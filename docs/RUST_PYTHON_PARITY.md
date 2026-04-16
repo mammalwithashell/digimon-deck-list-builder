@@ -67,15 +67,15 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 **Fix outline:** Introduce `accept_mulligan(player, keep: bool)` action. Stay in `GamePhase::Mulligan` until every player has responded. Lay security after the mulligan resolves, mirroring `_finalize_opening_setup`.
 
-### 1.7 🔴 First-turn draw semantics
+### 1.7 🟢 First-turn draw semantics — verified equivalent
 
-**Python** — [game/__init__.py:228-230](../digimon_gym/engine/game/__init__.py#L228): hardcoded "no draw on turn 1 for anyone" — P0 and P1 both skip draw on their respective first turn.
+**Python** — [game/__init__.py:228-230](../digimon_gym/engine/game/__init__.py#L228) `phase_draw`: `if self.turn_count == 1: pass`. Since `switch_turn` increments `turn_count`, P0's first turn is turn 1 and P1's first turn is turn 2. **Only P0 skips** — matches the standard Digimon TCG rule.
 
-**Rust** — [game.rs:196-211](../digimon-engine/src/game.rs#L196) with `SkipDraw::P1Only` skips draw only on turn 1 when `turn_player == 0`. P1's first draw (turn 2) is *not* skipped.
+**Rust** — [game.rs](../digimon-engine/src/game.rs) with `SkipDraw::FirstPlayerOnly` (renamed from the misleading `P1Only`): skips draw when `turn_count == 1 && turn_player == 0`. Same behavior.
 
-**Consequence:** Rust's P1 draws 1 extra card over the first two turns compared to Python's P1.
+**Previous audit was wrong** — an earlier pass over this file reported a divergence that doesn't actually exist. Keeping the entry here to prevent a future auditor from reproducing the same mistake.
 
-**Fix outline:** Change `SkipDraw::P1Only` to also skip on each player's first visit, not just absolute turn 1. Track a `has_drawn` flag per player, or compare `turn_count <= player_count`.
+**Coverage:** [tests/first_turn_draw.rs](../digimon-engine/tests/first_turn_draw.rs) locks in the P0-skips / P1-draws-on-turn-2 / P0-draws-on-turn-3 rule.
 
 ---
 
@@ -253,10 +253,10 @@ Different by design. Both produce the same `card_id → effect` mapping observab
 
 Phase 9 (PyO3 bindings) readiness requires, in priority order:
 
-1. **§1.1 — Deduct play cost** (single biggest correctness bug; every play is free today).
-2. **§1.2 / §1.3 / §1.4 / §1.5 — Memory seesaw semantics** (tight cluster; probably ~30 lines of changes in `game.rs` plus tests).
+1. **§1.1 — Deduct play cost** (single biggest correctness bug; every play is free today). ✅ done
+2. **§1.2 / §1.3 / §1.4 / §1.5 — Memory seesaw semantics** (tight cluster; probably ~30 lines of changes in `game.rs` plus tests). ✅ done
 3. **§2.1 — Rush exemption** (needed for any card with Rush; trivial once modifier lookup is in place).
-4. **§1.7 — First-turn draw rule** (small, affects tempo analysis).
+4. ~~**§1.7 — First-turn draw rule**~~ — audit was wrong; behavior already matches Python. Tested as of this cycle.
 5. **§1.6 — Mulligan flow** (scoped change: new action, phase transition).
 6. **§3.1 / §3.2 — Tensor source-DP + OPT slots** (blocks model transfer; requires Effect iteration to sum modifiers).
 7. **§4.2 / §4.3 / §4.4 — Action mask main-phase parity** (Option color, Blitz, Raid).

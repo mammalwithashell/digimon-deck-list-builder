@@ -195,7 +195,7 @@ impl Game {
         // Draw phase
         self.current_phase = GamePhase::Draw;
         let should_skip_draw = match self.rules.skip_first_draw {
-            SkipDraw::P1Only => self.turn_count == 1 && tp == 0,
+            SkipDraw::FirstPlayerOnly => self.turn_count == 1 && tp == 0,
             SkipDraw::AllRound1 => {
                 self.turn_count <= self.rules.player_count as u16
             }

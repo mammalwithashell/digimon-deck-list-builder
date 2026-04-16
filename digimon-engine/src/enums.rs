@@ -237,9 +237,12 @@ pub enum Expiry {
 /// How first-turn draw skip works.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SkipDraw {
-    /// Standard: only P1 skips draw on turn 1
-    P1Only,
-    /// EDH: all players skip draw on round 1
+    /// Standard: the first player (turn_count == 1, turn_player == 0) skips
+    /// their draw. All subsequent turns, including the second player's first
+    /// turn (turn_count == 2), draw normally. Matches Python's
+    /// `if self.turn_count == 1: pass` rule.
+    FirstPlayerOnly,
+    /// EDH: every player skips draw on their first turn (turn_count <= player_count).
     AllRound1,
     /// No skip
     None,

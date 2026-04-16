@@ -32,7 +32,7 @@ impl Rules {
             commander: false,
             memory_range: (-10, 10),
             max_turns: 200,
-            skip_first_draw: SkipDraw::P1Only,
+            skip_first_draw: SkipDraw::FirstPlayerOnly,
         }
     }
 
@@ -66,7 +66,7 @@ impl Rules {
             commander: false,
             memory_range: (-10, 10),
             max_turns: 400,
-            skip_first_draw: SkipDraw::P1Only,
+            skip_first_draw: SkipDraw::FirstPlayerOnly,
         }
     }
 
@@ -83,7 +83,7 @@ impl Rules {
             commander: false,
             memory_range: (-10, 10),
             max_turns: 400,
-            skip_first_draw: SkipDraw::P1Only,
+            skip_first_draw: SkipDraw::FirstPlayerOnly,
         }
     }
 }
