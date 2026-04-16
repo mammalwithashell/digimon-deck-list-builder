@@ -10,7 +10,7 @@
 
 use crate::action::space::*;
 use crate::card_data::CardData;
-use crate::enums::{CardColor, CardKind, GamePhase, Keyword, PlayerId};
+use crate::enums::{CardColor, CardKind, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
@@ -104,13 +104,65 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let sec_action = encode_attack(i as u16, SECURITY_TARGET);
                 mask[sec_action as usize] = 1.0;
 
-                // Digimon attacks: suspended targets only (baseline); Raid
-                // and CAN_ATTACK_UNSUSPENDED extensions land in Task 3.
+                // Digimon attacks (§4.4). Suspended enemies are always valid.
+                // Unsuspended enemies are valid iff attacker has:
+                //   - CAN_ATTACK_UNSUSPENDED modifier (any unsuspended), or
+                //   - Raid keyword (unsuspended enemies tied for highest
+                //     effective DP).
+                // Native `_is_can_attack_unsuspended` keyword awaits §4.5.
+                let can_attack_unsuspended = game
+                    .modifiers
+                    .has(handle, ModifierType::CanAttackUnsuspended);
+                let has_raid = game.modifiers.has_keyword(handle, Keyword::Raid);
                 let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
+
+                // Precompute max effective DP among unsuspended enemy Digimon
+                // only if Raid is relevant (skip when CAN_ATTACK_UNSUSPENDED
+                // already broadens targeting).
+                let raid_max_dp = if has_raid && !can_attack_unsuspended {
+                    let mut best: Option<i32> = None;
+                    for j in 0..max_opp {
+                        let t = &opp.battle_area[j];
+                        if t.is_suspended || !t.is_digimon(&game.card_data) {
+                            continue;
+                        }
+                        let t_handle = PermanentHandle {
+                            player: opp_id,
+                            index: j as u8,
+                        };
+                        if let Some(dp) = game.effective_dp(t_handle) {
+                            best = Some(best.map_or(dp, |b| b.max(dp)));
+                        }
+                    }
+                    best
+                } else {
+                    None
+                };
+
                 for j in 0..max_opp {
                     let target = &opp.battle_area[j];
-                    if target.is_suspended && target.is_digimon(&game.card_data) {
-                        mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
+                    if !target.is_digimon(&game.card_data) {
+                        continue;
+                    }
+                    let action_bit = encode_attack(i as u16, j as u16) as usize;
+                    if target.is_suspended {
+                        mask[action_bit] = 1.0;
+                        continue;
+                    }
+                    if can_attack_unsuspended {
+                        mask[action_bit] = 1.0;
+                        continue;
+                    }
+                    if let Some(max_dp) = raid_max_dp {
+                        let t_handle = PermanentHandle {
+                            player: opp_id,
+                            index: j as u8,
+                        };
+                        if let Some(dp) = game.effective_dp(t_handle) {
+                            if dp == max_dp {
+                                mask[action_bit] = 1.0;
+                            }
+                        }
                     }
                 }
             }

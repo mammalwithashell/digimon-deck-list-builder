@@ -35,12 +35,16 @@ fn make_option(id: &str, color: CardColor) -> CardData {
 }
 
 fn make_digimon(id: &str, color: CardColor) -> CardData {
+    make_digimon_dp(id, color, 4000)
+}
+
+fn make_digimon_dp(id: &str, color: CardColor, dp: i32) -> CardData {
     CardData {
         card_id: id.to_string(),
         card_name: id.to_string(),
         card_kind: CardKind::Digimon,
         level: Some(4),
-        dp: Some(4000),
+        dp: Some(dp),
         play_cost: 5,
         colors: vec![color],
         traits: Vec::new(),
@@ -209,5 +213,122 @@ fn mask_blitz_without_digivolving_does_not_attack_under_negative_memory() {
     assert_eq!(
         mask[sec_bit], 0.0,
         "Blitz without this-turn digivolve must not unlock attack under memory<0"
+    );
+}
+
+// ─── §4.4 Raid + CAN_ATTACK_UNSUSPENDED target rules ───────────────────
+
+/// With Raid, an attacker can target unsuspended enemies tied for the
+/// highest effective DP. Lower-DP unsuspended enemies remain off-limits.
+#[test]
+fn mask_raid_targets_highest_dp_unsuspended() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon_dp("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon_dp("WEAK", CardColor::Blue, 2000))
+        .add_card(make_digimon_dp("STRONG", CardColor::Blue, 7000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let weak_idx = r.place_on_field(opp, "WEAK", Some(0)).index;
+    let strong_idx = r.place_on_field(opp, "STRONG", Some(0)).index;
+    // Both enemies unsuspended.
+    for p in &mut r.game.players[opp as usize].battle_area {
+        p.is_suspended = false;
+    }
+
+    r.game.enter_main_phase();
+    r.game.set_memory(3);
+
+    // Baseline: no Raid → unsuspended targets stay off-limits.
+    let weak_bit = encode_attack(attacker.index as u16, weak_idx as u16) as usize;
+    let strong_bit = encode_attack(attacker.index as u16, strong_idx as u16) as usize;
+    let baseline = build_action_mask(&r.game, tp);
+    assert_eq!(baseline[weak_bit], 0.0, "no Raid → unsuspended weak is off-limits");
+    assert_eq!(baseline[strong_bit], 0.0, "no Raid → unsuspended strong is off-limits");
+
+    // Grant Raid → only the highest-DP unsuspended target (STRONG) lights up.
+    r.game.modifiers.grant_keyword(
+        attacker, Keyword::Raid, Expiry::EndOfTurn, tp,
+    );
+    let raid_mask = build_action_mask(&r.game, tp);
+    assert_eq!(raid_mask[strong_bit], 1.0, "Raid → highest-DP unsuspended is attackable");
+    assert_eq!(raid_mask[weak_bit], 0.0, "Raid → lower-DP unsuspended is NOT attackable");
+}
+
+/// When multiple unsuspended enemies share the highest DP, Raid allows
+/// attacking any of them (matches Python's `any(... == max(...))`).
+#[test]
+fn mask_raid_allows_all_tied_for_highest() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon_dp("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon_dp("TWIN", CardColor::Blue, 4000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let twin_a = r.place_on_field(opp, "TWIN", Some(0)).index;
+    let twin_b = r.place_on_field(opp, "TWIN", Some(0)).index;
+    for p in &mut r.game.players[opp as usize].battle_area {
+        p.is_suspended = false;
+    }
+
+    r.game.enter_main_phase();
+    r.game.set_memory(3);
+    r.game.modifiers.grant_keyword(
+        attacker, Keyword::Raid, Expiry::EndOfTurn, tp,
+    );
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, twin_a as u16) as usize], 1.0,
+        "Raid → first tied-for-max target is attackable",
+    );
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, twin_b as u16) as usize], 1.0,
+        "Raid → second tied-for-max target is also attackable",
+    );
+}
+
+/// CAN_ATTACK_UNSUSPENDED modifier broadens attack targets to every
+/// unsuspended enemy regardless of DP.
+#[test]
+fn mask_can_attack_unsuspended_modifier_allows_all_unsuspended() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon_dp("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon_dp("WEAK", CardColor::Blue, 2000))
+        .add_card(make_digimon_dp("STRONG", CardColor::Blue, 7000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let weak_idx = r.place_on_field(opp, "WEAK", Some(0)).index;
+    let strong_idx = r.place_on_field(opp, "STRONG", Some(0)).index;
+    for p in &mut r.game.players[opp as usize].battle_area {
+        p.is_suspended = false;
+    }
+
+    r.game.enter_main_phase();
+    r.game.set_memory(3);
+    r.game.modifiers.add(
+        attacker,
+        digimon_engine::modifiers::ModifierEntry {
+            modifier: ModifierType::CanAttackUnsuspended,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: tp,
+        },
+    );
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize], 1.0,
+        "CAN_ATTACK_UNSUSPENDED → lower-DP unsuspended is attackable",
+    );
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize], 1.0,
+        "CAN_ATTACK_UNSUSPENDED → higher-DP unsuspended is attackable",
     );
 }
