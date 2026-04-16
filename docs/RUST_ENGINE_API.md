@@ -423,7 +423,7 @@ These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:
 
 - **Block / Counter / Alliance interrupt phases** not yet wired — combat is atomic.
 - **OnSecurityCheck** / **OnStartBattle** / **OnEndBattle** / **OnEndAttack** timings are not yet fired by the combat module.
-- **Rush** keyword does not yet override summoning sickness.
+- **Rush** from a card's innate keyword list — only modifier-granted Rush currently exempts summoning sickness. Native Rush needs the effect-listing query.
 - **Security effects** don't have a fully wired timing that exposes the attacker to the script.
 - **BeforePayCost** for cost reduction scanning the entire battle area is not implemented.
 - **Option cards** have no play flow yet (they hit the field as a permanent like Digimon).
@@ -487,3 +487,81 @@ A missing entry here means the card plays as **vanilla** — no effect, no error
 - Two different cards.json files between Python and Rust environments.
 
 The test `tests/card_registry_parity.rs` loads the real cards.json and asserts the Rust mapping matches `CardData.index` for every card. Keep that green.
+
+---
+
+## 12. Setup and mulligan
+
+The setup sequence in `Game::new` + `start_game` matches Python's mulligan flow. If you're writing card effects you almost never touch this — it's relevant mainly when writing tests that want to exercise opening-hand decisions, or when building a UI / RL loop that surfaces the mulligan choice.
+
+### Sequence
+
+1. **`Game::new(decks, cards, rules, seed)`** — builds players, shuffles each deck and digitama via the seeded rng, then:
+   - Shuffles `turn_order` (first-player coin flip; deterministic under the same seed).
+   - Draws `rules.starting_hand` cards for every player.
+   - Initializes `mulligan_pending` (clone of `turn_order`) and `mulligan_used` (all false).
+   - Leaves the game in `GamePhase::Mulligan`. **Security is not yet laid.**
+
+2. **Each decider answers.** Either the caller walks through `accept_mulligan`, or a convenience caller invokes `start_game` to auto-keep.
+
+3. **`finalize_mulligan` runs automatically** once the last decider answers. It lays `rules.security_count` security cards per player, sets `turn_count = 1`, `memory = 0`, and calls `begin_turn`.
+
+### API surface
+
+```rust
+// Read-only
+game.mulligan_current_player() -> Option<PlayerId>
+game.mulligan_pending          // Vec<PlayerId> — FIFO of remaining deciders
+game.mulligan_used             // Vec<bool> indexed by player id
+
+// Mutating
+game.accept_mulligan(player, keep: bool) -> Result<(), &'static str>
+//   keep == true  : hand stays as-is, advance to next decider
+//   keep == false : hand → deck, reshuffle with game.rng, draw starting_hand,
+//                   set mulligan_used[player] = true, advance
+
+// Shorthand
+game.start_game()  // auto-keep every pending player, then finalize
+```
+
+`accept_mulligan` returns `Err` if:
+- The caller passes a player who isn't the current decider (the message contains "different player").
+- Mulligan is already complete (message: "already complete").
+
+### Action mask
+
+During `GamePhase::Mulligan`:
+- Only the current decider's mask has any bits set. Every other perspective is all zeros.
+- Bit 0 is **keep** — always available.
+- Bit 1 is **mulligan** — suppressed once `mulligan_used[current] == true`.
+
+### DebugRunner
+
+The common test path bypasses mulligan: `DebugRunner::builder().start()` runs `start_game` which auto-keeps, and `build_inner` clears `mulligan_pending` so the test's explicit zones aren't cannibalized by `setup_security`.
+
+Mulligan-specific tests should construct `Game::new` directly with a real deck (so redraws have cards) and optionally wrap with `DebugRunner::wrap(game)` for the convenience helpers:
+
+```rust
+let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(42)).unwrap();
+let first = game.mulligan_current_player().unwrap();
+game.accept_mulligan(first, /* keep */ false).unwrap(); // redraw
+game.start_game(); // auto-keep for the rest
+```
+
+Or via DebugRunner:
+```rust
+let mut r = DebugRunner::wrap(game);
+r.mulligan_decide(false)?;     // redraw current decider
+r.skip_mulligan();              // auto-keep everyone else
+```
+
+### Tauri / UI
+
+The DTO returned from every `rust_*` command carries `mulligan_current_player: Option<PlayerId>` and `mulligan_used: Vec<bool>`. The frontend hides the Mulligan button for any player whose `mulligan_used` is true, and only enables keep/mulligan controls for the player whose id matches `mulligan_current_player`.
+
+`rustMulliganDecide(keep: boolean)` from `frontend/src/api/rustEngine.ts` applies the decision for the current decider and returns the updated state.
+
+### What's NOT here (yet)
+
+- **Rule-driven mulligan variants** (e.g. redraw fewer cards, double mulligan). Digimon TCG has a single, full-size redraw only.
+- **Tensor slot for mulligan context.** The current tensor has no dedicated "who's deciding" slot; if RL needs to learn mulligan policy, we'd extend the selection-context section of the tensor. Not required for current training loops.
