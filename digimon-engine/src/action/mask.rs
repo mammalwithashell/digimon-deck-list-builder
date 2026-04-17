@@ -188,6 +188,17 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let max_field = me.battle_area.len().min(FIELD_SLOTS);
                 for f in 0..max_field {
                     let base_perm = &me.battle_area[f];
+                    let base_handle = PermanentHandle { player: player_id, index: f as u8 };
+                    // §4.7b CANNOT_DIGIVOLVE — suppress the bit if the
+                    // base permanent carries an active CannotDigivolve
+                    // modifier. Python's `{'digivolving_card': card}`
+                    // discriminant is not carried in Rust (§4.7x).
+                    if game
+                        .modifiers
+                        .has(base_handle, ModifierType::CannotDigivolve)
+                    {
+                        continue;
+                    }
                     if can_basic_digivolve(card, base_perm, &game.card_data) {
                         mask[encode_digivolve(h as u16, f as u16) as usize] = 1.0;
                     }

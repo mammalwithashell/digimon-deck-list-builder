@@ -570,3 +570,54 @@ fn mask_cannot_play_from_hand_suppresses_all_hand_bits() {
     assert_eq!(mask_blocked[0], 0.0, "HAND-A suppressed while modifier is active");
     assert_eq!(mask_blocked[1], 0.0, "HAND-B suppressed while modifier is active");
 }
+
+// ─── §4.7b CANNOT_DIGIVOLVE ────────────────────────────────────────────
+
+/// A permanent with an active CannotDigivolve modifier must not have any
+/// digivolve bit emitted, regardless of evo-cost match.
+#[test]
+fn mask_cannot_digivolve_suppresses_digivolve_bits_on_base() {
+    use digimon_engine::action::encode_digivolve;
+
+    // Hand card: Red Lv4 with Red Lv3 evo_cost.
+    let mut evo_card = make_digimon_level("EVO-RED", CardColor::Red, 4);
+    evo_card.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        card_color: 0, // Red
+        level: 3,
+        memory_cost: 1,
+    }];
+
+    let base_card = make_digimon_level("BASE-RED", CardColor::Red, 3);
+
+    let mut r = DebugRunner::builder()
+        .add_card(evo_card)
+        .add_card(base_card)
+        .hand(0, &["EVO-RED"])
+        .start();
+
+    let base = r.place_on_field(0, "BASE-RED", Some(0));
+    r.game.set_memory(5);
+    r.game.enter_main_phase();
+
+    // Baseline: evo bit to base[0] is emitted (evo_cost matches).
+    let baseline = build_action_mask(&r.game, 0);
+    let evo_bit = encode_digivolve(0 as u16, base.index as u16) as usize;
+    assert_eq!(baseline[evo_bit], 1.0, "baseline digivolve bit should be set");
+
+    // Grant CannotDigivolve to the base.
+    r.game.modifiers.add(
+        base,
+        digimon_engine::modifiers::ModifierEntry {
+            modifier: ModifierType::CannotDigivolve,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: 0,
+        },
+    );
+
+    let blocked = build_action_mask(&r.game, 0);
+    assert_eq!(
+        blocked[evo_bit], 0.0,
+        "CannotDigivolve on base must suppress the digivolve bit onto it",
+    );
+}
