@@ -1085,6 +1085,224 @@ impl Game {
         true
     }
 
+    /// Full "digivolve from hand" action — Python parity for
+    /// `action_digivolve(field_idx, hand_idx)`. Validates phase, indices,
+    /// `CannotDigivolve` modifier, and evo-cost fit; pays memory; removes
+    /// the card from hand; stacks it onto the target permanent; draws 1;
+    /// fires `WhenDigivolving` triggers and drains the effect queue;
+    /// finally calls `check_turn_end`.
+    ///
+    /// Deferred (see RUST_PYTHON_PARITY.md):
+    /// - Cost reductions (`WhenWouldDigivolve`, `CHANGE_DIGIVOLUTION_COST`)
+    /// - `digivolve_observer` mechanism (no Rust equivalent yet)
+    /// - Contextual modifier predicates (`{'digivolving_card': card}`)
+    pub fn digivolve_from_hand(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+    ) -> bool {
+        if self.current_phase != GamePhase::Main {
+            return false;
+        }
+        let player = self.player(player_id);
+        if hand_index >= player.hand.len() || field_index >= player.battle_area.len() {
+            return false;
+        }
+        let handle = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        if self.modifiers.has(handle, ModifierType::CannotDigivolve) {
+            return false;
+        }
+
+        let card = player.hand[hand_index].clone();
+        let perm = &player.battle_area[field_index];
+        if !self.can_digivolve(&card, perm) {
+            return false;
+        }
+
+        let base_level = perm.top_card().level(&self.card_data).unwrap();
+        let base_colors = perm.top_card().colors(&self.card_data);
+        let evo_costs = &self.card_data[card.data_index].evo_costs;
+        let cost = evo_costs
+            .iter()
+            .filter(|ec| {
+                ec.level == base_level
+                    && crate::action::mask::evo_color(ec.card_color)
+                        .map(|c| base_colors.contains(&c))
+                        .unwrap_or(false)
+            })
+            .map(|ec| ec.memory_cost)
+            .min()
+            .expect("can_digivolve guarantees at least one matching evo_cost");
+
+        if !self.pay_memory(cost) {
+            return false;
+        }
+
+        let turn = self.turn_count;
+        let removed = self.player_mut(player_id).hand.remove(hand_index);
+        self.player_mut(player_id).battle_area[field_index].digivolve(removed, turn);
+
+        self.player_mut(player_id).draw();
+
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            crate::selection::TriggerSource::Permanent(handle),
+        );
+        self.drain_effect_queue();
+
+        // TODO(parity): digivolve_observer mechanism not ported.
+
+        self.check_turn_end();
+        true
+    }
+
+    /// Digivolve a hand card onto the breeding-area permanent. Python
+    /// parity for `action_digivolve_breeding(hand_idx)` — same flow as
+    /// `digivolve_from_hand` minus the trigger/observer firing (breeding
+    /// digivolve does NOT fire `WhenDigivolving`).
+    pub fn digivolve_from_hand_onto_breeding(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> bool {
+        if self.current_phase != GamePhase::Main {
+            return false;
+        }
+        let player = self.player(player_id);
+        if hand_index >= player.hand.len() {
+            return false;
+        }
+        let Some(breeding) = player.breeding_area.as_ref() else {
+            return false;
+        };
+
+        let card = player.hand[hand_index].clone();
+        if !self.can_digivolve(&card, breeding) {
+            return false;
+        }
+
+        let base_level = breeding.top_card().level(&self.card_data).unwrap();
+        let base_colors = breeding.top_card().colors(&self.card_data);
+        let evo_costs = &self.card_data[card.data_index].evo_costs;
+        let cost = evo_costs
+            .iter()
+            .filter(|ec| {
+                ec.level == base_level
+                    && crate::action::mask::evo_color(ec.card_color)
+                        .map(|c| base_colors.contains(&c))
+                        .unwrap_or(false)
+            })
+            .map(|ec| ec.memory_cost)
+            .min()
+            .expect("can_digivolve guarantees at least one matching evo_cost");
+
+        if !self.pay_memory(cost) {
+            return false;
+        }
+
+        let turn = self.turn_count;
+        let removed = self.player_mut(player_id).hand.remove(hand_index);
+        let player_mut = self.player_mut(player_id);
+        if let Some(breeding) = player_mut.breeding_area.as_mut() {
+            breeding.digivolve(removed, turn);
+        }
+        player_mut.draw();
+
+        // Breeding digivolve does NOT fire WhenDigivolving (Python parity).
+        self.check_turn_end();
+        true
+    }
+
+    /// Install a `SelectMaterial` pending selection for DNA digivolve.
+    /// Python parity for `_initiate_dna_digivolve(hand_idx)`. The
+    /// second-material selection + actual digivolve execution is stubbed
+    /// inside the callback and tracked as `TODO(dna-digivolve-execute)`.
+    pub fn initiate_dna_digivolve(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> bool {
+        if self.current_phase != GamePhase::Main {
+            return false;
+        }
+        let player = self.player(player_id);
+        if hand_index >= player.hand.len() {
+            return false;
+        }
+        let card = player.hand[hand_index].clone();
+        let evo_meta = &self.card_data[card.data_index];
+        if evo_meta.dna_costs.is_empty() {
+            return false;
+        }
+        if !crate::dna_digivolve::has_valid_dna_targets(
+            evo_meta,
+            &player.battle_area,
+            &self.card_data,
+        ) {
+            return false;
+        }
+
+        // Collect valid first-material battle_area indices: those that
+        // appear in at least one valid pair (either ordering).
+        let mut first_targets: Vec<u16> = Vec::new();
+        for i in 0..player.battle_area.len() {
+            for j in 0..player.battle_area.len() {
+                if i == j {
+                    continue;
+                }
+                if crate::dna_digivolve::can_dna_digivolve(
+                    evo_meta,
+                    &player.battle_area[i],
+                    &player.battle_area[j],
+                    &self.card_data,
+                ) {
+                    first_targets.push(i as u16);
+                    break;
+                }
+            }
+        }
+        first_targets.sort();
+        first_targets.dedup();
+        if first_targets.is_empty() {
+            return false;
+        }
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectMaterial;
+
+        let selecting_player = player_id;
+        let source_card = card.handle();
+
+        self.pending_selection = Some(PendingSelection {
+            kind: crate::selection::SelectionKind::Material,
+            selecting_player,
+            previous_phase,
+            valid_action_ids: first_targets,
+            is_optional: false,
+            prompt: "Select first DNA material".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: None,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                // TODO(dna-digivolve-execute): decode first material
+                // index, install second-material selection, and on its
+                // resolution remove both materials from battle_area,
+                // create a new permanent carrying the evo card with
+                // both materials in the stack, pay the DnaCost
+                // memory_cost, fire WhenDigivolving. See
+                // `action_decoder.py::_dna_select_second` +
+                // `player.dna_digivolve` for the Python reference.
+                let _ = (game, action_id);
+            }),
+            on_decline: None,
+        });
+        true
+    }
+
     /// Returns `true` when `card` may digivolve onto `perm` per standard
     /// evo-cost rules: `card` has an `EvoCost` entry whose `level` matches
     /// `perm.top_card()`'s level and whose color is present on
