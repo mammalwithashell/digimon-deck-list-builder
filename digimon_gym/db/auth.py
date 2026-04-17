@@ -14,12 +14,13 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from digimon_gym.config import settings
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import RefreshToken, Role, User, UserRole
 
 # ── Configuration ───────────────────────────────────────────────────────
 
-SECRET_KEY = "CHANGE-ME-IN-PRODUCTION"  # Override via environment variable
+SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 30

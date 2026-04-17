@@ -1,14 +1,47 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
 
-WORKDIR /app
+ENV PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# Install dependencies
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential gcc \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip wheel --wheel-dir=/wheels -r requirements.txt
 
-# Copy application code
-COPY digimon_gym/ digimon_gym/
+
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home --shell /bin/bash app
+USER app
+WORKDIR /home/app
+
+COPY --from=builder /wheels /wheels
+COPY --chown=app requirements.txt .
+RUN pip install --user --no-index --find-links=/wheels -r requirements.txt \
+    && rm -rf /wheels
+
+ENV PATH=/home/app/.local/bin:$PATH
+
+COPY --chown=app digimon_gym/ digimon_gym/
+COPY --chown=app alembic/ alembic/
+COPY --chown=app alembic.ini .
+COPY --chown=app data/ data/
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS http://localhost:8000/healthz || exit 1
 
 CMD ["uvicorn", "digimon_gym.api:app", "--host", "0.0.0.0", "--port", "8000"]

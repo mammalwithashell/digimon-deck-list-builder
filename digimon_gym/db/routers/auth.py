@@ -1,13 +1,13 @@
 """Authentication router: register, login, refresh, logout."""
 
-from __future__ import annotations
-
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from digimon_gym.config import settings
+from digimon_gym.limiter import limiter
 from digimon_gym.db.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     REFRESH_TOKEN_EXPIRE_DAYS,
@@ -22,7 +22,7 @@ from digimon_gym.db.auth import (
     verify_password,
 )
 from digimon_gym.db.database import get_db
-from digimon_gym.db.models import RefreshToken, User, UserPreferences
+from digimon_gym.db.models import InviteCode, RefreshToken, User, UserPreferences
 from digimon_gym.db.schemas import (
     LoginRequest,
     RefreshRequest,
@@ -48,22 +48,43 @@ def _to_user_profile(user: User, roles: list[str]) -> UserProfile:
 
 
 @router.post("/register", response_model=UserProfile, status_code=status.HTTP_201_CREATED)
-async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/hour")
+async def register(
+    request: Request,
+    body: RegisterRequest = Body(...),
+    db: AsyncSession = Depends(get_db),
+):
+    # Invite-code gate (alpha). We lock the row to make redemption atomic
+    # with the new-user insert below; double-spend races would otherwise
+    # let two users claim the same code.
+    invite_row: InviteCode | None = None
+    if settings.invite_codes_required:
+        if not body.invite_code:
+            raise HTTPException(status_code=400, detail="Invite code is required")
+        result = await db.execute(
+            select(InviteCode)
+            .where(InviteCode.code == body.invite_code)
+            .with_for_update()
+        )
+        invite_row = result.scalar_one_or_none()
+        if invite_row is None or invite_row.redeemed_by_user_id is not None:
+            raise HTTPException(status_code=400, detail="Invalid or already-used invite code")
+
     # Check username uniqueness
-    existing = await db.execute(select(User).where(User.username == request.username))
+    existing = await db.execute(select(User).where(User.username == body.username))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Username already taken")
 
     # Check email uniqueness
-    existing = await db.execute(select(User).where(User.email == request.email))
+    existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Email already registered")
 
     user = User(
-        username=request.username,
-        email=request.email,
-        password_hash=hash_password(request.password),
-        display_name=request.display_name,
+        username=body.username,
+        email=body.email,
+        password_hash=hash_password(body.password),
+        display_name=body.display_name,
     )
     db.add(user)
     await db.flush()  # Ensure user.id is populated
@@ -73,6 +94,10 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
     db.add(prefs)
     await assign_role_to_user(db, user.id, ROLE_PLAYER)
 
+    if invite_row is not None:
+        invite_row.redeemed_by_user_id = user.id
+        invite_row.redeemed_at = datetime.now(timezone.utc)
+
     await db.commit()
     await db.refresh(user)
     roles = sorted(await get_user_role_names(user.id, db))
@@ -80,11 +105,16 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.username == request.username))
+@limiter.limit("10/minute")
+async def login(
+    request: Request,
+    body: LoginRequest = Body(...),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.username == body.username))
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(request.password, user.password_hash):
+    if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",

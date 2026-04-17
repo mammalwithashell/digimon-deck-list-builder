@@ -924,3 +924,17 @@ class RefreshToken(Base):
     revoked = Column(Integer, default=0, nullable=False)
 
     user = relationship("User", back_populates="refresh_tokens")
+
+
+class InviteCode(Base):
+    __tablename__ = "invite_codes"
+    __table_args__ = (
+        Index("idx_invite_codes_redeemed_by", "redeemed_by_user_id"),
+    )
+
+    code = Column(String, primary_key=True)
+    created_by_user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    redeemed_by_user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    redeemed_at = Column(DateTime(timezone=True), nullable=True)
+    note = Column(Text, nullable=True)

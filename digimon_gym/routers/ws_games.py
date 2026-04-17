@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
+from digimon_gym.config import settings
 from digimon_gym.db.auth import decode_access_token
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.engine.state_filter import filter_state_for_player
@@ -28,6 +29,21 @@ def _authenticate_ws(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _major_version(semver: str) -> Optional[int]:
+    """Return the major component of a semver string, or None if malformed.
+
+    We gate on the major version only: minor/patch bumps are wire-compatible
+    by convention (`docs/RUST_ENGINE_API.md` / rules 1 & 4 in CLAUDE.md say
+    tensor+action spec changes require coordinated bumps, so a major-version
+    mismatch is the reliable tripwire). Returning None means the client sent
+    us a string we can't parse — treated as a mismatch to be safe.
+    """
+    try:
+        return int(semver.split(".", 1)[0])
+    except (AttributeError, ValueError):
+        return None
+
+
 @router.websocket("/ws/games/{game_id}")
 async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     """WebSocket endpoint for live game participation or spectating.
@@ -38,11 +54,25 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     """
     token = websocket.query_params.get("token", "")
     role = websocket.query_params.get("role", "player")
+    client_engine_version = websocket.query_params.get("engine_version", "")
 
     # Authenticate
     payload = _authenticate_ws(token)
     if payload is None:
         await websocket.close(code=4001, reason="Invalid or missing auth token")
+        return
+
+    # Engine-version gate. Clients on an incompatible major (e.g. ancient
+    # desktop build meeting a newer hosted API that changed tensor spec)
+    # get closed with 4002 + server version so they can prompt the user
+    # to upgrade.
+    server_major = _major_version(settings.engine_version)
+    client_major = _major_version(client_engine_version)
+    if server_major is None or client_major != server_major:
+        await websocket.close(
+            code=4002,
+            reason=f"Engine version mismatch; server={settings.engine_version}",
+        )
         return
 
     user_id: str = payload["sub"]
@@ -98,6 +128,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
             "state": spec_state,
             "current_player_id": runner.game.current_player_id,
             "is_game_over": runner.is_game_over,
+            "engine_version": settings.engine_version,
         })
         await _spectator_loop(websocket, game_id)
         return
@@ -127,6 +158,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
         "current_player_id": current_pid,
         "is_game_over": runner.is_game_over,
         "your_player_id": player_id,
+        "engine_version": settings.engine_version,
     })
 
     # Send spectator count
