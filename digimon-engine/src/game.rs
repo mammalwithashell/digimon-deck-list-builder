@@ -7,6 +7,7 @@ use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw};
+use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::player::Player;
@@ -104,6 +105,12 @@ pub struct Game {
     /// Consumed by the drainer in PR2.
     #[allow(dead_code)]
     pub(crate) effect_chain_depth: u16,
+
+    /// Game logger. Defaults to `SilentLogger` (zero-overhead for RL
+    /// training). Callers that want human-readable traces install a
+    /// `VerboseLogger` via `set_logger`. Parity with Python's
+    /// `Game.logger` field.
+    pub logger: Box<dyn GameLogger>,
 }
 
 impl Game {
@@ -212,6 +219,7 @@ impl Game {
             effect_queue: EffectQueue::new(),
             pending_attack: None,
             effect_chain_depth: 0,
+            logger: Box::new(SilentLogger),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -227,6 +235,13 @@ impl Game {
     /// Get the current turn player's ID.
     pub fn turn_player(&self) -> PlayerId {
         self.turn_order[self.turn_player_idx]
+    }
+
+    /// Swap out the game logger (defaults to `SilentLogger`). Callers
+    /// that want to capture trace/reject messages should install a
+    /// `VerboseLogger` here.
+    pub fn set_logger(&mut self, logger: Box<dyn GameLogger>) {
+        self.logger = logger;
     }
 
     // ─── Mulligan ────────────────────────────────────────────────────
@@ -1103,10 +1118,27 @@ impl Game {
         field_index: usize,
     ) -> bool {
         if self.current_phase != GamePhase::Main {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: not in Main phase (phase={:?})",
+                self.current_phase
+            ));
             return false;
         }
         let player = self.player(player_id);
-        if hand_index >= player.hand.len() || field_index >= player.battle_area.len() {
+        if hand_index >= player.hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: hand index {} out of range (hand size={})",
+                hand_index,
+                player.hand.len()
+            ));
+            return false;
+        }
+        if field_index >= player.battle_area.len() {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: field index {} out of range (battle_area size={})",
+                field_index,
+                player.battle_area.len()
+            ));
             return false;
         }
         let handle = PermanentHandle {
@@ -1114,12 +1146,21 @@ impl Game {
             index: field_index as u8,
         };
         if self.modifiers.has(handle, ModifierType::CannotDigivolve) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: permanent at field index {} blocked by CannotDigivolve modifier",
+                field_index
+            ));
             return false;
         }
 
         let card = player.hand[hand_index].clone();
         let perm = &player.battle_area[field_index];
         if !self.can_digivolve(&card, perm) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: card {} cannot digivolve onto {} (evo-cost mismatch)",
+                card.card_id(&self.card_data),
+                perm.top_card().card_id(&self.card_data),
+            ));
             return false;
         }
 
@@ -1139,6 +1180,10 @@ impl Game {
             .expect("can_digivolve guarantees at least one matching evo_cost");
 
         if !self.pay_memory(cost) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: cannot pay memory cost {} (current memory={})",
+                cost, self.memory
+            ));
             return false;
         }
 
@@ -1170,18 +1215,33 @@ impl Game {
         hand_index: usize,
     ) -> bool {
         if self.current_phase != GamePhase::Main {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: not in Main phase (phase={:?})",
+                self.current_phase
+            ));
             return false;
         }
         let player = self.player(player_id);
         if hand_index >= player.hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: hand index {} out of range (hand size={})",
+                hand_index,
+                player.hand.len()
+            ));
             return false;
         }
         let Some(breeding) = player.breeding_area.as_ref() else {
+            self.logger.log("[Rejected] digivolve_breeding: breeding area is empty");
             return false;
         };
 
         let card = player.hand[hand_index].clone();
         if !self.can_digivolve(&card, breeding) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: card {} cannot digivolve onto breeding {} (evo-cost mismatch)",
+                card.card_id(&self.card_data),
+                breeding.top_card().card_id(&self.card_data),
+            ));
             return false;
         }
 
@@ -1201,6 +1261,10 @@ impl Game {
             .expect("can_digivolve guarantees at least one matching evo_cost");
 
         if !self.pay_memory(cost) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: cannot pay memory cost {} (current memory={})",
+                cost, self.memory
+            ));
             return false;
         }
 
@@ -1227,15 +1291,28 @@ impl Game {
         hand_index: usize,
     ) -> bool {
         if self.current_phase != GamePhase::Main {
+            self.logger.log(&format!(
+                "[Rejected] initiate_dna_digivolve: not in Main phase (phase={:?})",
+                self.current_phase
+            ));
             return false;
         }
         let player = self.player(player_id);
         if hand_index >= player.hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] initiate_dna_digivolve: hand index {} out of range (hand size={})",
+                hand_index,
+                player.hand.len()
+            ));
             return false;
         }
         let card = player.hand[hand_index].clone();
         let evo_meta = &self.card_data[card.data_index];
         if evo_meta.dna_costs.is_empty() {
+            self.logger.log(&format!(
+                "[Rejected] initiate_dna_digivolve: card {} has no DNA costs",
+                card.card_id(&self.card_data)
+            ));
             return false;
         }
         if !crate::dna_digivolve::has_valid_dna_targets(
@@ -1243,6 +1320,10 @@ impl Game {
             &player.battle_area,
             &self.card_data,
         ) {
+            self.logger.log(&format!(
+                "[Rejected] initiate_dna_digivolve: no valid DNA material pair for {}",
+                card.card_id(&self.card_data)
+            ));
             return false;
         }
 
@@ -1268,6 +1349,9 @@ impl Game {
         first_targets.sort();
         first_targets.dedup();
         if first_targets.is_empty() {
+            self.logger.log(
+                "[Rejected] initiate_dna_digivolve: no valid first-material indices after filter",
+            );
             return false;
         }
 
