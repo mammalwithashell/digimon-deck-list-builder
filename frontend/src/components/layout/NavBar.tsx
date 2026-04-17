@@ -22,7 +22,10 @@ const NAV_GROUPS: NavGroup[] = [
   {
     key: 'home',
     title: 'Overview',
-    items: [{ to: '/', label: 'Home', exact: true }],
+    items: [
+      { to: '/', label: 'Home', exact: true },
+      { to: '/patch-notes', label: 'Patch Notes' },
+    ],
   },
   {
     key: 'deck-play',
@@ -51,6 +54,12 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/arena', label: 'Arena' },
       { to: '/admin/gauntlet', label: 'Gauntlet' },
     ],
+  },
+  {
+    key: 'admin-content',
+    title: 'Content',
+    adminOnly: true,
+    items: [{ to: '/admin/patch-notes', label: 'Patch Notes' }],
   },
 ];
 

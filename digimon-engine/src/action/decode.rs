@@ -10,10 +10,12 @@
 //! This matches Python's decoder, which also no-ops on invalid inputs.
 
 use crate::action::space::{
-    ACTION_SPACE_SIZE, ATTACK_START, DIGIVOLVE_START, EFFECTS_PER_PERMANENT, FIELD_EFFECT_END,
-    FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_SLOT_FOR_OVERCLOCK, FIELD_EFFECT_START,
-    HAND_EFFECT_END, HAND_EFFECT_START, HATCH, MOVE_FROM_BREEDING, PASS, PLAY_HAND_END,
-    PLAY_HAND_START, SECURITY_TARGET, TARGETS_PER_ATTACKER, TRASH_EFFECT_END, TRASH_EFFECT_START,
+    decode_digivolve, ACTION_SPACE_SIZE, ATTACK_START, BREEDING_TARGET, DIGIVOLVE_END,
+    DIGIVOLVE_START, DNA_DIGIVOLVE_END, DNA_DIGIVOLVE_START, EFFECTS_PER_PERMANENT,
+    FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_SLOT_FOR_OVERCLOCK,
+    FIELD_EFFECT_START, HAND_EFFECT_END, HAND_EFFECT_START, HATCH, MOVE_FROM_BREEDING, PASS,
+    PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, TARGETS_PER_ATTACKER, TRASH_EFFECT_END,
+    TRASH_EFFECT_START,
 };
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
@@ -94,9 +96,14 @@ impl Game {
             return;
         }
 
-        // [63..93) — DNA digivolve: not yet exposed as a public initiate method.
-        // Skip silently; the mask will not emit these bits until the engine
-        // exposes a `begin_dna_digivolve` entry point.
+        // [63..93) — DNA digivolve. `initiate_dna_digivolve` installs a
+        // `SelectMaterial` pending selection for the first material; the
+        // follow-up picks land on the selection phase branch.
+        if (DNA_DIGIVOLVE_START..DNA_DIGIVOLVE_END).contains(&action_id) {
+            let hand_idx = (action_id - DNA_DIGIVOLVE_START) as usize;
+            self.initiate_dna_digivolve(tp, hand_idx);
+            return;
+        }
 
         // [100..400) — Attack
         if (ATTACK_START..ATTACK_START + 300).contains(&action_id) {
@@ -107,13 +114,16 @@ impl Game {
             return;
         }
 
-        // [400..1000) — Digivolve (hand -> field, or hand -> breeding).
-        // The Rust engine has no public "digivolve from hand index N" entry
-        // point yet: `Game::digivolve_onto` takes a `CardSource` directly
-        // and leaves hand removal / memory payment to the caller. The
-        // high-level action glue is a future milestone; until then, the
-        // mask does not emit these bits and we silently drop them.
-        if (DIGIVOLVE_START..DIGIVOLVE_START + 600).contains(&action_id) {
+        // [400..1000) — Digivolve. `BREEDING_TARGET` in the field slot
+        // routes to the breeding-area variant (no `WhenDigivolving`
+        // triggers); everything else is a standard hand→field digivolve.
+        if (DIGIVOLVE_START..DIGIVOLVE_END).contains(&action_id) {
+            let (hand, field) = decode_digivolve(action_id);
+            if field == BREEDING_TARGET {
+                self.digivolve_from_hand_onto_breeding(tp, hand as usize);
+            } else {
+                self.digivolve_from_hand(tp, hand as usize, field as usize);
+            }
             return;
         }
 
@@ -209,5 +219,4 @@ impl Game {
         };
         let _ = self.attack_digimon(attacker_handle, defender, /* vortex */ false);
     }
-
 }
