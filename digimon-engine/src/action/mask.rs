@@ -10,7 +10,8 @@
 
 use crate::action::space::*;
 use crate::card_data::CardData;
-use crate::enums::{CardColor, CardKind, GamePhase, Keyword, ModifierType, PlayerId};
+use crate::effect_context::EffectReadContext;
+use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
@@ -239,6 +240,138 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     &game.card_data,
                 ) {
                     mask[(DNA_DIGIVOLVE_START + h as u16) as usize] = 1.0;
+                }
+            }
+
+            // --- [Main] activated effects (§4.5c) ---
+            //
+            // Python iterates each card's effect list and filters by the
+            // `_is_{hand,field,trash}_main` bool flag. Rust promotes the
+            // zone distinction into the timing enum itself, so filtering
+            // is a single `effect.timing ==` check.
+            //
+            // OPT enforcement:
+            //   * Field — use the existing per-permanent
+            //     `activation_count((handle, slot))` map (already populated
+            //     by effect firing at runtime).
+            //   * Hand / Trash — Python's mask does NOT check
+            //     `_turn_activate_count` either; the effect's
+            //     `can_use_condition` closure is responsible. Mirror that
+            //     here. Adding explicit hand/trash activation maps is a
+            //     follow-up tracked in §4.5c residuals.
+
+            // Hand [Main] (bits 30-59). One bit per hand slot, mirroring
+            // Python's `action_mask.py:176-185`. First-match-wins per slot.
+            let hand_limit = me.hand.len().min(HAND_MAIN_LIMIT);
+            for h in 0..hand_limit {
+                let card = &me.hand[h];
+                let card_id = card.card_id(&game.card_data);
+                let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
+                    continue;
+                };
+                for effect in &effects {
+                    if effect.timing != EffectTiming::MainFromHand {
+                        continue;
+                    }
+                    if let Some(cond) = &effect.condition {
+                        let ctx = EffectReadContext::new(
+                            game,
+                            card.handle(),
+                            None,
+                            player_id,
+                        );
+                        if !cond(&ctx) {
+                            continue;
+                        }
+                    }
+                    mask[(HAND_EFFECT_START + h as u16) as usize] = 1.0;
+                    break;
+                }
+            }
+
+            // Field [Main] (bits 1000-1149). Python emits one bit per
+            // permanent at sub-slot `+2` (FIELD_EFFECT_SLOT_FOR_MAIN),
+            // first-match-wins across the entire digivolution stack.
+            // Inherited-vs-top filter matches `source_dp_contribution`.
+            let field_limit = me.battle_area.len().min(FIELD_SLOTS);
+            for i in 0..field_limit {
+                let perm = &me.battle_area[i];
+                let perm_handle = PermanentHandle {
+                    player: player_id,
+                    index: i as u8,
+                };
+                let stack_size = perm.card_sources.len();
+                let mut emitted = false;
+                for (source_index, source) in perm.card_sources.iter().enumerate() {
+                    if emitted {
+                        break;
+                    }
+                    let is_under = source_index + 1 < stack_size;
+                    let card_id = source.card_id(&game.card_data);
+                    let Some(effects) = game.effects_for_card(card_id, source.handle())
+                    else {
+                        continue;
+                    };
+                    for (slot, effect) in effects.iter().enumerate() {
+                        if effect.timing != EffectTiming::MainOnField {
+                            continue;
+                        }
+                        if is_under != effect.inherited {
+                            continue;
+                        }
+                        if effect.max_per_turn > 0
+                            && perm.activation_count(source.handle(), slot as u8)
+                                >= effect.max_per_turn
+                        {
+                            continue;
+                        }
+                        if let Some(cond) = &effect.condition {
+                            let ctx = EffectReadContext::new(
+                                game,
+                                source.handle(),
+                                Some(perm_handle),
+                                player_id,
+                            );
+                            if !cond(&ctx) {
+                                continue;
+                            }
+                        }
+                        let bit = FIELD_EFFECT_START
+                            + i as u16 * EFFECTS_PER_PERMANENT
+                            + FIELD_EFFECT_SLOT_FOR_MAIN;
+                        mask[bit as usize] = 1.0;
+                        emitted = true;
+                        break;
+                    }
+                }
+            }
+
+            // Trash [Main] (bits 1150-1194). One bit per trash slot,
+            // first-match-wins, mirroring `action_mask.py:216-225`.
+            let trash_limit = me.trash.len().min(TRASH_MAIN_LIMIT);
+            for t in 0..trash_limit {
+                let card = &me.trash[t];
+                let card_id = card.card_id(&game.card_data);
+                let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
+                    continue;
+                };
+                for effect in &effects {
+                    if effect.timing != EffectTiming::MainFromTrash {
+                        continue;
+                    }
+                    if let Some(cond) = &effect.condition {
+                        let ctx = EffectReadContext::new(
+                            game,
+                            card.handle(),
+                            None,
+                            player_id,
+                        );
+                        if !cond(&ctx) {
+                            continue;
+                        }
+                    }
+                    mask[(TRASH_EFFECT_START + t as u16) as usize] = 1.0;
+                    break;
                 }
             }
 
