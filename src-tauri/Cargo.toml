@@ -17,3 +17,8 @@ tauri-build = { version = "2", features = [] }
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+# Build the desktop app without the Python sidecar — the frontend talks to
+# the in-process Rust engine via Tauri `invoke()` commands only.
+# Pair with `VITE_ENGINE=rust` on the frontend build and the
+# `tauri.rust.conf.json` bundle config (which drops `externalBin`).
+no-sidecar = []

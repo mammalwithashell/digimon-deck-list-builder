@@ -15,7 +15,7 @@
 
 use std::collections::VecDeque;
 
-use crate::card_source::CardHandle;
+use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{EffectTiming, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
 
@@ -152,6 +152,30 @@ pub enum TriggerSource {
     /// (EndOfYourTurn, StartOfYourTurn, etc.). Effects are collected in
     /// battle-area order; the player is the controller of every entry.
     PlayerBattleArea(PlayerId),
+    /// A card revealed from security is firing `SecuritySkill` effects. The
+    /// defender is the controller of the triggers; the card itself lives in
+    /// `Game.pending_security` during resolution (it has been popped off the
+    /// security stack but not yet trashed). Only effects whose `timing` and
+    /// `security` flag match `SecuritySkill + security=true` are collected —
+    /// mirroring Python's `is_security_effect` filter.
+    SecurityRevealed {
+        defender: PlayerId,
+        card: CardHandle,
+    },
+}
+
+/// Transient per-security-check state. Lives on `Game` from the moment the
+/// defender's security card is popped until the check finishes (either the
+/// card is trashed or an effect plays it from security).
+///
+/// The `played` bit is raised by `EffectContext::play_from_security` — it
+/// signals the security-resolution loop that the card is now a Permanent on
+/// the field, and must NOT be trashed at the end of the check.
+#[derive(Debug, Clone)]
+pub struct PendingSecurity {
+    pub defender: PlayerId,
+    pub card: CardSource,
+    pub played: bool,
 }
 
 /// Mid-attack state. Held separately from the effect queue because interrupt

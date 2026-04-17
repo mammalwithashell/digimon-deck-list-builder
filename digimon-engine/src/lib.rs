@@ -18,6 +18,9 @@ pub mod selection;
 pub mod effect_queue;
 pub mod dna_digivolve;
 pub mod debug_runner;
+pub mod runners;
+pub mod logger;
+pub mod recorder;
 
 // Re-export key types at crate root
 pub use enums::*;
@@ -36,6 +39,9 @@ pub use effect_context::{EffectContext, EffectReadContext};
 pub use cards::{build_registry, CardEffectRegistry};
 pub use combat::AttackResult;
 pub use debug_runner::{DebugRunner, DebugRunnerBuilder};
+pub use runners::HeadlessRunner;
+pub use logger::{GameLogger, SilentLogger, VerboseLogger};
+pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedAction};
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,
     PendingSelection, QueuedEffect, SelectionCallback, SelectionError, SelectionKind,

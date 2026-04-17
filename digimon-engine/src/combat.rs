@@ -880,6 +880,18 @@ impl Game {
     }
 
     /// Resolve a single security card being revealed.
+    ///
+    /// Flow (mirrors Python's `Player.security_attack`, RUST_PYTHON_PARITY §2.5):
+    /// 1. Park `sec_card` in `Game.pending_security` so effect scripts can
+    ///    observe it and raise the `played` bit via `play_from_security`.
+    /// 2. Enqueue `SecuritySkill` triggers on the revealed card and drain.
+    ///    Effects that play the card from security raise
+    ///    `pending_security.played = true`.
+    /// 3. For `CardKind::Digimon`, run the DP battle against the attacker.
+    ///    Jamming on the attacker suppresses attacker deletion on a loss.
+    /// 4. Fire `OnLoseSecurity` on the revealed card (observer timing).
+    /// 5. If `played == false`, trash the card; otherwise it's already on
+    ///    the defender's field and `pending_security` is cleared.
     fn resolve_security_card(
         &mut self,
         attacker: PermanentHandle,
@@ -887,36 +899,79 @@ impl Game {
         defender_player: PlayerId,
     ) -> AttackResult {
         let kind = sec_card.card_kind(&self.card_data);
-        match kind {
-            CardKind::Digimon => {
-                // Battle attacker vs the security Digimon.
-                // Security Digimon has its base DP (no field modifiers).
+        let card_handle = sec_card.handle();
+
+        // Park the revealed card for the duration of the check. Effects
+        // access it through `EffectContext::play_from_security` / ctx queries.
+        self.pending_security = Some(crate::selection::PendingSecurity {
+            defender: defender_player,
+            card: sec_card,
+            played: false,
+        });
+
+        // Fire SecuritySkill effects for all card kinds. Digimon security
+        // cards with SecuritySkill text (rare, but Armor evolution etc. can
+        // produce them) should behave the same as Option/Tamer.
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::SecuritySkill,
+            crate::selection::TriggerSource::SecurityRevealed {
+                defender: defender_player,
+                card: card_handle,
+            },
+        );
+        self.drain_effect_queue();
+
+        // Determine battle outcome for Digimon-kind security (independent of
+        // whether the card was played — Python battles *after* the effect
+        // fires, and `play_from_security` leaves battle untouched because the
+        // battle comparison reads the card's printed DP, not its field form).
+        let mut outcome = AttackResult::SecurityCheckSurvived;
+        if kind == CardKind::Digimon {
+            if let Some(pending) = self.pending_security.as_ref() {
                 let attacker_dp = self.effective_dp(attacker).unwrap_or(0);
-                let sec_dp = sec_card.dp(&self.card_data).unwrap_or(0);
-                if attacker_dp >= sec_dp {
-                    // Attacker wins or ties: security Digimon is trashed,
-                    // attacker survives (ties against security favor the attacker
-                    // in Digimon TCG — the security Digimon is trashed).
-                    self.player_mut(defender_player).trash.push(sec_card);
-                    AttackResult::SecurityCheckSurvived
-                } else {
-                    // Security Digimon wins: attacker is deleted, security
-                    // Digimon is trashed (security is "consumed" either way).
-                    self.player_mut(defender_player).trash.push(sec_card);
-                    self.delete_permanent_with_effects(attacker);
-                    AttackResult::AttackerDeletedBySecurity
+                let sec_dp = pending.card.dp(&self.card_data).unwrap_or(0);
+                if attacker_dp < sec_dp {
+                    // Security Digimon wins the DP comparison. Jamming on
+                    // the attacker prevents the attacker from being deleted.
+                    if !self.modifiers.has_keyword(attacker, Keyword::Jamming) {
+                        self.delete_permanent_with_effects(attacker);
+                        outcome = AttackResult::AttackerDeletedBySecurity;
+                    }
                 }
             }
-            CardKind::Option | CardKind::Tamer => {
-                // Security effects would fire here. For Phase 4 MVP, just trash.
-                self.player_mut(defender_player).trash.push(sec_card);
-                AttackResult::SecurityCheckSurvived
+        }
+
+        // Fire OnLoseSecurity regardless of play-vs-trash outcome.
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnLoseSecurity,
+            crate::selection::TriggerSource::SecurityRevealed {
+                defender: defender_player,
+                card: card_handle,
+            },
+        );
+        self.drain_effect_queue();
+
+        // Dispose: trash the card unless an effect played it.
+        if let Some(pending) = self.pending_security.take() {
+            if !pending.played {
+                if kind == CardKind::DigiEgg {
+                    // Eggs in security are just trashed (shouldn't happen
+                    // normally — matches the pre-rewrite behavior).
+                    self.player_mut(defender_player).trash.push(pending.card);
+                } else {
+                    self.player_mut(defender_player).trash.push(pending.card);
+                }
             }
-            CardKind::DigiEgg => {
-                // Eggs in security are just trashed (shouldn't happen normally).
-                self.player_mut(defender_player).trash.push(sec_card);
-                AttackResult::SecurityCheckSurvived
-            }
+        }
+
+        // Legacy `match kind` block preserved for symmetry with AttackResult
+        // return shape — all non-Digimon kinds hit the default SurvivalSurvived
+        // outcome unless overridden by the Digimon DP branch above.
+        match kind {
+            CardKind::Digimon
+            | CardKind::Option
+            | CardKind::Tamer
+            | CardKind::DigiEgg => outcome,
         }
     }
 

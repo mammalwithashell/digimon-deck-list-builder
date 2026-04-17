@@ -255,6 +255,59 @@ impl CardEffect for Test010 {
     }
 }
 
+/// TEST-020: "[Security] Draw 2 cards."
+/// Pilot for `SecuritySkill` trigger-and-trash — exercises the
+/// security-reveal → enqueue → drain → trash pipeline with a simple
+/// draw effect. The revealed card ends up in the defender's trash.
+pub struct Test020;
+
+impl CardEffect for Test020 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::security(card)
+            .name("[Security] Draw 2")
+            .process(|ctx| {
+                let me = ctx.player;
+                ctx.draw(me, 2);
+            })
+            .build()]
+    }
+}
+
+/// TEST-021: "[Security] Play this card without paying its cost."
+/// Pilot for `play_from_security` — exercises the `security_played` bit
+/// so the revealed card stays on the defender's field instead of being
+/// trashed. Exercises the `pending_security` transient state.
+pub struct Test021;
+
+impl CardEffect for Test021 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::security(card)
+            .name("[Security] Play self without paying cost")
+            .process(|ctx| {
+                ctx.play_from_security();
+            })
+            .build()]
+    }
+}
+
+/// TEST-022: "[Security] Gain 3 memory."
+/// Pilot for observer-timing parity — a second non-destructive effect
+/// so the harness can distinguish "effect fired" (memory changed) from
+/// "effect fired AND card is on field" (TEST-021's signature). Trashes
+/// the revealed card after firing.
+pub struct Test022;
+
+impl CardEffect for Test022 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::security(card)
+            .name("[Security] Gain 3 memory")
+            .process(|ctx| {
+                ctx.gain_memory(3);
+            })
+            .build()]
+    }
+}
+
 /// TEST-008: "End of your turn: Lose 3 memory."
 /// Paired with TEST-006 in drainer tests to disambiguate resolution
 /// order from final-state aggregates.
@@ -286,6 +339,9 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-012", Arc::new(Test012));
     registry.insert("TEST-013", Arc::new(Test013));
     registry.insert("TEST-014", Arc::new(Test014));
+    registry.insert("TEST-020", Arc::new(Test020));
+    registry.insert("TEST-021", Arc::new(Test021));
+    registry.insert("TEST-022", Arc::new(Test022));
 
     // Suppress unused warning on ModifierType (referenced via add_dp_modifier helper).
     let _ = ModifierType::ChangeDp;

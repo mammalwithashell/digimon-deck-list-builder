@@ -65,7 +65,20 @@ pub enum EffectTiming {
     OnDeletion,
     WhenAttacking,
     OnBlock,
-    SecurityEffect,
+    /// Primary security-trigger timing — fires for each effect on the card
+    /// revealed during a security check. Mirrors Python's `SecuritySkill`
+    /// (`enums.py`). Effects that should run here must also set the
+    /// `security` flag on the `Effect` struct (builder: `.security_flag()`).
+    SecuritySkill,
+    /// Observer timing fired once per security reveal **after** the revealed
+    /// card's own effects resolve. Consumed by other-zone effects that watch
+    /// for security checks (e.g. "When security is checked, gain 1 memory").
+    /// Mirrors Python's `OnSecurityCheck`.
+    OnSecurityCheck,
+    /// Fires when a card leaves the security stack — whether it's trashed
+    /// after resolution or played from security by an effect. Mirrors
+    /// Python's `OnLoseSecurity`.
+    OnLoseSecurity,
     CounterEffect,
 
     // Turn-based

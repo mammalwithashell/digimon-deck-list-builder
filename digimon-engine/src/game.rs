@@ -7,11 +7,12 @@ use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw};
+use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
-use crate::selection::{EffectQueue, PendingAttack, PendingSelection, SelectionError};
+use crate::selection::{EffectQueue, PendingAttack, PendingSecurity, PendingSelection, SelectionError};
 
 /// Reasons `Game::activate_overclock` can fail. Exposed so callers
 /// (Tauri commands, tests, Python bindings) can distinguish between
@@ -98,12 +99,23 @@ pub struct Game {
     /// the combat state machine, cleared by `cleanup_attack`.
     /// Always `None` until the combat state machine lands (PR4).
     pub pending_attack: Option<PendingAttack>,
+    /// Transient state for an in-progress security check. Set by
+    /// `resolve_security_card` before firing `SecuritySkill` effects and
+    /// cleared afterward. `EffectContext::play_from_security` inspects and
+    /// mutates this slot to keep the revealed card from being trashed.
+    pub pending_security: Option<PendingSecurity>,
     /// Safety rail matching Python's `_resolve_effect_stack` max-iterations=50
     /// cap. Incremented per drain step; reset to 0 when the queue empties.
     /// Prevents a self-triggering chain from hanging the engine.
     /// Consumed by the drainer in PR2.
     #[allow(dead_code)]
     pub(crate) effect_chain_depth: u16,
+
+    /// Game logger. Defaults to `SilentLogger` (zero-overhead for RL
+    /// training). Callers that want human-readable traces install a
+    /// `VerboseLogger` via `set_logger`. Parity with Python's
+    /// `Game.logger` field.
+    pub logger: Box<dyn GameLogger>,
 }
 
 impl Game {
@@ -211,7 +223,9 @@ impl Game {
             pending_selection: None,
             effect_queue: EffectQueue::new(),
             pending_attack: None,
+            pending_security: None,
             effect_chain_depth: 0,
+            logger: Box::new(SilentLogger),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -227,6 +241,13 @@ impl Game {
     /// Get the current turn player's ID.
     pub fn turn_player(&self) -> PlayerId {
         self.turn_order[self.turn_player_idx]
+    }
+
+    /// Swap out the game logger (defaults to `SilentLogger`). Callers
+    /// that want to capture trace/reject messages should install a
+    /// `VerboseLogger` here.
+    pub fn set_logger(&mut self, logger: Box<dyn GameLogger>) {
+        self.logger = logger;
     }
 
     // ─── Mulligan ────────────────────────────────────────────────────
@@ -1082,6 +1103,293 @@ impl Game {
             return false;
         }
         player.battle_area[field_index].digivolve(card, turn);
+        true
+    }
+
+    /// Full "digivolve from hand" action — Python parity for
+    /// `action_digivolve(field_idx, hand_idx)`. Validates phase, indices,
+    /// `CannotDigivolve` modifier, and evo-cost fit; pays memory; removes
+    /// the card from hand; stacks it onto the target permanent; draws 1;
+    /// fires `WhenDigivolving` triggers and drains the effect queue;
+    /// finally calls `check_turn_end`.
+    ///
+    /// Deferred (see RUST_PYTHON_PARITY.md):
+    /// - Cost reductions (`WhenWouldDigivolve`, `CHANGE_DIGIVOLUTION_COST`)
+    /// - `digivolve_observer` mechanism (no Rust equivalent yet)
+    /// - Contextual modifier predicates (`{'digivolving_card': card}`)
+    pub fn digivolve_from_hand(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+    ) -> bool {
+        if self.current_phase != GamePhase::Main {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: not in Main phase (phase={:?})",
+                self.current_phase
+            ));
+            return false;
+        }
+        let player = self.player(player_id);
+        if hand_index >= player.hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: hand index {} out of range (hand size={})",
+                hand_index,
+                player.hand.len()
+            ));
+            return false;
+        }
+        if field_index >= player.battle_area.len() {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: field index {} out of range (battle_area size={})",
+                field_index,
+                player.battle_area.len()
+            ));
+            return false;
+        }
+        let handle = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        if self.modifiers.has(handle, ModifierType::CannotDigivolve) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: permanent at field index {} blocked by CannotDigivolve modifier",
+                field_index
+            ));
+            return false;
+        }
+
+        let card = player.hand[hand_index].clone();
+        let perm = &player.battle_area[field_index];
+        if !self.can_digivolve(&card, perm) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: card {} cannot digivolve onto {} (evo-cost mismatch)",
+                card.card_id(&self.card_data),
+                perm.top_card().card_id(&self.card_data),
+            ));
+            return false;
+        }
+
+        let base_level = perm.top_card().level(&self.card_data).unwrap();
+        let base_colors = perm.top_card().colors(&self.card_data);
+        let evo_costs = &self.card_data[card.data_index].evo_costs;
+        let cost = evo_costs
+            .iter()
+            .filter(|ec| {
+                ec.level == base_level
+                    && crate::action::mask::evo_color(ec.card_color)
+                        .map(|c| base_colors.contains(&c))
+                        .unwrap_or(false)
+            })
+            .map(|ec| ec.memory_cost)
+            .min()
+            .expect("can_digivolve guarantees at least one matching evo_cost");
+
+        if !self.pay_memory(cost) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_from_hand: cannot pay memory cost {} (current memory={})",
+                cost, self.memory
+            ));
+            return false;
+        }
+
+        let turn = self.turn_count;
+        let removed = self.player_mut(player_id).hand.remove(hand_index);
+        self.player_mut(player_id).battle_area[field_index].digivolve(removed, turn);
+
+        self.player_mut(player_id).draw();
+
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            crate::selection::TriggerSource::Permanent(handle),
+        );
+        self.drain_effect_queue();
+
+        // TODO(parity): digivolve_observer mechanism not ported.
+
+        self.check_turn_end();
+        true
+    }
+
+    /// Digivolve a hand card onto the breeding-area permanent. Python
+    /// parity for `action_digivolve_breeding(hand_idx)` — same flow as
+    /// `digivolve_from_hand` minus the trigger/observer firing (breeding
+    /// digivolve does NOT fire `WhenDigivolving`).
+    pub fn digivolve_from_hand_onto_breeding(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> bool {
+        if self.current_phase != GamePhase::Main {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: not in Main phase (phase={:?})",
+                self.current_phase
+            ));
+            return false;
+        }
+        let player = self.player(player_id);
+        if hand_index >= player.hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: hand index {} out of range (hand size={})",
+                hand_index,
+                player.hand.len()
+            ));
+            return false;
+        }
+        let Some(breeding) = player.breeding_area.as_ref() else {
+            self.logger.log("[Rejected] digivolve_breeding: breeding area is empty");
+            return false;
+        };
+
+        let card = player.hand[hand_index].clone();
+        if !self.can_digivolve(&card, breeding) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: card {} cannot digivolve onto breeding {} (evo-cost mismatch)",
+                card.card_id(&self.card_data),
+                breeding.top_card().card_id(&self.card_data),
+            ));
+            return false;
+        }
+
+        let base_level = breeding.top_card().level(&self.card_data).unwrap();
+        let base_colors = breeding.top_card().colors(&self.card_data);
+        let evo_costs = &self.card_data[card.data_index].evo_costs;
+        let cost = evo_costs
+            .iter()
+            .filter(|ec| {
+                ec.level == base_level
+                    && crate::action::mask::evo_color(ec.card_color)
+                        .map(|c| base_colors.contains(&c))
+                        .unwrap_or(false)
+            })
+            .map(|ec| ec.memory_cost)
+            .min()
+            .expect("can_digivolve guarantees at least one matching evo_cost");
+
+        if !self.pay_memory(cost) {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: cannot pay memory cost {} (current memory={})",
+                cost, self.memory
+            ));
+            return false;
+        }
+
+        let turn = self.turn_count;
+        let removed = self.player_mut(player_id).hand.remove(hand_index);
+        let player_mut = self.player_mut(player_id);
+        if let Some(breeding) = player_mut.breeding_area.as_mut() {
+            breeding.digivolve(removed, turn);
+        }
+        player_mut.draw();
+
+        // Breeding digivolve does NOT fire WhenDigivolving (Python parity).
+        self.check_turn_end();
+        true
+    }
+
+    /// Install a `SelectMaterial` pending selection for DNA digivolve.
+    /// Python parity for `_initiate_dna_digivolve(hand_idx)`. The
+    /// second-material selection + actual digivolve execution is stubbed
+    /// inside the callback and tracked as `TODO(dna-digivolve-execute)`.
+    pub fn initiate_dna_digivolve(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> bool {
+        if self.current_phase != GamePhase::Main {
+            self.logger.log(&format!(
+                "[Rejected] initiate_dna_digivolve: not in Main phase (phase={:?})",
+                self.current_phase
+            ));
+            return false;
+        }
+        let player = self.player(player_id);
+        if hand_index >= player.hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] initiate_dna_digivolve: hand index {} out of range (hand size={})",
+                hand_index,
+                player.hand.len()
+            ));
+            return false;
+        }
+        let card = player.hand[hand_index].clone();
+        let evo_meta = &self.card_data[card.data_index];
+        if evo_meta.dna_costs.is_empty() {
+            self.logger.log(&format!(
+                "[Rejected] initiate_dna_digivolve: card {} has no DNA costs",
+                card.card_id(&self.card_data)
+            ));
+            return false;
+        }
+        if !crate::dna_digivolve::has_valid_dna_targets(
+            evo_meta,
+            &player.battle_area,
+            &self.card_data,
+        ) {
+            self.logger.log(&format!(
+                "[Rejected] initiate_dna_digivolve: no valid DNA material pair for {}",
+                card.card_id(&self.card_data)
+            ));
+            return false;
+        }
+
+        // Collect valid first-material battle_area indices: those that
+        // appear in at least one valid pair (either ordering).
+        let mut first_targets: Vec<u16> = Vec::new();
+        for i in 0..player.battle_area.len() {
+            for j in 0..player.battle_area.len() {
+                if i == j {
+                    continue;
+                }
+                if crate::dna_digivolve::can_dna_digivolve(
+                    evo_meta,
+                    &player.battle_area[i],
+                    &player.battle_area[j],
+                    &self.card_data,
+                ) {
+                    first_targets.push(i as u16);
+                    break;
+                }
+            }
+        }
+        first_targets.sort();
+        first_targets.dedup();
+        if first_targets.is_empty() {
+            self.logger.log(
+                "[Rejected] initiate_dna_digivolve: no valid first-material indices after filter",
+            );
+            return false;
+        }
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectMaterial;
+
+        let selecting_player = player_id;
+        let source_card = card.handle();
+
+        self.pending_selection = Some(PendingSelection {
+            kind: crate::selection::SelectionKind::Material,
+            selecting_player,
+            previous_phase,
+            valid_action_ids: first_targets,
+            is_optional: false,
+            prompt: "Select first DNA material".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: None,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                // TODO(dna-digivolve-execute): decode first material
+                // index, install second-material selection, and on its
+                // resolution remove both materials from battle_area,
+                // create a new permanent carrying the evo card with
+                // both materials in the stack, pay the DnaCost
+                // memory_cost, fire WhenDigivolving. See
+                // `action_decoder.py::_dna_select_second` +
+                // `player.dna_digivolve` for the Python reference.
+                let _ = (game, action_id);
+            }),
+            on_decline: None,
+        });
         true
     }
 

@@ -875,3 +875,58 @@ class SceneInfoResponse(BaseModel):
     name: str
     display_name: str
     tournament_count: int = 0
+
+
+# ── Patch Notes ─────────────────────────────────────────────────────────
+
+class KnownIssueCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=4000)
+
+
+class KnownIssueUpdateRequest(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=4000)
+
+
+class KnownIssueResponse(BaseModel):
+    id: str
+    title: str
+    description: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ReleaseCreateRequest(BaseModel):
+    version: str = Field(..., min_length=1, max_length=64)
+    release_date: datetime
+    title: Optional[str] = Field(None, max_length=200)
+    added: List[str] = Field(default_factory=list)
+    changed: List[str] = Field(default_factory=list)
+    fixed: List[str] = Field(default_factory=list)
+
+
+class ReleaseUpdateRequest(BaseModel):
+    version: Optional[str] = Field(None, min_length=1, max_length=64)
+    release_date: Optional[datetime] = None
+    title: Optional[str] = Field(None, max_length=200)
+    added: Optional[List[str]] = None
+    changed: Optional[List[str]] = None
+    fixed: Optional[List[str]] = None
+
+
+class ReleaseResponse(BaseModel):
+    id: str
+    version: str
+    release_date: datetime
+    title: Optional[str]
+    added: List[str]
+    changed: List[str]
+    fixed: List[str]
+    created_at: datetime
+    updated_at: datetime
+
+
+class PatchNotesResponse(BaseModel):
+    known_issues: List[KnownIssueResponse]
+    releases: List[ReleaseResponse]

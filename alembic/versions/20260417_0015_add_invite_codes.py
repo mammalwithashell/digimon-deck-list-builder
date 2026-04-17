@@ -1,7 +1,7 @@
 """add invite_codes table for alpha registration gating
 
-Revision ID: 20260417_0014
-Revises: 20260414_0013
+Revision ID: 20260417_0015
+Revises: 20260415_0014
 Create Date: 2026-04-17 12:00:00
 """
 
@@ -9,8 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "20260417_0014"
-down_revision = "20260414_0013"
+revision = "20260417_0015"
+down_revision = "20260415_0014"
 branch_labels = None
 depends_on = None
 

@@ -9,6 +9,7 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { GamePage } from '@/pages/GamePage';
 import { DeckBuilderPage } from '@/pages/DeckBuilderPage';
 import { LobbyPage } from '@/pages/LobbyPage';
+import { PatchNotesPage } from '@/pages/PatchNotesPage';
 import { useAuthStore } from '@/stores/authStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
@@ -21,6 +22,7 @@ const BarracksPage = lazy(() => import('@/pages/BarracksPage').then(m => ({ defa
 const ArenaPage = lazy(() => import('@/pages/ArenaPage').then(m => ({ default: m.ArenaPage })));
 const GauntletPage = lazy(() => import('@/pages/GauntletPage').then(m => ({ default: m.GauntletPage })));
 const DeckPoolPage = lazy(() => import('@/pages/DeckPoolPage').then(m => ({ default: m.DeckPoolPage })));
+const AdminPatchNotesPage = lazy(() => import('@/pages/AdminPatchNotesPage').then(m => ({ default: m.AdminPatchNotesPage })));
 
 function suspended(Component: React.LazyExoticComponent<React.ComponentType>) {
   return (
@@ -42,6 +44,7 @@ export function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/patch-notes" element={<PatchNotesPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route element={<AuthGuard />}>
@@ -60,6 +63,7 @@ export function App() {
               <Route path="/admin/gauntlet/:id" element={suspended(GauntletPage)} />
               <Route path="/admin/deck-pools" element={suspended(DeckPoolPage)} />
               <Route path="/admin/deck-pools/:id" element={suspended(DeckPoolPage)} />
+              <Route path="/admin/patch-notes" element={suspended(AdminPatchNotesPage)} />
             </Route>
           )}
         </Route>

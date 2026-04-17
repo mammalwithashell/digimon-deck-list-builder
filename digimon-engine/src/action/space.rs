@@ -9,6 +9,19 @@ pub const PLAY_HAND_START: u16 = 0;
 pub const PLAY_HAND_END: u16 = 30; // exclusive
 pub const HAND_EFFECT_START: u16 = 30;
 pub const HAND_EFFECT_END: u16 = 60;
+// Phase-disambiguated selection sub-ranges sharing the 30-59 raw ID space.
+// Under `GamePhase::SelectReveal`, IDs 30-39 index revealed cards;
+// under `GamePhase::SelectSecurity`, IDs 40-49 index the selecting player's
+// own security stack and 50-59 index the opponent's. Matches Python's
+// `SEL_REVEALED_START` / `SEL_MY_SECURITY_START` / `SEL_OPP_SECURITY_START`.
+pub const SEL_REVEAL_START: u16 = 30;
+pub const SEL_REVEAL_END: u16 = 40;
+pub const SEL_MY_SECURITY_START: u16 = 40;
+pub const SEL_MY_SECURITY_END: u16 = 50;
+pub const SEL_OPP_SECURITY_START: u16 = 50;
+pub const SEL_OPP_SECURITY_END: u16 = 60;
+pub const MAX_SECURITY: usize = 10;
+pub const MAX_REVEALED: usize = 10;
 pub const HATCH: u16 = 60;
 pub const MOVE_FROM_BREEDING: u16 = 61;
 pub const PASS: u16 = 62;

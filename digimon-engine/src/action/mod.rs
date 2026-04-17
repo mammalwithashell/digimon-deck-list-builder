@@ -1,3 +1,4 @@
+pub mod decode;
 pub mod mask;
 pub mod space;
 
