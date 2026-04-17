@@ -290,8 +290,13 @@ export function AdminPatchNotesPage() {
 
   const handleDeleteIssue = async (issue: KnownIssue) => {
     if (!window.confirm(`Delete known issue "${issue.title}"?`)) return;
-    await deleteKnownIssue(issue.id);
-    await refresh();
+    setError(null);
+    try {
+      await deleteKnownIssue(issue.id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete known issue');
+    }
   };
 
   const handleCreateRelease = async (payload: ReleaseInput) => {
@@ -308,8 +313,13 @@ export function AdminPatchNotesPage() {
 
   const handleDeleteRelease = async (release: Release) => {
     if (!window.confirm(`Delete release v${release.version}?`)) return;
-    await deleteRelease(release.id);
-    await refresh();
+    setError(null);
+    try {
+      await deleteRelease(release.id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete release');
+    }
   };
 
   return (

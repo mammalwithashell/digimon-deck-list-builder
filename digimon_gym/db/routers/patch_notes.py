@@ -183,7 +183,7 @@ async def update_release(
         await db.rollback()
         raise HTTPException(
             status_code=409,
-            detail=f"Release with version '{request.version}' already exists",
+            detail="Release version must be unique",
         )
     await db.refresh(release)
     return _release_to_response(release)
