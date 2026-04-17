@@ -55,7 +55,17 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
         GamePhase::Main => {
             // --- Play cards (0-29) ---
             let max_hand = (me.hand.len() as u16).min(PLAY_HAND_END);
+            // §4.7c CANNOT_PLAY_FROM_HAND — any active modifier of this
+            // type (anywhere in the registry) suppresses every hand-play
+            // bit. Python's context discriminant (the specific `card`
+            // argument) isn't carried in Rust — tracked as §4.7x.
+            let play_blocked = game
+                .modifiers
+                .any_with_type(ModifierType::CannotPlayFromHand);
             for i in 0..max_hand as usize {
+                if play_blocked {
+                    continue;
+                }
                 let card = &me.hand[i];
                 let cost = card.play_cost(&game.card_data) as i16;
                 // Memory check: card is affordable if memory - cost >= memory_min

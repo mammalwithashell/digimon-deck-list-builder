@@ -531,3 +531,42 @@ fn mask_dna_digivolve_skips_cards_without_dna_costs() {
         "Digimon without dna_costs must not emit the DNA bit even if a pair exists",
     );
 }
+
+// ─── §4.7c CANNOT_PLAY_FROM_HAND ───────────────────────────────────────
+
+/// If any permanent has an active CannotPlayFromHand modifier, every
+/// hand-play bit (0-29) is suppressed. Unconditional semantics — Rust
+/// doesn't carry Python's context discriminants (§4.7x).
+#[test]
+fn mask_cannot_play_from_hand_suppresses_all_hand_bits() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon_level("BLOCKER", CardColor::Red, 3))
+        .add_card(make_digimon_level("HAND-A", CardColor::Red, 3))
+        .add_card(make_digimon_level("HAND-B", CardColor::Blue, 3))
+        .hand(0, &["HAND-A", "HAND-B"])
+        .start();
+
+    let blocker = r.place_on_field(0, "BLOCKER", Some(0));
+    r.game.set_memory(5);
+    r.game.enter_main_phase();
+
+    // Baseline: both hand cards are playable (affordable + Digimon kind).
+    let mask_baseline = build_action_mask(&r.game, 0);
+    assert_eq!(mask_baseline[0], 1.0, "HAND-A should be playable without the modifier");
+    assert_eq!(mask_baseline[1], 1.0, "HAND-B should be playable without the modifier");
+
+    // Grant CannotPlayFromHand to the blocker.
+    r.game.modifiers.add(
+        blocker,
+        digimon_engine::modifiers::ModifierEntry {
+            modifier: ModifierType::CannotPlayFromHand,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: 0,
+        },
+    );
+
+    let mask_blocked = build_action_mask(&r.game, 0);
+    assert_eq!(mask_blocked[0], 0.0, "HAND-A suppressed while modifier is active");
+    assert_eq!(mask_blocked[1], 0.0, "HAND-B suppressed while modifier is active");
+}
