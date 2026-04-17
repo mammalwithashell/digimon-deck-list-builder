@@ -33,6 +33,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/deckbuilder', label: 'Deck Builder' },
       { to: '/game', label: 'Play' },
+      { to: '/settings/models', label: 'AI Models' },
     ],
   },
   {

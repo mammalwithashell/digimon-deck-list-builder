@@ -36,6 +36,51 @@ class MintInviteCodesRequest(BaseModel):
     note: Optional[str] = None
 
 
+# ── Model Catalog ───────────────────────────────────────────────────────
+
+class ModelVersionPublic(BaseModel):
+    version: str
+    size_bytes: int
+    sha256: str
+    url: str
+    min_engine_version: Optional[str] = None
+    onnx_input_shapes: Optional[Dict[str, Any]] = None
+    changelog: str
+    is_deprecated: bool
+    released_at: datetime
+
+
+class ModelRecordPublic(BaseModel):
+    slug: str
+    name: str
+    arch: Literal["mlp", "lstm"]
+    description: str
+    deck_pool: Optional[str] = None
+    min_engine_version: str
+    is_deprecated: bool
+    latest: Optional[ModelVersionPublic] = None
+    versions: List[ModelVersionPublic] = Field(default_factory=list)
+
+
+class ModelRecordCreate(BaseModel):
+    slug: str = Field(..., pattern=r"^[a-z0-9][a-z0-9-]{1,63}$")
+    name: str = Field(..., min_length=1, max_length=128)
+    arch: Literal["mlp", "lstm"]
+    description: str = ""
+    deck_pool: Optional[str] = None
+    min_engine_version: str = Field(default="0.1.0")
+    is_public: bool = True
+
+
+class ModelVersionUploadMeta(BaseModel):
+    """Companion metadata for the multipart upload. Sent as a stringified
+    JSON field named `meta` alongside the `.onnx` file."""
+
+    version: str = Field(..., pattern=r"^\d+\.\d+\.\d+(?:[-+][a-z0-9.-]+)?$")
+    changelog: str = ""
+    min_engine_version: Optional[str] = None
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str

@@ -93,5 +93,5 @@ export function getGameClient(isLocalGame: boolean = true) {
   return isTauri && isLocalGame ? localClient : client;
 }
 
-export { isTauri, LOCAL_SIDECAR_URL };
+export { isTauri, localClient, LOCAL_SIDECAR_URL };
 export default client;

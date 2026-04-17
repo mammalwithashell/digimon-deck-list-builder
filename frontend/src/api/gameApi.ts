@@ -17,6 +17,11 @@ interface CreateGameParams {
   player2_type?: string;
   player1_policy?: string;
   player2_policy?: string;
+  /** Slug from the model catalog or legacy `.onnx` filename. The sidecar
+   *  resolves both against its cache + bundled dirs. Pair with
+   *  `player*_policy = 'trained'` so the engine actually loads it. */
+  player1_model?: string;
+  player2_model?: string;
   agent_action_delay_ms?: number;
 }
 

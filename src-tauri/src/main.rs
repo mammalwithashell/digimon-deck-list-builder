@@ -83,18 +83,50 @@ fn spawn_sidecar(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::W
             let models_dir = resource_dir.join("resources").join("models");
             let models_dir_str = models_dir.to_string_lossy().to_string();
 
+            // Per-user writable cache for models downloaded from the hosted
+            // /models catalog. Tauri's `app_data_dir` resolves to the
+            // OS-appropriate location (AppData on Windows, Application
+            // Support on macOS, ~/.config on Linux).
+            let cache_dir = app
+                .path()
+                .app_data_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."))
+                .join("models");
+            let _ = std::fs::create_dir_all(&cache_dir);
+            let cache_dir_str = cache_dir.to_string_lossy().to_string();
+
+            // Optional: hosted-API base URL for `/models` catalog fetches.
+            // Resolved from the `DIGIMON_API_BASE` env var — empty string
+            // means "no remote catalog; bundled-only mode".
+            let api_base = std::env::var("DIGIMON_API_BASE").unwrap_or_default();
+
             let port_state: Arc<Mutex<Option<u16>>> = Arc::new(Mutex::new(None));
             let child_state: Arc<Mutex<Option<tauri_plugin_shell::process::CommandChild>>> =
                 Arc::new(Mutex::new(None));
 
             let app_handle = app.handle().clone();
 
+            // Build the arg vector once so the initial spawn and the
+            // respawn path stay in lock-step.
+            let mut sidecar_args: Vec<String> = vec![
+                "--port".into(),
+                "8321".into(),
+                "--models-dir".into(),
+                models_dir_str.clone(),
+                "--models-cache-dir".into(),
+                cache_dir_str.clone(),
+            ];
+            if !api_base.is_empty() {
+                sidecar_args.push("--catalog-api-base".into());
+                sidecar_args.push(api_base.clone());
+            }
+
             // Spawn the Python sidecar (game engine only, no DB/auth)
             let (rx, child) = app_handle
                 .shell()
                 .sidecar("digimon-server")
                 .expect("failed to create sidecar command")
-                .args(["--port", "8321", "--models-dir", &models_dir_str])
+                .args(&sidecar_args)
                 .spawn()
                 .expect("failed to spawn sidecar");
 
@@ -104,7 +136,7 @@ fn spawn_sidecar(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::W
             let port_clone = Arc::clone(&port_state);
             let child_clone = Arc::clone(&child_state);
             let handle_clone = app_handle.clone();
-            let models_dir_clone = models_dir_str.clone();
+            let sidecar_args_clone = sidecar_args.clone();
 
             // Log sidecar output, parse port, and handle respawn
             tauri::async_runtime::spawn(async move {
@@ -149,7 +181,7 @@ fn spawn_sidecar(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::W
                                 .shell()
                                 .sidecar("digimon-server")
                                 .expect("failed to create sidecar command")
-                                .args(["--port", "8321", "--models-dir", &models_dir_clone])
+                                .args(&sidecar_args_clone)
                                 .spawn()
                             {
                                 Ok((new_rx, new_child)) => {

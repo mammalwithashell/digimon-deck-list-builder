@@ -11,6 +11,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -189,19 +192,89 @@ def _verify_lstm(policy, wrapper, onnx_path: str) -> None:
 # CLI
 # ---------------------------------------------------------------------------
 
+def _sha256_file(path: Path, chunk_size: int = 1 * 1024 * 1024) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(chunk_size), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def write_metadata_sidecar(
+    onnx_path: Path,
+    arch: str,
+    engine_version: str,
+    min_engine_version: str | None,
+    changelog: str,
+) -> Path:
+    """Write `{onnx_path}.meta.json` alongside the exported model.
+
+    The companion JSON is what the admin upload endpoint expects in its
+    `meta` form field — consuming it in CI removes a manual JSON-typing
+    step. Fields here are the union of `ModelVersionUploadMeta` plus
+    extras (sha256, size, arch, exported_at) that the upload handler
+    recomputes server-side but that also let a human eyeball the file.
+    """
+    sha = _sha256_file(onnx_path)
+    size = onnx_path.stat().st_size
+    meta = {
+        "arch": arch,
+        "engine_version": engine_version,
+        "min_engine_version": min_engine_version,
+        "changelog": changelog,
+        "size_bytes": size,
+        "sha256": sha,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+    }
+    out = onnx_path.with_suffix(onnx_path.suffix + ".meta.json")
+    out.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    return out
+
+
 def main():
     parser = argparse.ArgumentParser(description="Export SB3 models to ONNX")
     parser.add_argument("--type", choices=["mlp", "lstm"], required=True)
     parser.add_argument("--input", required=True, help="Path to SB3 .zip checkpoint")
     parser.add_argument("--output", required=True, help="Output .onnx path")
+    parser.add_argument(
+        "--emit-metadata",
+        action="store_true",
+        help="Write a {output}.meta.json sidecar usable as the `meta` field on /admin/models/{slug}/versions uploads.",
+    )
+    parser.add_argument(
+        "--engine-version",
+        default="0.1.0",
+        help="Engine version this model was trained against (baked into the metadata sidecar).",
+    )
+    parser.add_argument(
+        "--min-engine-version",
+        default=None,
+        help="Lowest engine version that can still load this model (None = same as --engine-version).",
+    )
+    parser.add_argument(
+        "--changelog",
+        default="",
+        help="Release notes for the model. Shown in the client settings UI.",
+    )
     args = parser.parse_args()
 
-    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    out = Path(args.output)
+    out.parent.mkdir(parents=True, exist_ok=True)
 
     if args.type == "mlp":
         export_mlp(args.input, args.output)
     else:
         export_lstm(args.input, args.output)
+
+    if args.emit_metadata:
+        meta_path = write_metadata_sidecar(
+            onnx_path=out,
+            arch=args.type,
+            engine_version=args.engine_version,
+            min_engine_version=args.min_engine_version or args.engine_version,
+            changelog=args.changelog,
+        )
+        print(f"Wrote metadata sidecar: {meta_path}")
 
 
 if __name__ == "__main__":

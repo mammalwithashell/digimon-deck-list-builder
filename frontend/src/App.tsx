@@ -23,6 +23,7 @@ const ArenaPage = lazy(() => import('@/pages/ArenaPage').then(m => ({ default: m
 const GauntletPage = lazy(() => import('@/pages/GauntletPage').then(m => ({ default: m.GauntletPage })));
 const DeckPoolPage = lazy(() => import('@/pages/DeckPoolPage').then(m => ({ default: m.DeckPoolPage })));
 const AdminPatchNotesPage = lazy(() => import('@/pages/AdminPatchNotesPage').then(m => ({ default: m.AdminPatchNotesPage })));
+const SettingsModelsPage = lazy(() => import('@/pages/SettingsModelsPage'));
 
 function suspended(Component: React.LazyExoticComponent<React.ComponentType>) {
   return (
@@ -51,6 +52,7 @@ export function App() {
             <Route path="/lobby" element={<LobbyPage />} />
             <Route path="/game/:id?" element={<GamePage />} />
             <Route path="/deckbuilder/:id?" element={<DeckBuilderPage />} />
+            <Route path="/settings/models" element={suspended(SettingsModelsPage)} />
           </Route>
           {!IS_DESKTOP && (
             <Route element={<RoleGuard allowedRoles={['admin']} />}>

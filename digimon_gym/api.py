@@ -21,6 +21,7 @@ from digimon_gym.logging_setup import RequestIdMiddleware, configure_logging, co
 from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.card_registry import CardRegistry
 from digimon_gym.db.routers import admin_ai as admin_ai_router
+from digimon_gym.db.routers import admin_models as admin_models_router
 from digimon_gym.db.routers import training as training_router
 from digimon_gym.db.routers import assets as assets_router
 from digimon_gym.db.routers import auth as auth_router
@@ -34,6 +35,7 @@ from digimon_gym.routers import deck_tools
 from digimon_gym.routers import games
 from digimon_gym.routers import health
 from digimon_gym.routers import lobby
+from digimon_gym.routers import models as models_router
 from digimon_gym.routers import recordings
 from digimon_gym.routers import replays
 from digimon_gym.routers import simulations
@@ -86,6 +88,7 @@ app.include_router(assets_router.router)
 app.include_router(issues_router.router)
 app.include_router(patch_notes_router.router)
 app.include_router(admin_ai_router.router)
+app.include_router(admin_models_router.router)
 app.include_router(invites_router.router)
 app.include_router(training_router.router)
 
@@ -97,6 +100,7 @@ app.include_router(recordings.router)
 app.include_router(replays.router)
 app.include_router(deck_tools.router)
 app.include_router(lobby.router)
+app.include_router(models_router.router)
 app.include_router(ws_games.router)
 app.include_router(deck_optimizer.router)
 

@@ -33,6 +33,8 @@ import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
+import { useModelStore } from '@/stores/modelStore';
+import { modelReferenceForEntry, isEntryAvailable } from '@/api/modelsApi';
 import * as gameApi from '@/api/gameApi';
 import * as deckApiMod from '@/api/deckApi';
 import {
@@ -91,7 +93,15 @@ export function GamePage() {
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [opponentDeckId, setOpponentDeckId] = useState<string>('');
   const [agentType, setAgentType] = useState<string>('greedy');
+  const [agentModelSlug, setAgentModelSlug] = useState<string>('');
   const [starting, setStarting] = useState(false);
+  const modelStore = useModelStore();
+  useEffect(() => {
+    // Lazy-load the model catalog on first render so the picker has
+    // something to show; refresh()'s own internal cache keeps this cheap.
+    if (modelStore.manifest === null) void modelStore.refresh();
+  }, [modelStore]);
+  const availableModels = modelStore.listModels().filter(isEntryAvailable);
 
   // Hydrate store from URL param when navigating to /game/:id
   useEffect(() => {
@@ -165,7 +175,8 @@ export function GamePage() {
         deck2: [...oppDeck.egg_deck, ...oppDeck.main_deck],
         player1_type: 'human',
         player2_type: 'agent',
-        player2_policy: agentType,
+        player2_policy: agentModelSlug ? 'trained' : agentType,
+        player2_model: agentModelSlug || undefined,
       });
 
       // Set game state before gameId so the board has player data when it first renders
@@ -470,14 +481,51 @@ export function GamePage() {
           <div>
             <label className="block text-sm text-gray-400 mb-1">Agent Type</label>
             <select
-              value={agentType}
-              onChange={(e) => setAgentType(e.target.value)}
+              value={agentModelSlug ? 'trained' : agentType}
+              onChange={(e) => {
+                if (e.target.value !== 'trained') {
+                  setAgentModelSlug('');
+                  setAgentType(e.target.value);
+                }
+              }}
               className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
             >
               <option value="greedy">Greedy Agent</option>
               <option value="random">Random Agent</option>
+              {availableModels.length > 0 && (
+                <option value="trained" disabled>
+                  ── Trained model: ──
+                </option>
+              )}
             </select>
           </div>
+
+          {availableModels.length > 0 && (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Trained Model</label>
+              <select
+                value={agentModelSlug}
+                onChange={(e) => setAgentModelSlug(e.target.value)}
+                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              >
+                <option value="">(none — use agent above)</option>
+                {availableModels.map((m) => {
+                  const ref = modelReferenceForEntry(m);
+                  return ref ? (
+                    <option key={m.slug} value={ref}>
+                      {m.name} ({m.arch})
+                    </option>
+                  ) : null;
+                })}
+              </select>
+              <div className="text-xs text-gray-500 mt-1">
+                Manage downloads in{' '}
+                <a href="/settings/models" className="underline">
+                  Settings → Models
+                </a>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={handleStartGame}

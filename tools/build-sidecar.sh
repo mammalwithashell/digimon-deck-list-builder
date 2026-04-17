@@ -5,11 +5,15 @@ set -euo pipefail
 # and produce a Rust-engine-only bundle.
 #
 # Usage:
-#   ./tools/build-sidecar.sh [gameplay|full|rust]
+#   ./tools/build-sidecar.sh [gameplay|full|rust] [--bundle-all]
 #
 # Profiles:
 #   gameplay (default) — Greedy/random bots only, no ONNX models (~60-90MB)
-#   full               — Includes ONNX runtime + bundled model weights (~90-120MB)
+#   full               — Includes ONNX runtime + ONE baseline ONNX model so
+#                        the app works offline out of the box. Community
+#                        models stream on demand via the hosted /models
+#                        catalog. Pass `--bundle-all` to include every
+#                        exported model in the installer (legacy behavior).
 #   rust               — Skip PyInstaller entirely. The frontend dispatches
 #                        directly to the in-process digimon-engine crate
 #                        via Tauri `invoke()`. Build the final desktop bundle
@@ -22,6 +26,13 @@ set -euo pipefail
 #   src-tauri/binaries/digimon-server-<target-triple>[.exe]
 
 PROFILE="${1:-gameplay}"
+BUNDLE_ALL=0
+for arg in "${@:2}"; do
+    case "$arg" in
+        --bundle-all) BUNDLE_ALL=1 ;;
+        *) echo "Unknown argument: $arg" >&2; exit 1 ;;
+    esac
+done
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT_DIR"
@@ -107,13 +118,36 @@ if [ "$PROFILE" = "full" ]; then
         echo "Exported $EXPORTED model(s) to ONNX"
     fi
 
-    # Copy ONNX models to Tauri resources
+    # Copy ONNX models to Tauri resources. Default: smallest MLP only, so
+    # the installer ships a single offline-capable baseline and leaves the
+    # rest of the catalog to streaming downloads. `--bundle-all` restores
+    # the legacy "ship everything" behavior for air-gapped builds.
     mkdir -p src-tauri/resources/models
-    if ls models/*.onnx 1>/dev/null 2>&1; then
-        cp models/*.onnx src-tauri/resources/models/
-        echo "Copied ONNX models to src-tauri/resources/models/"
-    else
+    if ! ls models/*.onnx 1>/dev/null 2>&1; then
         echo "Warning: No .onnx files found in models/ directory"
+    elif [ "$BUNDLE_ALL" -eq 1 ]; then
+        cp models/*.onnx src-tauri/resources/models/
+        echo "Copied ALL ONNX models to src-tauri/resources/models/ (--bundle-all)"
+    else
+        # Prefer the smallest MLP; fall back to whatever smallest exists.
+        baseline="$(
+            for m in models/*.onnx; do
+                case "$m" in *lstm*|*Lstm*|*LSTM*) continue ;; esac
+                stat -c '%s %n' "$m" 2>/dev/null || stat -f '%z %N' "$m"
+            done | sort -n | head -n 1 | awk '{print $2}'
+        )"
+        if [ -z "$baseline" ]; then
+            baseline="$(
+                for m in models/*.onnx; do
+                    stat -c '%s %n' "$m" 2>/dev/null || stat -f '%z %N' "$m"
+                done | sort -n | head -n 1 | awk '{print $2}'
+            )"
+        fi
+        if [ -n "$baseline" ]; then
+            cp "$baseline" src-tauri/resources/models/
+            echo "Bundled baseline model: $(basename "$baseline")"
+            echo "(Use --bundle-all to include every exported ONNX.)"
+        fi
     fi
 else
     echo "Installing gameplay-only dependencies..."

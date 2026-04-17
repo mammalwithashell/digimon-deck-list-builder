@@ -10,17 +10,30 @@ PyInstaller and run as a Tauri sidecar.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import os
 import socket
 import time
 from contextlib import asynccontextmanager
+from dataclasses import asdict
+from pathlib import Path
+from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, APIRouter, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.data.deck_loader import parse_deck
+from digimon_gym.engine.model_catalog import (
+    IntegrityError,
+    delete_cached_version,
+    download_model,
+    fetch_remote_manifest,
+    merge_manifest,
+    resolve_model,
+)
 from digimon_gym.engine.model_utils import resolve_model_path, list_onnx_models
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest
@@ -37,13 +50,29 @@ async def _lifespan(app: FastAPI):
     yield
 
 
-def create_desktop_app(models_dir: str = "./models") -> FastAPI:
+def create_desktop_app(
+    models_dir: str = "./models",
+    *,
+    models_cache_dir: Optional[str] = None,
+    catalog_api_base: Optional[str] = None,
+) -> FastAPI:
     """Create a minimal FastAPI app for desktop sidecar use.
 
     Only mounts game engine and deck tool routes — no DB, no auth.
     Also mounts simulation and replay routers (engine-only, no DB deps).
+
+    `models_dir` is the installer-bundled baseline model dir.
+    `models_cache_dir` is writable per-user storage for models
+    downloaded from the hosted API's `/models` catalog. The two are
+    merged at runtime so the frontend sees a single unified list.
     """
     os.environ["ONNX_MODELS_DIR"] = models_dir
+    if models_cache_dir:
+        os.environ["ONNX_MODELS_CACHE_DIR"] = models_cache_dir
+        Path(models_cache_dir).mkdir(parents=True, exist_ok=True)
+    cache_dir_path = Path(models_cache_dir) if models_cache_dir else None
+    bundled_dir_path = Path(models_dir)
+    api_base = catalog_api_base or os.environ.get("DIGIMON_API_BASE", "")
 
     app = FastAPI(title="Digimon TCG Desktop", version="0.1.0", lifespan=_lifespan)
     app.add_middleware(
@@ -229,7 +258,83 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     @router.get("/games/models")
     def list_models():
+        """Legacy filename-only listing. Kept for back-compat with older
+        frontend builds; new UI code should use `/models/manifest`."""
         return {"models": list_onnx_models()}
+
+    # ── Merged model catalog (bundled + cached + remote-available) ──
+
+    class DownloadRequest(BaseModel):
+        slug: str
+        version: str
+
+    class DeleteRequest(BaseModel):
+        slug: str
+        version: str
+
+    @router.get("/models/manifest")
+    def sidecar_manifest(refresh: bool = False):
+        """Merged view: every bundled model + every version the remote
+        catalog knows about, annotated with `is_cached` so the UI can
+        distinguish downloaded-available from download-on-demand."""
+        remote = fetch_remote_manifest(api_base, force=refresh) if api_base else []
+        entries = merge_manifest(
+            remote=remote,
+            bundled_dir=bundled_dir_path,
+            cache_dir=cache_dir_path or Path("/tmp/digimon-models-cache"),
+        )
+        return {
+            "api_base": api_base,
+            "cache_dir": str(cache_dir_path) if cache_dir_path else None,
+            "bundled_dir": str(bundled_dir_path),
+            "models": [asdict(e) for e in entries],
+        }
+
+    @router.post("/models/download")
+    async def sidecar_download(request: DownloadRequest):
+        if cache_dir_path is None:
+            raise HTTPException(
+                status_code=503,
+                detail="No models_cache_dir configured; desktop cannot cache remote models",
+            )
+        if not api_base:
+            raise HTTPException(
+                status_code=503,
+                detail="No catalog_api_base configured; cannot resolve remote versions",
+            )
+        remote = fetch_remote_manifest(api_base, force=False)
+        entries = merge_manifest(
+            remote=remote, bundled_dir=bundled_dir_path, cache_dir=cache_dir_path
+        )
+        entry = next((e for e in entries if e.slug == request.slug), None)
+        if entry is None:
+            raise HTTPException(status_code=404, detail=f"Unknown slug: {request.slug}")
+        version = next((v for v in entry.versions if v.version == request.version), None)
+        if version is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Unknown version {request.version} for {request.slug}",
+            )
+        try:
+            # download_model blocks on httpx.stream; hop to a worker thread
+            # so the event loop stays responsive for other requests.
+            path = await asyncio.to_thread(
+                download_model, entry, version, cache_dir_path
+            )
+        except IntegrityError as exc:
+            raise HTTPException(status_code=502, detail=str(exc))
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Download failed: {exc}")
+        return {"slug": request.slug, "version": request.version, "path": str(path)}
+
+    @router.post("/models/delete")
+    def sidecar_delete_cached(request: DeleteRequest):
+        if cache_dir_path is None:
+            raise HTTPException(status_code=503, detail="No models_cache_dir configured")
+        removed = delete_cached_version(cache_dir_path, request.slug, request.version)
+        if not removed:
+            raise HTTPException(status_code=404, detail="Nothing cached to delete")
+        return {"status": "deleted"}
 
     @router.delete("/games/{game_id}")
     def delete_game(game_id: str):
@@ -267,14 +372,34 @@ def _find_available_port(start: int = 8321, max_attempts: int = 10) -> int:
 def main():
     parser = argparse.ArgumentParser(description="Digimon TCG Desktop Sidecar")
     parser.add_argument("--port", type=int, default=8321)
-    parser.add_argument("--models-dir", default="./models")
+    parser.add_argument(
+        "--models-dir",
+        default="./models",
+        help="Installer-bundled ONNX models (read-only baseline).",
+    )
+    parser.add_argument(
+        "--models-cache-dir",
+        default=None,
+        help="Per-user cache for models downloaded from the hosted catalog. "
+             "Tauri should pass app_data_dir()/models here.",
+    )
+    parser.add_argument(
+        "--catalog-api-base",
+        default=None,
+        help="Base URL of the hosted API (e.g. https://api.example.com). "
+             "Sidecar proxies /models/manifest, /models/download through this.",
+    )
     args = parser.parse_args()
 
     port = _find_available_port(args.port)
     # Print port for Tauri to discover via stdout parsing
     print(f"SIDECAR_PORT={port}", flush=True)
 
-    app = create_desktop_app(args.models_dir)
+    app = create_desktop_app(
+        args.models_dir,
+        models_cache_dir=args.models_cache_dir,
+        catalog_api_base=args.catalog_api_base,
+    )
     uvicorn.run(app, host="127.0.0.1", port=port)
 
 

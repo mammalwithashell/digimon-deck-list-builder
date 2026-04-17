@@ -972,3 +972,70 @@ class KnownIssue(Base):
     description = Column(Text, nullable=False, default="")
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+# ── ONNX Model Catalog ───────────────────────────────────────────────────
+
+class ModelRecord(Base):
+    """A logical model (e.g. "greedy-meta-gauntlet"). Versions stack up
+    under it via `ModelVersion`. `min_engine_version` is the lowest
+    engine semver that can load *any* version of this model without
+    spec-incompatibility; per-version overrides live on `ModelVersion`."""
+
+    __tablename__ = "model_records"
+    __table_args__ = (
+        CheckConstraint(
+            "arch IN ('mlp', 'lstm')",
+            name="ck_model_records_arch",
+        ),
+        Index("idx_model_records_slug", "slug"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    slug = Column(String, unique=True, nullable=False)
+    name = Column(String, nullable=False)
+    arch = Column(String, nullable=False)
+    description = Column(Text, default="", nullable=False)
+    deck_pool = Column(String, nullable=True)
+    min_engine_version = Column(String, nullable=False, default="0.1.0")
+    is_public = Column(Integer, default=1, nullable=False)
+    is_deprecated = Column(Integer, default=0, nullable=False)
+    created_by_user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    versions = relationship(
+        "ModelVersion",
+        back_populates="model",
+        cascade="all, delete-orphan",
+        order_by="ModelVersion.released_at.desc()",
+    )
+
+
+class ModelVersion(Base):
+    """A single uploaded `.onnx` blob for a `ModelRecord`. `storage_key`
+    is the opaque identifier into `ModelStorage` (filesystem path on
+    local, S3 key on Spaces). `sha256` is the authoritative integrity
+    value — clients verify after download, the admin upload handler
+    refuses to register if recomputed hash doesn't match."""
+
+    __tablename__ = "model_versions"
+    __table_args__ = (
+        UniqueConstraint("model_id", "version", name="uq_model_versions_model_version"),
+        Index("idx_model_versions_model_id", "model_id"),
+        Index("idx_model_versions_released_at", "released_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    model_id = Column(String, ForeignKey("model_records.id", ondelete="CASCADE"), nullable=False)
+    version = Column(String, nullable=False)
+    storage_key = Column(String, nullable=False)
+    size_bytes = Column(Integer, nullable=False)
+    sha256 = Column(String, nullable=False)
+    min_engine_version = Column(String, nullable=True)
+    onnx_input_shapes = Column(JSON, nullable=True)
+    changelog = Column(Text, default="", nullable=False)
+    is_deprecated = Column(Integer, default=0, nullable=False)
+    released_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    model = relationship("ModelRecord", back_populates="versions")
