@@ -174,3 +174,45 @@ fn mask_vortex_targets_unsuspended_digimon_too() {
 fn make_digimon_without_dp(id: &str, color: CardColor) -> CardData {
     make_digimon(id, color, 3000)
 }
+
+/// Vortex attack bits (EndOfTurnAction arm) must also honor
+/// CannotAttackTarget on the enemy permanent — parity with Python's
+/// action_mask.py:348-351.
+#[test]
+fn mask_vortex_respects_cannot_attack_target() {
+    use digimon_engine::enums::ModifierType;
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon("DEF", CardColor::Blue, 3000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+
+    r.game.modifiers.grant_keyword(
+        attacker, Keyword::Vortex, Expiry::EndOfTurn, tp,
+    );
+    r.game.modifiers.add(
+        defender,
+        digimon_engine::modifiers::ModifierEntry {
+            modifier: ModifierType::CannotAttackTarget,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: opp,
+        },
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize], 0.0,
+        "Vortex must also honor CannotAttackTarget",
+    );
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        "Vortex security attack is unaffected by CannotAttackTarget",
+    );
+}

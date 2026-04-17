@@ -621,3 +621,52 @@ fn mask_cannot_digivolve_suppresses_digivolve_bits_on_base() {
         "CannotDigivolve on base must suppress the digivolve bit onto it",
     );
 }
+
+// ─── §4.7a CANNOT_ATTACK_TARGET ────────────────────────────────────────
+
+/// An enemy permanent with CannotAttackTarget active must not have any
+/// attacker-vs-target bit emitted. Security-attack bit is orthogonal.
+#[test]
+fn mask_cannot_attack_target_suppresses_digimon_attack_bit() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon_level("ATK", CardColor::Red, 4))
+        .add_card(make_digimon_level("DEF", CardColor::Blue, 3))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+    r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
+
+    r.game.set_memory(3);
+    r.game.enter_main_phase();
+
+    // Baseline: attack bit to defender is emitted (suspended).
+    let baseline = build_action_mask(&r.game, tp);
+    let atk_bit = encode_attack(attacker.index as u16, defender.index as u16) as usize;
+    let sec_bit = encode_attack(attacker.index as u16, SECURITY_TARGET) as usize;
+    assert_eq!(baseline[atk_bit], 1.0, "baseline: suspended defender is attackable");
+    assert_eq!(baseline[sec_bit], 1.0, "baseline: security is attackable");
+
+    // Grant CannotAttackTarget to defender.
+    r.game.modifiers.add(
+        defender,
+        digimon_engine::modifiers::ModifierEntry {
+            modifier: ModifierType::CannotAttackTarget,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: opp,
+        },
+    );
+
+    let blocked = build_action_mask(&r.game, tp);
+    assert_eq!(
+        blocked[atk_bit], 0.0,
+        "CannotAttackTarget on defender must suppress the digimon-attack bit",
+    );
+    assert_eq!(
+        blocked[sec_bit], 1.0,
+        "security attack bit is orthogonal to CannotAttackTarget",
+    );
+}

@@ -154,6 +154,19 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     if !target.is_digimon(&game.card_data) {
                         continue;
                     }
+                    let t_handle = PermanentHandle {
+                        player: opp_id,
+                        index: j as u8,
+                    };
+                    // §4.7a CANNOT_ATTACK_TARGET — suppress this target if
+                    // it carries the modifier. Per-attacker discriminant
+                    // from Python is §4.7x.
+                    if game
+                        .modifiers
+                        .has(t_handle, ModifierType::CannotAttackTarget)
+                    {
+                        continue;
+                    }
                     let action_bit = encode_attack(i as u16, j as u16) as usize;
                     if target.is_suspended {
                         mask[action_bit] = 1.0;
@@ -164,10 +177,6 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         continue;
                     }
                     if let Some(max_dp) = raid_max_dp {
-                        let t_handle = PermanentHandle {
-                            player: opp_id,
-                            index: j as u8,
-                        };
                         if let Some(dp) = game.effective_dp(t_handle) {
                             if dp == max_dp {
                                 mask[action_bit] = 1.0;
@@ -273,9 +282,22 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
                 for j in 0..max_opp {
                     let target = &opp.battle_area[j];
-                    if target.is_digimon(&game.card_data) {
-                        mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
+                    if !target.is_digimon(&game.card_data) {
+                        continue;
                     }
+                    let t_handle = PermanentHandle {
+                        player: opp_id,
+                        index: j as u8,
+                    };
+                    // §4.7a CANNOT_ATTACK_TARGET — suppress Vortex attacks
+                    // against a target carrying the modifier.
+                    if game
+                        .modifiers
+                        .has(t_handle, ModifierType::CannotAttackTarget)
+                    {
+                        continue;
+                    }
+                    mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
                 }
             }
         }
