@@ -109,6 +109,16 @@ pub enum EffectTiming {
     OptionMain,
     OptionSecurity,
 
+    // [Main] activated effects — zone-scoped variants. DCGO gates these via
+    // `EffectTiming.OnDeclaration` + `CanUseCondition` zone checks; Python
+    // reduces that to `_is_{hand,field,trash}_main` bool flags on the effect.
+    // Rust promotes the zone distinction into the timing enum itself so
+    // `effect.timing == MainFromHand` is the sole dispatch key for the mask
+    // and decoder. See RUST_PYTHON_PARITY.md §4.5c.
+    MainFromHand,
+    MainOnField,
+    MainFromTrash,
+
     // Special
     None,
 }

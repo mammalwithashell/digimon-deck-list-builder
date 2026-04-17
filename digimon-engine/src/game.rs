@@ -658,6 +658,23 @@ impl Game {
         true
     }
 
+    // ─── Effect-listing API (§4.5c) ──────────────────────────────────
+
+    /// Enumerate a card's effects by asking the registry for its impl.
+    /// Returns `None` if no impl is registered (card has no script effects).
+    ///
+    /// Analogous to Python's `CardSource.effect_list(timing)` but expressed
+    /// Rust-idiomatically: the registry is owned by `Game`, so this is the
+    /// single entry point callers use regardless of whether the card lives
+    /// in hand, trash, or a `card_sources` slot. Callers filter the returned
+    /// `Vec<Effect>` by `effect.timing` (e.g. `MainFromHand`).
+    pub fn effects_for_card(&self, card_id: &str, handle: crate::card_source::CardHandle) -> Vec<crate::effect::Effect> {
+        match self.effect_registry.get(card_id) {
+            Some(impl_) => impl_.effects(handle),
+            None => Vec::new(),
+        }
+    }
+
     // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───
 
     /// Sum of static `dp_modifier` values from a single source's effects

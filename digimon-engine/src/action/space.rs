@@ -34,6 +34,20 @@ pub const MAX_FIELD_SLOTS: u16 = 14;
 pub const SECURITY_TARGET: u16 = 14; // attack target index for security
 pub const BREEDING_TARGET: u16 = 14; // digivolve target for breeding area
 
+/// Within the 10-slot per-permanent effect sub-range, index 2 is the
+/// conventional slot for the [Field] [Main] activated ability (§4.5c).
+/// Matches Python's `action_mask.py` layout (offset `+ 2` per permanent).
+pub const FIELD_EFFECT_SLOT_FOR_MAIN: u16 = 2;
+
+/// Upper bound on how many trash cards the mask inspects for [Trash] [Main]
+/// activations. Python enforces 45 in `action_mask.py` (TRASH_EFFECT_END -
+/// TRASH_EFFECT_START = 1195 - 1150).
+pub const TRASH_MAIN_LIMIT: usize = 45;
+
+/// Upper bound on how many hand cards the mask inspects for [Hand] [Main]
+/// activations (one bit per hand index). Matches the HAND_EFFECT range width.
+pub const HAND_MAIN_LIMIT: usize = 30;
+
 /// Decode an attack action into (attacker_field_index, target_index).
 /// target_index 14 = attack security.
 pub fn decode_attack(action: u16) -> (u16, u16) {

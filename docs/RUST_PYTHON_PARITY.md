@@ -228,14 +228,28 @@ DNA digivolve plumbing has landed; Hand/Field/Trash `[Main]` effect masks remain
 
 `CardData.dna_costs` is present and deserialized, but cards.json's ingest pipeline doesn't emit the field today. Every card loaded from production data has `dna_costs = []`, so the mask branch above never fires in actual games. Python populates DNA costs from per-card scripts; Rust needs the cross-language export pipeline to emit DNA costs (or an auxiliary `dna_costs.json` sidecar) before this work is meaningful at runtime.
 
-### 4.5c 🔴 Hand / Field / Trash `[Main]` effect masks
+### 4.5c 🟢 Hand / Field / Trash `[Main]` effect masks — implemented
 
-Rust's mask emits 0.0 for:
-- Hand effects (30-59) — [action_mask.py:176-185](../digimon_gym/engine/game/action_mask.py#L176)
-- Field effects (1000-1149) — [action_mask.py:201-214](../digimon_gym/engine/game/action_mask.py#L201)
-- Trash effects (1150-1194) — [action_mask.py:216-225](../digimon_gym/engine/game/action_mask.py#L216)
+**Python** — [action_mask.py:176-225](../digimon_gym/engine/game/action_mask.py#L176): iterates a card's effects and filters by `_is_hand_main` / `_is_field_main` / `_is_trash_main` bool flags.
 
-All three require a `CardSource::effect_list(registry, timing)` query that iterates compiled effects — a multi-day architectural lift that unlocks many downstream parity items.
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) Main-phase arm emits bits for three new zone-scoped timing variants:
+- `EffectTiming::MainFromHand` → bits `HAND_EFFECT_START + h` (30-59)
+- `EffectTiming::MainOnField` → bits `FIELD_EFFECT_START + i * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN` (1000-1149, sub-slot +2)
+- `EffectTiming::MainFromTrash` → bits `TRASH_EFFECT_START + t` (1150-1194)
+
+The effect-listing primitive is [`Game::effects_for_card(card_id, handle)`](../digimon-engine/src/game.rs) — analogous to Python's `CardSource.effect_list(timing)` but expressed Rust-idiomatically with the registry owned by `Game`. Callers filter on `effect.timing`. This primitive also unblocks §2.1b / §4.2b / §4.3b (native static keyword parsing) and §4.7e (DigiXros cost-reduction).
+
+**Field [Main]** additionally enforces OPT via the existing per-permanent `activation_count((source_handle, slot))` map and applies the same `inherited == is_under` filter used by `source_dp_contribution` / `source_opt_state`, so the mask agrees with the tensor helpers.
+
+**Coverage:** [tests/mask_main_effects_parity.rs](../digimon-engine/tests/mask_main_effects_parity.rs) — 12 cases across the three zones: emit/suppress by condition, first-match-wins per slot, inherited-only-when-under, OPT exhaustion via `record_activation`, and phase gating (all three bits stay 0 outside Main).
+
+### 4.5c-residual 🟡 Hand / Trash per-turn activation counters
+
+Rust (like Python's mask) does NOT currently track `_turn_activate_count` for Hand / Trash [Main] effects at mask-generation time — the effect's `can_use_condition` closure is the sole gate. When execution-side support lands (firing these activated actions and recording activation), we'll revisit whether to add a parallel activation map on `Player` keyed by `(CardHandle, slot)`. Field [Main] already uses `Permanent::effect_activations`.
+
+### 4.5c-residual 🔴 Action execution for [Main] bits
+
+The mask emits the bits but the action decoder does not yet consume them — firing `HAND_EFFECT` / `FIELD_EFFECT` / `TRASH_EFFECT` actions (memory cost payment, effect process invocation, activation recording) is the next plan. See [docs/RUST_ENGINE_API.md](RUST_ENGINE_API.md) §§3-4.
 
 ### 4.6 🟡 Interrupt-phase mask coverage — partial
 
@@ -347,7 +361,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
 6. ~~**§3.1 / §3.2 — Tensor source-DP + OPT slots**~~ ✅ done — `EffectReadContext` + `Permanent::effect_activations` + Game helpers + tensor wiring. Residual §3.1b (linked-card effects) deferred.
 7. ~~**§4.2 / §4.3 / §4.4 — Action mask main-phase parity**~~ ✅ done — Option color check, Blitz memory exception, Raid / CAN_ATTACK_UNSUSPENDED targeting. Residual: §4.2b (script-based bypass) and §4.3b (native/static Blitz) await §4.5 effect-listing.
-8. **§4.5 / §4.6 — Mask phase coverage** — partial. ✅ §4.5a DNA digivolve mask + data types; ✅ §4.6a Vortex mask emission. Blocked: §4.5b `dna_costs` data-population pipeline (cards.json ingest); §4.5c Hand/Field/Trash `[Main]` masks (need `CardSource::effect_list(timing)` infra); §4.6b phase transition; §4.6c Overclock/MAY_ATTACK/FORCE_ATTACK bits; §4.6d interrupt/selection phase builders (Phase-4 state machine).
+8. **§4.5 / §4.6 — Mask phase coverage** — partial. ✅ §4.5a DNA digivolve mask + data types; ✅ §4.5c Hand/Field/Trash `[Main]` masks + `Game::effects_for_card` effect-listing primitive; ✅ §4.6a Vortex mask emission. Blocked: §4.5b `dna_costs` data-population pipeline (cards.json ingest); §4.5c-residual action execution for the new `[Main]` bits (decoder side); §4.6b phase transition; §4.6c Overclock/MAY_ATTACK/FORCE_ATTACK bits; §4.6d interrupt/selection phase builders (Phase-4 state machine).
 9. **§4.7 — Modifier-gated mask checks** — partial. ✅ §4.7a CannotAttackTarget, §4.7b CannotDigivolve, §4.7c CannotPlayFromHand (unconditional semantics). Outstanding: §4.7d FORCE_ATTACK (own plan), §4.7e DigiXros cost-reduction (own plan; also blocked on data-population like §4.5b), §4.7x context-aware modifier queries (architectural).
 
 The rest (combat interrupts §2.3, face-down security §3.3, etc.) can follow as cards that need them get implemented.
