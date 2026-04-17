@@ -344,7 +344,9 @@ pub fn rust_attack_digimon(
         player: defender_player,
         index: defender_index,
     };
-    let result = game.attack_digimon(attacker, defender);
+    // Tauri UI only drives Main-phase attacks today; <Vortex> end-of-turn
+    // attacks will get a dedicated command once §4.6 mask coverage lands.
+    let result = game.attack_digimon(attacker, defender, false);
     Ok(AttackResultDto {
         result: attack_result_str(result).to_string(),
         state: game_state_dto(game),
@@ -365,7 +367,7 @@ pub fn rust_attack_player(
         player: attacker_player,
         index: attacker_index,
     };
-    let result = game.attack_player(attacker, defender_player);
+    let result = game.attack_player(attacker, defender_player, false);
     Ok(AttackResultDto {
         result: attack_result_str(result).to_string(),
         state: game_state_dto(game),

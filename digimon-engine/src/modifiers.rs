@@ -72,6 +72,16 @@ impl ModifierRegistry {
         !self.get(target, modifier).is_empty()
     }
 
+    /// Whether ANY permanent in the registry has a modifier of the given
+    /// type. Mirrors Python's "global modifier query" pattern — e.g.
+    /// `_is_play_blocked_by_modifier` iterates every active modifier of
+    /// type `CannotPlayFromHand` without keying by target.
+    pub fn any_with_type(&self, modifier: ModifierType) -> bool {
+        self.permanent_modifiers
+            .values()
+            .any(|entries| entries.iter().any(|e| e.modifier == modifier))
+    }
+
     /// Whether the permanent has the given granted keyword.
     pub fn has_keyword(&self, target: PermanentHandle, keyword: Keyword) -> bool {
         self.permanent_keywords

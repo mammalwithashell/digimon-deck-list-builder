@@ -12,6 +12,35 @@ pub struct EvoCost {
     pub memory_cost: u16,
 }
 
+/// One half of a DNA digivolve cost — a constraint that one of the two
+/// sacrificed materials must satisfy. Mirror of Python's `DnaRequirement`
+/// in `digimon_gym/engine/data/evo_cost.py`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DnaRequirement {
+    /// Required level. 0 means "any level" (name/text-only requirement).
+    #[serde(default)]
+    pub level: u8,
+    /// Optional color constraint. `None` means any color.
+    #[serde(default)]
+    pub card_color: Option<CardColor>,
+    /// Case-insensitive substring against `card_name`. Empty = no constraint.
+    #[serde(default)]
+    pub name_contains: String,
+    /// Case-insensitive substring against `effect_text`. Empty = no constraint.
+    #[serde(default)]
+    pub text_contains: String,
+}
+
+/// A DNA digivolve cost entry. Two requirements plus a memory cost.
+/// Mirror of Python's `DnaCost` in `digimon_gym/engine/data/evo_cost.py`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DnaCost {
+    pub requirement1: DnaRequirement,
+    pub requirement2: DnaRequirement,
+    #[serde(default)]
+    pub memory_cost: i16,
+}
+
 /// Static card metadata loaded from cards.json.
 /// One instance per unique card_id, shared across all game instances.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,6 +54,11 @@ pub struct CardData {
     pub colors: Vec<CardColor>,
     pub traits: Vec<String>,
     pub evo_costs: Vec<EvoCost>,
+    /// DNA digivolve costs. Empty for cards without a DNA variant.
+    /// Currently defaults to empty for every card loaded from cards.json —
+    /// the JSON export pipeline doesn't yet emit this field (§4.5b).
+    #[serde(default)]
+    pub dna_costs: Vec<DnaCost>,
     pub effect_text: String,
     pub inherited_text: String,
     pub security_text: String,
@@ -71,6 +105,11 @@ struct RawCard {
     security_effect_description_eng: String,
     #[serde(default)]
     evo_costs: Vec<RawEvoCost>,
+    /// DNA digivolve costs — absent in cards.json today; deserializes to
+    /// empty. When the Python export pipeline starts emitting this field
+    /// (§4.5b), the structure here is already the deserialization target.
+    #[serde(default)]
+    dna_costs: Vec<DnaCost>,
     /// Stable tensor-encoding index. Present in the current cards.json dict
     /// format; absent in legacy array format or minimal test fixtures.
     #[serde(default)]
@@ -155,6 +194,7 @@ impl CardData {
                         memory_cost: e.memory_cost,
                     })
                     .collect(),
+                dna_costs: raw_card.dna_costs,
                 effect_text: raw_card.effect_description_eng,
                 inherited_text: raw_card.inherited_effect_description_eng,
                 security_text: raw_card.security_effect_description_eng,

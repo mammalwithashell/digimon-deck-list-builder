@@ -58,7 +58,12 @@ impl Game {
     }
 
     /// Check whether a permanent can attack right now (atomic — ignores interrupts).
-    pub fn can_attack(&self, handle: PermanentHandle) -> bool {
+    ///
+    /// `vortex` — pass `true` when the attack is invoked via the <Vortex>
+    /// end-of-turn mechanic. Vortex exempts summoning sickness at the call
+    /// site without adding a persistent keyword (mirrors Python's
+    /// `Permanent.can_attack(is_vortex=True)` — see RUST_PYTHON_PARITY §2.1).
+    pub fn can_attack(&self, handle: PermanentHandle, vortex: bool) -> bool {
         let perm = match self.player(handle.player).battle_area.get(handle.index as usize) {
             Some(p) => p,
             None => return false,
@@ -70,12 +75,13 @@ impl Game {
             return false;
         }
         // Summoning sickness: can't attack on the turn it was played unless
-        // Rush has been granted (§2.1 parity fix). Native Rush from a card's
-        // static keyword list is not yet checked — that requires the
-        // effect-listing infrastructure to be in place. For now, only
-        // modifier-granted Rush exempts a permanent.
+        // Rush has been granted or this is a Vortex end-of-turn attack
+        // (§2.1 parity fix). Native Rush from a card's static keyword list
+        // is not yet checked — that requires the effect-listing
+        // infrastructure (§2.1b / §4.5). For now, only modifier-granted
+        // Rush exempts a permanent.
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
-        if is_fresh && !self.modifiers.has_keyword(handle, Keyword::Rush) {
+        if is_fresh && !vortex && !self.modifiers.has_keyword(handle, Keyword::Rush) {
             return false;
         }
         true
@@ -83,12 +89,15 @@ impl Game {
 
     /// Attack another Digimon on the opponent's field.
     /// Returns the battle outcome.
+    ///
+    /// `vortex` — see [`Game::can_attack`].
     pub fn attack_digimon(
         &mut self,
         attacker: PermanentHandle,
         defender: PermanentHandle,
+        vortex: bool,
     ) -> AttackResult {
-        if !self.can_attack(attacker) {
+        if !self.can_attack(attacker, vortex) {
             return AttackResult::Invalid;
         }
         // Defender must be on field and be a Digimon.
@@ -130,12 +139,15 @@ impl Game {
     }
 
     /// Attack the defending player (security check sequence).
+    ///
+    /// `vortex` — see [`Game::can_attack`].
     pub fn attack_player(
         &mut self,
         attacker: PermanentHandle,
         defender_player: PlayerId,
+        vortex: bool,
     ) -> AttackResult {
-        if !self.can_attack(attacker) {
+        if !self.can_attack(attacker, vortex) {
             return AttackResult::Invalid;
         }
 
