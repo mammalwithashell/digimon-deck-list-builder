@@ -83,9 +83,26 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::None).inherited_flag()
     }
 
-    /// Builder constructor for a security effect.
+    /// Builder constructor for a security effect (the primary per-card
+    /// trigger that fires when this card is revealed from security). Sets
+    /// timing = `SecuritySkill` and raises the `security` flag.
     pub fn security(card: CardHandle) -> EffectBuilder {
-        EffectBuilder::new(card, EffectTiming::SecurityEffect).security_flag()
+        EffectBuilder::new(card, EffectTiming::SecuritySkill).security_flag()
+    }
+
+    /// Builder constructor for an observer that fires **once per security
+    /// check** after the revealed card's own `SecuritySkill` effects resolve.
+    /// Used for field/trash/hand effects that react to security checks
+    /// globally. Mirrors Python's `EffectTiming.OnSecurityCheck`.
+    pub fn on_security_check(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnSecurityCheck)
+    }
+
+    /// Builder constructor for an effect that fires when a card leaves the
+    /// security stack — triggered on both trash-after-reveal and
+    /// play-from-security paths. Mirrors Python's `EffectTiming.OnLoseSecurity`.
+    pub fn on_lose_security(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnLoseSecurity)
     }
 
     /// Builder constructor for a declarative (always-on) effect.

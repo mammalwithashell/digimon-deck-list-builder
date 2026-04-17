@@ -614,3 +614,144 @@ game.source_opt_state(h, i)       -> f32        // per-source offset +1
 ```
 
 Each one iterates effects via `CardEffectRegistry::get(card_id).effects(handle)`, applies the inherited/top filter (`is_under == effect.inherited`), and evaluates conditions through `EffectReadContext`. You can call them yourself in tests or diagnostics.
+
+---
+
+## Writing a card effect (TDD walkthrough)
+
+This is the onramp the forthcoming Rust `batch-fix-cards` skill will hand to sub-agents. Authors (human or AI) follow it directly until the skill exists. The flow mirrors the Python `/batch-fix-cards` convention: decompose → test-first → implement → verdict.
+
+Worked example pattern: `digimon-engine/src/cards/test_cards.rs` (the `TEST-001..TEST-022` structs) with paired tests in `digimon-engine/tests/test_cards_behavioral.rs`. Read both side-by-side before starting a real card.
+
+### 1. Decompose the card text into numbered clauses
+
+Copy the official card text verbatim. Split on each independent clause and number them. Example for a hypothetical card:
+
+```
+[On Play]
+  (1) Trash the top card of your deck.
+  (2) If that card was a Lv.5 Digimon, gain 1 memory.
+```
+
+Each clause becomes a discrete assertion in the test. The numbering stays in comments so the implementation's `process` closure mirrors it.
+
+### 2. Write failing behavioral tests first
+
+Create or extend a test file under `digimon-engine/tests/`. Use `DebugRunner::builder()` to construct a minimal game state — inject only what the clause exercises. One `#[test]` per clause outcome, including both positive and negative branches.
+
+```rust
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+#[test]
+fn clause1_trashes_top_of_deck() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("YOUR-001", "Example"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .hand(0, &["YOUR-001"])
+        .deck(0, &["FILLER"])
+        .memory(5)
+        .start();
+
+    r.play(0, 0);
+
+    assert_eq!(r.deck_size(0), 0);
+    assert_eq!(r.trash_size(0), 1);
+}
+
+#[test]
+fn clause2_gains_memory_when_trashed_card_is_lv5() {
+    // … inject a Lv.5 card at the top of the deck, assert +1 memory …
+}
+
+#[test]
+fn clause2_no_memory_when_trashed_card_is_not_lv5() {
+    // … negative branch …
+}
+```
+
+`DebugRunner` setup helpers (`.hand`, `.deck`, `.memory`, `.add_card`, `.start`) are the canonical surface — don't reach into `Game` directly from tests.
+
+### 3. Run the tests and confirm they fail
+
+```bash
+cargo test --manifest-path digimon-engine/Cargo.toml --test your_card_behavioral
+```
+
+Expect compile failures (no `CardEffect` impl yet) or assertion failures. A passing test at this point means the test doesn't actually exercise the clause — rewrite it until it fails for the right reason.
+
+### 4. Implement the `CardEffect`
+
+Add a zero-sized struct in `digimon-engine/src/cards/` (under a set-scoped submodule for real cards — e.g. `src/cards/bt16/bt16_052.rs`). Implement `CardEffect::effects` using the `Effect` builder. Use `EffectContext` for every mutation — never reach into `Game` internals from a `process` closure.
+
+```rust
+use std::sync::Arc;
+use crate::card_source::CardHandle;
+use crate::cards::CardEffectRegistry;
+use crate::effect::{CardEffect, Effect};
+
+pub struct YourCard001;
+
+impl CardEffect for YourCard001 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Trash top, gain 1 if Lv.5")
+            .process(|ctx| {
+                // (1) Trash the top card of your deck.
+                let me = ctx.player;
+                let trashed = ctx.trash_from_top(me, 1);
+                // (2) If that card was a Lv.5 Digimon, gain 1 memory.
+                if trashed.first().is_some_and(|c| c.level() == Some(5) && c.is_digimon()) {
+                    ctx.gain_memory(1);
+                }
+            })
+            .build()]
+    }
+}
+```
+
+Numbered comments inside the closure match the clause decomposition from Step 1.
+
+### 5. Register the effect
+
+Wire the card into the registry. Real cards register from their set module; test cards register from `test_cards::register`. Follow the existing pattern in `digimon-engine/src/cards.rs` and `digimon-engine/src/cards/test_cards.rs`.
+
+```rust
+// digimon-engine/src/cards/bt16/mod.rs
+pub fn register(registry: &mut CardEffectRegistry) {
+    registry.insert("BT16-001", Arc::new(bt16_001::BT16_001));
+    // …
+}
+```
+
+### 6. Run the tests and confirm they pass
+
+```bash
+cargo test --manifest-path digimon-engine/Cargo.toml --test your_card_behavioral
+```
+
+All clause tests green. Then run the full suite to catch regressions:
+
+```bash
+cargo test --manifest-path digimon-engine/Cargo.toml
+```
+
+### 7. Emit a verdict
+
+Use the same verdict vocabulary as the Python `/batch-fix-cards` skill so the eventual Rust skill inherits it cleanly:
+
+- **IMPLEMENTED** — every clause has a passing test and a faithful implementation.
+- **PARTIAL** — some clauses landed; the rest are blocked on a specific engine gap. Document which clauses and why.
+- **BLOCKED** — the card requires engine infrastructure that doesn't yet exist (new `EffectTiming` variant, modifier type, selection kind, etc.). Do not ship a stub. File the gap in `qa/archetype-qa/engine-gaps.md` and move on.
+
+### No-approximations checklist (Rust)
+
+Before claiming IMPLEMENTED, re-read the card text against the implementation and confirm:
+
+1. No clause is silently dropped.
+2. Every player choice uses `ctx.select_*` — never auto-select a target when the card text allows multiple.
+3. Optional effects (`(Optional)`, "you may") are modeled with the `optional` builder flag + a declined branch in the test.
+4. Memory cost is paid through the standard play/digivolve path, not re-implemented inside `process`.
+5. Static keywords (Blitz, Rush, Piercing, Blocker, …) on the face of the card are handled via `grant_keyword` or the appropriate `Keyword` query, not hard-coded booleans.
+6. Inherited effects use `Effect::inherited(card)`, not `Effect::on_play(card)` with a manual under-the-stack check.
+7. Trait / name matching uses `CardSource::contains_card_name` / trait accessors (case-insensitive), not raw string equality.
+8. Every closure is `Send + Sync + 'static` — if you have lifetime errors, you're capturing a borrow; use handles (`Copy`) instead.

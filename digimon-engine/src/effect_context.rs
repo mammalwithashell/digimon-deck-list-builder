@@ -6,7 +6,7 @@
 //! Both expose the same read-only query surface.
 
 use crate::card_data::CardData;
-use crate::card_source::CardHandle;
+use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{Expiry, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::modifiers::ModifierEntry;
@@ -635,6 +635,187 @@ impl<'a> EffectContext<'a> {
             }),
             on_decline: None,
         });
+    }
+
+    /// Prompt `self.player` to pick one of the cards currently exposed in
+    /// `Game.revealed_cards`. Filter runs once per reveal position at install
+    /// time; callback receives the chosen index.
+    ///
+    /// Uses the `SelectReveal` sub-range (30-39) of the shared HAND_EFFECT
+    /// action space — disambiguated by `GamePhase::SelectReveal`. Mirrors
+    /// Python's `SEL_REVEALED_START`.
+    pub fn select_reveal<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        use crate::action::space::{MAX_REVEALED, SEL_REVEAL_START};
+
+        let revealed_len = self.game.revealed_cards.len();
+        let cap = revealed_len.min(MAX_REVEALED);
+        let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
+        for i in 0..cap {
+            if filter(self.game, i) {
+                valid_action_ids.push(SEL_REVEAL_START + i as u16);
+            }
+        }
+        if valid_action_ids.is_empty() {
+            return;
+        }
+
+        let selecting_player = self.player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let user_callback: Box<
+            dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync,
+        > = Box::new(callback);
+
+        let previous_phase = self.game.current_phase;
+        self.game.current_phase = crate::enums::GamePhase::SelectReveal;
+        self.game.pending_selection = Some(crate::selection::PendingSelection {
+            kind: crate::selection::SelectionKind::Reveal,
+            selecting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let index = action_id.saturating_sub(SEL_REVEAL_START) as usize;
+                let mut ctx =
+                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                user_callback(&mut ctx, index);
+            }),
+            on_decline: None,
+        });
+    }
+
+    /// Prompt `self.player` to pick a card from a security stack. Set
+    /// `of_player = self.player` to target own security, or
+    /// `self.opponent_id()` to target the opponent's. Filter runs once per
+    /// security position at install time; callback receives the chosen
+    /// index.
+    ///
+    /// Uses sub-ranges 40-49 (own) and 50-59 (opp) of the shared
+    /// HAND_EFFECT action space — disambiguated by `GamePhase::SelectSecurity`.
+    /// Mirrors Python's `effect_select_own_security` / `effect_select_opponent_security`.
+    pub fn select_security<F, C>(
+        &mut self,
+        of_player: PlayerId,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        use crate::action::space::{MAX_SECURITY, SEL_MY_SECURITY_START, SEL_OPP_SECURITY_START};
+
+        let base = if of_player == self.player {
+            SEL_MY_SECURITY_START
+        } else {
+            SEL_OPP_SECURITY_START
+        };
+
+        let security_len = self.game.player(of_player).security.len();
+        let cap = security_len.min(MAX_SECURITY);
+        let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
+        for i in 0..cap {
+            if filter(self.game, i) {
+                valid_action_ids.push(base + i as u16);
+            }
+        }
+        if valid_action_ids.is_empty() {
+            return;
+        }
+
+        let selecting_player = self.player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let user_callback: Box<
+            dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync,
+        > = Box::new(callback);
+
+        let previous_phase = self.game.current_phase;
+        self.game.current_phase = crate::enums::GamePhase::SelectSecurity;
+        self.game.pending_selection = Some(crate::selection::PendingSelection {
+            kind: crate::selection::SelectionKind::Security,
+            selecting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let index = action_id.saturating_sub(base) as usize;
+                let mut ctx =
+                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                user_callback(&mut ctx, index);
+            }),
+            on_decline: None,
+        });
+    }
+
+    /// Mark a security slot face-up. Consumed by the observation tensor so
+    /// the card's identity is exposed to the RL agent (it would otherwise be
+    /// zeroed for hidden-information safety — §3.3). The slot is keyed by
+    /// the card's instance index.
+    pub fn mark_security_face_up(&mut self, of_player: PlayerId, card: &CardSource) {
+        self.game
+            .player_mut(of_player)
+            .face_up_security
+            .insert(card.card_index);
+    }
+
+    /// Play the card currently parked in `Game.pending_security` onto
+    /// `self.player`'s field without paying cost. Called from a
+    /// `SecuritySkill` effect's process closure to implement "Play this
+    /// card without paying the cost" text.
+    ///
+    /// Raises the `played` bit on `Game.pending_security` so the
+    /// security-resolution loop skips the default trash-after-check step.
+    /// Fires `OnPlay` effects on the newly-created permanent — matches the
+    /// `play_from_hand` flow. Does NOT pay memory.
+    ///
+    /// Silently no-ops if the field is full or no security check is in
+    /// progress. Mirrors Python's `Game.effect_play_from_security`.
+    pub fn play_from_security(&mut self) {
+        let turn = self.game.turn_count;
+        let field_slots = self.game.rules.field_slots as usize;
+
+        let Some(pending) = self.game.pending_security.as_ref() else {
+            return;
+        };
+        if pending.played {
+            return;
+        }
+        let defender = pending.defender;
+        let card = pending.card.clone();
+
+        if self.game.player(defender).battle_area.len() >= field_slots {
+            return;
+        }
+
+        let perm = crate::permanent::Permanent::new(card, turn);
+        self.game.player_mut(defender).battle_area.push(perm);
+        let field_index = self.game.player(defender).battle_area.len() - 1;
+
+        // Raise the played bit so the security-resolution caller skips trash.
+        if let Some(pending) = self.game.pending_security.as_mut() {
+            pending.played = true;
+        }
+
+        self.game.fire_on_play(defender, field_index);
     }
 
     /// Shared implementation for the field-selection prompts. Encodes each

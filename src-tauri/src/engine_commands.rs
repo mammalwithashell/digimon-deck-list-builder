@@ -11,6 +11,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use digimon_engine::action::build_action_mask;
 use digimon_engine::card_data::CardData;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlayerId};
@@ -140,6 +141,7 @@ fn attack_result_str(r: AttackResult) -> &'static str {
         AttackResult::SecurityCheckSurvived => "SecurityCheckSurvived",
         AttackResult::AttackerDeletedBySecurity => "AttackerDeletedBySecurity",
         AttackResult::GameWon => "GameWon",
+        AttackResult::InProgress => "InProgress",
     }
 }
 
@@ -236,6 +238,7 @@ fn synth_card(id: &str, name: &str, kind: CardKind, dp: Option<i32>, cost: u16) 
         colors: vec![CardColor::Red],
         traits: Vec::new(),
         evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
@@ -441,6 +444,232 @@ pub fn rust_move_from_breeding(
     Ok(game_state_dto(game))
 }
 
+// ─── Action-ID dispatch envelope (parity with Python sidecar shape) ───
+//
+// The frontend's gameApi.ts speaks in flat action IDs and expects responses
+// shaped like Python's ActionResponse. These commands and DTOs let the
+// frontend bind against the same interface regardless of which engine is
+// backing it.
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameEventDto {
+    #[serde(rename = "type")]
+    pub event_type: String,
+    pub seq: u32,
+    pub player: i32,
+    pub source_card_id: Option<String>,
+    pub source_slot: Option<i32>,
+    pub target_card_id: Option<String>,
+    pub target_slot: Option<i32>,
+    pub meta: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionResponseDto {
+    pub state: GameStateDto,
+    pub action_mask: Vec<u8>,
+    pub is_game_over: bool,
+    pub logs: Vec<String>,
+    pub events: Vec<GameEventDto>,
+    pub action_context: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateGameResponseDto {
+    pub game_id: String,
+    pub state: GameStateDto,
+    pub action_mask: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StepResponseDto {
+    pub state: GameStateDto,
+    pub action_mask: Vec<u8>,
+    pub logs: Vec<String>,
+    pub events: Vec<GameEventDto>,
+    pub is_human_turn: bool,
+    pub is_game_over: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SurrenderResponseDto {
+    pub state: GameStateDto,
+    pub action_mask: Vec<u8>,
+    pub logs: Vec<String>,
+    pub events: Vec<GameEventDto>,
+    pub is_game_over: bool,
+    pub surrendered_by: PlayerId,
+}
+
+/// Mirror of HeadlessRunner::current_decision_player — who is expected to
+/// submit the next action.
+fn current_decision_player(game: &Game) -> PlayerId {
+    if let Some(p) = game.mulligan_current_player() {
+        return p;
+    }
+    if let Some(sel) = game.pending_selection.as_ref() {
+        return sel.selecting_player;
+    }
+    game.turn_player()
+}
+
+/// Build a `u8` action mask for the current decider. The frontend stores
+/// `number[]`; `0`/`1` bytes round-trip transparently through Tauri/serde.
+fn action_mask_bytes(game: &Game) -> Vec<u8> {
+    let pid = current_decision_player(game);
+    build_action_mask(game, pid)
+        .into_iter()
+        .map(|v| if v > 0.0 { 1u8 } else { 0u8 })
+        .collect()
+}
+
+/// Drain structured gameplay events emitted by the engine during the last
+/// action. The Rust engine does not yet emit `GameEvent`s (animations in
+/// Rust mode will be a no-op until a follow-up milestone adds this). For now
+/// we return an empty vector so the response shape matches Python's.
+fn drain_events(_game: &mut Game) -> Vec<GameEventDto> {
+    Vec::new()
+}
+
+/// Ensure a game exists (auto-seed a test game on first call) and return a
+/// mutable reference. Lets the frontend skip the explicit create-game step
+/// during rapid iteration.
+fn ensure_game<'a>(
+    guard: &'a mut std::sync::MutexGuard<'_, Option<Game>>,
+) -> Result<&'a mut Game, String> {
+    if guard.is_none() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
+            .map_err(|e| format!("Game::new failed: {}", e))?;
+        game.start_game();
+        **guard = Some(game);
+    }
+    guard.as_mut().ok_or_else(|| "No active game".to_string())
+}
+
+/// Create a new local game using the built-in test card database. Accepts
+/// optional deck lists; when absent, uses the standard test decks.
+#[tauri::command]
+pub fn rust_create_game(
+    state: tauri::State<'_, RustEngineState>,
+    deck1: Option<Vec<String>>,
+    deck2: Option<Vec<String>>,
+) -> Result<CreateGameResponseDto, String> {
+    let db = test_card_db();
+    let decks = vec![
+        deck1.unwrap_or_else(test_deck),
+        deck2.unwrap_or_else(test_deck),
+    ];
+    let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
+        .map_err(|e| format!("Game::new failed: {}", e))?;
+    game.start_game();
+    let mask = action_mask_bytes(&game);
+    let dto = game_state_dto(&game);
+    *state.game.lock().map_err(|e| e.to_string())? = Some(game);
+    Ok(CreateGameResponseDto {
+        game_id: "rust-local".to_string(),
+        state: dto,
+        action_mask: mask,
+    })
+}
+
+/// Execute a flat RL-action-ID against the current game. Mirrors the Python
+/// sidecar's `POST /games/{id}/actions` surface so the frontend's gameApi
+/// can bind against this without knowing which backend is running.
+#[tauri::command]
+pub fn rust_submit_action(
+    state: tauri::State<'_, RustEngineState>,
+    action: u32,
+) -> Result<ActionResponseDto, String> {
+    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
+    let game = ensure_game(&mut guard)?;
+    let pid = current_decision_player(game);
+    game.decode_action(action as u16, pid);
+    let events = drain_events(game);
+    let mask = action_mask_bytes(game);
+    let is_over = game.game_over;
+    Ok(ActionResponseDto {
+        state: game_state_dto(game),
+        action_mask: mask,
+        is_game_over: is_over,
+        logs: Vec::new(),
+        events,
+        action_context: serde_json::json!({}),
+    })
+}
+
+/// Advance agent turns. The Rust mode has no AI-opponent policy yet, so
+/// this is a pure state snapshot with the current mask — matches the
+/// `stepGame` shape so the frontend's step-after-action loop is a no-op
+/// rather than an error.
+#[tauri::command]
+pub fn rust_step_game(
+    state: tauri::State<'_, RustEngineState>,
+) -> Result<StepResponseDto, String> {
+    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
+    let game = ensure_game(&mut guard)?;
+    let mask = action_mask_bytes(game);
+    let is_over = game.game_over;
+    Ok(StepResponseDto {
+        state: game_state_dto(game),
+        action_mask: mask,
+        logs: Vec::new(),
+        events: Vec::new(),
+        is_human_turn: true,
+        is_game_over: is_over,
+    })
+}
+
+/// Read the current action mask.
+#[tauri::command]
+pub fn rust_get_mask(
+    state: tauri::State<'_, RustEngineState>,
+) -> Result<Vec<u8>, String> {
+    let guard = state.game.lock().map_err(|e| e.to_string())?;
+    let game = guard.as_ref().ok_or("No active game")?;
+    Ok(action_mask_bytes(game))
+}
+
+/// Read the accumulated log (empty for now — Rust engine doesn't log yet).
+#[tauri::command]
+pub fn rust_get_log(
+    state: tauri::State<'_, RustEngineState>,
+) -> Result<Vec<String>, String> {
+    let _guard = state.game.lock().map_err(|e| e.to_string())?;
+    Ok(Vec::new())
+}
+
+/// Surrender ends the game with the opposing player as winner.
+#[tauri::command]
+pub fn rust_surrender(
+    state: tauri::State<'_, RustEngineState>,
+    player_id: PlayerId,
+) -> Result<SurrenderResponseDto, String> {
+    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
+    let game = guard.as_mut().ok_or("No active game")?;
+    let winner = if player_id == 0 { 1 } else { 0 };
+    game.declare_winner(winner);
+    let mask = action_mask_bytes(game);
+    Ok(SurrenderResponseDto {
+        state: game_state_dto(game),
+        action_mask: mask,
+        logs: Vec::new(),
+        events: Vec::new(),
+        is_game_over: true,
+        surrendered_by: player_id,
+    })
+}
+
+/// Delete the active game (used by the frontend cleanup path).
+#[tauri::command]
+pub fn rust_delete_game(
+    state: tauri::State<'_, RustEngineState>,
+) -> Result<(), String> {
+    *state.game.lock().map_err(|e| e.to_string())? = None;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -467,5 +696,50 @@ mod tests {
         let eggs = deck.iter().filter(|c| c.starts_with("EGG")).count();
         assert_eq!(mains, 50);
         assert_eq!(eggs, 5);
+    }
+
+    // Rust-side mirror of the Tauri command logic: drives `decode_action`
+    // directly on a `Game`. The Tauri handlers themselves need a runtime
+    // State<>, which is awkward to fabricate in a unit test — but the
+    // interesting logic (dispatch + mask rebuild + envelope) can be exercised
+    // directly.
+    #[test]
+    fn rust_submit_action_dispatches_and_rebuilds_mask() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let mut game = Game::new(&decks, &db, Rules::standard(), Some(42)).unwrap();
+        game.start_game();
+
+        // Drive through any initial mulligan decisions to reach a playable phase.
+        while let Some(p) = game.mulligan_current_player() {
+            game.accept_mulligan(p, /* keep */ true).unwrap();
+        }
+
+        // Submit a PASS action via decode_action — the same path
+        // rust_submit_action takes — and confirm the envelope round-trips.
+        let pid = current_decision_player(&game);
+        game.decode_action(digimon_engine::action::space::PASS, pid);
+
+        let mask = action_mask_bytes(&game);
+        let dto = game_state_dto(&game);
+        let resp = ActionResponseDto {
+            state: dto,
+            action_mask: mask,
+            is_game_over: game.game_over,
+            logs: Vec::new(),
+            events: Vec::<GameEventDto>::new(),
+            action_context: serde_json::json!({}),
+        };
+
+        assert_eq!(
+            resp.action_mask.len(),
+            digimon_engine::action::space::ACTION_SPACE_SIZE
+        );
+        assert!(!resp.is_game_over);
+        // Serde round-trip — frontend relies on this envelope shape.
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("\"action_mask\""));
+        assert!(json.contains("\"events\""));
+        assert!(json.contains("\"is_game_over\":false"));
     }
 }

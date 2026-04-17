@@ -11,7 +11,7 @@ use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
-use crate::selection::{EffectQueue, PendingAttack, PendingSelection, SelectionError};
+use crate::selection::{EffectQueue, PendingAttack, PendingSecurity, PendingSelection, SelectionError};
 
 /// Reasons `Game::activate_overclock` can fail. Exposed so callers
 /// (Tauri commands, tests, Python bindings) can distinguish between
@@ -98,6 +98,11 @@ pub struct Game {
     /// the combat state machine, cleared by `cleanup_attack`.
     /// Always `None` until the combat state machine lands (PR4).
     pub pending_attack: Option<PendingAttack>,
+    /// Transient state for an in-progress security check. Set by
+    /// `resolve_security_card` before firing `SecuritySkill` effects and
+    /// cleared afterward. `EffectContext::play_from_security` inspects and
+    /// mutates this slot to keep the revealed card from being trashed.
+    pub pending_security: Option<PendingSecurity>,
     /// Safety rail matching Python's `_resolve_effect_stack` max-iterations=50
     /// cap. Incremented per drain step; reset to 0 when the queue empties.
     /// Prevents a self-triggering chain from hanging the engine.
@@ -211,6 +216,7 @@ impl Game {
             pending_selection: None,
             effect_queue: EffectQueue::new(),
             pending_attack: None,
+            pending_security: None,
             effect_chain_depth: 0,
         };
 

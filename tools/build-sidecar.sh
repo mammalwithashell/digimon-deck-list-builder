@@ -1,22 +1,53 @@
 #!/bin/bash
 set -euo pipefail
 
-# Build the desktop sidecar binary using PyInstaller.
+# Build the desktop sidecar binary using PyInstaller — or skip it entirely
+# and produce a Rust-engine-only bundle.
 #
 # Usage:
-#   ./scripts/build-sidecar.sh [gameplay|full]
+#   ./tools/build-sidecar.sh [gameplay|full|rust]
 #
 # Profiles:
 #   gameplay (default) — Greedy/random bots only, no ONNX models (~60-90MB)
 #   full               — Includes ONNX runtime + bundled model weights (~90-120MB)
+#   rust               — Skip PyInstaller entirely. The frontend dispatches
+#                        directly to the in-process digimon-engine crate
+#                        via Tauri `invoke()`. Build the final desktop bundle
+#                        with:
+#                          cd src-tauri && cargo tauri build \
+#                            --features no-sidecar \
+#                            --config tauri.rust.conf.json
 #
-# Output:
+# Output (gameplay/full):
 #   src-tauri/binaries/digimon-server-<target-triple>[.exe]
 
 PROFILE="${1:-gameplay}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT_DIR"
+
+# Rust-engine profile: no Python, no PyInstaller, no sidecar binary.
+# Just prep the frontend and hand off to `cargo tauri build`.
+if [ "$PROFILE" = "rust" ]; then
+    echo "Building desktop (profile: rust — Rust engine, no Python sidecar)"
+    export VITE_BUILD_TARGET=desktop
+    export VITE_ENGINE=rust
+
+    echo "Building frontend with Rust-engine mode..."
+    (cd frontend && npm run build -- --mode rust)
+
+    echo ""
+    echo "Frontend built. Next step:"
+    echo "  cd src-tauri && cargo tauri build \\"
+    echo "      --features no-sidecar \\"
+    echo "      --config tauri.rust.conf.json"
+    echo ""
+    echo "For dev iteration:"
+    echo "  cd src-tauri && cargo tauri dev \\"
+    echo "      --features no-sidecar \\"
+    echo "      --config tauri.rust.conf.json"
+    exit 0
+fi
 
 # Detect platform target triple (Tauri sidecar naming convention)
 detect_target_triple() {

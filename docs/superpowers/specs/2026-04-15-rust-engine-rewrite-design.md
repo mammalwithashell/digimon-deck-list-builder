@@ -1,8 +1,21 @@
 # Rust Engine Rewrite Design
 
 **Date:** 2026-04-15
-**Status:** Draft
+**Status:** In progress — see Current Status below
 **Goal:** Rewrite the Digimon TCG game engine in Rust for training speed, correctness, and desktop-native play. Tensor/action-space-first design. Card effects written test-first by AI agents.
+
+---
+
+## Current Status
+
+This spec was written pre-execution. Since then:
+
+- **Phases 1–6 are largely complete.** Engine core, action space + tensor (`ACTION_SPACE_SIZE = 2168`, `TENSOR_SIZE = 1375`), effect system with `EffectContext` + `DebugRunner`, combat state machine with Alliance/Counter/Block interrupts and security-effect execution, Tauri commands, and the Engine API Reference (`docs/RUST_ENGINE_API.md`) have all landed. Recent commits use the §4.x-residual notation from `docs/RUST_PYTHON_PARITY.md` to track work within Phase 4 of that doc.
+- **Phase 9 (PyO3) is partially landed.** `digimon-engine-py/` exists with a working `RustHeadlessGame` class and numpy zero-copy tensor/mask accessors. `DigimonEnv` can swap to the Rust backend via `DIGIMON_BACKEND=rust`. However, the parity tracker still lists 🔴 parity-breaking items and 🟡 mask/tensor drift that must clear before full drop-in replacement of Python's `HeadlessGame` is safe for training.
+- **Phase 7 (Rust `batch-fix-cards` skill) is the current focus.** No production card scripts exist in Rust yet — only the hand-written TEST-001..TEST-022 examples in `digimon-engine/src/cards/test_cards.rs`. The skill will mirror the Python `/batch-fix-cards` orchestration but target Rust + `DebugRunner` tests, with per-card TDD as described in §10.
+- **Phase 8 (first archetypes) is gated on Phase 7 landing.** The desktop beta milestone (Tauri-native game without Python sidecar) depends on having real card effects in Rust.
+
+**Single source of truth for live phase + parity state:** `docs/RUST_PYTHON_PARITY.md` §7 (Recommended fix order). This spec describes the target architecture; the parity doc describes what is and isn't yet true about it.
 
 ---
 

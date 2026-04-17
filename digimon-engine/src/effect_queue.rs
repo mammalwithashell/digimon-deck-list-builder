@@ -20,6 +20,7 @@
 //! `_resolve_effect_stack` max=50 bound.
 
 use crate::action::space::{HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS};
+use crate::card_source::CardHandle;
 use crate::effect_context::EffectContext;
 use crate::enums::{EffectTiming, GamePhase, PlayerId};
 use crate::game::Game;
@@ -57,6 +58,9 @@ impl Game {
                     };
                     self.enqueue_from_permanent(timing, handle);
                 }
+            }
+            TriggerSource::SecurityRevealed { defender, card } => {
+                self.enqueue_from_security_card(timing, defender, card);
             }
         }
     }
@@ -126,6 +130,56 @@ impl Game {
     }
 
     // ─── Internal helpers ───────────────────────────────────────────
+
+    /// Collect `SecuritySkill` effects off a revealed security card. The
+    /// card is expected to be parked in `Game.pending_security` (popped off
+    /// the defender's security stack but not yet disposed). Only effects
+    /// whose `security` flag is set are enqueued — matches Python's
+    /// `is_security_effect` filter.
+    fn enqueue_from_security_card(
+        &mut self,
+        timing: EffectTiming,
+        defender: PlayerId,
+        card: CardHandle,
+    ) {
+        let Some(pending) = self.pending_security.as_ref() else {
+            return;
+        };
+        if pending.card.handle() != card {
+            return;
+        }
+        let card_id = pending.card.card_id(&self.card_data).to_string();
+        let source_card = card;
+
+        let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+            return;
+        };
+
+        let tp = self.turn_player();
+        let is_turn_player = defender == tp;
+
+        for (slot, effect) in effects.iter().enumerate() {
+            if !timing_flag_matches(effect, timing) {
+                continue;
+            }
+            // Security trigger specifically: ignore effects that don't carry
+            // the security flag. Matches Python's
+            // `if getattr(effect, 'is_security_effect', False)` filter.
+            if timing == EffectTiming::SecuritySkill && !effect.security {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card,
+                source_permanent: None,
+                controller: defender,
+                timing,
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.clone(),
+            });
+        }
+    }
 
     /// Collect effects for a single permanent. Applies the same timing +
     /// flag filter as the legacy `fire_*` loops so enqueue is a drop-in
