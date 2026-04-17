@@ -393,6 +393,28 @@ python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output m
 
 Exported files are consumed by `OnnxMlpPolicy` / `OnnxLstmPolicy` in `digimon_gym/engine/onnx_policy.py` and served via the `/games/models` API route.
 
+#### Metadata sidecar for catalog uploads
+
+`--emit-metadata` writes a `{output}.meta.json` alongside the ONNX containing `arch`, `engine_version`, `min_engine_version`, `changelog`, `size_bytes`, `sha256`, and `exported_at`. The file is ready to paste into the `meta` form field of `POST /admin/models/{slug}/versions`, collapsing export and upload into a scripted pair:
+
+```bash
+python tools/export_onnx.py \
+  --type mlp \
+  --input models/greedy_meta.zip \
+  --output models/greedy_meta.onnx \
+  --emit-metadata \
+  --engine-version 0.2.0 \
+  --min-engine-version 0.1.0 \
+  --changelog "Retrained on Q2 meta"
+
+curl -X POST https://api.example.com/admin/models/greedy-meta/versions \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -F "meta=$(cat models/greedy_meta.onnx.meta.json)" \
+  -F "file=@models/greedy_meta.onnx"
+```
+
+Full catalog system reference: [MODEL_CATALOG.md](MODEL_CATALOG.md).
+
 ---
 
 ### 7.2 Desktop Sidecar Build
@@ -402,16 +424,18 @@ Exported files are consumed by `OnnxMlpPolicy` / `OnnxLstmPolicy` in `digimon_gy
 Builds the desktop sidecar binary using PyInstaller and names it according to the Tauri v2 sidecar convention (`digimon-server-<target-triple>[.exe]`).
 
 ```bash
-./tools/build-sidecar.sh gameplay   # Greedy/random bots only (~60-90MB)
-./tools/build-sidecar.sh full       # Includes ONNX runtime + model weights (~90-120MB)
+./tools/build-sidecar.sh gameplay                  # Greedy/random bots only (~60-90MB)
+./tools/build-sidecar.sh full                      # ONNX runtime + one baseline model (~90-110MB)
+./tools/build-sidecar.sh full --bundle-all         # ONNX runtime + every exported model (legacy)
 ```
 
 | Profile | Size | Contents |
 |---|---|---|
 | `gameplay` (default) | ~60-90MB | Engine + greedy/random bots, no ONNX |
-| `full` | ~90-120MB | Engine + ONNX runtime + bundled model weights |
+| `full` | ~90-110MB | Engine + ONNX runtime + one smallest-MLP baseline (offline-capable) |
+| `full --bundle-all` | 100MB-GB | Every exported `.onnx`; for air-gapped installers |
 
-Output goes to `src-tauri/binaries/`. The `full` profile auto-exports SB3 → ONNX before bundling. See `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md` for the full build pipeline.
+Output goes to `src-tauri/binaries/`. The `full` profile auto-exports SB3 → ONNX before bundling. The single-baseline default keeps installer size tight; community models stream on demand via the hosted [/models catalog](MODEL_CATALOG.md). See `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md` for the full build pipeline.
 
 ---
 

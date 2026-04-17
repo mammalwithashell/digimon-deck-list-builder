@@ -250,6 +250,8 @@ Key references:
 - **Tools**: `docs/TOOLS.md` — card pipeline, transpiler, Pinecone, model export, new-set workflow
 - **Training**: `docs/TRAINING_RUNBOOK.md` + `AGENTS.md` (wrapper chain, gauntlet, pipeline)
 - **Rules**: `docs/RULES_CONTEXT.md` — official Digimon TCG rules reference
+- **Hosted-API deployment**: `docs/DEPLOYMENT.md` — DigitalOcean topology, env vars, bootstrap
+- **Model catalog**: `docs/MODEL_CATALOG.md` — ONNX upload/download pipeline, storage backends, desktop cache
 
 **Rust engine (target source of truth — read all three before editing engine code):**
 - **Design / phase plan**: `docs/superpowers/specs/2026-04-15-rust-engine-rewrite-design.md` — north-star architecture, crate structure, phase roadmap

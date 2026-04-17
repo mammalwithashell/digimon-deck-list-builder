@@ -89,10 +89,14 @@ need `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection
 2. Generate a Spaces access key (r/w on the bucket).
 3. Set the `SPACES_*` env vars on the API container.
 4. Upload the first model via `POST /admin/models` + `POST
-   /admin/models/{slug}/versions` (see Part 2 of the rollout plan).
+   /admin/models/{slug}/versions`.
 
 Model download traffic hits the CDN edge, not the Droplet — Droplet egress
 stays cheap even as the community grows.
+
+Full reference for the catalog (admin endpoints, CI upload pattern,
+desktop cache layout, integrity guarantees, environment variables):
+see [MODEL_CATALOG.md](MODEL_CATALOG.md).
 
 ## First-user bootstrap
 
