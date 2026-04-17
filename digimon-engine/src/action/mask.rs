@@ -377,6 +377,14 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 
             // --- Pass (62) ---
             mask[PASS as usize] = 1.0;
+
+            // §4.7d FORCE_ATTACK global mask replacement. If any friendly
+            // Digimon has the ForceAttack modifier AND at least one legal
+            // attack is available, zero every other bit and retain only
+            // the forced attacker(s)' attack bits. Mirrors Python
+            // action_mask.py:227-280. Falls through to the normal mask
+            // above when no forced attacker can act (e.g. all suspended).
+            apply_force_attack_mask_replacement(&mut mask, game, player_id, opp_id);
         }
 
         GamePhase::Breeding => {
@@ -395,24 +403,50 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
         }
 
         GamePhase::EndOfTurnAction => {
-            // Decline end-of-turn action — always legal.
+            // Decline end-of-turn action — always legal. Matches Python's
+            // `action_mask.py` EndOfTurnAction branch where PASS (62) is the
+            // sole exit even when FORCE_ATTACK is present (execution-side
+            // enforcement; the mask doesn't hide PASS).
             mask[PASS as usize] = 1.0;
-            // §4.6 slice — Vortex. A permanent with modifier-granted
-            // Keyword::Vortex whose `can_attack(handle, vortex=true)` is
-            // true may attack any enemy Digimon (suspended or not).
-            // Mirrors Python action_mask.py:321-335. Overclock /
-            // MAY_ATTACK / FORCE_ATTACK bits are tracked as §4.6c.
+
             let max_field = me.battle_area.len().min(FIELD_SLOTS);
+            let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
+
             for i in 0..max_field {
-                let handle = PermanentHandle { player: player_id, index: i as u8 };
-                if !game.modifiers.has_keyword(handle, Keyword::Vortex) {
+                let handle = PermanentHandle {
+                    player: player_id,
+                    index: i as u8,
+                };
+
+                // §4.6c Overclock (sub-slot 0 of the per-permanent field
+                // effect range). Mirrors Python action_mask.py:354-361:
+                // emits when the Digimon has Overclock AND at least one
+                // other sacrificeable permanent exists on the battle area.
+                if game.modifiers.has_keyword(handle, Keyword::Overclock)
+                    && game.has_overclock_sacrifice(player_id, i)
+                {
+                    let bit = FIELD_EFFECT_START
+                        + i as u16 * EFFECTS_PER_PERMANENT
+                        + FIELD_EFFECT_SLOT_FOR_OVERCLOCK;
+                    mask[bit as usize] = 1.0;
+                }
+
+                // §4.6 attack bits: Vortex / MayAttack / ForceAttack all
+                // share the 100-399 attack range and the same target loop
+                // (any enemy Digimon + security, subject to
+                // CannotAttackTarget). Vortex uses the summoning-sickness
+                // exemption; the other two use normal `can_attack`.
+                let vortex = game.modifiers.has_keyword(handle, Keyword::Vortex);
+                let may_attack = game.modifiers.has(handle, ModifierType::MayAttack);
+                let force_attack = game.modifiers.has(handle, ModifierType::ForceAttack);
+                if !vortex && !may_attack && !force_attack {
                     continue;
                 }
-                if !game.can_attack(handle, /* vortex = */ true) {
+                if !game.can_attack(handle, /* vortex = */ vortex) {
                     continue;
                 }
+
                 mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
-                let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
                 for j in 0..max_opp {
                     let target = &opp.battle_area[j];
                     if !target.is_digimon(&game.card_data) {
@@ -422,8 +456,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         player: opp_id,
                         index: j as u8,
                     };
-                    // §4.7a CANNOT_ATTACK_TARGET — suppress Vortex attacks
-                    // against a target carrying the modifier.
+                    // §4.7a CANNOT_ATTACK_TARGET — suppress attacks against
+                    // a target carrying the modifier, regardless of which
+                    // keyword granted the attack.
                     if game
                         .modifiers
                         .has(t_handle, ModifierType::CannotAttackTarget)
@@ -550,4 +585,132 @@ fn can_basic_digivolve(
         return true;
     }
     false
+}
+
+/// §4.7d FORCE_ATTACK global mask replacement. If any friendly Digimon
+/// carries `ModifierType::ForceAttack` AND has at least one legal attack
+/// available (respecting summoning sickness, Raid / CanAttackUnsuspended
+/// targeting, and CannotAttackTarget per-target filtering), replace the
+/// passed-in `mask` with a fresh all-zero mask populated only with those
+/// attackers' attack bits.
+///
+/// Falls through (leaves `mask` untouched) when no forced Digimon can
+/// actually attack — matches Python's behavior at
+/// `action_mask.py:279-280`. Intentionally does not gate on memory:
+/// Python's forced-attack branch only checks `attacker.can_attack()`
+/// (summoning sickness), not memory.
+fn apply_force_attack_mask_replacement(
+    mask: &mut [f32],
+    game: &Game,
+    player_id: PlayerId,
+    opp_id: PlayerId,
+) {
+    let me = game.player(player_id);
+    let opp = game.player(opp_id);
+    let max_field = me.battle_area.len().min(FIELD_SLOTS);
+
+    // First pass: is any friendly Digimon forced to attack?
+    let has_any_forced = (0..max_field).any(|i| {
+        let handle = PermanentHandle {
+            player: player_id,
+            index: i as u8,
+        };
+        game.modifiers.has(handle, ModifierType::ForceAttack)
+    });
+    if !has_any_forced {
+        return;
+    }
+
+    // Build the replacement mask into a fresh buffer so we can fall through
+    // if no forced attacker can legally act this turn.
+    let mut replacement = vec![0.0f32; ACTION_SPACE_SIZE];
+    let mut any_attack_emitted = false;
+    let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
+
+    for i in 0..max_field {
+        let attacker = &me.battle_area[i];
+        let handle = PermanentHandle {
+            player: player_id,
+            index: i as u8,
+        };
+        if !game.modifiers.has(handle, ModifierType::ForceAttack) {
+            continue;
+        }
+        if !can_basic_attack(
+            attacker,
+            handle,
+            game.turn_count,
+            &game.card_data,
+            &game.modifiers,
+        ) {
+            continue;
+        }
+
+        // Security attack.
+        replacement[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
+        any_attack_emitted = true;
+
+        // Digimon attacks — same Raid / CanAttackUnsuspended logic as the
+        // normal Main-phase attack block above.
+        let can_attack_unsuspended = game
+            .modifiers
+            .has(handle, ModifierType::CanAttackUnsuspended);
+        let has_raid = game.modifiers.has_keyword(handle, Keyword::Raid);
+        let raid_max_dp = if has_raid && !can_attack_unsuspended {
+            let mut best: Option<i32> = None;
+            for j in 0..max_opp {
+                let t = &opp.battle_area[j];
+                if t.is_suspended || !t.is_digimon(&game.card_data) {
+                    continue;
+                }
+                let t_handle = PermanentHandle {
+                    player: opp_id,
+                    index: j as u8,
+                };
+                if let Some(dp) = game.effective_dp(t_handle) {
+                    best = Some(best.map_or(dp, |b| b.max(dp)));
+                }
+            }
+            best
+        } else {
+            None
+        };
+
+        for j in 0..max_opp {
+            let target = &opp.battle_area[j];
+            if !target.is_digimon(&game.card_data) {
+                continue;
+            }
+            let t_handle = PermanentHandle {
+                player: opp_id,
+                index: j as u8,
+            };
+            if game
+                .modifiers
+                .has(t_handle, ModifierType::CannotAttackTarget)
+            {
+                continue;
+            }
+            let action_bit = encode_attack(i as u16, j as u16) as usize;
+            if target.is_suspended {
+                replacement[action_bit] = 1.0;
+                continue;
+            }
+            if can_attack_unsuspended {
+                replacement[action_bit] = 1.0;
+                continue;
+            }
+            if let Some(max_dp) = raid_max_dp {
+                if let Some(dp) = game.effective_dp(t_handle) {
+                    if dp == max_dp {
+                        replacement[action_bit] = 1.0;
+                    }
+                }
+            }
+        }
+    }
+
+    if any_attack_emitted {
+        mask.copy_from_slice(&replacement);
+    }
 }

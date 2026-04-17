@@ -13,10 +13,14 @@
 //! Overclock / MAY_ATTACK / FORCE_ATTACK bits, and the full interrupt-
 //! phase mask builders are all §4.6b / §4.6c / §4.6d residuals.
 
-use digimon_engine::action::{build_action_mask, encode_attack, PASS, SECURITY_TARGET};
+use digimon_engine::action::{
+    build_action_mask, encode_attack, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_OVERCLOCK,
+    FIELD_EFFECT_START, PASS, SECURITY_TARGET,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 
 fn make_digimon(id: &str, color: CardColor, dp: i32) -> CardData {
     CardData {
@@ -180,8 +184,6 @@ fn make_digimon_without_dp(id: &str, color: CardColor) -> CardData {
 /// action_mask.py:348-351.
 #[test]
 fn mask_vortex_respects_cannot_attack_target() {
-    use digimon_engine::enums::ModifierType;
-
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("ATK", CardColor::Red, 5000))
         .add_card(make_digimon("DEF", CardColor::Blue, 3000))
@@ -197,7 +199,7 @@ fn mask_vortex_respects_cannot_attack_target() {
     );
     r.game.modifiers.add(
         defender,
-        digimon_engine::modifiers::ModifierEntry {
+        ModifierEntry {
             modifier: ModifierType::CannotAttackTarget,
             value: 1,
             expiry: Expiry::EndOfTurn,
@@ -215,4 +217,162 @@ fn mask_vortex_respects_cannot_attack_target() {
         mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
         "Vortex security attack is unaffected by CannotAttackTarget",
     );
+}
+
+// ─── §4.6c Overclock ───────────────────────────────────────────────────
+
+fn overclock_bit(field_index: usize) -> usize {
+    (FIELD_EFFECT_START
+        + field_index as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_OVERCLOCK) as usize
+}
+
+#[test]
+fn mask_overclock_emits_sub_slot_0_bit_with_sacrifice_available() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", CardColor::Red, 5000))
+        .add_card(make_digimon("SAC", CardColor::Red, 1000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let _sac = r.place_on_field(tp, "SAC", Some(0));
+    r.game.modifiers.grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[overclock_bit(oc.index as usize)], 1.0,
+        "Overclock with at least one other Digimon must emit sub-slot 0",
+    );
+}
+
+#[test]
+fn mask_overclock_suppressed_when_no_sacrifice() {
+    // Only the Overclock Digimon on the field — nothing else to sacrifice.
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", CardColor::Red, 5000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    r.game.modifiers.grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[overclock_bit(oc.index as usize)], 0.0,
+        "no sacrifice available → Overclock bit must not emit",
+    );
+}
+
+// ─── §4.6c MayAttack ──────────────────────────────────────────────────
+
+#[test]
+fn mask_may_attack_emits_attack_bits_against_digimon_and_security() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon("DEF", CardColor::Blue, 3000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry {
+            modifier: ModifierType::MayAttack,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: tp,
+        },
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        "MayAttack permits attacking security",
+    );
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize], 1.0,
+        "MayAttack permits attacking any enemy Digimon",
+    );
+}
+
+#[test]
+fn mask_may_attack_respects_cannot_attack_target() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon("DEF", CardColor::Blue, 3000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry {
+            modifier: ModifierType::MayAttack,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: tp,
+        },
+    );
+    r.game.modifiers.add(
+        defender,
+        ModifierEntry {
+            modifier: ModifierType::CannotAttackTarget,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: opp,
+        },
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize], 0.0,
+        "MayAttack must honor CannotAttackTarget like Vortex does",
+    );
+}
+
+// ─── §4.6c ForceAttack (EOT branch) ───────────────────────────────────
+
+#[test]
+fn mask_force_attack_emits_attack_bits_in_eot() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon("DEF", CardColor::Blue, 3000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry {
+            modifier: ModifierType::ForceAttack,
+            value: 1,
+            expiry: Expiry::EndOfTurn,
+            source_player: tp,
+        },
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        "ForceAttack permits attacking security in EOT",
+    );
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize], 1.0,
+        "ForceAttack permits attacking enemy Digimon in EOT",
+    );
+    // PASS is still emitted — execution-side enforcement of the "mandatory"
+    // part is out of scope for mask-level parity (matches Python).
+    assert_eq!(mask[PASS as usize], 1.0);
 }

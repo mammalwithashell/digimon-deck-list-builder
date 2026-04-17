@@ -247,13 +247,19 @@ The effect-listing primitive is [`Game::effects_for_card(card_id, handle)`](../d
 
 Rust (like Python's mask) does NOT currently track `_turn_activate_count` for Hand / Trash [Main] effects at mask-generation time — the effect's `can_use_condition` closure is the sole gate. When execution-side support lands (firing these activated actions and recording activation), we'll revisit whether to add a parallel activation map on `Player` keyed by `(CardHandle, slot)`. Field [Main] already uses `Permanent::effect_activations`.
 
-### 4.5c-residual 🔴 Action execution for [Main] bits
+### 4.5c-residual 🟢 Action execution for [Main] bits — implemented
 
-The mask emits the bits but the action decoder does not yet consume them — firing `HAND_EFFECT` / `FIELD_EFFECT` / `TRASH_EFFECT` actions (memory cost payment, effect process invocation, activation recording) is the next plan. See [docs/RUST_ENGINE_API.md](RUST_ENGINE_API.md) §§3-4.
+**Rust** — [game.rs](../digimon-engine/src/game.rs) `Game::activate_hand_main(player, hand_index)`, `Game::activate_field_main(player, field_index)`, `Game::activate_trash_main(player, trash_index)` each walk the card's / permanent's effects in the same order the mask emits, apply the same condition / inherited / OPT filters, and fire the first match. Memory cost, card movement, and all other side effects are handled inside the effect's `process` closure — mirroring Python's `_execute_*_main_effect` (no upfront `pay_memory` call, matching Python's inline `player.add_memory(-cost)` model).
+
+**Field activation recording:** `activate_field_main` calls `perm.record_activation(source_handle, slot as u8)` before invoking the process closure, using the same `(CardHandle, slot)` key the mask inspects via `perm.activation_count`. Mask ↔ decoder agreement is verified by a regression test (`mask_and_field_decoder_agree_on_opt_exhaustion`).
+
+**Hand/Trash activation counters:** intentionally omitted. See §4.5c-residual 🟡 below — Python's mask doesn't gate on `_turn_activate_count` either, and the execution-side counter is a separate architectural item worth its own plan.
+
+**Coverage:** [tests/action_main_effects_parity.rs](../digimon-engine/tests/action_main_effects_parity.rs) — 14 cases: fires / suppressions per zone (condition gate, OOB index, wrong timing), Field OPT exhaustion, Field inherited-filter, mask ↔ decoder consistency for both Field (OPT-aware) and Hand (no OPT).
 
 ### 4.6 🟡 Interrupt-phase mask coverage — partial
 
-Vortex mask emission has landed; phase transition, other end-of-turn actions, and the full interrupt/selection subsystem remain future work.
+End-of-turn surface is now complete for mask parity — Vortex (§4.6a) + Overclock/MayAttack/ForceAttack (§4.6c) emission, plus phase transition (§4.6b) and `pass_end_of_turn_action` resumption. Overclock sacrifice *execution* (§4.6c-residual) and the full interrupt/selection subsystem (§4.6d — Block/Counter/Alliance, selection phases, EffectChoice) remain future work.
 
 ### 4.6a 🟢 Vortex mask emission — implemented
 
@@ -263,13 +269,29 @@ Vortex mask emission has landed; phase transition, other end-of-turn actions, an
 
 **Coverage:** [tests/mask_end_of_turn_parity.rs](../digimon-engine/tests/mask_end_of_turn_parity.rs) — `mask_vortex_emits_attacks_in_end_of_turn_phase`, `mask_vortex_without_keyword_only_emits_pass`, `mask_vortex_bypasses_summoning_sickness`, `mask_vortex_targets_unsuspended_digimon_too`.
 
-### 4.6b 🔴 Phase transition into `EndOfTurnAction`
+### 4.6b 🟢 Phase transition into `EndOfTurnAction` — implemented
 
-Nothing in `game::end_turn` inspects for pending vortex / overclock / may-attack / force-attack and flips `current_phase` to `EndOfTurnAction`. Python triggers the phase via `_has_end_of_turn_keywords`. Wiring the transition plus resume-after-action requires the interrupt state machine — tracked with §4.6d.
+**Python** — [game/__init__.py:294-324](../digimon_gym/engine/game/__init__.py#L294) `_complete_end_phase` parks in `GamePhase.EndOfTurnAction` when `_has_end_of_turn_keywords` returns true (Vortex / Overclock w/ sacrifice / MayAttack). Turn rotation defers until the player calls `next_phase` via PASS action 62.
 
-### 4.6c 🔴 Overclock / MAY_ATTACK / FORCE_ATTACK mask bits
+**Rust** — [game.rs](../digimon-engine/src/game.rs) `Game::end_turn` mirrors the Python flow: fire OnEndTurn effects → swing-back check → `has_end_of_turn_keywords` → park in `EndOfTurnAction` or fall through to `rotate_turn_player`. `Game::pass_end_of_turn_action` resumes rotation. The turn-rotation tail of the old `end_turn` is extracted into a private `rotate_turn_player(ending_player)` helper so the resume path doesn't re-evaluate the EOT keyword check. `ModifierType::ForceAttack` is intentionally excluded from the EOT-park check (matches Python) — it's enforced Main-phase by §4.7d.
 
-Python's `EndOfTurnAction` branch also emits bits for Overclock sacrifices and `MAY_ATTACK`/`FORCE_ATTACK` attacks. Each needs its own modifier variant plus a mask arm (Overclock additionally needs sacrifice selection).
+**Coverage:** [tests/end_turn_phase_transition.rs](../digimon-engine/tests/end_turn_phase_transition.rs) — 9 cases covering Vortex/Overclock/MayAttack parking, sacrifice-availability gating, suspended-MayAttack no-park, swing-back short-circuit, rotation resumption, and EOT-modifier expiry on resume.
+
+### 4.6b-residual 🟡 Token detection
+
+Rust's `CardKind` has no `Token` variant (tokens are registered as `Digimon`-kind via `token_registry`). Python's Overclock-sacrifice check is `p.is_token or p.is_digimon`; Rust collapses it to `is_digimon` alone. No observable gap today because token registrations produce `CardKind::Digimon` anyway, but promoting Token to a first-class kind will be needed if a card ever introduces Token-specific sacrifice restrictions.
+
+### 4.6c 🟢 Overclock / MAY_ATTACK / FORCE_ATTACK mask bits — implemented
+
+**Python** — [action_mask.py:354-389](../digimon_gym/engine/game/action_mask.py#L354): EndOfTurnAction branch emits Overclock at `1000 + i * EFFECTS_PER_PERM + 0`, MAY_ATTACK and FORCE_ATTACK attacks at `100 + i * TARGETS_PER_ATTACKER + j` (shared with normal attack range).
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) `GamePhase::EndOfTurnAction` arm folds Vortex/MayAttack/ForceAttack into a single target-loop shared with the §4.7a `CannotAttackTarget` filter; Vortex uses `can_attack(vortex=true)` and the other two use `can_attack(vortex=false)`. Overclock emits at sub-slot `FIELD_EFFECT_SLOT_FOR_OVERCLOCK` (=0) via the new `Game::has_overclock_sacrifice` helper.
+
+**Coverage:** [tests/mask_end_of_turn_parity.rs](../digimon-engine/tests/mask_end_of_turn_parity.rs) extends with `mask_overclock_emits_sub_slot_0_bit_with_sacrifice_available`, `mask_overclock_suppressed_when_no_sacrifice`, `mask_may_attack_emits_attack_bits_against_digimon_and_security`, `mask_may_attack_respects_cannot_attack_target`, `mask_force_attack_emits_attack_bits_in_eot`.
+
+### 4.6c-residual 🔴 Overclock sacrifice execution
+
+The mask emits the Overclock bit but firing it (select a sacrifice, delete the sacrifice, attack without suspending, return to EOT phase) requires the selection/pending-action subsystem tracked by §4.6d. Mask-side parity is done; execution-side follows with the broader Phase-4 state machine.
 
 ### 4.6d 🔴 Full interrupt / selection-phase mask builders
 
@@ -284,7 +306,7 @@ All still 0.0 in Rust except PASS. Unlocking these is a Phase-4 architectural pr
 
 ### 4.7 🟡 Modifier-gated mask checks — partial
 
-Three of the five checks landed with unconditional semantics; the other two (§4.7d/e) and per-action context discriminants (§4.7x) remain future work.
+Four of the five checks have landed; §4.7e (DigiXros cost-reduction) and per-action context discriminants (§4.7x) remain future work.
 
 ### 4.7a 🟢 CannotAttackTarget — implemented
 
@@ -310,9 +332,13 @@ Three of the five checks landed with unconditional semantics; the other two (§4
 
 **Coverage:** `mask_cannot_play_from_hand_suppresses_all_hand_bits` in [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs).
 
-### 4.7d 🔴 FORCE_ATTACK — outstanding
+### 4.7d 🟢 FORCE_ATTACK — implemented
 
-Python's Main-phase builder (`action_mask.py:227-280`) does a global mask-replacement: if any friendly Digimon has `FORCE_ATTACK`, every other legal action is zeroed and only attacks by forced Digimon remain. Requires a new `ModifierType::ForceAttack` variant plus a second mask-replacement pass after the normal build. Own plan.
+**Python** — [action_mask.py:227-280](../digimon_gym/engine/game/action_mask.py#L227): if any friendly Digimon has `ModifierType::FORCE_ATTACK`, every non-attack bit is zeroed and only those Digimons' attack bits remain. Falls through to the normal mask when no forced Digimon can legally act (all suspended, etc.).
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) `apply_force_attack_mask_replacement` runs at the tail of the `GamePhase::Main` arm. Builds a fresh replacement mask, walks forced attackers through `can_basic_attack` + the same Raid / CanAttackUnsuspended / CannotAttackTarget filters the normal Main-phase attack loop uses, and `mask.copy_from_slice(&replacement)` when at least one attack bit was emitted. No memory gate on forced attackers (matches Python).
+
+**Coverage:** [tests/mask_force_attack.rs](../digimon-engine/tests/mask_force_attack.rs) — 5 cases: non-attack bits zeroed when active, multiple forced Digimon all retain attacks, fall-through when forced attacker is suspended, CannotAttackTarget filtering, Raid-target tiebreak against unsuspended enemies.
 
 ### 4.7e 🔴 DigiXros cost-reduction — outstanding
 
@@ -361,8 +387,8 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
 6. ~~**§3.1 / §3.2 — Tensor source-DP + OPT slots**~~ ✅ done — `EffectReadContext` + `Permanent::effect_activations` + Game helpers + tensor wiring. Residual §3.1b (linked-card effects) deferred.
 7. ~~**§4.2 / §4.3 / §4.4 — Action mask main-phase parity**~~ ✅ done — Option color check, Blitz memory exception, Raid / CAN_ATTACK_UNSUSPENDED targeting. Residual: §4.2b (script-based bypass) and §4.3b (native/static Blitz) await §4.5 effect-listing.
-8. **§4.5 / §4.6 — Mask phase coverage** — partial. ✅ §4.5a DNA digivolve mask + data types; ✅ §4.5c Hand/Field/Trash `[Main]` masks + `Game::effects_for_card` effect-listing primitive; ✅ §4.6a Vortex mask emission. Blocked: §4.5b `dna_costs` data-population pipeline (cards.json ingest); §4.5c-residual action execution for the new `[Main]` bits (decoder side); §4.6b phase transition; §4.6c Overclock/MAY_ATTACK/FORCE_ATTACK bits; §4.6d interrupt/selection phase builders (Phase-4 state machine).
-9. **§4.7 — Modifier-gated mask checks** — partial. ✅ §4.7a CannotAttackTarget, §4.7b CannotDigivolve, §4.7c CannotPlayFromHand (unconditional semantics). Outstanding: §4.7d FORCE_ATTACK (own plan), §4.7e DigiXros cost-reduction (own plan; also blocked on data-population like §4.5b), §4.7x context-aware modifier queries (architectural).
+8. **§4.5 / §4.6 — Mask phase coverage** — partial. ✅ §4.5a DNA digivolve mask + data types; ✅ §4.5c Hand/Field/Trash `[Main]` masks + `Game::effects_for_card` effect-listing primitive; ✅ §4.5c-residual decoder execution via `Game::activate_hand_main` / `activate_field_main` / `activate_trash_main`; ✅ §4.6a Vortex mask emission; ✅ §4.6b `end_turn` phase transition + `pass_end_of_turn_action`; ✅ §4.6c Overclock/MayAttack/ForceAttack mask bits. Blocked: §4.5b `dna_costs` data-population pipeline (cards.json ingest); §4.6c-residual Overclock sacrifice execution; §4.6d interrupt/selection phase builders (Phase-4 state machine).
+9. **§4.7 — Modifier-gated mask checks** — partial. ✅ §4.7a CannotAttackTarget, §4.7b CannotDigivolve, §4.7c CannotPlayFromHand (unconditional semantics); ✅ §4.7d FORCE_ATTACK Main-phase mask replacement. Outstanding: §4.7e DigiXros cost-reduction (own plan; also blocked on data-population like §4.5b), §4.7x context-aware modifier queries (architectural).
 
 The rest (combat interrupts §2.3, face-down security §3.3, etc.) can follow as cards that need them get implemented.
 

@@ -212,6 +212,14 @@ pub enum ModifierType {
     GrantArmor,
     GrantDecoy,
     GrantVortex,
+    GrantOverclock,
+
+    // End-of-turn attack grants. MayAttack permits one optional attack
+    // during the EndOfTurnAction phase. ForceAttack mandates an attack
+    // during the turn: it drives a global mask replacement in Main
+    // (§4.7d) and also emits attack bits in EndOfTurnAction (§4.6c).
+    MayAttack,
+    ForceAttack,
 
     // Security
     SecurityAttackChange,

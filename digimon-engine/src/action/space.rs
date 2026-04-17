@@ -39,6 +39,12 @@ pub const BREEDING_TARGET: u16 = 14; // digivolve target for breeding area
 /// Matches Python's `action_mask.py` layout (offset `+ 2` per permanent).
 pub const FIELD_EFFECT_SLOT_FOR_MAIN: u16 = 2;
 
+/// Sub-slot 0 of the per-permanent effect range is the Overclock
+/// sacrifice-and-attack action in the `EndOfTurnAction` phase (§4.6c).
+/// Matches Python's `action_mask.py:354-361` bit layout
+/// `1000 + i * EFFECTS_PER_PERM + 0`.
+pub const FIELD_EFFECT_SLOT_FOR_OVERCLOCK: u16 = 0;
+
 /// Upper bound on how many trash cards the mask inspects for [Trash] [Main]
 /// activations. Python enforces 45 in `action_mask.py` (TRASH_EFFECT_END -
 /// TRASH_EFFECT_START = 1195 - 1150).

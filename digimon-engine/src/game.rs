@@ -6,7 +6,7 @@ use crate::card_data::CardData;
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::{GamePhase, PlayerId, SkipDraw};
+use crate::enums::{EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::player::Player;
@@ -324,10 +324,15 @@ impl Game {
 
     /// End the current turn and advance to the next player.
     ///
-    /// Fires OnEndTurn effects (when the effect system is wired to this),
-    /// checks memory swing-back (§1.5): if an OnEndTurn effect restored memory
-    /// from negative to non-negative, the turn continues and returns to Main
-    /// phase instead of switching. Matches Python `_complete_end_phase`.
+    /// Fires OnEndTurn effects, checks memory swing-back (§1.5): if an OnEndTurn
+    /// effect restored memory from negative to non-negative, the turn continues
+    /// and returns to Main phase instead of switching.
+    ///
+    /// If the ending player has a permanent with a pending end-of-turn action
+    /// (§4.6b: Vortex / Overclock / MayAttack), the phase parks in
+    /// `GamePhase::EndOfTurnAction` and the caller resumes by picking an attack
+    /// bit or calling `pass_end_of_turn_action`. Matches Python
+    /// `_complete_end_phase`.
     pub fn end_turn(&mut self) {
         if self.game_over {
             return;
@@ -346,6 +351,24 @@ impl Game {
             return;
         }
 
+        // §4.6b: park in EndOfTurnAction if the player has a pending
+        // end-of-turn-keyword action. Turn rotation is deferred until the
+        // player resumes via `pass_end_of_turn_action`. ForceAttack is not
+        // checked here (Python doesn't either): it's enforced at the
+        // Main-phase mask (§4.7d) before the turn reaches `end_turn`.
+        if self.has_end_of_turn_keywords(ending_player) {
+            self.current_phase = GamePhase::EndOfTurnAction;
+            return;
+        }
+
+        self.rotate_turn_player(ending_player);
+    }
+
+    /// Advance the turn rotation — expires end-of-turn modifiers, flips the
+    /// memory seesaw, and calls `begin_turn` for the new active player.
+    /// Extracted from `end_turn` so `pass_end_of_turn_action` can resume
+    /// rotation without re-running the EOT-keyword check.
+    fn rotate_turn_player(&mut self, ending_player: PlayerId) {
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
         self.modifiers.expire_end_of_turn(ending_player);
 
@@ -377,6 +400,74 @@ impl Game {
         }
 
         self.begin_turn();
+    }
+
+    /// Resume turn rotation from the `EndOfTurnAction` phase. Called when the
+    /// player declines further end-of-turn actions (PASS bit 62 while phase ==
+    /// `EndOfTurnAction`) or the runner has exhausted all reachable EOT
+    /// attacks. No-op if called outside the EOT-action phase.
+    ///
+    /// Mirrors Python's `next_phase` branch at [game/__init__.py:242-245].
+    pub fn pass_end_of_turn_action(&mut self) {
+        if self.current_phase != GamePhase::EndOfTurnAction {
+            return;
+        }
+        let ending_player = self.turn_player();
+        self.rotate_turn_player(ending_player);
+    }
+
+    /// True iff the given player has any permanent with a pending end-of-turn
+    /// keyword action (Vortex attack, Overclock sacrifice-and-attack, or
+    /// MayAttack). Mirrors Python `_has_end_of_turn_keywords`.
+    pub fn has_end_of_turn_keywords(&self, player: PlayerId) -> bool {
+        let Some(me) = self.players.get(player as usize) else {
+            return false;
+        };
+        for (i, perm) in me.battle_area.iter().enumerate() {
+            if !perm.top_card().is_digimon(&self.card_data) {
+                continue;
+            }
+            let handle = PermanentHandle {
+                player,
+                index: i as u8,
+            };
+            // Vortex — matches Python `perm.can_attack(is_vortex=True)`.
+            if self.modifiers.has_keyword(handle, Keyword::Vortex)
+                && self.can_attack(handle, /* vortex = */ true)
+            {
+                return true;
+            }
+            // Overclock — needs at least one other sacrificeable permanent.
+            if self.modifiers.has_keyword(handle, Keyword::Overclock)
+                && self.has_overclock_sacrifice(player, i)
+            {
+                return true;
+            }
+            // MayAttack — normal can_attack (not vortex-exempt).
+            if self.modifiers.has(handle, ModifierType::MayAttack)
+                && self.can_attack(handle, /* vortex = */ false)
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// True iff `player`'s battle area contains at least one Digimon other
+    /// than the Overclock Digimon at `overclock_index` — i.e. a valid
+    /// Overclock sacrifice is available.
+    ///
+    /// Python checks `p.is_token or p.is_digimon`; Rust's `CardKind` has no
+    /// `Token` variant (tokens are registered as Digimon via
+    /// `token_registry`), so the check collapses to `is_digimon`. See plan
+    /// note on Token detection.
+    pub fn has_overclock_sacrifice(&self, player: PlayerId, overclock_index: usize) -> bool {
+        let Some(me) = self.players.get(player as usize) else {
+            return false;
+        };
+        me.battle_area.iter().enumerate().any(|(i, p)| {
+            i != overclock_index && p.top_card().is_digimon(&self.card_data)
+        })
     }
 
     /// Pass action: give the next player 3 memory, then end turn.
@@ -640,6 +731,189 @@ impl Game {
                 process(&mut ctx);
             }
         }
+    }
+
+    /// Activate a `[Main]` effect on the card at `player_id`'s hand slot
+    /// `hand_index`. Returns `true` if a matching effect fired, `false` if no
+    /// `EffectTiming::MainFromHand` effect on the card was legal.
+    ///
+    /// Consumes `HAND_EFFECT` action bits (30-59) that the mask emits. Memory
+    /// cost, card movement, and any side effects are handled inside the
+    /// effect's `process` closure — mirroring Python's
+    /// `_execute_hand_main_effect`. First-match-wins: once an effect fires we
+    /// stop iterating, matching the mask's own first-match-wins emission.
+    ///
+    /// Hand/Trash per-turn activation counters (§4.5c-residual 🟡) are not
+    /// tracked here; see docs/RUST_PYTHON_PARITY.md §4.5c.
+    pub fn activate_hand_main(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
+        let (card_id, handle) = {
+            let player = match self.players.get(player_id as usize) {
+                Some(p) => p,
+                None => return false,
+            };
+            let card = match player.hand.get(hand_index) {
+                Some(c) => c,
+                None => return false,
+            };
+            (card.card_id(&self.card_data).to_string(), card.handle())
+        };
+
+        let effect_impl = match self.effect_registry.get(&card_id) {
+            Some(arc) => arc,
+            None => return false,
+        };
+        let effects = effect_impl.effects(handle);
+
+        for effect in &effects {
+            if effect.timing != EffectTiming::MainFromHand {
+                continue;
+            }
+            if let Some(cond) = &effect.condition {
+                let ctx = EffectReadContext::new(self, handle, None, player_id);
+                if !cond(&ctx) {
+                    continue;
+                }
+            }
+            if let Some(process) = &effect.process {
+                let mut ctx = EffectContext::new(self, handle, None, player_id);
+                process(&mut ctx);
+            }
+            return true;
+        }
+        false
+    }
+
+    /// Activate a `[Main]` effect on the permanent at `player_id`'s battle-area
+    /// slot `field_index`. Returns `true` if a matching effect fired.
+    ///
+    /// Consumes `FIELD_EFFECT` bits at sub-slot `FIELD_EFFECT_SLOT_FOR_MAIN`
+    /// (per-permanent base + 2). Walks the digivolution stack bottom-up,
+    /// applying the inherited-vs-top filter used by
+    /// [`Game::source_dp_contribution`] so a given Field [Main] effect only
+    /// fires on the same source/position the mask emitted from. Honors OPT via
+    /// [`Permanent::activation_count`] and records activation on success so a
+    /// subsequent mask rebuild sees the bit suppressed.
+    ///
+    /// Mirrors Python's `_execute_field_main_effect`.
+    pub fn activate_field_main(&mut self, player_id: PlayerId, field_index: usize) -> bool {
+        // Snapshot per-source identity without holding the battle_area borrow
+        // across the effect closure invocations (which need `&mut self`).
+        let (perm_handle, sources) = {
+            let Some(player) = self.players.get(player_id as usize) else {
+                return false;
+            };
+            let Some(perm) = player.battle_area.get(field_index) else {
+                return false;
+            };
+            let stack_size = perm.card_sources.len();
+            let handle = PermanentHandle {
+                player: player_id,
+                index: field_index as u8,
+            };
+            let mut infos: Vec<(bool, String, crate::card_source::CardHandle)> =
+                Vec::with_capacity(stack_size);
+            for (i, source) in perm.card_sources.iter().enumerate() {
+                let is_under = i + 1 < stack_size;
+                infos.push((
+                    is_under,
+                    source.card_id(&self.card_data).to_string(),
+                    source.handle(),
+                ));
+            }
+            (handle, infos)
+        };
+
+        for (is_under, card_id, source_handle) in sources {
+            let Some(effect_impl) = self.effect_registry.get(&card_id) else {
+                continue;
+            };
+            let effects = effect_impl.effects(source_handle);
+            for (slot, effect) in effects.iter().enumerate() {
+                if effect.timing != EffectTiming::MainOnField {
+                    continue;
+                }
+                if is_under != effect.inherited {
+                    continue;
+                }
+                if effect.max_per_turn > 0 {
+                    let perm = &self.players[player_id as usize].battle_area[field_index];
+                    if perm.activation_count(source_handle, slot as u8) >= effect.max_per_turn {
+                        continue;
+                    }
+                }
+                if let Some(cond) = &effect.condition {
+                    let ctx =
+                        EffectReadContext::new(self, source_handle, Some(perm_handle), player_id);
+                    if !cond(&ctx) {
+                        continue;
+                    }
+                }
+                // Python records activation before invoking the callback so a
+                // panic inside the process still counts toward OPT. Mirror that.
+                if let Some(perm) = self.players[player_id as usize]
+                    .battle_area
+                    .get_mut(field_index)
+                {
+                    perm.record_activation(source_handle, slot as u8);
+                }
+                if let Some(process) = &effect.process {
+                    let mut ctx = EffectContext::new(
+                        self,
+                        source_handle,
+                        Some(perm_handle),
+                        player_id,
+                    );
+                    process(&mut ctx);
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Activate a `[Main]` effect on the card at `player_id`'s trash slot
+    /// `trash_index`. Returns `true` if a matching effect fired.
+    ///
+    /// Consumes `TRASH_EFFECT` action bits (1150-1194). Mirrors Python's
+    /// `_execute_trash_main_effect`: memory cost and any card movement happen
+    /// inside the effect's process closure, and there is no per-turn
+    /// activation counter (§4.5c-residual 🟡).
+    pub fn activate_trash_main(&mut self, player_id: PlayerId, trash_index: usize) -> bool {
+        let (card_id, handle) = {
+            let player = match self.players.get(player_id as usize) {
+                Some(p) => p,
+                None => return false,
+            };
+            let card = match player.trash.get(trash_index) {
+                Some(c) => c,
+                None => return false,
+            };
+            (card.card_id(&self.card_data).to_string(), card.handle())
+        };
+
+        let effect_impl = match self.effect_registry.get(&card_id) {
+            Some(arc) => arc,
+            None => return false,
+        };
+        let effects = effect_impl.effects(handle);
+
+        for effect in &effects {
+            if effect.timing != EffectTiming::MainFromTrash {
+                continue;
+            }
+            if let Some(cond) = &effect.condition {
+                let ctx = EffectReadContext::new(self, handle, None, player_id);
+                if !cond(&ctx) {
+                    continue;
+                }
+            }
+            if let Some(process) = &effect.process {
+                let mut ctx = EffectContext::new(self, handle, None, player_id);
+                process(&mut ctx);
+            }
+            return true;
+        }
+        false
     }
 
     /// Digivolve: push a card onto a permanent's stack.
