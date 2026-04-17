@@ -26,6 +26,12 @@ pub struct Effect {
     pub counter: bool,
     pub declarative: bool,
     pub optional: bool,
+    /// Marks this effect as a blast-digivolve declaration — the card can be
+    /// stacked onto a battle-area Digimon during the defender's
+    /// `CounterTiming` window at zero memory cost. Consumed by
+    /// `combat::try_enter_counter` (RUST_PYTHON_PARITY §2.3). Mirrors
+    /// Python's `effect._is_blast_digivolve` flag.
+    pub blast_digivolve: bool,
 
     /// 0 = unlimited, 1 = once per turn, etc.
     pub max_per_turn: u8,
@@ -114,6 +120,7 @@ impl EffectBuilder {
                 counter: false,
                 declarative: false,
                 optional: false,
+                blast_digivolve: false,
                 max_per_turn: 0,
                 condition: None,
                 process: None,
@@ -154,6 +161,15 @@ impl EffectBuilder {
 
     pub fn name(mut self, n: &str) -> Self {
         self.inner.name = n.to_string();
+        self
+    }
+
+    /// Mark this effect as a blast-digivolve declaration. The card becomes
+    /// a candidate in the defender's `CounterTiming` window. See
+    /// RUST_PYTHON_PARITY §2.3 for semantics.
+    pub fn blast_digivolve(mut self) -> Self {
+        self.inner.blast_digivolve = true;
+        self.inner.counter = true; // diagnostic consistency with Python's is_counter_effect
         self
     }
 

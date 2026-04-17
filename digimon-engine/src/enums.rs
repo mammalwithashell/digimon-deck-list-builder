@@ -148,6 +148,10 @@ pub enum Keyword {
     Material,
     Partition,
     Vortex,
+    /// Attacker keyword — while this Digimon is attacking, every opponent
+    /// Digimon is treated as having Blocker. Consumed by
+    /// `combat::try_enter_block`. Mirrors Python's `_is_collision`.
+    Collision,
 }
 
 /// Zone where a card can exist.

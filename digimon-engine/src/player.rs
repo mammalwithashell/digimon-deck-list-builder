@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use rand::seq::SliceRandom;
 use rand::Rng;
 
@@ -19,6 +21,12 @@ pub struct Player {
     pub battle_area: Vec<Permanent>,
     pub breeding_area: Option<Permanent>,
 
+    /// `CardSource.card_index` of security cards currently face-up (visible
+    /// to this player and encoded into the observation tensor). Security is
+    /// laid face-down by default; effects that reveal security flip entries
+    /// in here. Matches Python's `Player.face_up_security`.
+    pub face_up_security: HashSet<u16>,
+
     // Commander/multiplayer fields
     pub commander_zone: Option<CardSource>,
     pub commander_tax: u16,
@@ -37,6 +45,7 @@ impl Player {
             trash: Vec::new(),
             battle_area: Vec::new(),
             breeding_area: None,
+            face_up_security: HashSet::new(),
             commander_zone: None,
             commander_tax: 0,
             is_eliminated: false,

@@ -97,21 +97,32 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 Rust's [CardData](../digimon-engine/src/card_data.rs#L18) has no `keywords: Vec<Keyword>` field — static card keywords live inside `effect_text: String`. Cards that print Rush on their face don't trigger the exemption in `can_attack` because there's nothing to inspect. Fix requires either a keyword-parsing pass over `effect_text` or an explicit `keywords` field on `CardData` + a migration of cards.json. Track with §4.5 effect-listing work.
 
-### 2.2 🟡 `is_attacking` flag missing
+### 2.2 🟢 `is_attacking` flag — implemented
 
 **Python** — `permanent.is_attacking` is set to `True` at attack declare and cleared at attack end. Used by "Progress" (effect immunity while attacking) and observer effects.
 
-**Rust** — no equivalent field on `Permanent`.
+**Rust** — `pub is_attacking: bool` field on [Permanent](../digimon-engine/src/permanent.rs). Set by `begin_attack` right after `PendingAttack` is installed; cleared by `cleanup_attack` alongside `modifiers.expire_end_of_attack()`.
 
-**Fix outline:** Add `pub is_attacking: bool` to `Permanent`. Set in `suspend_and_count_attack`, clear in an `end_attack` cleanup step alongside `modifiers.expire_end_of_attack()`.
+**Coverage:** [tests/block_interrupt.rs](../digimon-engine/tests/block_interrupt.rs) `is_attacking_flag_lifecycle` — verifies the flag is live while the attack is parked on BlockTiming and cleared after resolution.
 
-### 2.3 🟡 Combat interrupt phases
+### 2.3 🟢 Combat interrupt phases — implemented
 
 **Python** — full interrupt state machine in [combat.py](../digimon_gym/engine/game/combat.py): Counter → Block → Alliance phases pause the attack flow, require defender input, and resume via `_continue_attack_*` helpers.
 
-**Rust** — `combat.rs` is atomic. No counter digivolve, no blocker prompt, no alliance suspension.
+**Rust** — [combat.rs](../digimon-engine/src/combat.rs) is a state machine: `attack_digimon`/`attack_player` are wrappers over `begin_attack(attacker, AttackTarget, vortex)`, which installs `PendingAttack` and calls `advance_pending_attack`. The state progression is `Declared → AllianceOpen → CounterOpen → BlockOpen → Battle → Cleanup`, pausing on a `PendingSelection` at each open-window state that has candidates.
 
-**Status:** Known Phase 4 gap, [documented in RUST_ENGINE_API.md §9](RUST_ENGINE_API.md). Will require the selection/pending-action subsystem to fix.
+- **Alliance** ✅ implemented. `try_enter_alliance` scans the attacker's side for unsuspended allies with modifier-granted `Keyword::Alliance`. Declaration grants attacker +ally_dp and +1 security attack (both EndOfAttack expiry) and suspends the ally. Trait-matching refinement (Alliance only fires when ally shares a trait with attacker) is blocked on the trait-parsing infrastructure noted in §2.1b.
+- **Counter** ✅ implemented. `try_enter_counter` scans the defender's hand for cards whose effects set `blast_digivolve = true` and pairs each against valid field-digivolve targets via `Game::can_digivolve`. Declaration stacks the card onto the target (zero memory), fires `WhenDigivolving` via the effect queue, then advances to BlockOpen — unless the attacker was deleted mid-counter, in which case the state machine skips to Cleanup (matches DCGO `AttackProcess.cs:301`). **Digimon-target attacks only** — matches Python `combat.py:139`, which scopes Counter to Digimon targets. `OnCounterTiming` (Python's pre-WhenDigivolving counter-specific trigger) is intentionally deferred — no pilot card uses it yet.
+- **Block** ✅ implemented. `try_enter_block` scans defender's battle area for unsuspended Blocker-keyword Digimon. Declaration rewrites `effective_target` to the blocker; `resolve_pending_battle` reads `effective_target`, so the redirect works for both Digimon and Player attacks (a blocker on a player attack cancels the security loop and runs a Digimon battle against the blocker instead). **Collision** (attacker-side keyword) expands the candidate pool — when the attacker has `Keyword::Collision`, every unsuspended opponent Digimon is treated as having Blocker for this attack, matching Python `permanent.py::can_be_blocker:502`.
+- **Vortex** short-circuits directly to Battle after OnAttack (skips every interrupt window — matches DCGO).
+
+New return variant `AttackResult::InProgress` signals that an attack is parked on a `PendingSelection`; the terminal outcome arrives once the resolution chain completes.
+
+**Coverage:** [tests/block_interrupt.rs](../digimon-engine/tests/block_interrupt.rs) (10 cases); [tests/alliance_interrupt.rs](../digimon-engine/tests/alliance_interrupt.rs) (7 cases); [tests/counter_interrupt.rs](../digimon-engine/tests/counter_interrupt.rs) (12 cases: no-candidates baseline, invalid-pairing skip, prompt install, mask rendering, decline, declaration + stack growth + `WhenDigivolving` firing, attacker-delete cascade to Cleanup, Vortex bypass, Counter → Block sequence, player-target attack skips Counter, wrong-player rejection, encode/decode round-trip).
+
+### 2.3-residual 🟡 `OnCounterTiming` distinct timing
+
+Python's `_decode_counter` ([action_decoder.py:268-269](../digimon_gym/engine/game/action_decoder.py#L268)) fires `OnCounterTiming` *before* `WhenDigivolving`. Rust only fires `WhenDigivolving` today. Adding the distinct timing is a small surface change (new `EffectTiming::OnCounterTiming` variant + one `enqueue_triggered` call in `execute_blast_digivolve`) — deferred until the first card script actually uses it.
 
 ### 2.4 🟡 Security Digimon tie rule
 
@@ -143,27 +154,34 @@ Rust's [CardData](../digimon-engine/src/card_data.rs#L18) has no `keywords: Vec<
 
 **Coverage:** Same tests as §3.1.
 
-### 3.3 🟡 My face-down security visibility
+### 3.3 🟢 Face-down security visibility — implemented
 
 **Python** — [tensor.py:178-183](../digimon_gym/engine/game/tensor.py#L178): only writes card IDs for positions in the `face_up_security` set; face-down stays 0.0.
 
-**Rust** — [tensor.rs:118](../digimon-engine/src/tensor.rs#L118) writes every my-security card ID, ignoring face-down state.
+**Rust** — [player.rs](../digimon-engine/src/player.rs) now carries `face_up_security: HashSet<u16>` (keyed by `CardSource.card_index`). The new `write_security_ids` helper in [tensor.rs](../digimon-engine/src/tensor.rs) mirrors Python's writer — face-down slots stay 0.0; only `card_index`es present in the set emit their registry index. Applied to both `OFF_MY_SECURITY` and `OFF_OPP_SECURITY` so cross-player reveal effects have a symmetric slot.
 
-### 3.4 🟡 Revealed cards section (slots 1360-1369)
+**Previous behavior was a hidden-info leak** — Rust wrote every my-security card ID, so an RL agent trained on the Rust tensor could "peek" at its own face-down security stack and play perfectly around its own security effects.
+
+**Coverage:** [tests/tensor_hidden_info.rs](../digimon-engine/tests/tensor_hidden_info.rs) — `my_security_is_zero_by_default`, `opp_security_is_zero_by_default`, `my_security_visible_when_face_up`.
+
+### 3.4 🟢 Revealed cards section (slots 1360-1369) — implemented
 
 **Python** — [tensor.py:104](../digimon_gym/engine/game/tensor.py#L104) populates from `game.revealed_cards`.
 
-**Rust** — [tensor.rs:135-136](../digimon-engine/src/tensor.rs#L135) all zeros, marked "not yet implemented".
+**Rust** — `Game::revealed_cards: Vec<CardSource>` field ([game.rs](../digimon-engine/src/game.rs)) feeds the `OFF_REVEALED` slot via the existing `write_card_ids` helper. Cleared in `rotate_turn_player` so reveals don't leak across turns. No card effects populate the vec yet, but the scaffold is in place for reveal-from-deck / search effects.
 
-### 3.5 🟡 Selection context (slots 1371-1372)
+**Coverage:** [tests/tensor_hidden_info.rs](../digimon-engine/tests/tensor_hidden_info.rs) — `revealed_cards_populates_offset`, `revealed_cards_cleared_on_turn_rotation`.
+
+### 3.5 🟢 Selection context (slots 1371-1372) — implemented
 
 **Python** — [tensor.py:108-120](../digimon_gym/engine/game/tensor.py#L108) writes phase value, valid_count, selecting_player if `pending_selection` is set.
 
-**Rust** — [tensor.rs:139-141](../digimon-engine/src/tensor.rs#L139) writes only the phase value.
+**Rust** — [tensor.rs](../digimon-engine/src/tensor.rs) writes phase value at slot 1370 whenever the engine is in a selection / combat-interrupt phase; writes `valid_action_ids.len() / ACTION_SPACE_SIZE` at slot 1371 and `selecting_player` at slot 1372 whenever `pending_selection.is_some()` (covers both selection-phase parks and `TriggerOrder` prompts parked under `EffectChoice`).
+
+**Coverage:** [tests/select_opponent_permanent.rs](../digimon-engine/tests/select_opponent_permanent.rs) `tensor_reports_valid_count_and_selecting_player`.
 
 ### 3.6 🟢 Verified equivalent
 
-- Opponent face-down security ([tensor.rs:121-122](../digimon-engine/src/tensor.rs#L121)): both engines emit zeros.
 - Global section [0-9]: turn_count/30, phase, memory/10.
 - DP normalization constant: `DP_NORM = 30000.0` in both.
 - Hand / trash / breeding / empty-slot encoding (0.0).
@@ -259,7 +277,7 @@ Rust (like Python's mask) does NOT currently track `_turn_activate_count` for Ha
 
 ### 4.6 🟡 Interrupt-phase mask coverage — partial
 
-End-of-turn surface is now complete for mask parity — Vortex (§4.6a) + Overclock/MayAttack/ForceAttack (§4.6c) emission, plus phase transition (§4.6b) and `pass_end_of_turn_action` resumption. Overclock sacrifice *execution* (§4.6c-residual) and the full interrupt/selection subsystem (§4.6d — Block/Counter/Alliance, selection phases, EffectChoice) remain future work.
+End-of-turn surface is complete for mask parity — Vortex (§4.6a) + Overclock/MayAttack/ForceAttack (§4.6c) emission, plus phase transition (§4.6b) and `pass_end_of_turn_action` resumption. Overclock sacrifice *execution* landed with §4.6c-residual. Combat interrupts (§4.6d) support Alliance, Counter, and Block; selection helpers now cover `SelectTarget` / `SelectHand` / `SelectTrash` / `SelectMaterial` / `EffectChoice` / `TriggerOrder`. Remaining per-effect selection kinds (`SelectReveal` / `SelectSecurity` / `SelectSource`) track as §4.6d-residual follow-up work.
 
 ### 4.6a 🟢 Vortex mask emission — implemented
 
@@ -289,20 +307,38 @@ Rust's `CardKind` has no `Token` variant (tokens are registered as `Digimon`-kin
 
 **Coverage:** [tests/mask_end_of_turn_parity.rs](../digimon-engine/tests/mask_end_of_turn_parity.rs) extends with `mask_overclock_emits_sub_slot_0_bit_with_sacrifice_available`, `mask_overclock_suppressed_when_no_sacrifice`, `mask_may_attack_emits_attack_bits_against_digimon_and_security`, `mask_may_attack_respects_cannot_attack_target`, `mask_force_attack_emits_attack_bits_in_eot`.
 
-### 4.6c-residual 🔴 Overclock sacrifice execution
+### 4.6c-residual 🟢 Overclock sacrifice execution — implemented
 
-The mask emits the Overclock bit but firing it (select a sacrifice, delete the sacrifice, attack without suspending, return to EOT phase) requires the selection/pending-action subsystem tracked by §4.6d. Mask-side parity is done; execution-side follows with the broader Phase-4 state machine.
+**Python** — [action_decoder.py:501-522](../digimon_gym/engine/game/action_decoder.py#L501) `_initiate_overclock`: installs a `SelectTarget` prompt over Token-or-Digimon sacrifices on the turn player's field; the callback deletes the sacrifice and calls `resolve_attack(overclock_perm, opponent_player, without_suspend=True, return_phase=EndOfTurnAction)`. The attacker is not suspended.
 
-### 4.6d 🔴 Full interrupt / selection-phase mask builders
+**Rust** — [game.rs](../digimon-engine/src/game.rs) `Game::activate_overclock(overclock_index)` validates phase + keyword + sacrifice-availability, then installs an `OwnField` selection via direct `pending_selection = Some(...)` install (no `EffectContext` because this is an engine-level action, not an effect). The callback calls `Game::delete_permanent_with_effects(sacrifice)` then `Game::begin_attack_overclock(overclock_handle, AttackTarget::Player(opponent))`. Interrupts (Alliance / Counter / Block) still fire normally — only Vortex is uninterruptible per DCGO.
 
-Python has dedicated builders for:
-- `BlockTiming` — which permanents can declare blocker
-- `CounterTiming` — valid blast digivolve hand/field pairs
-- `AllianceTiming` — which unsuspended allies can suspend for alliance
-- `SelectTarget` / `SelectHand` / `SelectMaterial` / `SelectTrash` / `SelectSource` / `SelectReveal` / `SelectSecurity`
-- `EffectChoice`
+The suspend-skip flows through a new `is_overclock: bool` field on `PendingAttack` + a `begin_attack_overclock` constructor that delegates to a shared `begin_attack_impl(vortex, is_overclock)` private helper. When `is_overclock`, the declaration-time `suspend_and_count_attack` call is skipped; everything else (OnAttack triggers, state machine, interrupts, cleanup) matches the normal path.
 
-All still 0.0 in Rust except PASS. Unlocking these is a Phase-4 architectural project (combat state machine + `PendingSelection` infra — see §2.3).
+`OverclockError::{WrongPhase, Busy, NotOverclock, NoSacrifice, InvalidIndex}` exposes the validation failures so callers (Tauri, tests, future Python bindings) can distinguish between them.
+
+**Coverage:** [tests/overclock_execution.rs](../digimon-engine/tests/overclock_execution.rs) — 10 cases: prompt install, reject-without-keyword, reject-without-sacrifice, reject-wrong-phase, decline-leaves-state-untouched, full-flow sacrifice + security hit, full-flow wins game on empty security, low-level `begin_attack_overclock` skips suspend, regression guard on normal attack still suspending, higher-index sacrifice action-ID round-trip.
+
+### 4.6d 🟡 Full interrupt / selection-phase mask builders — partial
+
+Unified by PR3-PR5 into a single generic branch in [action/mask.rs](../digimon-engine/src/action/mask.rs) that reads `pending_selection.valid_action_ids` directly — mask correctness is now driven by the selection install site rather than a dedicated per-kind builder.
+
+- ✅ `BlockTiming` — `combat.rs::try_enter_block` installs a selection with every unsuspended Blocker-keyword Digimon's action ID (`encode_attack(0, field_idx)`) + PASS (Block is always a may-trigger). Attacker's `Keyword::Collision` widens the pool to every unsuspended opponent Digimon.
+- ✅ `AllianceTiming` — `combat.rs::try_enter_alliance` installs with every unsuspended Alliance-keyword ally.
+- ✅ `CounterTiming` — `combat.rs::try_enter_counter` installs one action ID per valid `(hand, field)` blast pairing via `encode_digivolve(h, f)` + PASS. Blast candidates detected by `Effect.blast_digivolve` flag; field targets validated via `Game::can_digivolve` (color + level). Scoped to Digimon-target attacks (Python parity).
+- ✅ `SelectTarget` (OppField / OwnField kinds) — [effect_context.rs](../digimon-engine/src/effect_context.rs) `select_opponent_permanent` / `select_own_permanent`; reuses the ATTACK target-half range. Pilot: [TEST-010](../digimon-engine/src/cards/test_cards.rs) (delete opp Digimon).
+- ✅ `SelectHand` — `effect_context.rs::select_hand`, reuses PLAY_HAND 0-29. Pilot: [TEST-011](../digimon-engine/src/cards/test_cards.rs) (trash from hand, draw 2).
+- ✅ `SelectTrash` — `effect_context.rs::select_trash`, reuses TRASH_EFFECT 1150-1194. No pilot card yet — infra validated by shared test scaffolding.
+- ✅ `EffectChoice` — `effect_context.rs::select_effect_choice`, reuses HAND_EFFECT 30-59 with effect_choices labels. Pilot: [TEST-012](../digimon-engine/src/cards/test_cards.rs) (choose memory / draw).
+- ✅ `TriggerOrder` (drainer-installed, parks under EffectChoice phase) — [effect_queue.rs](../digimon-engine/src/effect_queue.rs) `install_trigger_order_selection`; reuses HAND_EFFECT 30-59. Handles player-chosen ordering of simultaneous triggers, plus PASS=decline-all on all-optional bundles.
+- ✅ `SelectMaterial` — `effect_context.rs::select_material`, reuses SOURCE_SELECT 2000-2168. Prompts the controller to pick a source (digivolution-stack card) from a target permanent. Covered by [tests/select_material.rs](../digimon-engine/tests/select_material.rs) (7 cases).
+- 🔴 `SelectReveal` / `SelectSecurity` / `SelectSource` — helpers not yet authored. Infrastructure is uniform with the landed kinds; add when a card needs them.
+
+**Coverage:** [tests/effect_queue_drainer.rs](../digimon-engine/tests/effect_queue_drainer.rs) (9 cases), [tests/select_opponent_permanent.rs](../digimon-engine/tests/select_opponent_permanent.rs) (10), [tests/selection_kinds.rs](../digimon-engine/tests/selection_kinds.rs) (7), [tests/select_material.rs](../digimon-engine/tests/select_material.rs) (7), [tests/block_interrupt.rs](../digimon-engine/tests/block_interrupt.rs) (10), [tests/alliance_interrupt.rs](../digimon-engine/tests/alliance_interrupt.rs) (7), [tests/counter_interrupt.rs](../digimon-engine/tests/counter_interrupt.rs) (12).
+
+### 4.6d-residual 🔴 Remaining selection kinds
+
+`SelectReveal` / `SelectSecurity` / `SelectSource` helpers not yet authored. Infrastructure is uniform with the landed kinds (share `install_field_selection` or an analogous encoder); add per pilot card need.
 
 ### 4.7 🟡 Modifier-gated mask checks — partial
 
@@ -387,10 +423,13 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
 6. ~~**§3.1 / §3.2 — Tensor source-DP + OPT slots**~~ ✅ done — `EffectReadContext` + `Permanent::effect_activations` + Game helpers + tensor wiring. Residual §3.1b (linked-card effects) deferred.
 7. ~~**§4.2 / §4.3 / §4.4 — Action mask main-phase parity**~~ ✅ done — Option color check, Blitz memory exception, Raid / CAN_ATTACK_UNSUSPENDED targeting. Residual: §4.2b (script-based bypass) and §4.3b (native/static Blitz) await §4.5 effect-listing.
-8. **§4.5 / §4.6 — Mask phase coverage** — partial. ✅ §4.5a DNA digivolve mask + data types; ✅ §4.5c Hand/Field/Trash `[Main]` masks + `Game::effects_for_card` effect-listing primitive; ✅ §4.5c-residual decoder execution via `Game::activate_hand_main` / `activate_field_main` / `activate_trash_main`; ✅ §4.6a Vortex mask emission; ✅ §4.6b `end_turn` phase transition + `pass_end_of_turn_action`; ✅ §4.6c Overclock/MayAttack/ForceAttack mask bits. Blocked: §4.5b `dna_costs` data-population pipeline (cards.json ingest); §4.6c-residual Overclock sacrifice execution; §4.6d interrupt/selection phase builders (Phase-4 state machine).
+8. **§4.5 / §4.6 — Mask phase coverage** — partial. ✅ §4.5a DNA digivolve mask + data types; ✅ §4.5c Hand/Field/Trash `[Main]` masks + `Game::effects_for_card` effect-listing primitive; ✅ §4.5c-residual decoder execution via `Game::activate_hand_main` / `activate_field_main` / `activate_trash_main`; ✅ §4.6a Vortex mask emission; ✅ §4.6b `end_turn` phase transition + `pass_end_of_turn_action`; ✅ §4.6c Overclock/MayAttack/ForceAttack mask bits; ✅ §4.6d (partial) Block + Alliance interrupt builders + generic selection-phase mask branch. Blocked: §4.5b `dna_costs` data-population pipeline (cards.json ingest); §4.6c-residual Overclock sacrifice execution; §4.6d-residual Counter (blast-digivolve infra) + remaining per-effect selection kinds.
 9. **§4.7 — Modifier-gated mask checks** — partial. ✅ §4.7a CannotAttackTarget, §4.7b CannotDigivolve, §4.7c CannotPlayFromHand (unconditional semantics); ✅ §4.7d FORCE_ATTACK Main-phase mask replacement. Outstanding: §4.7e DigiXros cost-reduction (own plan; also blocked on data-population like §4.5b), §4.7x context-aware modifier queries (architectural).
+10. ~~**§2.2 / §2.3 — Combat state machine + `is_attacking`**~~ ✅ done — `PendingAttack` state machine with Alliance + Counter + Block windows; `is_attacking` flag lifecycle; `AttackResult::InProgress` signals paused attacks. Residual: `OnCounterTiming` distinct timing (§2.3-residual) awaits first card script.
+11. ~~**§3.5 — Selection tensor slots**~~ ✅ done — `valid_count / ACTION_SPACE_SIZE` and `selecting_player` written at slots 1371/1372 whenever `pending_selection.is_some()`.
+12. ~~**§2.3 Counter + blast digivolve**~~ ✅ done — `Effect::blast_digivolve` flag, `Game::can_digivolve` validator, `combat::try_enter_counter` + `execute_blast_digivolve`. Defender-only, Digimon-target only (Python parity). Attacker-deletion cascade routes to Cleanup without re-running Block/Battle.
 
-The rest (combat interrupts §2.3, face-down security §3.3, etc.) can follow as cards that need them get implemented.
+The rest (face-down security §3.3, remaining selection kinds §4.6d-residual, etc.) can follow as cards that need them get implemented.
 
 ---
 

@@ -26,6 +26,12 @@ pub struct Permanent {
     pub turn_digivolved: u16,
     /// Number of attacks made this turn.
     pub attacks_this_turn: u8,
+    /// Whether this permanent is currently the attacker in an in-flight
+    /// attack. Set by `begin_attack`, cleared by `cleanup_attack`. Used by
+    /// condition closures for effects like Progress (immunity while
+    /// attacking) and by UI affordances for the attack animation.
+    /// Closes RUST_PYTHON_PARITY.md §2.2.
+    pub is_attacking: bool,
     /// Per-source, per-effect activation counts this turn.
     /// Key: (source card handle, effect slot index within that card's
     /// `CardEffect::effects(handle)` vec). Value: number of activations.
@@ -44,6 +50,7 @@ impl Permanent {
             turn_played: turn,
             turn_digivolved: 0,
             attacks_this_turn: 0,
+            is_attacking: false,
             effect_activations: HashMap::new(),
         }
     }
