@@ -265,8 +265,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             let hand_limit = me.hand.len().min(HAND_MAIN_LIMIT);
             for h in 0..hand_limit {
                 let card = &me.hand[h];
-                let card_id = card.card_id(&game.card_data).to_string();
-                let effects = game.effects_for_card(&card_id, card.handle());
+                let card_id = card.card_id(&game.card_data);
+                let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
+                    continue;
+                };
                 for effect in &effects {
                     if effect.timing != EffectTiming::MainFromHand {
                         continue;
@@ -305,8 +307,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         break;
                     }
                     let is_under = source_index + 1 < stack_size;
-                    let card_id = source.card_id(&game.card_data).to_string();
-                    let effects = game.effects_for_card(&card_id, source.handle());
+                    let card_id = source.card_id(&game.card_data);
+                    let Some(effects) = game.effects_for_card(card_id, source.handle())
+                    else {
+                        continue;
+                    };
                     for (slot, effect) in effects.iter().enumerate() {
                         if effect.timing != EffectTiming::MainOnField {
                             continue;
@@ -346,8 +351,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             let trash_limit = me.trash.len().min(TRASH_MAIN_LIMIT);
             for t in 0..trash_limit {
                 let card = &me.trash[t];
-                let card_id = card.card_id(&game.card_data).to_string();
-                let effects = game.effects_for_card(&card_id, card.handle());
+                let card_id = card.card_id(&game.card_data);
+                let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
+                    continue;
+                };
                 for effect in &effects {
                     if effect.timing != EffectTiming::MainFromTrash {
                         continue;
