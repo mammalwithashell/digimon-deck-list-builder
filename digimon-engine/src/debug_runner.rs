@@ -124,22 +124,26 @@ impl DebugRunner {
         }
     }
 
-    /// Attack a Digimon.
+    /// Attack a Digimon. `vortex=false` for the vast majority of tests;
+    /// pass `true` to simulate an end-of-turn <Vortex> attack.
     pub fn attack_digimon(
         &mut self,
         attacker: PermanentHandle,
         defender: PermanentHandle,
+        vortex: bool,
     ) -> crate::combat::AttackResult {
-        self.game.attack_digimon(attacker, defender)
+        self.game.attack_digimon(attacker, defender, vortex)
     }
 
-    /// Attack the opposing player's security.
+    /// Attack the opposing player's security. See [`Self::attack_digimon`]
+    /// for the `vortex` flag.
     pub fn attack_player(
         &mut self,
         attacker: PermanentHandle,
         defender_player: PlayerId,
+        vortex: bool,
     ) -> crate::combat::AttackResult {
-        self.game.attack_player(attacker, defender_player)
+        self.game.attack_player(attacker, defender_player, vortex)
     }
 
     /// Effective DP of a permanent (base + modifiers).
@@ -466,6 +470,7 @@ pub fn make_test_card(card_id: &str, card_name: &str) -> CardData {
         colors: vec![crate::enums::CardColor::Red],
         traits: Vec::new(),
         evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
@@ -487,6 +492,7 @@ pub fn make_test_egg(card_id: &str, card_name: &str) -> CardData {
         colors: vec![crate::enums::CardColor::Red],
         traits: Vec::new(),
         evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),

@@ -14,6 +14,7 @@ pub mod effect;
 pub mod effect_context;
 pub mod cards;
 pub mod combat;
+pub mod dna_digivolve;
 pub mod debug_runner;
 
 // Re-export key types at crate root

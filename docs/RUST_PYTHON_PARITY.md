@@ -85,13 +85,17 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 ## 2. Combat & permanent state
 
-### 2.1 🔴 Rush / Vortex summoning sickness exemption
+### 2.1 🟢 Rush / Vortex summoning-sickness exemption — implemented
 
-**Python** — [permanent.py:405-407](../digimon_gym/engine/core/permanent.py#L405): a permanent with `_is_rush` or invoked with `is_vortex=True` can attack the turn it arrived.
+**Python** — [permanent.py:404-407](../digimon_gym/engine/core/permanent.py#L404): a permanent with `_is_rush` or invoked with `is_vortex=True` can attack the turn it arrived.
 
-**Rust** — [combat.rs:77-87](../digimon-engine/src/combat.rs#L77): if `turn_played == turn_count`, `can_attack` returns false. No keyword check.
+**Rust** — [combat.rs](../digimon-engine/src/combat.rs) `can_attack(handle, vortex)`, `attack_digimon(…, vortex)`, `attack_player(…, vortex)` all carry the `vortex: bool` flag. Summoning sickness short-circuits when `vortex` is true *or* `modifiers.has_keyword(handle, Keyword::Rush)` is true. The mask helper `can_basic_attack` in [mask.rs](../digimon-engine/src/action/mask.rs) checks modifier-granted Rush so the Main-phase mask agrees with the engine.
 
-**Fix outline:** After the summoning-sickness check, short-circuit with `|| self.modifiers.has_keyword(handle, Keyword::Rush)`. Accept a `vortex: bool` parameter on `can_attack` for vortex-triggered attacks.
+**Coverage:** [tests/rush_exemption.rs](../digimon-engine/tests/rush_exemption.rs) — `freshly_played_without_rush_cannot_attack`, `freshly_played_with_rush_can_attack`, `rush_does_not_override_suspended_state`, `freshly_played_with_vortex_can_attack`, `vortex_does_not_override_suspended_state`, `mask_allows_rush_granted_attack_on_turn_played`.
+
+### 2.1b 🟡 Native (card-text) Rush not parsed
+
+Rust's [CardData](../digimon-engine/src/card_data.rs#L18) has no `keywords: Vec<Keyword>` field — static card keywords live inside `effect_text: String`. Cards that print Rush on their face don't trigger the exemption in `can_attack` because there's nothing to inspect. Fix requires either a keyword-parsing pass over `effect_text` or an explicit `keywords` field on `CardData` + a migration of cards.json. Track with §4.5 effect-listing work.
 
 ### 2.2 🟡 `is_attacking` flag missing
 
@@ -176,58 +180,133 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 - Encode/decode formulas for attack, digivolve, field effect, source select.
 - Total `ACTION_SPACE_SIZE = 2168`.
 
-### 4.2 🔴 Option card color requirement
+### 4.2 🟢 Option card color requirement — implemented
 
-**Python** — [action_mask.py:77-99](../digimon_gym/engine/game/action_mask.py#L77): an Option card is only playable if the player has a Digimon of a matching color on the field (unless `IGNORE_COLOR_REQUIREMENT` is active).
+**Python** — [action_mask.py:77-99](../digimon_gym/engine/game/action_mask.py#L77): an Option card is only playable if the player has a matching-color Digimon or Tamer on field or a matching-color Digimon in breeding.
 
-**Rust** — [mask.rs:53](../digimon-engine/src/action/mask.rs#L53) doesn't check; comment marks this as "deferred to effect system".
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) Play-cards loop calls `option_color_match_available(card, me, &card_data)`, which iterates the player's battle_area + breeding_area for a color-set intersection with the Option's colors.
 
-**Consequence:** a Python-trained policy will sample Option plays that Rust's decoder will attempt. If the engine ever enforces the rule, the action silently fails; if not, games diverge from Python's.
+**Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_option_requires_matching_color_on_field` (walks empty → wrong-color → matching-color), `mask_option_color_check_accepts_tamer`.
 
-### 4.3 🔴 Blitz attack exception
+### 4.2b 🟡 Script-based color bypasses not yet honored
 
-**Python** — [action_mask.py:107-114](../digimon_gym/engine/game/action_mask.py#L107): with memory < 0, a Blitz Digimon that digivolved this turn can still attack.
+Python cards can set `card._match_color_requirement = False` or register a `_match_color_requirement_fn` callback (~10 cards, e.g. `ex1_071`, `lm_050`, `st20_15`). Rust's `CardData` has no such field and no scripting infra — these Options will be *over*-masked (Rust refuses to play them when Python would allow). Similarly, Python's `IGNORE_COLOR_REQUIREMENT` aura modifier has no `ModifierType` variant in Rust yet. Both await §4.5 effect-listing / card-scripting infra.
 
-**Rust** — [mask.rs:60](../digimon-engine/src/action/mask.rs#L60) blocks all attacks when memory < 0.
+### 4.3 🟢 Blitz attack exception under negative memory — implemented
 
-### 4.4 🔴 Raid target rule
+**Python** — [action_mask.py:107-114](../digimon_gym/engine/game/action_mask.py#L107): with `memory < 0`, a Blitz Digimon that digivolved this turn can still attack.
 
-**Python** — [action_mask.py:142-148](../digimon_gym/engine/game/action_mask.py#L142): a Raid Digimon can attack the highest-DP unsuspended opponent.
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs): the memory gate is per-attacker. `memory_ok = memory >= 0 || (turn_digivolved == turn_count && modifiers.has_keyword(handle, Keyword::Blitz))`.
 
-**Rust** — [mask.rs:78](../digimon-engine/src/action/mask.rs#L78) filters to suspended targets only.
+**Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_blitz_can_attack_under_negative_memory`, `mask_blitz_without_digivolving_does_not_attack_under_negative_memory`.
 
-### 4.5 🔴 Entire action categories ungenerated
+### 4.3b 🟡 Native / static Blitz not parsed
 
-Rust's mask always emits 0.0 for:
-- Hand effects (30-59) — [action_mask.py:176-185](../digimon_gym/engine/game/action_mask.py#L176) in Python
-- DNA digivolve (63-92) — [action_mask.py:168-174](../digimon_gym/engine/game/action_mask.py#L168)
+Same pattern as §2.1b — only modifier-granted Blitz is honored because `CardData` has no `keywords` field. Native Blitz printed on a card's face awaits §4.5 effect-listing / keyword-parsing infra.
+
+### 4.4 🟢 Raid target rule — implemented
+
+**Python** — [action_mask.py:121-140](../digimon_gym/engine/game/action_mask.py#L121): unsuspended enemies are targetable if attacker has `CAN_ATTACK_UNSUSPENDED` (any unsuspended) or Raid (tied-for-highest-DP unsuspended).
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs): target loop precomputes the max effective DP across unsuspended enemy Digimon and emits attack bits for each target whose `effective_dp` equals the max under Raid; emits for every unsuspended target under `ModifierType::CanAttackUnsuspended`. DP tiebreak uses `Game::effective_dp` so `ChangeDp` modifiers are honored (slight improvement over Python's raw `.dp`).
+
+**Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_raid_targets_highest_dp_unsuspended`, `mask_raid_allows_all_tied_for_highest`, `mask_can_attack_unsuspended_modifier_allows_all_unsuspended`.
+
+### 4.5 🟡 Entire action categories ungenerated — partial
+
+DNA digivolve plumbing has landed; Hand/Field/Trash `[Main]` effect masks remain blocked on effect-listing infrastructure.
+
+### 4.5a 🟢 DNA digivolve mask — implemented
+
+**Python** — [action_mask.py:161-166](../digimon_gym/engine/game/action_mask.py#L161): `if card.is_digimon and has_valid_dna_targets(card, me.battle_area): mask[63 + h] = 1.0`.
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) `GamePhase::Main` arm emits `DNA_DIGIVOLVE_START + hand_index` when the hand card's `CardData.dna_costs` is non-empty and [`dna_digivolve::has_valid_dna_targets`](../digimon-engine/src/dna_digivolve.rs) finds some pair of battle-area permanents satisfying any `DnaCost` entry in either ordering. Memory cost is NOT gated at mask-generation time — Python's `action_mask.py:161-166` emits the bit regardless of memory and defers the cost check to action execution. `text_contains` searches the concatenation of `effect_text + inherited_text + security_text` to match Python's `_perm_matches_dna_req`.
+
+**Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_dna_digivolve_emits_when_valid_pair_exists`, `mask_dna_digivolve_accepts_either_ordering`, `mask_dna_digivolve_rejects_when_no_pair`, `mask_dna_digivolve_respects_memory_cost`, `mask_dna_digivolve_skips_cards_without_dna_costs`.
+
+### 4.5b 🟡 `dna_costs` data-population pipeline
+
+`CardData.dna_costs` is present and deserialized, but cards.json's ingest pipeline doesn't emit the field today. Every card loaded from production data has `dna_costs = []`, so the mask branch above never fires in actual games. Python populates DNA costs from per-card scripts; Rust needs the cross-language export pipeline to emit DNA costs (or an auxiliary `dna_costs.json` sidecar) before this work is meaningful at runtime.
+
+### 4.5c 🔴 Hand / Field / Trash `[Main]` effect masks
+
+Rust's mask emits 0.0 for:
+- Hand effects (30-59) — [action_mask.py:176-185](../digimon_gym/engine/game/action_mask.py#L176)
 - Field effects (1000-1149) — [action_mask.py:201-214](../digimon_gym/engine/game/action_mask.py#L201)
 - Trash effects (1150-1194) — [action_mask.py:216-225](../digimon_gym/engine/game/action_mask.py#L216)
 
-These require the full effect-listing machinery (iterating permanent `effect_list()` by timing). Rust has the `Effect` struct but no equivalent "list all activatable effects" query yet.
+All three require a `CardSource::effect_list(registry, timing)` query that iterates compiled effects — a multi-day architectural lift that unlocks many downstream parity items.
 
-### 4.6 🔴 Interrupt-phase mask coverage
+### 4.6 🟡 Interrupt-phase mask coverage — partial
 
-**Rust** — [mask.rs:130](../digimon-engine/src/action/mask.rs#L130) default arm returns `mask[PASS] = 1.0` for every non-Main/Breeding/Mulligan phase.
+Vortex mask emission has landed; phase transition, other end-of-turn actions, and the full interrupt/selection subsystem remain future work.
 
-**Python** has dedicated builders for:
+### 4.6a 🟢 Vortex mask emission — implemented
+
+**Python** — [action_mask.py:321-335](../digimon_gym/engine/game/action_mask.py#L321): during `GamePhase.EndOfTurnAction`, permanents with `_is_vortex` and a passing `can_attack(is_vortex=True)` emit attack bits against any enemy Digimon.
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) `GamePhase::EndOfTurnAction` arm: mirrors Python via `modifiers.has_keyword(handle, Keyword::Vortex)` + `can_attack(handle, /* vortex = */ true)`. Any enemy Digimon (suspended or not) is a valid target.
+
+**Coverage:** [tests/mask_end_of_turn_parity.rs](../digimon-engine/tests/mask_end_of_turn_parity.rs) — `mask_vortex_emits_attacks_in_end_of_turn_phase`, `mask_vortex_without_keyword_only_emits_pass`, `mask_vortex_bypasses_summoning_sickness`, `mask_vortex_targets_unsuspended_digimon_too`.
+
+### 4.6b 🔴 Phase transition into `EndOfTurnAction`
+
+Nothing in `game::end_turn` inspects for pending vortex / overclock / may-attack / force-attack and flips `current_phase` to `EndOfTurnAction`. Python triggers the phase via `_has_end_of_turn_keywords`. Wiring the transition plus resume-after-action requires the interrupt state machine — tracked with §4.6d.
+
+### 4.6c 🔴 Overclock / MAY_ATTACK / FORCE_ATTACK mask bits
+
+Python's `EndOfTurnAction` branch also emits bits for Overclock sacrifices and `MAY_ATTACK`/`FORCE_ATTACK` attacks. Each needs its own modifier variant plus a mask arm (Overclock additionally needs sacrifice selection).
+
+### 4.6d 🔴 Full interrupt / selection-phase mask builders
+
+Python has dedicated builders for:
 - `BlockTiming` — which permanents can declare blocker
 - `CounterTiming` — valid blast digivolve hand/field pairs
 - `AllianceTiming` — which unsuspended allies can suspend for alliance
 - `SelectTarget` / `SelectHand` / `SelectMaterial` / `SelectTrash` / `SelectSource` / `SelectReveal` / `SelectSecurity`
 - `EffectChoice`
-- `EndOfTurnAction` — Vortex, Overclock, MAY_ATTACK, FORCE_ATTACK
 
-All are 0.0 in Rust except PASS. Model samples PASS universally in these phases.
+All still 0.0 in Rust except PASS. Unlocking these is a Phase-4 architectural project (combat state machine + `PendingSelection` infra — see §2.3).
 
-### 4.7 🟡 Modifier-gated mask checks
+### 4.7 🟡 Modifier-gated mask checks — partial
 
-Python checks these modifiers per-action; Rust does not:
-- `CANNOT_ATTACK_TARGET` (per attacker-target pair)
-- `CANNOT_DIGIVOLVE`
-- `CANNOT_PLAY_FROM_HAND`
-- `FORCE_ATTACK` (restricts mask to forced Digimon only)
-- `DigiXros` cost-reduction optimistic calculation
+Three of the five checks landed with unconditional semantics; the other two (§4.7d/e) and per-action context discriminants (§4.7x) remain future work.
+
+### 4.7a 🟢 CannotAttackTarget — implemented
+
+**Python** — [action_mask.py:129-136](../digimon_gym/engine/game/action_mask.py#L129): `has_modifier(target, CANNOT_ATTACK_TARGET, {'attacker': attacker})` gates each Digimon-attack bit; same check repeats in Vortex / MAY_ATTACK / FORCE_ATTACK arms.
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) Main-phase Digimon-attack inner loop + `GamePhase::EndOfTurnAction` arm call `modifiers.has(t_handle, ModifierType::CannotAttackTarget)` and skip the target. Per-attacker discriminant is dropped — see §4.7x.
+
+**Coverage:** `mask_cannot_attack_target_suppresses_digimon_attack_bit` in [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs); `mask_vortex_respects_cannot_attack_target` in [tests/mask_end_of_turn_parity.rs](../digimon-engine/tests/mask_end_of_turn_parity.rs).
+
+### 4.7b 🟢 CannotDigivolve — implemented
+
+**Python** — [action_mask.py:151-153](../digimon_gym/engine/game/action_mask.py#L151): `has_modifier(base_perm, CANNOT_DIGIVOLVE, {'digivolving_card': card})`.
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) Main-phase digivolve loop checks `modifiers.has(base_handle, ModifierType::CannotDigivolve)` before `can_basic_digivolve`. `digivolving_card` discriminant dropped (§4.7x).
+
+**Coverage:** `mask_cannot_digivolve_suppresses_digivolve_bits_on_base` in [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs).
+
+### 4.7c 🟢 CannotPlayFromHand — implemented
+
+**Python** — [action_mask.py:58](../digimon_gym/engine/game/action_mask.py#L58) → `_is_play_blocked_by_modifier(card)` (effects.py:303-311).
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) Main-phase play-cards loop short-circuits when `modifiers.any_with_type(ModifierType::CannotPlayFromHand)` is true.
+
+**Coverage:** `mask_cannot_play_from_hand_suppresses_all_hand_bits` in [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs).
+
+### 4.7d 🔴 FORCE_ATTACK — outstanding
+
+Python's Main-phase builder (`action_mask.py:227-280`) does a global mask-replacement: if any friendly Digimon has `FORCE_ATTACK`, every other legal action is zeroed and only attacks by forced Digimon remain. Requires a new `ModifierType::ForceAttack` variant plus a second mask-replacement pass after the normal build. Own plan.
+
+### 4.7e 🔴 DigiXros cost-reduction — outstanding
+
+Python's play-cost check (`action_mask.py:66-72`) computes `effective_cost = max(0, play_cost - max_reduction)` for cards with `digixros_cost`. Blocked on `CardData.digixros_cost` schema + `has_any_digixros_material` validator + ingest-pipeline data (same data-population shape as §4.5b). Own plan.
+
+### 4.7x 🟡 Context-aware modifier queries — outstanding
+
+Python's `has_modifier(target, type, context)` can refine the match via the modifier's `condition` closure — e.g. `CannotAttackTarget` that applies only to Red attackers, or `CannotDigivolve` that applies only when digivolving into a specific card. Rust's `ModifierEntry` ([modifiers.rs:13-19](../digimon-engine/src/modifiers.rs#L13)) has no condition closure, so §4.7a and §4.7b are unconditional (any active modifier blocks regardless of the attacker/digivolving_card discriminant). Adding condition closures is an architectural change worthy of its own plan.
 
 ---
 
@@ -263,12 +342,13 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 
 1. **§1.1 — Deduct play cost** (single biggest correctness bug; every play is free today). ✅ done
 2. **§1.2 / §1.3 / §1.4 / §1.5 — Memory seesaw semantics** (tight cluster; probably ~30 lines of changes in `game.rs` plus tests). ✅ done
-3. **§2.1 — Rush exemption** (needed for any card with Rush; trivial once modifier lookup is in place).
+3. ~~**§2.1 — Rush / Vortex exemption**~~ ✅ done — `vortex: bool` threaded through combat, modifier-granted Rush honored in both combat and Main-phase mask. Residual §2.1b (native static keyword) deferred until effect-listing lands.
 4. ~~**§1.7 — First-turn draw rule**~~ — audit was wrong; behavior already matches Python. Tested as of this cycle.
 5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
 6. ~~**§3.1 / §3.2 — Tensor source-DP + OPT slots**~~ ✅ done — `EffectReadContext` + `Permanent::effect_activations` + Game helpers + tensor wiring. Residual §3.1b (linked-card effects) deferred.
-7. **§4.2 / §4.3 / §4.4 — Action mask main-phase parity** (Option color, Blitz, Raid).
-8. **§4.5 / §4.6 — Mask phase coverage** (hand/field/trash effects + interrupt phases; depends on the effect-listing query).
+7. ~~**§4.2 / §4.3 / §4.4 — Action mask main-phase parity**~~ ✅ done — Option color check, Blitz memory exception, Raid / CAN_ATTACK_UNSUSPENDED targeting. Residual: §4.2b (script-based bypass) and §4.3b (native/static Blitz) await §4.5 effect-listing.
+8. **§4.5 / §4.6 — Mask phase coverage** — partial. ✅ §4.5a DNA digivolve mask + data types; ✅ §4.6a Vortex mask emission. Blocked: §4.5b `dna_costs` data-population pipeline (cards.json ingest); §4.5c Hand/Field/Trash `[Main]` masks (need `CardSource::effect_list(timing)` infra); §4.6b phase transition; §4.6c Overclock/MAY_ATTACK/FORCE_ATTACK bits; §4.6d interrupt/selection phase builders (Phase-4 state machine).
+9. **§4.7 — Modifier-gated mask checks** — partial. ✅ §4.7a CannotAttackTarget, §4.7b CannotDigivolve, §4.7c CannotPlayFromHand (unconditional semantics). Outstanding: §4.7d FORCE_ATTACK (own plan), §4.7e DigiXros cost-reduction (own plan; also blocked on data-population like §4.5b), §4.7x context-aware modifier queries (architectural).
 
 The rest (combat interrupts §2.3, face-down security §3.3, etc.) can follow as cards that need them get implemented.
 
