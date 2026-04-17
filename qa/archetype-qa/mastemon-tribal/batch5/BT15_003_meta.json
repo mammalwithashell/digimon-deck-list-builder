@@ -1,0 +1,18 @@
+{
+  "card_id": "BT15-003",
+  "card_name": "Nyaromon",
+  "card_kind": "DigiEgg",
+  "level": 2,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Lesser",
+  "dp": null,
+  "play_cost": 0,
+  "evo_costs": [],
+  "effect_text": "Inherited Effect [When Attacking] [Once Per Turn] By trashing the top or bottom card of your security stack, gain 1 memory.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt15/bt15_003.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT15\\Yellow\\BT15_003.cs"
+}

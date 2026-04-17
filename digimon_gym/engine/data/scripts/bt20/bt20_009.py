@@ -41,7 +41,7 @@ class BT20_009(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                if not (any('Free' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if 'Free' not in (getattr(c.c_entity_base, 'attribute_eng', []) or []):
                     return False
                 return True
             game.effect_digivolve_from_hand(

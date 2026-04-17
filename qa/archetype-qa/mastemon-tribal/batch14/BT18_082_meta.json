@@ -1,0 +1,25 @@
+{
+  "card_id": "BT18-082",
+  "card_name": "Lucemon: Chaos Mode",
+  "card_kind": "Digimon",
+  "level": 5,
+  "colors": [
+    "Purple",
+    "Yellow"
+  ],
+  "traits": "Demon Lord, Seven Great Demon Lords",
+  "dp": 13000,
+  "play_cost": 13,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 8,
+      "level": 4
+    }
+  ],
+  "effect_text": "[On Play] [When Digivolving] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.) and trash the top card of your opponent's security stack.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing the bottom card of your security stack, it doesn't leave.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt18/bt18_082.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT18\\Purple\\BT18_082.cs"
+}

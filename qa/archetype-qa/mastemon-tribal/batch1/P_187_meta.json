@@ -1,0 +1,25 @@
+{
+  "card_id": "P-187",
+  "card_name": "Mastemon",
+  "card_kind": "Digimon",
+  "level": 6,
+  "colors": [
+    "Purple",
+    "Yellow"
+  ],
+  "traits": "Angel",
+  "dp": 13000,
+  "play_cost": 13,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 5,
+      "level": 5
+    }
+  ],
+  "effect_text": "[When Digivolving] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.) Then, if DNA digivolving, by placing 1 other Digimon or Tamer as the top or bottom security card, trash your opponent's top security card.\r\n[When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card, you may play 1 purple or yellow Digimon card with 6000 DP or less from your hand or trash without paying the cost.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/p/p_187.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\P\\Purple\\P_187.cs"
+}

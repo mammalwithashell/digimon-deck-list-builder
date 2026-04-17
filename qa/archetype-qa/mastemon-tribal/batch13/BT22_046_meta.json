@@ -1,0 +1,25 @@
+{
+  "card_id": "BT22-046",
+  "card_name": "Gargomon",
+  "card_kind": "Digimon",
+  "level": 4,
+  "colors": [
+    "Green",
+    "Yellow"
+  ],
+  "traits": "Beastkin, CS",
+  "dp": 6000,
+  "play_cost": 5,
+  "evo_costs": [
+    {
+      "color": "Green",
+      "cost": 3,
+      "level": 3
+    }
+  ],
+  "effect_text": "[When Digivolving] If you have 1 or fewer Tamers, from your hand and without paying the cost, you may play 1 Tamer card with [CS] trait from your hand without paying the cost.",
+  "inherited_text": "[All Turns] This Digimon gets +1000 DP.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_046.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Green\\BT22_046.cs"
+}

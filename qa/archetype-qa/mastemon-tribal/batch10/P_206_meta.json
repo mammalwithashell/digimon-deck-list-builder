@@ -1,0 +1,18 @@
+{
+  "card_id": "P-206",
+  "card_name": "Digital Gate Open",
+  "card_kind": "Option",
+  "level": null,
+  "colors": [
+    "White"
+  ],
+  "traits": "",
+  "dp": null,
+  "play_cost": 4,
+  "evo_costs": [],
+  "effect_text": "You can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 Digimon card and 1 Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 Tamer card with the same color as any of your Digimon on the field from your hand with the play cost reduced by 4.",
+  "inherited_text": "Security Effect [Security] You may play 1 Digimon card with a play cost of 3 or less from your hand or trash without paying the cost. Then, add this card to the hand.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/p/p_206.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\P\\White\\P_206.cs"
+}

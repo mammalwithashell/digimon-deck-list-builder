@@ -38,7 +38,9 @@ class BT11_097(CardScript):
             def target_filter(p):
                 if p.dp is None or p.dp > 8000:
                     return False
-                if not (any('Vaccine' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
+                top = p.top_card
+                _attrs = (getattr(top.c_entity_base, 'attribute_eng', []) or []) if top else []
+                if 'Vaccine' not in _attrs:
                     return False
                 return p.is_digimon
             def on_delete(target_perm):

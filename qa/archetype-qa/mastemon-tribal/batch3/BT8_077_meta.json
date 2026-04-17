@@ -1,0 +1,25 @@
+{
+  "card_id": "BT8-077",
+  "card_name": "BlackGatomon",
+  "card_kind": "Digimon",
+  "level": 4,
+  "colors": [
+    "Purple",
+    "Yellow"
+  ],
+  "traits": "Dark Animal",
+  "dp": 6000,
+  "play_cost": 5,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 3,
+      "level": 3
+    }
+  ],
+  "effect_text": "＜Rush＞ (This Digimon can attack the turn it comes into play.)",
+  "inherited_text": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt8/bt8_077.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT8\\Purple\\BT8_077.cs"
+}

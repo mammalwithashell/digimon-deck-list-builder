@@ -1,0 +1,18 @@
+{
+  "card_id": "BT22-004",
+  "card_name": "Wanyamon",
+  "card_kind": "DigiEgg",
+  "level": 2,
+  "colors": [
+    "Green"
+  ],
+  "traits": "Lesser, CS",
+  "dp": null,
+  "play_cost": 0,
+  "evo_costs": [],
+  "effect_text": "Inherited Effect [Your Turn] [Once Per Turn] When effects place [CS] trait Digimon cards in this Digimon's digivolution cards, it may digivolve into a [CS] trait Digimon card in the hand with the digivolution cost reduced by 1.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_004.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Green\\BT22_004.cs"
+}

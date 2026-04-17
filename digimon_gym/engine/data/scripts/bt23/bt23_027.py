@@ -14,23 +14,36 @@ class BT23_027(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT23-027 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.3 from [Patamon] for cost 2
-        effect0._alt_digi_cost = 2
-        effect0._alt_digi_level = 3
-        effect0._alt_digi_name = "Patamon"
+        # Factory effect: alt_digivolve_req (Patamon variant)
+        # Alternate digivolution requirement: from [Patamon] for cost 2
+        # C# PermanentCondition = TopCard.EqualsCardName("Patamon")
+        #                         || (IsLevel3 && HasCSTraits)
+        # Split into two _alt_digi effects (engine validator does not call
+        # can_use_condition for alt-digi; all constraints go on _alt_digi_*).
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("BT23-027 Alt digi from Patamon")
+        effect0a.set_effect_description("Alternate digivolution: from [Patamon] for cost 2")
+        effect0a._alt_digi_cost = 2
+        effect0a._alt_digi_name = "Patamon"
 
-        def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Patamon'))):
-                return False
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        # Factory effect: alt_digivolve_req (Lv.3 w/CS trait variant)
+        # Alternate digivolution requirement: from Lv.3 w/[CS] trait for cost 2
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("BT23-027 Alt digi from Lv.3 CS")
+        effect0b.set_effect_description("Alternate digivolution: from Lv.3 w/[CS] trait for cost 2")
+        effect0b._alt_digi_cost = 2
+        effect0b._alt_digi_level = 3
+        effect0b._alt_digi_trait = "CS"
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
 
         # Factory effect: barrier
         # Barrier

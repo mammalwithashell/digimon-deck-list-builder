@@ -233,31 +233,26 @@ class BT16_085(CardScript):
             player.add_memory(1)
 
             # If DNA digivolving, trash any 3 digivolution cards under
-            # your opponent's Digimon.
+            # your opponent's Digimon (player selects which).
+            # DCGO: CardEffectCommons.SelectTrashDigivolutionCards with
+            #   isFromOnly1Permanent=false, canNoTrash=false, maxCount=3
             is_dna = ctx.get('is_dna_digivolve', False)
             if is_dna:
-                enemy = player.enemy
-                trashed_total = 0
-                max_trash = 3
-                # Collect opponent Digimon with digivolution cards
-                for opp_perm in list(enemy.battle_area):
-                    if trashed_total >= max_trash:
-                        break
-                    if not opp_perm.is_digimon:
-                        continue
-                    digi_cards = [c for c in opp_perm.card_sources
-                                  if c is not opp_perm.top_card]
-                    if not digi_cards:
-                        continue
-                    can_trash = min(len(digi_cards), max_trash - trashed_total)
-                    trashed = opp_perm.trash_digivolution_cards(can_trash)
-                    if trashed:
-                        enemy.trash_cards.extend(trashed)
-                        trashed_total += len(trashed)
-                        game.logger.log(
-                            f"[BT16-085] Trashed {len(trashed)} digivolution "
-                            f"card(s) from {game._perm_ref(opp_perm)}."
-                        )
+                def opp_digi_filter(p):
+                    if not p.is_digimon:
+                        return False
+                    owner = p.top_card.owner if p.top_card else None
+                    return owner is not player
+
+                game.effect_select_trash_digivolution_cards(
+                    player,
+                    max_count=3,
+                    perm_filter=opp_digi_filter,
+                    is_optional=False,
+                    from_only_one_permanent=False,
+                    prompt_perm="Select opponent Digimon to trash digivolution cards from.",
+                    prompt_card="Select digivolution card to trash.",
+                )
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

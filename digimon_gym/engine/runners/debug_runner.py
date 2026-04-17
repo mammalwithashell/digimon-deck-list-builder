@@ -312,7 +312,7 @@ class DebugRunner:
                 for kw in ["blocker", "rush", "piercing", "reboot", "security_attack_plus",
                            "jamming", "barrier", "armor_purge", "alliance", "vortex",
                            "overclock", "blast_digivolve", "material_save", "decoy",
-                           "evade", "fortitude", "mind_link"]:
+                           "evade", "fortitude", "mind_link", "collision"]:
                     attr = f"_is_{kw}"
                     if hasattr(perm, 'has_keyword') and perm.has_keyword(attr):
                         keywords.append(kw)

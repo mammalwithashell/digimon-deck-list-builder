@@ -51,16 +51,17 @@ class EX10_051(CardScript):
                 return True
 
             def on_trashed(selected):
+                # Use trash_from_hand so OnDiscardHand timing fires (DCGO parity).
                 if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
+                    player.trash_from_hand([selected])
 
                 # De-Digivolve 1 opponent Digimon
                 def on_de_digivolve(target_perm):
                     removed = target_perm.de_digivolve(1)
-                    enemy = player.enemy
-                    if enemy:
-                        enemy.trash_cards.extend(removed)
+                    # Removed digivolution cards go to the target's owner trash.
+                    target_owner = target_perm.owner
+                    if target_owner and removed:
+                        target_owner.trash_cards.extend(removed)
 
                 enemy = player.enemy
                 if enemy and any(p.is_digimon for p in enemy.battle_area):
@@ -99,23 +100,29 @@ class EX10_051(CardScript):
             if not (player and game):
                 return
 
-            # Get names of existing Tamers
-            existing_tamer_names = set()
+            # Build set of names of ALL existing own battle-area permanents
+            # (DCGO GetBattleAreaPermanents scans every frame, not just Tamers).
+            # "This effect can't play cards with the same name as any of your
+            #  Tamers" — we follow DCGO's broader check which also naturally
+            # subsumes the text's tamers-only reading.
+            existing_own_names = set()
             for p in player.battle_area:
-                if p.is_tamer and p.top_card:
-                    for n in (getattr(p.top_card, 'card_names', []) or []):
-                        existing_tamer_names.add(n)
+                if p.top_card is None:
+                    continue
+                for n in (getattr(p.top_card, 'card_names', []) or []):
+                    if n:
+                        existing_own_names.add(n)
 
             def play_filter(c):
                 if not getattr(c, 'is_tamer', False):
                     return False
-                # Must have [Myotismon] in text
+                # Must have [Myotismon] in text (DCGO HasText("Myotismon"))
                 text = getattr(c, 'card_text', '') or ''
                 if 'Myotismon' not in text:
                     return False
-                # Can't play same name as existing Tamers
+                # Can't play a Tamer sharing a name with any own permanent
                 names = getattr(c, 'card_names', []) or []
-                if any(n in existing_tamer_names for n in names):
+                if any(n in existing_own_names for n in names):
                     return False
                 return True
 

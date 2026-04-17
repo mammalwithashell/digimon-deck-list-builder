@@ -399,7 +399,7 @@ class ActionDecoderMixin:
             if delay_effect.can_use_condition is None or delay_effect.can_use_condition(context):
                 self._log_effect_activation(delay_effect, EffectTiming.AfterEffectsActivate)
                 delay_effect.record_activation()
-                delay_effect.on_process_callback(context)
+                self._invoke_effect_callback(delay_effect, context)
 
     def _execute_hand_main_effect(self, hand_idx: int):
         """Execute a [Hand][Main] effect from a hand card."""
@@ -422,7 +422,7 @@ class ActionDecoderMixin:
                 if effect.can_use_condition is None or effect.can_use_condition(context):
                     self._log_effect_activation(effect, EffectTiming.NoTiming)
                     effect.record_activation()
-                    effect.on_process_callback(context)
+                    self._invoke_effect_callback(effect, context)
                     self._recover_from_stale_selection()
                     return
 
@@ -446,7 +446,7 @@ class ActionDecoderMixin:
                 if effect.can_use_condition is None or effect.can_use_condition(context):
                     self._log_effect_activation(effect, EffectTiming.NoTiming)
                     effect.record_activation()
-                    effect.on_process_callback(context)
+                    self._invoke_effect_callback(effect, context)
                     self._recover_from_stale_selection()
                     return
 
@@ -464,7 +464,7 @@ class ActionDecoderMixin:
                     if effect.can_use_condition is None or effect.can_use_condition(context):
                         self._log_effect_activation(effect, EffectTiming.NoTiming)
                         effect.record_activation()
-                        effect.on_process_callback(context)
+                        self._invoke_effect_callback(effect, context)
                         self._recover_from_stale_selection()
                         return
 

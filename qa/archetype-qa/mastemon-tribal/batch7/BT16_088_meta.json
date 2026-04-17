@@ -1,0 +1,19 @@
+{
+  "card_id": "BT16-088",
+  "card_name": "Cody Hida & T.K. Takaishi",
+  "card_kind": "Tamer",
+  "level": null,
+  "colors": [
+    "Black",
+    "Yellow"
+  ],
+  "traits": "",
+  "dp": null,
+  "play_cost": 4,
+  "evo_costs": [],
+  "effect_text": "[Start of Your Main Phase] You may play 1 [Armadillomon] or [Patamon] from your hand without paying the cost. At the next end of your opponent's turn, return it to the hand.\r\n[Your Turn] When one of your Digimon digivolves into a black or yellow Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt16/bt16_088.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT16\\Black\\BT16_088.cs"
+}

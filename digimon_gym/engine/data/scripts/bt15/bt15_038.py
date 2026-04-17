@@ -77,14 +77,17 @@ class BT15_038(CardScript):
                         trashed = player.security_cards.pop(-1)
                     player.trash_cards.append(trashed)
 
-                    # Give 1 opponent Digimon -6000 DP
+                    # Give 1 opponent Digimon -6000 DP until end of their turn.
+                    # Card text is mandatory ("1 of your opponent's Digimon gets"),
+                    # matching C# `canNoSelect=false`. Cost is paid regardless.
                     def target_filter(p):
                         return p.is_digimon
 
                     def on_target(target_perm):
+                        # CHANGE_DP value_fn arity is (current, target, ctx) -> new.
                         game.register_modifier(
                             target_perm, ModifierType.CHANGE_DP,
-                            value_fn=lambda: -6000,
+                            value_fn=lambda cur, t, c: cur - 6000,
                             expiry='end_of_opponent_turn',
                         )
 
@@ -116,11 +119,18 @@ class BT15_038(CardScript):
         effect3.set_hash_string("Recovery1_BT15_038")
 
         def condition3(context: Dict[str, Any]) -> bool:
+            # Must be on the field.
             if card and card.permanent_of_this_card() is None:
                 return False
             player = card.owner if card else None
             if not player:
                 return False
+            # Only fire when OUR security is lost, not opponent's.
+            # C# `CanTriggerWhenLoseSecurity(hashtable, player => player == card.Owner)`.
+            event_player = context.get('event_player')
+            if event_player is not None and event_player is not player:
+                return False
+            # "If you have 3 or fewer security cards"
             if len(player.security_cards) > 3:
                 return False
             return True
@@ -134,12 +144,16 @@ class BT15_038(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Ace Overflow <-3>
+        # Inherited: Ace Overflow <-3>
+        # Marker effect only — engine handles ACE Overflow via
+        # `Player._apply_ace_overflow()` driven by `card.c_entity_base.is_ace`
+        # and `card.c_entity_base.ace_overflow_cost`.
         effect4 = ICardEffect()
         effect4.set_effect_name("BT15-038 Ace Overflow -3")
         effect4.set_effect_description("Ace Overflow <-3>")
         effect4.is_inherited_effect = True
-        effect4._ace_overflow = -3
+        effect4._is_ace_overflow = True
+        effect4._overflow_amount = -3
 
         def condition4(context: Dict[str, Any]) -> bool:
             return True

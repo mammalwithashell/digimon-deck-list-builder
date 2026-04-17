@@ -1,0 +1,19 @@
+{
+  "card_id": "EX6-074",
+  "card_name": "Mirei Mikagura",
+  "card_kind": "Tamer",
+  "level": null,
+  "colors": [
+    "Purple",
+    "Yellow"
+  ],
+  "traits": "",
+  "dp": null,
+  "play_cost": 4,
+  "evo_costs": [],
+  "effect_text": "[Your Turn] When one of your Digimon with the [Holy Beast], [Archangel] or [Fallen Angel] trait is played, by suspending this Tamer, gain 1 memory. Then, 1 of your Digimon may digivolve into [Angewomon] or [LadyDevimon] in your trash with the cost reduced by 1.\r\n[End of Your Turn] [Once Per Turn] 2 of your Digimon may DNA digivolve into a Digimon card in your hand.",
+  "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_074.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Purple\\EX6_074.cs"
+}

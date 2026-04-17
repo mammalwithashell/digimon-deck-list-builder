@@ -98,17 +98,17 @@ class EX6_022(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             perm = card.permanent_of_this_card()
-            if not perm:
+            if not perm or not perm.top_card:
                 return False
-            # Only active if this Digimon has [Angel] or [Three Great Angels] trait
-            all_traits = []
-            for cs in perm.card_sources:
-                all_traits.extend(getattr(cs, 'card_traits', []) or [])
-            has_required_trait = any(
-                'Angel' in t or 'Three Great Angels' in t
-                for t in all_traits
-            )
-            return has_required_trait
+            # Only active if THIS DIGIMON (the top card of the host permanent)
+            # has [Angel] or [Three Great Angels] trait. C# reference:
+            #   card.PermanentOfThisCard().TopCard.CardTraits.Contains("Angel")
+            # Use exact list membership (not substring) and check TopCard only
+            # (not the full stack). 'Angel' must NOT match 'Archangel'.
+            top_traits = getattr(perm.top_card, 'card_traits', []) or []
+            return ('Angel' in top_traits
+                    or 'Three Great Angels' in top_traits
+                    or 'ThreeGreatAngels' in top_traits)
 
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)

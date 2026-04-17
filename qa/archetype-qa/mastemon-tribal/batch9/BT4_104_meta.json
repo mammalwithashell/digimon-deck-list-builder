@@ -1,0 +1,18 @@
+{
+  "card_id": "BT4-104",
+  "card_name": "Blinding Ray",
+  "card_kind": "Option",
+  "level": null,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "",
+  "dp": null,
+  "play_cost": 0,
+  "evo_costs": [],
+  "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt4/bt4_104.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT4\\Yellow\\BT4_104.cs"
+}

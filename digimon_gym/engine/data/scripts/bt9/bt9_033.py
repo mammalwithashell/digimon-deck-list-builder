@@ -47,12 +47,19 @@ class BT9_033(CardScript):
             if not perm:
                 return
 
-            # Register CANNOT_PLAY_BY_EFFECT for Digimon only
-            # Blocks effect-based plays; normal hand plays are unaffected
+            # Register CANNOT_PLAY_BY_EFFECT for Digimon (and Digi-Eggs per C#).
+            # Blocks effect-based plays; normal hand plays are unaffected.
+            # C# CardCondition: cardSource.IsDigimon || cardSource.IsDigiEgg
+            def _block_condition(target, c):
+                card_in_ctx = c.get('card')
+                if card_in_ctx is None:
+                    return False
+                return bool(card_in_ctx.is_digimon or card_in_ctx.is_digi_egg)
+
             game.register_modifier(
                 perm,
                 ModifierType.CANNOT_PLAY_BY_EFFECT,
-                condition=lambda target, c: c.get('card') and c['card'].is_digimon,
+                condition=_block_condition,
                 source_effect=effect0,
                 expiry='permanent',
             )

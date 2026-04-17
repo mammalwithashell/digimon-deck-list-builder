@@ -1,0 +1,18 @@
+{
+  "card_id": "LM-035",
+  "card_name": "Amber Memory Boost!",
+  "card_kind": "Option",
+  "level": null,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "",
+  "dp": null,
+  "play_cost": 3,
+  "evo_costs": [],
+  "effect_text": "Purple also meets this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 yellow or purple Digimon card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "inherited_text": "Security Effect [Security] Place this card in the battle area.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/lm/lm_035.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\LM\\Yellow\\LM_035.cs"
+}

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -13,8 +13,8 @@ class BT1_087(CardScript):
 
     [Start of Your Turn] If you have 2 or less memory, set it to 3.
     [On Play] Search your security stack, reveal 1 card among it and add it
-        to your hand. If it's a yellow card, Recovery +1 (Deck). Then, shuffle
-        your security stack.
+        to your hand. If it's a yellow card, <Recovery +1 (Deck)>. Then,
+        shuffle your security stack.
     Security Effect [Security] Play this card without paying the cost.
     """
 
@@ -22,8 +22,9 @@ class BT1_087(CardScript):
         effects = []
 
         # --- Effect 0: [Start of Your Turn] Set memory to 3 ---
+        # C# uses EffectTiming.OnStartTurn + SetMemoryTo3TamerEffect
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT1-087 Set memory to 3")
         effect0.set_effect_description(
             "[Start of Your Turn] If you have 2 or less memory, set it to 3."
@@ -60,11 +61,22 @@ class BT1_087(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Tamer must belong to the player whose turn it is (On Play always does)
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            # C# CanActivateCondition requires at least 1 security card
+            if not owner.security_cards:
+                # Still allow the effect to "fire" for the shuffle step but
+                # there is nothing to select — let process0 no-op gracefully.
+                # Return True so the effect still runs (matches C# which enters
+                # the coroutine and short-circuits on empty security).
+                return True
             return True
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Search security, add 1 to hand, recovery if yellow, shuffle."""
+            """Search security, reveal 1, add to hand, recovery if yellow, shuffle."""
             import random
             player = ctx.get('player')
             game = ctx.get('game')
@@ -74,29 +86,36 @@ class BT1_087(CardScript):
                 return
 
             def on_security_selected(selected):
+                # Move the chosen security card to hand
                 if selected in player.security_cards:
                     player.security_cards.remove(selected)
                     player.hand_cards.append(selected)
 
-                    # If it's yellow, recovery +1
+                    # If it's a yellow card, Recovery +1 (Deck)
                     colors = getattr(selected, 'card_colors', []) or []
-                    color_names = [col.name for col in colors]
-                    if 'Yellow' in color_names:
+                    if CardColor.Yellow in colors:
                         player.recovery(1)
 
-                # Shuffle remaining security
+                # Then, shuffle your security stack
                 random.shuffle(player.security_cards)
 
+            # "Search your security stack" — player browses all security cards
+            # and selects 1 to reveal and add to hand. No filter: any card is valid.
             game.effect_select_own_security(
-                player, lambda c: True, on_security_selected, is_optional=False,
-                prompt="Select 1 card from your security stack to add to your hand."
+                player,
+                lambda c: True,
+                on_security_selected,
+                is_optional=False,
+                prompt="Search your security stack and reveal 1 card to add to your hand.",
             )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # --- Effect 2: [Security] Play this card without paying the cost ---
+        # C# uses CardEffectFactory.PlaySelfTamerSecurityEffect(card)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT1-087 Security: Play free")
         effect2.set_effect_description(
             "[Security] Play this card without paying the cost."
@@ -108,11 +127,17 @@ class BT1_087(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Play this tamer from security without paying cost."""
+            """Play this tamer from security without paying the cost.
+
+            Must use game.effect_play_from_security so _security_played is set
+            and security_attack() does not also trash the card after play.
+            """
             player = ctx.get('player')
             game = ctx.get('game')
-            if player and game and card:
-                player.play_card_from_source(card, pay_cost=False)
+            security_card = ctx.get('card')
+            if not (player and game and security_card):
+                return
+            game.effect_play_from_security(player, security_card)
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 

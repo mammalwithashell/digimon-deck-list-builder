@@ -1,0 +1,25 @@
+{
+  "card_id": "BT22-043",
+  "card_name": "Terriermon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Green",
+    "Yellow"
+  ],
+  "traits": "Beast, CS",
+  "dp": 1000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Green",
+      "cost": 1,
+      "level": 2
+    }
+  ],
+  "effect_text": "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost.",
+  "inherited_text": "[Main] [Once Per Turn] By placing this [CS] trait Digimon's top stacked card as its bottom digivolution card, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_043.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Green\\BT22_043.cs"
+}

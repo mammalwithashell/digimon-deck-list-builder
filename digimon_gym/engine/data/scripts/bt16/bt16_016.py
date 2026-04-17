@@ -56,7 +56,9 @@ class BT16_016(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                if not (any('Angel' in _t or 'Free' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                _traits = getattr(c, 'card_traits', []) or []
+                _attrs = getattr(c.c_entity_base, 'attribute_eng', []) or []
+                if not (any('Angel' in _t for _t in _traits) or 'Free' in _attrs):
                     return False
                 return True
             game.effect_digivolve_from_hand(
@@ -95,7 +97,9 @@ class BT16_016(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                if not (any('Angel' in _t or 'Free' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                _traits = getattr(c, 'card_traits', []) or []
+                _attrs = getattr(c.c_entity_base, 'attribute_eng', []) or []
+                if not (any('Angel' in _t for _t in _traits) or 'Free' in _attrs):
                     return False
                 return True
             game.effect_digivolve_from_hand(

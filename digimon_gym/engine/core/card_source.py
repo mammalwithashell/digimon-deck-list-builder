@@ -78,18 +78,21 @@ class CardSource:
 
     @property
     def card_traits(self) -> List[str]:
-        """Return combined traits matching C# CardTraits: Form + Attribute + Type.
+        """Return combined traits: Form + Type (excluding Attribute).
 
-        DCGO CardSource.cs CardTraits property concatenates:
-            Form_ENG + Attribute_ENG + Type_ENG (filtering empty strings)
+        DCGO CardSource.cs CardTraits concatenates Form + Attribute + Type, but
+        in this engine we deliberately exclude ``attribute_eng`` because several
+        cards use the attribute channel for mechanics that scripts should check
+        explicitly (Vaccine, Virus, Data, Free). Scripts that need to read those
+        should access ``c_entity_base.attribute_eng`` directly — see
+        ``bt15/bt15_034.py`` (Vaccine) and ``bt17/bt17_097.py`` (Free) for the
+        canonical idiom. This prevents false positives like
+        ``'Free' in card.card_traits`` matching any Free-attribute Digimon.
         """
         if not self.c_entity_base:
             return []
         traits = []
         for s in (self.c_entity_base.form_eng or []):
-            if s:
-                traits.append(s)
-        for s in (self.c_entity_base.attribute_eng or []):
             if s:
                 traits.append(s)
         for s in (self.c_entity_base.type_eng or []):

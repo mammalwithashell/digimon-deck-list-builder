@@ -1,0 +1,24 @@
+{
+  "card_id": "BT23-031",
+  "card_name": "Angewomon",
+  "card_kind": "Digimon",
+  "level": 5,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Archangel, CS",
+  "dp": 6000,
+  "play_cost": 7,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 3,
+      "level": 4
+    }
+  ],
+  "effect_text": "When this card would be played from the hand, if you have [LadyDevimon] or [Mirei Mikagura], reduce the play cost by 3.\r\n[On Play] [When Digivolving] Add your top security card to the hand. Then, if you have 3 or fewer security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.).",
+  "inherited_text": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_031.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Yellow\\BT23_031.cs"
+}

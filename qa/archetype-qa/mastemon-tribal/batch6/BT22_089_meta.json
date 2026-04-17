@@ -1,0 +1,19 @@
+{
+  "card_id": "BT22-089",
+  "card_name": "Mirei Mikagura",
+  "card_kind": "Tamer",
+  "level": null,
+  "colors": [
+    "Yellow",
+    "Purple"
+  ],
+  "traits": "CS",
+  "dp": null,
+  "play_cost": 3,
+  "evo_costs": [],
+  "effect_text": "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Mirei Mikagura] or play cost 4 or higher Tamer card with the [CS] trait from your hand without paying the cost.\r\n[On Play] By trashing 1 card with the [Holy Beast], [Angel], [Archangel], [Fallen Angel] or [CS] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_089.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Yellow\\BT22_089.cs"
+}

@@ -1,0 +1,2014 @@
+[
+  {
+    "card_id": "BT1-087",
+    "card_name": "T.K. Takaishi",
+    "card_kind": "Tamer",
+    "level": null,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 4,
+    "evo_costs": [],
+    "effect_text": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] Search your security stack, reveal 1 card among it and add it to your hand. If it's a yellow card, \uff1cRecovery +1 (Deck)\uff1e. Then, shuffle your security stack.",
+    "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt1/bt1_087.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT1\\Yellow\\BT1_087.cs",
+    "shared_with": [
+      "ACCEL",
+      "CS Mastemon",
+      "Hudiemon",
+      "Jesmon",
+      "Sakuyamon",
+      "Security Control",
+      "Shakkoumon",
+      "Wargreymon OTK",
+      "Xros Heart",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT10-042",
+    "card_name": "Venusmon",
+    "card_kind": "Digimon",
+    "level": 6,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Shaman, Olympos XII",
+    "dp": 12000,
+    "play_cost": 13,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 4,
+        "level": 5
+      }
+    ],
+    "effect_text": "[When Digivolving] All of your opponent's Digimon gain \uff1cSecurity A. -1\uff1e (This Digimon checks 1 fewer security card.) until the end of your opponent's turn.\r\n[Opponent's Turn] Your opponent's Digimon with \uff1cSecurity A.\uff1e can't attack this Digimon and can't activate [When Attacking] and [When Digivolving] effects.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt10/bt10_042.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT10\\Yellow\\BT10_042.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "Eaters",
+      "Hudiemon",
+      "MetalEtemon",
+      "Numemon",
+      "Purple Hybrid",
+      "Sakuyamon",
+      "Security Control",
+      "Silphymon",
+      "TS Jupitermon",
+      "TS Olympos"
+    ]
+  },
+  {
+    "card_id": "BT11-042",
+    "card_name": "Angewomon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Archangel",
+    "dp": 6000,
+    "play_cost": 7,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 3,
+        "level": 4
+      }
+    ],
+    "effect_text": "[When Digivolving] You may search your security stack, reveal 1 card with the [Angel], [Archangel] or [Fallen Angel]\u00a0trait from it, and add it to your hand. If you added a card, \uff1cRecovery +1 (Deck)\uff1e. Then, shuffle your security stack.\r\n[Your Turn] [Once Per Turn] When you play [LadyDevimon] or [Mirei Mikagura], gain 1 memory.",
+    "inherited_text": "[Opponent's Turn] While you have a purple Digimon in play, all of your Digimon with the [Angel], [Archangel] or [Fallen Angel]\u00a0trait gain \uff1cBlocker\uff1e (This Digimon can block in the blocker timing.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt11/bt11_042.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT11\\Yellow\\BT11_042.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT11-080",
+    "card_name": "Devimon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Purple"
+    ],
+    "traits": "Fallen Angel",
+    "dp": 5000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 2,
+        "level": 3
+      }
+    ],
+    "effect_text": "[Your Turn] While you have a yellow Digimon or yellow Tamer in play, this Digimon gains \uff1cRush\uff1e (This Digimon can attack the turn it comes into play.) and \uff1cRetaliation\uff1e (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt11/bt11_080.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT11\\Purple\\BT11_080.cs",
+    "shared_with": [
+      "Shakkoumon"
+    ]
+  },
+  {
+    "card_id": "BT11-083",
+    "card_name": "LadyDevimon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Purple"
+    ],
+    "traits": "Fallen Angel",
+    "dp": 6000,
+    "play_cost": 7,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 3,
+        "level": 4
+      }
+    ],
+    "effect_text": "[When Digivolving] You may trash 1 card in your hand. If you do, you may return 1 [Mirei Mikagura]\u00a0trait or 1 card with the [Angel], [Archangel] or [Fallen Angel]\u00a0trait from your trash to your hand.\r\n[Your Turn] [Once Per Turn] When you play [Angewomon] or [Mirei Mikagura], gain 1 memory.",
+    "inherited_text": "[Opponent's Turn] While you have a yellow Digimon in play, all of your Digimon with the [Angel], [Archangel] or [Fallen Angel]\u00a0trait gain \uff1cRetaliation\uff1e (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.).",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt11/bt11_083.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT11\\Purple\\BT11_083.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT11-094",
+    "card_name": "Mirei Mikagura",
+    "card_kind": "Tamer",
+    "level": null,
+    "colors": [
+      "Purple",
+      "Yellow"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 5,
+    "evo_costs": [],
+    "effect_text": "[Start of Your Turn] Gain 1 memory.\r\n[Your Turn] When one of your Digimon digivolves into [Angewomon] or [LadyDevimon], if you have 1 or fewer Digimon in play, by suspending this Tamer, you may play 1 [Angewomon] or [LadyDevimon] with a different name than the Digimon you digivolved into from your hand without paying the cost.",
+    "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt11/bt11_094.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT11\\Purple\\BT11_094.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT13-034",
+    "card_name": "Kudamon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Holy Beast",
+    "dp": 1000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 yellow Digimon card with the [Vaccine]\u00a0trait trait and 1 yellow Tamer card among them to your hand. Place the rest at the bottom of your deck in any order.",
+    "inherited_text": "[When Attacking] [Once Per Turn] If the total cards in both players' security stacks is 6 or less, 1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt13/bt13_034.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT13\\Yellow\\BT13_034.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT13-106",
+    "card_name": "Odin's Breath",
+    "card_kind": "Option",
+    "level": null,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 5,
+    "evo_costs": [],
+    "effect_text": "When an effect trashes this card from the security stack, activate this card's [Main] effect.\r\n[Main] 1 of your opponent's Digimon gets -3000 DP until the end of your opponent's turn. Then, if there're 6 or fewer total cards in both players' security stacks, all of your opponent's Digimon gain \uff1cSecurity A. -1\uff1e (This Digimon checks 1 fewer security card.) until the end of your opponent's turn.",
+    "inherited_text": "Security Effect [Security] Activate this card's [Main] effects.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt13/bt13_106.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT13\\Yellow\\BT13_106.cs",
+    "shared_with": [
+      "Blue Hybrid",
+      "Dynasmon",
+      "Purple Hybrid",
+      "Sistermon Puppets",
+      "TS Olympos"
+    ]
+  },
+  {
+    "card_id": "BT14-003",
+    "card_name": "Tokomon",
+    "card_kind": "DigiEgg",
+    "level": 2,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Lesser",
+    "dp": null,
+    "play_cost": 0,
+    "evo_costs": [],
+    "effect_text": "Inherited Effect [Your Turn] [Once Per Turn] When a card is added to your security stack, \uff1cDraw 1\uff1e (Draw 1 card from your deck.)",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt14/bt14_003.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT14\\Yellow\\BT14_003.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Dynasmon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT14-033",
+    "card_name": "Patamon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Mammal",
+    "dp": 1000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "[Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine]\u00a0trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine]\u00a0trait from your hand at the bottom of your security stack.",
+    "inherited_text": "[Your Turn] [Once Per Turn] When a card is added to your security stack, gain 1 memory.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt14/bt14_033.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT14\\Yellow\\BT14_033.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Dynasmon",
+      "Eaters",
+      "Magnamon Armors",
+      "Shakkoumon",
+      "TS Jupitermon",
+      "TS Olympos",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT15-003",
+    "card_name": "Nyaromon",
+    "card_kind": "DigiEgg",
+    "level": 2,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Lesser",
+    "dp": null,
+    "play_cost": 0,
+    "evo_costs": [],
+    "effect_text": "Inherited Effect [When Attacking] [Once Per Turn] By trashing the top or bottom card of your security stack, gain 1 memory.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt15/bt15_003.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT15\\Yellow\\BT15_003.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Eaters",
+      "Puppets",
+      "Silphymon",
+      "TS Jupitermon",
+      "TS Olympos",
+      "UNKNOWN"
+    ]
+  },
+  {
+    "card_id": "BT15-034",
+    "card_name": "Salamon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Mammal",
+    "dp": 1000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "[Start of Your Main Phase] If you have 3 or more security cards, you may add the top card of your security stack to the hand. If you have 2 or fewer, you may place 1 yellow Digimon card with the [Vaccine]\u00a0trait from your hand at the top or bottom of your security stack.",
+    "inherited_text": "[All Turns] [Once Per Turn] When a card is removed from your security stack, 1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt15/bt15_034.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT15\\Yellow\\BT15_034.cs",
+    "shared_with": [
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT15-037",
+    "card_name": "Gatomon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Holy Beast",
+    "dp": 4000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 2,
+        "level": 3
+      }
+    ],
+    "effect_text": "When an effect trashes this card from the security stack, you may play it without paying the cost.\r\n\uff1cBarrier\uff1e (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[All Turns] [Once Per Turn] When a card is removed from your security stack, gain 1 memory.",
+    "inherited_text": "\uff1cBarrier\uff1e (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt15/bt15_037.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT15\\Yellow\\BT15_037.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT15-038",
+    "card_name": "Angewomon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Archangel",
+    "dp": 7000,
+    "play_cost": 4,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 3,
+        "level": 4
+      }
+    ],
+    "effect_text": "[Hand] [Counter] \uff1cBlast Digivolve\uff1e (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of their turn.\r\n[All Turns] [Once Per Turn] When a card is removed from your security stack, if you have 3 or fewer security cards, \uff1cRecovery +1 (Deck)\uff1e (Place the top card of your deck on top of your security stack.)",
+    "inherited_text": "Ace Overflow \uff1c-3\uff1e (As this card moves from the field or under a card to an area other than those, lose 3 memory.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt15/bt15_038.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT15\\Yellow\\BT15_038.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Magnamon Armors",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT16-088",
+    "card_name": "Cody Hida & T.K. Takaishi",
+    "card_kind": "Tamer",
+    "level": null,
+    "colors": [
+      "Black",
+      "Yellow"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 4,
+    "evo_costs": [],
+    "effect_text": "[Start of Your Main Phase] You may play 1 [Armadillomon] or [Patamon] from your hand without paying the cost. At the next end of your opponent's turn, return it to the hand.\r\n[Your Turn] When one of your Digimon digivolves into a black or yellow Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, \uff1cDe-Digivolve 1\uff1e 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+    "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt16/bt16_088.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT16\\Black\\BT16_088.cs",
+    "shared_with": [
+      "MetalEtemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT18-082",
+    "card_name": "Lucemon: Chaos Mode",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Purple",
+      "Yellow"
+    ],
+    "traits": "Demon Lord, Seven Great Demon Lords",
+    "dp": 13000,
+    "play_cost": 13,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 8,
+        "level": 4
+      }
+    ],
+    "effect_text": "[On Play] [When Digivolving] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, \uff1cRecovery +1 (Deck)\uff1e (Place the top card of your deck on top of your security stack.) and trash the top card of your opponent's security stack.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing the bottom card of your security stack, it doesn't leave.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt18/bt18_082.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT18\\Purple\\BT18_082.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Leviamon",
+      "Lucemon",
+      "Seven Great Demon Lords"
+    ]
+  },
+  {
+    "card_id": "BT22-004",
+    "card_name": "Wanyamon",
+    "card_kind": "DigiEgg",
+    "level": 2,
+    "colors": [
+      "Green"
+    ],
+    "traits": "Lesser, CS",
+    "dp": null,
+    "play_cost": 0,
+    "evo_costs": [],
+    "effect_text": "Inherited Effect [Your Turn] [Once Per Turn] When effects place [CS]\u00a0trait Digimon cards in this Digimon's digivolution cards, it may digivolve into a [CS]\u00a0trait Digimon card in the hand with the digivolution cost reduced by 1.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_004.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Green\\BT22_004.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "CS Omnimon",
+      "Jesmon",
+      "Magnamon Armors",
+      "Rapidmon",
+      "Rosemon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-031",
+    "card_name": "GoldNumemon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Yellow",
+      "Black"
+    ],
+    "traits": "Mutant, CS",
+    "dp": 2000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 3,
+        "level": 3
+      }
+    ],
+    "effect_text": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon \uff1cSecurity A. -2\uff1e (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.",
+    "inherited_text": "[Your Turn] [Once Per Turn] When this Digimon would digivolve into a Digimon card with the [CS]\u00a0trait, reduce the digivolution cost by 1.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_031.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Yellow\\BT22_031.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "CS Omnimon",
+      "Hudiemon",
+      "Jesmon",
+      "Magnamon Armors",
+      "Numemon",
+      "Rapidmon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-034",
+    "card_name": "Reppamon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Holy Beast, CS",
+    "dp": 5000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 2,
+        "level": 3
+      }
+    ],
+    "effect_text": "When effects trash this card from the security stack, you may play this card without paying the cost.\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP until their turn ends. By trashing your top security card, instead 1 of your opponent's Digimon gets -6000 DP until their turn ends.",
+    "inherited_text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_034.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Yellow\\BT22_034.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT22-043",
+    "card_name": "Terriermon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Green",
+      "Yellow"
+    ],
+    "traits": "Beast, CS",
+    "dp": 1000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Green",
+        "cost": 1,
+        "level": 2
+      }
+    ],
+    "effect_text": "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS]\u00a0trait in this Digimon's digivolution cards, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [CS]\u00a0trait from your hand without paying the cost.",
+    "inherited_text": "[Main] [Once Per Turn] By placing this [CS]\u00a0trait Digimon's top stacked card as its bottom digivolution card, \uff1cDraw 1\uff1e (Draw 1 card from your deck.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_043.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Green\\BT22_043.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "CS Omnimon",
+      "Hudiemon",
+      "Jesmon",
+      "Magnamon Armors",
+      "Rapidmon",
+      "Rosemon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-044",
+    "card_name": "Palmon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Green",
+      "Red"
+    ],
+    "traits": "Vegetation, CS",
+    "dp": 1000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Green",
+        "cost": 1,
+        "level": 2
+      }
+    ],
+    "effect_text": "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS]\u00a0trait in this Digimon's digivolution cards, gain 1 memory.",
+    "inherited_text": "[Main] [Once Per Turn] By placing this [CS]\u00a0trait Digimon's top stacked card as its bottom digivolution card, \uff1cDraw 1\uff1e (Draw 1 card from your deck.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_044.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Green\\BT22_044.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "CS Omnimon",
+      "Hudiemon",
+      "Jesmon",
+      "Magnamon Armors",
+      "Rapidmon",
+      "Rosemon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-046",
+    "card_name": "Gargomon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Green",
+      "Yellow"
+    ],
+    "traits": "Beastkin, CS",
+    "dp": 6000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Green",
+        "cost": 3,
+        "level": 3
+      }
+    ],
+    "effect_text": "[When Digivolving] If you have 1 or fewer Tamers, from your hand and without paying the cost, you may play 1 Tamer card with [CS]\u00a0trait from your hand without paying the cost.",
+    "inherited_text": "[All Turns] This Digimon gets +1000 DP.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_046.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Green\\BT22_046.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Omnimon",
+      "Jesmon",
+      "Phoenixmon",
+      "Rapidmon",
+      "Rosemon",
+      "Royal Base",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-054",
+    "card_name": "Hagurumon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Black",
+      "Yellow"
+    ],
+    "traits": "Machine, CS",
+    "dp": 1000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Black",
+        "cost": 1,
+        "level": 2
+      }
+    ],
+    "effect_text": "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS]\u00a0trait in this Digimon's digivolution cards, 1 of your opponent's Digimon gets -3000 DP for the turn.",
+    "inherited_text": "[Main] [Once Per Turn] By placing this [CS]\u00a0trait Digimon's top stacked card as its bottom digivolution card, \uff1cDraw 1\uff1e (Draw 1 card from your deck.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_054.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Black\\BT22_054.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "Hudiemon",
+      "Rapidmon",
+      "Rosemon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-056",
+    "card_name": "Guardromon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Black",
+      "Yellow"
+    ],
+    "traits": "Machine, CS",
+    "dp": 5000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Black",
+        "cost": 3,
+        "level": 3
+      }
+    ],
+    "effect_text": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if this Digimon's stack has 2 or more same-level cards, \uff1cDe-Digivolve 1\uff1e 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+    "inherited_text": "[Opponent's Turn] This Digimon gets +2000 DP.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_056.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Black\\BT22_056.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "CS Omnimon",
+      "Jesmon",
+      "Rapidmon",
+      "Rosemon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-089",
+    "card_name": "Mirei Mikagura",
+    "card_kind": "Tamer",
+    "level": null,
+    "colors": [
+      "Yellow",
+      "Purple"
+    ],
+    "traits": "CS",
+    "dp": null,
+    "play_cost": 3,
+    "evo_costs": [],
+    "effect_text": "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Mirei Mikagura] or play cost 4 or higher Tamer card with the [CS]\u00a0trait from your hand without paying the cost.\r\n[On Play] By trashing 1 card with the [Holy Beast], [Angel], [Archangel], [Fallen Angel] or [CS]\u00a0trait from your hand, \uff1cDraw 2\uff1e (Draw 2 cards from your deck.)",
+    "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_089.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Yellow\\BT22_089.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "DNA Omnimon",
+      "DexDorugoramon",
+      "Eaters",
+      "Hudiemon",
+      "Jesmon",
+      "Magnamon Armors",
+      "Phoenixmon",
+      "Rosemon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT22-093",
+    "card_name": "Ami Aiba",
+    "card_kind": "Tamer",
+    "level": null,
+    "colors": [
+      "White"
+    ],
+    "traits": "CS",
+    "dp": null,
+    "play_cost": 4,
+    "evo_costs": [],
+    "effect_text": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your Digimon digivolve into a Digimon with the [CS]\u00a0trait, if it has a digivolution card with the same level as the digivolved Digimon, by suspending this Tamer, that Digimon may digivolve into a Digimon card with the [CS]\u00a0trait in the hand without paying the cost.",
+    "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_093.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\White\\BT22_093.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "Hudiemon",
+      "Jesmon",
+      "Magnamon Armors",
+      "Rapidmon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-094",
+    "card_name": "Yuugo Kamishiro",
+    "card_kind": "Tamer",
+    "level": null,
+    "colors": [
+      "White"
+    ],
+    "traits": "CS",
+    "dp": null,
+    "play_cost": 3,
+    "evo_costs": [],
+    "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [CS]\u00a0trait among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] When any of your Digimon or Tamers with the [CS]\u00a0trait would be played, by returning this Tamer to the bottom of the deck, reduce the play cost by 2.",
+    "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_094.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\White\\BT22_094.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "CS Omnimon",
+      "DNA Omnimon",
+      "Eaters",
+      "Hudiemon",
+      "Jesmon",
+      "Rapidmon"
+    ]
+  },
+  {
+    "card_id": "BT22-099",
+    "card_name": "Kuremi Detective Agency",
+    "card_kind": "Option",
+    "level": null,
+    "colors": [
+      "Black",
+      "Yellow"
+    ],
+    "traits": "CS",
+    "dp": null,
+    "play_cost": 3,
+    "evo_costs": [],
+    "effect_text": "While you have a [CS]\u00a0trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 [CS]\u00a0trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] \uff1cDelay\uff1e (By trashing this card after the placing turn, activate the effect below.)\r\n\u30fbGain 2 memory.",
+    "inherited_text": "Security Effect [Security] Place this card in the battle area.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_099.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Black\\BT22_099.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "DNA Omnimon",
+      "DexDorugoramon",
+      "Eaters",
+      "Hudiemon",
+      "Jesmon",
+      "Rapidmon",
+      "Rosemon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT22-101",
+    "card_name": "Kyoko Kuremi",
+    "card_kind": "Tamer",
+    "level": null,
+    "colors": [
+      "Black",
+      "Yellow"
+    ],
+    "traits": "CS",
+    "dp": null,
+    "play_cost": 5,
+    "evo_costs": [],
+    "effect_text": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When any of your level 4 or higher [CS]\u00a0trait Digimon are deleted, by suspending this Tamer, return 1 [CS]\u00a0trait Digimon card from your trash to the hand.\r\n[Your Turn] [Once Per Turn] When this Tamer unsuspends, if you don't have [Alphamon], this Tamer may digivolve into [Alphamon] in the hand with the digivolution cost reduced by 2.",
+    "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_101.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\Black\\BT22_101.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "Hudiemon",
+      "Jesmon",
+      "Royal Base",
+      "Shakkoumon",
+      "Shinegreymon"
+    ]
+  },
+  {
+    "card_id": "BT23-027",
+    "card_name": "Angemon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Yellow",
+      "Blue"
+    ],
+    "traits": "Angel, Hudie, CS",
+    "dp": 5000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 3,
+        "level": 3
+      }
+    ],
+    "effect_text": "\uff1cBarrier\uff1e (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[On Play] [When Digivolving] \uff1cDraw 1\uff1e (Draw 1 card from your deck.) Then, if it's your turn, 2 of your Digimon may DNA digivolve into [Shakkoumon] in the hand.",
+    "inherited_text": "\uff1cBarrier\uff1e (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_027.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Yellow\\BT23_027.cs",
+    "shared_with": [
+      "Bloomlordmon",
+      "CS Mastemon",
+      "Hudiemon",
+      "Jesmon",
+      "Magnamon Armors",
+      "MetalEtemon",
+      "Phoenixmon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT23-031",
+    "card_name": "Angewomon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Archangel, CS",
+    "dp": 6000,
+    "play_cost": 7,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 3,
+        "level": 4
+      }
+    ],
+    "effect_text": "When this card would be played from the hand, if you have [LadyDevimon] or [Mirei Mikagura], reduce the play cost by 3.\r\n[On Play] [When Digivolving] Add your top security card to the hand. Then, if you have 3 or fewer security cards, \uff1cRecovery +1 (Deck)\uff1e (Place the top card of your deck on top of your security stack.).",
+    "inherited_text": "\uff1cAlliance\uff1e (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains \uff1cSecurity A. +1\uff1e for the attack.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_031.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Yellow\\BT23_031.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Rapidmon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT23-037",
+    "card_name": "Tentomon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Green",
+      "Yellow"
+    ],
+    "traits": "Insectoid, Hudie, CS",
+    "dp": 1000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Green",
+        "cost": 1,
+        "level": 2
+      }
+    ],
+    "effect_text": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [CS]\u00a0trait, reduce the digivolution cost by 1.",
+    "inherited_text": "[When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower Digimon card with the [Hudie]\u00a0trait from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at the end of your opponent's turn.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_037.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Green\\BT23_037.cs",
+    "shared_with": [
+      "Hudiemon",
+      "MetalEtemon",
+      "Phoenixmon"
+    ]
+  },
+  {
+    "card_id": "BT23-067",
+    "card_name": "LadyDevimon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Purple"
+    ],
+    "traits": "Fallen Angel, CS",
+    "dp": 6000,
+    "play_cost": 7,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 3,
+        "level": 4
+      }
+    ],
+    "effect_text": "When this card would be played from the hand, if you have [Angewomon] or [Mirei Mikagura], reduce the play cost by 3.\r\n\uff1cBlocker\uff1e (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon.",
+    "inherited_text": "\uff1cScapegoat\uff1e (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_067.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Purple\\BT23_067.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Rapidmon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT23-096",
+    "card_name": "Comet Hammer",
+    "card_kind": "Option",
+    "level": null,
+    "colors": [
+      "Black"
+    ],
+    "traits": "CS",
+    "dp": null,
+    "play_cost": 5,
+    "evo_costs": [],
+    "effect_text": "While you have a Digimon or Tamer with the [CS]\u00a0trait on the field, you can ignore this card's color requirements.\r\n[Main] \uff1cDe-Digivolve 4\uff1e 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.) Then, place this card in the battle area.\r\n[Your Turn] When one of your [CS]\u00a0trait Digimon attacks, \uff1cDelay\uff1e (By trashing this card after the placing turn, activate the effect below.)\r\n\u30fb\uff1cDe-Digivolve 4\uff1e 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.)",
+    "inherited_text": "Security Effect [Security] \uff1cDe-Digivolve 4\uff1e 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.) Then, place this card in the battle area.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_096.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Black\\BT23_096.cs",
+    "shared_with": [
+      "Abbadomon",
+      "Bloomlordmon",
+      "CS Mastemon",
+      "DNA Omnimon",
+      "Diaboromon",
+      "Eaters",
+      "Hudiemon",
+      "Rocks",
+      "Rosemon"
+    ]
+  },
+  {
+    "card_id": "BT23-102",
+    "card_name": "Mastemon",
+    "card_kind": "Digimon",
+    "level": 6,
+    "colors": [
+      "Yellow",
+      "Purple"
+    ],
+    "traits": "Angel, CS",
+    "dp": 13000,
+    "play_cost": 13,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 5,
+        "level": 5
+      }
+    ],
+    "effect_text": "\uff1cBarrier\uff1e (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n\uff1cPartition ([Angewomon] & [LadyDevimon])\uff1e (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[When Digivolving] You may play 1 level 5 or lower yellow or purple card from your hand or trash without paying the cost. Then, if this Digimon's stack has 2 or more same-level cards, trash the top cards of both players' security stacks so that they have 3 cards left.\r\n[All Turns] [Once Per Turn] When security stacks are removed from, you may place 1 Digimon as the bottom security card.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_102.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Yellow\\BT23_102.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Cerberus-Master",
+      "Leviamon",
+      "Lucemon",
+      "Mastemon (KDA)",
+      "Rapidmon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT4-104",
+    "card_name": "Blinding Ray",
+    "card_kind": "Option",
+    "level": null,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 0,
+    "evo_costs": [],
+    "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt4/bt4_104.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT4\\Yellow\\BT4_104.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Chronicle",
+      "Eaters",
+      "Hudiemon",
+      "Lucemon",
+      "Magnamon Armors",
+      "Pulse Tribal",
+      "Purple Hybrid",
+      "Sakuyamon",
+      "TS Jupitermon",
+      "TS Merukimon",
+      "TS Olympos",
+      "UNKNOWN"
+    ]
+  },
+  {
+    "card_id": "BT5-033",
+    "card_name": "Cutemon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Fairy",
+    "dp": 3000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "[Opponent's Turn] Your opponent can't reduce digivolution costs.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt5/bt5_033.py",
+    "csharp_path": null,
+    "shared_with": [
+      "CS Mastemon",
+      "Puppets",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT7-032",
+    "card_name": "Pulsemon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Beastkin",
+    "dp": 2000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "Inherited Effect [When Attacking] [Once Per Turn] If you have 3 security cards, gain 2 memory.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt7/bt7_032.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT7\\Yellow\\BT7_032.cs",
+    "shared_with": [
+      "Eaters",
+      "TS Jupitermon",
+      "TS Olympos",
+      "UNKNOWN"
+    ]
+  },
+  {
+    "card_id": "BT7-107",
+    "card_name": "Calling From the Darkness",
+    "card_kind": "Option",
+    "level": null,
+    "colors": [
+      "Purple"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 1,
+    "evo_costs": [],
+    "effect_text": "[Main] Delete 1 of your Digimon. Then, return up to 2 purple Digimon cards from your trash to your hand.",
+    "inherited_text": "Security Effect [Security] Add this card to the hand.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt7/bt7_107.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT7\\Purple\\BT7_107.cs",
+    "shared_with": [
+      "7GDL",
+      "Bagra Army",
+      "Beelstar 3Musketeers",
+      "Beelzemon",
+      "Belphemon",
+      "Chaos Control",
+      "Creepymon",
+      "Dark Animals",
+      "Gallantmon",
+      "Ghosts",
+      "Hunters",
+      "Imperialdramon (PR)",
+      "Leviamon",
+      "Lucemon",
+      "Megidramon",
+      "Millenniummon",
+      "Myotismon Loop",
+      "Purple Hybrid",
+      "Seven Great Demon Lords",
+      "TS Central Town",
+      "TS Titans",
+      "Titamon"
+    ]
+  },
+  {
+    "card_id": "BT8-071",
+    "card_name": "Psychemon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Purple"
+    ],
+    "traits": "Reptile",
+    "dp": 3000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "[All Turns] Players can't reduce play costs.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt8/bt8_071.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT8\\Purple\\BT8_071.cs",
+    "shared_with": [
+      "Belphemon",
+      "CS Mastemon",
+      "Cerberus-Master",
+      "Ghosts",
+      "Imperialdramon (PR)",
+      "Leviamon",
+      "Mastemon (KDA)",
+      "Purple Hybrid",
+      "Ragnaloardmon",
+      "Security Control",
+      "TS Central Town",
+      "TS Titans",
+      "Takemikazuchi",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT8-077",
+    "card_name": "BlackGatomon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Purple",
+      "Yellow"
+    ],
+    "traits": "Dark Animal",
+    "dp": 6000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 3,
+        "level": 3
+      }
+    ],
+    "effect_text": "\uff1cRush\uff1e (This Digimon can attack the turn it comes into play.)",
+    "inherited_text": "\uff1cRetaliation\uff1e (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt8/bt8_077.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT8\\Purple\\BT8_077.cs",
+    "shared_with": [
+      "Fenriloogamon"
+    ]
+  },
+  {
+    "card_id": "BT9-033",
+    "card_name": "Pillomon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Mammal",
+    "dp": 2000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "[All Turns] Players can't play Digimon by effects.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt9/bt9_033.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT9\\Yellow\\BT9_033.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Dynasmon",
+      "Puppets",
+      "Sakuyamon",
+      "Security Control",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "BT9-082",
+    "card_name": "Ordinemon",
+    "card_kind": "Digimon",
+    "level": 7,
+    "colors": [
+      "Purple",
+      "Yellow"
+    ],
+    "traits": "Fallen Angel",
+    "dp": 15000,
+    "play_cost": 15,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 6,
+        "level": 6
+      }
+    ],
+    "effect_text": "[When Digivolving] When DNA digivolving, delete 1 of your opponent's level 6 or higher Digimon and all of their level 5 or lower Digimon. For each Digimon deleted by this effect, \uff1cRecovery +1 (Deck)\uff1e (Place the top card of your deck on top of your security stack.)\r\n[On Deletion] You may trash the top card of your security stack to play this card without paying its memory cost.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/bt9/bt9_082.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT9\\Purple\\BT9_082.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX10-031",
+    "card_name": "DarkKnightmon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Black",
+      "Purple"
+    ],
+    "traits": "Dark Knight, Bagra Army, Twilight",
+    "dp": 7000,
+    "play_cost": 7,
+    "evo_costs": [
+      {
+        "color": "Black",
+        "cost": 4,
+        "level": 4
+      }
+    ],
+    "effect_text": "[On Play] [When Digivolving] Until your opponent's turn ends, their \uff1cDe-Digivolve\uff1e effects don't affect 1 of your Digimon, and it gets +3000 DP.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower card from its digivolution cards without paying the cost.",
+    "inherited_text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex10/ex10_031.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX10\\Black\\EX10_031.cs",
+    "shared_with": [
+      "Bagra Army",
+      "LordKnightmon"
+    ]
+  },
+  {
+    "card_id": "EX10-051",
+    "card_name": "Mummymon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Purple",
+      "Black"
+    ],
+    "traits": "Undead",
+    "dp": 6000,
+    "play_cost": 6,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 4,
+        "level": 4
+      }
+    ],
+    "effect_text": "[On Play] By trashing 1 card in your hand, \uff1cDe-Digivolve 1\uff1e 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)\r\n[On Deletion] You may play 1 Tamer card with [Myotismon]\u00a0in its text from your trash without paying the cost. This effect can't play cards with the same name as any of your Tamers.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex10/ex10_051.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX10\\Purple\\EX10_051.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Myotismon Loop"
+    ]
+  },
+  {
+    "card_id": "EX4-074",
+    "card_name": "ShineGreymon: Ruin Mode",
+    "card_kind": "Digimon",
+    "level": 7,
+    "colors": [
+      "Purple",
+      "Yellow"
+    ],
+    "traits": "Light Dragon",
+    "dp": 15000,
+    "play_cost": 14,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 5,
+        "level": 6
+      }
+    ],
+    "effect_text": "[When Digivolving] [On Deletion] Until the end of your opponent's next turn, all of your opponent's Digimon get -5000DP.\r\n[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and \uff1cRecovery +1 (Deck)\uff1e. Then, if you have a Tamer in play, hatch 1 Digi-Egg card to an empty space in your breeding area.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex4/ex4_074.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX4\\Purple\\EX4_074.cs",
+    "shared_with": [
+      "7GDL",
+      "Beelstar 3Musketeers",
+      "Beelzemon",
+      "CS Mastemon",
+      "Eaters",
+      "Galaxy",
+      "Gallantmon",
+      "Imperialdramon (PR)",
+      "Leviamon",
+      "Mastemon (KDA)",
+      "Megidramon",
+      "Numemon",
+      "Puppets",
+      "Sakuyamon",
+      "Seven Great Demon Lords",
+      "Shakkoumon",
+      "Shine",
+      "Shinegreymon",
+      "Silphymon",
+      "TS Central Town",
+      "TS Jupitermon",
+      "TS Olympos",
+      "Three Musketeers",
+      "UNKNOWN",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX6-020",
+    "card_name": "Gatomon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Holy Beast",
+    "dp": 4000,
+    "play_cost": 4,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 2,
+        "level": 3
+      }
+    ],
+    "effect_text": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Angel], [Archangel] or [Fallen Angel]\u00a0trait and 1 [Mirei Mikagura] among them to the hand. Return the rest to the bottom of the deck.",
+    "inherited_text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_020.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Yellow\\EX6_020.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX6-022",
+    "card_name": "Angewomon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Archangel",
+    "dp": 6000,
+    "play_cost": 7,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 3,
+        "level": 4
+      }
+    ],
+    "effect_text": "\uff1cBarrier\uff1e (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[On Play] [When Digivolving] If you have a [Mirei Mikagura], 1 of your opponent's Digimon gains \uff1cSecurity A. -2\uff1e (This Digimon checks 2 additional security cards.) until the end of their turn. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your hand without paying the cost.",
+    "inherited_text": "[All Turns] While this Digimon has the [Angel] or [Three Great Angels]\u00a0trait, it gains \uff1cAlliance\uff1e (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains \uff1cSecurity A. +1\uff1e for the attack.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_022.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Yellow\\EX6_022.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX6-029",
+    "card_name": "Mastemon",
+    "card_kind": "Digimon",
+    "level": 6,
+    "colors": [
+      "Yellow",
+      "Purple"
+    ],
+    "traits": "Angel",
+    "dp": 12000,
+    "play_cost": 7,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 4,
+        "level": 5
+      }
+    ],
+    "effect_text": "[Hand] [Counter] \uff1cBlast DNA Digivolve ([Angewomon] + [LadyDevimon])\uff1e (1 of your specified Digimon and 1 specified card in hand may DNA digivolve into this card.)\r\n[On Play] [When Digivolving] You may play 1 level 5 or lower Digimon card with the [Angel], [Archangel] or [Fallen Angel]\u00a0trait from your hand or trash without paying the cost. Then, if DNA digivolving, place 1 other Digimon at the bottom of its owner's security stack, and trash cards from the top of your opponent's security stack until it has 4 left.",
+    "inherited_text": "Ace Overflow \uff1c-4\uff1e (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_029.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Yellow\\EX6_029.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX6-030",
+    "card_name": "Dominimon",
+    "card_kind": "Digimon",
+    "level": 6,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Dominion",
+    "dp": 12000,
+    "play_cost": 12,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 4,
+        "level": 5
+      }
+    ],
+    "effect_text": "[When Digivolving] Search your security stack. You may play 1 level 5 or lower Digimon card with the [Angel] or [Archangel]\u00a0trait among them without paying the cost. Then, shuffle your security stack, and 1 of your opponent's Digimon gets -7000 DP until the end of the turn.\r\n[All Turns] When one of your Digimon with the [Angel], [Archangel] or [Three Great Angels]\u00a0trait would leave the battle area other than by one of your effects or a battle, by trashing the top card of your security stack, prevent them from leaving.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_030.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Yellow\\EX6_030.cs",
+    "shared_with": [
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX6-053",
+    "card_name": "LadyDevimon",
+    "card_kind": "Digimon",
+    "level": 5,
+    "colors": [
+      "Purple"
+    ],
+    "traits": "Fallen Angel",
+    "dp": 6000,
+    "play_cost": 7,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 3,
+        "level": 4
+      }
+    ],
+    "effect_text": "\uff1cRetaliation\uff1e (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)\r\n[On Play] [When Digivolving] If you have a [Mirei Mikagura], delete 1 of your opponent's level 4 or lower Digimon. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your trash without paying the cost.",
+    "inherited_text": "[All Turns] While this Digimon has the [Angel] or [Seven Great Demon Lords]\u00a0trait, it gains \uff1cScapegoat\uff1e (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_053.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Purple\\EX6_053.cs",
+    "shared_with": [
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX6-074",
+    "card_name": "Mirei Mikagura",
+    "card_kind": "Tamer",
+    "level": null,
+    "colors": [
+      "Purple",
+      "Yellow"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 4,
+    "evo_costs": [],
+    "effect_text": "[Your Turn] When one of your Digimon with the [Holy Beast], [Archangel] or [Fallen Angel]\u00a0trait is played, by suspending this Tamer, gain 1 memory. Then, 1 of your Digimon may digivolve into [Angewomon] or [LadyDevimon] in your trash with the cost reduced by 1.\r\n[End of Your Turn] [Once Per Turn] 2 of your Digimon may DNA digivolve into a Digimon card in your hand.",
+    "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_074.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Purple\\EX6_074.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX8-030",
+    "card_name": "Tapirmon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Holy Beast, NSo",
+    "dp": 2000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "[All Turns] Your opponent can't gain memory other than by Tamer effects.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex8/ex8_030.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX8\\Yellow\\EX8_030.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Dynasmon",
+      "Nightmare Soldiers",
+      "Puppets",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "EX8-064",
+    "card_name": "Boltboutamon",
+    "card_kind": "Digimon",
+    "level": 7,
+    "colors": [
+      "Purple",
+      "Black"
+    ],
+    "traits": "Wizard, NSo",
+    "dp": 15000,
+    "play_cost": 15,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 5,
+        "level": 6
+      }
+    ],
+    "effect_text": "[When Digivolving] \uff1cDe-Digivolve 3\uff1e 1 of your opponent's Digimon and, for the turn, all of their Digimon get -6000 DP. Then, if DNA digivolving, you may play up to 10 play cost's total worth of [NSo]\u00a0trait Digimon cards from your trash without paying the cost.\r\n[All Turns] [Once Per Turn] When other Digimon are deleted, trash your opponent's top security card.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/ex8/ex8_064.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX8\\Purple\\EX8_064.cs",
+    "shared_with": [
+      "Chronicle",
+      "D-Brigade",
+      "Digi-Police",
+      "Nightmare Soldiers",
+      "Sakuyamon",
+      "Takemikazuchi"
+    ]
+  },
+  {
+    "card_id": "LM-035",
+    "card_name": "Amber Memory Boost!",
+    "card_kind": "Option",
+    "level": null,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 3,
+    "evo_costs": [],
+    "effect_text": "Purple also meets this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 yellow or purple Digimon card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] \uff1cDelay\uff1e (By trashing this card after the placing turn, activate the effect below.)\r\n\u30fbGain 2 memory.",
+    "inherited_text": "Security Effect [Security] Place this card in the battle area.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/lm/lm_035.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\LM\\Yellow\\LM_035.cs",
+    "shared_with": [
+      "Appmon",
+      "CS Mastemon",
+      "Gallantmon",
+      "Nightmare Soldiers",
+      "Puppets",
+      "Purple Hybrid",
+      "Shakkoumon",
+      "Takemikazuchi",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "P-187",
+    "card_name": "Mastemon",
+    "card_kind": "Digimon",
+    "level": 6,
+    "colors": [
+      "Purple",
+      "Yellow"
+    ],
+    "traits": "Angel",
+    "dp": 13000,
+    "play_cost": 13,
+    "evo_costs": [
+      {
+        "color": "Purple",
+        "cost": 5,
+        "level": 5
+      }
+    ],
+    "effect_text": "[When Digivolving] \uff1cRecovery +1 (Deck)\uff1e (Place the top card of your deck on top of your security stack.) Then, if DNA digivolving, by placing 1 other Digimon or Tamer as the top or bottom security card, trash your opponent's top security card.\r\n[When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card, you may play 1 purple or yellow Digimon card with 6000 DP or less from your hand or trash without paying the cost.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/p/p_187.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\P\\Purple\\P_187.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Mastemon (KDA)",
+      "Rapidmon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "P-206",
+    "card_name": "Digital Gate Open",
+    "card_kind": "Option",
+    "level": null,
+    "colors": [
+      "White"
+    ],
+    "traits": "",
+    "dp": null,
+    "play_cost": 4,
+    "evo_costs": [],
+    "effect_text": "You can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 Digimon card and 1 Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] \uff1cDelay\uff1e (By trashing this card after the placing turn, activate the effect below.)\r\n\u30fbYou may play 1 Tamer card with the same color as any of your Digimon on the field from your hand with the play cost reduced by 4.",
+    "inherited_text": "Security Effect [Security] You may play 1 Digimon card with a play cost of 3 or less from your hand or trash without paying the cost. Then, add this card to the hand.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/p/p_206.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\P\\White\\P_206.cs",
+    "shared_with": [
+      "ACCEL",
+      "Bagra Army",
+      "Blackwargreymon",
+      "Bloomlordmon",
+      "Blue Hybrid",
+      "CS Mastemon",
+      "CS Omnimon",
+      "Chronicle",
+      "D-Brigade",
+      "DNA Omnimon",
+      "Eaters",
+      "Gabu Bond",
+      "Galacticmon",
+      "Galaxy",
+      "Ghosts",
+      "Hexeblaumon",
+      "Hudiemon",
+      "Imperialdramon (UG)",
+      "Invisimon",
+      "Jesmon",
+      "Magnamon Armors",
+      "Medusamon",
+      "Millenniummon",
+      "Myotismon Loop",
+      "Nightmare Soldiers",
+      "Puppets",
+      "Purple Hybrid",
+      "Rapidmon",
+      "Rocks",
+      "Royal Base",
+      "Royal Knights",
+      "Sakuyamon",
+      "Shakkoumon",
+      "Shine",
+      "Shinegreymon",
+      "Silphymon",
+      "TS Olympos",
+      "Wargreymon OTK",
+      "Xros Heart",
+      "Yellow Vax",
+      "Zephagamon"
+    ]
+  },
+  {
+    "card_id": "P-221",
+    "card_name": "Chaosmon",
+    "card_kind": "Digimon",
+    "level": 7,
+    "colors": [
+      "Yellow",
+      "Purple"
+    ],
+    "traits": "Unique",
+    "dp": 15000,
+    "play_cost": 15,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 5,
+        "level": 6
+      }
+    ],
+    "effect_text": "\uff1cSecurity A. +1\uff1e (This Digimon checks 1 additional security card.)\r\n\uff1cPartition (Yellow Lv.6 & Purple/Black Lv.6)\uff1e (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[When Digivolving] If DNA digivolving, until your opponent's turn ends, their effects don't affect this Digimon.\r\n[When Digivolving] [When Attacking] 1 of your opponent's Digimon gets -10000 DP until their turn ends.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/p/p_221.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\P\\Yellow\\P_221.cs",
+    "shared_with": [
+      "Chaosmon",
+      "Sakuyamon",
+      "Shakkoumon"
+    ]
+  },
+  {
+    "card_id": "P-225",
+    "card_name": "DigiLab",
+    "card_kind": "Option",
+    "level": null,
+    "colors": [
+      "White"
+    ],
+    "traits": "CS",
+    "dp": null,
+    "play_cost": 2,
+    "evo_costs": [],
+    "effect_text": "While you have [CS]\u00a0trait Digimon or Tamer, you can ignore this card's color requirements.\r\n[Main] \uff1cDraw 1\uff1e (Draw 1 card from your deck.) Then, place this card in the battle area.\r\n[Main] \uff1cDelay\uff1e (By trashing this card after the placing turn, activate the effect below.)\r\n\u30fbBy placing the top stacked card of any of your level 4 or higher [CS] Digimon as its bottom digivolution card, gain 2 memory.",
+    "inherited_text": "Security Effect [Security] Place this card in the battle area.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/p/p_225.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\P\\White\\P_225.cs",
+    "shared_with": [
+      "Hudiemon",
+      "Magnamon Armors"
+    ]
+  },
+  {
+    "card_id": "ST10-02",
+    "card_name": "Salamon",
+    "card_kind": "Digimon",
+    "level": 3,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Mammal",
+    "dp": 2000,
+    "play_cost": 3,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 0,
+        "level": 2
+      }
+    ],
+    "effect_text": "Inherited Effect [End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+    "inherited_text": "",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/st10/st10_02.py",
+    "csharp_path": null,
+    "shared_with": [
+      "CS Mastemon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "ST10-04",
+    "card_name": "Gatomon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Yellow",
+      "Purple"
+    ],
+    "traits": "Holy Beast",
+    "dp": 4000,
+    "play_cost": 5,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 3,
+        "level": 3
+      }
+    ],
+    "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 yellow Digimon card and 1 purple Digimon card among them to your hand. Place the remaining cards at the bottom of your deck in any order.\r\n[Your Turn] When this Digimon would digivolve into a card with the [Archangel] or [Fallen Angel]\u00a0trait, reduce the memory cost of the digivolution by 2.",
+    "inherited_text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/st10/st10_04.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\ST10\\Yellow\\ST10_04.cs",
+    "shared_with": [
+      "CS Mastemon",
+      "Ragnaloardmon",
+      "Shakkoumon",
+      "Yellow Vax"
+    ]
+  },
+  {
+    "card_id": "ST20-05",
+    "card_name": "Gatomon",
+    "card_kind": "Digimon",
+    "level": 4,
+    "colors": [
+      "Yellow"
+    ],
+    "traits": "Holy Beast, ADVENTURE",
+    "dp": 4000,
+    "play_cost": 4,
+    "evo_costs": [
+      {
+        "color": "Yellow",
+        "cost": 2,
+        "level": 3
+      }
+    ],
+    "effect_text": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Give 2 of your opponent's Digimon \uff1cSecurity A. -1\uff1e (This Digimon checks 1 fewer security card.) until their turn ends.",
+    "inherited_text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "security_text": "",
+    "script_status": "frozen",
+    "script_path": "digimon_gym/engine/data/scripts/st20/st20_05.py",
+    "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\ST20\\Yellow\\ST20_05.cs",
+    "shared_with": [
+      "ADVENTURE",
+      "CS Mastemon",
+      "Phoenixmon",
+      "TyrantKabuterimon",
+      "Yellow Vax"
+    ]
+  }
+]

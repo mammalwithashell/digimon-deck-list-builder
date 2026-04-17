@@ -1,0 +1,24 @@
+{
+  "card_id": "EX6-053",
+  "card_name": "LadyDevimon",
+  "card_kind": "Digimon",
+  "level": 5,
+  "colors": [
+    "Purple"
+  ],
+  "traits": "Fallen Angel",
+  "dp": 6000,
+  "play_cost": 7,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 3,
+      "level": 4
+    }
+  ],
+  "effect_text": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)\r\n[On Play] [When Digivolving] If you have a [Mirei Mikagura], delete 1 of your opponent's level 4 or lower Digimon. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your trash without paying the cost.",
+  "inherited_text": "[All Turns] While this Digimon has the [Angel] or [Seven Great Demon Lords] trait, it gains ＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_053.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Purple\\EX6_053.cs"
+}

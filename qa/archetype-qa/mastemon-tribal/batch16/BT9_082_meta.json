@@ -1,0 +1,25 @@
+{
+  "card_id": "BT9-082",
+  "card_name": "Ordinemon",
+  "card_kind": "Digimon",
+  "level": 7,
+  "colors": [
+    "Purple",
+    "Yellow"
+  ],
+  "traits": "Fallen Angel",
+  "dp": 15000,
+  "play_cost": 15,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 6,
+      "level": 6
+    }
+  ],
+  "effect_text": "[When Digivolving] When DNA digivolving, delete 1 of your opponent's level 6 or higher Digimon and all of their level 5 or lower Digimon. For each Digimon deleted by this effect, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[On Deletion] You may trash the top card of your security stack to play this card without paying its memory cost.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt9/bt9_082.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT9\\Purple\\BT9_082.cs"
+}

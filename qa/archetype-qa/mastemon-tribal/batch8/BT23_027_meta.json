@@ -1,0 +1,25 @@
+{
+  "card_id": "BT23-027",
+  "card_name": "Angemon",
+  "card_kind": "Digimon",
+  "level": 4,
+  "colors": [
+    "Yellow",
+    "Blue"
+  ],
+  "traits": "Angel, Hudie, CS",
+  "dp": 5000,
+  "play_cost": 5,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 3,
+      "level": 3
+    }
+  ],
+  "effect_text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[On Play] [When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.) Then, if it's your turn, 2 of your Digimon may DNA digivolve into [Shakkoumon] in the hand.",
+  "inherited_text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_027.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Yellow\\BT23_027.cs"
+}

@@ -100,12 +100,13 @@ class TestBT7107CallingFromTheDarkness:
             "Delete selection should be mandatory (action 62/decline should not be legal)"
         )
 
-    def test_no_digimon_to_delete_effect_fizzles(self, debug_runner):
-        """If no own Digimon on field, the entire effect fizzles (no trash recovery).
+    def test_no_digimon_to_delete_still_runs_trash_recovery(self, debug_runner):
+        """Per C# BT7_107.cs the delete and trash recovery are INDEPENDENT
+        top-level if-blocks, not nested. So if no own Digimon exists, the
+        delete clause is skipped but trash recovery still runs.
 
-        Note: Option cards require a matching-color Digimon or Tamer on field
-        to play. So we use a Purple Tamer to satisfy the color requirement
-        while having no Digimon to delete.
+        Option cards require a matching-color Digimon or Tamer on field to
+        play, so we use a Purple Tamer to satisfy the color requirement.
         """
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
 
@@ -114,8 +115,8 @@ class TestBT7107CallingFromTheDarkness:
         runner.place_on_field(1, ["BT2-090"])  # Matt Ishida (Purple Tamer)
 
         # Put purple Digimon in trash
-        runner.inject_card(1, "BT2-068", "trash")
-        runner.inject_card(1, "BT2-069", "trash")
+        runner.inject_card(1, "BT2-068", "trash")  # Impmon
+        runner.inject_card(1, "BT2-069", "trash")  # Gabumon
 
         runner.inject_card(1, "BT7-107", "hand")
         runner.set_phase("Main")
@@ -125,20 +126,34 @@ class TestBT7107CallingFromTheDarkness:
             f"Should find play action (purple Tamer satisfies color req). "
             f"Actions: {runner.actions()}"
         )
-        snap_before = runner.snapshot()
-        trash_purple_before = [cid for cid in snap_before.p1_trash
-                               if cid in ("BT2-068", "BT2-069")]
 
         runner.execute(action)
+
+        # With no own Digimon to delete, the effect should go straight to
+        # the trash selection phase (SelectTrash).
+        snap = runner.snapshot()
+        assert snap.phase == "SelectTrash", (
+            f"Should jump straight to SelectTrash when no Digimon to delete "
+            f"(independent if-blocks per C#). Got phase={snap.phase}."
+        )
+
+        # First pick is mandatory (C# canNoSelect=false).
+        legal = runner.action_mask()
+        assert 62 not in legal, (
+            "First trash recovery pick should be mandatory per C# "
+            "(canNoSelect=false)."
+        )
+
         runner.auto_resolve()
 
         snap_after = runner.snapshot()
-        # Purple Digimon should remain in trash (no recovery without delete)
-        trash_purple_after = [cid for cid in snap_after.p1_trash
-                              if cid in ("BT2-068", "BT2-069")]
-        assert trash_purple_after == trash_purple_before, (
-            "When no Digimon to delete, trash recovery should not happen. "
-            f"Trash before: {trash_purple_before}, after: {trash_purple_after}"
+        # At least 1 purple Digimon should be recovered to hand.
+        recovered = [cid for cid in snap_after.p1_hand
+                     if cid in ("BT2-068", "BT2-069")]
+        assert len(recovered) >= 1, (
+            f"Should recover at least 1 purple Digimon from trash even with "
+            f"no Digimon to delete (C# runs trash recovery unconditionally). "
+            f"Hand: {snap_after.p1_hand}"
         )
 
     # ── [Main] Trash Recovery: Purple Digimon Filter ───────────────────

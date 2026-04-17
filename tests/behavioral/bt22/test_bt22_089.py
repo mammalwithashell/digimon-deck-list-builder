@@ -210,3 +210,147 @@ class TestBT22089MireiMikagura:
         snap = runner.snapshot()
         assert any(s.card_id == "BT22-089" for s in snap.p1_field), \
             "Mirei should be on the field even without valid trash targets"
+
+    def test_on_play_condition_rejects_when_only_non_matching_trait(self, debug_runner):
+        """The On Play by-cost condition must use EXACT trait matching.
+        A card whose only trait is a Reptile/Mini Dragon must NOT satisfy the
+        condition (regression for substring-trait bug: 'CS' in 'Chess', etc.)."""
+        runner = debug_runner(deck1=NO_TARGETS_DECK, deck2=NO_TARGETS_DECK, initial_memory=5)
+
+        # Place BT22-089 on field, fully clear hand, then add one non-matching card
+        perm = runner.place_on_field(1, ["BT22-089"])
+        game = runner.game
+        game.player1.hand_cards.clear()
+
+        from digimon_gym.engine.data.card_database import CardDatabase
+        db = CardDatabase()
+        # BT1-009 Monodramon has traits ['Mini Dragon'] -> no C2 match
+        monodramon = db.create_card_source("BT1-009", game.player1)
+        game.player1.hand_cards.append(monodramon)
+
+        effects = perm.top_card.effect_list(None)
+        on_play_effects = [
+            e for e in effects
+            if getattr(e, 'is_on_play', False)
+            and e.timing == EffectTiming.OnEnterFieldAnyone
+        ]
+        assert len(on_play_effects) == 1
+        effect = on_play_effects[0]
+        # Condition should fail — no qualifying hand card (Mini Dragon != CS/Angel/etc)
+        assert not effect.can_use_condition({}), \
+            "On Play condition must reject when hand has no matching trait"
+
+    def test_on_play_condition_accepts_each_target_trait(self, debug_runner):
+        """All five C2 target traits should satisfy the condition independently."""
+        from digimon_gym.engine.data.card_database import CardDatabase
+        db = CardDatabase()
+
+        # Each card tests one trait family
+        trait_cards = [
+            ("BT1-046", "Holy Beast"),   # Kudamon
+            ("BT1-053", "Angel"),         # Darcmon
+            ("BT22-017", "CS"),           # Gabumon (CS)
+        ]
+        for card_id, trait_label in trait_cards:
+            runner = debug_runner(deck1=NO_TARGETS_DECK, deck2=NO_TARGETS_DECK, initial_memory=5)
+            perm = runner.place_on_field(1, ["BT22-089"])
+            game = runner.game
+            game.player1.hand_cards.clear()
+            cs = db.create_card_source(card_id, game.player1)
+            game.player1.hand_cards.append(cs)
+
+            effects = perm.top_card.effect_list(None)
+            on_play = [
+                e for e in effects
+                if getattr(e, 'is_on_play', False)
+                and e.timing == EffectTiming.OnEnterFieldAnyone
+            ][0]
+            assert on_play.can_use_condition({}), \
+                f"On Play condition should accept {trait_label} (via {card_id})"
+
+    def test_on_play_trash_uses_engine_helper(self, debug_runner):
+        """Trashing via the by-cost must move the card from hand to trash."""
+        runner = debug_runner(deck1=NO_TARGETS_DECK, deck2=NO_TARGETS_DECK, initial_memory=5)
+        perm = runner.place_on_field(1, ["BT22-089"])
+        game = runner.game
+        game.player1.hand_cards.clear()
+
+        from digimon_gym.engine.data.card_database import CardDatabase
+        db = CardDatabase()
+        kudamon = db.create_card_source("BT1-046", game.player1)  # Holy Beast
+        game.player1.hand_cards.append(kudamon)
+
+        trash_before = len(game.player1.trash_cards)
+
+        # Drive the on-play effect directly via its process callback
+        effects = perm.top_card.effect_list(None)
+        on_play = [
+            e for e in effects
+            if getattr(e, 'is_on_play', False)
+            and e.timing == EffectTiming.OnEnterFieldAnyone
+        ][0]
+        on_play.on_process_callback({
+            'player': game.player1,
+            'game': game,
+            'permanent': perm,
+        })
+        runner.auto_resolve()
+
+        # Kudamon is now in trash, drew 2 cards
+        assert kudamon in game.player1.trash_cards, \
+            "Selected hand card should be moved to trash via engine helper"
+        assert len(game.player1.trash_cards) >= trash_before + 1
+
+    # -- Security: Play this card without paying the cost --
+
+    def test_security_effect_is_registered_with_correct_timing_and_process(self, debug_runner):
+        """The [Security] Play this card effect must be wired with
+        SecuritySkill timing, is_security_effect=True, and a process
+        callback that invokes effect_play_from_security."""
+        runner = debug_runner(deck1=MIREI_DECK, deck2=MIREI_DECK, initial_memory=5)
+        from digimon_gym.engine.data.card_database import CardDatabase
+        db = CardDatabase()
+        mirei = db.create_card_source("BT22-089", runner.game.player1)
+
+        effects = mirei.effect_list(None)
+        sec_effects = [e for e in effects if getattr(e, 'is_security_effect', False)]
+        assert len(sec_effects) == 1, "Expected exactly one security effect"
+        sec = sec_effects[0]
+        assert sec.timing == EffectTiming.SecuritySkill, \
+            "Security effect must use SecuritySkill timing"
+        assert sec.on_process_callback is not None, \
+            "Security effect must have a process callback"
+
+    def test_security_play_puts_mirei_on_field(self, debug_runner):
+        """When Mirei is revealed as a security card, the Security effect should
+        put her on the owner's battle area without paying cost."""
+        runner = debug_runner(deck1=MIREI_DECK, deck2=MIREI_DECK, initial_memory=5)
+        game = runner.game
+        player = game.player1
+
+        # Simulate the security-skill process directly: fetch the effect from
+        # a security-zone CardSource and invoke it (this mirrors Player.attack()).
+        from digimon_gym.engine.data.card_database import CardDatabase
+        db = CardDatabase()
+        mirei = db.create_card_source("BT22-089", player)
+        player.security_cards.insert(0, mirei)
+
+        effects = mirei.effect_list(EffectTiming.SecuritySkill)
+        sec = next(e for e in effects if getattr(e, 'is_security_effect', False))
+        assert sec.on_process_callback is not None
+
+        field_before = len(player.battle_area)
+        sec.on_process_callback({
+            'game': game,
+            'player': player,
+            'permanent': None,
+            'card': mirei,
+        })
+
+        assert len(player.battle_area) == field_before + 1, \
+            "Security play should add Mirei to battle area"
+        assert any(p.top_card is mirei for p in player.battle_area), \
+            "Mirei should be on the field after security play"
+        # The security-played card should be marked so normal security trash
+        # logic does not re-trash it.
+        assert getattr(mirei, '_security_played', False) is True

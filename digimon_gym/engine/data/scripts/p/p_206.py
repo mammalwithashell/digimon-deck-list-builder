@@ -79,9 +79,12 @@ class P_206(CardScript):
         effects.append(effect2)
 
         # --- Effect 3: [Main] <Delay> Play Tamer matching Digimon color ---
+        # NOTE: _is_field_main must NOT be set here. The delay mechanism has
+        # its own action slot (effectIdx=1 on the option permanent). Adding
+        # _is_field_main would expose the effect at effectIdx=2 as well,
+        # creating a duplicate action that fires without trashing the Option.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
-        effect3._is_field_main = True
         effect3.set_effect_name(
             "P-206 Play 1 color-matched Tamer from hand with cost -4"
         )

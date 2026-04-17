@@ -1,0 +1,24 @@
+{
+  "card_id": "EX6-020",
+  "card_name": "Gatomon",
+  "card_kind": "Digimon",
+  "level": 4,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Holy Beast",
+  "dp": 4000,
+  "play_cost": 4,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 2,
+      "level": 3
+    }
+  ],
+  "effect_text": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Angel], [Archangel] or [Fallen Angel] trait and 1 [Mirei Mikagura] among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_020.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Yellow\\EX6_020.cs"
+}

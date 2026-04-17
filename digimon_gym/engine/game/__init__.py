@@ -80,8 +80,6 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         # Deferred end-phase: set when OnEndTurn effects create pending selections.
         self._end_phase_deferred: bool = False
         self._end_phase_memory_before: int = 0
-        # Deferred move-to-main: set when OnMove effects create pending selections.
-        self._move_to_main_deferred: bool = False
 
         # Opening mulligan state (set during start_game()).
         self._mulligan_order: List[Player] = []
@@ -96,6 +94,41 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
         # Deletion observer recursion depth guard (prevents token chain infinite loops)
         self._deletion_depth: int = 0
+
+        # Deferred move-to-main: set when OnMove effects create pending selections.
+        # Cleared by _maybe_complete_move_to_main() once selection resolves.
+        self._move_to_main_deferred: bool = False
+
+        # Active effect stack — tracks the ICardEffect currently being resolved
+        # so downstream mutations (e.g. add_memory) can inspect the source effect
+        # (used by CANNOT_ADD_MEMORY "except Tamer effects" gating, etc.).
+        self._active_effect_stack: List['ICardEffect'] = []
+
+    @property
+    def current_effect(self):
+        """Return the ICardEffect currently being processed (top of stack), or None."""
+        return self._active_effect_stack[-1] if self._active_effect_stack else None
+
+    def _invoke_effect_callback(self, effect, context):
+        """Invoke an effect's on_process_callback while tracking it on the active stack.
+
+        Scripts can inspect ``game.current_effect`` during processing (or in
+        subsequently-triggered hooks like ``Player.add_memory``) to know which
+        effect is the source of the mutation. Uses try/finally so that the
+        stack is always balanced even if the callback raises.
+        """
+        if effect is None or effect.on_process_callback is None:
+            return
+        self._active_effect_stack.append(effect)
+        try:
+            effect.on_process_callback(context)
+        finally:
+            # Defensive pop — handle the rare case where the callback itself
+            # mutated the stack (should not happen, but keep balanced).
+            if self._active_effect_stack and self._active_effect_stack[-1] is effect:
+                self._active_effect_stack.pop()
+            elif effect in self._active_effect_stack:
+                self._active_effect_stack.remove(effect)
 
     @property
     def current_player_id(self) -> int:
@@ -593,7 +626,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                         "played_card": card,
                     }
                     try:
-                        effect.on_process_callback(ctx)
+                        self._invoke_effect_callback(effect, ctx)
                     except Exception:
                         pass
 
@@ -750,7 +783,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
             self._log_effect_activation(te.effect, timing)
             te.effect.record_activation()
-            te.effect.on_process_callback(te.context)
+            self._invoke_effect_callback(te.effect, te.context)
             self._rule_process()
             if self.game_over:
                 return
@@ -772,7 +805,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                         continue
                     self._log_effect_activation(cte.effect, timing)
                     cte.effect.record_activation()
-                    cte.effect.on_process_callback(cte.context)
+                    self._invoke_effect_callback(cte.effect, cte.context)
                     self._rule_process()
                     if self.game_over:
                         return
@@ -926,7 +959,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                 continue
             self._log_effect_activation(te.effect, EffectTiming.OnDestroyedAnyone)
             te.effect.record_activation()
-            te.effect.on_process_callback(te.context)
+            self._invoke_effect_callback(te.effect, te.context)
 
         self._fire_deletion_observers(deleted_permanent, owner, removal_cause=removal_cause)
 
@@ -1078,7 +1111,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     if effect.can_use_condition and not effect.can_use_condition(context):
                         continue
                     effect.record_activation()
-                    effect.on_process_callback(context)
+                    self._invoke_effect_callback(effect, context)
 
     def _fire_play_observers(self, played_perm, player):
         """Fire effects on other permanents observing a play event."""
@@ -1106,7 +1139,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     if effect.can_use_condition and not effect.can_use_condition(context):
                         continue
                     effect.record_activation()
-                    effect.on_process_callback(context)
+                    self._invoke_effect_callback(effect, context)
 
     def _fire_deletion_observers(self, deleted_perm, owner, removal_cause: str = 'effect'):
         """Fire effects on permanents observing a deletion event."""
@@ -1136,7 +1169,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     if effect.can_use_condition and not effect.can_use_condition(context):
                         continue
                     effect.record_activation()
-                    effect.on_process_callback(context)
+                    self._invoke_effect_callback(effect, context)
         # Also scan opponent's battle area for cross-side watchers
         enemy = owner.enemy if hasattr(owner, 'enemy') and owner.enemy else None
         if enemy:
@@ -1161,7 +1194,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                         if effect.can_use_condition and not effect.can_use_condition(context):
                             continue
                         effect.record_activation()
-                        effect.on_process_callback(context)
+                        self._invoke_effect_callback(effect, context)
 
     def _fire_suspend_observers(self, suspended_perm):
         """Fire effects on permanents observing a suspend event."""
@@ -1190,7 +1223,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     if effect.can_use_condition and not effect.can_use_condition(context):
                         continue
                     effect.record_activation()
-                    effect.on_process_callback(context)
+                    self._invoke_effect_callback(effect, context)
 
     def _reset_effect_turn_counts(self):
         """Reset once-per-turn counters for all effects at start of turn."""
@@ -1423,12 +1456,13 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             # Set Main phase BEFORE executing OnMove effects so that any
             # request_selection saves previous_phase=Main (not Breeding).
             # This ensures selections resolve back to Main correctly.
+            self.current_phase = GamePhase.Main
             self.execute_effects(EffectTiming.OnMove, {"moved_permanent": self.turn_player.battle_area[-1]})
-            # If OnMove effects created pending selections, defer Main transition
+            # If OnMove effects created a pending selection, defer phase_main()
+            # until the selection resolves (picked up by _maybe_complete_move_to_main).
             if self.pending_selection is not None:
                 self._move_to_main_deferred = True
                 return
-            self.current_phase = GamePhase.Main
             self.phase_main()
 
     def action_breeding_pass(self):

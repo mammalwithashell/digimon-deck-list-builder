@@ -39,24 +39,31 @@ class BT7_107(CardScript):
             if not (player and game):
                 return
 
-            # Step 1: Delete 1 of your own Digimon (mandatory)
+            # Per C# BT7_107.cs the two clauses run as INDEPENDENT top-level
+            # `if` blocks (not nested), so trash recovery runs regardless of
+            # whether the delete step fired. The "Then" in card text is
+            # sequencing, not gating.
+            #
+            # Step 1: Delete 1 of your own Digimon (mandatory if any exist).
             own_digimon = [p for p in player.battle_area if p.is_digimon]
-            if not own_digimon:
-                return
 
             def on_delete(target_perm):
-                if target_perm is None:
-                    return
-                player.delete_permanent(target_perm)
-                # Step 2: Return up to 2 purple Digimon cards from trash to hand
+                if target_perm is not None:
+                    player.delete_permanent(target_perm)
+                # Step 2: Return up to 2 purple Digimon cards from trash.
                 _select_purple_from_trash(player, game, 2)
 
-            game.effect_select_own_permanent(
-                player, on_delete,
-                filter_fn=lambda p: p.is_digimon,
-                is_optional=False,
-                prompt="Delete 1 of your Digimon."
-            )
+            if own_digimon:
+                game.effect_select_own_permanent(
+                    player, on_delete,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=False,
+                    prompt="Delete 1 of your Digimon."
+                )
+            else:
+                # No own Digimon — skip delete, still run trash recovery
+                # (matches C# independent if-blocks).
+                _select_purple_from_trash(player, game, 2)
 
         def _select_purple_from_trash(player, game, remaining, picked_count=0):
             """Select purple Digimon from trash to hand.

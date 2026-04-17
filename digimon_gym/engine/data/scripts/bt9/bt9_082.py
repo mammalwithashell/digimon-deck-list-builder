@@ -13,7 +13,7 @@ class BT9_082(CardScript):
 
     [When Digivolving] When DNA digivolving, delete 1 of your opponent's
         level 6 or higher Digimon and all of their level 5 or lower Digimon.
-        For each Digimon deleted by this effect, Recovery +1 (Deck).
+        For each Digimon deleted by this effect, <Recovery +1 (Deck)>.
     [On Deletion] You may trash the top card of your security stack to play
         this card without paying its memory cost.
     """
@@ -21,28 +21,33 @@ class BT9_082(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: [When Digivolving] DNA digivolve mass deletion + recovery ---
+        # ------------------------------------------------------------------
+        # Effect 0: [When Digivolving] DNA digivolve mass deletion + recovery
+        # ------------------------------------------------------------------
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT9-082 When Digivolving: mass delete + recovery")
         effect0.set_effect_description(
             "[When Digivolving] When DNA digivolving, delete 1 of your "
             "opponent's level 6 or higher Digimon and all of their level 5 "
-            "or lower Digimon. For each Digimon deleted, Recovery +1 (Deck)."
+            "or lower Digimon. For each Digimon deleted by this effect, "
+            "<Recovery +1 (Deck)>."
         )
         effect0.is_when_digivolving = True
 
         def condition0(context: Dict[str, Any]) -> bool:
+            # Must be on field at the time of the trigger.
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Only activates when DNA digivolving
+            # Only fires when DNA digivolving.
             if not context.get('is_dna_digivolve'):
                 return False
             return True
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Delete 1 opponent Lv6+ and all Lv5-, then recovery for each."""
+            """Delete 1 opponent Lv6+ (player choice) and all Lv5- Digimon,
+            then Recovery +1 per Digimon actually deleted."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -51,48 +56,60 @@ class BT9_082(CardScript):
             if not enemy:
                 return
 
-            deleted_count = [0]  # Use list for closure mutation
+            # Use a list for closure mutation across nested callbacks.
+            deleted_count = [0]
 
-            def _delete_low_and_recover():
-                """Delete all level 5 or lower Digimon, then recovery."""
+            def _delete_all_low_and_recover():
+                """Delete every opponent Lv5- Digimon, then Recovery."""
                 to_delete_low = [
-                    p for p in enemy.battle_area
+                    p for p in list(enemy.battle_area)
                     if p.is_digimon and p.level is not None and p.level <= 5
                 ]
                 for perm in to_delete_low:
                     if perm in enemy.battle_area:
-                        enemy.delete_permanent(perm)
-                        deleted_count[0] += 1
-                # Recovery +1 for each deleted
+                        if enemy.delete_permanent(perm, is_opponent_effect=True):
+                            deleted_count[0] += 1
                 if deleted_count[0] > 0:
                     player.recovery(deleted_count[0])
 
-            # Delete 1 level 6 or higher Digimon (player selects)
+            # The Lv6+ deletion is a mandatory player choice — expose to agent.
             high_targets = [
                 p for p in enemy.battle_area
                 if p.is_digimon and p.level is not None and p.level >= 6
             ]
+
             if high_targets:
-                def on_delete_high(target_perm):
+                def on_select_high(target_perm):
                     if target_perm and target_perm in enemy.battle_area:
-                        enemy.delete_permanent(target_perm)
-                        deleted_count[0] += 1
-                    _delete_low_and_recover()
+                        if enemy.delete_permanent(
+                            target_perm, is_opponent_effect=True
+                        ):
+                            deleted_count[0] += 1
+                    _delete_all_low_and_recover()
 
                 game.effect_select_opponent_permanent(
-                    player, on_delete_high,
-                    filter_fn=lambda p: p.is_digimon and p.level is not None and p.level >= 6,
-                    is_optional=False)
+                    player,
+                    on_select_high,
+                    filter_fn=(
+                        lambda p: p.is_digimon
+                        and p.level is not None
+                        and p.level >= 6
+                    ),
+                    is_optional=False,
+                    prompt="Select 1 Digimon to delete.",
+                )
             else:
-                _delete_low_and_recover()
+                _delete_all_low_and_recover()
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # --- Effect 1: [On Deletion] Trash top security to play this card free ---
+        # ------------------------------------------------------------------
+        # Effect 1: [On Deletion] Trash top security to play self from trash
+        # ------------------------------------------------------------------
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect1.set_effect_name("BT9-082 On Deletion: revive from trash")
+        effect1.set_effect_name("BT9-082 On Deletion: replay from trash")
         effect1.set_effect_description(
             "[On Deletion] You may trash the top card of your security stack "
             "to play this card without paying its memory cost."
@@ -101,31 +118,51 @@ class BT9_082(CardScript):
         effect1.is_optional = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Check if this card is the one being deleted
-            destroyed = context.get('permanent')
-            if card and destroyed:
-                if card.permanent_of_this_card() is not None:
-                    return False  # Still on field, not deleted
-            player = card.owner if card else None
-            if player and not player.security_cards:
-                return False  # No security to trash
+            # Must no longer be on the field (i.e., actually deleted).
+            if card and card.permanent_of_this_card() is not None:
+                return False
+            # Must be in the owner's trash (DCGO: IsExistOnTrash(card)).
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            if card not in owner.trash_cards:
+                return False
+            # Must have at least 1 security card to pay the cost.
+            if not owner.security_cards:
+                return False
             return True
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Trash top security card, then play this card from trash free."""
-            player = ctx.get('player')
+            """Trash top of security, then play this card from trash free."""
             game = ctx.get('game')
-            if not (player and game):
+            if not game:
                 return
-            if not player.security_cards:
+            owner = card.owner if card else None
+            if not owner:
                 return
-            # Trash top card of security
-            trashed = player.security_cards.pop(0)
-            player.trash_cards.append(trashed)
-            # Play this card from trash without paying cost
-            if card and card in player.trash_cards:
-                player.play_card_from_source(card, pay_cost=False)
+            if card not in owner.trash_cards:
+                return
+            if not owner.security_cards:
+                return
+
+            # Trash the top card of security (index 0 is top).
+            trashed = owner.security_cards.pop(0)
+            owner.trash_cards.append(trashed)
+
+            # Play this card from trash without paying its memory cost.
+            owner.trash_cards.remove(card)
+            played_perm = owner.play_card_from_source(card, pay_cost=False)
+            if played_perm is not None:
+                # Fire OnEnterFieldAnyone for any observers / cascading plays.
+                game.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {
+                        "played_card": card,
+                        "played_permanent": played_perm,
+                        "event_player": owner,
+                    },
+                )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

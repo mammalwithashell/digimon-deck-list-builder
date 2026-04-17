@@ -266,15 +266,69 @@ class Permanent:
         # (mirrors _get_aura_dp_modifier pattern for keyword granting)
         if self.is_digimon and self.top_card and self.top_card.owner:
             owner = self.top_card.owner
+            # Self-aura: the keyword-granting effect may be on this permanent
+            # itself (e.g. BT11-042 Angewomon grants Blocker to all own
+            # Angel/Archangel Digimon — Angewomon herself has Archangel trait
+            # and qualifies for the grant). Scan top card for both inherited
+            # and non-inherited aura effects, since an aura grant applies to
+            # self whether the card lives in the top slot or as a digi source.
+            if self.top_card:
+                for effect in self.top_card.effect_list(EffectTiming.NoTiming):
+                    if not getattr(effect, '_applies_to_all_own_digimon', False):
+                        continue
+                    if not getattr(effect, keyword_attr, False):
+                        continue
+                    ctx = {"permanent": self}
+                    if effect.can_use_condition and not effect.can_use_condition(ctx):
+                        continue
+                    perm_filter = getattr(effect, '_keyword_permanent_condition', None)
+                    if perm_filter and not perm_filter(self):
+                        continue
+                    return True
+            # Self-aura from inherited sources under top card (e.g. aura
+            # effect lives on a digivolution card below the current top).
+            for source in self.card_sources[:-1]:
+                for effect in source.effect_list(EffectTiming.NoTiming):
+                    if not effect.is_inherited_effect:
+                        continue
+                    if not getattr(effect, '_applies_to_all_own_digimon', False):
+                        continue
+                    if not getattr(effect, keyword_attr, False):
+                        continue
+                    ctx = {"permanent": self}
+                    if effect.can_use_condition and not effect.can_use_condition(ctx):
+                        continue
+                    perm_filter = getattr(effect, '_keyword_permanent_condition', None)
+                    if perm_filter and not perm_filter(self):
+                        continue
+                    return True
             if hasattr(owner, 'battle_area'):
                 for other_perm in owner.battle_area:
                     if other_perm is self:
                         continue
-                    # Check non-inherited effects from other permanent's top card
+                    # Inherited effects from sources under top card of other permanent
+                    # (e.g. BT11-042 Angewomon's aura keyword grant remains active
+                    # when Angewomon is digivolved past and sits below the new top).
+                    for source in other_perm.card_sources[:-1]:
+                        for effect in source.effect_list(EffectTiming.NoTiming):
+                            if not effect.is_inherited_effect:
+                                continue
+                            if not getattr(effect, '_applies_to_all_own_digimon', False):
+                                continue
+                            if not getattr(effect, keyword_attr, False):
+                                continue
+                            ctx = {"permanent": self}
+                            if effect.can_use_condition and not effect.can_use_condition(ctx):
+                                continue
+                            perm_filter = getattr(effect, '_keyword_permanent_condition', None)
+                            if perm_filter and not perm_filter(self):
+                                continue
+                            return True
+                    # Check effects on other permanent's top card (both inherited
+                    # and non-inherited — aura keyword grants apply regardless of
+                    # whether the card sits in the top slot or as a digi source).
                     if other_perm.top_card:
                         for effect in other_perm.top_card.effect_list(EffectTiming.NoTiming):
-                            if effect.is_inherited_effect:
-                                continue
                             if not getattr(effect, '_applies_to_all_own_digimon', False):
                                 continue
                             if not getattr(effect, keyword_attr, False):
@@ -525,7 +579,26 @@ class Permanent:
 
     def de_digivolve(self, count: int = 1) -> List['CardSource']:
         """Remove top N digivolution cards (not the base) and send to trash.
-        Returns the removed cards."""
+        Returns the removed cards.
+
+        Respects ``IMMUNE_FROM_DE_DIGIVOLVE`` modifier — if set on this
+        permanent, no cards are removed and an empty list is returned.
+        """
+        # IMMUNE_FROM_DE_DIGIVOLVE check: if the modifier is registered on
+        # this permanent, no digivolution cards may be removed by de-digivolve.
+        game = self._owner_game
+        if game is not None and hasattr(game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            if game.modifiers.has_modifier(self, ModifierType.IMMUNE_FROM_DE_DIGIVOLVE):
+                if hasattr(game, 'logger'):
+                    try:
+                        game.logger.log(
+                            f"[DeDigivolve] {self.top_card.card_names[0] if self.top_card else 'Unknown'} "
+                            f"is immune to De-Digivolve"
+                        )
+                    except Exception:
+                        pass
+                return []
         removed = []
         for _ in range(count):
             if len(self.card_sources) <= 1:
@@ -540,24 +613,85 @@ class Permanent:
 
     def trash_digivolution_cards(self, count: int, from_top: bool = True) -> List['CardSource']:
         """Trash N digivolution cards (from under the top card).
-        Returns the trashed cards."""
-        trashed = []
-        for _ in range(count):
-            if len(self.card_sources) <= 1:
-                break
-            if from_top:
-                # Trash from just under top (index -2, -3, etc.)
-                idx = len(self.card_sources) - 2
-            else:
-                # Trash from bottom
-                idx = 0
-            if idx >= 0:
-                card = self.card_sources.pop(idx)
-                trashed.append(card)
-        if trashed:
-            self._fire_timing(EffectTiming.OnDigivolutionCardDiscarded,
-                              {"permanent": self, "trashed_cards": trashed})
-        return trashed
+        Returns the trashed cards.
+
+        Fires ``OnDigivolutionCardDiscarded`` **before** removing the cards so
+        inherited observers on the trashed cards can still see themselves in
+        the stack when the timing fires (matches the semantics of
+        ``trash_specific_digivolution_cards``).
+        """
+        # First pick the victims without removing them, so we can fire the
+        # timing while they're still present in self.card_sources.
+        victims: List['CardSource'] = []
+        available = [cs for cs in self.card_sources if cs is not self.top_card]
+        if from_top:
+            # Nearest to top first (reverse of card_sources order).
+            victims = list(reversed(available))[:count]
+        else:
+            # From the bottom.
+            victims = available[:count]
+        if not victims:
+            return []
+        # Fire BEFORE removal so observers see cards still in card_sources.
+        self._fire_timing(EffectTiming.OnDigivolutionCardDiscarded,
+                          {"permanent": self, "trashed_cards": list(victims)})
+        # Now remove them.
+        for cs in victims:
+            if cs in self.card_sources:
+                self.card_sources.remove(cs)
+        return victims
+
+    def trash_specific_digivolution_cards(
+        self,
+        cards: List['CardSource'],
+        card_effect=None,
+    ) -> List['CardSource']:
+        """Trash only the specified cards from this permanent's digivolution stack.
+
+        Accepts a list of CardSource references and trashes those cards from
+        ``self.card_sources``. The top card cannot be trashed by this method —
+        any reference to ``self.top_card`` is filtered out.
+
+        Fires ``OnDigivolutionCardDiscarded`` **before** removing the cards so
+        inherited observers on the trashed cards can still see themselves in
+        the stack (e.g. P-167's "when this card is trashed from digivolution
+        cards of a [Mineral]/[Rock] Digimon" trigger).
+
+        The caller is responsible for appending the returned cards to the
+        owning player's ``trash_cards``.
+
+        Args:
+            cards: CardSource references to trash (order ignored).
+            card_effect: The ICardEffect that caused the trash, passed to the
+                immunity check so ``CANNOT_TRASH_DIGIVOLUTION_CARDS`` modifier
+                conditions can inspect the source effect if needed.
+
+        Returns:
+            The list of cards actually trashed (filtered to those present in
+            ``card_sources`` below the top card).
+        """
+        # Immunity check — CANNOT_TRASH_DIGIVOLUTION_CARDS modifier can block
+        # this entirely. Scripts may register this with a condition that
+        # inspects the causing effect via ``card_effect``.
+        game = self._owner_game
+        if game is not None and hasattr(game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            ctx = {"effect": card_effect, "card_effect": card_effect, "permanent": self}
+            if game.modifiers.has_modifier(self, ModifierType.CANNOT_TRASH_DIGIVOLUTION_CARDS, ctx):
+                return []
+
+        top = self.top_card
+        to_trash = [cs for cs in cards if cs in self.card_sources and cs is not top]
+        if not to_trash:
+            return []
+        # Fire BEFORE removal so observers see cards still in card_sources.
+        self._fire_timing(EffectTiming.OnDigivolutionCardDiscarded,
+                          {"permanent": self, "trashed_cards": list(to_trash)})
+        # Now remove them.
+        for cs in to_trash:
+            if cs in self.card_sources:
+                self.card_sources.remove(cs)
+        return to_trash
 
     def contains_card_name(self, name: str) -> bool:
         """Check if the top card's name contains the given string."""
