@@ -17,7 +17,7 @@ use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::tensor::FIELD_SLOTS;
 
-fn evo_color(raw: u8) -> Option<CardColor> {
+pub(crate) fn evo_color(raw: u8) -> Option<CardColor> {
     match raw {
         0 => Some(CardColor::Red),
         1 => Some(CardColor::Blue),
@@ -470,9 +470,47 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             }
         }
 
-        // Selection / combat phases require effect system + pending_selection support.
-        // Defer to later phases. For now, allow pass to avoid soft-locking.
+        // Selection phases: SelectTarget, SelectHand, SelectTrash, ...,
+        // and TriggerOrder (which parks in EffectChoice). Emit only the
+        // exact action IDs the pending selection considers valid — plus
+        // PASS when the selection is optional.
+        //
+        // Non-selecting players see an empty mask (modulo the soft-lock
+        // safety PASS below) — they have no legal action while another
+        // player is answering. Combat sub-phases (BlockTiming,
+        // CounterTiming, AllianceTiming) work the same way: a
+        // PendingSelection is installed during those phases too (PR4+),
+        // and this branch renders it.
+        phase
+            if phase.is_selection_phase()
+                || phase == GamePhase::BlockTiming
+                || phase == GamePhase::CounterTiming
+                || phase == GamePhase::AllianceTiming =>
+        {
+            if let Some(sel) = &game.pending_selection {
+                if sel.selecting_player == player_id {
+                    for &aid in &sel.valid_action_ids {
+                        if (aid as usize) < ACTION_SPACE_SIZE {
+                            mask[aid as usize] = 1.0;
+                        }
+                    }
+                    if sel.is_optional {
+                        mask[PASS as usize] = 1.0;
+                    }
+                }
+                // Non-selecting players see zeros — nothing to do.
+            } else {
+                // In a selection phase with no pending_selection installed
+                // is a transient state we shouldn't normally hit; allow
+                // PASS as a soft-lock safety rail rather than returning
+                // an all-zero mask.
+                mask[PASS as usize] = 1.0;
+            }
+        }
+
         _ => {
+            // Phases we haven't wired a mask for (EndOfTurnAction is
+            // handled above). PASS-only keeps the engine from soft-locking.
             mask[PASS as usize] = 1.0;
         }
     }

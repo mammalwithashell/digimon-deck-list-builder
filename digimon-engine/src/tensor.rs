@@ -9,6 +9,7 @@ use crate::card_registry::CardRegistry;
 use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::permanent::{Permanent, PermanentHandle};
+use crate::player::Player;
 
 // ─── Tensor Layout Constants ──────────────────────────────────────────
 
@@ -76,7 +77,7 @@ const OFF_SELECTION: usize = OFF_REVEALED + REVEALED_SIZE; // 1370
 ///   [1270-1279]   Opp security (10 card IDs, face-down = 0.0)
 ///   [1280-1319]   My breeding (1 slot × 40)
 ///   [1320-1359]   Opp breeding (1 slot × 40)
-///   [1360-1369]   Revealed cards (10 card IDs)
+///   [1360-1369]   Revealed cards (10 card IDs, from `game.revealed_cards`)
 ///   [1370-1374]   Selection context
 /// ```
 pub fn build_tensor(
@@ -114,12 +115,15 @@ pub fn build_tensor(
     // --- Opp trash ---
     write_card_ids(&mut t, OFF_OPP_TRASH, &opp.trash, MAX_TRASH, &game.card_data, registry);
 
-    // --- My security (all visible for now; face-down handling deferred to effect system) ---
-    write_card_ids(&mut t, OFF_MY_SECURITY, &me.security, MAX_SECURITY, &game.card_data, registry);
+    // --- My security (face-down = 0.0; face-up cards written when
+    // `face_up_security` is populated by reveal effects). Matches Python's
+    // `_write_security_ids`.
+    write_security_ids(&mut t, OFF_MY_SECURITY, me, MAX_SECURITY, &game.card_data, registry);
 
-    // --- Opp security (count only visible; individual cards hidden) ---
-    // For now, write 0s (face-down). Face-up tracking deferred to effect system.
-    // t[OFF_OPP_SECURITY..] stays 0.0
+    // --- Opp security (face-down = 0.0). Face-up reveals against the
+    // opponent populate `opp.face_up_security`, so mirror the my-security
+    // writer.
+    write_security_ids(&mut t, OFF_OPP_SECURITY, opp, MAX_SECURITY, &game.card_data, registry);
 
     // --- My breeding ---
     // Breeding slot has no PermanentHandle (it's not in battle_area), so
@@ -136,13 +140,30 @@ pub fn build_tensor(
     }
 
     // --- Revealed cards ---
-    // Deferred: game.revealed_cards not yet implemented
-    // t[OFF_REVEALED..] stays 0.0
+    write_card_ids(
+        &mut t,
+        OFF_REVEALED,
+        &game.revealed_cards,
+        MAX_REVEALED,
+        &game.card_data,
+        registry,
+    );
 
     // --- Selection context ---
+    // Slot +0: phase tensor value (populated whenever the engine is parked
+    //   in any selection/interrupt phase, even if pending_selection is None —
+    //   so RL policies can observe "we're in SelectTarget" from the phase
+    //   signal alone).
+    // Slots +1/+2: valid_count (normalized) + selecting_player, populated
+    //   only when a PendingSelection is installed. Matches Python's
+    //   `tensor.py:108-120`.
     if game.current_phase.is_selection_phase() {
         t[OFF_SELECTION] = game.current_phase.tensor_value();
-        // valid_count and selecting_player deferred to pending_selection implementation
+    }
+    if let Some(sel) = &game.pending_selection {
+        t[OFF_SELECTION + 1] = sel.valid_action_ids.len() as f32
+            / crate::action::space::ACTION_SPACE_SIZE as f32;
+        t[OFF_SELECTION + 2] = sel.selecting_player as f32;
     }
 
     t
@@ -328,6 +349,25 @@ fn write_field(
             card_data,
             registry,
         );
+    }
+}
+
+/// Write a player's security stack into the tensor. Only face-up cards
+/// (those whose `card_index` is in `player.face_up_security`) emit their
+/// registry index; face-down slots stay 0.0. Mirrors Python's
+/// `_write_security_ids`.
+fn write_security_ids(
+    tensor: &mut [f32],
+    start: usize,
+    player: &Player,
+    limit: usize,
+    card_data: &[CardData],
+    registry: &CardRegistry,
+) {
+    for (i, card) in player.security.iter().take(limit).enumerate() {
+        if player.face_up_security.contains(&card.card_index) {
+            tensor[start + i] = registry.get_index(&card.card_id(card_data)) as f32;
+        }
     }
 }
 

@@ -11,6 +11,39 @@ use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
+use crate::selection::{EffectQueue, PendingAttack, PendingSelection, SelectionError};
+
+/// Reasons `Game::activate_overclock` can fail. Exposed so callers
+/// (Tauri commands, tests, Python bindings) can distinguish between
+/// phase-violation and state-violation errors.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverclockError {
+    /// Current phase is not `EndOfTurnAction`.
+    WrongPhase,
+    /// Another selection or attack is in flight.
+    Busy,
+    /// The indicated permanent does not have `<Overclock>` (either the
+    /// keyword isn't granted, or the slot doesn't hold a Digimon).
+    NotOverclock,
+    /// No sacrificeable Digimon is available to pay the Overclock cost.
+    NoSacrifice,
+    /// `overclock_index` is out of range for the turn player's battle area.
+    InvalidIndex,
+}
+
+impl std::fmt::Display for OverclockError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::WrongPhase => write!(f, "activate_overclock called outside EndOfTurnAction"),
+            Self::Busy => write!(f, "activate_overclock called while a selection or attack is in flight"),
+            Self::NotOverclock => write!(f, "permanent does not have <Overclock>"),
+            Self::NoSacrifice => write!(f, "no sacrificeable Digimon available"),
+            Self::InvalidIndex => write!(f, "overclock_index out of range"),
+        }
+    }
+}
+
+impl std::error::Error for OverclockError {}
 
 /// The core game state. Drives the turn state machine.
 #[derive(Debug)]
@@ -46,6 +79,31 @@ pub struct Game {
     /// `PlayerId`. Used by the action mask to suppress the re-draw bit once
     /// a player has used their single mulligan.
     pub mulligan_used: Vec<bool>,
+    /// Cards currently revealed to all players (e.g. top-of-deck reveals,
+    /// search pools). Rendered into the observation tensor at `OFF_REVEALED`
+    /// and cleared on turn rotation. Populated by reveal-from-deck / search
+    /// effects. Matches Python's `Game.revealed_cards`.
+    pub revealed_cards: Vec<CardSource>,
+
+    /// Parked player-choice prompt, if any. Set by `EffectContext::select_*`
+    /// helpers and the effect-queue drainer; resolved by
+    /// `Game::resolve_selection`. See `selection.rs` for the design.
+    /// Always `None` until the selection subsystem lands (PR2/PR3).
+    pub pending_selection: Option<PendingSelection>,
+    /// Triggered effects waiting to resolve at the current timing window.
+    /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
+    /// Empty until the drainer lands (PR2).
+    pub effect_queue: EffectQueue,
+    /// In-flight attack, if any. Installed by `begin_attack`, advanced by
+    /// the combat state machine, cleared by `cleanup_attack`.
+    /// Always `None` until the combat state machine lands (PR4).
+    pub pending_attack: Option<PendingAttack>,
+    /// Safety rail matching Python's `_resolve_effect_stack` max-iterations=50
+    /// cap. Incremented per drain step; reset to 0 when the queue empties.
+    /// Prevents a self-triggering chain from hanging the engine.
+    /// Consumed by the drainer in PR2.
+    #[allow(dead_code)]
+    pub(crate) effect_chain_depth: u16,
 }
 
 impl Game {
@@ -149,6 +207,11 @@ impl Game {
             next_card_index,
             mulligan_pending,
             mulligan_used,
+            revealed_cards: Vec::new(),
+            pending_selection: None,
+            effect_queue: EffectQueue::new(),
+            pending_attack: None,
+            effect_chain_depth: 0,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -248,6 +311,35 @@ impl Game {
             .copied()
             .filter(|&pid| pid != id)
             .collect()
+    }
+
+    // ─── Pending selection resolution ───────────────────────────────
+    //
+    // Wired up in PR3. For now this is a stub so callers can reference the
+    // name without crashing — every invocation is a logic bug until the
+    // selection subsystem lands. The error path is intentionally distinct
+    // from `NoPendingSelection` so tests can assert "we haven't implemented
+    // this yet" rather than "nothing to resolve".
+
+    /// Resolve a pending selection with `action_id` submitted by `player`.
+    ///
+    /// Dispatches to `resolve_generic_selection` in `effect_queue.rs`,
+    /// which validates, restores the pre-selection phase, invokes the
+    /// callback (or `on_decline` for PASS on an optional prompt), and
+    /// resumes the effect-queue drainer.
+    ///
+    /// Works uniformly for every `SelectionKind`: TriggerOrder, OppField,
+    /// Hand, Trash, EffectChoice, etc. The callback stored on the
+    /// selection does kind-specific decoding.
+    pub fn resolve_selection(
+        &mut self,
+        player: PlayerId,
+        action_id: u16,
+    ) -> Result<(), SelectionError> {
+        if self.pending_selection.is_none() {
+            return Err(SelectionError::NoPendingSelection);
+        }
+        self.resolve_generic_selection(player, action_id)
     }
 
     /// Get the next player clockwise from the given player.
@@ -369,6 +461,10 @@ impl Game {
     /// Extracted from `end_turn` so `pass_end_of_turn_action` can resume
     /// rotation without re-running the EOT-keyword check.
     fn rotate_turn_player(&mut self, ending_player: PlayerId) {
+        // Reveal pool is transient — clear on turn rotation so tensor reveals
+        // don't leak across turns. Matches Python's clear in `switch_turn`.
+        self.revealed_cards.clear();
+
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
         self.modifiers.expire_end_of_turn(ending_player);
 
@@ -468,6 +564,122 @@ impl Game {
         me.battle_area.iter().enumerate().any(|(i, p)| {
             i != overclock_index && p.top_card().is_digimon(&self.card_data)
         })
+    }
+
+    /// Activate `<Overclock>` on the turn player's battle-area permanent at
+    /// `overclock_index`. Installs a `PendingSelection` over the other
+    /// sacrificeable battle-area Digimon; resolving it deletes the sacrifice
+    /// and fires an end-of-turn attack on the opponent player that does NOT
+    /// suspend the attacker. Declining (PASS) is legal and returns to
+    /// `EndOfTurnAction` with no side effects — the Overclock bit remains
+    /// available on the next mask build.
+    ///
+    /// Target is always the opposing player (security check). Mirrors Python
+    /// `action_decoder._initiate_overclock` /
+    /// [action_decoder.py:501-522](../digimon_gym/engine/game/action_decoder.py#L501).
+    ///
+    /// § Parity: §4.6c-residual.
+    pub fn activate_overclock(
+        &mut self,
+        overclock_index: usize,
+    ) -> Result<(), OverclockError> {
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+
+        if self.current_phase != GamePhase::EndOfTurnAction {
+            return Err(OverclockError::WrongPhase);
+        }
+        if self.pending_selection.is_some() || self.pending_attack.is_some() {
+            return Err(OverclockError::Busy);
+        }
+
+        let player = self.turn_player();
+        let overclock_handle = PermanentHandle {
+            player,
+            index: overclock_index as u8,
+        };
+
+        let me = self
+            .players
+            .get(player as usize)
+            .ok_or(OverclockError::InvalidIndex)?;
+        let overclock_perm = me
+            .battle_area
+            .get(overclock_index)
+            .ok_or(OverclockError::InvalidIndex)?;
+
+        if !self.modifiers.has_keyword(overclock_handle, Keyword::Overclock) {
+            return Err(OverclockError::NotOverclock);
+        }
+        if !overclock_perm.top_card().is_digimon(&self.card_data) {
+            return Err(OverclockError::NotOverclock);
+        }
+        if !self.has_overclock_sacrifice(player, overclock_index) {
+            return Err(OverclockError::NoSacrifice);
+        }
+
+        // Build the OwnField selection over sacrificeable Digimon. Encoding
+        // uses the ATTACK target-half range — same convention the existing
+        // `install_field_selection` helper uses for OwnField/OppField selects.
+        let mut valid_action_ids: Vec<u16> = Vec::new();
+        for (i, perm) in me.battle_area.iter().enumerate() {
+            if i == overclock_index {
+                continue;
+            }
+            if perm.top_card().is_digimon(&self.card_data) {
+                valid_action_ids.push(encode_attack(0, i as u16));
+            }
+        }
+        debug_assert!(!valid_action_ids.is_empty(), "has_overclock_sacrifice promised ≥1");
+
+        let source_card = overclock_perm.top_card().handle();
+        let opponent = self.next_clockwise(player);
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectTarget;
+
+        self.pending_selection = Some(PendingSelection {
+            kind: crate::selection::SelectionKind::OwnField,
+            selecting_player: player,
+            previous_phase,
+            valid_action_ids,
+            is_optional: true,
+            prompt: "Choose a Digimon to sacrifice for <Overclock>".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: Some(overclock_handle),
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let sacrifice_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                let sacrifice_handle = PermanentHandle {
+                    player,
+                    index: sacrifice_index,
+                };
+
+                // Delete the sacrifice (firing OnDeletion triggers).
+                game.delete_permanent_with_effects(sacrifice_handle);
+
+                // OnDeletion may have removed the Overclock Digimon, shifted
+                // indices, or killed the game. Bail if the Overclock Digimon
+                // is no longer present at its original index.
+                let attacker_alive = game
+                    .players
+                    .get(player as usize)
+                    .and_then(|p| p.battle_area.get(overclock_index as usize))
+                    .map(|p| p.top_card().card_index == source_card.0)
+                    .unwrap_or(false);
+                if !attacker_alive || game.game_over {
+                    return;
+                }
+
+                // Fire the attack on the opponent player without suspending.
+                game.begin_attack_overclock(
+                    overclock_handle,
+                    crate::selection::AttackTarget::Player(opponent),
+                );
+            }),
+            on_decline: None,
+        });
+
+        Ok(())
     }
 
     /// Pass action: give the next player 3 memory, then end turn.
@@ -642,95 +854,36 @@ impl Game {
 
     /// Fire `EndOfYourTurn` effects on every permanent in `player`'s battle area.
     /// Called by `end_turn`; exposed for tests that want to trigger swing-back.
+    ///
+    /// Thin wrapper over the effect-queue drainer — collects every matching
+    /// effect across the battle area into `effect_queue`, then drains.
     pub fn fire_end_of_your_turn(&mut self, player: PlayerId) {
-        // Snapshot (card_id, handle) for each permanent up-front, because
-        // firing an effect could mutate the battle_area (e.g. self-deletion).
-        let snapshot: Vec<(String, crate::card_source::CardHandle, PermanentHandle)> = {
-            let area = &self.player(player).battle_area;
-            area.iter()
-                .enumerate()
-                .map(|(i, p)| {
-                    let top = p.top_card();
-                    (
-                        top.card_id(&self.card_data).to_string(),
-                        top.handle(),
-                        PermanentHandle {
-                            player,
-                            index: i as u8,
-                        },
-                    )
-                })
-                .collect()
-        };
-
-        for (card_id, card_handle, perm_handle) in snapshot {
-            let Some(effect_impl) = self.effect_registry.get(&card_id) else {
-                continue;
-            };
-            let effects = effect_impl.effects(card_handle);
-            for effect in &effects {
-                if effect.timing != crate::enums::EffectTiming::EndOfYourTurn {
-                    continue;
-                }
-                if let Some(cond) = &effect.condition {
-                    let ctx =
-                        EffectContext::new(self, card_handle, Some(perm_handle), player);
-                    if !cond(&ctx.as_read()) {
-                        continue;
-                    }
-                }
-                if let Some(process) = &effect.process {
-                    let mut ctx =
-                        EffectContext::new(self, card_handle, Some(perm_handle), player);
-                    process(&mut ctx);
-                }
-            }
-        }
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::EndOfYourTurn,
+            crate::selection::TriggerSource::PlayerBattleArea(player),
+        );
+        self.drain_effect_queue();
     }
 
     /// Fire OnPlay effects for the permanent at `(player, field_index)`.
     /// Called by play_from_hand; can also be called directly by tests.
+    ///
+    /// Thin wrapper over the effect-queue drainer. Single-trigger cases fire
+    /// in one step exactly like the old atomic loop; multi-trigger cases
+    /// park on a `TriggerOrder` selection for the controller to order.
     pub fn fire_on_play(&mut self, player_id: PlayerId, field_index: usize) {
-        // Read card identity (immutable borrow) before getting an effect impl.
-        let (card_id, handle) = {
-            let perm = match self.players[player_id as usize].battle_area.get(field_index) {
-                Some(p) => p,
-                None => return,
-            };
-            let top = perm.top_card();
-            let card_id = top.card_id(&self.card_data).to_string();
-            (card_id, top.handle())
-        };
-
-        // Pull the Arc out of the registry (clones the Arc, releases borrow).
-        let effect_impl = match self.effect_registry.get(&card_id) {
-            Some(arc) => arc,
-            None => return,
-        };
-
-        let effects = effect_impl.effects(handle);
-        let perm_handle = PermanentHandle {
+        if field_index >= self.players[player_id as usize].battle_area.len() {
+            return;
+        }
+        let handle = PermanentHandle {
             player: player_id,
             index: field_index as u8,
         };
-
-        for effect in &effects {
-            if !effect.on_play {
-                continue;
-            }
-            // Check condition (if any).
-            if let Some(cond) = &effect.condition {
-                let ctx = EffectContext::new(self, handle, Some(perm_handle), player_id);
-                if !cond(&ctx.as_read()) {
-                    continue;
-                }
-            }
-            // Run process (if any).
-            if let Some(process) = &effect.process {
-                let mut ctx = EffectContext::new(self, handle, Some(perm_handle), player_id);
-                process(&mut ctx);
-            }
-        }
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnPlay,
+            crate::selection::TriggerSource::Permanent(handle),
+        );
+        self.drain_effect_queue();
     }
 
     /// Activate a `[Main]` effect on the card at `player_id`'s hand slot
@@ -930,6 +1083,33 @@ impl Game {
         }
         player.battle_area[field_index].digivolve(card, turn);
         true
+    }
+
+    /// Returns `true` when `card` may digivolve onto `perm` per standard
+    /// evo-cost rules: `card` has an `EvoCost` entry whose `level` matches
+    /// `perm.top_card()`'s level and whose color is present on
+    /// `perm.top_card()`'s color list.
+    ///
+    /// Memory cost is **not** checked — blast digivolve bypasses memory,
+    /// and regular digivolve pays memory at the call site. Mirrors
+    /// Python's `can_digivolve(card, base_perm)` validator. Used by
+    /// `combat::try_enter_counter` for §2.3 parity.
+    pub fn can_digivolve(
+        &self,
+        card: &CardSource,
+        perm: &crate::permanent::Permanent,
+    ) -> bool {
+        let Some(base_level) = perm.top_card().level(&self.card_data) else {
+            return false;
+        };
+        let base_colors = perm.top_card().colors(&self.card_data);
+        let evo_costs = &self.card_data[card.data_index].evo_costs;
+        evo_costs.iter().any(|ec| {
+            ec.level == base_level
+                && crate::action::mask::evo_color(ec.card_color)
+                    .map(|c| base_colors.contains(&c))
+                    .unwrap_or(false)
+        })
     }
 
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
