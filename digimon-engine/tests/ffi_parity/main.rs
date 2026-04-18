@@ -4,3 +4,4 @@
 //! don't have to travel through Python to be diagnosed.
 
 mod selection_view;
+mod events;

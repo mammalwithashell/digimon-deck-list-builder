@@ -1,4 +1,5 @@
 pub mod enums;
+pub mod events;
 pub mod rules;
 pub mod card_data;
 pub mod card_registry;
@@ -47,6 +48,7 @@ pub use runners::HeadlessRunner;
 pub use logger::{GameLogger, SilentLogger, VerboseLogger};
 pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedAction};
 pub use inference::{load_policy, InferenceError, OnnxLstmPolicy, OnnxMlpPolicy, OnnxPolicy};
+pub use crate::events::GameEvent;
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,
     PendingSelection, PendingSelectionView, QueuedEffect, SelectionCallback, SelectionError,
