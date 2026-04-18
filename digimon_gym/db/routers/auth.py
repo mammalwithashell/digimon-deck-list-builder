@@ -215,7 +215,7 @@ async def create_guest(db: AsyncSession = Depends(get_db)) -> GuestSessionRespon
         id=guest_id,
         username=guest_id,
         email=placeholder_email,
-        password_hash="!disabled-guest",
+        password_hash=hash_password(secrets.token_urlsafe(32)),
         display_name=display_name,
         is_guest=True,
     )

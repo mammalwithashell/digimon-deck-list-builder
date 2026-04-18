@@ -86,3 +86,16 @@ async def test_post_auth_guest_is_idempotent_per_call(client: AsyncClient) -> No
     a = (await client.post("/auth/guest")).json()
     b = (await client.post("/auth/guest")).json()
     assert a["user_id"] != b["user_id"]
+
+
+@pytest.mark.asyncio
+async def test_guest_username_login_fails_as_401_not_500(client: AsyncClient) -> None:
+    """Guest rows have synthesized password hashes; a login attempt against
+    one must return 401 (cleanly, through the normal invalid-password path)
+    rather than 500 from bcrypt raising on a non-hash sentinel."""
+    guest = (await client.post("/auth/guest")).json()
+    resp = await client.post("/auth/login", json={
+        "username": guest["user_id"],  # the guest username
+        "password": "anything",
+    })
+    assert resp.status_code == 401, resp.text
