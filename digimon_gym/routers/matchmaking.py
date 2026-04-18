@@ -37,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from digimon_gym.db.auth import get_current_user
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import Deck, User
+from digimon_gym.engine.data.deck_loader import RESTRICTED_LIST, validate_deck
 from digimon_gym.engine.runners.interactive_game import InteractiveGame  # noqa: F401
 from digimon_gym.routers.lobby import (
     PendingGame,
@@ -320,6 +321,24 @@ async def enqueue(
     if not card_ids:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Deck is empty")
 
+    # Defense-in-depth: re-validate against the standard ban list at enqueue
+    # time. Deck save already enforces this (decks.py), but a deck saved
+    # before a card was banned — or tampered with via admin / direct DB —
+    # would otherwise bypass the format. no_restriction opts out explicitly.
+    if deck.game_mode != "no_restriction":
+        ban_result = validate_deck(card_ids, RESTRICTED_LIST)
+        if not ban_result.is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "Deck violates format restrictions",
+                    "errors": ban_result.errors,
+                    "game_mode": deck.game_mode,
+                },
+            )
+
+    # Queue-specific tier eligibility. Jank/sweat require a specific
+    # classifier tier; casual + ranked have no tier gate.
     deck_tier = deck.meta_tier
     if request.queue_type == "jank" and deck_tier != "jank":
         raise HTTPException(
