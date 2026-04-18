@@ -139,31 +139,30 @@ async def confirm_model(
             )
         raise
 
-    # Stream sha256 + collect total bytes
-    sha256_hex, total_bytes = await asyncio.to_thread(spaces.stream_sha256, row.spaces_key)
-
-    # Download to temp file for ONNX inspection
-    tmp_path: str | None = None
+    # Single-pass download: write to temp file while computing sha256.
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".onnx")
+    os.close(tmp_fd)
     try:
-        with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as tmp_f:
-            tmp_path = tmp_f.name
-            for chunk in spaces.iter_object_chunks(row.spaces_key):
-                tmp_f.write(chunk)
+        sha256_hex, total_bytes = await asyncio.to_thread(
+            spaces.download_and_hash, row.spaces_key, tmp_path
+        )
 
         import onnxruntime  # local import so desktop can still import router module
 
-        try:
-            sess = onnxruntime.InferenceSession(
-                tmp_path, providers=["CPUExecutionProvider"]
-            )
-        except Exception as exc:
+        async def _fail(detail: str) -> HTTPException:
             row.state = "failed"
             await db.commit()
             await asyncio.to_thread(spaces.delete_object, row.spaces_key)
-            raise HTTPException(
-                status_code=422,
-                detail=f"Failed to load ONNX model: {exc}",
+            return HTTPException(status_code=422, detail=detail)
+
+        try:
+            sess = await asyncio.to_thread(
+                onnxruntime.InferenceSession,
+                tmp_path,
+                providers=["CPUExecutionProvider"],
             )
+        except Exception as exc:
+            raise await _fail(f"Failed to load ONNX model: {exc}")
 
         obs_input = next((i for i in sess.get_inputs() if i.name == "obs"), None)
         logits_output = next(
@@ -171,50 +170,21 @@ async def confirm_model(
         )
 
         if obs_input is None:
-            row.state = "failed"
-            await db.commit()
-            await asyncio.to_thread(spaces.delete_object, row.spaces_key)
-            raise HTTPException(
-                status_code=422,
-                detail="Missing 'obs' input in ONNX model",
-            )
-
+            raise await _fail("Missing 'obs' input in ONNX model")
         if logits_output is None:
-            row.state = "failed"
-            await db.commit()
-            await asyncio.to_thread(spaces.delete_object, row.spaces_key)
-            raise HTTPException(
-                status_code=422,
-                detail="Missing 'logits' output in ONNX model",
-            )
+            raise await _fail("Missing 'logits' output in ONNX model")
 
-        # Extract tensor size and action space from shapes (guard symbolic dims)
         try:
             tensor_size = int(obs_input.shape[-1])
-        except (TypeError, ValueError):
-            row.state = "failed"
-            await db.commit()
-            raise HTTPException(
-                status_code=422,
-                detail="ONNX shape not static",
-            )
-
-        try:
             action_space_size = int(logits_output.shape[-1])
         except (TypeError, ValueError):
-            row.state = "failed"
-            await db.commit()
-            raise HTTPException(
-                status_code=422,
-                detail="ONNX shape not static",
-            )
+            raise await _fail("ONNX shape not static")
 
     finally:
-        if tmp_path is not None:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
     # Success — update model fields
     row.state = "uploaded"
@@ -401,7 +371,7 @@ async def get_manifest(
             trained_at=row.trained_at,
             file_sha256=row.file_sha256,
             file_size_bytes=row.file_size_bytes,
-            url=await asyncio.to_thread(spaces.public_url, row.spaces_key),
+            url=spaces.public_url(row.spaces_key),
             deck_id=row.deck_id,
             deck_name=deck_name_map.get(row.deck_id) if row.deck_id else None,
             notes=row.notes,

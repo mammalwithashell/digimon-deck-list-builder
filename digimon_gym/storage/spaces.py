@@ -93,9 +93,30 @@ def stream_sha256(key: str) -> tuple[str, int]:
     return h.hexdigest(), total
 
 
+def download_and_hash(key: str, dest_path: str) -> tuple[str, int]:
+    """Stream the object once, writing to dest_path while computing sha256.
+
+    Returns (sha256_hex, total_bytes). dest_path is opened for binary write
+    and closed before return.
+    """
+    h = hashlib.sha256()
+    total = 0
+    with open(dest_path, "wb") as f:
+        for chunk in iter_object_chunks(key):
+            h.update(chunk)
+            f.write(chunk)
+            total += len(chunk)
+    return h.hexdigest(), total
+
+
 def public_url(key: str) -> str:
-    """Stable public URL — <bucket>.<region>.digitaloceanspaces.com/<key>.
-    The presence of SPACES_ENDPOINT (with scheme+host) gives us the origin.
+    """Path-style URL: ``{SPACES_ENDPOINT}/{bucket}/{key}``.
+
+    DigitalOcean Spaces serves both path-style and virtual-hosted-style URLs;
+    this function uses the path form because it derives entirely from the
+    configured endpoint and doesn't require parsing region/bucket into a
+    subdomain. Callers that need the virtual-hosted form should build it
+    themselves.
     """
     endpoint = _require_env("SPACES_ENDPOINT").rstrip("/")
     return f"{endpoint}/{_bucket()}/{key}"

@@ -138,6 +138,22 @@ def test_iter_object_chunks_across_boundary():
 
 
 @mock_s3
+def test_download_and_hash_writes_file_and_matches_hashlib(tmp_path):
+    """download_and_hash writes bytes to disk AND returns sha256 matching hashlib."""
+    raw = _raw_client()
+    _make_bucket(raw)
+    blob = b"digimon onnx blob" * 300
+    raw.put_object(Bucket=_BUCKET, Key="models/dl/policy.onnx", Body=blob)
+
+    dest = tmp_path / "out.onnx"
+    sha_hex, total = spaces.download_and_hash("models/dl/policy.onnx", str(dest))
+
+    assert dest.read_bytes() == blob
+    assert total == len(blob)
+    assert sha_hex == hashlib.sha256(blob).hexdigest()
+
+
+@mock_s3
 def test_missing_env_var_raises_at_call_time(monkeypatch):
     """If SPACES_ENDPOINT is unset, calling head_object should raise RuntimeError (not ImportError)."""
     monkeypatch.delenv("SPACES_ENDPOINT")
