@@ -102,3 +102,32 @@ fn pending_selection_null_when_no_selection() {
         value["pendingSelection"]
     );
 }
+
+#[test]
+fn current_phase_is_integer_matching_python() {
+    let r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-001", "TestOne"))
+        .start();
+    let value = to_ui_json(&r.game);
+    // Python's GamePhase enum integer values must match. Breeding is
+    // phase 3 in Python's enum.
+    assert!(value["currentPhase"].is_i64(), "currentPhase must be int, got {:?}", value["currentPhase"]);
+}
+
+#[test]
+fn player_memory_is_player_relative() {
+    let r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-001", "TestOne"))
+        .memory(5)
+        .start();
+    let value = to_ui_json(&r.game);
+    // Turn player (player 1 = Rust 0) sees +5; opponent sees -5.
+    let turn_player = value["currentPlayer"].as_i64().unwrap();
+    if turn_player == 1 {
+        assert_eq!(value["player1"]["memory"], serde_json::json!(5));
+        assert_eq!(value["player2"]["memory"], serde_json::json!(-5));
+    } else {
+        assert_eq!(value["player1"]["memory"], serde_json::json!(-5));
+        assert_eq!(value["player2"]["memory"], serde_json::json!(5));
+    }
+}

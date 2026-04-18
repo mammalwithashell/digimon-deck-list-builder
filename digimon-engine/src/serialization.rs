@@ -17,17 +17,48 @@ use crate::enums::{CardKind, GamePhase};
 use crate::game::Game;
 use crate::permanent::Permanent;
 use crate::player::Player;
-use crate::selection::AttackTarget;
+use crate::selection::{AttackTarget, PendingAttack, PendingSelectionView};
 
 /// Translate a Rust `PlayerId` (0 / 1) into the Python 1 / 2 convention.
 fn py_pid(rust_pid: u8) -> i64 {
     (rust_pid as i64) + 1
 }
 
-/// Stable string for a phase variant. Uses the Rust `Debug` spelling
-/// (PascalCase). Consumers can normalise case if needed.
-fn phase_str(p: GamePhase) -> String {
-    format!("{:?}", p)
+/// Map a Rust `GamePhase` variant to Python's `GamePhase.value` integer.
+///
+/// Python's `GamePhase` enum (`digimon_gym/engine/data/enums.py`):
+///   Start=0, Draw=1, Breeding=2, Main=3, End=4,
+///   SelectTarget=5, SelectMaterial=6, BlockTiming=7, CounterTiming=8,
+///   SelectTrash=9, SelectSource=10, SelectHand=11, SelectReveal=12,
+///   SelectEffectChoice=13, SelectSecurity=14, EndOfTurnAction=15,
+///   AllianceTiming=16, Mulligan=17
+///
+/// Rust-only variants with no direct Python equivalent:
+///   Unsuspend → treated as Start (0); an Unsuspend phase is never serialised
+///               in practice because Rust auto-resolves it without pausing.
+///   GameOver  → reused from Python's End (4) since the game is over either way.
+fn phase_int(p: GamePhase) -> i64 {
+    match p {
+        GamePhase::Mulligan => 17,
+        GamePhase::Unsuspend => 0, // no Python equivalent; Start=0 is nearest
+        GamePhase::Draw => 1,
+        GamePhase::Breeding => 2,
+        GamePhase::Main => 3,
+        GamePhase::EndTurn => 4,
+        GamePhase::SelectTarget => 5,
+        GamePhase::SelectMaterial => 6,
+        GamePhase::SelectTrash => 9,
+        GamePhase::SelectSource => 10,
+        GamePhase::SelectHand => 11,
+        GamePhase::SelectReveal => 12,
+        GamePhase::SelectSecurity => 14,
+        GamePhase::EffectChoice => 13,
+        GamePhase::BlockTiming => 7,
+        GamePhase::CounterTiming => 8,
+        GamePhase::AllianceTiming => 16,
+        GamePhase::EndOfTurnAction => 15,
+        GamePhase::GameOver => 4, // no Python equivalent; End=4 is nearest
+    }
 }
 
 /// Build the player-level dict. Matches `player_ui_data()` in Python.
@@ -86,9 +117,17 @@ fn player_ui_data(player: &Player, data: &[CardData], game: &Game) -> Value {
 
     let trash_ids: Vec<&str> = player.trash.iter().map(|c| c.card_id(data)).collect();
 
+    // Player-relative memory: turn player sees +gauge, opponent sees -gauge.
+    // Matches Python's `game._get_memory_for(p)` in serialization.py:300.
+    let memory: i64 = if player.id == game.turn_player() {
+        game.memory as i64
+    } else {
+        -(game.memory as i64)
+    };
+
     json!({
         "id": py_pid(player.id),
-        "memory": game.memory,
+        "memory": memory,
         "handCount": player.hand.len(),
         "handIds": hand_ids,
         "handCards": hand_cards,
@@ -191,63 +230,74 @@ fn perm_data(perm: &Permanent, data: &[CardData], _game: &Game) -> Value {
     })
 }
 
+/// Build the pendingSelection dict from a resolved `PendingSelectionView`.
+///
+/// Extracted as a private helper symmetric with `player_ui_data` / `perm_data`
+/// so it is unit-testable and keeps `to_ui_json` lean.
+///
+/// "kind" is a deliberate Rust-additive key not present in Python's
+/// serialization.py:338 output — it surfaces the SelectionKind variant string
+/// so typed WebSocket/UI consumers can route selection prompts without
+/// re-deriving the kind from phase + validIndices alone.
+fn pending_selection_data(v: &PendingSelectionView) -> Value {
+    let mut m = Map::new();
+    m.insert("kind".into(), Value::String(v.kind_str()));
+    // phase: int matching Python's GamePhase.value (not a debug string).
+    m.insert("phase".into(), Value::from(phase_int(v.previous_phase)));
+    m.insert(
+        "selectingPlayer".into(),
+        Value::from(py_pid(v.selecting_player)),
+    );
+    m.insert(
+        "validIndices".into(),
+        Value::Array(v.valid_action_ids.iter().map(|i| json!(*i)).collect()),
+    );
+    m.insert("isOptional".into(), Value::from(v.is_optional));
+    m.insert("prompt".into(), Value::String(v.prompt.clone()));
+    if let Some(choices) = v.effect_choices.as_ref() {
+        m.insert(
+            "effectChoices".into(),
+            Value::Array(
+                choices
+                    .iter()
+                    .map(|c| json!({"label": c.label, "actionId": c.action_id}))
+                    .collect(),
+            ),
+        );
+    }
+    Value::Object(m)
+}
+
+/// Build the pendingAttack dict.
+///
+/// Shape matches Python's serialization.py:370-373:
+///   attacker_slot: index of the attacker in the turn-player's battle_area.
+///   target_slot: index in enemy battle_area (Digimon target) or
+///     SECURITY_TARGET for a direct/player attack.
+fn pending_attack_data(pa: &PendingAttack, _game: &Game) -> Value {
+    let attacker_slot = pa.attacker.index as i64;
+    let target_slot: i64 = match pa.effective_target {
+        AttackTarget::Digimon(ph) => ph.index as i64,
+        AttackTarget::Player(_) => SECURITY_TARGET as i64,
+    };
+    json!({
+        "attackerSlot": attacker_slot,
+        "targetSlot": target_slot,
+    })
+}
+
 /// Build the full UI-state dict. `state_filter.py` consumes this directly.
 pub fn to_ui_json(game: &Game) -> Value {
-    let ps = game.pending_selection.as_ref().map(|s| s.view());
-    let pending_sel_value = match ps {
-        None => Value::Null,
-        Some(v) => {
-            let mut m = Map::new();
-            // "kind" is a deliberate Rust-additive key not present in Python's
-            // serialization.py:338 output — it surfaces the SelectionKind variant
-            // string so typed WebSocket/UI consumers can route selection prompts
-            // without re-deriving the kind from phase + validIndices alone.
-            m.insert("kind".into(), Value::String(v.kind_str()));
-            m.insert("phase".into(), Value::String(v.previous_phase_str()));
-            m.insert(
-                "selectingPlayer".into(),
-                Value::from(py_pid(v.selecting_player)),
-            );
-            m.insert(
-                "validIndices".into(),
-                Value::Array(v.valid_action_ids.iter().map(|i| json!(*i)).collect()),
-            );
-            m.insert("isOptional".into(), Value::from(v.is_optional));
-            m.insert("prompt".into(), Value::String(v.prompt.clone()));
-            if let Some(choices) = v.effect_choices.as_ref() {
-                m.insert(
-                    "effectChoices".into(),
-                    Value::Array(
-                        choices
-                            .iter()
-                            .map(|c| json!({"label": c.label, "actionId": c.action_id}))
-                            .collect(),
-                    ),
-                );
-            }
-            Value::Object(m)
-        }
-    };
+    let pending_sel_value = game
+        .pending_selection
+        .as_ref()
+        .map(|s| pending_selection_data(&s.view()))
+        .unwrap_or(Value::Null);
 
     let pending_attack = game
         .pending_attack
         .as_ref()
-        .map(|pa| {
-            // Shape matches Python's serialization.py:370-373.
-            // attacker_slot: index of the attacker in the turn-player's battle_area.
-            // target_slot: index in enemy battle_area (Digimon target) or
-            //   SECURITY_TARGET (14) for a direct/player attack — mirrors Python's
-            //   isinstance(pa.effective_target, Permanent) branch.
-            let attacker_slot = pa.attacker.index as i64;
-            let target_slot: i64 = match pa.effective_target {
-                AttackTarget::Digimon(ph) => ph.index as i64,
-                AttackTarget::Player(_) => SECURITY_TARGET as i64,
-            };
-            json!({
-                "attackerSlot": attacker_slot,
-                "targetSlot": target_slot,
-            })
-        })
+        .map(|pa| pending_attack_data(pa, game))
         .unwrap_or(Value::Null);
 
     let revealed: Vec<Value> = game
@@ -256,11 +306,20 @@ pub fn to_ui_json(game: &Game) -> Value {
         .map(|cs| json!({"cardId": cs.card_id(&game.card_data), "owner": py_pid(cs.owner)}))
         .collect();
 
+    // memoryGauge: from player1's perspective. Matches Python's
+    // `game._get_memory_for(game.player1)` at serialization.py:379.
+    // Positive when player1 is the turn player, negative otherwise.
+    let memory_gauge: i64 = if game.players[0].id == game.turn_player() {
+        game.memory as i64
+    } else {
+        -(game.memory as i64)
+    };
+
     json!({
         "turnCount": game.turn_count,
-        "currentPhase": phase_str(game.current_phase),
+        "currentPhase": phase_int(game.current_phase),
         "currentPlayer": py_pid(game.turn_player()),
-        "memoryGauge": game.memory,
+        "memoryGauge": memory_gauge,
         "isGameOver": game.game_over,
         "winner": game.winner.map(py_pid),
         "player1": player_ui_data(&game.players[0], &game.card_data, game),
