@@ -597,12 +597,14 @@ async def list_deck_library_archetypes(
         from digimon_gym.digilab_client import get_scoped_meta
         ids = [int(x.strip()) for x in store_ids.split(",") if x.strip()]
         if ids:
-            scoped_stats = await asyncio.to_thread(get_scoped_meta, store_ids=ids)
+            scoped_result = await asyncio.to_thread(get_scoped_meta, store_ids=ids)
+            scoped_stats = scoped_result.archetypes
             mg.override_meta_shares({n: s.meta_share for n, s in scoped_stats.items()})
     elif scope == "scene" and scene_id is not None:
         import asyncio
         from digimon_gym.digilab_client import get_scoped_meta
-        scoped_stats = await asyncio.to_thread(get_scoped_meta, scene_id=scene_id)
+        scoped_result = await asyncio.to_thread(get_scoped_meta, scene_id=scene_id)
+        scoped_stats = scoped_result.archetypes
         mg.override_meta_shares({n: s.meta_share for n, s in scoped_stats.items()})
 
     responses: list[ArchetypeInfoResponse] = []

@@ -29,6 +29,8 @@ interface DeckResponse {
   validation_errors: string[];
   is_public: boolean;
   tags: string[];
+  meta_tier?: string | null;
+  meta_archetype?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -26,6 +26,8 @@ export interface DeckSummary {
   is_valid: boolean;
   is_public: boolean;
   card_count: number;
+  meta_tier?: string | null;
+  meta_archetype?: string | null;
   created_at: string;
   updated_at: string;
 }
