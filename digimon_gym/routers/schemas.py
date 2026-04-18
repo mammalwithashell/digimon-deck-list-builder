@@ -1,7 +1,6 @@
 """Pydantic schemas for gameplay-oriented API routers.
 
 Engine-only schemas — no database or SQLAlchemy dependencies.
-Safe to import from the desktop sidecar.
 """
 
 from __future__ import annotations

@@ -23,6 +23,8 @@ pub mod debug_runner;
 pub mod runners;
 pub mod logger;
 pub mod recorder;
+pub mod inference;
+pub mod deck_tools;
 
 // Re-export key types at crate root
 pub use enums::*;
@@ -44,6 +46,7 @@ pub use debug_runner::{DebugRunner, DebugRunnerBuilder};
 pub use runners::HeadlessRunner;
 pub use logger::{GameLogger, SilentLogger, VerboseLogger};
 pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedAction};
+pub use inference::{load_policy, InferenceError, OnnxLstmPolicy, OnnxMlpPolicy, OnnxPolicy};
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,
     PendingSelection, QueuedEffect, SelectionCallback, SelectionError, SelectionKind,

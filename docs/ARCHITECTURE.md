@@ -27,10 +27,8 @@ Detailed architecture documentation extracted from CLAUDE.md. For project overvi
 - `digimon_gym/routers/ws_manager.py`: WebSocket connection manager for PvP games
 - `digimon_gym/routers/ws_games.py`: WebSocket game endpoint (player/spectator)
 - `digimon_gym/routers/lobby.py`: game lobby with join codes and public game browser
-- `digimon_gym/desktop_main.py`: lightweight desktop sidecar entry point (no DB/auth)
-- `src-tauri/`: Tauri v2 desktop app shell (Rust sidecar lifecycle management)
+- `src-tauri/`: Tauri v2 desktop app shell — Rust-only; hosts gameplay, ONNX inference, deck tools, and the runtime-downloaded model cache
 - `tools/export_onnx.py`: SB3 → ONNX model conversion (MLP + LSTM)
-- `tools/build-sidecar.sh`: desktop sidecar build pipeline (PyInstaller + Tauri naming)
 - `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, `AGENTS.md`, `docs/TRAINING_RUNBOOK.md`: behavior contracts
 - `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md`: full implementation plan for desktop distribution
 - `docs/TOOLS.md`: card registry, autoencoder, tensor layout, and new-set workflow documentation
@@ -261,11 +259,12 @@ CSS keyframes defined in `frontend/src/index.css`:
 
 ### Frontend API Architecture
 
-- `client.ts` exports `default` (remote server) and `getGameClient()` for Tauri dual-server routing
+- `client.ts` exports `default` (remote hosted API) and `getGameClient()` used by the web-fallback branches in `gameApi.ts` / `deckApi.ts`
 - `useWebSocketGame.ts`: WebSocket hook for PvP/spectating with reconnection; exposes `sendAction` and `sendSurrender`
-- `gameApi.ts`: game REST client (create, action, step, state, mask, log, surrender, delete)
-- `lobbyApi.ts`: lobby REST client
-- In Tauri desktop mode, local game requests route to sidecar (`localhost:8321`); online features to remote server
+- `gameApi.ts`: game REST client; desktop builds short-circuit to `rustGameApi.ts` (Tauri `invoke()`) before the HTTP client runs
+- `deckApi.ts`: deck REST client; desktop builds short-circuit to `rust_parse_deck` / `rust_validate_deck_raw` / `rust_list_tested_cards`
+- `lobbyApi.ts`: lobby REST client (hosted API only)
+- `desktopModelsApi.ts`: Tauri-only commands for the model manifest/cache (desktop builds only)
 
 ### Frontend Action/Phase Constants
 
@@ -301,27 +300,36 @@ Common scope profiles:
 
 ### Architecture
 
-The desktop app uses a **dual-server** model:
-- **Local sidecar** (PyInstaller binary): game engine + deck tools only, no DB/auth. For offline play against agents.
-- **Remote server**: PvP, auth, lobby, user data. All online features.
+The desktop app is **Python-free**. Gameplay, ONNX inference, and deck
+tooling run inside the embedded `digimon-engine` crate; the frontend
+reaches them via Tauri `invoke()`. Online features (PvP, auth, lobby)
+still proxy to the hosted FastAPI server over HTTPS.
+
+Trained AI models are fetched at runtime: the Models page GETs
+`${MANIFEST_URL}/models/manifest.json`, the user downloads one (or
+more), and each is cached under `dirs::data_dir()/digimon-tcg/models/
+<sanitized_id>/{policy.onnx, meta.json}`. A compatibility gate checks
+the manifest entry's `tensor_size` / `action_space_size` against the
+engine contract before the download starts so a tensor-shape change in
+`digimon-engine` can't silently break previously-cached models.
 
 ### Key Files
 
-- `src-tauri/tauri.conf.json`: build config, sidecar + resource bundling
-- `src-tauri/src/main.rs`: Rust entry point, spawns/kills Python sidecar
-- `digimon_gym/desktop_main.py`: stripped-down FastAPI app (no SQLAlchemy imports)
-- `desktop.spec`: PyInstaller spec excluding heavy deps (torch, SB3, SQLAlchemy)
-- `tools/build-sidecar.sh`: build script with `gameplay` (no models) and `full` (ONNX) profiles
-- `requirements-desktop.txt`: minimal deps for sidecar
-
-### Build Profiles
-
-- `gameplay` (default): greedy/random bots only, ~60-90MB
-- `full`: auto-exports SB3 → ONNX, bundles models, ~90-120MB
+- `src-tauri/tauri.conf.json`: build config (no `externalBin`, no bundled resources)
+- `src-tauri/src/main.rs`: Rust entry point — just registers managed state and Tauri commands
+- `src-tauri/src/engine_commands.rs`: gameplay commands, agent loop, ONNX-policy plumbing
+- `src-tauri/src/inference_state.rs`: ONNX session cache keyed by model_id
+- `src-tauri/src/models.rs`: manifest fetch + SHA-verified streaming download cache
+- `src-tauri/src/deck_commands.rs`: `rust_parse_deck`, `rust_validate_deck_raw`, `rust_list_tested_cards`
+- `digimon-engine/src/inference/`: MLP + LSTM ONNX policies (mirrors `onnx_policy.py` semantics)
+- `digimon-engine/src/deck_tools.rs`: deck parser + validator + alpha-pool allowlist
+- `frontend/src/api/rustGameApi.ts`, `deckApi.ts`, `desktopModelsApi.ts`: Tauri-`invoke` adapters
+- `frontend/src/pages/ModelsPage.tsx`: manifest browser, download progress, per-seat model selection
 
 ### Working Rules for Desktop
 
-1. `desktop_main.py` must never import from `digimon_gym.db.*` or `digimon_gym.ai.*`
-2. The sidecar has its own inline game routes (not shared with `games.py`) to avoid DB import chains
-3. ONNX model paths are resolved at game creation time via `ONNX_MODELS_DIR` env var
-4. The Rust sidecar manager pipes stdout/stderr for debugging; sidecar is killed on window close
+1. The Tauri build must not link any Python runtime. All gameplay, inference, and deck tooling dispatch through Tauri `invoke()` into `digimon-engine`.
+2. Frontend desktop gating uses a single flag: `IS_DESKTOP = VITE_BUILD_TARGET === 'desktop'`. Every desktop-only API path and UI surface checks this.
+3. Model cache lives under `dirs::data_dir()/digimon-tcg/models/<id>/`; downloads verify SHA256 + content-length before atomic rename from `.tmp`.
+4. The compatibility gate (`models_engine_contract` + `assert_compatible`) must run before any download so tensor/action-space drift from engine changes fails loudly, not silently.
+5. LSTM ONNX policies must call `reset()` at episode boundaries — same rule as SB3/Python.

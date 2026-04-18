@@ -13,6 +13,7 @@ type NavGroup = {
   key: string;
   title: string;
   adminOnly?: boolean;
+  desktopOnly?: boolean;
   items: NavItem[];
 };
 
@@ -33,6 +34,14 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/deckbuilder', label: 'Deck Builder' },
       { to: '/game', label: 'Play' },
+    ],
+  },
+  {
+    key: 'desktop-tools',
+    title: 'Desktop',
+    desktopOnly: true,
+    items: [
+      { to: '/models', label: 'AI Models' },
     ],
   },
   {
@@ -83,6 +92,7 @@ export function NavBar() {
   const groups = NAV_GROUPS.filter((group) => {
     if (group.adminOnly && IS_DESKTOP) return false;
     if (group.adminOnly && !isAdmin) return false;
+    if (group.desktopOnly && !IS_DESKTOP) return false;
     return true;
   });
 

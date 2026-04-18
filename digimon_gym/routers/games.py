@@ -1,7 +1,8 @@
 """Game session endpoints.
 
-Engine-only router — no database or auth dependencies.
-Safe to mount in the desktop sidecar alongside the hosted API.
+Engine-only router — no database or auth dependencies. Mounted on the
+hosted API for web-app gameplay; desktop dispatches the same operations
+through Tauri `invoke()` into the Rust engine instead of this router.
 """
 
 from __future__ import annotations

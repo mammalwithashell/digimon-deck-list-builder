@@ -1,8 +1,8 @@
-//! Tauri commands that expose the Rust `digimon-engine` directly to the frontend.
-//!
-//! These run in parallel with the existing Python sidecar (which is still
-//! responsible for RL inference). Eventually the frontend will prefer these
-//! commands and the sidecar will be retired.
+//! Tauri commands that expose the Rust `digimon-engine` directly to the
+//! frontend. These are the sole gameplay backend on desktop — there is no
+//! Python sidecar; ONNX inference runs in-process via `InferenceState`.
+//! Response shapes mirror the hosted API's `/games/*` router so the web
+//! and desktop frontends share one set of TypeScript types.
 //!
 //! All commands mutate shared state behind a `Mutex<Option<Game>>`. The
 //! frontend calls `create_test_game` first, then uses `get_state` /
@@ -13,17 +13,48 @@ use std::sync::Mutex;
 
 use digimon_engine::action::build_action_mask;
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlayerId};
 use digimon_engine::game::Game;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::rules::Rules;
+use digimon_engine::tensor::build_tensor;
 use serde::{Deserialize, Serialize};
+
+use crate::inference_state::InferenceState;
+
+/// Per-player game configuration — which kind of decider drives each seat,
+/// and (for `Trained`) which loaded model to consult.
+///
+/// Lock order invariant: always acquire `RustEngineState::game` before
+/// `RustEngineState::session` — avoids deadlock between the two.
+#[derive(Default)]
+pub struct GameSession {
+    pub registry: Option<CardRegistry>,
+    pub player_kinds: Vec<PlayerKind>,
+    pub player_model_ids: Vec<Option<String>>,
+}
 
 /// Shared mutable Rust-engine state, held by Tauri.
 #[derive(Default)]
 pub struct RustEngineState {
     pub game: Mutex<Option<Game>>,
+    pub session: Mutex<GameSession>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PlayerKind {
+    Human,
+    Greedy,
+    Trained,
+}
+
+impl Default for PlayerKind {
+    fn default() -> Self {
+        PlayerKind::Human
+    }
 }
 
 // ─── DTOs ────────────────────────────────────────────────────────────
@@ -444,12 +475,12 @@ pub fn rust_move_from_breeding(
     Ok(game_state_dto(game))
 }
 
-// ─── Action-ID dispatch envelope (parity with Python sidecar shape) ───
+// ─── Action-ID dispatch envelope (parity with hosted-API shape) ───
 //
-// The frontend's gameApi.ts speaks in flat action IDs and expects responses
-// shaped like Python's ActionResponse. These commands and DTOs let the
-// frontend bind against the same interface regardless of which engine is
-// backing it.
+// The frontend's `gameApi.ts` speaks in flat action IDs and expects
+// responses shaped like the hosted API's `ActionResponse`. These
+// commands and DTOs let desktop and web callers bind against one set of
+// TypeScript types regardless of which backend is serving the request.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameEventDto {
@@ -549,24 +580,57 @@ fn ensure_game<'a>(
 }
 
 /// Create a new local game using the built-in test card database. Accepts
-/// optional deck lists; when absent, uses the standard test decks.
+/// optional deck lists; when absent, uses the standard test decks. Accepts
+/// optional per-player kinds (`human` / `greedy` / `trained`) and model IDs
+/// (one per player, only honored for `trained`). When both are omitted, both
+/// seats default to `human`.
+///
+/// Player indices in the request are 0-based (matching the Rust engine's
+/// `PlayerId` convention).
 #[tauri::command]
 pub fn rust_create_game(
     state: tauri::State<'_, RustEngineState>,
+    inference: tauri::State<'_, InferenceState>,
     deck1: Option<Vec<String>>,
     deck2: Option<Vec<String>>,
+    player_kinds: Option<Vec<PlayerKind>>,
+    player_model_ids: Option<Vec<Option<String>>>,
 ) -> Result<CreateGameResponseDto, String> {
     let db = test_card_db();
     let decks = vec![
         deck1.unwrap_or_else(test_deck),
         deck2.unwrap_or_else(test_deck),
     ];
+    let player_count = decks.len();
     let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
         .map_err(|e| format!("Game::new failed: {}", e))?;
     game.start_game();
+
+    let kinds = normalize_player_kinds(player_kinds, player_count)?;
+    let model_ids = normalize_player_model_ids(player_model_ids, player_count, &kinds)?;
+    validate_models_loaded(&inference, &kinds, &model_ids)?;
+    // Fresh episode — reset LSTM state on every model any player will drive.
+    // Silent for models the user passed but never loaded; the predict path
+    // will surface that as a clean error instead.
+    for model_id in model_ids.iter().flatten() {
+        let _ = inference.reset(model_id);
+    }
+
+    let registry = CardRegistry::from_cards(&db);
     let mask = action_mask_bytes(&game);
     let dto = game_state_dto(&game);
-    *state.game.lock().map_err(|e| e.to_string())? = Some(game);
+
+    {
+        let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
+        let mut session_guard = state.session.lock().map_err(|e| e.to_string())?;
+        *game_guard = Some(game);
+        *session_guard = GameSession {
+            registry: Some(registry),
+            player_kinds: kinds,
+            player_model_ids: model_ids,
+        };
+    }
+
     Ok(CreateGameResponseDto {
         game_id: "rust-local".to_string(),
         state: dto,
@@ -574,18 +638,90 @@ pub fn rust_create_game(
     })
 }
 
-/// Execute a flat RL-action-ID against the current game. Mirrors the Python
-/// sidecar's `POST /games/{id}/actions` surface so the frontend's gameApi
-/// can bind against this without knowing which backend is running.
+fn normalize_player_kinds(
+    provided: Option<Vec<PlayerKind>>,
+    player_count: usize,
+) -> Result<Vec<PlayerKind>, String> {
+    match provided {
+        None => Ok(vec![PlayerKind::Human; player_count]),
+        Some(v) if v.len() == player_count => Ok(v),
+        Some(v) => Err(format!(
+            "player_kinds length {} does not match player count {}",
+            v.len(),
+            player_count
+        )),
+    }
+}
+
+fn normalize_player_model_ids(
+    provided: Option<Vec<Option<String>>>,
+    player_count: usize,
+    kinds: &[PlayerKind],
+) -> Result<Vec<Option<String>>, String> {
+    let v = match provided {
+        None => vec![None; player_count],
+        Some(v) if v.len() == player_count => v,
+        Some(v) => {
+            return Err(format!(
+                "player_model_ids length {} does not match player count {}",
+                v.len(),
+                player_count
+            ));
+        }
+    };
+    for (i, (kind, model_id)) in kinds.iter().zip(v.iter()).enumerate() {
+        if *kind == PlayerKind::Trained && model_id.is_none() {
+            return Err(format!(
+                "player {i} is 'trained' but no model_id was provided"
+            ));
+        }
+    }
+    Ok(v)
+}
+
+fn validate_models_loaded(
+    inference: &InferenceState,
+    kinds: &[PlayerKind],
+    model_ids: &[Option<String>],
+) -> Result<(), String> {
+    for (i, (kind, model_id)) in kinds.iter().zip(model_ids.iter()).enumerate() {
+        if *kind != PlayerKind::Trained {
+            continue;
+        }
+        let id = model_id.as_deref().expect("trained kind without model_id");
+        if !inference.is_loaded(id)? {
+            return Err(format!(
+                "player {i} requested model '{id}' which is not loaded; \
+                 call rust_load_model first"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Execute a flat RL-action-ID against the current game. Mirrors the
+/// hosted API's `POST /games/{id}/actions` surface so the frontend's
+/// `gameApi.ts` can bind against this without knowing which backend is
+/// running.
+///
+/// After the human's action lands we also drain any agent turns that
+/// immediately follow, so the response reflects the next state the
+/// player needs to see — same pattern the hosted API uses in
+/// `InteractiveGame.step`.
 #[tauri::command]
 pub fn rust_submit_action(
     state: tauri::State<'_, RustEngineState>,
+    inference: tauri::State<'_, InferenceState>,
     action: u32,
 ) -> Result<ActionResponseDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = ensure_game(&mut guard)?;
+    let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
+    let session_guard = state.session.lock().map_err(|e| e.to_string())?;
+    let game = ensure_game(&mut game_guard)?;
     let pid = current_decision_player(game);
-    game.decode_action(action as u16, pid);
+    let action_u16 = u16::try_from(action)
+        .map_err(|_| format!("action {action} is out of range for a u16 action ID"))?;
+    game.decode_action(action_u16, pid);
+    run_agent_steps(game, &session_guard, &inference)?;
     let events = drain_events(game);
     let mask = action_mask_bytes(game);
     let is_over = game.game_over;
@@ -599,26 +735,136 @@ pub fn rust_submit_action(
     })
 }
 
-/// Advance agent turns. The Rust mode has no AI-opponent policy yet, so
-/// this is a pure state snapshot with the current mask — matches the
-/// `stepGame` shape so the frontend's step-after-action loop is a no-op
-/// rather than an error.
+/// Drive the game forward until a human decision is required, or the game
+/// ends. Each loop iteration inspects the current decider's `PlayerKind`:
+///
+/// - `Human`: stop — frontend should render and await the next `rust_submit_action`.
+/// - `Greedy`: pick the first valid action (deterministic heuristic used for
+///   local testing until a stronger built-in bot lands).
+/// - `Trained`: run the ONNX policy attached to that player's `model_id`.
+///
+/// The response's `is_human_turn` reflects state *after* the loop: `true`
+/// means the frontend should wait for user input, `false` means the game
+/// ended while the last decider was still an agent.
 #[tauri::command]
 pub fn rust_step_game(
     state: tauri::State<'_, RustEngineState>,
+    inference: tauri::State<'_, InferenceState>,
 ) -> Result<StepResponseDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = ensure_game(&mut guard)?;
+    let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
+    let session_guard = state.session.lock().map_err(|e| e.to_string())?;
+    let game = ensure_game(&mut game_guard)?;
+    run_agent_steps(game, &session_guard, &inference)?;
     let mask = action_mask_bytes(game);
+    let pid = current_decision_player(game);
+    let is_human_turn = matches!(
+        decider_kind(&session_guard, pid),
+        PlayerKind::Human
+    ) || game.game_over;
     let is_over = game.game_over;
     Ok(StepResponseDto {
         state: game_state_dto(game),
         action_mask: mask,
         logs: Vec::new(),
         events: Vec::new(),
-        is_human_turn: true,
+        is_human_turn,
         is_game_over: is_over,
     })
+}
+
+fn decider_kind(session: &GameSession, pid: PlayerId) -> PlayerKind {
+    session
+        .player_kinds
+        .get(pid as usize)
+        .copied()
+        .unwrap_or(PlayerKind::Human)
+}
+
+/// Step the game forward while the current decider is a non-human agent.
+/// Bail out as soon as the game ends or a human seat is up — matches the
+/// hosted API's `InteractiveGame.run_step` contract so the frontend
+/// state machine doesn't care which backend is driving.
+fn run_agent_steps(
+    game: &mut Game,
+    session: &GameSession,
+    inference: &InferenceState,
+) -> Result<(), String> {
+    // Cap iterations defensively so a bug in mask generation can't turn this
+    // into an infinite spin. Normal games resolve in far fewer than this.
+    const MAX_AGENT_STEPS: usize = 10_000;
+    for _ in 0..MAX_AGENT_STEPS {
+        if game.game_over {
+            return Ok(());
+        }
+        let pid = current_decision_player(game);
+        let kind = decider_kind(session, pid);
+        let action = match kind {
+            PlayerKind::Human => return Ok(()),
+            PlayerKind::Greedy => {
+                let mask = build_action_mask(game, pid);
+                first_valid_action(&mask).ok_or_else(|| {
+                    format!("greedy agent for player {pid} has no valid actions")
+                })?
+            }
+            PlayerKind::Trained => {
+                let model_id = session
+                    .player_model_ids
+                    .get(pid as usize)
+                    .and_then(|m| m.as_deref())
+                    .ok_or_else(|| {
+                        format!("trained agent for player {pid} has no model_id")
+                    })?;
+                let registry = session.registry.as_ref().ok_or_else(|| {
+                    "inference: session has no card registry (game not created?)".to_string()
+                })?;
+                let obs = build_tensor(game, pid, registry);
+                let mask = build_action_mask(game, pid);
+                validate_shapes(&obs, &mask, model_id)?;
+                inference.predict(model_id, &obs, &mask)?
+            }
+        };
+        let action_u16 = u16::try_from(action).map_err(|_| {
+            format!("agent returned out-of-range action {action}")
+        })?;
+        game.decode_action(action_u16, pid);
+    }
+    Err(format!(
+        "agent step loop exceeded {MAX_AGENT_STEPS} iterations; possible mask bug"
+    ))
+}
+
+/// Greedy-bot action selection: prefer any valid non-PASS action so the game
+/// actually progresses, fall back to PASS when nothing else is legal. Two
+/// greedy seats pitted against each other would otherwise loop forever
+/// passing turns at each other.
+fn first_valid_action(mask: &[f32]) -> Option<usize> {
+    let pass = digimon_engine::action::space::PASS as usize;
+    mask.iter()
+        .enumerate()
+        .find(|(i, &v)| *i != pass && v > 0.0)
+        .map(|(i, _)| i)
+        .or_else(|| mask.iter().position(|&v| v > 0.0))
+}
+
+/// Sanity-check obs/mask sizes before feeding them to the policy so a
+/// shape mismatch shows up here (with a clear error) rather than inside
+/// the ONNX session.
+fn validate_shapes(obs: &[f32], mask: &[f32], model_id: &str) -> Result<(), String> {
+    if obs.len() != digimon_engine::tensor::TENSOR_SIZE {
+        return Err(format!(
+            "model '{model_id}' obs length {} != engine TENSOR_SIZE {}",
+            obs.len(),
+            digimon_engine::tensor::TENSOR_SIZE
+        ));
+    }
+    if mask.len() != digimon_engine::action::space::ACTION_SPACE_SIZE {
+        return Err(format!(
+            "model '{model_id}' mask length {} != engine ACTION_SPACE_SIZE {}",
+            mask.len(),
+            digimon_engine::action::space::ACTION_SPACE_SIZE
+        ));
+    }
+    Ok(())
 }
 
 /// Read the current action mask.
@@ -661,13 +907,53 @@ pub fn rust_surrender(
     })
 }
 
-/// Delete the active game (used by the frontend cleanup path).
+/// Delete the active game (used by the frontend cleanup path). Clears the
+/// session (player kinds, model-id bindings, card registry) at the same
+/// time — but loaded ONNX policies stay in the inference cache since the
+/// next game will likely reuse them.
 #[tauri::command]
 pub fn rust_delete_game(
     state: tauri::State<'_, RustEngineState>,
 ) -> Result<(), String> {
-    *state.game.lock().map_err(|e| e.to_string())? = None;
+    let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
+    let mut session_guard = state.session.lock().map_err(|e| e.to_string())?;
+    *game_guard = None;
+    *session_guard = GameSession::default();
     Ok(())
+}
+
+/// Load an ONNX model into the inference cache, keyed by `model_id`. This
+/// is the low-level command the Phase-C model manager will wrap — for now
+/// the frontend can call it directly with a filesystem path for testing.
+/// Idempotent: reloading the same `model_id` replaces the previous entry.
+#[tauri::command]
+pub fn rust_load_model(
+    inference: tauri::State<'_, InferenceState>,
+    model_id: String,
+    onnx_path: String,
+) -> Result<(), String> {
+    let path = std::path::PathBuf::from(&onnx_path);
+    if !path.exists() {
+        return Err(format!("ONNX file not found: {onnx_path}"));
+    }
+    inference.load(model_id, &path)
+}
+
+/// Unload a model from the cache, freeing its ONNX session.
+#[tauri::command]
+pub fn rust_unload_model(
+    inference: tauri::State<'_, InferenceState>,
+    model_id: String,
+) -> Result<bool, String> {
+    inference.unload(&model_id)
+}
+
+/// List currently-loaded model IDs.
+#[tauri::command]
+pub fn rust_list_loaded_models(
+    inference: tauri::State<'_, InferenceState>,
+) -> Result<Vec<String>, String> {
+    inference.loaded_ids()
 }
 
 #[cfg(test)]
@@ -741,5 +1027,195 @@ mod tests {
         assert!(json.contains("\"action_mask\""));
         assert!(json.contains("\"events\""));
         assert!(json.contains("\"is_game_over\":false"));
+    }
+
+    // ─── agent step loop ───────────────────────────────────────────────
+    //
+    // The Tauri command wrappers take `tauri::State<'_, _>` which we can't
+    // construct in a unit test, so these tests exercise the internal
+    // `run_agent_steps` entry point directly with real state objects.
+
+    use digimon_engine::inference::{InferenceError, OnnxPolicy};
+
+    /// Mock policy that always returns a fixed action (or the first valid
+    /// action if the preferred one is masked off). Lets us test the Trained
+    /// branch without an engine-shape .onnx file.
+    struct FixedActionPolicy {
+        preferred: usize,
+        reset_count: std::cell::Cell<usize>,
+        predict_count: std::cell::Cell<usize>,
+    }
+
+    impl FixedActionPolicy {
+        fn new(preferred: usize) -> Self {
+            Self {
+                preferred,
+                reset_count: std::cell::Cell::new(0),
+                predict_count: std::cell::Cell::new(0),
+            }
+        }
+    }
+
+    impl OnnxPolicy for FixedActionPolicy {
+        fn predict(&mut self, _obs: &[f32], mask: &[f32]) -> Result<usize, InferenceError> {
+            self.predict_count.set(self.predict_count.get() + 1);
+            if mask.get(self.preferred).copied().unwrap_or(0.0) > 0.0 {
+                Ok(self.preferred)
+            } else {
+                // Fall back to first valid — matches how a real policy behaves
+                // after masking kills its preferred action's logit.
+                Ok(mask.iter().position(|&v| v > 0.0).unwrap_or(0))
+            }
+        }
+        fn reset(&mut self) {
+            self.reset_count.set(self.reset_count.get() + 1);
+        }
+    }
+
+    fn build_playable_game() -> (Game, CardRegistry) {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let mut game = Game::new(&decks, &db, Rules::standard(), Some(42)).unwrap();
+        game.start_game();
+        while let Some(p) = game.mulligan_current_player() {
+            game.accept_mulligan(p, /* keep */ true).unwrap();
+        }
+        let registry = CardRegistry::from_cards(&db);
+        (game, registry)
+    }
+
+    #[test]
+    fn run_agent_steps_stops_when_current_decider_is_human() {
+        let (mut game, registry) = build_playable_game();
+        let session = GameSession {
+            registry: Some(registry),
+            player_kinds: vec![PlayerKind::Human, PlayerKind::Human],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+        let before = (game.turn_count, game.current_phase);
+        run_agent_steps(&mut game, &session, &inference).unwrap();
+        let after = (game.turn_count, game.current_phase);
+        assert_eq!(before, after, "human seat should not advance state");
+    }
+
+    #[test]
+    fn run_agent_steps_greedy_advances_until_game_resolves_or_human_up() {
+        let (mut game, registry) = build_playable_game();
+        // Make both seats greedy — the loop should drive to game_over, since
+        // neither side ever stops for a human decision. `MAX_AGENT_STEPS`
+        // caps the loop if decode_action somehow no-ops.
+        let session = GameSession {
+            registry: Some(registry),
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+        run_agent_steps(&mut game, &session, &inference).unwrap();
+        assert!(
+            game.game_over,
+            "two greedy agents should play the game to completion"
+        );
+    }
+
+    #[test]
+    fn run_agent_steps_trained_seat_consults_loaded_policy() {
+        let (mut game, registry) = build_playable_game();
+        let inference = InferenceState::default();
+
+        // Player 0 starts as decider — pass until player 1 (the trained
+        // seat) is up so the loop is forced into the Trained branch.
+        while current_decision_player(&game) == 0 && !game.game_over {
+            let pid = current_decision_player(&game);
+            game.decode_action(digimon_engine::action::space::PASS, pid);
+        }
+        let trained_pid = current_decision_player(&game);
+        assert!(
+            !game.game_over,
+            "test setup expected game to still be live after player-0 passes"
+        );
+
+        let policy = Box::new(FixedActionPolicy::new(0)); // always PASS
+        inference.insert_for_test("bot-42", policy);
+
+        let mut kinds = vec![PlayerKind::Human; 2];
+        kinds[trained_pid as usize] = PlayerKind::Trained;
+        let mut model_ids: Vec<Option<String>> = vec![None; 2];
+        model_ids[trained_pid as usize] = Some("bot-42".into());
+        let session = GameSession {
+            registry: Some(registry),
+            player_kinds: kinds,
+            player_model_ids: model_ids,
+        };
+
+        let before_pid = current_decision_player(&game);
+        run_agent_steps(&mut game, &session, &inference).unwrap();
+        // After the trained seat's turn the loop should have left us on a
+        // human decider (or the game should be over).
+        assert!(
+            current_decision_player(&game) != before_pid || game.game_over,
+            "trained policy never advanced state; decider still {before_pid}"
+        );
+    }
+
+    #[test]
+    fn run_agent_steps_errors_when_trained_model_is_unloaded() {
+        let (mut game, registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        // Force player 0 (who's up) to be Trained with a model_id that
+        // doesn't exist in the cache.
+        let kinds = match pid {
+            0 => vec![PlayerKind::Trained, PlayerKind::Human],
+            _ => vec![PlayerKind::Human, PlayerKind::Trained],
+        };
+        let model_ids = match pid {
+            0 => vec![Some("nope".into()), None],
+            _ => vec![None, Some("nope".into())],
+        };
+        let session = GameSession {
+            registry: Some(registry),
+            player_kinds: kinds,
+            player_model_ids: model_ids,
+        };
+        let inference = InferenceState::default();
+        let err = run_agent_steps(&mut game, &session, &inference)
+            .expect_err("missing model should error");
+        assert!(
+            err.contains("not loaded") || err.contains("nope"),
+            "error message should call out the missing model, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn normalize_player_kinds_defaults_to_all_human() {
+        let kinds = normalize_player_kinds(None, 2).unwrap();
+        assert_eq!(kinds, vec![PlayerKind::Human, PlayerKind::Human]);
+    }
+
+    #[test]
+    fn normalize_player_kinds_rejects_length_mismatch() {
+        let err = normalize_player_kinds(Some(vec![PlayerKind::Greedy]), 2).unwrap_err();
+        assert!(err.contains("length"));
+    }
+
+    #[test]
+    fn normalize_player_model_ids_rejects_trained_without_model() {
+        let kinds = vec![PlayerKind::Trained, PlayerKind::Human];
+        let err = normalize_player_model_ids(Some(vec![None, None]), 2, &kinds).unwrap_err();
+        assert!(err.contains("player 0"));
+        assert!(err.contains("model_id"));
+    }
+
+    #[test]
+    fn validate_shapes_rejects_wrong_obs_and_mask() {
+        let ok_obs = vec![0.0f32; digimon_engine::tensor::TENSOR_SIZE];
+        let ok_mask = vec![0.0f32; digimon_engine::action::space::ACTION_SPACE_SIZE];
+        assert!(validate_shapes(&ok_obs, &ok_mask, "m").is_ok());
+
+        let short_obs = vec![0.0f32; 10];
+        assert!(validate_shapes(&short_obs, &ok_mask, "m").is_err());
+
+        let short_mask = vec![0.0f32; 10];
+        assert!(validate_shapes(&ok_obs, &short_mask, "m").is_err());
     }
 }
