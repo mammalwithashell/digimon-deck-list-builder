@@ -49,6 +49,6 @@ pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedActio
 pub use inference::{load_policy, InferenceError, OnnxLstmPolicy, OnnxMlpPolicy, OnnxPolicy};
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,
-    PendingSelection, QueuedEffect, SelectionCallback, SelectionError, SelectionKind,
-    TriggerSource,
+    PendingSelection, PendingSelectionView, QueuedEffect, SelectionCallback, SelectionError,
+    SelectionKind, TriggerSource,
 };
