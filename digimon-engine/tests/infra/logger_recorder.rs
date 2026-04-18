@@ -71,11 +71,12 @@ fn test_deck() -> Vec<String> {
     deck
 }
 
-fn fresh_game() -> Game {
+fn fresh_game() -> (Game, Vec<String>) {
     let db = test_card_db();
     let deck = test_deck();
     let rules = Rules::standard();
-    Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap()
+    let game = Game::new(&[deck.clone(), deck.clone()], &db, rules, Some(42)).unwrap();
+    (game, deck)
 }
 
 #[test]
@@ -103,7 +104,7 @@ fn verbose_logger_buffers_and_prefixes_verbose() {
 
 #[test]
 fn game_rejects_out_of_range_digivolve_and_logs_reason() {
-    let mut game = fresh_game();
+    let (mut game, _deck) = fresh_game();
     game.set_logger(Box::new(VerboseLogger::new()));
     game.start_game();
     game.enter_main_phase();
@@ -134,7 +135,7 @@ fn game_rejects_out_of_range_digivolve_and_logs_reason() {
 
 #[test]
 fn game_default_logger_is_silent() {
-    let mut game = fresh_game();
+    let (mut game, _deck) = fresh_game();
     game.start_game();
     game.enter_main_phase();
     let tp = game.turn_player();
@@ -148,17 +149,16 @@ fn game_default_logger_is_silent() {
 
 #[test]
 fn recorder_captures_initial_state_after_start() {
-    let mut game = fresh_game();
+    let (mut game, deck) = fresh_game();
     game.start_game();
 
-    let mut rec = GameRecorder::new();
-    rec.capture_initial_state(&game);
+    let mut rec = GameRecorder::new(false);
+    rec.capture_initial_state(&game, (&deck, &deck));
 
     let init = rec.initial_state().expect("initial state captured");
-    assert_eq!(init.players.len(), 2);
     assert_eq!(init.first_player_id, game.turn_player());
 
-    for p in &init.players {
+    for p in [&init.player1, &init.player2] {
         assert_eq!(p.initial_hand.len(), 5, "opening hand is 5 cards");
         assert_eq!(p.security_order.len(), 5, "security is 5 cards after mulligan");
         assert_eq!(p.digitama_library_order.len(), 4, "egg deck has 4 eggs");
@@ -167,21 +167,21 @@ fn recorder_captures_initial_state_after_start() {
 
 #[test]
 fn recorder_record_and_finalize_action_captures_deltas() {
-    let mut game = fresh_game();
+    let (mut game, deck) = fresh_game();
     game.start_game();
     game.enter_main_phase();
     let tp = game.turn_player();
 
-    let mut rec = GameRecorder::new();
-    rec.capture_initial_state(&game);
+    let mut rec = GameRecorder::new(false);
+    rec.capture_initial_state(&game, (&deck, &deck));
 
-    let action_id = 62; // PASS — currently unwired so decode returns false
+    let action_id = 62u16; // PASS
     let mem_before = game.memory;
     let turn_before = game.turn_count;
 
-    let mut entry = rec.record_action(&game, action_id, tp);
+    let idx = rec.record_action(&game, action_id, tp);
     let _ = game.decode_action(action_id, tp);
-    rec.finalize_action(&game, &mut entry);
+    rec.finalize_action(idx, &game);
 
     assert_eq!(rec.actions().len(), 1);
     let a = &rec.actions()[0];
@@ -197,15 +197,18 @@ fn recorder_record_and_finalize_action_captures_deltas() {
 
 #[test]
 fn recorder_to_json_has_expected_top_level_keys() {
-    let mut game = fresh_game();
+    let (mut game, deck) = fresh_game();
     game.start_game();
 
-    let mut rec = GameRecorder::new();
-    rec.capture_initial_state(&game);
+    let mut rec = GameRecorder::new(false);
+    rec.capture_initial_state(&game, (&deck, &deck));
     let json = rec.to_json();
 
     assert!(json.get("initial_state").is_some());
     assert!(json.get("actions").is_some());
     assert!(json["actions"].is_array());
     assert_eq!(json["actions"].as_array().unwrap().len(), 0);
+    assert_eq!(json["total_actions"], serde_json::json!(0));
+    assert_eq!(json["tensor_snapshots_count"], serde_json::json!(0));
+    assert!(json["tensor_snapshots"].is_array());
 }

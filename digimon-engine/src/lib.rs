@@ -47,7 +47,7 @@ pub use combat::AttackResult;
 pub use debug_runner::{DebugRunner, DebugRunnerBuilder};
 pub use runners::HeadlessRunner;
 pub use logger::{GameLogger, SilentLogger, VerboseLogger};
-pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedAction};
+pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedAction, TensorSnapshot};
 pub use inference::{load_policy, InferenceError, OnnxLstmPolicy, OnnxMlpPolicy, OnnxPolicy};
 pub use crate::events::GameEvent;
 pub use selection::{

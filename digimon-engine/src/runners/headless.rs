@@ -2,11 +2,6 @@
 //! `digimon_gym/engine/runners/headless_game.py::HeadlessGame` so PyO3
 //! bindings can sit on a stable surface and `DigimonEnv` can swap backends
 //! via a flag.
-//!
-//! No logger / recorder subsystems yet — both are opt-in in the Python
-//! contract and are not on the RL hot path. `get_last_log` returns an empty
-//! `Vec` and `get_recording` returns `None` unless/until a future milestone
-//! ports `GameRecorder`.
 
 use std::collections::HashMap;
 
@@ -15,6 +10,7 @@ use crate::card_data::CardData;
 use crate::card_registry::CardRegistry;
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
+use crate::recorder::GameRecorder;
 use crate::rules::Rules;
 use crate::tensor::{build_tensor, TENSOR_SIZE};
 
@@ -31,14 +27,14 @@ const ACTION_MULLIGAN_KEEP: u16 = 0;
 pub struct HeadlessRunner {
     pub game: Game,
     registry: CardRegistry,
-    /// Retained for future recorder/logger milestones. The current
-    /// implementation does not emit logs.
     #[allow(dead_code)]
     verbose: bool,
     #[allow(dead_code)]
     record_actions: bool,
     #[allow(dead_code)]
     record_tensors: bool,
+    /// Recorder — `Some` when `record_actions` is true, `None` otherwise.
+    recorder: Option<GameRecorder>,
 }
 
 impl HeadlessRunner {
@@ -56,14 +52,24 @@ impl HeadlessRunner {
         seed: Option<u64>,
     ) -> Result<Self, String> {
         let registry = CardRegistry::from_cards(all_card_data);
-        let decks = vec![deck1_ids, deck2_ids];
+        let decks = vec![deck1_ids.clone(), deck2_ids.clone()];
         let game = Game::new(&decks, all_card_data, Rules::standard(), seed)?;
+
+        let recorder = if record_actions {
+            let mut rec = GameRecorder::new(record_tensors);
+            rec.capture_initial_state(&game, (&deck1_ids, &deck2_ids));
+            Some(rec)
+        } else {
+            None
+        };
+
         Ok(Self {
             game,
             registry,
             verbose,
             record_actions,
             record_tensors,
+            recorder,
         })
     }
 
@@ -74,7 +80,14 @@ impl HeadlessRunner {
             return;
         }
         let pid = self.current_decision_player();
+        let idx = self
+            .recorder
+            .as_mut()
+            .map(|r| r.record_action(&self.game, action_id, pid));
         self.game.decode_action(action_id, pid);
+        if let (Some(i), Some(r)) = (idx, self.recorder.as_mut()) {
+            r.finalize_action(i, &self.game);
+        }
     }
 
     /// Run to conclusion using `policy` (or a pass-everything default).
@@ -121,9 +134,14 @@ impl HeadlessRunner {
         Vec::new()
     }
 
-    /// Placeholder until a Rust port of `GameRecorder` lands.
-    pub fn get_recording(&self) -> Option<()> {
-        None
+    /// Return the serialized recording as a JSON value, or `None` if
+    /// recording was not enabled (`record_actions=false`).
+    ///
+    /// The returned `Value` matches Python's `GameRecorder.to_dict` shape:
+    /// `{ initial_state, actions, total_actions, tensor_snapshots_count,
+    ///   tensor_snapshots }`. Player IDs use the Python 1/2 convention.
+    pub fn get_recording(&self) -> Option<serde_json::Value> {
+        self.recorder.as_ref().map(|r| r.to_json())
     }
 
     pub fn is_game_over(&self) -> bool {
