@@ -125,6 +125,13 @@ pub struct Game {
     /// `VerboseLogger` via `set_logger`. Parity with Python's
     /// `Game.logger` field.
     pub logger: Box<dyn GameLogger>,
+
+    /// Event buffer drained per `step` by the runner. See
+    /// `src/events.rs` for the event taxonomy.
+    pub events: Vec<crate::events::GameEvent>,
+    /// Monotonic counter for `GameEvent::seq`. Never decreases across the
+    /// lifetime of a `Game`.
+    pub event_seq: u64,
 }
 
 impl Game {
@@ -235,6 +242,8 @@ impl Game {
             pending_security: None,
             effect_chain_depth: 0,
             logger: Box::new(SilentLogger),
+            events: Vec::new(),
+            event_seq: 0,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -396,6 +405,22 @@ impl Game {
         }
     }
 
+    // ─── Event accumulator ─────────────────────────────────────────
+
+    /// Allocate the next monotonic event sequence number.
+    pub fn next_event_seq(&mut self) -> u64 {
+        let s = self.event_seq;
+        self.event_seq += 1;
+        s
+    }
+
+    /// Drain accumulated events, returning them in emission order. The
+    /// `HeadlessRunner::step` wrapper calls this after each action so the
+    /// PyO3 layer can expose a per-step event list.
+    pub fn drain_events(&mut self) -> Vec<crate::events::GameEvent> {
+        std::mem::take(&mut self.events)
+    }
+
     // ─── Memory management ─────────────────────────────────────────
 
     /// Pay memory cost. Returns `true` if affordable (memory stays above
@@ -410,7 +435,16 @@ impl Game {
         if new_memory < self.rules.memory_range.0 {
             return false;
         }
+        let delta = new_memory - self.memory;
         self.memory = new_memory;
+        let seq = self.next_event_seq();
+        let player = self.turn_player();
+        self.events.push(crate::events::GameEvent::MemoryChange {
+            seq,
+            player,
+            delta,
+            total: self.memory,
+        });
         true
     }
 
@@ -425,12 +459,32 @@ impl Game {
 
     /// Gain memory for the active player.
     pub fn gain_memory(&mut self, amount: i16) {
+        let before = self.memory;
         self.memory = (self.memory + amount).min(self.rules.memory_range.1);
+        let delta = self.memory - before;
+        let seq = self.next_event_seq();
+        let player = self.turn_player();
+        self.events.push(crate::events::GameEvent::MemoryChange {
+            seq,
+            player,
+            delta,
+            total: self.memory,
+        });
     }
 
     /// Set memory to a specific value.
     pub fn set_memory(&mut self, value: i16) {
+        let before = self.memory;
         self.memory = value.clamp(self.rules.memory_range.0, self.rules.memory_range.1);
+        let delta = self.memory - before;
+        let seq = self.next_event_seq();
+        let player = self.turn_player();
+        self.events.push(crate::events::GameEvent::MemoryChange {
+            seq,
+            player,
+            delta,
+            total: self.memory,
+        });
     }
 
     // ─── Elimination / winner ──────────────────────────────────────
@@ -443,6 +497,11 @@ impl Game {
             let opponents = self.opponents(player_id);
             self.winner = opponents.first().copied();
             self.current_phase = GamePhase::GameOver;
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::GameOver {
+                seq,
+                winner: self.winner,
+            });
         } else {
             // Multiplayer: elimination
             self.eliminate_player(player_id);
@@ -461,6 +520,11 @@ impl Game {
             self.game_over = true;
             self.winner = Some(self.turn_order[0]);
             self.current_phase = GamePhase::GameOver;
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::GameOver {
+                seq,
+                winner: self.winner,
+            });
         }
 
         // Adjust turn_player_idx if needed
@@ -474,6 +538,11 @@ impl Game {
         self.game_over = true;
         self.winner = Some(winner_id);
         self.current_phase = GamePhase::GameOver;
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::GameOver {
+            seq,
+            winner: self.winner,
+        });
     }
 
     /// Allocate a new unique card index (for tokens, etc.).

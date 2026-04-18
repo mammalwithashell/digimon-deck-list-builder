@@ -134,6 +134,7 @@ opt-in — nothing here is required for core gameplay, PvP, or RL training.
 | Var | Default | Purpose |
 |-----|---------|---------|
 | `MATCHMAKING_DISABLED` | `0` | Set to `1` to skip starting the matchmaking background task on app startup. |
+| `MATCHMAKING_RANKED_ENABLED` | `0` | Gate for the ranked public queue (`digimon_gym/routers/matchmaking.py`). Leave unset/`0` during alpha — the jank/casual/sweat queues still run. Set to `1` to expose ranked. |
 
 ---
 
