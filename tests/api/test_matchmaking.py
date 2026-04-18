@@ -733,6 +733,30 @@ class TestRankedFlag:
         resp = await client.get("/matchmaking/config")
         assert resp.status_code == 200
 
+    async def test_active_ticket_409_takes_precedence_over_ranked_403(
+        self, client: AsyncClient, monkeypatch,
+    ):
+        """A user who already has an active ticket and tries to queue into
+        ranked while the flag is off should get the same 409 they'd get
+        trying to double-queue into any other pool — the duplicate-ticket
+        condition takes precedence over the ranked feature gate."""
+        monkeypatch.delenv("MATCHMAKING_RANKED_ENABLED", raising=False)
+        token = await _register_login(client, "rf_order")
+        headers = {"Authorization": f"Bearer {token}"}
+        deck_id = await self._seed_deck(client, headers, ["BT14-001"] * 50)
+
+        # First, successfully enqueue into casual.
+        r1 = await client.post("/matchmaking/queue", json={
+            "queue_type": "casual", "deck_id": deck_id,
+        }, headers=headers)
+        assert r1.status_code == 201
+
+        # Now try to queue into ranked (flag off). Must be 409, not 403.
+        r2 = await client.post("/matchmaking/queue", json={
+            "queue_type": "ranked", "deck_id": deck_id,
+        }, headers=headers)
+        assert r2.status_code == 409
+
 
 # ── Tier eligibility for jank / sweat queues ────────────────────────────
 
@@ -832,23 +856,25 @@ class TestTierEligibility:
         }, headers=headers)
         assert resp.status_code in (200, 201)
 
+    @pytest.mark.parametrize("tier", ["meta", "rogue", "jank", None])
     async def test_casual_queue_has_no_tier_eligibility(
-        self, client: AsyncClient, monkeypatch,
+        self, client: AsyncClient, monkeypatch, tier,
     ):
-        """Casual is any-vs-any — no tier gate at enqueue."""
-        token = await _register_login(client, "te7")
+        """Casual is any-vs-any — every tier (including unclassified/None)
+        must enqueue without a 422."""
+        # Username suffix derived from tier so each parametrization gets a
+        # fresh user and can't collide on user_to_ticket.
+        token = await _register_login(client, f"te7_{tier or 'none'}")
         headers = {"Authorization": f"Bearer {token}"}
-        for tier in ("meta", "rogue", "jank", None):
-            monkeypatch.setenv("_PH", str(tier))  # force fresh scope
-            # Re-register per iteration so user_to_ticket doesn't 409.
-        # Just pick one tier — the point is casual accepts any, including None.
         deck_id = await self._seed_deck_with_tier(
-            client, headers, ["BT14-001"] * 50, None, monkeypatch,
+            client, headers, ["BT14-001"] * 50, tier, monkeypatch,
         )
         resp = await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": deck_id,
         }, headers=headers)
-        assert resp.status_code in (200, 201)
+        assert resp.status_code in (200, 201), (
+            f"casual queue rejected tier={tier!r}: {resp.status_code} {resp.text}"
+        )
 
 
 # ── Alpha queue routing smoke (HTTP level) ──────────────────────────────

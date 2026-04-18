@@ -57,7 +57,9 @@ TierFilter = Literal["same", "any", "meta_only", "jank_only"]
 TicketStatus = Literal["waiting", "matched", "cancelled"]
 
 # Alpha public queues — ranked is gated behind MATCHMAKING_RANKED_ENABLED.
-ALPHA_QUEUES: tuple[str, ...] = ("jank", "casual", "sweat")
+# Typed against QueueType so adding a new queue value surfaces a type error
+# here if it isn't classified as alpha vs. gated.
+ALPHA_QUEUES: tuple[QueueType, ...] = ("jank", "casual", "sweat")
 SWEAT_TIERS: frozenset[str] = frozenset({"meta", "rogue"})
 
 
@@ -296,14 +298,17 @@ async def enqueue(
     """
     _prune_stale_tickets()
 
+    # 409 (already queued) takes precedence over the 403 ranked-gate so a
+    # user with an active ticket gets the same duplicate-ticket error
+    # regardless of which queue they tried to double-enqueue into.
+    if user.id in user_to_ticket:
+        raise HTTPException(status.HTTP_409_CONFLICT, "User already has an active ticket")
+
     if request.queue_type == "ranked" and not ranked_enabled():
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "Ranked matchmaking is not available",
         )
-
-    if user.id in user_to_ticket:
-        raise HTTPException(status.HTTP_409_CONFLICT, "User already has an active ticket")
 
     result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
     deck = result.scalar_one_or_none()
