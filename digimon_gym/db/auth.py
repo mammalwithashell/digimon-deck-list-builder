@@ -60,6 +60,29 @@ def create_access_token(user_id: str, username: str, roles: Sequence[str] | None
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
+GUEST_TOKEN_EXPIRE_DAYS = 365
+
+
+def create_guest_access_token(user_id: str, display_name: str) -> str:
+    """Mint a long-lived access token for an anonymous guest session.
+
+    The token is flagged with `is_guest: True` so downstream code can
+    cheaply distinguish guests without a DB lookup. Expiry is one year
+    because nothing the guest owns is server-side — a token rotation
+    would cost the user a new identity for no upside.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(days=GUEST_TOKEN_EXPIRE_DAYS)
+    payload = {
+        "sub": user_id,
+        "username": display_name,
+        "roles": [],
+        "exp": expire,
+        "type": "access",
+        "is_guest": True,
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
 def create_refresh_token_value() -> str:
     """Generate a cryptographically random refresh token string."""
     return secrets.token_urlsafe(64)
