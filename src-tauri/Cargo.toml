@@ -5,11 +5,19 @@ edition = "2021"
 
 [dependencies]
 tauri = { version = "2", features = [] }
-tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "1", features = ["time", "fs", "io-util", "rt-multi-thread"] }
 digimon-engine = { path = "../digimon-engine" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
+sha2 = "0.10"
+futures-util = "0.3"
+thiserror = "1"
+dirs = "5"
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -17,8 +25,3 @@ tauri-build = { version = "2", features = [] }
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
-# Build the desktop app without the Python sidecar — the frontend talks to
-# the in-process Rust engine via Tauri `invoke()` commands only.
-# Pair with `VITE_ENGINE=rust` on the frontend build and the
-# `tauri.rust.conf.json` bundle config (which drops `externalBin`).
-no-sidecar = []

@@ -8,6 +8,8 @@ description = "Headless Digimon TCG game engine for RL training and desktop play
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rand = "0.8"
+ort = { version = "2.0.0-rc.10", default-features = false, features = ["ndarray", "std", "download-binaries", "tls-rustls"] }
+ndarray = "0.17"
 
 [dev-dependencies]
 
@@ -46,3 +48,11 @@ path = "tests/infra/main.rs"
 [[test]]
 name = "cards_behavioral"
 path = "tests/cards_behavioral/main.rs"
+
+[[test]]
+name = "onnx_parity"
+path = "tests/onnx_parity/main.rs"
+
+[[test]]
+name = "deck_tools"
+path = "tests/deck_tools/main.rs"

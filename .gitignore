@@ -36,16 +36,10 @@ flamegraph.svg
 
 # Tauri
 src-tauri/target/
-src-tauri/binaries/
-src-tauri/resources/models/
 *.AppImage
 *.dmg
 *.msi
 *.deb
-
-# PyInstaller
-build/
-dist/
 
 # PM Agent
 .claude/pm/sessions/

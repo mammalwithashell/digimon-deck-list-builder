@@ -2,7 +2,7 @@
 //
 // Implements the same function surface as `gameApi.ts` but dispatches
 // through Tauri `invoke()` to the in-process `digimon-engine` crate.
-// Selected at build time via `VITE_ENGINE=rust` — see `gameApi.ts`.
+// Selected at build time via `VITE_BUILD_TARGET=desktop` — see `gameApi.ts`.
 //
 // The Rust `GameStateDto` carries less detail than the Python `GameState`
 // (no DP breakdowns, keyword metadata, source lists, etc.). The translator
@@ -62,6 +62,8 @@ interface RustSurrenderResponse {
 
 // ─── Frontend-facing response shapes (must mirror gameApi.ts) ────────
 
+type PlayerKind = 'human' | 'greedy' | 'trained';
+
 interface CreateGameParams {
   deck1?: string[];
   deck2?: string[];
@@ -72,6 +74,8 @@ interface CreateGameParams {
   player1_policy?: string;
   player2_policy?: string;
   agent_action_delay_ms?: number;
+  player_kinds?: PlayerKind[];
+  player_model_ids?: (string | null)[];
 }
 
 interface CreateGameResponse {
@@ -272,15 +276,37 @@ export function dtoToGameState(dto: GameStateDto): GameState {
 export async function createGame(
   params: CreateGameParams,
 ): Promise<CreateGameResponse> {
+  // Rust backend accepts optional `player_kinds` / `player_model_ids`.
+  // If the caller passed those directly, forward verbatim. Otherwise fall
+  // back to deriving them from the legacy string-typed fields the hosted
+  // API takes, so existing call sites work without modification.
+  const kinds = params.player_kinds ?? deriveKinds(params);
+  const modelIds = params.player_model_ids ?? [null, null];
   const resp = await invoke<RustCreateGameResponse>('rust_create_game', {
     deck1: params.deck1 ?? null,
     deck2: params.deck2 ?? null,
+    playerKinds: kinds ?? null,
+    playerModelIds: modelIds,
   });
   return {
     game_id: resp.game_id,
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
   };
+}
+
+function deriveKinds(params: CreateGameParams): PlayerKind[] | null {
+  if (!params.player1_type && !params.player2_type) return null;
+  return [
+    toKind(params.player1_type, params.player1_policy),
+    toKind(params.player2_type, params.player2_policy),
+  ];
+}
+
+function toKind(type: string | undefined, policy: string | undefined): PlayerKind {
+  if (type === 'human' || !type) return 'human';
+  if (policy === 'trained') return 'trained';
+  return 'greedy';
 }
 
 export async function sendAction(

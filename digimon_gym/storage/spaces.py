@@ -1,9 +1,9 @@
 """Thin boto3 client for DigitalOcean Spaces (S3-compatible).
 
 Keyed off env vars: SPACES_ENDPOINT, SPACES_BUCKET, SPACES_REGION,
-SPACES_KEY, SPACES_SECRET. Raises RuntimeError if any are unset at call time
-(fail loud, not on import, so desktop_main.py can still import the module
-transitively via db.routers — though in practice the router never imports it).
+SPACES_KEY, SPACES_SECRET. Raises RuntimeError if any are unset at call
+time (fail loud, not on import) so consumers can import the module even
+when credentials aren't configured.
 """
 from __future__ import annotations
 

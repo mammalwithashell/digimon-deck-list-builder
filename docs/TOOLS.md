@@ -530,27 +530,25 @@ python tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output mod
 python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
 ```
 
-Exported files are consumed by `OnnxMlpPolicy` / `OnnxLstmPolicy` in `digimon_gym/engine/onnx_policy.py` and served via the `/games/models` API route.
+Exported files are consumed by:
+
+- **Hosted API / training**: `OnnxMlpPolicy` / `OnnxLstmPolicy` in `digimon_gym/engine/onnx_policy.py`; served via the `/games/models` API route.
+- **Desktop app**: `digimon-engine/src/inference/` loads the same `.onnx` at runtime after it's downloaded from the hosted manifest and cached under `dirs::data_dir()/digimon-tcg/models/<id>/policy.onnx`.
+
+Newly-exported models reach desktop users by being published to the admin model manifest (`/models/manifest.json`) with the correct `tensor_size` / `action_space_size`; the desktop app rejects downloads that mismatch the Rust engine's contract.
 
 ---
 
-### 7.2 Desktop Sidecar Build
+### 7.2 Desktop Build
 
-**Script:** `tools/build-sidecar.sh`
-
-Builds the desktop sidecar binary using PyInstaller and names it according to the Tauri v2 sidecar convention (`digimon-server-<target-triple>[.exe]`).
+The desktop app is **Python-free** — there is no sidecar binary to build. Gameplay, ONNX inference, and deck tooling are statically linked into the Tauri executable via the embedded `digimon-engine` crate.
 
 ```bash
-./tools/build-sidecar.sh gameplay   # Greedy/random bots only (~60-90MB)
-./tools/build-sidecar.sh full       # Includes ONNX runtime + model weights (~90-120MB)
+cd frontend && npm ci && npm run build -- --mode desktop
+cd ../src-tauri && cargo tauri build
 ```
 
-| Profile | Size | Contents |
-|---|---|---|
-| `gameplay` (default) | ~60-90MB | Engine + greedy/random bots, no ONNX |
-| `full` | ~90-120MB | Engine + ONNX runtime + bundled model weights |
-
-Output goes to `src-tauri/binaries/`. The `full` profile auto-exports SB3 → ONNX before bundling. See `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md` for the full build pipeline.
+The installer contains only the Rust binary + frontend assets + icons. Trained AI models are not bundled; users fetch them at runtime from the hosted API's manifest via the in-app Models page.
 
 ---
 

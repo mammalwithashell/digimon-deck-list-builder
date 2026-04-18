@@ -1,6 +1,20 @@
 import client from './client';
 import type { DeckSummary } from '@/types/deck';
 
+// Mirrors `gameApi.ts` — desktop builds dispatch parse / validate /
+// tested-cards calls through Tauri `invoke()` into the embedded
+// `digimon-engine` deck_tools module; web builds hit the hosted FastAPI
+// endpoints. Response shapes match so callers don't branch.
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+
+type TauriInvoke = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
+
+async function invokeTauri<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  const mod = await import('@tauri-apps/api/core');
+  const invoke = mod.invoke as TauriInvoke;
+  return invoke<T>(cmd, args);
+}
+
 interface CreateDeckParams {
   name: string;
   description?: string;
@@ -87,6 +101,9 @@ export async function validateDeck(deckId: string): Promise<DeckResponse> {
 }
 
 export async function parseDeck(deckString: string): Promise<ParseDeckResponse> {
+  if (IS_DESKTOP) {
+    return invokeTauri<ParseDeckResponse>('rust_parse_deck', { deck: deckString });
+  }
   const { data } = await client.post<ParseDeckResponse>('/decks/parse', { deck: deckString });
   return data;
 }
@@ -97,6 +114,10 @@ interface TestedCardsResponse {
 }
 
 export async function listTestedCards(): Promise<string[]> {
+  if (IS_DESKTOP) {
+    const resp = await invokeTauri<TestedCardsResponse>('rust_list_tested_cards');
+    return resp.card_ids;
+  }
   const { data } = await client.get<TestedCardsResponse>('/decks/tested-cards');
   return data.card_ids;
 }
@@ -106,11 +127,18 @@ export async function validateDeckRaw(
   eggDeck: string[],
   gameMode?: string,
 ): Promise<ValidateDeckResponse> {
-  const { data } = await client.post<BackendValidateDeckResponse>('/decks/validate', {
-    main_deck: mainDeck,
-    egg_deck: eggDeck,
-    game_mode: gameMode ?? 'standard',
-  });
+  const data: BackendValidateDeckResponse = IS_DESKTOP
+    ? await invokeTauri<BackendValidateDeckResponse>('rust_validate_deck_raw', {
+        mainDeck,
+        eggDeck,
+      })
+    : (
+        await client.post<BackendValidateDeckResponse>('/decks/validate', {
+          main_deck: mainDeck,
+          egg_deck: eggDeck,
+          game_mode: gameMode ?? 'standard',
+        })
+      ).data;
 
   return {
     valid: data.is_valid,

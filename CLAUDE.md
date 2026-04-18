@@ -22,17 +22,17 @@ The project is migrating to a **Rust engine as the source of truth** (`digimon-e
 - **Engine (transitional)**: Python 3.11+, `digimon_gym/engine/` — retained until card-script migration completes
 - **Backend**: FastAPI + Uvicorn, SQLAlchemy + PostgreSQL (hosted API only); binds to Rust engine via PyO3
 - **Frontend**: React 18 + TypeScript + Vite, Zustand state management
-- **Desktop**: Tauri v2 (Rust shell) + PyInstaller sidecar
+- **Desktop**: Tauri v2 (Rust shell) — Python-free; gameplay + inference + deck tools run entirely in the embedded `digimon-engine` crate, and AI models are fetched at runtime from the hosted API's manifest
 - **RL**: Gymnasium, Stable-Baselines3, ONNX Runtime for inference; env drives the Rust engine via PyO3
 - **AI Pipeline**: Claude API, Pinecone vector DB, git worktrees
 - **C# Reference**: DCGO submodule (`DCGO/`) — behavioral source of truth
 
 ## System Overview
 
-The codebase is split into three deployable services sharing a common engine:
+The codebase is split into three deployable services:
 
-1. **Desktop Sidecar** (`digimon_gym/desktop_main.py`) — local games vs AI agents, deck tools, simulations, replays. No DB, no auth. Bundled as a Tauri v2 desktop app.
-2. **Hosted API** (`digimon_gym/api.py`) — PvP WebSockets, lobby, auth, user data, recordings, admin AI. Central server for online features.
+1. **Desktop App** (`src-tauri/`) — local games vs AI agents, deck tools. No Python at runtime: gameplay, ONNX inference, and deck validation run inside the embedded `digimon-engine` crate via Tauri `invoke()` commands. Trained models are downloaded at runtime from the hosted API's `/models/manifest.json` and cached under the OS `data_dir`.
+2. **Hosted API** (`digimon_gym/api.py`) — PvP WebSockets, lobby, auth, user data, recordings, admin AI, model manifest. Central server for online features.
 3. **Training CLI** (`python -m digimon_gym.agents.pilot_training`) — standalone RL training. No HTTP server, no DB.
 
 Underlying surfaces:
@@ -41,7 +41,7 @@ Underlying surfaces:
 2. Python game engine (`digimon_gym/engine/`) — transitional; shared by all services today, retired once Rust card-script migration completes
 3. RL environment and pilot training (`digimon_gym/digimon_gym.py`, `digimon_gym/agents/`)
 4. React frontend (`frontend/src/`) — desktop build excludes admin/training UI via `VITE_BUILD_TARGET`
-5. Tauri v2 desktop shell (`src-tauri/`) — depends on `digimon-engine` directly (no Python) for desktop gameplay
+5. Tauri v2 desktop shell (`src-tauri/`) — depends on `digimon-engine` directly (no Python) for gameplay, ONNX inference, deck tools, and the model cache/downloader
 6. Admin AI workflow (`digimon_gym/ai/`, `/admin/*` routes) — hosted API only
 
 ## Project Layout
@@ -95,7 +95,6 @@ Underlying surfaces:
 │   ├── db/                        # SQLAlchemy models, auth, DB routers (hosted API only)
 │   ├── ai/                        # Admin AI pipeline (hosted API only)
 │   ├── api.py                     # Hosted API app assembly
-│   ├── desktop_main.py            # Desktop sidecar entry point (no DB/auth)
 │   └── digimon_gym.py             # DigimonEnv (Gymnasium)
 ├── frontend/src/
 │   ├── pages/                     # GamePage, LobbyPage, DeckBuilderPage, Admin*
@@ -103,7 +102,14 @@ Underlying surfaces:
 │   ├── components/game/           # ActionBar, overlays, selection UI
 │   ├── api/                       # REST + WebSocket clients
 │   └── App.tsx                    # Route map
-├── src-tauri/                     # Tauri v2 desktop shell (Rust)
+├── src-tauri/                     # Tauri v2 desktop shell — Rust-only, hosts
+│   │                              # gameplay, ONNX inference, deck tools, and
+│   │                              # the runtime-downloaded model cache
+│   └── src/
+│       ├── engine_commands.rs     # `rust_create_game` / step / submit + agent loop
+│       ├── inference_state.rs     # ONNX session cache per model_id
+│       ├── models.rs              # Manifest fetch + SHA-verified download cache
+│       └── deck_commands.rs       # parse / validate / tested-cards Tauri wrappers
 ├── tools/                         # CLI tools (see docs/TOOLS.md)
 │   ├── transpiler/                # C#→Python transpiler package
 │   └── archive/                   # One-time migration scripts
@@ -129,7 +135,8 @@ Underlying surfaces:
 
 ## Service Boundaries
 
-**Engine-only routers** (safe for desktop sidecar — no DB imports):
+**Engine-only routers** (hosted API, no DB imports — mirrored by Rust Tauri
+commands on desktop):
 - `health`, `games`, `deck_tools`, `simulations`, `replays`
 
 **DB/auth-required routers** (hosted API only):
@@ -143,7 +150,6 @@ Underlying surfaces:
 
 **Requirements files:**
 - `requirements.txt` — full hosted API (all deps)
-- `requirements-desktop.txt` — sidecar (engine + ONNX, no DB/torch)
 - `requirements-training.txt` — training CLI (engine + torch/SB3, no FastAPI/DB)
 
 ## Commands
@@ -193,16 +199,10 @@ python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs
 python tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
 python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
 
-# Desktop sidecar build
-./tools/build-sidecar.sh gameplay   # greedy bots only
-./tools/build-sidecar.sh full       # auto-exports ONNX + bundles models
-
-# Desktop sidecar (standalone, for testing)
-python -m digimon_gym.desktop_main --port 8321 --models-dir ./models
-
-# Tauri desktop app (requires Rust toolchain)
-cd src-tauri && cargo tauri dev    # development
-cd src-tauri && cargo tauri build  # production installers
+# Tauri desktop app (requires Rust toolchain; Python-free at runtime)
+cd src-tauri && cargo tauri dev                     # development
+cd src-tauri && cargo tauri build                   # production installers
+cargo test --manifest-path src-tauri/Cargo.toml     # Tauri-layer unit tests
 
 # Rust engine tests
 cargo test --manifest-path digimon-engine/Cargo.toml
@@ -225,7 +225,7 @@ DIGIMON_BACKEND=rust python -m pytest tests/engine/test_rust_backend_parity.py -
 5. Keep docs stable: avoid stale hardcoded snapshot claims unless explicitly time-stamped.
 6. When threading LSTM state during evaluation/inference, reset state to `None` at episode boundaries.
 7. OpponentWrapper discards dense rewards from opponent steps; only terminal rewards pass through.
-8. `desktop_main.py` must not import any `digimon_gym.db.*` or `digimon_gym.ai.*` modules (breaks without SQLAlchemy).
+8. The desktop Tauri build must not link any Python runtime. All gameplay, inference, and deck tooling dispatch through Tauri `invoke()` into `digimon-engine`; trained models are downloaded at runtime via `src-tauri/src/models.rs` and cached under `dirs::data_dir()/digimon-tcg/models/`.
 9. WebSocket state broadcasts must use `state_filter.py` — never send raw `to_ui_json()` to network clients.
 10. ONNX policies must call `reset()` at episode boundaries for LSTM models (same rule as SB3 LSTM state threading).
 11. Engine-only routers (`games.py`, `replays.py`, `simulations.py`, `deck_tools.py`) must not import from `digimon_gym.db.*` or `digimon_gym.ai.*`.

@@ -4,10 +4,13 @@ Scans ``tests/behavioral/**/test_*.py`` for per-card behavioral test files
 and writes the canonical card IDs to
 ``digimon_gym/engine/data/tested_cards.json``.
 
-The snapshot is committed to the repo and bundled into the desktop sidecar
-by ``desktop.spec`` (which globs ``digimon_gym/engine/data/*.json``). The
-alpha deck builder uses it to restrict players to cards that have been
-tested end-to-end.
+The snapshot is committed to the repo and consumed by:
+- the hosted API via ``digimon_gym/engine/tested_cards.py``
+- the desktop app, where ``digimon-engine`` bakes it into the binary via
+  ``include_str!`` in ``digimon-engine/src/deck_tools.rs``
+
+The alpha deck builder uses it to restrict players to cards that have
+been tested end-to-end.
 
 Run from the repo root:
 

@@ -25,6 +25,11 @@ const DeckPoolPage = lazy(() => import('@/pages/DeckPoolPage').then(m => ({ defa
 const AdminPatchNotesPage = lazy(() => import('@/pages/AdminPatchNotesPage').then(m => ({ default: m.AdminPatchNotesPage })));
 const AdminModelsPage = lazy(() => import('@/pages/AdminModelsPage').then(m => ({ default: m.AdminModelsPage })));
 
+// Desktop-only ONNX model manager (Tauri-backed). Lazy-loaded so web builds
+// tree-shake it out — the Tauri `invoke()` calls inside would fail at
+// runtime on the hosted web app.
+const ModelsPage = lazy(() => import('@/pages/ModelsPage').then(m => ({ default: m.ModelsPage })));
+
 function suspended(Component: React.LazyExoticComponent<React.ComponentType>) {
   return (
     <Suspense fallback={null}>
@@ -67,6 +72,9 @@ export function App() {
               <Route path="/admin/patch-notes" element={suspended(AdminPatchNotesPage)} />
               <Route path="/admin/models" element={suspended(AdminModelsPage)} />
             </Route>
+          )}
+          {IS_DESKTOP && (
+            <Route path="/models" element={suspended(ModelsPage)} />
           )}
         </Route>
       </Routes>

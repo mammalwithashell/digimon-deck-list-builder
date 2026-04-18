@@ -1,7 +1,5 @@
-"""Shared ONNX model path resolution utilities.
-
-Used by both the main server (games.py) and the desktop sidecar (desktop_main.py)
-to keep filename sanitization and error messaging consistent.
+"""Shared ONNX model path resolution utilities used by the hosted API
+(`games.py`) for filename sanitization and consistent error messaging.
 """
 
 from __future__ import annotations
