@@ -13,7 +13,7 @@ use serde_json::{json, Map, Value};
 
 use crate::action::space::SECURITY_TARGET;
 use crate::card_data::CardData;
-use crate::enums::{CardKind, GamePhase};
+use crate::enums::{CardColor, CardKind, GamePhase};
 use crate::game::Game;
 use crate::permanent::Permanent;
 use crate::player::Player;
@@ -143,8 +143,48 @@ fn player_ui_data(player: &Player, data: &[CardData], game: &Game) -> Value {
     })
 }
 
-fn colors_of(cd: &CardData) -> Vec<String> {
-    cd.colors.iter().map(|c| format!("{:?}", c)).collect()
+fn colors_of(cd: &CardData) -> Vec<i64> {
+    cd.colors.iter().map(|c| color_to_python_int(*c)).collect()
+}
+
+/// Map Rust `CardColor` → Python `CardColor` enum int value. Hand-written
+/// because the two enums have different declaration orders.
+///
+/// Python (`digimon_gym/engine/data/enums.py`):
+///   Red=0, Blue=1, Yellow=2, Green=3, White=4, Black=5, Purple=6
+///
+/// Rust (`digimon-engine/src/enums.rs`):
+///   Red=0, Blue=1, Yellow=2, Green=3, Black=4, Purple=5, White=6
+///
+/// White, Black, and Purple are in different positions, so `as u8` gives
+/// wrong values for those three. This mapping must be kept in sync with
+/// Python's `CardColor` enum.
+fn color_to_python_int(c: CardColor) -> i64 {
+    match c {
+        CardColor::Red => 0,
+        CardColor::Blue => 1,
+        CardColor::Yellow => 2,
+        CardColor::Green => 3,
+        CardColor::White => 4,
+        CardColor::Black => 5,
+        CardColor::Purple => 6,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn color_to_python_int_mapping() {
+        assert_eq!(color_to_python_int(CardColor::Red), 0);
+        assert_eq!(color_to_python_int(CardColor::Blue), 1);
+        assert_eq!(color_to_python_int(CardColor::Yellow), 2);
+        assert_eq!(color_to_python_int(CardColor::Green), 3);
+        assert_eq!(color_to_python_int(CardColor::White), 4);
+        assert_eq!(color_to_python_int(CardColor::Black), 5);
+        assert_eq!(color_to_python_int(CardColor::Purple), 6);
+    }
 }
 
 fn kind_int(cd: &CardData) -> i64 {

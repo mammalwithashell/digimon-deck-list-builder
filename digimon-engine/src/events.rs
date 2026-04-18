@@ -2,11 +2,11 @@
 //! Python's `digimon_gym/engine/events.py::GameEvent` — a tagged enum
 //! consumed by UI animation and replay layers.
 //!
-//! Emission coverage is currently partial: `MemoryChange`, `TurnStart`,
-//! `PhaseChange`, `GameOver`, and `Play` are wired in by this module's
-//! initial landing. `Digivolve`, `Attack`, `Trash`, `Mill`, and
-//! `SecurityReveal` variants exist on the enum and will be emitted as
-//! card-migration work wires the corresponding game paths.
+//! Emission coverage is currently partial: `MemoryChange`, `Play`, and
+//! `GameOver` are wired in by this module's initial landing.
+//! `TurnStart`, `PhaseChange`, `Digivolve`, `Attack`, `Trash`, `Mill`,
+//! and `SecurityReveal` variants exist on the enum and will be emitted
+//! as game-phase and card-migration work wires the corresponding paths.
 //!
 //! Every event carries a monotonically increasing `seq` allocated by
 //! `Game::next_event_seq`. Consumers drain the buffer via

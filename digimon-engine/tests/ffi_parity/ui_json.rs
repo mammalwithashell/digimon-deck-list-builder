@@ -115,6 +115,29 @@ fn current_phase_is_integer_matching_python() {
 }
 
 #[test]
+fn colors_emitted_as_python_int_values() {
+    // Red card (card_colors=[0] in cards.json → CardColor::Red in Rust → 0 in Python).
+    // make_test_card defaults to Red (card_colors=[0]), so colors should be [0].
+    let r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-001", "TestOne"))
+        .hand(0, &["TEST-001"])
+        .start();
+    let value = to_ui_json(&r.game);
+    let hand_cards = value["player1"]["handCards"].as_array().expect("handCards is array");
+    assert!(!hand_cards.is_empty(), "expected at least one hand card");
+    let colors = hand_cards[0]["colors"].as_array().expect("colors is array");
+    assert!(!colors.is_empty(), "expected at least one color");
+    // Must be a JSON integer (not a string like "Red")
+    assert!(
+        colors[0].is_i64(),
+        "colors[0] must be an integer (Python CardColor.value), got {:?}",
+        colors[0]
+    );
+    // Red == 0 in Python's CardColor enum
+    assert_eq!(colors[0], serde_json::json!(0), "Red must map to Python value 0");
+}
+
+#[test]
 fn player_memory_is_player_relative() {
     let r = DebugRunner::builder()
         .add_card(make_test_card("TEST-001", "TestOne"))
