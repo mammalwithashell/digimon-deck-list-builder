@@ -1,8 +1,46 @@
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
 
 use crate::enums::{GameMode, SkipDraw, TitanRole};
+
+/// Built once, cloned on each `CardRestriction::official_eng()` call — the data
+/// is effectively static config, so don't re-allocate the map and vectors every time.
+static OFFICIAL_ENG_RESTRICTION: LazyLock<CardRestriction> = LazyLock::new(|| {
+    let mut card_limits = BTreeMap::new();
+
+    // 3 Banned cards (0 copies allowed)
+    for id in ["BT2-090", "BT5-109", "EX5-065"] {
+        card_limits.insert(id.to_string(), 0);
+    }
+
+    // 47 Restricted cards (max 1 copy)
+    for id in [
+        "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110",
+        "BT14-002", "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069",
+        "BT19-040", "BT2-047", "BT2-069", "BT3-054", "BT3-103", "BT4-104",
+        "BT4-111", "BT6-100", "BT6-104", "BT7-038", "BT7-064", "BT7-069",
+        "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068",
+        "EX2-039", "EX2-070", "EX3-057", "EX4-006", "EX4-019", "EX4-030",
+        "EX5-015", "EX5-018", "EX5-062", "P-008", "P-025", "P-029",
+        "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
+    ] {
+        card_limits.insert(id.to_string(), 1);
+    }
+
+    let choice_groups = vec![
+        // Choice 1: Mother D-Reaper vs Shoto Kazama
+        (vec!["EX2-007".to_string()], vec!["EX7-064".to_string()]),
+        // Choice 2: Chaosmon: Valdur Arm vs Taomon + Sakuyamon (X Antibody)
+        (
+            vec!["BT20-037".to_string()],
+            vec!["BT17-035".to_string(), "EX8-037".to_string()],
+        ),
+    ];
+
+    CardRestriction { card_limits, choice_groups }
+});
 
 /// Card-copy restrictions and mutual-exclusivity groups for a format.
 /// Mirrors `digimon_gym/engine/data/deck_loader.py:CardRestriction`.
@@ -28,39 +66,17 @@ impl CardRestriction {
     /// Must stay in sync with `digimon_gym/engine/data/deck_loader.py`:
     /// `_BANNED`, `_RESTRICTED`, `_CHOICE_GROUPS`. Update both sides together
     /// until the Python engine is retired.
+    ///
+    /// Clones from a process-wide cached copy (see `OFFICIAL_ENG_RESTRICTION`);
+    /// use `official_eng_ref()` if you only need a shared reference.
     pub fn official_eng() -> Self {
-        let mut card_limits = BTreeMap::new();
+        OFFICIAL_ENG_RESTRICTION.clone()
+    }
 
-        // 3 Banned cards (0 copies allowed)
-        for id in ["BT2-090", "BT5-109", "EX5-065"] {
-            card_limits.insert(id.to_string(), 0);
-        }
-
-        // 47 Restricted cards (max 1 copy)
-        for id in [
-            "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110",
-            "BT14-002", "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069",
-            "BT19-040", "BT2-047", "BT2-069", "BT3-054", "BT3-103", "BT4-104",
-            "BT4-111", "BT6-100", "BT6-104", "BT7-038", "BT7-064", "BT7-069",
-            "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068",
-            "EX2-039", "EX2-070", "EX3-057", "EX4-006", "EX4-019", "EX4-030",
-            "EX5-015", "EX5-018", "EX5-062", "P-008", "P-025", "P-029",
-            "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
-        ] {
-            card_limits.insert(id.to_string(), 1);
-        }
-
-        let choice_groups = vec![
-            // Choice 1: Mother D-Reaper vs Shoto Kazama
-            (vec!["EX2-007".to_string()], vec!["EX7-064".to_string()]),
-            // Choice 2: Chaosmon: Valdur Arm vs Taomon + Sakuyamon (X Antibody)
-            (
-                vec!["BT20-037".to_string()],
-                vec!["BT17-035".to_string(), "EX8-037".to_string()],
-            ),
-        ];
-
-        Self { card_limits, choice_groups }
+    /// Shared reference to the cached official ENG restricted list.
+    /// Prefer this over `official_eng()` when you don't need ownership.
+    pub fn official_eng_ref() -> &'static Self {
+        &OFFICIAL_ENG_RESTRICTION
     }
 }
 
@@ -171,19 +187,45 @@ impl Rules {
 
     /// Map a `GameMode` (+ optional `TitanRole` for Titan) to its `Rules` preset.
     /// Mirrors Python's per-mode routing in `_validate_for_mode`.
-    /// Panics if `mode == Titan` and `role` is `None`.
-    pub fn for_mode(mode: GameMode, role: Option<TitanRole>) -> Self {
-        match mode {
-            GameMode::Standard => Self::standard(),
-            GameMode::NoRestriction => Self::no_restriction(),
-            GameMode::EdhCommander => Self::edh(),
-            GameMode::Titan => match role.expect("Titan mode requires a TitanRole") {
-                TitanRole::Boss => Self::titan_boss(),
-                TitanRole::Team => Self::titan_team(),
-            },
+    ///
+    /// Returns `Err` if `mode == Titan` and `role` is `None`, or if `role` is
+    /// provided for a non-Titan mode (callers should pass `None` there).
+    pub fn for_mode(mode: GameMode, role: Option<TitanRole>) -> Result<Self, ForModeError> {
+        match (mode, role) {
+            (GameMode::Standard, None) => Ok(Self::standard()),
+            (GameMode::NoRestriction, None) => Ok(Self::no_restriction()),
+            (GameMode::EdhCommander, None) => Ok(Self::edh()),
+            (GameMode::Titan, Some(TitanRole::Boss)) => Ok(Self::titan_boss()),
+            (GameMode::Titan, Some(TitanRole::Team)) => Ok(Self::titan_team()),
+            (GameMode::Titan, None) => Err(ForModeError::MissingTitanRole),
+            (mode, Some(_)) => Err(ForModeError::UnexpectedRole(mode)),
         }
     }
 }
+
+/// Errors returned by `Rules::for_mode`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ForModeError {
+    /// Caller passed `GameMode::Titan` without a `TitanRole`.
+    MissingTitanRole,
+    /// Caller passed a `TitanRole` for a non-Titan mode.
+    UnexpectedRole(GameMode),
+}
+
+impl std::fmt::Display for ForModeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingTitanRole => {
+                write!(f, "GameMode::Titan requires a TitanRole")
+            }
+            Self::UnexpectedRole(mode) => {
+                write!(f, "GameMode::{:?} does not accept a TitanRole", mode)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ForModeError {}
 
 impl Default for Rules {
     fn default() -> Self {
@@ -317,28 +359,49 @@ mod tests {
 
     #[test]
     fn for_mode_routing() {
-        assert_eq!(Rules::for_mode(GameMode::Standard, None), Rules::standard());
         assert_eq!(
-            Rules::for_mode(GameMode::NoRestriction, None),
+            Rules::for_mode(GameMode::Standard, None).unwrap(),
+            Rules::standard()
+        );
+        assert_eq!(
+            Rules::for_mode(GameMode::NoRestriction, None).unwrap(),
             Rules::no_restriction()
         );
         assert_eq!(
-            Rules::for_mode(GameMode::EdhCommander, None),
+            Rules::for_mode(GameMode::EdhCommander, None).unwrap(),
             Rules::edh()
         );
         assert_eq!(
-            Rules::for_mode(GameMode::Titan, Some(TitanRole::Boss)),
+            Rules::for_mode(GameMode::Titan, Some(TitanRole::Boss)).unwrap(),
             Rules::titan_boss()
         );
         assert_eq!(
-            Rules::for_mode(GameMode::Titan, Some(TitanRole::Team)),
+            Rules::for_mode(GameMode::Titan, Some(TitanRole::Team)).unwrap(),
             Rules::titan_team()
         );
     }
 
     #[test]
-    #[should_panic(expected = "Titan mode requires a TitanRole")]
-    fn for_mode_titan_without_role_panics() {
-        let _ = Rules::for_mode(GameMode::Titan, None);
+    fn for_mode_titan_without_role_errors() {
+        assert_eq!(
+            Rules::for_mode(GameMode::Titan, None),
+            Err(ForModeError::MissingTitanRole)
+        );
+    }
+
+    #[test]
+    fn for_mode_role_on_non_titan_errors() {
+        assert_eq!(
+            Rules::for_mode(GameMode::Standard, Some(TitanRole::Boss)),
+            Err(ForModeError::UnexpectedRole(GameMode::Standard))
+        );
+    }
+
+    #[test]
+    fn official_eng_ref_matches_owned() {
+        // Both APIs must agree on contents.
+        let owned = CardRestriction::official_eng();
+        let by_ref = CardRestriction::official_eng_ref();
+        assert_eq!(&owned, by_ref);
     }
 }
