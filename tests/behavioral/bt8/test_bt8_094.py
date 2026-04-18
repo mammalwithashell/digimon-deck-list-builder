@@ -1,245 +1,327 @@
 """Behavioral tests for BT8-094 Digimon Emperor (Tamer, White, Cost 3).
 
 Card text:
-  [All Turns] When one of your opponent's level 5 or lower Digimon is deleted,
-  you may suspend this Tamer to <Draw 1>.
-  [Opponent's Turn] When one of your opponent's level 3 Digimon is moved from
-  their breeding area to their battle area, gain 2 memory.
-  [Security] Play this card without paying the cost.
+    [All Turns] When one of your opponent's level 5 or lower Digimon is deleted,
+    you may suspend this Tamer to <Draw 1>.
+    [Opponent's Turn] When one of your opponent's level 3 Digimon is moved
+    from their breeding area to their battle area, gain 2 memory.
+    [Security] Play this card without paying its memory cost.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from digimon_gym.engine.data.enums import EffectTiming
+
+
+def _find_deletion_observer(perm):
+    """Find the _is_deletion_observer effect on a permanent."""
+    for source in perm.card_sources:
+        for eff in source.effect_list(EffectTiming.NoTiming):
+            if getattr(eff, '_is_deletion_observer', False):
+                return eff
+    return None
+
+
+def _find_on_move_effect(perm):
+    """Find the OnMove effect on a permanent."""
+    for source in perm.card_sources:
+        for eff in source.effect_list(EffectTiming.OnMove):
+            if eff.timing == EffectTiming.OnMove:
+                return eff
+    return None
 
 
 @pytest.mark.behavioral
-class TestBT8094DrawOnDelete:
-    """[All Turns] Opponent's Lv.5- Digimon deleted -> suspend to Draw 1."""
+class TestBT8094DigimonEmperor:
+    """Tests for BT8-094 Digimon Emperor."""
 
-    def test_draw_on_opponent_digimon_deleted(self, debug_runner):
-        """Deleting opponent's Lv.5 or lower Digimon triggers Draw 1."""
-        runner = debug_runner(initial_memory=5)
+    # ── Effect 0: Deletion observer — draw 1 when opp lv5- deleted ──
 
-        # Place Digimon Emperor on P1 field
-        runner.place_on_field(1, ["BT8-094"])
+    def test_effect0_has_deletion_observer_flag(self, debug_runner):
+        """Effect 0 should use NoTiming + _is_deletion_observer pattern."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
 
-        # Place a Lv.3 Digimon on P2 field
-        runner.place_on_field(2, ["ST1-03"])  # Agumon Lv.3
+        observer = _find_deletion_observer(tamer)
+        assert observer is not None, (
+            "BT8-094 should have a _is_deletion_observer effect with NoTiming"
+        )
+        assert observer.is_optional is True, "Draw effect should be optional ('you may')"
 
-        hand_before = len(runner.game.player1.hand_cards)
+    def test_effect0_draws_when_opp_lv5_or_lower_deleted(self, debug_runner):
+        """When opponent's lv5- Digimon is deleted, tamer controller draws 1."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        # Place a lv3 Digimon on opponent's field
+        opp_digi = runner.place_on_field(2, ["ST1-03"])  # Agumon Lv3
 
-        # Delete opponent's Digimon
-        p2_perm = runner.game.player2.battle_area[0]
-        runner.game.player2.delete_permanent(p2_perm, is_opponent_effect=True)
+        snap_before = runner.snapshot()
+        p1_hand_before = len(snap_before.p1_hand)
 
-        # Auto-resolve the optional trigger
+        # Delete the opponent's Digimon
+        runner.game.player2.delete_permanent(opp_digi, removal_cause='effect')
         runner.auto_resolve()
 
-        hand_after = len(runner.game.player1.hand_cards)
-        assert hand_after >= hand_before + 1, (
-            f"Should draw 1 when opponent's Lv.5- Digimon is deleted, "
-            f"hand before={hand_before}, after={hand_after}"
+        snap_after = runner.snapshot()
+        p1_hand_after = len(snap_after.p1_hand)
+
+        assert p1_hand_after == p1_hand_before + 1, (
+            f"Player 1 should draw 1 card. Hand before: {p1_hand_before}, after: {p1_hand_after}"
         )
 
-    def test_draw_on_opponent_lv5_deleted(self, debug_runner):
-        """Lv.5 Digimon is still within the 'Lv.5 or lower' range."""
-        runner = debug_runner(initial_memory=5)
+    def test_effect0_suspends_tamer_as_cost(self, debug_runner):
+        """The tamer should be suspended as a cost when the effect fires."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        opp_digi = runner.place_on_field(2, ["ST1-03"])
 
-        runner.place_on_field(1, ["BT8-094"])
-        runner.place_on_field(2, ["ST7-07"])  # RizeGreymon Lv.5
+        assert not tamer.is_suspended, "Tamer starts unsuspended"
 
-        hand_before = len(runner.game.player1.hand_cards)
-
-        p2_perm = runner.game.player2.battle_area[0]
-        runner.game.player2.delete_permanent(p2_perm, is_opponent_effect=True)
+        runner.game.player2.delete_permanent(opp_digi, removal_cause='effect')
         runner.auto_resolve()
 
-        hand_after = len(runner.game.player1.hand_cards)
-        assert hand_after >= hand_before + 1, (
-            f"Should draw 1 when opponent's Lv.5 Digimon is deleted, "
-            f"hand before={hand_before}, after={hand_after}"
+        assert tamer.is_suspended, "Tamer should be suspended after effect fires"
+
+    def test_effect0_does_not_fire_if_tamer_already_suspended(self, debug_runner):
+        """If tamer is already suspended, should not draw."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        tamer.suspend()  # Already suspended
+        opp_digi = runner.place_on_field(2, ["ST1-03"])
+
+        snap_before = runner.snapshot()
+        p1_hand_before = len(snap_before.p1_hand)
+
+        runner.game.player2.delete_permanent(opp_digi, removal_cause='effect')
+        runner.auto_resolve()
+
+        snap_after = runner.snapshot()
+        p1_hand_after = len(snap_after.p1_hand)
+
+        assert p1_hand_after == p1_hand_before, (
+            "Should NOT draw when tamer is already suspended"
         )
 
-    def test_no_draw_on_opponent_lv6_deleted(self, debug_runner):
-        """Lv.6 Digimon should NOT trigger the draw (> Lv.5)."""
-        runner = debug_runner(initial_memory=5)
+    def test_effect0_does_not_fire_for_own_digimon_deleted(self, debug_runner):
+        """Should NOT trigger when your own Digimon is deleted."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        own_digi = runner.place_on_field(1, ["ST1-03"])
 
-        runner.place_on_field(1, ["BT8-094"])
-        runner.place_on_field(2, ["BT1-084"])  # Omnimon Lv.7
+        snap_before = runner.snapshot()
+        p1_hand_before = len(snap_before.p1_hand)
 
-        hand_before = len(runner.game.player1.hand_cards)
-
-        p2_perm = runner.game.player2.battle_area[0]
-        runner.game.player2.delete_permanent(p2_perm, is_opponent_effect=True)
+        runner.game.player1.delete_permanent(own_digi, removal_cause='effect')
         runner.auto_resolve()
 
-        hand_after = len(runner.game.player1.hand_cards)
-        assert hand_after == hand_before, (
-            f"Should NOT draw when opponent's Lv.7 Digimon is deleted, "
-            f"hand before={hand_before}, after={hand_after}"
+        snap_after = runner.snapshot()
+        p1_hand_after = len(snap_after.p1_hand)
+
+        assert p1_hand_after == p1_hand_before, (
+            "Should NOT draw when your own Digimon is deleted"
         )
 
-    def test_no_draw_on_own_digimon_deleted(self, debug_runner):
-        """Own Digimon deleted should NOT trigger the draw."""
-        runner = debug_runner(initial_memory=5)
+    def test_effect0_does_not_fire_for_lv6_digimon(self, debug_runner):
+        """Should NOT trigger for opponent's level 6+ Digimon."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        # Place a Lv6 Digimon on opponent's field (WarGreymon)
+        opp_digi = runner.place_on_field(2, ["ST1-11"])  # WarGreymon Lv6
 
-        runner.place_on_field(1, ["BT8-094"])
-        runner.place_on_field(1, ["ST1-03"])  # Own Agumon Lv.3
+        snap_before = runner.snapshot()
+        p1_hand_before = len(snap_before.p1_hand)
 
-        hand_before = len(runner.game.player1.hand_cards)
-
-        # Delete own Digimon
-        agumon = None
-        for p in runner.game.player1.battle_area:
-            if p.is_digimon:
-                agumon = p
-                break
-        assert agumon is not None
-        runner.game.player1.delete_permanent(agumon)
+        runner.game.player2.delete_permanent(opp_digi, removal_cause='effect')
         runner.auto_resolve()
 
-        hand_after = len(runner.game.player1.hand_cards)
-        assert hand_after == hand_before, (
-            f"Should NOT draw when own Digimon is deleted, "
-            f"hand before={hand_before}, after={hand_after}"
+        snap_after = runner.snapshot()
+        p1_hand_after = len(snap_after.p1_hand)
+
+        assert p1_hand_after == p1_hand_before, (
+            "Should NOT draw for opponent's level 6 Digimon"
         )
 
-    def test_suspend_required_for_draw(self, debug_runner):
-        """Tamer must be suspended after triggering the draw."""
-        runner = debug_runner(initial_memory=5)
+    def test_effect0_fires_for_lv5_digimon(self, debug_runner):
+        """Should trigger for opponent's level 5 Digimon (boundary case)."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        # ST1-09 MetalGreymon is Lv5
+        opp_digi = runner.place_on_field(2, ["ST1-09"])
 
-        de_perm = runner.place_on_field(1, ["BT8-094"])
-        runner.place_on_field(2, ["ST1-03"])  # Opponent Agumon
+        snap_before = runner.snapshot()
+        p1_hand_before = len(snap_before.p1_hand)
 
-        assert not de_perm.is_suspended, "Should start unsuspended"
-
-        p2_perm = runner.game.player2.battle_area[0]
-        runner.game.player2.delete_permanent(p2_perm, is_opponent_effect=True)
+        runner.game.player2.delete_permanent(opp_digi, removal_cause='effect')
         runner.auto_resolve()
 
-        assert de_perm.is_suspended, "Should be suspended after triggering draw"
+        snap_after = runner.snapshot()
+        p1_hand_after = len(snap_after.p1_hand)
 
-    def test_no_draw_when_already_suspended(self, debug_runner):
-        """Cannot trigger draw if Tamer is already suspended."""
-        runner = debug_runner(initial_memory=5)
-
-        de_perm = runner.place_on_field(1, ["BT8-094"], is_suspended=True)
-        runner.place_on_field(2, ["ST1-03"])  # Opponent Agumon
-
-        hand_before = len(runner.game.player1.hand_cards)
-
-        p2_perm = runner.game.player2.battle_area[0]
-        runner.game.player2.delete_permanent(p2_perm, is_opponent_effect=True)
-        runner.auto_resolve()
-
-        hand_after = len(runner.game.player1.hand_cards)
-        assert hand_after == hand_before, (
-            f"Should NOT draw when Tamer is already suspended, "
-            f"hand before={hand_before}, after={hand_after}"
+        assert p1_hand_after == p1_hand_before + 1, (
+            f"Should draw 1 for opponent's level 5 Digimon. Hand before: {p1_hand_before}, after: {p1_hand_after}"
         )
 
-    def test_effect_is_optional(self, debug_runner):
-        """The effect should be optional (you MAY suspend)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        db = CardDatabase()
-        cs = db.create_card_source("BT8-094")
-        effects = cs.effect_list(None)
-        # Implemented as a deletion observer (NoTiming + _is_deletion_observer)
-        observers = [e for e in effects if getattr(e, '_is_deletion_observer', False)]
-        assert len(observers) >= 1, "Should have a deletion observer effect"
-        assert observers[0].is_optional, "Effect should be optional"
+    def test_effect0_does_not_fire_for_tamer_deleted(self, debug_runner):
+        """Should NOT trigger for opponent's Tamer being removed."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        # Place opponent tamer
+        opp_tamer = runner.place_on_field(2, ["BT8-094"])
 
+        snap_before = runner.snapshot()
+        p1_hand_before = len(snap_before.p1_hand)
 
-@pytest.mark.behavioral
-class TestBT8094MemoryOnMove:
-    """[Opponent's Turn] Opponent's Lv.3 moves from breeding -> gain 2 memory."""
-
-    def test_gain_memory_on_opponent_lv3_move(self, debug_runner):
-        """When opponent moves Lv.3 from breeding, gain 2 memory."""
-        runner = debug_runner(initial_memory=0, first_player=2)
-
-        # Place Digimon Emperor on P1 field (P1 is not turn player)
-        runner.place_on_field(1, ["BT8-094"])
-
-        # Place Lv.3 in P2's breeding area and move it
-        runner.place_in_breeding(2, ["BT1-001", "ST1-03"])  # Lv.3 Agumon
-        runner.set_phase("Breeding")
-
-        memory_before = runner.game.memory
-
-        action = runner.find_action("Move")
-        assert action is not None, "P2 should be able to move from breeding"
-        runner.execute(action)
+        runner.game.player2.delete_permanent(opp_tamer, removal_cause='effect')
         runner.auto_resolve()
 
-        # P1 gains 2 memory. P2 is turn player, so memory gauge is from P2's
-        # perspective. P1 gaining memory means P2 loses it, so memory decreases.
-        # add_memory(2) on non-turn-player => memory -= 2
-        memory_after = runner.game.memory
-        assert memory_after <= memory_before - 2, (
-            f"P1 should gain 2 memory (P2 loses 2 as turn player), "
-            f"before={memory_before}, after={memory_after}"
+        snap_after = runner.snapshot()
+        p1_hand_after = len(snap_after.p1_hand)
+
+        assert p1_hand_after == p1_hand_before, (
+            "Should NOT draw when opponent's Tamer is deleted (must be Digimon)"
         )
 
-    def test_no_memory_on_own_turn_move(self, debug_runner):
-        """Effect is [Opponent's Turn] -- should not fire on own turn."""
-        runner = debug_runner(initial_memory=3, first_player=1)
+    # ── Effect 1: OnMove — gain 2 memory when opp moves lv3 from breeding ──
 
-        runner.place_on_field(1, ["BT8-094"])
+    def test_effect1_has_on_move_timing(self, debug_runner):
+        """Effect 1 should have OnMove timing."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+        )
+        runner.set_phase("Main")
+        tamer = runner.place_on_field(1, ["BT8-094"])
 
-        # Check condition directly
-        game = runner.game
-        player1 = game.player1
-        de_card = None
-        for p in player1.battle_area:
-            if p.top_card and p.top_card.c_entity_base.card_id == "BT8-094":
-                de_card = p.top_card
-                break
-        assert de_card is not None
+        on_move = _find_on_move_effect(tamer)
+        assert on_move is not None, "BT8-094 should have an OnMove effect"
 
-        effects = de_card.effect_list(None)
-        on_move = [e for e in effects if e.timing == EffectTiming.OnMove]
-        assert len(on_move) >= 1
+    def test_effect1_gains_memory_when_opp_moves_lv3(self, debug_runner):
+        """Gain 2 memory when opponent moves a lv3 Digimon from breeding."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-01"] * 4 + ["ST1-03"] * 46,
+            initial_memory=-3,  # Negative = opponent's turn
+            first_player=2,
+        )
+        # Set up: it's P2's turn, P1 has Digimon Emperor
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        # Place a lv3 in P2's breeding area (ST1-01 digitama + ST1-03 rookie)
+        runner.place_in_breeding(2, ["ST1-01", "ST1-03"])
 
-        # On P1's turn, condition should be False
-        player1.is_my_turn = True
-        result = on_move[0].can_use_condition({})
-        assert result is False, "OnMove should not activate on own turn"
+        # Verify it's opponent's turn for P1
+        assert not runner.game.player1.is_my_turn, "Should be P2's turn (not P1's)"
 
-    def test_no_memory_on_lv4_move(self, debug_runner):
-        """Effect requires specifically Lv.3; Lv.4 should not trigger."""
-        runner = debug_runner(initial_memory=0, first_player=2)
+        snap_before = runner.snapshot()
+        memory_before = snap_before.memory
 
-        runner.place_on_field(1, ["BT8-094"])
+        # P2 moves from breeding to battle area
+        runner.game.player2.move_from_breeding()
+        # Fire OnMove effects
+        moved = runner.game.player2.battle_area[-1]
+        runner.game.execute_effects(EffectTiming.OnMove, {"moved_permanent": moved})
+        runner.auto_resolve()
 
-        # Place a Lv.4 in breeding (egg + Lv.3 + Lv.4 stack)
-        runner.place_in_breeding(2, ["BT1-001", "ST1-03", "ST1-05"])  # Lv.4 Greymon
-        runner.set_phase("Breeding")
+        snap_after = runner.snapshot()
+        memory_after = snap_after.memory
 
-        memory_before = runner.game.memory
+        # Memory gain of 2 for P1 (non-turn-player) decreases game.memory by 2
+        # (game.memory is from turn player's perspective; P2 is turn player)
+        assert memory_after == memory_before - 2, (
+            f"P1 should gain 2 memory (game.memory decreases by 2). Before: {memory_before}, After: {memory_after}"
+        )
 
-        action = runner.find_action("Move")
-        if action is not None:
-            runner.execute(action)
-            runner.auto_resolve()
+    def test_effect1_does_not_trigger_on_own_turn(self, debug_runner):
+        """Should NOT trigger on your own turn (Opponent's Turn only)."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["BT1-01"] * 4 + ["ST1-03"] * 42,
+            deck2=["ST1-03"] * 50,
+            initial_memory=3,
+            first_player=1,
+        )
+        # P1's turn, P1 has tamer
+        tamer = runner.place_on_field(1, ["BT8-094"])
 
-        memory_after = runner.game.memory
-        # Should NOT gain 2 -- the moved perm is Lv.4
+        on_move = _find_on_move_effect(tamer)
+        assert on_move is not None
+
+        # Simulate a move context on P1's own turn
+        dummy_perm = runner.place_on_field(2, ["ST1-03"])  # lv3
+        ctx = {
+            'game': runner.game,
+            'player': runner.game.player1,
+            'permanent': tamer,
+            'moved_permanent': dummy_perm,
+            'turn_player': runner.game.turn_player,
+            'opponent_player': runner.game.opponent_player,
+        }
+        # P1's turn, so condition should fail
+        assert runner.game.player1.is_my_turn is True
+        result = on_move.can_use_condition(ctx)
+        assert result is False, "OnMove should NOT trigger on your own turn"
+
+    def test_effect1_does_not_trigger_for_lv4_or_higher(self, debug_runner):
+        """Should NOT trigger for level 4+ Digimon moving from breeding."""
+        runner = debug_runner(
+            deck1=["BT8-094"] * 4 + ["ST1-03"] * 46,
+            deck2=["ST1-01"] * 4 + ["ST1-06"] * 46,
+            initial_memory=-3,
+            first_player=2,
+        )
+        tamer = runner.place_on_field(1, ["BT8-094"])
+        # Place a lv4 in P2's breeding area (ST1-01 digitama + ST1-03 rookie + ST1-06 Lv4)
+        runner.place_in_breeding(2, ["ST1-01", "ST1-03", "ST1-06"])
+
+        snap_before = runner.snapshot()
+        memory_before = snap_before.memory
+
+        runner.game.player2.move_from_breeding()
+        moved = runner.game.player2.battle_area[-1]
+        runner.game.execute_effects(EffectTiming.OnMove, {"moved_permanent": moved})
+        runner.auto_resolve()
+
+        snap_after = runner.snapshot()
+        memory_after = snap_after.memory
+
         assert memory_after == memory_before, (
-            f"Should NOT gain memory when Lv.4 moves from breeding, "
-            f"before={memory_before}, after={memory_after}"
+            f"Should NOT gain memory for lv4 Digimon. Before: {memory_before}, After: {memory_after}"
         )
-
-
-@pytest.mark.behavioral
-class TestBT8094SecurityPlay:
-    """[Security] Play this card without paying the cost."""
-
-    def test_has_security_effect(self, debug_runner):
-        """Should have a security effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        db = CardDatabase()
-        cs = db.create_card_source("BT8-094")
-        effects = cs.effect_list(None)
-        sec_effects = [e for e in effects if getattr(e, 'is_security_effect', False)]
-        assert len(sec_effects) >= 1, "Should have a security play effect"

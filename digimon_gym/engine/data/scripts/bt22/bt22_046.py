@@ -16,12 +16,15 @@ class BT22_046(CardScript):
 
         # Factory effect: alt_digivolve_req
         # Alternate digivolution requirement
+        # C# ref: targetPermanent.TopCard.IsLevel3 && targetPermanent.TopCard.HasCSTraits
+        #         digivolutionCost: 2
         effect0 = ICardEffect()
         effect0.set_effect_name("BT22-046 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.3 for cost 2
+        # Alternate digivolution: Lv.3 w/[CS] trait for cost 2
         effect0._alt_digi_cost = 2
         effect0._alt_digi_level = 3
+        effect0._alt_digi_trait = "CS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

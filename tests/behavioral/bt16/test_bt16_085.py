@@ -233,6 +233,9 @@ class TestBT16085DavisKen:
             'is_dna_digivolve': True,
         }
         when_digi.on_process_callback(ctx)
+        # The new selection flow requires resolving pending selections
+        # (pick permanent → pick cards × 3)
+        runner.auto_resolve()
 
         # Should trash exactly 3 digi-cards
         assert len(runner.game.player2.trash_cards) == 3, (
@@ -285,6 +288,7 @@ class TestBT16085DavisKen:
             'is_dna_digivolve': True,
         }
         when_digi.on_process_callback(ctx)
+        runner.auto_resolve()
 
         total_trashed = len(runner.game.player2.trash_cards)
         assert total_trashed == 3, (

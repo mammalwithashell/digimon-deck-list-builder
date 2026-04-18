@@ -78,7 +78,27 @@ class CardSource:
 
     @property
     def card_traits(self) -> List[str]:
-        return self.c_entity_base.type_eng if self.c_entity_base else []
+        """Return combined traits: Form + Type (excluding Attribute).
+
+        DCGO CardSource.cs CardTraits concatenates Form + Attribute + Type, but
+        in this engine we deliberately exclude ``attribute_eng`` because several
+        cards use the attribute channel for mechanics that scripts should check
+        explicitly (Vaccine, Virus, Data, Free). Scripts that need to read those
+        should access ``c_entity_base.attribute_eng`` directly — see
+        ``bt15/bt15_034.py`` (Vaccine) and ``bt17/bt17_097.py`` (Free) for the
+        canonical idiom. This prevents false positives like
+        ``'Free' in card.card_traits`` matching any Free-attribute Digimon.
+        """
+        if not self.c_entity_base:
+            return []
+        traits = []
+        for s in (self.c_entity_base.form_eng or []):
+            if s:
+                traits.append(s)
+        for s in (self.c_entity_base.type_eng or []):
+            if s:
+                traits.append(s)
+        return traits
 
     @property
     def card_text(self) -> str:

@@ -1,0 +1,24 @@
+{
+  "card_id": "EX8-030",
+  "card_name": "Tapirmon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Holy Beast, NSo",
+  "dp": 2000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 0,
+      "level": 2
+    }
+  ],
+  "effect_text": "[All Turns] Your opponent can't gain memory other than by Tamer effects.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/ex8/ex8_030.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX8\\Yellow\\EX8_030.cs"
+}

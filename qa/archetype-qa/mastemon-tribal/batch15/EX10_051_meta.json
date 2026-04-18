@@ -1,0 +1,25 @@
+{
+  "card_id": "EX10-051",
+  "card_name": "Mummymon",
+  "card_kind": "Digimon",
+  "level": 5,
+  "colors": [
+    "Purple",
+    "Black"
+  ],
+  "traits": "Undead",
+  "dp": 6000,
+  "play_cost": 6,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 4,
+      "level": 4
+    }
+  ],
+  "effect_text": "[On Play] By trashing 1 card in your hand, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)\r\n[On Deletion] You may play 1 Tamer card with [Myotismon] in its text from your trash without paying the cost. This effect can't play cards with the same name as any of your Tamers.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/ex10/ex10_051.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX10\\Purple\\EX10_051.cs"
+}

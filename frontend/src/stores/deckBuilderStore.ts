@@ -37,8 +37,8 @@ interface DeckBuilderStore {
 
   setTestedCardIds: (ids: string[]) => void;
 
-  addCardToDeck: (cardId: string, cardData: DigimonCardData) => void;
-  removeCardFromDeck: (cardId: string) => void;
+  addCardToDeck: (cardId: string, cardData: DigimonCardData, isAltArt?: boolean) => void;
+  removeCardFromDeck: (cardId: string, isAltArt?: boolean) => void;
   setDeckName: (name: string) => void;
   setDeckId: (id: string | null) => void;
   loadDeck: (id: string | null, name: string, main: DeckEntry[], egg: DeckEntry[]) => void;
@@ -78,7 +78,7 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
 
   setTestedCardIds: (ids) => set({ testedCardIds: new Set(ids) }),
 
-  addCardToDeck: (cardId, cardData) =>
+  addCardToDeck: (cardId, cardData, isAltArt = false) =>
     set((s) => {
       // Alpha gate: refuse to add cards that lack behavioral test coverage.
       if (s.testedCardIds && !s.testedCardIds.has(cardId)) {
@@ -86,23 +86,32 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
       }
       const isEgg = cardData.type === 'Digi-Egg';
       const deck = isEgg ? [...s.eggDeck] : [...s.mainDeck];
-      const existing = deck.find((e) => e.cardId === cardId);
+      // The 4-per-card limit spans both art variants: sum counts for every
+      // entry with the same cardId, regardless of `isAltArt`.
+      const totalForCard = deck
+        .filter((e) => e.cardId === cardId)
+        .reduce((sum, e) => sum + e.count, 0);
+      if (totalForCard >= 4) return s;
+      const existing = deck.find(
+        (e) => e.cardId === cardId && !!e.isAltArt === !!isAltArt,
+      );
       if (existing) {
-        if (existing.count >= 4) return s;
         existing.count += 1;
       } else {
-        deck.push({ cardId, count: 1, cardData });
+        deck.push({ cardId, isAltArt, count: 1, cardData });
       }
       return isEgg
         ? { eggDeck: deck, isDirty: true }
         : { mainDeck: deck, isDirty: true };
     }),
 
-  removeCardFromDeck: (cardId) =>
+  removeCardFromDeck: (cardId, isAltArt = false) =>
     set((s) => {
-      let mainDeck = [...s.mainDeck];
-      let eggDeck = [...s.eggDeck];
-      const mainIdx = mainDeck.findIndex((e) => e.cardId === cardId);
+      const mainDeck = [...s.mainDeck];
+      const eggDeck = [...s.eggDeck];
+      const match = (e: DeckEntry) =>
+        e.cardId === cardId && !!e.isAltArt === !!isAltArt;
+      const mainIdx = mainDeck.findIndex(match);
       if (mainIdx !== -1) {
         const entry = mainDeck[mainIdx]!;
         if (entry.count > 1) {
@@ -111,7 +120,7 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
           mainDeck.splice(mainIdx, 1);
         }
       } else {
-        const eggIdx = eggDeck.findIndex((e) => e.cardId === cardId);
+        const eggIdx = eggDeck.findIndex(match);
         if (eggIdx !== -1) {
           const entry = eggDeck[eggIdx]!;
           if (entry.count > 1) {

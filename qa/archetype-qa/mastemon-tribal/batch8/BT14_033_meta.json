@@ -1,0 +1,24 @@
+{
+  "card_id": "BT14-033",
+  "card_name": "Patamon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Mammal",
+  "dp": 1000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 0,
+      "level": 2
+    }
+  ],
+  "effect_text": "[Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.",
+  "inherited_text": "[Your Turn] [Once Per Turn] When a card is added to your security stack, gain 1 memory.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt14/bt14_033.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT14\\Yellow\\BT14_033.cs"
+}

@@ -1,0 +1,25 @@
+{
+  "card_id": "BT23-037",
+  "card_name": "Tentomon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Green",
+    "Yellow"
+  ],
+  "traits": "Insectoid, Hudie, CS",
+  "dp": 1000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Green",
+      "cost": 1,
+      "level": 2
+    }
+  ],
+  "effect_text": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [CS] trait, reduce the digivolution cost by 1.",
+  "inherited_text": "[When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower Digimon card with the [Hudie] trait from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at the end of your opponent's turn.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_037.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Green\\BT23_037.cs"
+}

@@ -126,6 +126,14 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                     attacker, ModifierType.CAN_ATTACK_UNSUSPENDED)
             for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                 target = opp.battle_area[j]
+                # CANNOT_ATTACK_TARGET: per-pair attack restriction queried
+                # with {'attacker': attacker}. Used for cards like BT10-042
+                # Venusmon where a specific defender refuses attacks from
+                # specific attackers.
+                if hasattr(game, 'modifiers') and game.modifiers.has_modifier(
+                        target, ModifierType.CANNOT_ATTACK_TARGET,
+                        {'attacker': attacker}):
+                    continue
                 if target.is_suspended and target.is_digimon:
                     mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
                 elif not target.is_suspended and target.is_digimon:
@@ -147,7 +155,9 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
             for f in range(min(len(me.battle_area), FIELD_SLOTS)):
                 base_perm = me.battle_area[f]
                 # DCGO: ICanNotDigivolveEffect blocks digivolution on target
-                if game.modifiers.has_modifier(base_perm, ModifierType.CANNOT_DIGIVOLVE):
+                # Pass digivolving_card so conditional restrictions (e.g. "only into X") work
+                if game.modifiers.has_modifier(base_perm, ModifierType.CANNOT_DIGIVOLVE,
+                                               {'digivolving_card': card}):
                     continue
                 if can_digivolve(card, base_perm):
                     mask[400 + h * FIELDS_PER_HAND + f] = 1.0
@@ -244,6 +254,11 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                         attacker, ModifierType.CAN_ATTACK_UNSUSPENDED)
                 for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                     target = opp.battle_area[j]
+                    # CANNOT_ATTACK_TARGET per-pair check
+                    if game.modifiers.has_modifier(
+                            target, ModifierType.CANNOT_ATTACK_TARGET,
+                            {'attacker': attacker}):
+                        continue
                     if target.is_suspended and target.is_digimon:
                         forced_mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
                         has_any_attack = True
@@ -330,6 +345,10 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                 for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                     target = opp.battle_area[j]
                     if target.is_digimon:
+                        if game.modifiers.has_modifier(
+                                target, ModifierType.CANNOT_ATTACK_TARGET,
+                                {'attacker': perm}):
+                            continue
                         mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
 
             # <Overclock>: activate to sacrifice + attack player
@@ -349,6 +368,10 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                     for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                         target = opp.battle_area[j]
                         if target.is_digimon:
+                            if game.modifiers.has_modifier(
+                                    target, ModifierType.CANNOT_ATTACK_TARGET,
+                                    {'attacker': perm}):
+                                continue
                             mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
 
             # FORCE_ATTACK: Digimon granted mandatory attack at end of turn
@@ -359,6 +382,10 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                     for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                         target = opp.battle_area[j]
                         if target.is_digimon:
+                            if game.modifiers.has_modifier(
+                                    target, ModifierType.CANNOT_ATTACK_TARGET,
+                                    {'attacker': perm}):
+                                continue
                             mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
 
     elif phase == GamePhase.AllianceTiming:

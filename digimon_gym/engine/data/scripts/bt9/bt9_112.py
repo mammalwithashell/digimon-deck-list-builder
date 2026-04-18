@@ -48,24 +48,9 @@ class BT9_112(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Reduce play cost by 3 per opponent's Digimon and Tamer in play."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy
-            if not enemy:
-                return
-            count = sum(
-                1 for p in enemy.battle_area
-                if p.is_digimon or p.is_tamer
-            )
-            reduction = 3 * count
-            if reduction > 0:
-                if hasattr(player, '_temp_play_cost_reduction'):
-                    player._temp_play_cost_reduction += reduction
-                else:
-                    player._temp_play_cost_reduction = reduction
+            # No-op: _cost_reduction_value_fn handles the dynamic cost reduction.
+            # Do NOT set _temp_play_cost_reduction here (broken double-reduction pattern).
+            return
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 

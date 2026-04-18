@@ -75,6 +75,7 @@ class BT4_097(CardScript):
             """Play this tamer from security without paying cost."""
             player = ctx.get('player')
             if player and card:
+                card._security_played = True
                 player.play_card_from_source(card, pay_cost=False)
 
         effect1.set_on_process_callback(process1)

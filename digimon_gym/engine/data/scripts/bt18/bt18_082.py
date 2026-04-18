@@ -6,164 +6,253 @@ from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
+    from ....core.permanent import Permanent
 
 
 class BT18_082(CardScript):
     """BT18-082 Lucemon: Chaos Mode | Lv.5 Purple/Yellow Digimon
 
     [On Play] [When Digivolving] Your opponent may delete 1 of their Digimon
-        or Tamers. If this effect didn't delete, Recovery +1 (Deck) and trash
+        or Tamers. If this effect didn't delete, <Recovery +1 (Deck)> (Place
+        the top card of your deck on top of your security stack.) and trash
         the top card of your opponent's security stack.
     [All Turns] [Once Per Turn] When this Digimon would leave the battle area,
         by trashing the bottom card of your security stack, it doesn't leave.
+
+    Alt-digi: <Digivolve> [Lucemon]: Cost 6 (exact-name match, from Lv.3
+    plain "Lucemon" permanent).
+
+    Reference: DCGO/Assets/Scripts/CardEffect/BT18/Purple/BT18_082.cs
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: [On Play] Opponent deletes or recovery+trash ---
-        effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("BT18-082 On Play: opponent deletes or recovery+trash")
-        effect0.set_effect_description(
+        # ─── Alt-digivolution: from exact "Lucemon" for cost 6 ──────────────
+        # C# uses EqualsCardName("Lucemon") — strict equality. Use
+        # _alt_digi_condition_fn to enforce exact match (not substring).
+        def _exact_lucemon(base_perm: 'Permanent') -> bool:
+            top = base_perm.top_card
+            if top is None:
+                return False
+            names = getattr(top, 'card_names', []) or []
+            # Exact match: must have a card name equal to "Lucemon"
+            return any((n or '').strip() == 'Lucemon' for n in names)
+
+        alt_digi = ICardEffect()
+        alt_digi.set_effect_name("BT18-082 Alt-digi: Lucemon cost 6")
+        alt_digi.set_effect_description("<Digivolve> [Lucemon]: Cost 6")
+        alt_digi._alt_digi_cost = 6
+        alt_digi._alt_digi_name = "Lucemon"
+        alt_digi._alt_digi_condition_fn = _exact_lucemon
+
+        def condition_alt(context: Dict[str, Any]) -> bool:
+            return True
+        alt_digi.set_can_use_condition(condition_alt)
+        effects.append(alt_digi)
+
+        # ─── Shared logic: opponent chooses to delete own Digimon/Tamer, ────
+        # else Recovery +1 and trash opp security top.
+        def _run_opp_delete_or_recovery(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy
+            if enemy is None:
+                return
+
+            def _recovery_and_trash():
+                """Recovery +1 + trash top of opponent's security."""
+                player.recovery(1)
+                if enemy.security_cards:
+                    top_sec = enemy.security_cards[0]
+                    enemy.trash_security_card(top_sec)
+
+            # Filter: opponent's own Digimon or Tamer
+            def deletable_filter(p):
+                return getattr(p, 'is_digimon', False) or getattr(p, 'is_tamer', False)
+
+            has_target = any(deletable_filter(p) for p in enemy.battle_area)
+            if not has_target:
+                # No valid target at all → effect didn't delete → recovery + trash
+                _recovery_and_trash()
+                return
+
+            # Give opponent the selection (is_optional=True → "may delete")
+            def on_opp_selected(target_perm):
+                # Opponent chose a target. Attempt delete. If another effect
+                # prevents it, delete_permanent returns False → recovery + trash.
+                result = enemy.delete_permanent(target_perm)
+                if result is False:
+                    _recovery_and_trash()
+
+            def on_opp_declined():
+                _recovery_and_trash()
+
+            # Build selection manually so we can wire on_decline.
+            from ....game.constants import SEL_MY_FIELD_START
+
+            valid = []
+            for i, p in enumerate(enemy.battle_area):
+                if deletable_filter(p):
+                    valid.append(SEL_MY_FIELD_START + i)
+
+            if not valid:
+                _recovery_and_trash()
+                return
+
+            def on_action(action_id: int):
+                idx = action_id - SEL_MY_FIELD_START
+                if 0 <= idx < len(enemy.battle_area):
+                    on_opp_selected(enemy.battle_area[idx])
+
+            from ....data.enums import GamePhase
+            game.request_selection(
+                GamePhase.SelectTarget,
+                enemy,  # opponent is the selecting player
+                on_action,
+                valid,
+                is_optional=True,
+                prompt="Select 1 of your Digimon or Tamers to delete "
+                       "(or decline to let opponent gain Recovery +1 and "
+                       "trash your top security).",
+                on_decline=on_opp_declined,
+            )
+
+        # ─── Effect 1: [On Play] ────────────────────────────────────────────
+        effect_on_play = ICardEffect()
+        effect_on_play.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect_on_play.set_effect_name(
+            "BT18-082 [On Play] Opp may delete or recovery+trash"
+        )
+        effect_on_play.set_effect_description(
             "[On Play] Your opponent may delete 1 of their Digimon or Tamers. "
-            "If this effect didn't delete, Recovery +1 (Deck) and trash the "
-            "top card of your opponent's security stack."
+            "If this effect didn't delete, <Recovery +1 (Deck)> and trash "
+            "the top card of your opponent's security stack."
         )
-        effect0.is_on_play = True
+        effect_on_play.is_on_play = True
 
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition_on_play(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
-        effect0.set_can_use_condition(condition0)
+        effect_on_play.set_can_use_condition(condition_on_play)
+        effect_on_play.set_on_process_callback(_run_opp_delete_or_recovery)
+        effects.append(effect_on_play)
 
-        def process0(ctx: Dict[str, Any]):
-            """Opponent may delete their own, or we get recovery+trash."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy
-            if not enemy:
-                return
-
-            # Check if opponent has any Digimon or Tamers to delete
-            deletable = [
-                p for p in enemy.battle_area
-                if p.is_digimon or p.is_tamer
-            ]
-            if not deletable:
-                # No targets — auto recovery + trash
-                player.recovery(1)
-                if enemy.security_cards:
-                    trashed = enemy.security_cards.pop(0)
-                    enemy.trash_cards.append(trashed)
-                return
-
-            # Simplified: opponent auto-declines deletion (AI can't make
-            # opponent decisions), so we get the recovery + trash benefit.
-            # In a full implementation, this would prompt the opponent.
-            player.recovery(1)
-            if enemy.security_cards:
-                trashed = enemy.security_cards.pop(0)
-                enemy.trash_cards.append(trashed)
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
-
-        # --- Effect 1: [When Digivolving] Same effect ---
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT18-082 When Digivolving: opponent deletes or recovery+trash")
-        effect1.set_effect_description(
+        # ─── Effect 2: [When Digivolving] ───────────────────────────────────
+        effect_when_digi = ICardEffect()
+        effect_when_digi.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect_when_digi.set_effect_name(
+            "BT18-082 [When Digivolving] Opp may delete or recovery+trash"
+        )
+        effect_when_digi.set_effect_description(
             "[When Digivolving] Your opponent may delete 1 of their Digimon "
-            "or Tamers. If this effect didn't delete, Recovery +1 (Deck) and "
-            "trash the top card of your opponent's security stack."
+            "or Tamers. If this effect didn't delete, <Recovery +1 (Deck)> "
+            "and trash the top card of your opponent's security stack."
         )
-        effect1.is_when_digivolving = True
+        effect_when_digi.is_when_digivolving = True
 
-        def condition1(context: Dict[str, Any]) -> bool:
+        def condition_when_digi(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
-        effect1.set_can_use_condition(condition1)
+        effect_when_digi.set_can_use_condition(condition_when_digi)
+        effect_when_digi.set_on_process_callback(_run_opp_delete_or_recovery)
+        effects.append(effect_when_digi)
 
-        def process1(ctx: Dict[str, Any]):
-            """Same as on play — opponent deletes or recovery+trash."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy
-            if not enemy:
-                return
-
-            deletable = [
-                p for p in enemy.battle_area
-                if p.is_digimon or p.is_tamer
-            ]
-            if not deletable:
-                player.recovery(1)
-                if enemy.security_cards:
-                    trashed = enemy.security_cards.pop(0)
-                    enemy.trash_cards.append(trashed)
-                return
-
-            # Simplified: auto-grant recovery + trash (opponent declines)
-            player.recovery(1)
-            if enemy.security_cards:
-                trashed = enemy.security_cards.pop(0)
-                enemy.trash_cards.append(trashed)
-
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
-
-        # --- Effect 2: [All Turns] [Once Per Turn] Leave protection ---
-        # When this Digimon would leave the battle area, trash bottom security
-        # to prevent leaving. This is a "would be removed" interrupt.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
-        effect2.set_effect_name("BT18-082 Leave protection")
-        effect2.set_effect_description(
+        # ─── Effect 3: [All Turns] [Once Per Turn] Leave prevention ─────────
+        # When this Digimon would leave the battle area, by trashing the
+        # BOTTOM card of your security stack (index -1), it doesn't leave.
+        # Pattern: WhenPermanentWouldBeDeleted + _will_not_be_removed flag.
+        effect_leave = ICardEffect()
+        effect_leave.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
+        effect_leave.set_effect_name("BT18-082 [All Turns] Trash bottom sec to stay")
+        effect_leave.set_effect_description(
             "[All Turns] [Once Per Turn] When this Digimon would leave the "
             "battle area, by trashing the bottom card of your security stack, "
             "it doesn't leave."
         )
-        effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("AllTurns_BT18-082_LeaveProtection")
-        effect2.is_optional = True
+        effect_leave.is_optional = True
+        effect_leave.set_max_count_per_turn(1)
+        effect_leave.set_hash_string("AllTurns_BT18-082_LeaveProtection")
 
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+        def condition_leave(context: Dict[str, Any]) -> bool:
+            # Card must be on field
+            if card is None:
                 return False
-            # Check that the permanent being deleted is this one
-            perm = card.permanent_of_this_card() if card else None
-            ctx_perm = context.get('permanent')
-            if perm and ctx_perm and perm != ctx_perm:
+            own_perm = card.permanent_of_this_card()
+            if own_perm is None:
                 return False
-            # Need security to trash
-            player = card.owner if card else None
-            if player and not player.security_cards:
+            # Must be THIS Digimon that would be deleted
+            event_perm = context.get('event_permanent', context.get('permanent'))
+            if event_perm is not own_perm:
+                return False
+            # Must have at least 1 security card to pay cost
+            owner = card.owner
+            if not owner or not owner.security_cards:
                 return False
             return True
-        effect2.set_can_use_condition(condition2)
+        effect_leave.set_can_use_condition(condition_leave)
 
-        def process2(ctx: Dict[str, Any]):
-            """Trash bottom security card to prevent leaving."""
+        def process_leave(ctx: Dict[str, Any]):
+            """Trash bottom of security (index -1) → prevent deletion.
+
+            IMPORTANT: the engine checks `_will_not_be_removed` synchronously
+            after WhenPermanentWouldBeDeleted fires. We must set the flag
+            BEFORE the selection opens; if the player declines, we revert it
+            via on_decline and additionally undo the cost.
+            """
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            if player.security_cards:
-                # Trash bottom card of security
-                trashed = player.security_cards.pop(-1)
-                player.trash_cards.append(trashed)
-                # Mark permanent as surviving deletion
-                perm = card.permanent_of_this_card() if card else None
-                if perm:
-                    perm._survived_deletion = True
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+            own_perm = card.permanent_of_this_card() if card else None
+            if own_perm is None:
+                return
+            if not player.security_cards:
+                return
+
+            # Snapshot the bottom security card (index -1 = bottom).
+            bottom_sec = player.security_cards[-1]
+
+            # Optimistically set the prevention flag BEFORE opening the
+            # branch selection. This mirrors the pattern in BT22-036.
+            own_perm._will_not_be_removed = True
+
+            def on_choice(branch: int):
+                if branch == 0:
+                    # Pay the cost: trash the bottom of security.
+                    # Flag is already True → deletion already prevented.
+                    if bottom_sec in player.security_cards:
+                        player.trash_security_card(bottom_sec)
+                else:
+                    # Decline: revert the optimistic flag.
+                    own_perm._will_not_be_removed = False
+
+            def on_decline_action():
+                # Defensive: if the agent hits action 62, revert.
+                own_perm._will_not_be_removed = False
+
+            game.effect_choose_branch(
+                player, 2,
+                callback=on_choice,
+                prompt=(
+                    "Trash the bottom card of your security stack to prevent "
+                    "Lucemon: Chaos Mode from leaving the battle area?"
+                ),
+                branch_labels=[
+                    "Trash bottom security (it doesn't leave)",
+                    "Let it leave the battle area",
+                ],
+            )
+            # Attach the on_decline callback to the pending selection
+            # so action 62 also reverts the flag.
+            if game.pending_selection:
+                game.pending_selection.on_decline = on_decline_action
+
+        effect_leave.set_on_process_callback(process_leave)
+        effects.append(effect_leave)
 
         return effects

@@ -26,9 +26,18 @@ class BT14_003(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            # Field presence: inherited effects only work while the host
+            # permanent is on the battle area.
             if card and card.permanent_of_this_card() is None:
                 return False
+            # [Your Turn]: only on the card owner's turn.
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # C#: CanTriggerWhenAddSecurity(hashtable, player => player == card.Owner)
+            # Only fire when the owner of the security stack being added to is
+            # this card's owner (i.e., your own security, not the opponent's).
+            event_player = context.get('event_player') if context else None
+            if event_player is not None and event_player is not card.owner:
                 return False
             return True
 

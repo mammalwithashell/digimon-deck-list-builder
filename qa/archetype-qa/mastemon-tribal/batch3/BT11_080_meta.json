@@ -1,0 +1,24 @@
+{
+  "card_id": "BT11-080",
+  "card_name": "Devimon",
+  "card_kind": "Digimon",
+  "level": 4,
+  "colors": [
+    "Purple"
+  ],
+  "traits": "Fallen Angel",
+  "dp": 5000,
+  "play_cost": 5,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 2,
+      "level": 3
+    }
+  ],
+  "effect_text": "[Your Turn] While you have a yellow Digimon or yellow Tamer in play, this Digimon gains ＜Rush＞ (This Digimon can attack the turn it comes into play.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt11/bt11_080.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT11\\Purple\\BT11_080.cs"
+}

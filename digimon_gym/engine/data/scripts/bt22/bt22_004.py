@@ -27,34 +27,52 @@ class BT22_004(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            # Wanyamon must be in a stack on a permanent (field or breeding)
+            this_perm = card.permanent_of_this_card() if card else None
+            if this_perm is None:
                 return False
+            # [Your Turn] gate
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # Check that the added card has CS trait
+            # Event identity: the permanent whose stack received the card
+            # must be this Wanyamon's permanent. DCGO:
+            #   permanentCondition: permanent => permanent == card.PermanentOfThisCard()
+            event_permanent = context.get('event_permanent')
+            if event_permanent is not this_perm:
+                return False
+            # The added card must be a [CS] trait Digimon. DCGO:
+            #   cardCondition: cardSource => cardSource.IsDigimon && cardSource.HasCSTraits
             added_card = context.get('added_card')
-            if added_card:
-                traits = getattr(added_card, 'card_traits', []) or []
-                if not any('CS' == t for t in traits):
-                    return False
+            if added_card is None:
+                return False
+            if not getattr(added_card, 'is_digimon', False):
+                return False
+            traits = getattr(added_card, 'card_traits', []) or []
+            if not any(t == 'CS' for t in traits):
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve into a CS trait Digimon from hand, cost -1"""
+            """Action: Digivolve into a [CS] trait Digimon from hand with
+            the digivolution cost reduced by 1."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
+            # Use Wanyamon's own permanent (not ctx['permanent'], which could
+            # be overwritten by future context changes). Matches DCGO:
+            #   targetPermanent: card.PermanentOfThisCard().TopCard.PermanentOfThisCard()
+            perm = card.permanent_of_this_card() if card else None
             if not (player and perm and game):
                 return
-            def digi_filter(c):
+            def cs_digimon_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 traits = getattr(c, 'card_traits', []) or []
-                return any('CS' == t for t in traits)
+                return any(t == 'CS' for t in traits)
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, cost_reduction=1, is_optional=True)
+                player, perm, cs_digimon_filter,
+                cost_reduction=1, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

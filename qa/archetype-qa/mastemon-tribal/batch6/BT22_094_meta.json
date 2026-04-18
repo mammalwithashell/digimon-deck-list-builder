@@ -1,0 +1,18 @@
+{
+  "card_id": "BT22-094",
+  "card_name": "Yuugo Kamishiro",
+  "card_kind": "Tamer",
+  "level": null,
+  "colors": [
+    "White"
+  ],
+  "traits": "CS",
+  "dp": null,
+  "play_cost": 3,
+  "evo_costs": [],
+  "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] When any of your Digimon or Tamers with the [CS] trait would be played, by returning this Tamer to the bottom of the deck, reduce the play cost by 2.",
+  "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt22/bt22_094.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT22\\White\\BT22_094.cs"
+}

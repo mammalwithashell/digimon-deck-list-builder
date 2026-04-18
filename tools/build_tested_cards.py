@@ -13,9 +13,9 @@ Run from the repo root:
 
     python tools/build_tested_cards.py
 
-Exits non-zero if any test filename cannot be resolved to a real card ID,
-or if the generated snapshot differs from the committed file (use
-``--write`` to update it).
+Exits non-zero if any test filename cannot be resolved to a real card ID.
+By default the tool rewrites the snapshot; pass ``--check`` to instead
+fail if the generated snapshot differs from the committed file.
 """
 
 from __future__ import annotations

@@ -195,6 +195,27 @@ class Player:
             candidates.append(get_alt_digi_cost(card_source, permanent))
         base_cost = min(candidates) if candidates else 0
 
+        # 1b. Check for "players can't reduce costs" lockout (BT5-008, BT5-033,
+        # BT5-021, etc.). Mirrors the calculate_play_cost guard. When active,
+        # both WhenWouldDigivolve cost_reduction effects AND cost-decreasing
+        # CHANGE_DIGIVOLUTION_COST modifiers are skipped.
+        cannot_reduce = False
+        if self.game and hasattr(self.game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            cannot_reduce_ctx = {
+                'player': self,
+                'card': card_source,
+                'card_source': card_source,
+                'permanent': permanent,
+                'target_permanents': [permanent],
+            }
+            for entry in self.game.modifiers._modifiers.get(
+                ModifierType.CANNOT_REDUCE_COST, []
+            ):
+                if entry.is_active(None, cannot_reduce_ctx):
+                    cannot_reduce = True
+                    break
+
         # 2. Trigger WhenWouldDigivolve
         reduction = 0
         all_effects = []
@@ -216,21 +237,38 @@ class Player:
         for effect in all_effects:
             if effect.can_use_condition and effect.can_use_condition(context):
                 if effect.cost_reduction > 0:
+                    if cannot_reduce:
+                        self._log(
+                            f"Effect {effect.effect_name} would reduce cost by "
+                            f"{effect.cost_reduction} but cost reduction is "
+                            f"blocked (CANNOT_REDUCE_COST)."
+                        )
+                        continue
                     reduction += effect.cost_reduction
                     self._log(f"Effect {effect.effect_name} reduced cost by {effect.cost_reduction}")
 
         final_cost = max(0, base_cost - reduction)
 
         # 2b. Apply CHANGE_DIGIVOLUTION_COST modifiers from modifier registry
-        # (e.g., BT3-103 Hidden Potential Discovered!, EX1-071 Win Rate: 60%!)
+        # (e.g., BT3-103 Hidden Potential Discovered!, EX1-071 Win Rate: 60%!).
+        # When CANNOT_REDUCE_COST is active, any aggregated net reduction is
+        # discarded — only net increases survive (cost reduction is blocked,
+        # but cost *increases* are not).
         if self.game and hasattr(self.game, 'modifiers'):
             from ..interfaces.modifiers import ModifierType
-            final_cost = self.game.modifiers.get_int_modifier(
+            modded_cost = self.game.modifiers.get_int_modifier(
                 permanent, ModifierType.CHANGE_DIGIVOLUTION_COST,
                 base_value=final_cost,
                 context={'card': card_source, 'permanent': permanent, 'player': self},
             )
-            final_cost = max(0, final_cost)
+            modded_cost = max(0, modded_cost)
+            if cannot_reduce and modded_cost < final_cost:
+                self._log(
+                    "CHANGE_DIGIVOLUTION_COST reduction blocked "
+                    "(CANNOT_REDUCE_COST active)."
+                )
+            else:
+                final_cost = modded_cost
 
         # 3. Pay Cost
         # Memory can go negative.
@@ -592,7 +630,10 @@ class Player:
                             "turn_player": self.game.turn_player if self.game else None,
                             "opponent_player": self.game.opponent_player if self.game else None,
                         }
-                        effect.on_process_callback(context)
+                        if self.game is not None:
+                            self.game._invoke_effect_callback(effect, context)
+                        else:
+                            effect.on_process_callback(context)
 
         result = AttackResolution.Survivor
 
@@ -682,12 +723,16 @@ class Player:
 
         DCGO: Player.CanAddMemory() checks ICannotAddMemoryEffect before
         allowing positive memory gains. Negative adjustments (losing memory)
-        always go through.
+        always go through. The currently-processing effect (if any) is exposed
+        via ``game.current_effect`` so CANNOT_ADD_MEMORY modifier conditions
+        can inspect the source (e.g. "except by Tamer effects").
         """
         if amount > 0 and self.game and hasattr(self.game, 'modifiers'):
             from ..interfaces.modifiers import ModifierType
+            source_effect = getattr(self.game, 'current_effect', None)
+            ctx = {'player': self, 'source_effect': source_effect}
             for entry in self.game.modifiers._modifiers.get(ModifierType.CANNOT_ADD_MEMORY, []):
-                if entry.condition is None or entry.condition(None, {'player': self}):
+                if entry.condition is None or entry.condition(None, ctx):
                     self._log(f"{self.player_name} cannot gain memory (blocked by effect)")
                     return
         if self.game:

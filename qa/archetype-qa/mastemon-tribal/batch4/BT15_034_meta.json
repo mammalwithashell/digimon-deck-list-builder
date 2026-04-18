@@ -1,0 +1,24 @@
+{
+  "card_id": "BT15-034",
+  "card_name": "Salamon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Mammal",
+  "dp": 1000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 0,
+      "level": 2
+    }
+  ],
+  "effect_text": "[Start of Your Main Phase] If you have 3 or more security cards, you may add the top card of your security stack to the hand. If you have 2 or fewer, you may place 1 yellow Digimon card with the [Vaccine] trait from your hand at the top or bottom of your security stack.",
+  "inherited_text": "[All Turns] [Once Per Turn] When a card is removed from your security stack, 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt15/bt15_034.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT15\\Yellow\\BT15_034.cs"
+}

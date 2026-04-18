@@ -1,0 +1,24 @@
+{
+  "card_id": "BT9-033",
+  "card_name": "Pillomon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Mammal",
+  "dp": 2000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 0,
+      "level": 2
+    }
+  ],
+  "effect_text": "[All Turns] Players can't play Digimon by effects.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt9/bt9_033.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT9\\Yellow\\BT9_033.cs"
+}

@@ -1,0 +1,25 @@
+{
+  "card_id": "EX10-031",
+  "card_name": "DarkKnightmon",
+  "card_kind": "Digimon",
+  "level": 5,
+  "colors": [
+    "Black",
+    "Purple"
+  ],
+  "traits": "Dark Knight, Bagra Army, Twilight",
+  "dp": 7000,
+  "play_cost": 7,
+  "evo_costs": [
+    {
+      "color": "Black",
+      "cost": 4,
+      "level": 4
+    }
+  ],
+  "effect_text": "[On Play] [When Digivolving] Until your opponent's turn ends, their ＜De-Digivolve＞ effects don't affect 1 of your Digimon, and it gets +3000 DP.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower card from its digivolution cards without paying the cost.",
+  "inherited_text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/ex10/ex10_031.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX10\\Black\\EX10_031.cs"
+}

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -68,6 +68,65 @@ class BT15_079(CardScript):
         effect1.set_can_use_condition(condition1)
         effect1.set_on_process_callback(_delete_unsuspended_process)
         effects.append(effect1)
+
+        # --- [Your Turn] This Digimon can only digivolve into white Digimon ---
+        # DCGO: CanNotDigivolveStaticSelfEffect with CardCondition = !White
+        # Register a CANNOT_DIGIVOLVE modifier on THIS permanent that blocks
+        # non-white cards from digivolving onto it during owner's turn.
+        # Uses OnStartMainPhase to register once (covers all field-entry paths).
+        _digi_restrict_registered = [False]
+
+        def _register_digi_restrict(ctx: Dict[str, Any]):
+            if _digi_restrict_registered[0]:
+                return
+            player = ctx.get('player')
+            game = ctx.get('game')
+            perm = ctx.get('permanent')
+            if not (player and game and perm):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
+
+            def restrict_condition(target_perm, mod_ctx):
+                # Only restrict THIS permanent
+                if target_perm is not perm:
+                    return False
+                # Only during owner's turn
+                if not (card and card.owner and card.owner.is_my_turn):
+                    return False
+                # Check if the digivolving card is white — if so, allow it
+                digi_card = mod_ctx.get('digivolving_card') if mod_ctx else None
+                if digi_card is not None:
+                    colors = getattr(digi_card, 'card_colors', []) or []
+                    if CardColor.White in colors:
+                        return False  # Allow white cards
+                return True  # Block non-white cards
+
+            entry = ModifierEntry(
+                modifier_type=ModifierType.CANNOT_DIGIVOLVE,
+                condition=restrict_condition,
+                source_effect=None,
+                source_permanent=perm,
+                expiry='permanent',
+            )
+            game.modifiers.register(entry)
+            _digi_restrict_registered[0] = True
+
+        # OnStartMainPhase: register digivolve restriction modifier
+        effect_digi_restrict = ICardEffect()
+        effect_digi_restrict.set_timing(EffectTiming.OnStartMainPhase)
+        effect_digi_restrict.set_effect_name("BT15-079 Can only digivolve into white")
+        effect_digi_restrict.set_effect_description(
+            "[Your Turn] This Digimon can only digivolve into white Digimon.")
+
+        def condition_digi_restrict(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
+        effect_digi_restrict.set_can_use_condition(condition_digi_restrict)
+        effect_digi_restrict.set_on_process_callback(_register_digi_restrict)
+        effects.append(effect_digi_restrict)
 
         # [End of Opponent's Turn] Delete THIS Digimon. Then, may play 1 Digimon
         # with [Dark Masters] trait (not [Piedmon]) from hand without paying cost.

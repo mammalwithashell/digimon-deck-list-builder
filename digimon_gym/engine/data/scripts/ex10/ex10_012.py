@@ -52,6 +52,7 @@ class EX10_012(CardScript):
             "the play cost reduced by 5."
         )
         effect0.is_optional = True
+        effect0.cost_reduction = 5
 
         def condition0(context: Dict[str, Any]) -> bool:
             if context.get('card_source') is not card:
@@ -63,13 +64,6 @@ class EX10_012(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            if not player:
-                return
-            if hasattr(player, '_temp_play_cost_reduction'):
-                player._temp_play_cost_reduction += 5
-            else:
-                player._temp_play_cost_reduction = 5
             # Mark that this card was played via cost reduction (for EOT delete)
             card._ex10_eot_delete = True
         effect0.set_on_process_callback(process0)
@@ -122,7 +116,7 @@ class EX10_012(CardScript):
             if opp_digimon:
                 def on_select_digimon(target_perm):
                     game.register_modifier(
-                        ModifierType.CANNOT_SUSPEND, target_perm,
+                        target_perm, ModifierType.CANNOT_SUSPEND,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
                     player, on_select_digimon,
@@ -133,7 +127,7 @@ class EX10_012(CardScript):
             if opp_tamers:
                 def on_select_tamer(target_perm):
                     game.register_modifier(
-                        ModifierType.CANNOT_SUSPEND, target_perm,
+                        target_perm, ModifierType.CANNOT_SUSPEND,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
                     player, on_select_tamer,
@@ -179,7 +173,43 @@ class EX10_012(CardScript):
         effect3.set_on_process_callback(_cant_suspend_effect)
         effects.append(effect3)
 
-        # --- Effect 4: [On Deletion] Place face-up as bottom security ---
+        # --- Effect 4: [All Turns] Can only digivolve into [Apocalymon] ---
+        # Per C#: CanNotDigivolveStaticSelfEffect — blocks non-Apocalymon.
+        # Engine CANNOT_DIGIVOLVE modifier blocks all digivolution on target.
+        # The action mask does not pass the digivolving card to the modifier
+        # condition, so we cannot selectively allow Apocalymon. This registers
+        # a blanket block (matching BT13-086 pattern). Apocalymon digivolution
+        # would need engine-level support for conditional CANNOT_DIGIVOLVE.
+        effect_digi_restrict = ICardEffect()
+        effect_digi_restrict.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect_digi_restrict.set_effect_name("EX10-012 Can only digivolve into Apocalymon")
+        effect_digi_restrict.set_effect_description(
+            "[All Turns] This Digimon can only digivolve into [Apocalymon]."
+        )
+        effect_digi_restrict.is_on_play = True
+        effect_digi_restrict.is_when_digivolving = True
+
+        def condition_digi_restrict(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect_digi_restrict.set_can_use_condition(condition_digi_restrict)
+
+        def process_digi_restrict(ctx: Dict[str, Any]):
+            game = ctx.get('game')
+            perm = card.permanent_of_this_card() if card else None
+            if not (game and perm):
+                return
+            from ....interfaces.modifiers import ModifierType
+            game.register_modifier(
+                perm, ModifierType.CANNOT_DIGIVOLVE,
+                source_effect=effect_digi_restrict,
+                expiry='permanent',
+            )
+        effect_digi_restrict.set_on_process_callback(process_digi_restrict)
+        effects.append(effect_digi_restrict)
+
+        # --- Effect 5: [On Deletion] Place face-up as bottom security ---
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("EX10-012 On Deletion: Place as bottom security")
@@ -190,8 +220,8 @@ class EX10_012(CardScript):
         effect4.is_on_deletion = True
 
         def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
+            # On Deletion fires after removal from field, so
+            # permanent_of_this_card() returns None — no field check needed.
             player = card.owner if card else None
             if not player:
                 return False
@@ -242,6 +272,9 @@ class EX10_012(CardScript):
                 return
 
             def play_filter(c):
+                # C# ref: cardSource.IsDigimon — must be a Digimon
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if getattr(c, 'is_digi_egg', False):
                     return False
                 lv = getattr(c, 'level', None)

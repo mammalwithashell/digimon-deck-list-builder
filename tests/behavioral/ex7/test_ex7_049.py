@@ -1,92 +1,226 @@
 """Behavioral tests for EX7-049 Metallicdramon (Lv.6 Black Sky Dragon).
 
-Card text:
+Card text (from cards.json):
   [On Play] [When Attacking] <De-Digivolve 4> 1 of your opponent's Digimon.
+      (Trash up to 4 cards from the top. You can't trash past level 3 cards.)
   [When Digivolving] None of your opponent's level 4 or lower Digimon can
       digivolve until the end of their turn.
   [All Turns] [Once Per Turn] When this Digimon would leave battle area other
       than by one of your effects, you may play 1 Digimon card with the
       [Rock Dragon] or [Earth Dragon] trait from your trash without paying
       the cost.
+
+NOTE: The user request specified CANNOT_ATTACK + CANNOT_BLOCK for the When
+Digivolving clause. The actual card text in cards.json says "can't digivolve",
+so tests validate CANNOT_DIGIVOLVE per faithful implementation policy.
 """
 
 import pytest
 
 from digimon_gym.engine.data.enums import GamePhase
+from digimon_gym.engine.interfaces.modifiers import ModifierType
+
+# Card IDs
+METALLICDRAMON = "EX7-049"   # Card under test (Lv.6 Black Sky Dragon)
+MEGADRAMON = "BT2-060"       # Black Lv.5 (valid digivolve base for Metallicdramon)
+FILLER = "BT1-003"           # Koromon (Lv.2 digi-egg for filler)
+AGUMON_LV3 = "ST1-03"        # Agumon (Lv.3 Red)
+GREYMON_LV4 = "ST1-07"       # Greymon (Lv.4 Red)
+METALGREYMON_LV5 = "ST1-09"  # MetalGreymon (Lv.5 Red)
+WARGREYMON_LV6 = "ST1-11"    # WarGreymon (Lv.6 Red)
+VORVOMON = "BT2-011"         # Lv.3 Rock Dragon Digimon (for trash test)
+GROUNDRAMON = "BT1-020"      # Lv.5 Earth Dragon Digimon (for trash test)
+
+FILLER_CARD = "ST1-03"       # Main deck filler
 
 
-def _select_non_decline(runner):
-    """After a WhenRemoveField trigger, pick the non-decline action if
-    the engine is in a SelectTarget phase with an optional selection.
-    Returns True if a card was selected, False otherwise."""
-    if runner.game.current_phase != GamePhase.SelectTarget:
-        return False
-    legal = runner.action_mask()
-    # 62 is typically the Decline/Pass action
-    play_actions = [a for a in legal if a != 62]
-    if not play_actions:
-        return False
-    runner.execute(play_actions[0])
-    runner.auto_resolve()
-    return True
+def _build_deck(extras=None):
+    """50-card deck: extras + filler."""
+    cards = list(extras or [])
+    while len(cards) < 50:
+        cards.append(FILLER_CARD)
+    return cards
 
+
+# ════════════════════════════════════════════════════════════════════════
+# Effect 0 & 1: [On Play] / [When Attacking] <De-Digivolve 4>
+# ════════════════════════════════════════════════════════════════════════
 
 @pytest.mark.behavioral
 class TestEX7049DeDigivolve:
     """Tests for [On Play] / [When Attacking] <De-Digivolve 4> effect."""
 
-    def test_on_play_de_digivolve_4(self, debug_runner):
-        """On Play should De-Digivolve 4 an opponent Digimon."""
-        runner = debug_runner(initial_memory=20)
+    def test_on_play_de_digivolve_removes_4_cards(self, debug_runner):
+        """On Play should De-Digivolve 4: trash exactly 4 cards from the top
+        of an opponent's 5-card stack, leaving 1 card."""
+        deck = _build_deck([METALLICDRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=20)
 
-        # Opponent: stacked Digimon with 4 evo cards underneath
-        # Stack (bottom-to-top): BT1-003, BT1-009, BT1-015, BT1-020, BT1-020
-        # That's 4 evo cards under top card BT1-020
+        # Opponent: 5-card stack (Lv.3 -> Lv.4 -> Lv.5 -> Lv.5 -> Lv.5)
         opp_perm = runner.place_on_field(2, [
-            "BT1-003", "BT1-009", "BT1-015", "BT1-020", "BT1-020"
+            AGUMON_LV3, GREYMON_LV4, METALGREYMON_LV5,
+            METALGREYMON_LV5, METALGREYMON_LV5
         ])
-        before_stack = len(opp_perm.card_sources)
-        assert before_stack == 5, f"Opponent should have 5 cards in stack, got {before_stack}"
+        assert len(opp_perm.card_sources) == 5
 
-        # Play Metallicdramon
-        runner.inject_card(1, "EX7-049", "hand")
+        runner.inject_card(1, METALLICDRAMON, "hand")
         runner.set_phase("Main")
 
         play = runner.find_action("Play Metallicdramon")
-        assert play is not None, f"Should be able to play Metallicdramon. Actions: {runner.actions()}"
+        assert play is not None, f"Should be able to play. Actions: {runner.actions()}"
         runner.execute(play)
         runner.auto_resolve()
 
         snap = runner.snapshot()
-        # Opponent Digimon should have lost up to 4 cards from top
+        # The opp stack should now be exactly 1 card (Lv.3 base remains)
         opp_field = [s for s in snap.p2_field if s.is_digimon]
-        if opp_field:
-            # Remaining stack should be smaller
-            assert len(opp_field[0].stack_ids) < before_stack, (
-                "Opponent Digimon should have fewer cards after De-Digivolve 4"
-            )
-        # Trashed cards should be in opponent's trash
-        assert len(snap.p2_trash) > 0, (
-            "De-Digivolved cards should be in opponent's trash"
+        assert len(opp_field) == 1, "Opponent should still have 1 Digimon on field"
+        assert len(opp_field[0].stack_ids) == 1, (
+            f"De-Digivolve 4 on a 5-card stack should leave 1 card, "
+            f"got {len(opp_field[0].stack_ids)}"
+        )
+        # 4 cards should be in opponent's trash
+        assert len(snap.p2_trash) == 4, (
+            f"4 cards should be trashed by De-Digivolve 4, got {len(snap.p2_trash)}"
+        )
+
+    def test_on_play_de_digivolve_stops_at_level_3(self, debug_runner):
+        """De-Digivolve 4 can't trash past level 3 cards. A 3-card stack
+        (Lv.3 + 2 above) should only lose 2 cards, not 4."""
+        deck = _build_deck([METALLICDRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=20)
+
+        # Opponent: 3-card stack (Lv.3 -> Lv.4 -> Lv.5)
+        opp_perm = runner.place_on_field(2, [
+            AGUMON_LV3, GREYMON_LV4, METALGREYMON_LV5
+        ])
+        assert len(opp_perm.card_sources) == 3
+
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        play = runner.find_action("Play Metallicdramon")
+        assert play is not None
+        runner.execute(play)
+        runner.auto_resolve()
+
+        snap = runner.snapshot()
+        opp_field = [s for s in snap.p2_field if s.is_digimon]
+        assert len(opp_field) == 1
+        # Should stop at Lv.3 — only 2 cards trashed (Lv.4 and Lv.5)
+        assert len(opp_field[0].stack_ids) == 1, (
+            f"Should stop at Lv.3 base, got {len(opp_field[0].stack_ids)} cards"
+        )
+        assert len(snap.p2_trash) == 2, (
+            f"Only 2 cards above Lv.3 base should be trashed, got {len(snap.p2_trash)}"
+        )
+
+    def test_on_play_de_digivolve_single_card_digimon(self, debug_runner):
+        """De-Digivolve on a single-card Digimon (no evo stack) should
+        remove 0 cards — the base card stays."""
+        deck = _build_deck([METALLICDRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=20)
+
+        # Opponent: single Lv.4 Digimon (no digivolution cards underneath)
+        opp_perm = runner.place_on_field(2, [GREYMON_LV4])
+        assert len(opp_perm.card_sources) == 1
+
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        play = runner.find_action("Play Metallicdramon")
+        assert play is not None
+        runner.execute(play)
+        runner.auto_resolve()
+
+        snap = runner.snapshot()
+        opp_field = [s for s in snap.p2_field if s.is_digimon]
+        assert len(opp_field) == 1
+        assert len(opp_field[0].stack_ids) == 1, (
+            "Single-card Digimon should remain untouched by De-Digivolve"
+        )
+        assert len(snap.p2_trash) == 0, (
+            "No cards should be trashed from a single-card Digimon"
+        )
+
+    def test_on_play_trashed_cards_go_to_opponent_trash(self, debug_runner):
+        """De-Digivolve cards must go to the opponent's trash, not ours."""
+        deck = _build_deck([METALLICDRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=20)
+
+        opp_perm = runner.place_on_field(2, [
+            AGUMON_LV3, GREYMON_LV4, METALGREYMON_LV5
+        ])
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        play = runner.find_action("Play Metallicdramon")
+        runner.execute(play)
+        runner.auto_resolve()
+
+        snap = runner.snapshot()
+        # Trashed cards are in P2 trash, not P1 trash
+        assert len(snap.p2_trash) >= 2, "De-digivolved cards should be in opponent's trash"
+        # P1 trash should be empty (no own cards trashed)
+        assert len(snap.p1_trash) == 0, (
+            f"P1 trash should be empty, got {len(snap.p1_trash)} cards"
+        )
+
+    def test_when_attacking_de_digivolve_4(self, debug_runner):
+        """When Attacking should also trigger De-Digivolve 4."""
+        deck = _build_deck([METALLICDRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=5)
+
+        # Place Metallicdramon on our field (already played, can attack)
+        our_perm = runner.place_on_field(1, [METALLICDRAMON], turn_played=-1)
+
+        # Opponent: 5-card stack
+        opp_perm = runner.place_on_field(2, [
+            AGUMON_LV3, GREYMON_LV4, METALGREYMON_LV5,
+            METALGREYMON_LV5, METALGREYMON_LV5
+        ])
+        assert len(opp_perm.card_sources) == 5
+
+        runner.set_phase("Main")
+
+        # Find attack action
+        attack = runner.find_action("Attack")
+        assert attack is not None, f"Should be able to attack. Actions: {runner.actions()}"
+        runner.execute(attack)
+        runner.auto_resolve()
+
+        # After attack + De-Digivolve 4, opponent stack should be reduced
+        remaining = len(opp_perm.card_sources)
+        assert remaining == 1, (
+            f"De-Digivolve 4 on attack should leave 1 card, got {remaining}"
         )
 
 
+# ════════════════════════════════════════════════════════════════════════
+# Effect 2: [When Digivolving] Opponent Lv.4 or lower can't digivolve
+# ════════════════════════════════════════════════════════════════════════
+
 @pytest.mark.behavioral
 class TestEX7049WhenDigivolving:
-    """Tests for [When Digivolving] opponent Lv.4 or lower can't digivolve."""
+    """Tests for [When Digivolving] CANNOT_DIGIVOLVE on opponent's Lv.4- Digimon.
 
-    def test_when_digivolving_blocks_opponent_lv4_digivolve(self, debug_runner):
-        """When Metallicdramon digivolves, opponent's Lv.4 or lower Digimon
-        should have CANNOT_DIGIVOLVE modifier."""
-        runner = debug_runner(initial_memory=10)
+    Actual card text: "None of your opponent's level 4 or lower Digimon
+    can digivolve until the end of their turn."
+    """
 
-        # Opponent has a Lv.4 Digimon on field
-        opp_perm = runner.place_on_field(2, ["BT1-015"])  # Lv.4
+    def test_lv4_gets_cannot_digivolve(self, debug_runner):
+        """Opponent's Lv.4 Digimon should get CANNOT_DIGIVOLVE modifier
+        when Metallicdramon digivolves."""
+        deck = _build_deck([METALLICDRAMON] * 4 + [MEGADRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
+
+        # Opponent has a Lv.4 Digimon
+        opp_perm = runner.place_on_field(2, [GREYMON_LV4])
         assert opp_perm.level == 4
 
-        # Place Black Lv.5 on our field, then digivolve into Metallicdramon
-        runner.place_on_field(1, ["BT2-060"])  # Megadramon, Black Lv.5
-        runner.inject_card(1, "EX7-049", "hand")
+        # Place Black Lv.5 on our field, digivolve into Metallicdramon
+        runner.place_on_field(1, [MEGADRAMON])
+        runner.inject_card(1, METALLICDRAMON, "hand")
         runner.set_phase("Main")
 
         digivolve = runner.find_action("Digivolve")
@@ -96,8 +230,7 @@ class TestEX7049WhenDigivolving:
         runner.execute(digivolve)
         runner.auto_resolve()
 
-        # Check that the opponent Lv.4 has CANNOT_DIGIVOLVE modifier
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        # Check CANNOT_DIGIVOLVE modifier on opponent's Lv.4
         has_block = runner.game.modifiers.has_modifier(
             opp_perm, ModifierType.CANNOT_DIGIVOLVE, {"permanent": opp_perm}
         )
@@ -105,6 +238,167 @@ class TestEX7049WhenDigivolving:
             "Opponent's Lv.4 Digimon should have CANNOT_DIGIVOLVE after "
             "Metallicdramon's When Digivolving effect"
         )
+
+    def test_lv3_gets_cannot_digivolve(self, debug_runner):
+        """Opponent's Lv.3 Digimon should also get CANNOT_DIGIVOLVE
+        (level 4 or LOWER)."""
+        deck = _build_deck([METALLICDRAMON] * 4 + [MEGADRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
+
+        opp_perm = runner.place_on_field(2, [AGUMON_LV3])
+        assert opp_perm.level == 3
+
+        runner.place_on_field(1, [MEGADRAMON])
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        digivolve = runner.find_action("Digivolve")
+        assert digivolve is not None
+        runner.execute(digivolve)
+        runner.auto_resolve()
+
+        has_block = runner.game.modifiers.has_modifier(
+            opp_perm, ModifierType.CANNOT_DIGIVOLVE, {"permanent": opp_perm}
+        )
+        assert has_block, (
+            "Opponent's Lv.3 Digimon should have CANNOT_DIGIVOLVE"
+        )
+
+    def test_lv5_not_affected(self, debug_runner):
+        """Opponent's Lv.5 Digimon should NOT get CANNOT_DIGIVOLVE (above Lv.4)."""
+        deck = _build_deck([METALLICDRAMON] * 4 + [MEGADRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
+
+        opp_perm = runner.place_on_field(2, [METALGREYMON_LV5])
+        assert opp_perm.level == 5
+
+        runner.place_on_field(1, [MEGADRAMON])
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        digivolve = runner.find_action("Digivolve")
+        assert digivolve is not None
+        runner.execute(digivolve)
+        runner.auto_resolve()
+
+        has_block = runner.game.modifiers.has_modifier(
+            opp_perm, ModifierType.CANNOT_DIGIVOLVE, {"permanent": opp_perm}
+        )
+        assert not has_block, (
+            "Opponent's Lv.5 Digimon should NOT have CANNOT_DIGIVOLVE"
+        )
+
+    def test_lv6_not_affected(self, debug_runner):
+        """Opponent's Lv.6 Digimon should NOT get CANNOT_DIGIVOLVE."""
+        deck = _build_deck([METALLICDRAMON] * 4 + [MEGADRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
+
+        opp_perm = runner.place_on_field(2, [WARGREYMON_LV6])
+        assert opp_perm.level == 6
+
+        runner.place_on_field(1, [MEGADRAMON])
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        digivolve = runner.find_action("Digivolve")
+        assert digivolve is not None
+        runner.execute(digivolve)
+        runner.auto_resolve()
+
+        has_block = runner.game.modifiers.has_modifier(
+            opp_perm, ModifierType.CANNOT_DIGIVOLVE, {"permanent": opp_perm}
+        )
+        assert not has_block, (
+            "Opponent's Lv.6 Digimon should NOT have CANNOT_DIGIVOLVE"
+        )
+
+    def test_modifier_expiry_end_of_opponent_turn(self, debug_runner):
+        """The CANNOT_DIGIVOLVE modifier should expire 'end_of_opponent_turn'
+        (card text says 'until the end of their turn')."""
+        deck = _build_deck([METALLICDRAMON] * 4 + [MEGADRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
+
+        opp_perm = runner.place_on_field(2, [GREYMON_LV4])
+        runner.place_on_field(1, [MEGADRAMON])
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        digivolve = runner.find_action("Digivolve")
+        runner.execute(digivolve)
+        runner.auto_resolve()
+
+        # Check that the modifier uses 'end_of_opponent_turn' expiry
+        entries = runner.game.modifiers._modifiers.get(ModifierType.CANNOT_DIGIVOLVE, [])
+        matching = [e for e in entries if e.is_active(opp_perm, {})]
+        assert len(matching) >= 1, "Should have at least 1 CANNOT_DIGIVOLVE entry"
+        assert matching[0].expiry == 'end_of_opponent_turn', (
+            f"Modifier expiry should be 'end_of_opponent_turn', got '{matching[0].expiry}'"
+        )
+
+    def test_multiple_lv4_digimon_all_affected(self, debug_runner):
+        """ALL opponent Lv.4 or lower Digimon should get the modifier,
+        not just one."""
+        deck = _build_deck([METALLICDRAMON] * 4 + [MEGADRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
+
+        opp_perm1 = runner.place_on_field(2, [GREYMON_LV4])
+        opp_perm2 = runner.place_on_field(2, [AGUMON_LV3])
+
+        runner.place_on_field(1, [MEGADRAMON])
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        digivolve = runner.find_action("Digivolve")
+        runner.execute(digivolve)
+        runner.auto_resolve()
+
+        has1 = runner.game.modifiers.has_modifier(
+            opp_perm1, ModifierType.CANNOT_DIGIVOLVE, {}
+        )
+        has2 = runner.game.modifiers.has_modifier(
+            opp_perm2, ModifierType.CANNOT_DIGIVOLVE, {}
+        )
+        assert has1, "Opponent's Lv.4 should have CANNOT_DIGIVOLVE"
+        assert has2, "Opponent's Lv.3 should have CANNOT_DIGIVOLVE"
+
+    def test_not_triggered_on_play(self, debug_runner):
+        """CANNOT_DIGIVOLVE should NOT trigger on play, only on digivolve."""
+        deck = _build_deck([METALLICDRAMON] * 4)
+        runner = debug_runner(deck1=deck, deck2=deck, initial_memory=20)
+
+        opp_perm = runner.place_on_field(2, [GREYMON_LV4])
+        runner.inject_card(1, METALLICDRAMON, "hand")
+        runner.set_phase("Main")
+
+        play = runner.find_action("Play Metallicdramon")
+        assert play is not None
+        runner.execute(play)
+        runner.auto_resolve()
+
+        has_block = runner.game.modifiers.has_modifier(
+            opp_perm, ModifierType.CANNOT_DIGIVOLVE, {}
+        )
+        assert not has_block, (
+            "CANNOT_DIGIVOLVE should NOT be applied when playing (not digivolving)"
+        )
+
+
+# ════════════════════════════════════════════════════════════════════════
+# Effect 3: [All Turns] [Once Per Turn] When leave, play from trash
+# ════════════════════════════════════════════════════════════════════════
+
+def _select_non_decline(runner):
+    """Pick the non-decline action in a SelectTarget phase.
+    Returns True if a card was selected, False otherwise."""
+    if runner.game.current_phase != GamePhase.SelectTarget:
+        return False
+    legal = runner.action_mask()
+    play_actions = [a for a in legal if a != 62]
+    if not play_actions:
+        return False
+    runner.execute(play_actions[0])
+    runner.auto_resolve()
+    return True
 
 
 @pytest.mark.behavioral
@@ -114,213 +408,100 @@ class TestEX7049WhenLeaveField:
     from trash."""
 
     def test_triggers_on_opponent_effect_removal(self, debug_runner):
-        """Effect SHOULD trigger when Metallicdramon is removed by opponent's effect.
-        This is the primary case: 'other than by one of your effects' means
-        opponent effects are allowed."""
+        """Should trigger when removed by opponent's effect (not own effect)."""
         runner = debug_runner(initial_memory=5)
 
-        perm = runner.place_on_field(1, ["EX7-049"])
-
-        # Put a Rock Dragon Digimon in our trash (BT2-011 Vorvomon, Lv.3 Rock Dragon)
-        runner.inject_card(1, "BT2-011", "trash")
+        perm = runner.place_on_field(1, [METALLICDRAMON])
+        runner.inject_card(1, VORVOMON, "trash")
 
         p1 = runner.game.player1
-        before_trash = [c.c_entity_base.card_id for c in p1.trash_cards]
-        assert "BT2-011" in before_trash, "Vorvomon should be in trash"
-
-        # Delete Metallicdramon by opponent's effect
         p1.delete_permanent(perm, is_opponent_effect=True)
 
-        # The effect creates an optional selection — explicitly select the play action
         selected = _select_non_decline(runner)
-        assert selected, "WhenRemoveField should create a selection to play from trash"
+        assert selected, "Should create a selection to play from trash"
 
         snap = runner.snapshot()
-        # Vorvomon should be played from trash to field
         field_ids = [s.card_id for s in snap.p1_field]
-        assert "BT2-011" in field_ids, (
-            f"Vorvomon (Rock Dragon) should be played from trash when Metallicdramon "
-            f"is removed by opponent effect. Field: {field_ids}"
+        assert VORVOMON in field_ids, (
+            f"Vorvomon (Rock Dragon) should be played from trash. Field: {field_ids}"
         )
 
     def test_does_not_trigger_on_own_effect_removal(self, debug_runner):
-        """Effect should NOT trigger when Metallicdramon is removed by own effects.
-        Card text: 'other than by one of your effects'."""
+        """Should NOT trigger when removed by own effects."""
         runner = debug_runner(initial_memory=5)
 
-        perm = runner.place_on_field(1, ["EX7-049"])
-        runner.inject_card(1, "BT2-011", "trash")
+        perm = runner.place_on_field(1, [METALLICDRAMON])
+        runner.inject_card(1, VORVOMON, "trash")
 
         p1 = runner.game.player1
-
-        # Delete by own effect (is_opponent_effect=False -> is_own_effect=True)
         p1.delete_permanent(perm, is_opponent_effect=False)
         runner.auto_resolve()
 
         snap = runner.snapshot()
         field_ids = [s.card_id for s in snap.p1_field]
-        assert "BT2-011" not in field_ids, (
-            f"Vorvomon should NOT be played when Metallicdramon is removed by own "
-            f"effect. Field: {field_ids}"
-        )
-
-    def test_triggers_on_battle_removal(self, debug_runner):
-        """Effect SHOULD trigger when Metallicdramon is deleted by battle.
-        Battle is not 'one of your effects'."""
-        runner = debug_runner(initial_memory=5)
-
-        perm = runner.place_on_field(1, ["EX7-049"])
-        runner.inject_card(1, "BT2-011", "trash")
-
-        p1 = runner.game.player1
-
-        # Delete by battle
-        p1.delete_permanent(perm, is_battle=True, removal_cause='battle')
-
-        selected = _select_non_decline(runner)
-        assert selected, "WhenRemoveField should trigger on battle removal"
-
-        snap = runner.snapshot()
-        field_ids = [s.card_id for s in snap.p1_field]
-        assert "BT2-011" in field_ids, (
-            f"Vorvomon should be played from trash when Metallicdramon is removed "
-            f"by battle. Field: {field_ids}"
-        )
-
-    def test_triggers_on_rule_removal(self, debug_runner):
-        """Effect SHOULD trigger when Metallicdramon is removed by rule (e.g. DP=0)."""
-        runner = debug_runner(initial_memory=5)
-
-        perm = runner.place_on_field(1, ["EX7-049"])
-        runner.inject_card(1, "BT2-011", "trash")
-
-        p1 = runner.game.player1
-
-        # Delete by rule (is_opponent_effect defaults to False,
-        # but removal_cause='rule' is not own effect)
-        p1.delete_permanent(perm, removal_cause='rule')
-
-        selected = _select_non_decline(runner)
-        assert selected, "WhenRemoveField should trigger on rule removal"
-
-        snap = runner.snapshot()
-        field_ids = [s.card_id for s in snap.p1_field]
-        assert "BT2-011" in field_ids, (
-            f"Vorvomon should be played from trash when Metallicdramon is removed "
-            f"by rule. Field: {field_ids}"
+        assert VORVOMON not in field_ids, (
+            f"Vorvomon should NOT be played on own-effect removal. Field: {field_ids}"
         )
 
     def test_plays_earth_dragon_from_trash(self, debug_runner):
-        """Effect should also accept Earth Dragon trait Digimon from trash."""
+        """Should accept Earth Dragon trait Digimon from trash."""
         runner = debug_runner(initial_memory=5)
 
-        perm = runner.place_on_field(1, ["EX7-049"])
-        # BT1-020 Groundramon is Lv.5 Earth Dragon
-        runner.inject_card(1, "BT1-020", "trash")
+        perm = runner.place_on_field(1, [METALLICDRAMON])
+        runner.inject_card(1, GROUNDRAMON, "trash")
 
         p1 = runner.game.player1
-
         p1.delete_permanent(perm, is_opponent_effect=True)
 
         selected = _select_non_decline(runner)
-        assert selected, "WhenRemoveField should trigger for Earth Dragon trash target"
+        assert selected, "Should trigger for Earth Dragon trash target"
 
         snap = runner.snapshot()
         field_ids = [s.card_id for s in snap.p1_field]
-        assert "BT1-020" in field_ids, (
+        assert GROUNDRAMON in field_ids, (
             f"Groundramon (Earth Dragon) should be played from trash. Field: {field_ids}"
         )
 
-    def test_does_not_play_non_qualifying_digimon(self, debug_runner):
-        """Effect should NOT play Digimon without Rock Dragon or Earth Dragon trait."""
-        runner = debug_runner(initial_memory=5)
-
-        perm = runner.place_on_field(1, ["EX7-049"])
-        # BT1-009 Agumon has no Rock/Earth Dragon trait
-        runner.inject_card(1, "BT1-009", "trash")
-
-        p1 = runner.game.player1
-
-        p1.delete_permanent(perm, is_opponent_effect=True)
-        runner.auto_resolve()
-
-        snap = runner.snapshot()
-        field_ids = [s.card_id for s in snap.p1_field]
-        assert "BT1-009" not in field_ids, (
-            f"Non-qualifying Digimon should NOT be played. Field: {field_ids}"
-        )
-
-    def test_once_per_turn_limit(self, debug_runner):
-        """Effect should only trigger once per turn."""
-        runner = debug_runner(initial_memory=5)
-
-        perm1 = runner.place_on_field(1, ["EX7-049"])
-        runner.inject_card(1, "BT2-011", "trash")
-
-        p1 = runner.game.player1
-
-        # First removal - should trigger
-        p1.delete_permanent(perm1, is_opponent_effect=True)
-        selected = _select_non_decline(runner)
-        assert selected, "First WhenRemoveField trigger should create a selection"
-
-        snap1 = runner.snapshot()
-        field_ids1 = [s.card_id for s in snap1.p1_field]
-        assert "BT2-011" in field_ids1, "First trigger should play Vorvomon"
-
-        # Place another Metallicdramon and another trash target
-        perm2 = runner.place_on_field(1, ["EX7-049"])
-        runner.inject_card(1, "BT1-020", "trash")
-
-        # Second removal same turn - should NOT trigger (once per turn)
-        p1.delete_permanent(perm2, is_opponent_effect=True)
-        runner.auto_resolve()
-
-        snap2 = runner.snapshot()
-        field_ids2 = [s.card_id for s in snap2.p1_field]
-        # BT1-020 should still be in trash, not on field
-        assert "BT1-020" not in field_ids2, (
-            f"Second Metallicdramon's leave trigger should NOT fire (OPT). "
-            f"Field: {field_ids2}"
-        )
-
     def test_effect_is_optional(self, debug_runner):
-        """The 'you may play' indicates the effect is optional."""
+        """'you may play' means the effect is optional."""
+        from digimon_gym.engine.data.enums import EffectTiming
         runner = debug_runner(initial_memory=5)
 
-        perm = runner.place_on_field(1, ["EX7-049"])
-        runner.inject_card(1, "BT2-011", "trash")
-
-        # Verify the effect has is_optional=True
-        from digimon_gym.engine.data.enums import EffectTiming
+        perm = runner.place_on_field(1, [METALLICDRAMON])
         effects = perm.effect_list(EffectTiming.WhenRemoveField)
         leave_effects = [e for e in effects
                          if "Rock Dragon" in (e.effect_name or "")
                          or "Play Rock" in (e.effect_name or "")]
         assert len(leave_effects) >= 1, (
-            f"Should have the WhenRemoveField Rock/Earth Dragon effect. "
+            f"Should have WhenRemoveField effect. "
             f"Effects: {[(e.effect_name, e.timing) for e in effects]}"
         )
         assert leave_effects[0].is_optional, (
             "The effect should be optional ('you may play')"
         )
 
-    def test_no_trash_target_means_no_trigger(self, debug_runner):
-        """If there are no qualifying cards in trash, the effect condition
-        should return False and not trigger at all."""
+    def test_once_per_turn(self, debug_runner):
+        """Effect should only trigger once per turn."""
         runner = debug_runner(initial_memory=5)
 
-        perm = runner.place_on_field(1, ["EX7-049"])
-        # No qualifying cards in trash
+        perm1 = runner.place_on_field(1, [METALLICDRAMON])
+        runner.inject_card(1, VORVOMON, "trash")
 
         p1 = runner.game.player1
+        p1.delete_permanent(perm1, is_opponent_effect=True)
 
-        field_before = len(p1.battle_area)
-        p1.delete_permanent(perm, is_opponent_effect=True)
+        selected = _select_non_decline(runner)
+        assert selected, "First trigger should fire"
+
+        # Second Metallicdramon + second trash target
+        perm2 = runner.place_on_field(1, [METALLICDRAMON])
+        runner.inject_card(1, GROUNDRAMON, "trash")
+
+        p1.delete_permanent(perm2, is_opponent_effect=True)
         runner.auto_resolve()
 
         snap = runner.snapshot()
-        # Nothing should have been played
-        assert len(snap.p1_field) < field_before, (
-            "With no qualifying trash cards, nothing should be played"
+        field_ids = [s.card_id for s in snap.p1_field]
+        assert GROUNDRAMON not in field_ids, (
+            f"Second trigger should NOT fire (once per turn). Field: {field_ids}"
         )

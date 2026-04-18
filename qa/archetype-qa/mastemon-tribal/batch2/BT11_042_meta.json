@@ -1,0 +1,24 @@
+{
+  "card_id": "BT11-042",
+  "card_name": "Angewomon",
+  "card_kind": "Digimon",
+  "level": 5,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Archangel",
+  "dp": 6000,
+  "play_cost": 7,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 3,
+      "level": 4
+    }
+  ],
+  "effect_text": "[When Digivolving] You may search your security stack, reveal 1 card with the [Angel], [Archangel] or [Fallen Angel] trait from it, and add it to your hand. If you added a card, ＜Recovery +1 (Deck)＞. Then, shuffle your security stack.\r\n[Your Turn] [Once Per Turn] When you play [LadyDevimon] or [Mirei Mikagura], gain 1 memory.",
+  "inherited_text": "[Opponent's Turn] While you have a purple Digimon in play, all of your Digimon with the [Angel], [Archangel] or [Fallen Angel] trait gain ＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt11/bt11_042.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT11\\Yellow\\BT11_042.cs"
+}

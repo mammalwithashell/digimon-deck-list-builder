@@ -1,0 +1,18 @@
+{
+  "card_id": "BT7-107",
+  "card_name": "Calling From the Darkness",
+  "card_kind": "Option",
+  "level": null,
+  "colors": [
+    "Purple"
+  ],
+  "traits": "",
+  "dp": null,
+  "play_cost": 1,
+  "evo_costs": [],
+  "effect_text": "[Main] Delete 1 of your Digimon. Then, return up to 2 purple Digimon cards from your trash to your hand.",
+  "inherited_text": "Security Effect [Security] Add this card to the hand.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt7/bt7_107.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT7\\Purple\\BT7_107.cs"
+}

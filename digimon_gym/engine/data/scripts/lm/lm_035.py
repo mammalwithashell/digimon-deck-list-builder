@@ -12,9 +12,9 @@ class LM_035(CardScript):
     """LM-035 Amber Memory Boost! | Option (Yellow, Cost 3)
 
     Purple also meets this card's color requirements.
-    [Main] Reveal the top 3 cards of your deck. Add 1 yellow or purple
-        Digimon card among them to the hand. Return the rest to the bottom
-        of deck. Then, place this card in the battle area.
+    [Main] Reveal the top 3 cards of your deck. Add 1 yellow or purple Digimon
+        card among them to the hand. Return the rest to the bottom of deck.
+        Then, place this card in the battle area.
     [Main] <Delay> (By trashing this card after the placing turn, activate
         the effect below.)
         - Gain 2 memory.
@@ -22,35 +22,50 @@ class LM_035(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        # --- Partial color bypass: "Purple also meets this card's color requirements" ---
+        # LM-035 natively requires Yellow; this clause additionally accepts Purple
+        # Digimon/Tamers on the field as satisfying the color requirement.
+        # Implemented via _match_color_requirement_fn: bypass the engine's color
+        # check iff the player has a Purple Digimon/Tamer on field; otherwise the
+        # engine's default Yellow check applies.
+        def _check_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True  # enforce (default)
+            for p in owner.battle_area:
+                top = p.top_card
+                if not top:
+                    continue
+                if not (p.is_digimon or p.is_tamer):
+                    continue
+                colors = getattr(top, 'card_colors', []) or []
+                if any(getattr(c, 'name', None) == 'Purple' for c in colors):
+                    return False  # bypass — Purple on field satisfies requirement
+            return True  # enforce Yellow via default path
+        card._match_color_requirement_fn = _check_color_req
+
         effects = []
 
-        # --- Effect 0: Ignore color requirements (Purple also meets) ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("LM-035 Ignore color requirements")
-        effect0.set_effect_description(
-            "Purple also meets this card's color requirements."
+        # --- Effect 0: [Main] Reveal top 3, add 1 yellow/purple Digimon,
+        #               rest to deck bottom. Place self in battle area is
+        #               handled automatically by the engine because we have
+        #               a _is_delay marker below (_option_stays_on_field). ---
+        effect_main = ICardEffect()
+        effect_main.set_timing(EffectTiming.OptionSkill)
+        effect_main.set_effect_name(
+            "LM-035 Reveal top 3, add 1 yellow/purple Digimon to hand"
         )
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
-
-        # --- Effect 1: [Main] Reveal top 3, add 1 yellow/purple Digimon, place in battle area ---
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OptionSkill)
-        effect1.set_effect_name("LM-035 Reveal top 3, add yellow/purple Digimon")
-        effect1.set_effect_description(
+        effect_main.set_effect_description(
             "[Main] Reveal the top 3 cards of your deck. Add 1 yellow or "
-            "purple Digimon card among them to the hand. Return the rest "
-            "to the bottom of deck. Then, place this card in the battle area."
+            "purple Digimon card among them to the hand. Return the rest to "
+            "the bottom of deck. Then, place this card in the battle area."
         )
 
-        def condition1(context: Dict[str, Any]) -> bool:
+        def condition_main(context: Dict[str, Any]) -> bool:
             return True
-        effect1.set_can_use_condition(condition1)
+        effect_main.set_can_use_condition(condition_main)
 
-        def process1(ctx: Dict[str, Any]):
+        def process_main(ctx: Dict[str, Any]):
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -60,87 +75,93 @@ class LM_035(CardScript):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 colors = getattr(c, 'card_colors', []) or []
-                color_names = [col.name for col in colors]
+                color_names = [getattr(col, 'name', '') for col in colors]
                 return 'Yellow' in color_names or 'Purple' in color_names
 
-            def on_selected(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-
-            game.effect_reveal_and_select(
+            game.effect_reveal_and_select_multi(
                 player, 3,
-                filter_fn=yellow_or_purple_digimon_filter,
-                on_selected=on_selected,
+                passes=[
+                    (yellow_or_purple_digimon_filter, 'hand'),
+                ],
+                remaining_placement='deck_bottom',
                 is_optional=False,
-                prompt="Select 1 yellow or purple Digimon card to add to hand."
             )
+        effect_main.set_on_process_callback(process_main)
+        effects.append(effect_main)
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+        # --- Effect 1: Delay marker ---
+        # Marker effect that tells the engine "this Option has a Delay" so
+        # _option_stays_on_field() keeps it on the field after main resolution.
+        effect_delay_marker = ICardEffect()
+        effect_delay_marker.set_effect_name("LM-035 Delay")
+        effect_delay_marker.set_effect_description("Delay")
+        effect_delay_marker._is_delay = True
 
-        # --- Effect 2: Delay marker ---
-        effect2 = ICardEffect()
-        effect2.set_effect_name("LM-035 Delay")
-        effect2.set_effect_description("Delay")
-        effect2._is_delay = True
-
-        def condition2(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-        effect2.set_can_use_condition(condition2)
-        effects.append(effect2)
-
-        # --- Effect 3: [Main] <Delay> Gain 2 memory ---
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnStartMainPhase)
-        effect3.set_effect_name("LM-035 Delay: Gain 2 memory")
-        effect3.set_effect_description("<Delay> Gain 2 memory.")
-        effect3._is_delay_effect = True
-
-        def condition3(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            if card and card.permanent_of_this_card() is None:
+        def condition_delay_marker(context: Dict[str, Any]) -> bool:
+            # Delay can only activate on the owner's turn, after the placing turn.
+            # Turn-placed enforcement is handled by action_mask (perm.turn_played
+            # < game.turn_count). No permanent_of_this_card() check here — the
+            # engine's _execute_delay trashes the permanent BEFORE calling the
+            # body condition/callback.
+            owner = card.owner if card else None
+            if not (owner and owner.is_my_turn):
                 return False
             return True
-        effect3.set_can_use_condition(condition3)
+        effect_delay_marker.set_can_use_condition(condition_delay_marker)
+        effects.append(effect_delay_marker)
 
-        def process3(ctx: Dict[str, Any]):
+        # --- Effect 2: [Main] <Delay> Gain 2 memory ---
+        # Engine's _execute_delay already removes the permanent and trashes the
+        # card source BEFORE invoking this callback. Do NOT try to delete the
+        # permanent here; just run the body effect.
+        effect_delay_body = ICardEffect()
+        effect_delay_body.set_timing(EffectTiming.OnDeclaration)
+        effect_delay_body._is_field_main = True
+        effect_delay_body.set_effect_name("LM-035 Delay: Gain 2 memory")
+        effect_delay_body.set_effect_description("[Main] <Delay> Gain 2 memory.")
+
+        def condition_delay_body(context: Dict[str, Any]) -> bool:
+            # Don't check permanent_of_this_card() — engine already trashed
+            # this card by the time this condition is evaluated.
+            owner = card.owner if card else None
+            if not (owner and owner.is_my_turn):
+                return False
+            return True
+        effect_delay_body.set_can_use_condition(condition_delay_body)
+
+        def process_delay_body(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            game = ctx.get('game')
-            if player and game:
-                # Trash this card from battle area (Delay consumption)
-                perm = card.permanent_of_this_card() if card else None
-                if perm:
-                    player.delete_permanent(perm)
-                player.add_memory(2)
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
+            if not player:
+                return
+            # Engine's _execute_delay has already trashed the card source and
+            # removed the permanent. Simply grant +2 memory.
+            player.add_memory(2)
+        effect_delay_body.set_on_process_callback(process_delay_body)
+        effects.append(effect_delay_body)
 
-        # --- Effect 4: [Security] Place this card in the battle area ---
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.SecuritySkill)
-        effect4.set_effect_name("LM-035 Security: Place in battle area")
-        effect4.set_effect_description(
+        # --- Effect 3: [Security] Place this card in the battle area. ---
+        effect_sec = ICardEffect()
+        effect_sec.set_timing(EffectTiming.SecuritySkill)
+        effect_sec.set_effect_name("LM-035 Security: Place in battle area")
+        effect_sec.set_effect_description(
             "[Security] Place this card in the battle area."
         )
-        effect4.is_security_effect = True
+        effect_sec.is_security_effect = True
 
-        def condition4(context: Dict[str, Any]) -> bool:
+        def condition_sec(context: Dict[str, Any]) -> bool:
             return True
-        effect4.set_can_use_condition(condition4)
+        effect_sec.set_can_use_condition(condition_sec)
 
-        def process4(ctx: Dict[str, Any]):
+        def process_sec(ctx: Dict[str, Any]):
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game and card):
                 return
-            player.play_card_from_source(card, pay_cost=False)
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
+            # Use effect_play_from_security so the card is placed in battle
+            # area, _security_played flag is set (preventing post-attack
+            # trash), and OnEnterFieldAnyone effects fire.
+            game.effect_play_from_security(player, card)
+        effect_sec.set_on_process_callback(process_sec)
+        effects.append(effect_sec)
 
         return effects

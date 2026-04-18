@@ -1,0 +1,24 @@
+{
+  "card_id": "BT15-037",
+  "card_name": "Gatomon",
+  "card_kind": "Digimon",
+  "level": 4,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Holy Beast",
+  "dp": 4000,
+  "play_cost": 5,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 2,
+      "level": 3
+    }
+  ],
+  "effect_text": "When an effect trashes this card from the security stack, you may play it without paying the cost.\r\n＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[All Turns] [Once Per Turn] When a card is removed from your security stack, gain 1 memory.",
+  "inherited_text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt15/bt15_037.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT15\\Yellow\\BT15_037.cs"
+}

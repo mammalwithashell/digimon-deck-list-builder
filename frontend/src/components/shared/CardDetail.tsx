@@ -66,7 +66,7 @@ export function CardDetail() {
         )}
 
         <button
-          onClick={() => addCardToDeck(card.cardnumber, card)}
+          onClick={() => addCardToDeck(card.cardnumber, card, card.isAltArt ?? false)}
           className="mt-2 px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-sm rounded"
         >
           Add to Deck

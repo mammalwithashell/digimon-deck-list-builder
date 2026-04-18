@@ -1,0 +1,18 @@
+{
+  "card_id": "BT1-087",
+  "card_name": "T.K. Takaishi",
+  "card_kind": "Tamer",
+  "level": null,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "",
+  "dp": null,
+  "play_cost": 4,
+  "evo_costs": [],
+  "effect_text": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] Search your security stack, reveal 1 card among it and add it to your hand. If it's a yellow card, ＜Recovery +1 (Deck)＞. Then, shuffle your security stack.",
+  "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt1/bt1_087.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT1\\Yellow\\BT1_087.cs"
+}

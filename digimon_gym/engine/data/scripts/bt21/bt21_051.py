@@ -20,6 +20,7 @@ class BT21_051(CardScript):
         effect0.set_effect_name("BT21-051 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 5
         effect0._alt_digi_trait = "WG"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -75,21 +76,6 @@ class BT21_051(CardScript):
             if not enemy:
                 return
 
-            # Step 1: De-Digivolve 2 one of opponent's Digimon
-            has_digimon = any(p.is_digimon for p in enemy.battle_area)
-            if has_digimon:
-                def on_de_digivolve(target_perm):
-                    removed = target_perm.de_digivolve(2)
-                    enemy.trash_cards.extend(removed)
-                    _do_bounce()
-
-                game.effect_select_opponent_permanent(
-                    player, on_de_digivolve,
-                    filter_fn=lambda p: p.is_digimon,
-                    is_optional=False)
-            else:
-                _do_bounce()
-
             def _do_bounce():
                 # Step 2: Return 1 of their SUSPENDED Digimon to bottom of deck
                 def suspended_digimon_filter(p):
@@ -106,6 +92,21 @@ class BT21_051(CardScript):
                     player, on_bounce,
                     filter_fn=suspended_digimon_filter,
                     is_optional=False)
+
+            # Step 1: De-Digivolve 2 one of opponent's Digimon
+            has_digimon = any(p.is_digimon for p in enemy.battle_area)
+            if has_digimon:
+                def on_de_digivolve(target_perm):
+                    removed = target_perm.de_digivolve(2)
+                    enemy.trash_cards.extend(removed)
+                    _do_bounce()
+
+                game.effect_select_opponent_permanent(
+                    player, on_de_digivolve,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=False)
+            else:
+                _do_bounce()
 
         # [On Play] De-Digivolve 2, then return 1 suspended Digimon to deck bottom
         effect4 = ICardEffect()

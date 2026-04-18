@@ -1,0 +1,25 @@
+{
+  "card_id": "ST10-04",
+  "card_name": "Gatomon",
+  "card_kind": "Digimon",
+  "level": 4,
+  "colors": [
+    "Yellow",
+    "Purple"
+  ],
+  "traits": "Holy Beast",
+  "dp": 4000,
+  "play_cost": 5,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 3,
+      "level": 3
+    }
+  ],
+  "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 yellow Digimon card and 1 purple Digimon card among them to your hand. Place the remaining cards at the bottom of your deck in any order.\r\n[Your Turn] When this Digimon would digivolve into a card with the [Archangel] or [Fallen Angel] trait, reduce the memory cost of the digivolution by 2.",
+  "inherited_text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/st10/st10_04.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\ST10\\Yellow\\ST10_04.cs"
+}

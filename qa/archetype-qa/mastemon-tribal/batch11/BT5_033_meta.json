@@ -1,0 +1,24 @@
+{
+  "card_id": "BT5-033",
+  "card_name": "Cutemon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Fairy",
+  "dp": 3000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 0,
+      "level": 2
+    }
+  ],
+  "effect_text": "[Opponent's Turn] Your opponent can't reduce digivolution costs.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt5/bt5_033.py",
+  "csharp_path": null
+}

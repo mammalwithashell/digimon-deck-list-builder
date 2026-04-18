@@ -1,28 +1,79 @@
 // Prevents additional console window on Windows in release.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod engine_commands;
+
+#[cfg(not(feature = "no-sidecar"))]
 use std::sync::{Arc, Mutex};
+#[cfg(not(feature = "no-sidecar"))]
 use tauri::Manager;
+#[cfg(not(feature = "no-sidecar"))]
 use tauri_plugin_shell::ShellExt;
 
+use engine_commands::RustEngineState;
+
 /// State to hold the sidecar process handle for cleanup and the discovered port.
+#[cfg(not(feature = "no-sidecar"))]
 struct SidecarState {
     child: Arc<Mutex<Option<tauri_plugin_shell::process::CommandChild>>>,
     port: Arc<Mutex<Option<u16>>>,
 }
 
 /// Max number of automatic sidecar respawn attempts.
+#[cfg(not(feature = "no-sidecar"))]
 const MAX_RESPAWN_RETRIES: u32 = 5;
 
+/// Returns the Python sidecar's port.
+#[cfg(not(feature = "no-sidecar"))]
 #[tauri::command]
 fn get_sidecar_port(state: tauri::State<'_, SidecarState>) -> Option<u16> {
     *state.port.lock().unwrap()
 }
 
+/// In `no-sidecar` builds the Python sidecar never runs, so the frontend
+/// falls back to Tauri `invoke()` commands on `None`.
+#[cfg(feature = "no-sidecar")]
+#[tauri::command]
+fn get_sidecar_port() -> Option<u16> {
+    None
+}
+
 fn main() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![get_sidecar_port])
+        .manage(RustEngineState::default())
+        .invoke_handler(tauri::generate_handler![
+            get_sidecar_port,
+            engine_commands::create_test_game,
+            engine_commands::get_rust_game_state,
+            engine_commands::rust_play_card,
+            engine_commands::rust_attack_digimon,
+            engine_commands::rust_attack_player,
+            engine_commands::rust_end_turn,
+            engine_commands::rust_pass_turn,
+            engine_commands::rust_hatch,
+            engine_commands::rust_move_from_breeding,
+            engine_commands::rust_mulligan_decide,
+            engine_commands::rust_create_game,
+            engine_commands::rust_submit_action,
+            engine_commands::rust_step_game,
+            engine_commands::rust_get_mask,
+            engine_commands::rust_get_log,
+            engine_commands::rust_surrender,
+            engine_commands::rust_delete_game,
+        ]);
+
+    #[cfg(not(feature = "no-sidecar"))]
+    let builder = spawn_sidecar(builder);
+
+    builder
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+
+#[cfg(not(feature = "no-sidecar"))]
+fn spawn_sidecar(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
+    builder
         .setup(|app| {
             // Resolve models directory from bundled resources
             let resource_dir = app
@@ -136,6 +187,4 @@ fn main() {
                 }
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
 }

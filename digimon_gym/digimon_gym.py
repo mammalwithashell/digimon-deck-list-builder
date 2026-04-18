@@ -7,12 +7,40 @@ Wraps HeadlessGame to provide a standard Gymnasium interface with:
 - Action masking via info dict (compatible with SB3 MaskablePPO)
 """
 
+import os
 import numpy as np
 import logging
 from typing import List, Tuple, Dict, Any, Optional
 import gymnasium
 from gymnasium import spaces
 from digimon_gym.engine.runners.headless_game import HeadlessGame
+
+try:
+    from digimon_engine import RustHeadlessGame  # type: ignore
+except ImportError:
+    RustHeadlessGame = None
+
+
+def _make_runner(deck1: List[str], deck2: List[str]):
+    """Build the game runner chosen by the `DIGIMON_BACKEND` env var.
+
+    - `DIGIMON_BACKEND=rust` → `RustHeadlessGame` (requires the `digimon_engine`
+      PyO3 wheel to be installed, e.g. via `maturin develop`).
+    - anything else (including unset) → Python `HeadlessGame`.
+
+    Both runners expose the same duck-typed surface: `step`, `get_action_mask`,
+    `get_board_tensor`, `is_game_over`, plus a `game` attribute used by reward
+    shaping below.
+    """
+    backend = os.environ.get("DIGIMON_BACKEND", "py").lower()
+    if backend == "rust":
+        if RustHeadlessGame is None:
+            raise RuntimeError(
+                "DIGIMON_BACKEND=rust but digimon_engine wheel is not installed. "
+                "Run `cd digimon-engine-py && maturin develop --release`."
+            )
+        return RustHeadlessGame(deck1, deck2)
+    return HeadlessGame(deck1, deck2)
 from digimon_gym.engine.game import (
     TENSOR_SIZE, ACTION_SPACE_SIZE, FIELD_SLOTS,
     TARGETS_PER_ATTACKER, FIELDS_PER_HAND, SECURITY_TARGET, BREEDING_SLOT,
@@ -104,7 +132,7 @@ class DigimonEnv(gymnasium.Env):
             deck1 = options.get("deck1", deck1)
             deck2 = options.get("deck2", deck2)
 
-        self.runner = HeadlessGame(deck1, deck2)
+        self.runner = _make_runner(deck1, deck2)
         self._step_count = 0
 
         obs = self.runner.get_board_tensor(1)

@@ -87,6 +87,7 @@ class EX10_061(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         effect0._alt_digi_cost = 5
         effect0._alt_digi_level = 6
+        effect0._alt_digi_trait = "Dark Masters"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -139,21 +140,21 @@ class EX10_061(CardScript):
         effects.append(effect1)
 
         # --- Shared On Play / When Digivolving logic ---
-        def _shared_process(ctx: Dict[str, Any]):
-            """Play Dark Masters from digi cards, grant Rush, delete played at turn end."""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game and perm):
-                return
+        def _consume_pending_digi_sources(perm):
+            """Move any _pending_digi_sources from BeforePayCost into the permanent stack."""
+            pending = getattr(card, '_pending_digi_sources', None)
+            if pending and perm:
+                for cs in pending:
+                    perm.card_sources.insert(0, cs)  # insert at bottom
+                card._pending_digi_sources = []
 
-            # Find playable Dark Masters Digimon in digivolution cards
-            # "1 of each with different names" = up to 1 per distinct name
+        def _find_playable_dm(perm):
+            """Find distinct-named Dark Masters Digimon in digivolution cards."""
             seen_names = set()
             playable = []
             for cs in list(perm.card_sources):
                 if cs is perm.top_card:
-                    continue  # Don't play top card
+                    continue
                 if not _is_dark_masters_digimon(cs):
                     continue
                 names = getattr(cs, 'card_names', []) or []
@@ -161,19 +162,53 @@ class EX10_061(CardScript):
                 if name and name not in seen_names:
                     seen_names.add(name)
                     playable.append(cs)
+            return playable
+
+        def _shared_process(ctx: Dict[str, Any]):
+            """Play Dark Masters from digi cards, grant Rush, delete played at turn end.
+
+            C# ref: canNoSelect = true (player may skip entirely),
+            canEndNotMax = false (if selecting, must select all distinct names).
+            Implemented as a "you may" branch choice: play all or none.
+            """
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game and perm):
+                return
+
+            # First, consume any pending digi sources from BeforePayCost
+            _consume_pending_digi_sources(perm)
+
+            playable = _find_playable_dm(perm)
 
             if not playable:
                 # No Dark Masters in digi cards to play — still grant Rush
                 _grant_rush_to_dm(player, game)
                 return
 
-            # Play each distinct Dark Masters from digivolution cards
+            # C# behavior: canNoSelect=true + canEndNotMax=false means
+            # "you may play all distinct DMs, or none". Offer as branch choice.
+            def on_branch(branch_index: int):
+                if branch_index == 0:
+                    # Play all distinct Dark Masters from digi cards
+                    _play_all_dm_and_grant_rush(player, perm, game, playable)
+                else:
+                    # Skip playing — still grant Rush
+                    _grant_rush_to_dm(player, game)
+
+            game.effect_choose_branch(
+                player, 2, on_branch,
+                prompt="Play [Dark Masters] from digivolution cards?",
+                branch_labels=["Play all Dark Masters", "Skip"],
+            )
+
+        def _play_all_dm_and_grant_rush(player, perm, game, playable):
+            """Play all distinct DM cards from digi stack, grant Rush, register EOT delete."""
             played_perms = []
             for cs in playable:
-                # Remove from digivolution sources
                 if cs in perm.card_sources:
                     perm.card_sources.remove(cs)
-                # Play as new permanent without paying cost
                 played_perm = player.play_card_from_source(cs, pay_cost=False)
                 if played_perm:
                     played_perms.append(played_perm)
@@ -182,9 +217,12 @@ class EX10_061(CardScript):
                         {
                             'played_card': cs,
                             'played_permanent': played_perm,
+                            'event_permanent': played_perm,
                             'event_player': player,
+                            'is_effect_play': True,
                         },
                     )
+                    game._fire_play_observers(played_perm, player)
 
             # Grant <Rush> to all Dark Masters trait Digimon for the turn
             _grant_rush_to_dm(player, game)

@@ -9,17 +9,31 @@ if TYPE_CHECKING:
 
 
 class BT22_101(CardScript):
-    """BT22-101 Kyoko Kuremi"""
+    """BT22-101 Kyoko Kuremi | Tamer (Black/Yellow, Cost 5, CS)
+
+    [Start of Your Turn] If you have 2 or less memory, set it to 3.
+    [All Turns] When any of your level 4 or higher [CS] trait Digimon are
+        deleted, by suspending this Tamer, return 1 [CS] trait Digimon card
+        from your trash to the hand.
+    [Your Turn] [Once Per Turn] When this Tamer unsuspends, if you don't have
+        [Alphamon], this Tamer may digivolve into [Alphamon] in the hand with
+        the digivolution cost reduced by 2.
+    Security Effect: [Security] Play this card without paying the cost.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: set_memory_3
-        # [Start of Your Turn] Set memory to 3 if <= 2
+        # --------------------------------------------------------------
+        # C1 — [Start of Your Turn] If memory <= 2, set to 3
+        # (fires during OnStartMainPhase like other Tamer memory gates)
+        # --------------------------------------------------------------
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT22-101 Set memory to 3")
-        effect0.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
+        effect0.set_effect_description(
+            "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+        )
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -30,140 +44,221 @@ class BT22_101(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Set memory to 3 if <= 2"""
-            player = ctx.get('player')
+            """Set memory to 3 if <= 2."""
             game = ctx.get('game')
-            if player and game and game.memory <= 2:
+            if game and game.memory <= 2:
                 game.memory = 3
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [All Turns] When any of your level 4 or higher [CS] trait Digimon are deleted, by suspending this Tamer, return 1 [CS] trait Digimon card from your trash to the hand.
+        # --------------------------------------------------------------
+        # C2 — [All Turns] When our Lv4+ CS Digimon is deleted,
+        # by suspending this Tamer, return 1 CS Digimon from trash to hand.
+        # Uses NoTiming + _is_deletion_observer so _fire_deletion_observers()
+        # (which scans cross-permanent effects) picks it up. OnDestroyedAnyone
+        # fires only from the deleted perm's own card_sources and would never
+        # pick up this observer.
+        # --------------------------------------------------------------
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect1.set_effect_name("BT22-101 Suspend tamer, add 1 [CS] digimon from trash to hand")
-        effect1.set_effect_description("[All Turns] When any of your level 4 or higher [CS] trait Digimon are deleted, by suspending this Tamer, return 1 [CS] trait Digimon card from your trash to the hand.")
+        effect1.set_effect_name(
+            "BT22-101 Suspend tamer, add 1 [CS] digimon from trash to hand"
+        )
+        effect1.set_effect_description(
+            "[All Turns] When any of your level 4 or higher [CS] trait Digimon "
+            "are deleted, by suspending this Tamer, return 1 [CS] trait Digimon "
+            "card from your trash to the hand."
+        )
         effect1.is_optional = True
-        effect1.is_on_deletion = True
+        effect1._is_deletion_observer = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            # Kyoko must be on field
             tamer_perm = card.permanent_of_this_card() if card else None
-            if not tamer_perm:
+            if tamer_perm is None:
                 return False
-            # Tamer must be unsuspended (suspending is the cost)
+            # Can't pay the suspend cost if already suspended
             if tamer_perm.is_suspended:
                 return False
-            # The deleted permanent must be our own Lv4+ CS trait Digimon
-            deleted_perm = context.get('permanent')
-            if not deleted_perm:
+            owner = card.owner if card else None
+            if owner is None:
                 return False
-            player = card.owner if card else None
-            if not player:
+            # The deleted permanent must be our own Digimon
+            deleted_perm = context.get('deleted_permanent')
+            if deleted_perm is None:
                 return False
-            # Must be our Digimon (check via context event_player or owner)
-            event_player = context.get('event_player')
-            if event_player and event_player is not player:
+            if not getattr(deleted_perm, 'is_digimon', False):
                 return False
-            if not deleted_perm.is_digimon:
+            # Confirm ownership of the deleted perm: its card_sources[0].owner
+            # is the original owner (context['player'] in deletion observers
+            # is always the observer's owner, not the deleted owner).
+            deleted_owner = (
+                deleted_perm.card_sources[0].owner
+                if deleted_perm.card_sources else None
+            )
+            if deleted_owner is not owner:
                 return False
-            level = deleted_perm.level
+            # Level 4 or higher
+            top = deleted_perm.top_card
+            if top is None:
+                return False
+            level = getattr(top, 'level', None)
             if level is None or level < 4:
                 return False
-            top = deleted_perm.top_card
-            if top:
-                traits = getattr(top, 'card_traits', []) or []
-                if not any('CS' in t for t in traits):
-                    return False
-            else:
+            # Must have [CS] trait (exact-match on trait list, not substring)
+            traits = getattr(top, 'card_traits', []) or []
+            if 'CS' not in traits:
                 return False
             return True
-
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend this Tamer, return 1 CS Digimon from trash to hand."""
+            """Suspend Kyoko, then pick 1 CS Digimon from trash to return to hand."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Cost: suspend this Tamer
             tamer_perm = card.permanent_of_this_card() if card else None
-            if tamer_perm and not tamer_perm.is_suspended:
+            if tamer_perm is None:
+                return
+            # Pay cost: suspend this Tamer
+            if not tamer_perm.is_suspended:
                 tamer_perm.suspend()
-            # Select 1 CS trait Digimon from trash to return to hand
+
+            # Select 1 CS trait Digimon card from trash to return to hand
+            def trash_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return 'CS' in traits
+
+            def on_select(selected):
+                if selected in player.trash_cards:
+                    player.trash_cards.remove(selected)
+                    player.hand_cards.append(selected)
+
+            # Use the standard trash-select helper so the agent chooses.
+            from ....game.effects import SEL_TRASH_START
             from ....data.enums import GamePhase
             valid = []
             for i, tc in enumerate(player.trash_cards):
-                if getattr(tc, 'is_digimon', False):
-                    traits = getattr(tc, 'card_traits', []) or []
-                    if any('CS' in t for t in traits):
-                        from ....game.effects import SEL_TRASH_START
-                        idx = SEL_TRASH_START + i
-                        valid.append(idx)
+                if trash_filter(tc):
+                    valid.append(SEL_TRASH_START + i)
             if not valid:
                 return
 
-            def on_select(action_id):
-                from ....game.effects import SEL_TRASH_START
+            def on_action(action_id):
                 idx = action_id - SEL_TRASH_START
                 if 0 <= idx < len(player.trash_cards):
-                    selected = player.trash_cards.pop(idx)
-                    player.hand_cards.append(selected)
+                    on_select(player.trash_cards[idx])
 
             game.request_selection(
-                GamePhase.SelectTrash, player, on_select, valid, is_optional=False,
-                prompt="Select 1 [CS] trait Digimon card from trash to return to hand.")
-
+                GamePhase.SelectTrash, player, on_action,
+                valid, is_optional=False,
+                prompt="Select 1 [CS] trait Digimon card from trash to return to hand.",
+            )
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnUnTappedAnyone
-        # [Your Turn] [Once Per Turn] When this Tamer unsuspends, if you don't have [Alphamon], this Tamer may digivolve into [Alphamon] in the hand with the digivolution cost reduced by 2.
+        # --------------------------------------------------------------
+        # C3 — [Your Turn] [Once Per Turn] When this Tamer unsuspends, if you
+        # don't have [Alphamon], this Tamer may digivolve into [Alphamon] in
+        # the hand with the digivolution cost reduced by 2.
+        # --------------------------------------------------------------
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnUnTappedAnyone)
-        effect2.set_effect_name("BT22-101 Digivolve into [Alphamon] for 2 reducded cost")
-        effect2.set_effect_description("[Your Turn] [Once Per Turn] When this Tamer unsuspends, if you don't have [Alphamon], this Tamer may digivolve into [Alphamon] in the hand with the digivolution cost reduced by 2.")
+        effect2.set_effect_name(
+            "BT22-101 Digivolve into [Alphamon] (cost -2)"
+        )
+        effect2.set_effect_description(
+            "[Your Turn] [Once Per Turn] When this Tamer unsuspends, if you "
+            "don't have [Alphamon], this Tamer may digivolve into [Alphamon] "
+            "in the hand with the digivolution cost reduced by 2."
+        )
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT22_101_Digivolve")
 
-        effect = effect2  # alias for condition closure
+        def _is_alphamon_exact(cs) -> bool:
+            """Exact name match 'Alphamon' — excludes 'Alphamon: Ouryuken' etc."""
+            names = getattr(cs, 'card_names', []) or []
+            return 'Alphamon' in names
+
         def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            # Kyoko must be on field
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            owner = card.owner if card else None
+            if owner is None:
+                return False
+            # [Your Turn] — only fires on owner's turn
+            if not owner.is_my_turn:
+                return False
+            # Only when THIS tamer's permanent is the one unsuspending
+            unsuspended_perm = context.get('event_permanent', context.get('permanent'))
+            if unsuspended_perm is None:
+                return False
+            if unsuspended_perm is not tamer_perm:
+                return False
+            # "if you don't have [Alphamon]" — no Alphamon on owner's battle area
+            for p in owner.battle_area:
+                top = p.top_card
+                if top and _is_alphamon_exact(top):
+                    return False
+            # Must have at least one Alphamon in hand (otherwise nothing to do)
+            if not any(
+                getattr(c, 'is_digimon', False) and _is_alphamon_exact(c)
+                for c in owner.hand_cards
+            ):
                 return False
             return True
-
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Digivolve Kyoko into an Alphamon card in hand, cost -2."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
-            def digi_filter(c):
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm is None:
+                return
 
+            def digi_filter(c):
+                return bool(
+                    getattr(c, 'is_digimon', False) and _is_alphamon_exact(c)
+                )
+
+            game.effect_digivolve_from_hand(
+                player, tamer_perm, digi_filter,
+                cost_reduction=2, ignore_requirements=True,
+                is_optional=True,
+                prompt="Select an [Alphamon] from hand to digivolve this Tamer into.",
+            )
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # --------------------------------------------------------------
+        # C4 — [Security] Play this card without paying the cost
+        # --------------------------------------------------------------
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT22-101 Security: Play this card")
-        effect3.set_effect_description("Security: Play this card")
+        effect3.set_effect_description(
+            "[Security] Play this card without paying the cost."
+        )
         effect3.is_security_effect = True
 
         def condition3(context: Dict[str, Any]) -> bool:
             return True
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Play this tamer from security without paying cost."""
+            player = ctx.get('player')
+            if player and card:
+                player.play_card_from_source(card, pay_cost=False)
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

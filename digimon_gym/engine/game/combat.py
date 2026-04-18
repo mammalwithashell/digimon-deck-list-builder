@@ -422,4 +422,4 @@ class CombatMixin:
                 if effect.can_use_condition and not effect.can_use_condition(context):
                     continue
                 effect.record_activation()
-                effect.on_process_callback(context)
+                self._invoke_effect_callback(effect, context)

@@ -27,14 +27,20 @@ class BT4_104(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash top security, gain 2 memory"""
+            """Action: Trash top security, then gain 2 memory.
+
+            Use player.trash_security_card() (not raw list pop) so that
+            OnDiscardSecurity / OnLoseSecurity observers fire correctly.
+            Resolution order matches card text: trash first, then memory.
+            """
             player = ctx.get('player')
-            game = ctx.get('game')
             if not player:
                 return
+            # Trash the top card of the security stack (index 0 == top)
             if player.security_cards:
-                trashed = player.security_cards.pop(0)
-                player.trash_cards.append(trashed)
+                top_sec = player.security_cards[0]
+                player.trash_security_card(top_sec)
+            # Then, gain 2 memory
             player.add_memory(2)
 
         effect0.set_on_process_callback(process0)

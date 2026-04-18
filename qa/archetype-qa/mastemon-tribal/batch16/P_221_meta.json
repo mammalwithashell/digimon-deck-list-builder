@@ -1,0 +1,25 @@
+{
+  "card_id": "P-221",
+  "card_name": "Chaosmon",
+  "card_kind": "Digimon",
+  "level": 7,
+  "colors": [
+    "Yellow",
+    "Purple"
+  ],
+  "traits": "Unique",
+  "dp": 15000,
+  "play_cost": 15,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 5,
+      "level": 6
+    }
+  ],
+  "effect_text": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Partition (Yellow Lv.6 & Purple/Black Lv.6)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[When Digivolving] If DNA digivolving, until your opponent's turn ends, their effects don't affect this Digimon.\r\n[When Digivolving] [When Attacking] 1 of your opponent's Digimon gets -10000 DP until their turn ends.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/p/p_221.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\P\\Yellow\\P_221.cs"
+}

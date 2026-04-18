@@ -1,0 +1,24 @@
+{
+  "card_id": "BT8-071",
+  "card_name": "Psychemon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Purple"
+  ],
+  "traits": "Reptile",
+  "dp": 3000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 0,
+      "level": 2
+    }
+  ],
+  "effect_text": "[All Turns] Players can't reduce play costs.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt8/bt8_071.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT8\\Purple\\BT8_071.cs"
+}

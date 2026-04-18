@@ -1,0 +1,24 @@
+{
+  "card_id": "BT15-038",
+  "card_name": "Angewomon",
+  "card_kind": "Digimon",
+  "level": 5,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Archangel",
+  "dp": 7000,
+  "play_cost": 4,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 3,
+      "level": 4
+    }
+  ],
+  "effect_text": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of their turn.\r\n[All Turns] [Once Per Turn] When a card is removed from your security stack, if you have 3 or fewer security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_text": "Ace Overflow ＜-3＞ (As this card moves from the field or under a card to an area other than those, lose 3 memory.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt15/bt15_038.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT15\\Yellow\\BT15_038.cs"
+}

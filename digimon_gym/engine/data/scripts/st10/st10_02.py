@@ -32,28 +32,48 @@ class ST10_02(CardScript):
         effect0.is_optional = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            perm = card.permanent_of_this_card()
+            if not perm:
+                return False
+            owner = card.owner
+            # Need at least 1 OTHER Digimon on field as second DNA material
+            # ("This Digimon and any of your other Digimon may DNA digivolve")
+            other_digimon = [
+                p for p in owner.battle_area
+                if p is not perm and p.is_digimon
+            ]
+            if not other_digimon:
+                return False
+            # Need at least 1 Digimon card in hand as the DNA target
+            hand_digimon = [
+                c for c in owner.hand_cards
+                if getattr(c, 'is_digimon', False)
+            ]
+            if not hand_digimon:
                 return False
             return True
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Trigger DNA digivolve from hand at end of turn."""
+            """Trigger DNA digivolve from hand at end of turn.
+
+            The engine's effect_dna_digivolve_from_hand already filters
+            candidates down to cards with dna_costs and verifies that valid
+            DNA materials exist, so this script just forwards the call with
+            an open filter.
+            """
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Allow DNA digivolve from hand — any Digimon card with DNA costs
-            def dna_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                entity = getattr(c, 'c_entity_base', None)
-                if entity and entity.dna_costs:
-                    return True
-                return False
-            game.effect_dna_digivolve_from_hand(player, dna_filter, is_optional=True)
+            game.effect_dna_digivolve_from_hand(
+                player,
+                filter_fn=lambda c: True,
+                is_optional=True,
+                prompt="Select a card from hand to DNA digivolve (end of turn).",
+            )
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 

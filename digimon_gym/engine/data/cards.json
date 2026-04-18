@@ -137259,5 +137259,80 @@
     "security_effect_description_eng": "",
     "evo_costs": [],
     "xros_req": ""
+  },
+  "TEST-020": {
+    "index": 4083,
+    "norm_id": 0.20415,
+    "card_id": "TEST-020",
+    "card_index": 4083,
+    "card_name_eng": "ParitySynthDraw2",
+    "card_name_jpn": "",
+    "card_effect_class_name": "TEST_020",
+    "play_cost": 2,
+    "dp": null,
+    "level": null,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Draw 2 cards.",
+    "evo_costs": [],
+    "xros_req": ""
+  },
+  "TEST-021": {
+    "index": 4084,
+    "norm_id": 0.2042,
+    "card_id": "TEST-021",
+    "card_index": 4084,
+    "card_name_eng": "ParitySynthPlaySelf",
+    "card_name_jpn": "",
+    "card_effect_class_name": "TEST_021",
+    "play_cost": 2,
+    "dp": null,
+    "level": null,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying its cost.",
+    "evo_costs": [],
+    "xros_req": ""
+  },
+  "TEST-022": {
+    "index": 4085,
+    "norm_id": 0.20425,
+    "card_id": "TEST-022",
+    "card_index": 4085,
+    "card_name_eng": "ParitySynthGain3",
+    "card_name_jpn": "",
+    "card_effect_class_name": "TEST_022",
+    "play_cost": 2,
+    "dp": null,
+    "level": null,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Gain 3 memory.",
+    "evo_costs": [],
+    "xros_req": ""
   }
 }

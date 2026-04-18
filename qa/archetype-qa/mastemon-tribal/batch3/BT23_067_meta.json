@@ -1,0 +1,24 @@
+{
+  "card_id": "BT23-067",
+  "card_name": "LadyDevimon",
+  "card_kind": "Digimon",
+  "level": 5,
+  "colors": [
+    "Purple"
+  ],
+  "traits": "Fallen Angel, CS",
+  "dp": 6000,
+  "play_cost": 7,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 3,
+      "level": 4
+    }
+  ],
+  "effect_text": "When this card would be played from the hand, if you have [Angewomon] or [Mirei Mikagura], reduce the play cost by 3.\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon.",
+  "inherited_text": "＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt23/bt23_067.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT23\\Purple\\BT23_067.cs"
+}

@@ -46,7 +46,7 @@ class BT14_084(CardScript):
                     return False
                 if 'Yellow' not in [col.name for col in getattr(c, 'card_colors', [])]:
                     return False
-                return any('Vaccine' in trait for trait in (getattr(c, 'card_traits', []) or []))
+                return 'Vaccine' in (getattr(c.c_entity_base, 'attribute_eng', []) or [])
 
             def on_put_security(selected):
                 player.add_to_security_from_hand(selected, to_top=True)

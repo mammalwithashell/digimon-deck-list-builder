@@ -66,13 +66,17 @@ export function ImportExport({ isOpen, onClose }: ImportExportProps) {
         eggCounts.set(id, (eggCounts.get(id) ?? 0) + 1);
       }
 
+      // Imported text decks don't carry alt-art info; treat every slot
+      // as base art.  Users can re-pick alt-art printings in the grid.
       const mainEntries = Array.from(mainCounts.entries()).map(([cardId, count]) => ({
         cardId,
+        isAltArt: false,
         count,
         cardData: cardDataMap.get(cardId) ?? undefined,
       }));
       const eggEntries = Array.from(eggCounts.entries()).map(([cardId, count]) => ({
         cardId,
+        isAltArt: false,
         count,
         cardData: cardDataMap.get(cardId) ?? undefined,
       }));

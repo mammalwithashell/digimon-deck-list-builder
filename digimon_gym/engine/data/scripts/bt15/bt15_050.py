@@ -67,10 +67,16 @@ class BT15_050(CardScript):
 
         def process1(ctx: Dict[str, Any]):
             """By deleting 1 of your Digimon (cost), play 1 Dark Masters Digimon from hand free to breeding area."""
+            from ....core.permanent import Permanent as _Permanent
+
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
+
+            # Card text: "to an empty space in your breeding area"
+            if player.breeding_area is not None:
+                return  # Breeding area not empty — cannot use
 
             def own_digimon_filter(p):
                 return p.is_digimon
@@ -79,16 +85,36 @@ class BT15_050(CardScript):
             if not has_own:
                 return
 
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Dark Masters' in t or 'DarkMasters' in t for t in traits)
+
+            # Check there's at least one valid Dark Masters Digimon in hand
+            has_dm = any(play_filter(c) for c in player.hand_cards)
+            if not has_dm:
+                return
+
             def on_delete_cost(target_perm):
                 player.delete_permanent(target_perm)
-                def play_filter(c):
-                    if not getattr(c, 'is_digimon', False):
-                        return False
-                    traits = getattr(c, 'card_traits', []) or []
-                    return any('Dark Masters' in t or 'DarkMasters' in t for t in traits)
 
-                game.effect_play_from_zone(
-                    player, 'hand', play_filter, free=True, is_optional=True)
+                # Play 1 Dark Masters Digimon from hand to breeding area (free)
+                def on_hand_select(selected_card):
+                    if selected_card in player.hand_cards:
+                        player.hand_cards.remove(selected_card)
+                    new_perm = _Permanent([selected_card])
+                    if game:
+                        new_perm.turn_played = game.turn_count
+                        new_perm._owner_game = game
+                    player.breeding_area = new_perm
+                    game.logger.log(
+                        f"[Effect] {player.player_name} played "
+                        f"{selected_card.card_names[0]} to breeding area")
+
+                game.effect_select_hand_card(
+                    player, play_filter, on_hand_select, is_optional=True,
+                    prompt="Select a [Dark Masters] Digimon from hand to play to breeding area.")
 
             game.effect_select_own_permanent(
                 player, on_delete_cost, filter_fn=own_digimon_filter, is_optional=True)

@@ -1,0 +1,24 @@
+{
+  "card_id": "BT7-032",
+  "card_name": "Pulsemon",
+  "card_kind": "Digimon",
+  "level": 3,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Beastkin",
+  "dp": 2000,
+  "play_cost": 3,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 0,
+      "level": 2
+    }
+  ],
+  "effect_text": "Inherited Effect [When Attacking] [Once Per Turn] If you have 3 security cards, gain 2 memory.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt7/bt7_032.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT7\\Yellow\\BT7_032.cs"
+}

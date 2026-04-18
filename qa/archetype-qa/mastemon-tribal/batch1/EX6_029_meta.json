@@ -1,0 +1,25 @@
+{
+  "card_id": "EX6-029",
+  "card_name": "Mastemon",
+  "card_kind": "Digimon",
+  "level": 6,
+  "colors": [
+    "Yellow",
+    "Purple"
+  ],
+  "traits": "Angel",
+  "dp": 12000,
+  "play_cost": 7,
+  "evo_costs": [
+    {
+      "color": "Yellow",
+      "cost": 4,
+      "level": 5
+    }
+  ],
+  "effect_text": "[Hand] [Counter] ＜Blast DNA Digivolve ([Angewomon] + [LadyDevimon])＞ (1 of your specified Digimon and 1 specified card in hand may DNA digivolve into this card.)\r\n[On Play] [When Digivolving] You may play 1 level 5 or lower Digimon card with the [Angel], [Archangel] or [Fallen Angel] trait from your hand or trash without paying the cost. Then, if DNA digivolving, place 1 other Digimon at the bottom of its owner's security stack, and trash cards from the top of your opponent's security stack until it has 4 left.",
+  "inherited_text": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/ex6/ex6_029.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX6\\Yellow\\EX6_029.cs"
+}

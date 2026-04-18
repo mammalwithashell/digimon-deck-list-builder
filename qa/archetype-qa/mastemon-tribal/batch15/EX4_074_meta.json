@@ -1,0 +1,25 @@
+{
+  "card_id": "EX4-074",
+  "card_name": "ShineGreymon: Ruin Mode",
+  "card_kind": "Digimon",
+  "level": 7,
+  "colors": [
+    "Purple",
+    "Yellow"
+  ],
+  "traits": "Light Dragon",
+  "dp": 15000,
+  "play_cost": 14,
+  "evo_costs": [
+    {
+      "color": "Purple",
+      "cost": 5,
+      "level": 6
+    }
+  ],
+  "effect_text": "[When Digivolving] [On Deletion] Until the end of your opponent's next turn, all of your opponent's Digimon get -5000DP.\r\n[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and ＜Recovery +1 (Deck)＞. Then, if you have a Tamer in play, hatch 1 Digi-Egg card to an empty space in your breeding area.",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/ex4/ex4_074.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\EX4\\Purple\\EX4_074.cs"
+}

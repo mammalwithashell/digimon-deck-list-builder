@@ -37,8 +37,8 @@ class RB1_035(CardScript):
             player = card.owner if card else None
             if not player:
                 return False
-            game = context.get('game')
-            if game and game.current_player != player:
+            # Only fires at start of YOUR turn
+            if not player.is_my_turn:
                 return False
             enemy = player.enemy
             if not enemy:
@@ -49,9 +49,8 @@ class RB1_035(CardScript):
 
         def process0(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            game = ctx.get('game')
-            if player and game:
-                game.set_memory(game.memory + 1)
+            if player:
+                player.add_memory(1)
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
@@ -76,23 +75,20 @@ class RB1_035(CardScript):
             if not player:
                 return False
             # Must be triggered by opponent playing a Digimon
-            trigger_perm = context.get('permanent')
-            if not trigger_perm:
+            played_perm = context.get('played_permanent')
+            if not played_perm:
                 return False
-            if trigger_perm.owner == player:
+            # The played permanent must belong to the opponent
+            if played_perm.owner == player:
                 return False
-            if not trigger_perm.is_digimon:
-                return False
-            ctx_on_play = context.get('is_on_play', False)
-            if not ctx_on_play:
+            if not played_perm.is_digimon:
                 return False
             return True
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
+            if not player:
                 return
             tamer_perm = card.permanent_of_this_card() if card else None
             if not tamer_perm:
@@ -100,13 +96,13 @@ class RB1_035(CardScript):
             # Cost: suspend this Tamer
             tamer_perm.suspend()
             # Check the played Digimon's level
-            trigger_perm = ctx.get('permanent')
-            if not trigger_perm:
+            played_perm = ctx.get('played_permanent')
+            if not played_perm:
                 return
-            level = trigger_perm.level or 0
+            level = played_perm.level or 0
             if level >= 4:
-                game.set_memory(game.memory + 1)
-            elif level == 3:
+                player.add_memory(1)
+            if level == 3:
                 player.draw_cards(1)
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

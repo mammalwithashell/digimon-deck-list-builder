@@ -47,19 +47,15 @@ class EX2_067(CardScript):
             candidates = [p for p in enemy.battle_area if target_filter(p)]
 
             if candidates:
-                deleted = [False]
-
                 def on_delete(target_perm):
-                    enemy.delete_permanent(target_perm)
-                    deleted[0] = True
+                    actually_deleted = enemy.delete_permanent(target_perm)
+                    # "If an opponent's Digimon wasn't deleted by this effect"
+                    # — if deletion was prevented (Evade, Armor Purge, etc.), draw 2
+                    if not actually_deleted:
+                        player.draw_cards(2)
 
                 game.effect_select_opponent_permanent(
                     player, on_delete, filter_fn=target_filter, is_optional=False)
-
-                # If the selection was resolved synchronously and nothing was deleted,
-                # draw 2. The engine processes selections synchronously in headless mode.
-                if not deleted[0]:
-                    player.draw_cards(2)
             else:
                 # No valid targets — draw 2
                 player.draw_cards(2)

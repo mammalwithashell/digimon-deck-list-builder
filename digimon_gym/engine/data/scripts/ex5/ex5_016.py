@@ -16,12 +16,24 @@ class EX5_016(CardScript):
 
         # Factory effect: alt_digivolve_req
         # Alternate digivolution: Lv.2 with [Night Claw] or [Light Fang] trait for cost 0
+        # C# ref: checks both Night Claw/NightClaw AND Light Fang/LightFung
         effect0 = ICardEffect()
         effect0.set_effect_name("EX5-016 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         effect0._alt_digi_cost = 0
         effect0._alt_digi_level = 2
-        effect0._alt_digi_trait = "Night Claw"
+        # Use _alt_digi_condition_fn to express multi-trait OR logic
+        # (C# PermanentCondition checks Night Claw, NightClaw, Light Fang, LightFung)
+        def _alt_digi_trait_check(base_perm) -> bool:
+            top = base_perm.top_card if base_perm else None
+            if not top:
+                return False
+            traits = getattr(top, 'card_traits', []) or []
+            return any(
+                t in ('Night Claw', 'NightClaw', 'Light Fang', 'LightFung', 'LightFang')
+                for t in traits
+            )
+        effect0._alt_digi_condition_fn = _alt_digi_trait_check
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

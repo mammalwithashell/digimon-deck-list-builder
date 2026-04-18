@@ -1,13 +1,13 @@
 {
-  "version": 128,
-  "last_updated": "2026-04-10",
+  "version": 137,
+  "last_updated": "2026-04-12",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "Set memory to 3 correct. On Play search security (simplified). Security play correct."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT1-090": {
       "card_name": "Gravity Crush",
@@ -24,10 +24,11 @@
       "notes": "Fixed: Conditional check for Jesmon/Sistermon. Grants CAN_ATTACK_UNSUSPENDED to all Digimon."
     },
     "BT10-042": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Venusmon",
-      "archetype": "Hudiemon",
-      "notes": "Fixed effect1: replaced broken disable_effect stub with declarative static effect"
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT10-085": {
       "card_name": "Sistermon Ciel",
@@ -59,10 +60,10 @@
     },
     "BT11-042": {
       "card_name": "Angewomon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Digivolved onto Gatomon (evo cost 3, reduced by 2 from Gatomon inherited). When Digivolving security search fired. Keywords correct."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT11-061": {
       "card_name": "Vemmon",
@@ -80,17 +81,17 @@
     },
     "BT11-083": {
       "card_name": "LadyDevimon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Played free via BT23-102 Mastemon When Digivolving effect. On field correct."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT11-094": {
       "card_name": "Mirei Mikagura",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Play cost 5 correct. Start of Turn memory +1. When Digivolving Angewomon/LadyDevimon trigger effect."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT11-105": {
       "card_name": "Fusionize",
@@ -177,10 +178,10 @@
     },
     "BT13-034": {
       "card_name": "Kudamon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Added Vaccine trait check to reveal filter, security count condition."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT13-040": {
       "verdict": "IMPLEMENTED",
@@ -233,17 +234,18 @@
       "report": "batch-fix-cards"
     },
     "BT13-102": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Keenan Crier",
-      "archetype": "Archetype",
-      "notes": "Removed incorrect is_on_play, fixed permanent sourcing"
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: effect-play check, played_permanent context key, draw-before-memory order"
     },
     "BT13-106": {
       "card_name": "Odin's Breath",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-ts-olympos-qa.md",
-      "status": "PASS",
-      "notes": "Script exists and loads."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT13-110": {
       "card_name": "Royal Knights of the Purge",
@@ -274,10 +276,10 @@
     },
     "BT14-003": {
       "card_name": "Tokomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "Inherited OnAddSecurity Draw 1 with Once Per Turn correctly implemented."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT14-009": {
       "verdict": "PASS",
@@ -287,10 +289,10 @@
     },
     "BT14-033": {
       "card_name": "Patamon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Play cost 3 correct. Patamon Lv3 Yellow base for Angewomon digivolve chain."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT14-069": {
       "verdict": "PASS",
@@ -321,10 +323,10 @@
     },
     "BT15-003": {
       "card_name": "Nyaromon",
-      "status": "PASS",
-      "notes": "Inherited WA OPT trash security + memory. Faithful.",
-      "validated_date": "2026-04-05",
-      "report": "batch-fix-cards"
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT15-006": {
       "verdict": "PASS",
@@ -341,52 +343,52 @@
     },
     "BT15-027": {
       "card_name": "Scorpiomon",
-      "status": "PASS",
-      "notes": "Played for cost 6. On Play reveal top 4 add 2 Lv6+ resolved. Inherited Blocker.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: breeding area placement instead of battle area, empty breeding check"
     },
     "BT15-031": {
       "card_name": "MetalSeadramon",
-      "status": "PASS",
-      "notes": "Played for cost 11 correctly. On Play/attack/EOT effects need deeper testing.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Added white-only digivolve restriction with conditional CANNOT_DIGIVOLVE modifier"
     },
     "BT15-037": {
       "card_name": "Gatomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "Barrier (own + inherited). OnLoseSecurity +1 memory correct. OnDiscardSecurity play self free present."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT15-038": {
       "card_name": "Angewomon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Full rewrite: Security trash cost, target selection, DP modifier, Ace Overflow."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT15-050": {
       "card_name": "Cherrymon",
-      "status": "PASS",
-      "notes": "Played for cost 6. On Play reveal effect resolved. Inherited Piercing.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: breeding area placement, empty breeding check, hand card validation"
     },
     "BT15-062": {
       "card_name": "Gigadramon",
-      "status": "PASS",
-      "notes": "Played for cost 6. On Play reveal top 4 add 2 Lv6+ resolved. Inherited Reboot.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: breeding area placement, empty breeding check"
     },
     "BT15-066": {
       "card_name": "Machinedramon",
-      "status": "PASS",
-      "notes": "Played for cost 11 correctly. De-Digivolve and EOT chain effects need deeper testing.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Added white-only digivolve restriction"
     },
     "BT15-069": {
       "card_name": "Candlemon",
@@ -396,24 +398,25 @@
       "notes": "player.is_player_one -> player.player_id == 1. Games pass."
     },
     "BT15-072": {
-      "verdict": "PASS",
       "card_name": "Vilemon",
-      "archetype": "Archetype",
-      "notes": "Blocker + scapegoat prevention -- correct"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Implemented: WhenPermanentWouldBeDeleted process callback, target validation, self-delete cost, removal prevention"
     },
     "BT15-077": {
       "card_name": "LadyDevimon",
-      "status": "PASS",
-      "notes": "Played for cost 6. On Play reveal effect resolved. Inherited Retaliation.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: breeding area placement via request_selection"
     },
     "BT15-079": {
       "card_name": "Piedmon",
-      "status": "PASS",
-      "notes": "Played for cost 11 correctly. On Play delete and EOT chain need deeper testing.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Added white-only digivolve restriction via CANNOT_BE_AFFECTED modifier"
     },
     "BT15-084": {
       "verdict": "IMPLEMENTED",
@@ -443,10 +446,10 @@
     },
     "BT15-102": {
       "card_name": "Apocalymon",
-      "status": "PASS",
-      "notes": "Playable with DM trait cards in trash for cost reduction. Cost reduction mechanism works.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: cost reduction from battle area+trash, any card type with DM trait, pending sources consumed, mill uses proper API"
     },
     "BT16-006": {
       "verdict": "PASS",
@@ -525,10 +528,10 @@
     },
     "BT16-082": {
       "card_name": "Ukkomon",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-11",
       "report": "batch-fix-cards",
-      "status": "PASS",
-      "notes": "FAITHFUL."
+      "status": "FIXED",
+      "notes": "Fixed: moved_permanent context key, callback chaining for hatch, engine OnMove phase fix"
     },
     "BT16-102": {
       "card_name": "Magnamon (X Antibody)",
@@ -623,17 +626,17 @@
     },
     "BT17-068": {
       "card_name": "Mephistomon",
-      "status": "PASS",
-      "notes": "Played for cost 8 correctly. Apocalymon cost reduction and On Deletion play need deeper testing.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: cost_reduction property, removal_cause check, inherited auto-selection replaced with SelectTrash, DP value_fn arity"
     },
     "BT17-070": {
       "card_name": "Gulfmon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-dark-masters-qa.md",
-      "status": "PASS",
-      "notes": "Script correct. Prior cost anomaly was test artifact from field leak."
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: auto-selection replaced with zone branch + hand/trash selection phases"
     },
     "BT17-077": {
       "card_name": "Imperialdramon: Paladin Mode",
@@ -753,10 +756,10 @@
     },
     "BT18-082": {
       "card_name": "Lucemon: Chaos Mode",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "On Play/When Digivolving opponent deletes or recovery+trash. Simplified. Leave prevention tagged."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT18-086": {
       "card_name": "Lucemon: Larva",
@@ -884,10 +887,11 @@
       "notes": ""
     },
     "BT19-093": {
-      "verdict": "PASS",
       "card_name": "Queen Device",
-      "archetype": "Archetype",
-      "notes": "DP -3000 and color bypass correct; When Digivolving disable is engine gap"
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: conditional color bypass, DP uses register_modifier with end_of_opponent_turn, WD disable implemented, SA-2 via modifier, delay flag"
     },
     "BT19-094": {
       "card_name": "Seventh Divine Cruz",
@@ -1163,10 +1167,10 @@
     },
     "BT21-051": {
       "card_name": "Puppetmon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-dark-masters-qa.md",
-      "status": "PASS",
-      "notes": "Script correct. Cost anomaly explained by alt-digi cost."
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: alt-digi missing level=5, _do_bounce forward reference error"
     },
     "BT21-055": {
       "card_name": "Sunarizamon",
@@ -1272,10 +1276,10 @@
     },
     "BT22-004": {
       "card_name": "Wanyamon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: CS trait check + cost_reduction=1 added."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-005": {
       "card_name": "Tsumemon",
@@ -1347,10 +1351,10 @@
     },
     "BT22-031": {
       "card_name": "GoldNumemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-hudiemon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: SA-2 modifier application."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-032": {
       "card_name": "ShoeShoemon",
@@ -1361,10 +1365,10 @@
     },
     "BT22-034": {
       "card_name": "Reppamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "On Play/When Digivolving -3000 DP works. Digivolve and play cost correct."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-036": {
       "card_name": "Chaperomon",
@@ -1402,24 +1406,24 @@
     },
     "BT22-043": {
       "card_name": "Terriermon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-cs-hudiemon.md",
-      "status": "PASS",
-      "notes": "Play cost and On Play CS tamer play verified."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-044": {
       "card_name": "Palmon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-cs-hudiemon.md",
-      "status": "PASS",
-      "notes": "Inherited memory gain verified."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-046": {
       "card_name": "Gargomon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Fixed: c.type_eng->c.card_traits. CS Tamer filter correct."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-049": {
       "verdict": "PASS",
@@ -1442,17 +1446,17 @@
     },
     "BT22-054": {
       "card_name": "Hagurumon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Play cost 3 correct. CS trait Lv3 base. Continuous effect (CS digivolution card placed trigger) registered."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-056": {
       "card_name": "Guardromon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Alt-digivolve from CS Lv3 at cost 2 (via xros_req). When Digivolving -3000 DP effect fired."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-057": {
       "card_name": "Kurisarimon",
@@ -1517,10 +1521,10 @@
     },
     "BT22-089": {
       "card_name": "Mirei Mikagura",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-12",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Fixed play filter OR logic. 8 tests."
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-091": {
       "card_name": "Arata Sanada",
@@ -1531,17 +1535,17 @@
     },
     "BT22-093": {
       "card_name": "Ami Aiba",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Play cost 4 correct. Start of Main Phase memory gain if opponent has Digimon. Digi trigger for 2+ color Digimon."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-094": {
       "card_name": "Yuugo Kamishiro",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-12",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Fixed cost reduction context key (card_to_play -> card_source). 6 tests."
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-098": {
       "card_name": "Unique Emblem: Fable Waltz",
@@ -1552,10 +1556,10 @@
     },
     "BT22-099": {
       "card_name": "Kuremi Detective Agency",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-12",
       "report": "batch-fix-cards",
-      "status": "PASS",
-      "notes": "Faithful. 5 tests."
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT22-100": {
       "verdict": "IMPLEMENTED",
@@ -1565,10 +1569,10 @@
     },
     "BT22-101": {
       "card_name": "Kyoko Kuremi",
-      "status": "PASS",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-jesmon.md",
-      "notes": "Start of Turn memory, CS deletion return, once-per-turn."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT23-002": {
       "card_name": "Yokomon",
@@ -1642,10 +1646,10 @@
     },
     "BT23-027": {
       "card_name": "Angemon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-medusa-vs-hudie.md",
-      "status": "PASS",
-      "notes": "On Play draw + DNA digivolve into Shakkoumon verified. Uses effect_dna_digivolve_from_hand. Barrier keyword verified."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT23-030": {
       "card_name": "Etemon",
@@ -1656,10 +1660,10 @@
     },
     "BT23-031": {
       "card_name": "Angewomon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Digivolved from Gatomon (Yellow Lv4). When Digivolving: add security to hand + recovery +1. Alt evo via CS trait works."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT23-032": {
       "card_name": "Shakkoumon",
@@ -1677,10 +1681,10 @@
     },
     "BT23-037": {
       "card_name": "Tentomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-partial-fixes.md",
-      "status": "PASS",
-      "notes": "CS trait scope added to cost reduction. Hash collision fixed. Harmful effect3 removed."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT23-040": {
       "verdict": "PASS",
@@ -1756,10 +1760,10 @@
     },
     "BT23-067": {
       "card_name": "LadyDevimon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Play cost 7, reduced by 3 (Angewomon/Mirei on field) = cost 4. On Play delete Lv4 or lower fired."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT23-072": {
       "card_name": "King Drasil_7D6",
@@ -1849,10 +1853,10 @@
     },
     "BT23-096": {
       "card_name": "Comet Hammer",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-12",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Fixed color bypass (unconditional->conditional) + delay timing. 8 tests."
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT23-099": {
       "card_name": "The Sistermon Sisters Training Gym",
@@ -1876,10 +1880,10 @@
     },
     "BT23-102": {
       "card_name": "Mastemon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "DNA digivolve Yellow Lv5 + Purple Lv5 cost 0. When Digivolving free play Lv5 or lower. Security trash to 3 logic added. Keywords: alliance, barrier, scapegoat."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT24-001": {
       "card_name": "Gigimon",
@@ -2355,17 +2359,17 @@
     },
     "BT4-097": {
       "card_name": "Kari Kamiya",
-      "status": "PASS",
-      "notes": "Played for cost 3 correctly. Tamer suspend-for-memory trigger needs testing.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: added _security_played flag to prevent double-zone"
     },
     "BT4-104": {
       "card_name": "Blinding Ray",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-medusa-hudie-coverage.md",
-      "status": "PASS",
-      "notes": "New script. Trash security + gain 2 memory fully implemented."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT4-105": {
       "card_name": "Tactical Retreat!",
@@ -2390,10 +2394,10 @@
     },
     "BT5-033": {
       "card_name": "Cutemon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Was stub — implemented CANNOT_REDUCE_COST modifier (engine gap: not yet consumed in digivolve).",
-      "validated_date": "2026-04-05",
-      "report": "batch-fix-cards"
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT5-059": {
       "card_name": "Keramon",
@@ -2541,10 +2545,10 @@
     },
     "BT7-032": {
       "card_name": "Pulsemon",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-ts-jupitermon.md",
-      "status": "PASS",
-      "notes": "Inherited When Attacking +2 memory at exactly 3 security. OPT enforced. Does not trigger at 4 security."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT7-069": {
       "verdict": "PASS",
@@ -2568,10 +2572,10 @@
     },
     "BT7-107": {
       "card_name": "Calling From the Darkness",
-      "validated_date": "2026-04-10",
+      "validated_date": "2026-04-12",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "First trash recovery mandatory, second optional per C#"
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT7-109": {
       "card_name": "Dead or Alive",
@@ -2610,10 +2614,10 @@
     },
     "BT8-071": {
       "card_name": "Psychemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Descriptive-only continuous restriction. Engine lacks play cost lock."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT8-084": {
       "card_name": "Kimeramon",
@@ -2623,23 +2627,25 @@
       "notes": "Process callback added: Lv.5- Digimon from trash to bottom evo card. Dynamic DP per color."
     },
     "BT8-090": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Kari Kamiya",
-      "archetype": "Archetype",
-      "notes": "Wrong timing (OnStartMainPhase -> OnStartTurn); suspend-as-cost not checked properly; OnAddSecurity didn't verify it was own security"
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "Faithful. Memory model correct, OnAddSecurity triggers correctly"
     },
     "BT8-094": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Digimon Emperor",
-      "archetype": "Archetype",
-      "notes": "OnRemovedField -> OnDestroyedAnyone"
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: deletion observer timing/context keys, was using OnDestroyedAnyone instead of _is_deletion_observer"
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-11",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Added security process callback + SecuritySkill timing."
+      "notes": "Fixed: CANNOT_PUT_ON_FIELD -> CANNOT_PLAY_BY_EFFECT global modifier"
     },
     "BT8-107": {
       "verdict": "PASS",
@@ -2661,10 +2667,10 @@
     },
     "BT9-033": {
       "card_name": "Pillomon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Was stub — implemented CANNOT_PLAY_BY_EFFECT modifier.",
-      "validated_date": "2026-04-05",
-      "report": "batch-fix-cards"
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT9-069": {
       "card_name": "Baihumon",
@@ -2681,10 +2687,10 @@
     },
     "BT9-082": {
       "card_name": "Ordinemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Added is_dna_digivolve check. Fixed delete order."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "BT9-092": {
       "verdict": "IMPLEMENTED",
@@ -2693,10 +2699,11 @@
       "notes": "Wrong docstring (Hina Kurihara -> Cool Boy); removed unnecessary security process callback"
     },
     "BT9-103": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Kongou",
-      "archetype": "Archetype",
-      "notes": "grant_keyword -> register_modifier loop"
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: CANNOT_ATTACK -> CANNOT_ATTACK_PLAYER, per-permanent -> global dynamic condition"
     },
     "BT9-109": {
       "card_name": "X Antibody",
@@ -2714,10 +2721,10 @@
     },
     "BT9-112": {
       "card_name": "DeathXmon",
-      "status": "PASS",
-      "notes": "Cost reduction, De-Digivolve, EOT self-delete. Faithful.",
-      "validated_date": "2026-04-05",
-      "report": "batch-fix-cards"
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: removed broken _temp_play_cost_reduction from process0"
     },
     "EX1-021": {
       "card_name": "MetalGarurumon",
@@ -2889,10 +2896,10 @@
     },
     "EX10-051": {
       "card_name": "Mummymon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Full rewrite: On Play trash-then-de-digivolve. On Deletion plays Myotismon Tamer."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "EX10-052": {
       "card_name": "Lucemon: Chaos Mode",
@@ -3190,10 +3197,10 @@
     },
     "EX2-067": {
       "card_name": "Fire Ball",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Red card field requirement correct. Delete-or-draw-2 correct."
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: draw-2 fallback fired even after successful deletion due to async selection"
     },
     "EX3-057": {
       "verdict": "PASS",
@@ -3265,10 +3272,10 @@
     },
     "EX4-074": {
       "card_name": "ShineGreymon: Ruin Mode",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Fixed DP -5000 to use change_dp() instead of broken register_modifier. End of Attack self-delete.",
-      "validated_date": "2026-04-05",
-      "report": "batch-fix-cards"
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "EX5-016": {
       "card_name": "Lunamon",
@@ -3335,24 +3342,24 @@
     },
     "EX6-020": {
       "card_name": "Gatomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "On Play reveal top 3 add Angel/Mirei. Inherited -2000 DP on attack."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "EX6-022": {
       "card_name": "Angewomon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: SA-2 via register_modifier, Angel/3GA trait check on Alliance."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "EX6-029": {
       "card_name": "Mastemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Added is_digimon check to play filter."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "EX6-035": {
       "card_name": "Cherubimon",
@@ -3405,10 +3412,10 @@
     },
     "EX6-074": {
       "card_name": "Mirei Mikagura",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Play cost 4 correct. Triggers on Holy Beast/Archangel/Fallen Angel Digimon played, correctly fired for Tapirmon and Gatomon."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "EX7-024": {
       "card_name": "Shoemon",
@@ -3507,17 +3514,17 @@
     },
     "EX8-026": {
       "card_name": "MetalSeadramon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-dark-masters-qa.md",
-      "status": "PASS",
-      "notes": "Script correct. Alt-digi cost explanation."
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: CANNOT_SUSPEND continuous effect was non-functional (wrong declarative flag, arg order, memory check)"
     },
     "EX8-030": {
       "card_name": "Tapirmon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Was stub — implemented CANNOT_ADD_MEMORY modifier.",
-      "validated_date": "2026-04-05",
-      "report": "batch-fix-cards"
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "EX8-046": {
       "card_name": "Gotsumon",
@@ -3586,10 +3593,10 @@
     },
     "EX8-074": {
       "card_name": "MedievalGallantmon",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-11",
       "report": "batch-fix-cards",
-      "status": "PASS",
-      "notes": "FAITHFUL."
+      "status": "FIXED",
+      "notes": "Fixed: BeforePayCost condition counts both fields for suspend cost"
     },
     "EX9-002": {
       "verdict": "IMPLEMENTED",
@@ -3787,10 +3794,11 @@
       "report": "batch-fix-cards"
     },
     "EX9-068": {
-      "verdict": "PASS",
       "card_name": "Analogman",
-      "archetype": "Millenniummon",
-      "notes": ""
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: played_permanent context key, draw API, exact trait matching"
     },
     "EX9-069": {
       "verdict": "IMPLEMENTED",
@@ -3880,10 +3888,10 @@
     },
     "LM-035": {
       "card_name": "Amber Memory Boost!",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Rewrote to canonical Memory Boost pattern (OptionSkill, reveal_and_select, SecuritySkill).",
-      "validated_date": "2026-04-05",
-      "report": "batch-fix-cards"
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "LM-037": {
       "card_name": "Sepia Memory Boost!",
@@ -3894,10 +3902,10 @@
     },
     "LM-043": {
       "card_name": "Darkdramon",
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Played for cost 7 correctly. Ace. Scapegoat+De-Digivolve effects need testing.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "notes": "Faithful. Added Ace Overflow attributes for consistency"
     },
     "LM-045": {
       "card_name": "Vermilion Memory Boost!",
@@ -4017,10 +4025,10 @@
     },
     "P-123": {
       "card_name": "Ukkomon",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-11",
       "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Faithful. 5 tests."
+      "notes": "Faithful (engine fix for OnMove deferred phase transition)"
     },
     "P-130": {
       "card_name": "Lui Ohwada",
@@ -4107,10 +4115,10 @@
     },
     "P-187": {
       "card_name": "Mastemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Full rewrite: Separated effects, play costs own security, DP filter, DNA check."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "P-189": {
       "card_name": "Dimetromon",
@@ -4174,10 +4182,10 @@
     },
     "P-206": {
       "card_name": "Digital Gate Open",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Fixed security _security_played flag to prevent double-zone.",
-      "validated_date": "2026-04-05",
-      "report": "batch-fix-cards"
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "P-207": {
       "card_name": "Minervamon",
@@ -4208,10 +4216,10 @@
     },
     "P-216": {
       "card_name": "WaruMonzaemon",
+      "validated_date": "2026-04-10",
+      "report": "batch-fix-cards",
       "status": "FIXED",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-jesmon-dark-masters-qa.md",
-      "notes": "Complete rewrite per C# source. On Play plays Dark Masters + CANNOT_DIGIVOLVE + EOT deletion."
+      "notes": "Fixed: security face-up check uses is_security_face_up API, remove_from_security for cleanup"
     },
     "P-220": {
       "verdict": "PASS",
@@ -4220,10 +4228,11 @@
       "notes": ""
     },
     "P-225": {
-      "verdict": "PASS",
       "card_name": "DigiLab",
-      "archetype": "Hudiemon",
-      "notes": "Delay effect verified against C# reference"
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "P-229": {
       "card_name": "Unique Emblem: Narrative Ronde",
@@ -4233,10 +4242,11 @@
       "report": "batch-fix-cards"
     },
     "RB1-035": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Hokuto Amanokawa",
-      "archetype": "Archetype",
-      "notes": "OnStartMainPhase -> OnStartTurn"
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: non-existent game.current_player, inverted owner check, played_permanent key, set_memory->add_memory"
     },
     "ST1-07": {
       "card_name": "Greymon",
@@ -4247,17 +4257,17 @@
     },
     "ST10-02": {
       "card_name": "Salamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "Inherited End of Turn DNA digivolve from hand. Core archetype enabler works correctly."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "ST10-04": {
       "card_name": "Gatomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "On Play reveal top 3 add yellow+purple. Cost reduction for Archangel/Fallen Angel. Inherited End of Turn DNA."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "ST12-01": {
       "card_name": "Gurimon",
@@ -4414,10 +4424,10 @@
     },
     "ST20-05": {
       "card_name": "Gatomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "Security play free. On Play/When Digivolving Security A. -1 to 2 opponent Digimon. Inherited -2000 DP."
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     },
     "ST20-10": {
       "card_name": "Agumon",
@@ -4435,10 +4445,10 @@
     },
     "ST20-15": {
       "card_name": "Island of Adventure",
-      "validated_date": "2026-04-04",
+      "validated_date": "2026-04-11",
       "report": "batch-fix-cards",
-      "status": "FIXED",
-      "notes": "Fixed option card double-zone corruption in main swap effect. 7 tests."
+      "status": "PASS",
+      "notes": "Faithful. Color bypass, security DP aura, swap mechanic, tamer play all correct"
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",
@@ -4456,16 +4466,17 @@
     },
     "ST6-14": {
       "card_name": "Matt Ishida",
-      "validated_date": "2026-04-10",
+      "validated_date": "2026-04-11",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Changed to _is_deletion_observer, fixed context keys, added owner check"
+      "notes": "Fixed: deletion observer pattern, _security_played flag"
     },
     "ST6-15": {
-      "verdict": "PASS",
       "card_name": "Death Claw",
-      "archetype": "Millenniummon",
-      "notes": ""
+      "validated_date": "2026-04-11",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "Faithful. Optional sacrifice + mandatory opponent deletion correct"
     },
     "ST9-05": {
       "card_name": "Paildramon",
@@ -4886,6 +4897,69 @@
       "report": "batch-fix-cards",
       "status": "PASS",
       "notes": "Faithful. No changes needed"
+    },
+    "EX6-053": {
+      "card_name": "LadyDevimon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
+    },
+    "BT11-080": {
+      "card_name": "Devimon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
+    },
+    "BT8-077": {
+      "card_name": "BlackGatomon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
+    },
+    "BT15-034": {
+      "card_name": "Salamon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
+    },
+    "BT16-088": {
+      "card_name": "Cody Hida & T.K. Takaishi",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
+    },
+    "EX10-031": {
+      "card_name": "DarkKnightmon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
+    },
+    "EX6-030": {
+      "card_name": "Dominimon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
+    },
+    "EX8-064": {
+      "card_name": "Boltboutamon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
+    },
+    "P-221": {
+      "card_name": "Chaosmon",
+      "validated_date": "2026-04-12",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Mastemon (Tribal) archetype faithfulness fix batch"
     }
   }
 }

@@ -16,9 +16,17 @@ class EX10_072(CardScript):
 
         # Color bypass: "While you don't have [Spiral Mountain] in the battle
         # area, you can ignore this card's color requirements."
-        # Setting unconditionally is safe: if a Spiral Mountain is already in
-        # the battle area, its black color already satisfies the requirement.
-        card._match_color_requirement = False
+        # C# reference: CanUseCondition checks !HasBattleAreaPermanent("Spiral Mountain")
+        def _check_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True  # enforce
+            has_spiral = any(
+                p.contains_card_name("Spiral Mountain")
+                for p in owner.battle_area
+            )
+            return has_spiral  # True = enforce (already have one), False = bypass
+        card._match_color_requirement_fn = _check_color_req
 
         # --- Effect 0: [Main] <Draw 2>, then place in battle area ---
         effect0 = ICardEffect()
@@ -72,7 +80,11 @@ class EX10_072(CardScript):
 
         effect = effect2
         def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            # C# reference: CanUseCondition checks IsOpponentTurn(card)
+            # and CanDeclareOptionDelayEffect(card)
+            if not card or not card.owner:
+                return False
+            return not card.owner.is_my_turn
 
         effect2.set_can_use_condition(condition2)
 
@@ -84,7 +96,8 @@ class EX10_072(CardScript):
                 return
 
             def sec_filter(c):
-                if getattr(c, 'is_flipped', True):
+                # C# reference: !cardSource.IsFlipped — face-up security check
+                if not player.is_security_face_up(c):
                     return False
                 if not getattr(c, 'is_digimon', False):
                     return False

@@ -400,3 +400,141 @@ class TestP186Keywords:
             for eff in perm.effect_list(None)
         )
         assert has_blocker, "P-186 should have the Blocker keyword"
+
+
+@pytest.mark.behavioral
+class TestP186CostReductionEdgeCases:
+    """Edge cases for the BeforePayCost cost reduction formula."""
+
+    def test_cost_reduction_partial_trash_floor_division(self, debug_runner):
+        """7 total trash cards => floor(7/5) = 1 group => reduction of 2."""
+        runner = debug_runner(initial_memory=0)
+
+        runner.place_on_field(2, [OMNIMON])  # 15000 DP satisfies condition
+        for _ in range(4):
+            runner.inject_card(1, AGUMON, "trash")
+        for _ in range(3):
+            runner.inject_card(2, AGUMON, "trash")
+        # Total trash = 7 => floor(7/5) = 1 => reduction = 2*1 = 2
+
+        runner.inject_card(1, P186, "hand")
+        runner.set_phase("Main")
+
+        game = runner.game
+        p1 = game.player1
+        p186_card = [c for c in p1.hand_cards
+                     if c.c_entity_base and c.c_entity_base.card_id == P186][0]
+        cost = game.calculate_play_cost(p1, p186_card)
+        assert cost == 10, (
+            f"Cost should be 12 - 2*(7//5) = 12 - 2 = 10, got {cost}"
+        )
+
+    def test_cost_reduction_floor_at_zero(self, debug_runner):
+        """Massive trashes should reduce cost to 0 (not negative)."""
+        runner = debug_runner(initial_memory=0)
+
+        runner.place_on_field(2, [OMNIMON])  # 15000 DP
+        # 35 total trash => floor(35/5) = 7 => reduction = 14 > base cost 12
+        for _ in range(20):
+            runner.inject_card(1, AGUMON, "trash")
+        for _ in range(15):
+            runner.inject_card(2, AGUMON, "trash")
+
+        runner.inject_card(1, P186, "hand")
+        runner.set_phase("Main")
+
+        game = runner.game
+        p1 = game.player1
+        p186_card = [c for c in p1.hand_cards
+                     if c.c_entity_base and c.c_entity_base.card_id == P186][0]
+        cost = game.calculate_play_cost(p1, p186_card)
+        assert cost == 0, (
+            f"Cost should floor at 0 with massive trashes, got {cost}"
+        )
+
+    def test_cost_reduction_exact_memory_change(self, debug_runner):
+        """Verify actual memory spent when playing P-186 with cost reduction."""
+        runner = debug_runner(initial_memory=10)
+
+        runner.place_on_field(2, [OMNIMON])  # 15000 DP
+        # 10 trash cards total => reduction = 2*(10//5) = 4 => cost = 12 - 4 = 8
+        for _ in range(10):
+            runner.inject_card(1, AGUMON, "trash")
+
+        runner.inject_card(1, P186, "hand")
+        runner.set_phase("Main")
+
+        play_action = runner.find_action("Gallantmon")
+        assert play_action is not None
+        runner.execute(play_action)
+        runner.auto_resolve()
+
+        # Memory 10 - 8 = 2
+        assert runner.game.memory == 2, (
+            f"Playing P-186 with cost 8 (12 - 4 reduction) from memory 10 "
+            f"should leave memory at 2, got {runner.game.memory}"
+        )
+
+    def test_cost_reduction_zero_trash(self, debug_runner):
+        """With 0 trash cards and a 13000+ DP Digimon, no reduction (0 groups)."""
+        runner = debug_runner(initial_memory=0)
+
+        runner.place_on_field(2, [OMNIMON])  # 15000 DP
+        # No trash cards at all => floor(0/5) = 0 => reduction = 0
+
+        runner.inject_card(1, P186, "hand")
+        runner.set_phase("Main")
+
+        game = runner.game
+        p1 = game.player1
+        p186_card = [c for c in p1.hand_cards
+                     if c.c_entity_base and c.c_entity_base.card_id == P186][0]
+        cost = game.calculate_play_cost(p1, p186_card)
+        assert cost == 12, (
+            f"With 0 trash cards, cost should remain 12, got {cost}"
+        )
+
+
+@pytest.mark.behavioral
+class TestP186DeleteTargetFiltering:
+    """Verify delete only targets 13000+ DP Digimon, not lower."""
+
+    def test_delete_ignores_low_dp_digimon(self, debug_runner):
+        """Delete should NOT offer Digimon below 13000 DP as targets."""
+        runner = debug_runner(initial_memory=15)
+
+        # Place only low-DP Digimon on opponent field + one high-DP
+        runner.place_on_field(2, [AGUMON])      # 2000 DP — should NOT be selectable
+        runner.place_on_field(2, [OMNIMON])      # 15000 DP — should be selectable
+        runner.inject_card(1, P186, "hand")
+        runner.set_phase("Main")
+
+        play_action = runner.find_action("Gallantmon")
+        assert play_action is not None
+        runner.execute(play_action)
+
+        assert runner.game.current_phase == GamePhase.SelectTarget
+        sel = runner.game.pending_selection
+        assert sel is not None
+
+        # Only 1 valid target (Omnimon), not 2
+        assert len(sel.valid_indices) == 1, (
+            f"Only 13000+ DP Digimon should be selectable, "
+            f"got {len(sel.valid_indices)} valid targets"
+        )
+
+    def test_delete_exactly_13000_dp_is_eligible(self, debug_runner):
+        """A Digimon with exactly 13000 DP should be a valid delete target."""
+        runner = debug_runner(initial_memory=15)
+
+        runner.place_on_field(2, [SHOUTMON_X7])  # Exactly 13000 DP
+        runner.inject_card(1, P186, "hand")
+        runner.set_phase("Main")
+
+        play_action = runner.find_action("Gallantmon")
+        assert play_action is not None
+        runner.execute(play_action)
+
+        assert runner.game.current_phase == GamePhase.SelectTarget, (
+            "Exactly 13000 DP Digimon should trigger delete selection"
+        )

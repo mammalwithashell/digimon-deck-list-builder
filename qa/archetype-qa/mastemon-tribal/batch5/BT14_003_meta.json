@@ -1,0 +1,18 @@
+{
+  "card_id": "BT14-003",
+  "card_name": "Tokomon",
+  "card_kind": "DigiEgg",
+  "level": 2,
+  "colors": [
+    "Yellow"
+  ],
+  "traits": "Lesser",
+  "dp": null,
+  "play_cost": 0,
+  "evo_costs": [],
+  "effect_text": "Inherited Effect [Your Turn] [Once Per Turn] When a card is added to your security stack, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_text": "",
+  "security_text": "",
+  "script_path": "digimon_gym/engine/data/scripts/bt14/bt14_003.py",
+  "csharp_path": "DCGO\\Assets\\Scripts\\CardEffect\\BT14\\Yellow\\BT14_003.cs"
+}

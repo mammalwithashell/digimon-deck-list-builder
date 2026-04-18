@@ -62,12 +62,19 @@ def test_loader_matches_snapshot():
 
 
 def test_out_of_set_cards_dedups_and_preserves_order():
-    from digimon_gym.engine.data.tested_cards import out_of_set_cards
+    from digimon_gym.engine.data.tested_cards import (
+        load_tested_cards,
+        out_of_set_cards,
+    )
 
-    # Uses a deliberately-untested card ID. If BT1-001 ever gains a test,
-    # update this fixture to another untested ID.
-    result = out_of_set_cards(["BT1-001", "BT1-001", "BT1-002"])
-    assert result == ["BT1-001", "BT1-002"]
+    # Use synthetic IDs that cannot collide with real card IDs so the test
+    # stays stable as behavioral coverage grows.
+    tested = load_tested_cards()
+    synthetic = ["ZZZ-001", "ZZZ-001", "ZZZ-002"]
+    assert not any(c in tested for c in synthetic)
+
+    result = out_of_set_cards(synthetic)
+    assert result == ["ZZZ-001", "ZZZ-002"]
 
 
 if __name__ == "__main__":
