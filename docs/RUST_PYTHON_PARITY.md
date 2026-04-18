@@ -659,3 +659,31 @@ P0 plays two 3-cost cards (second goes into negative).
 P0 passes.
 P1's memory should be +3 (Python) — this will fail in Rust today until §1.2/§1.3 land.
 ```
+
+---
+
+## 10. Policies
+
+Parity tracking for opponent policies. ONNX inference lives in
+[`digimon-engine/src/inference/`](../digimon-engine/src/inference/) with
+its own parity test suite (`tests/onnx_parity/`). This section covers
+the heuristic side — the greedy bot — plus shape assumptions shared
+across both engines.
+
+### 10.1 🟡 Greedy heuristic re-implemented in Rust
+
+**Python** — [`digimon_gym/digimon_gym.py::greedy_policy`](../digimon_gym/digimon_gym.py) inspects full game state (phases, hand/field, level/DP/cost) and prioritizes Digivolve > Attack > Play > Pass in Main and Hatch > Move > Pass in Breeding. Tie-breaks are deterministic by (level, DP, -cost, -hand_idx, -field_idx).
+
+**Rust** — [`digimon-engine/src/policies/greedy.rs`](../digimon-engine/src/policies/greedy.rs) hand-ports the same heuristic. `greedy_action(game, mask) -> u16` is wired into `PlayerKind::Greedy` in `src-tauri/src/engine_commands.rs::run_agent_steps`, replacing the pre-port `first_valid_action` placeholder.
+
+**Parity hazard:** if Python's `greedy_policy()` changes (new tie-break rule, phase handling, archetype-specific logic), the Rust port will silently diverge. Any edit to the Python greedy must be mirrored in Rust and covered by a deterministic-seed behavioral test under [`digimon-engine/tests/policies/greedy.rs`](../digimon-engine/tests/policies/greedy.rs). The `self_play.rs` tripwire (20 seeds of greedy-vs-greedy to conclusion) catches gross breakage but not nuanced decision divergence.
+
+### 10.2 🟡 ONNX inference shape contract
+
+**Python** — [`digimon_gym/engine/onnx_policy.py`](../digimon_gym/engine/onnx_policy.py) binds input `"obs"` (shape `(1, TENSOR_SIZE)`) and output `"logits"` (shape `(1, ACTION_SPACE_SIZE)`). LSTM variant adds `h_in`/`c_in`/`h_out`/`c_out` at `(1, 1, 256)`.
+
+**Rust** — [`digimon-engine/src/inference/`](../digimon-engine/src/inference/) binds the same names and asserts the same shapes at session-load time; the compatibility gate in [`src-tauri/src/models.rs`](../src-tauri/src/models.rs) rejects drifted models before the download starts.
+
+**Historical drift (resolved):** pre-2026-04-18, `tools/export_onnx.py` hardcoded `obs=981 / logits=2120` — the pre-rewrite layout. Any `.onnx` on disk dated before the fix is unusable by either engine. Re-export from the original `.zip` checkpoint is mandatory; if that checkpoint was trained against the old layout, it must be retrained from scratch. The exporter now imports `TENSOR_SIZE` / `ACTION_SPACE_SIZE` from `digimon_gym.engine.game.constants` and raises before writing on any shape mismatch.
+
+**Ongoing hazard:** any future change to [`digimon-engine/src/tensor.rs`](../digimon-engine/src/tensor.rs) (`TENSOR_SIZE`) or [`digimon-engine/src/action/space.rs`](../digimon-engine/src/action/space.rs) (`ACTION_SPACE_SIZE`) invalidates every bundled or cached `.onnx`. The compatibility gate in `models.rs` and the exporter's shape assertion together make this a loud error, not a silent regression — but re-exports of all live checkpoints are required whenever either constant changes.

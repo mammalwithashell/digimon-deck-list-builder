@@ -17,6 +17,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from digimon_gym.engine.game.constants import ACTION_SPACE_SIZE, TENSOR_SIZE
+
 
 # ---------------------------------------------------------------------------
 # Wrapper modules that isolate the actor forward pass for tracing
@@ -25,7 +27,7 @@ import torch.nn as nn
 class MlpActorWrapper(nn.Module):
     """Wraps SB3 MLP policy's actor path for ONNX export.
 
-    Forward: obs (batch, 981) -> logits (batch, 2120)
+    Forward: obs (batch, TENSOR_SIZE) -> logits (batch, ACTION_SPACE_SIZE)
     """
 
     def __init__(self, policy):
@@ -45,8 +47,8 @@ class MlpActorWrapper(nn.Module):
 class LstmActorWrapper(nn.Module):
     """Wraps recurrent policy's actor path (LSTM + MLP head) for ONNX export.
 
-    Forward: obs (1, 981), h (1, 1, 256), c (1, 1, 256)
-          -> logits (1, 2120), h_out (1, 1, 256), c_out (1, 1, 256)
+    Forward: obs (1, TENSOR_SIZE), h (1, 1, 256), c (1, 1, 256)
+          -> logits (1, ACTION_SPACE_SIZE), h_out (1, 1, 256), c_out (1, 1, 256)
     """
 
     def __init__(self, policy):
@@ -64,7 +66,7 @@ class LstmActorWrapper(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         features = self.features_extractor(obs)
         # LSTM expects (seq_len, batch, input_size)
-        lstm_in = features.unsqueeze(0)  # (1, batch, 981)
+        lstm_in = features.unsqueeze(0)  # (1, batch, TENSOR_SIZE)
         lstm_out, (h_out, c_out) = self.lstm_actor(lstm_in, (h, c))
         lstm_out = lstm_out.squeeze(0)  # (batch, 256)
         latent_pi = self.mlp_extractor_policy(lstm_out)
@@ -87,7 +89,16 @@ def export_mlp(sb3_zip_path: str, output_path: str) -> None:
     wrapper = MlpActorWrapper(policy)
     wrapper.eval()
 
-    dummy_obs = torch.randn(1, 981, dtype=torch.float32)
+    dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
+
+    with torch.no_grad():
+        logits_shape = tuple(wrapper(dummy_obs).shape)
+    if logits_shape != (1, ACTION_SPACE_SIZE):
+        raise ValueError(
+            f"MLP checkpoint produces logits shape {logits_shape}, expected "
+            f"(1, {ACTION_SPACE_SIZE}). The checkpoint was trained against a "
+            f"stale tensor/action layout and must be retrained."
+        )
 
     torch.onnx.export(
         wrapper,
@@ -115,9 +126,18 @@ def export_lstm(sb3_zip_path: str, output_path: str) -> None:
     wrapper = LstmActorWrapper(policy)
     wrapper.eval()
 
-    dummy_obs = torch.randn(1, 981, dtype=torch.float32)
+    dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
     dummy_h = torch.zeros(1, 1, 256, dtype=torch.float32)
     dummy_c = torch.zeros(1, 1, 256, dtype=torch.float32)
+
+    with torch.no_grad():
+        logits_shape = tuple(wrapper(dummy_obs, dummy_h, dummy_c)[0].shape)
+    if logits_shape != (1, ACTION_SPACE_SIZE):
+        raise ValueError(
+            f"LSTM checkpoint produces logits shape {logits_shape}, expected "
+            f"(1, {ACTION_SPACE_SIZE}). The checkpoint was trained against a "
+            f"stale tensor/action layout and must be retrained."
+        )
 
     torch.onnx.export(
         wrapper,
@@ -145,13 +165,19 @@ def _verify_mlp(policy, wrapper, onnx_path: str) -> None:
     """Verify ONNX output matches PyTorch output."""
     import onnxruntime as ort
 
-    dummy_obs = torch.randn(1, 981, dtype=torch.float32)
+    dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
 
     with torch.no_grad():
         pt_logits = wrapper(dummy_obs).numpy()
 
     sess = ort.InferenceSession(onnx_path)
     ort_logits = sess.run(["logits"], {"obs": dummy_obs.numpy()})[0]
+
+    if ort_logits.shape != (1, ACTION_SPACE_SIZE):
+        raise ValueError(
+            f"Exported ONNX logits shape {ort_logits.shape} != "
+            f"(1, {ACTION_SPACE_SIZE})"
+        )
 
     max_diff = np.max(np.abs(pt_logits - ort_logits))
     print(f"  MLP verification: max logit diff = {max_diff:.6e}")
@@ -162,7 +188,7 @@ def _verify_lstm(policy, wrapper, onnx_path: str) -> None:
     """Verify ONNX output matches PyTorch output."""
     import onnxruntime as ort
 
-    dummy_obs = torch.randn(1, 981, dtype=torch.float32)
+    dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
     dummy_h = torch.zeros(1, 1, 256, dtype=torch.float32)
     dummy_c = torch.zeros(1, 1, 256, dtype=torch.float32)
 
@@ -177,6 +203,12 @@ def _verify_lstm(policy, wrapper, onnx_path: str) -> None:
         ["logits", "h_out", "c_out"],
         {"obs": dummy_obs.numpy(), "h_in": dummy_h.numpy(), "c_in": dummy_c.numpy()},
     )
+
+    if ort_out[0].shape != (1, ACTION_SPACE_SIZE):
+        raise ValueError(
+            f"Exported ONNX logits shape {ort_out[0].shape} != "
+            f"(1, {ACTION_SPACE_SIZE})"
+        )
 
     max_logit_diff = np.max(np.abs(pt_logits - ort_out[0]))
     max_h_diff = np.max(np.abs(pt_h - ort_out[1]))
