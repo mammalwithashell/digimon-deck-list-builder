@@ -85,12 +85,37 @@ class QueueTicket(BaseModel):
 
 tickets: dict[str, QueueTicket] = {}
 user_to_ticket: dict[str, str] = {}
+# ticket_id → asyncio.Event. Signalled when the ticket transitions to
+# "matched" (or is cancelled); the WS handler awaits this event so it can
+# push `match_found` without polling.
+_match_events: dict[str, "asyncio.Event"] = {}
 
 
 def reset_state() -> None:
     """Test-hook: wipe in-memory queue state."""
     tickets.clear()
     user_to_ticket.clear()
+    _match_events.clear()
+
+
+def get_or_create_listener(ticket_id: str) -> "asyncio.Event":
+    """Return the asyncio.Event that will fire when `ticket_id` is matched
+    or removed. Called by the WS handler on connect."""
+    ev = _match_events.get(ticket_id)
+    if ev is None:
+        ev = asyncio.Event()
+        _match_events[ticket_id] = ev
+    return ev
+
+
+def _fire_listener(ticket_id: str) -> None:
+    ev = _match_events.get(ticket_id)
+    if ev is not None:
+        ev.set()
+
+
+def drop_listener(ticket_id: str) -> None:
+    _match_events.pop(ticket_id, None)
 
 
 # ── Pure matcher ────────────────────────────────────────────────────────
@@ -225,7 +250,22 @@ def _promote_to_matched(
         side.matched_join_code = join_code
         side.matched_game_id = game_id
         side.matched_at = now
+        _fire_listener(side.ticket_id)
     return (game_id, join_code)
+
+
+def cancel_waiting_ticket(ticket_id: str) -> bool:
+    """Remove a waiting ticket from the registry. No-op (returns False) if
+    the ticket is matched or unknown. Used by the WS handler on client
+    disconnect to prevent ghost entries."""
+    t = tickets.get(ticket_id)
+    if t is None or t.status != "waiting":
+        return False
+    tickets.pop(ticket_id, None)
+    if user_to_ticket.get(t.user_id) == ticket_id:
+        user_to_ticket.pop(t.user_id, None)
+    _fire_listener(ticket_id)
+    return True
 
 
 # ── REST endpoints ──────────────────────────────────────────────────────
@@ -341,6 +381,7 @@ async def cancel_ticket(
 
     tickets.pop(ticket_id, None)
     user_to_ticket.pop(user.id, None)
+    _fire_listener(ticket_id)
     return {"status": "cancelled"}
 
 

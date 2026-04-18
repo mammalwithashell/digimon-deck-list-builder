@@ -411,3 +411,241 @@ class TestQueueEndpoints:
         assert rj.status_code == 200
         assert rj.json()["game_id"] == game_id
         assert game_id in active_games
+
+
+# ── WebSocket flow ──────────────────────────────────────────────────────
+
+class TestMatchmakingWebSocket:
+    """Uses FastAPI's sync TestClient because httpx.AsyncClient has no WS.
+
+    Each test builds its own in-memory SQLite, overrides get_db, and spins
+    up a fresh TestClient. State across tests is isolated via reset_mm()
+    and pending_games.clear() in setup/teardown.
+    """
+
+    def _setup(self):
+        from fastapi.testclient import TestClient
+        from sqlalchemy.ext.asyncio import (
+            AsyncSession, async_sessionmaker, create_async_engine,
+        )
+        import asyncio as _asyncio
+
+        from digimon_gym.api import app
+        from digimon_gym.db.database import get_db
+        from digimon_gym.db.models import Base
+        from digimon_gym.routers.lobby import pending_games, code_to_game
+        from digimon_gym.routers.matchmaking import reset_state as reset_mm
+
+        reset_mm()
+        pending_games.clear()
+        code_to_game.clear()
+
+        loop = _asyncio.new_event_loop()
+        _asyncio.set_event_loop(loop)
+
+        engine = create_async_engine(
+            "sqlite+aiosqlite:///:memory:", echo=False,
+            connect_args={"check_same_thread": False},
+        )
+
+        async def _init():
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        loop.run_until_complete(_init())
+
+        session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False,
+        )
+
+        async def override_get_db():
+            async with session_factory() as session:
+                yield session
+
+        app.dependency_overrides[get_db] = override_get_db
+        client = TestClient(app)
+
+        def teardown():
+            app.dependency_overrides.clear()
+            reset_mm()
+            pending_games.clear()
+            code_to_game.clear()
+            async def _drop():
+                async with engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.drop_all)
+                await engine.dispose()
+            loop.run_until_complete(_drop())
+            loop.close()
+        return client, teardown
+
+    def _register_login_sync(self, client, username: str) -> str:
+        client.post("/auth/register", json={
+            "username": username,
+            "email": f"{username}@example.com",
+            "password": "secure-password-123",
+        })
+        resp = client.post("/auth/login", json={
+            "username": username,
+            "password": "secure-password-123",
+        })
+        return resp.json()["access_token"]
+
+    def _seed_deck_sync(self, client, headers, cards):
+        resp = client.post("/decks", json={
+            "name": "D", "game_mode": "standard", "main_deck": cards,
+        }, headers=headers)
+        return resp.json()["id"]
+
+    def test_rejects_invalid_token(self):
+        client, teardown = self._setup()
+        try:
+            with pytest.raises(Exception):
+                with client.websocket_connect(
+                    "/ws/matchmaking/fake-ticket?token=garbage"
+                ) as ws:
+                    ws.receive_json()
+        finally:
+            teardown()
+
+    def test_rejects_ticket_not_owned(self):
+        client, teardown = self._setup()
+        try:
+            tok_a = self._register_login_sync(client, "owner1")
+            tok_b = self._register_login_sync(client, "intruder1")
+            ha = {"Authorization": f"Bearer {tok_a}"}
+
+            deck = self._seed_deck_sync(client, ha, ["BT14-001"] * 50)
+            r = client.post("/matchmaking/queue", json={
+                "queue_type": "casual", "deck_id": deck, "opponent_tier_filter": "any",
+            }, headers=ha)
+            tid = r.json()["ticket_id"]
+
+            with pytest.raises(Exception):
+                with client.websocket_connect(
+                    f"/ws/matchmaking/{tid}?token={tok_b}"
+                ) as ws:
+                    ws.receive_json()
+        finally:
+            teardown()
+
+    def test_sends_waiting_then_match_found(self):
+        """A queues, opens WS, gets 'waiting'. B queues via REST, triggers
+        match. A's WS receives 'match_found' with the same join_code."""
+        client, teardown = self._setup()
+        try:
+            tok_a = self._register_login_sync(client, "wsA")
+            tok_b = self._register_login_sync(client, "wsB")
+            ha = {"Authorization": f"Bearer {tok_a}"}
+            hb = {"Authorization": f"Bearer {tok_b}"}
+            da = self._seed_deck_sync(client, ha, ["BT14-001"] * 50)
+            db_ = self._seed_deck_sync(client, hb, ["BT14-002"] * 50)
+
+            r_a = client.post("/matchmaking/queue", json={
+                "queue_type": "casual", "deck_id": da, "opponent_tier_filter": "any",
+            }, headers=ha)
+            assert r_a.status_code == 201
+            ticket_a = r_a.json()["ticket_id"]
+
+            with client.websocket_connect(
+                f"/ws/matchmaking/{ticket_a}?token={tok_a}"
+            ) as ws:
+                first = ws.receive_json()
+                assert first["type"] == "waiting"
+
+                # B queues — matcher fires synchronously on POST; the WS
+                # handler is awaiting an asyncio.Event that gets set.
+                r_b = client.post("/matchmaking/queue", json={
+                    "queue_type": "casual", "deck_id": db_, "opponent_tier_filter": "any",
+                }, headers=hb)
+                assert r_b.json()["status"] == "matched"
+                shared_code = r_b.json()["join_code"]
+
+                msg = ws.receive_json()
+                assert msg["type"] == "match_found"
+                assert msg["join_code"] == shared_code
+                assert msg["game_id"] == r_b.json()["game_id"]
+        finally:
+            teardown()
+
+    def test_already_matched_ticket_pushes_match_found_on_connect(self):
+        """If a ticket is already matched before the WS opens, the server
+        sends match_found immediately (no 'waiting' first)."""
+        client, teardown = self._setup()
+        try:
+            tok_a = self._register_login_sync(client, "mmA")
+            tok_b = self._register_login_sync(client, "mmB")
+            ha = {"Authorization": f"Bearer {tok_a}"}
+            hb = {"Authorization": f"Bearer {tok_b}"}
+            da = self._seed_deck_sync(client, ha, ["BT14-001"] * 50)
+            db_ = self._seed_deck_sync(client, hb, ["BT14-002"] * 50)
+
+            r_a = client.post("/matchmaking/queue", json={
+                "queue_type": "casual", "deck_id": da, "opponent_tier_filter": "any",
+            }, headers=ha)
+            ticket_a = r_a.json()["ticket_id"]
+            client.post("/matchmaking/queue", json={
+                "queue_type": "casual", "deck_id": db_, "opponent_tier_filter": "any",
+            }, headers=hb)
+
+            with client.websocket_connect(
+                f"/ws/matchmaking/{ticket_a}?token={tok_a}"
+            ) as ws:
+                msg = ws.receive_json()
+                assert msg["type"] == "match_found"
+        finally:
+            teardown()
+
+    def test_disconnect_cancels_waiting_ticket(self):
+        """Client disconnects from a waiting ticket → ticket is removed,
+        preventing ghost entries in the queue."""
+        client, teardown = self._setup()
+        try:
+            from digimon_gym.routers.matchmaking import tickets
+            tok = self._register_login_sync(client, "ghost1")
+            h = {"Authorization": f"Bearer {tok}"}
+            d = self._seed_deck_sync(client, h, ["BT14-001"] * 50)
+            r = client.post("/matchmaking/queue", json={
+                "queue_type": "casual", "deck_id": d, "opponent_tier_filter": "any",
+            }, headers=h)
+            tid = r.json()["ticket_id"]
+            assert tid in tickets
+
+            with client.websocket_connect(
+                f"/ws/matchmaking/{tid}?token={tok}"
+            ) as ws:
+                ws.receive_json()  # waiting
+            # WS closed; ticket should be gone
+            assert tid not in tickets
+        finally:
+            teardown()
+
+    def test_disconnect_after_match_does_not_cancel(self):
+        """Matched tickets are retained for polling; disconnecting the WS
+        after match must not discard them."""
+        client, teardown = self._setup()
+        try:
+            from digimon_gym.routers.matchmaking import tickets
+
+            tok_a = self._register_login_sync(client, "postA")
+            tok_b = self._register_login_sync(client, "postB")
+            ha = {"Authorization": f"Bearer {tok_a}"}
+            hb = {"Authorization": f"Bearer {tok_b}"}
+            da = self._seed_deck_sync(client, ha, ["BT14-001"] * 50)
+            db_ = self._seed_deck_sync(client, hb, ["BT14-002"] * 50)
+
+            r_a = client.post("/matchmaking/queue", json={
+                "queue_type": "casual", "deck_id": da, "opponent_tier_filter": "any",
+            }, headers=ha)
+            tid = r_a.json()["ticket_id"]
+            client.post("/matchmaking/queue", json={
+                "queue_type": "casual", "deck_id": db_, "opponent_tier_filter": "any",
+            }, headers=hb)
+            assert tickets[tid].status == "matched"
+
+            with client.websocket_connect(
+                f"/ws/matchmaking/{tid}?token={tok_a}"
+            ) as ws:
+                ws.receive_json()  # match_found
+            assert tid in tickets
+            assert tickets[tid].status == "matched"
+        finally:
+            teardown()
