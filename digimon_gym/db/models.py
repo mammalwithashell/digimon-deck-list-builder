@@ -49,6 +49,9 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
     last_login_at = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Integer, default=1, nullable=False)
+    # Matchmaking rating — opaque scalar, updated by the ranked-rating spec.
+    # Defaults to 1500 for new accounts; read by the matcher at queue time.
+    rating = Column(Float, default=1500.0, nullable=False)
 
     # Relationships
     decks = relationship("Deck", back_populates="owner", cascade="all, delete-orphan")
@@ -132,6 +135,11 @@ class Deck(Base):
     validation_errors = Column(Text, default="[]")  # JSON array of error strings
     is_public = Column(Integer, default=0, nullable=False)
     tags = Column(Text, default="[]")  # JSON array of tag strings
+    # Matchmaking classifier output — "meta" / "rogue" / "jank" or NULL if
+    # the classifier hasn't run yet. Populated on save by the meta_tier
+    # classifier; consumed by the matchmaking ticket snapshot.
+    meta_tier = Column(String, nullable=True)
+    meta_archetype = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 

@@ -395,6 +395,132 @@ class TestDeckEndpoints:
         assert "titan_role" in resp.json()["detail"]
 
 
+class TestMetaTierGating:
+    """Verify that the deck_tagger classifier runs on deck save and
+    persists meta_tier / meta_archetype to the row."""
+
+    @pytest.fixture(autouse=True)
+    def _stub_classifier(self, monkeypatch):
+        """Install a deterministic mini-library so tests don't depend on
+        the live deck_library.json (which drifts as tournament data
+        updates). Uses the same fingerprint shape the real loader produces."""
+        from digimon_gym.classifier import deck_tagger
+        from digimon_gym.classifier.meta_tier import (
+            ArchetypeFingerprint,
+            ClassifierLibrary,
+        )
+
+        lib = ClassifierLibrary(
+            archetypes=[
+                ArchetypeFingerprint(
+                    name="MetaBeta",
+                    meta_share=0.05,
+                    times_played=100,
+                    staples={"META-001": 1.0, "META-002": 1.0, "META-003": 1.0},
+                ),
+                ArchetypeFingerprint(
+                    name="RogueAlpha",
+                    meta_share=0.01,
+                    times_played=20,
+                    staples={"ROGUE-001": 1.0, "ROGUE-002": 1.0},
+                ),
+            ],
+        )
+        monkeypatch.setattr(deck_tagger, "_library", lib)
+        yield
+        deck_tagger.reset_library_cache()
+
+    async def _register_and_login(self, client: AsyncClient, username: str):
+        await client.post("/auth/register", json={
+            "username": username,
+            "email": f"{username}@example.com",
+            "password": "secure-password-123",
+        })
+        resp = await client.post("/auth/login", json={
+            "username": username,
+            "password": "secure-password-123",
+        })
+        return resp.json()["access_token"]
+
+    async def test_meta_deck_is_tagged_meta(self, client: AsyncClient):
+        token = await self._register_and_login(client, "metauser")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/decks", json={
+            "name": "Meta Deck",
+            "game_mode": "standard",
+            "main_deck": ["META-001"] * 20 + ["META-002"] * 20 + ["META-003"] * 10,
+        }, headers=headers)
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["meta_archetype"] == "MetaBeta"
+        assert body["meta_tier"] == "meta"
+
+    async def test_rogue_deck_is_tagged_rogue(self, client: AsyncClient):
+        token = await self._register_and_login(client, "rogueuser")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/decks", json={
+            "name": "Rogue Deck",
+            "game_mode": "standard",
+            "main_deck": ["ROGUE-001"] * 25 + ["ROGUE-002"] * 25,
+        }, headers=headers)
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["meta_archetype"] == "RogueAlpha"
+        assert body["meta_tier"] == "rogue"
+
+    async def test_unknown_deck_is_tagged_jank(self, client: AsyncClient):
+        token = await self._register_and_login(client, "jankuser")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/decks", json={
+            "name": "Homebrew",
+            "game_mode": "standard",
+            "main_deck": ["JANK-999"] * 50,
+        }, headers=headers)
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["meta_archetype"] is None
+        assert body["meta_tier"] == "jank"
+
+    async def test_update_retags_when_cards_change(self, client: AsyncClient):
+        token = await self._register_and_login(client, "retaguser")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/decks", json={
+            "name": "Shifting Deck",
+            "game_mode": "standard",
+            "main_deck": ["JANK-X"] * 50,
+        }, headers=headers)
+        deck_id = resp.json()["id"]
+        assert resp.json()["meta_tier"] == "jank"
+
+        resp = await client.put(f"/decks/{deck_id}", json={
+            "main_deck": ["META-001"] * 20 + ["META-002"] * 20 + ["META-003"] * 10,
+        }, headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["meta_archetype"] == "MetaBeta"
+        assert resp.json()["meta_tier"] == "meta"
+
+    async def test_update_name_only_preserves_tier(self, client: AsyncClient):
+        """Renaming a deck shouldn't touch the classifier output."""
+        token = await self._register_and_login(client, "nameuser")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/decks", json={
+            "name": "Original",
+            "game_mode": "standard",
+            "main_deck": ["META-001"] * 20 + ["META-002"] * 20 + ["META-003"] * 10,
+        }, headers=headers)
+        deck_id = resp.json()["id"]
+
+        resp = await client.put(f"/decks/{deck_id}", json={"name": "Renamed"}, headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["meta_archetype"] == "MetaBeta"
+        assert resp.json()["meta_tier"] == "meta"
+
+
 class TestFriendEndpoints:
     async def _make_user(self, client: AsyncClient, name: str) -> str:
         await client.post("/auth/register", json={

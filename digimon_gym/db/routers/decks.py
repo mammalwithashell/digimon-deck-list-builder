@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from digimon_gym.classifier.deck_tagger import tag_deck
 from digimon_gym.db.auth import get_current_user
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import Deck, DeckVersion, User
@@ -137,6 +138,8 @@ def _deck_to_response(deck: Deck) -> DeckResponse:
         validation_errors=json.loads(deck.validation_errors) if deck.validation_errors else [],
         is_public=bool(deck.is_public),
         tags=json.loads(deck.tags) if deck.tags else [],
+        meta_tier=deck.meta_tier,
+        meta_archetype=deck.meta_archetype,
         created_at=deck.created_at,
         updated_at=deck.updated_at,
     )
@@ -168,6 +171,8 @@ async def create_deck(
     main_alts = _normalize_alt_arts(request.main_deck_alt_arts, len(request.main_deck))
     egg_alts = _normalize_alt_arts(request.egg_deck_alt_arts, len(request.egg_deck))
 
+    archetype, tier = tag_deck(request.main_deck + request.egg_deck)
+
     deck = Deck(
         owner_id=user.id,
         name=request.name,
@@ -183,6 +188,8 @@ async def create_deck(
         validation_errors=json.dumps(errors),
         is_public=1 if request.is_public else 0,
         tags=json.dumps(request.tags),
+        meta_archetype=archetype,
+        meta_tier=tier,
     )
     db.add(deck)
     await db.commit()
@@ -211,6 +218,8 @@ async def list_my_decks(
             is_valid=bool(d.is_valid),
             is_public=bool(d.is_public),
             card_count=len(json.loads(d.main_deck)) + len(json.loads(d.egg_deck) if d.egg_deck else []),
+            meta_tier=d.meta_tier,
+            meta_archetype=d.meta_archetype,
             created_at=d.created_at,
             updated_at=d.updated_at,
         )
@@ -238,6 +247,8 @@ async def list_public_decks(
             is_valid=bool(d.is_valid),
             is_public=True,
             card_count=len(json.loads(d.main_deck)) + len(json.loads(d.egg_deck) if d.egg_deck else []),
+            meta_tier=d.meta_tier,
+            meta_archetype=d.meta_archetype,
             created_at=d.created_at,
             updated_at=d.updated_at,
         )
@@ -325,6 +336,12 @@ async def update_deck(
     is_valid, errors = _validate_for_mode(all_cards, deck.game_mode, deck.titan_role)
     deck.is_valid = 1 if is_valid else 0
     deck.validation_errors = json.dumps(errors)
+
+    # Re-tag meta classification if the card list changed.
+    if request.main_deck is not None or request.egg_deck is not None:
+        archetype, tier = tag_deck(all_cards)
+        deck.meta_archetype = archetype
+        deck.meta_tier = tier
 
     # Save version snapshot if card list changed
     if request.main_deck is not None or request.egg_deck is not None:

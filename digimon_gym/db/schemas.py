@@ -465,6 +465,8 @@ class DeckResponse(BaseModel):
     validation_errors: List[str]
     is_public: bool
     tags: List[str]
+    meta_tier: Optional[str] = None
+    meta_archetype: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -478,6 +480,8 @@ class DeckSummary(BaseModel):
     is_valid: bool
     is_public: bool
     card_count: int
+    meta_tier: Optional[str] = None
+    meta_archetype: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

@@ -28,6 +28,7 @@ from digimon_gym.routers import deck_tools
 from digimon_gym.routers import games
 from digimon_gym.routers import health
 from digimon_gym.routers import lobby
+from digimon_gym.routers import matchmaking
 from digimon_gym.routers import recordings
 from digimon_gym.routers import replays
 from digimon_gym.routers import simulations
@@ -46,7 +47,12 @@ async def lifespan(app: FastAPI):
     training_enabled = os.getenv("TRAINING_WORKER_DISABLED", "0") != "1"
     if training_enabled:
         await training_job_worker.start()
+    matchmaking_enabled = os.getenv("MATCHMAKING_DISABLED", "0") != "1"
+    if matchmaking_enabled:
+        await matchmaking.start_sweep()
     yield
+    if matchmaking_enabled:
+        await matchmaking.stop_sweep()
     if training_enabled:
         await training_job_worker.stop()
     if worker_enabled:
@@ -84,6 +90,7 @@ app.include_router(recordings.router)
 app.include_router(replays.router)
 app.include_router(deck_tools.router)
 app.include_router(lobby.router)
+app.include_router(matchmaking.router)
 app.include_router(ws_games.router)
 app.include_router(deck_optimizer.router)
 
