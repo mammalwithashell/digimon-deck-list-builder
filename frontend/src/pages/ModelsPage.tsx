@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   deleteModel as deleteModelApi,
   downloadModel,
@@ -77,18 +77,23 @@ export function ModelsPage() {
     return Array.from(byId.values());
   }, [manifest, local]);
 
-  const withBusy = useCallback(async (id: string, fn: () => Promise<void>) => {
-    setBusyIds((prev) => new Set(prev).add(id));
-    try {
-      await fn();
-    } finally {
-      setBusyIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }
-  }, []);
+  const withBusy = useCallback(
+    async (id: string, fn: () => Promise<void>) => {
+      setBusyIds((prev) => new Set(prev).add(id));
+      try {
+        await fn();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [],
+  );
 
   const handleDownload = (m: ManifestModel) =>
     withBusy(m.id, async () => {
@@ -103,7 +108,10 @@ export function ModelsPage() {
       await refresh();
     });
 
-  const handleActivate = (id: string) => withBusy(id, () => loadCached(id).then());
+  const handleActivate = (id: string) =>
+    withBusy(id, async () => {
+      await loadCached(id);
+    });
 
   const handleTryOnline = async (row: MergedRow) => {
     if (!playDeckId) {
@@ -111,19 +119,16 @@ export function ModelsPage() {
       return;
     }
     await withBusy(row.id, async () => {
-      try {
-        const deck = await deckStore.getDeck(playDeckId);
-        // For now the opponent uses the same deck — the manifest entry may
-        // advertise an intended deck in a future iteration.
-        const { game_id } = await createVsAiGame({
-          modelId: row.id,
-          userDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
-          opponentDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
-        });
-        navigate(`/game/${game_id}?mode=vsai&player=1`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      }
+      const deck = await deckStore.getDeck(playDeckId);
+      // TODO(alpha+1): use `row.manifest?.deck_id` (see ManifestModel schema) to
+      // pick the AI's intended deck. For alpha we mirror the user's deck so a
+      // balanced matchup is at least possible.
+      const { game_id } = await createVsAiGame({
+        modelId: row.id,
+        userDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
+        opponentDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
+      });
+      navigate(`/game/${game_id}?mode=vsai&player=1`);
     });
   };
 
@@ -157,10 +162,11 @@ export function ModelsPage() {
           <select
             value={playDeckId}
             onChange={(e) => setPlayDeckId(e.target.value)}
-            className="rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
+            disabled={decks.length === 0}
+            className="rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white disabled:opacity-50"
           >
             {decks.length === 0 ? (
-              <option value="">No decks yet — build one in the Deck Builder</option>
+              <option value="">No decks yet</option>
             ) : (
               decks.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -169,6 +175,11 @@ export function ModelsPage() {
               ))
             )}
           </select>
+          {decks.length === 0 && (
+            <Link to="/deckbuilder" className="mt-1 block text-xs text-blue-400 hover:text-blue-300">
+              Build your first deck →
+            </Link>
+          )}
         </div>
         <button
           onClick={() => void refresh()}
@@ -229,7 +240,7 @@ export function ModelsPage() {
                           onClick={() => void handleTryOnline(row)}
                           className="rounded bg-blue-600 px-2 py-1 text-xs hover:bg-blue-500 disabled:opacity-40"
                         >
-                          {busy ? '…' : 'Try online'}
+                          {busy ? 'Preparing…' : 'Try online'}
                         </button>
                       )}
                       {row.manifest && !have && compatible && (
