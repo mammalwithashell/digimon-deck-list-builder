@@ -44,6 +44,11 @@ def _fake_onnx_bytes() -> bytes:
     return b"fake-onnx-model-payload"
 
 
+async def _guest_auth_headers(client: AsyncClient) -> dict[str, str]:
+    resp = await client.post("/auth/guest")
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
 @pytest.mark.asyncio
 async def test_resolve_manifest_writes_to_sha_keyed_cache(db_session, tmp_path, monkeypatch) -> None:
     model_id = str(_uuid.uuid4())
@@ -142,7 +147,8 @@ async def test_prepare_model_returns_filename_and_caches(
         return sha, len(payload)
 
     with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_dl):
-        resp = await client.post(f"/models/{model_id}/prepare")
+        headers = await _guest_auth_headers(client)
+        resp = await client.post(f"/models/{model_id}/prepare", headers=headers)
 
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -175,8 +181,9 @@ async def test_prepare_model_reports_cache_hit_on_second_call(
         return sha, len(payload)
 
     with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_dl) as m:
-        r1 = await client.post(f"/models/{model_id}/prepare")
-        r2 = await client.post(f"/models/{model_id}/prepare")
+        headers = await _guest_auth_headers(client)
+        r1 = await client.post(f"/models/{model_id}/prepare", headers=headers)
+        r2 = await client.post(f"/models/{model_id}/prepare", headers=headers)
 
     assert r1.json()["downloaded"] is True
     assert r2.json()["downloaded"] is False
@@ -211,6 +218,17 @@ async def test_resolve_manifest_rejects_sha_mismatch(db_session, tmp_path, monke
 
 
 @pytest.mark.asyncio
-async def test_prepare_model_404_on_unknown_id(client: AsyncClient) -> None:
+async def test_prepare_model_rejects_unauthenticated(client: AsyncClient) -> None:
+    # Any model_id works — auth check fires before resolution.
     resp = await client.post("/models/00000000-0000-0000-0000-000000000000/prepare")
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_prepare_model_404_on_unknown_id_when_authed(client: AsyncClient) -> None:
+    headers = await _guest_auth_headers(client)
+    resp = await client.post(
+        "/models/00000000-0000-0000-0000-000000000000/prepare",
+        headers=headers,
+    )
     assert resp.status_code == 404

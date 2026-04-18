@@ -35,3 +35,15 @@ async def db_session(db_engine):
     )
     async with session_factory() as session:
         yield session
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limit():
+    """Wipe /auth/guest rate-limit state before and after every API test so
+    earlier tests that mint several guests don't trip the limit in later tests.
+    """
+    from digimon_gym.db.routers.auth import _reset_guest_rate_limit
+
+    _reset_guest_rate_limit()
+    yield
+    _reset_guest_rate_limit()

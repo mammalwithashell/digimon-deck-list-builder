@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import ROLE_ADMIN, require_roles
+from digimon_gym.db.auth import ROLE_ADMIN, get_current_user, require_roles
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import AIModel, Deck, User
 from digimon_gym.db.schemas import (
@@ -393,6 +393,7 @@ async def get_manifest(
 @public_router.post("/{model_id}/prepare", response_model=PrepareModelResponse)
 async def prepare_model(
     model_id: str,
+    _: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PrepareModelResponse:
     """Stage a manifest model into the server-local ONNX dir so that a

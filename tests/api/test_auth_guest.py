@@ -89,6 +89,16 @@ async def test_post_auth_guest_is_idempotent_per_call(client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
+async def test_guest_mint_rate_limit_fires_after_burst(client: AsyncClient) -> None:
+    # First 10 should succeed; 11th should 429.
+    for _ in range(10):
+        r = await client.post("/auth/guest")
+        assert r.status_code == 201, r.text
+    r = await client.post("/auth/guest")
+    assert r.status_code == 429
+
+
+@pytest.mark.asyncio
 async def test_guest_username_login_fails_as_401_not_500(client: AsyncClient) -> None:
     """Guest rows have synthesized password hashes; a login attempt against
     one must return 401 (cleanly, through the normal invalid-password path)

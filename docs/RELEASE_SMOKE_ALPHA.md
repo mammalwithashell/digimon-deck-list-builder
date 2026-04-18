@@ -12,6 +12,8 @@ blocker before release.
 - [ ] `cd frontend && npx tsc --noEmit` is clean
 - [ ] `cd frontend && npx vitest run` passes (currently: `guest.test.ts`, 4 tests)
 - [ ] `python -m pytest tests/api/ -v` passes (backend regression; run only when backend changes land)
+- [ ] `JWT_SECRET_KEY` env var is set on the production server (not the default dev key)
+- [ ] `frontend/.env.desktop` has real URLs (not `api.digimon-tcg.example`)
 
 ## First launch (clean app-data dir)
 
