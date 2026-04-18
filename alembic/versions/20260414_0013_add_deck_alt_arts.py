@@ -1,6 +1,6 @@
 """add alt-art columns to decks and deck_versions
 
-Revision ID: 20260414_0013
+Revision ID: 20260414_0013a
 Revises: 20260227_0012
 Create Date: 2026-04-14 12:00:00
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "20260414_0013"
+revision = "20260414_0013a"
 down_revision = "20260227_0012"
 branch_labels = None
 depends_on = None

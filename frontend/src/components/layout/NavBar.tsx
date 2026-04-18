@@ -59,7 +59,10 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'admin-content',
     title: 'Content',
     adminOnly: true,
-    items: [{ to: '/admin/patch-notes', label: 'Patch Notes' }],
+    items: [
+      { to: '/admin/patch-notes', label: 'Patch Notes' },
+      { to: '/admin/models', label: 'Models' },
+    ],
   },
 ];
 

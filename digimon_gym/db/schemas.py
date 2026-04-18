@@ -911,3 +911,86 @@ class ReleaseResponse(BaseModel):
 class PatchNotesResponse(BaseModel):
     known_issues: List[KnownIssueResponse]
     releases: List[ReleaseResponse]
+
+
+# ── AI Models ────────────────────────────────────────────────────────────
+
+class AIModelCreateRequest(BaseModel):
+    name: str
+    model_type: Literal["mlp", "lstm"]
+    engine_commit: Optional[str] = None
+    trained_at: Optional[datetime] = None
+    deck_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class AIModelCreateResponse(BaseModel):
+    id: str
+    upload_url: str
+    spaces_key: str
+    expires_in: int
+
+
+class AIModelConfirmResponse(BaseModel):
+    id: str
+    state: str
+    file_sha256: str
+    file_size_bytes: int
+    tensor_size: int
+    action_space_size: int
+
+
+class AIModelUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    deck_id: Optional[str] = None
+    published: Optional[bool] = None
+    notes: Optional[str] = None
+    engine_commit: Optional[str] = None
+    trained_at: Optional[datetime] = None
+
+
+class AIModelResponse(BaseModel):
+    id: str
+    name: str
+    model_type: str
+    tensor_size: Optional[int]
+    action_space_size: Optional[int]
+    engine_commit: Optional[str]
+    trained_at: Optional[datetime]
+    file_sha256: Optional[str]
+    file_size_bytes: Optional[int]
+    spaces_key: str
+    deck_id: Optional[str]
+    uploaded_by: Optional[str]
+    published: bool
+    state: str
+    notes: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    uploader_username: Optional[str] = None
+    deck_name: Optional[str] = None
+
+
+class ListAIModelsResponse(BaseModel):
+    models: List[AIModelResponse]
+
+
+class ManifestModel(BaseModel):
+    id: str
+    name: str
+    model_type: str
+    tensor_size: int
+    action_space_size: int
+    engine_commit: Optional[str]
+    trained_at: Optional[datetime]
+    file_sha256: str
+    file_size_bytes: int
+    url: str
+    deck_id: Optional[str]
+    deck_name: Optional[str]
+    notes: Optional[str]
+
+
+class ManifestResponse(BaseModel):
+    generated_at: datetime
+    models: List[ManifestModel]

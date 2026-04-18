@@ -23,6 +23,7 @@ from digimon_gym.db.routers import friends as friends_router
 from digimon_gym.db.routers import issues as issues_router
 from digimon_gym.db.routers import patch_notes as patch_notes_router
 from digimon_gym.db.routers import users as users_router
+from digimon_gym.db.routers import admin_models as admin_models_router
 from digimon_gym.routers import deck_tools
 from digimon_gym.routers import games
 from digimon_gym.routers import health
@@ -70,6 +71,8 @@ app.include_router(friends_router.router)
 app.include_router(assets_router.router)
 app.include_router(issues_router.router)
 app.include_router(patch_notes_router.router)
+app.include_router(admin_models_router.admin_router)
+app.include_router(admin_models_router.public_router)
 app.include_router(admin_ai_router.router)
 app.include_router(training_router.router)
 
