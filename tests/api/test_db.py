@@ -308,7 +308,7 @@ class TestDeckEndpoints:
             "name": "Test Standard Deck",
             "game_mode": "standard",
             "main_deck": ["BT14-001"] * 50,
-            "egg_deck": ["BT14-002"] * 5,
+            "egg_deck": ["BT14-003"] * 5,
         }, headers=headers)
         assert resp.status_code == 201
         deck = resp.json()
