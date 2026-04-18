@@ -3,6 +3,7 @@
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Service architecture, API surface, frontend components, RL contracts, desktop distribution |
+| [ENVIRONMENT.md](ENVIRONMENT.md) | Environment variables — every var consumed by the hosted API, training CLI, desktop build, and frontend, grouped by subsystem |
 | [TENSOR_SPEC.md](TENSOR_SPEC.md) | Observation tensor layout (1375 floats) |
 | [ACTION_SPEC.md](ACTION_SPEC.md) | Action space (2168 actions) — ranges and conventions |
 | [TRAINING_RUNBOOK.md](TRAINING_RUNBOOK.md) | RL training operations guide |

@@ -562,3 +562,65 @@ class TestPublicManifest:
         )
         # URL is populated
         assert m["url"].startswith("https://")
+
+    async def test_manifest_url_uses_origin_when_cdn_unset(
+        self,
+        client: AsyncClient,
+        session_factory,
+        valid_mlp_path: Path,
+        monkeypatch,
+    ):
+        """Without SPACES_CDN_URL, manifest urls must resolve to the path-style origin."""
+        monkeypatch.delenv("SPACES_CDN_URL", raising=False)
+
+        token = await _register_and_login(client, "m_manifest_origin")
+        await _grant_admin(session_factory, "m_manifest_origin")
+
+        data = await _create_model(client, token, name="OriginModel")
+        await _confirm_model(client, token, data["id"], valid_mlp_path, data["spaces_key"])
+        await client.patch(
+            f"/admin/models/{data['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"published": True},
+        )
+
+        resp = await client.get("/models/manifest.json")
+        assert resp.status_code == 200
+        matching = [m for m in resp.json()["models"] if m["id"] == data["id"]]
+        assert len(matching) == 1
+        expected_prefix = f"{_ENDPOINT}/{_BUCKET}/"
+        assert matching[0]["url"].startswith(expected_prefix), matching[0]["url"]
+        assert matching[0]["url"].endswith(data["spaces_key"])
+
+    async def test_manifest_url_uses_cdn_when_set(
+        self,
+        client: AsyncClient,
+        session_factory,
+        valid_mlp_path: Path,
+        monkeypatch,
+    ):
+        """With SPACES_CDN_URL set, every manifest entry must use that base."""
+        cdn_base = "https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com"
+        monkeypatch.setenv("SPACES_CDN_URL", cdn_base)
+
+        token = await _register_and_login(client, "m_manifest_cdn")
+        await _grant_admin(session_factory, "m_manifest_cdn")
+
+        data = await _create_model(client, token, name="CdnModel")
+        await _confirm_model(client, token, data["id"], valid_mlp_path, data["spaces_key"])
+        await client.patch(
+            f"/admin/models/{data['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"published": True},
+        )
+
+        resp = await client.get("/models/manifest.json")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body["models"]) >= 1
+        for m in body["models"]:
+            assert m["url"].startswith(cdn_base + "/"), m["url"]
+            # CDN URL must not embed the bucket name — CDN is bucket-scoped already.
+            assert f"/{_BUCKET}/" not in m["url"], m["url"]
+        matching = [m for m in body["models"] if m["id"] == data["id"]]
+        assert matching[0]["url"] == f"{cdn_base}/{data['spaces_key']}"
