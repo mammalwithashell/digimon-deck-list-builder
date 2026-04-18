@@ -1005,3 +1005,8 @@ class ManifestModel(BaseModel):
 class ManifestResponse(BaseModel):
     generated_at: datetime
     models: List[ManifestModel]
+
+
+class PrepareModelResponse(BaseModel):
+    filename: str
+    cached: bool

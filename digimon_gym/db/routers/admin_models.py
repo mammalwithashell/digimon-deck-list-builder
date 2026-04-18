@@ -6,6 +6,7 @@ import asyncio
 import os
 import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from botocore.exceptions import ClientError
@@ -25,6 +26,11 @@ from digimon_gym.db.schemas import (
     ListAIModelsResponse,
     ManifestModel,
     ManifestResponse,
+    PrepareModelResponse,
+)
+from digimon_gym.engine.model_utils import (
+    get_models_dir,
+    resolve_manifest_model_path,
 )
 from digimon_gym.storage import spaces
 
@@ -384,3 +390,33 @@ async def get_manifest(
         generated_at=_utcnow(),
         models=manifest_models,
     )
+
+
+@public_router.post("/{model_id}/prepare", response_model=PrepareModelResponse)
+async def prepare_model(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> PrepareModelResponse:
+    """Stage a manifest model into the server-local ONNX dir so that a
+    subsequent POST /games with player_model=<returned filename> can load it.
+
+    The resolver writes to `MANIFEST_MODEL_CACHE_DIR`, which must be
+    configured to match (or be a subdir of) `ONNX_MODELS_DIR` so that
+    `/games` can find the file by its returned filename. Safe on repeated
+    calls: the file is keyed by sha256 and hits the cache.
+    """
+    try:
+        path = await resolve_manifest_model_path(db, model_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    filename = Path(path).name  # "<sha256>.onnx"
+    # Ensure get_models_dir sees this file.
+    models_dir = get_models_dir()
+    if Path(path).parent != models_dir:
+        target = models_dir / filename
+        if not target.exists():
+            models_dir.mkdir(parents=True, exist_ok=True)
+            import shutil
+            shutil.copy2(path, target)
+    return PrepareModelResponse(filename=filename, cached=True)
