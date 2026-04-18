@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import secrets
+import string
+import uuid as _uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,6 +17,7 @@ from digimon_gym.db.auth import (
     ROLE_PLAYER,
     assign_role_to_user,
     create_access_token,
+    create_guest_access_token,
     create_refresh_token_value,
     get_current_user,
     get_user_role_names,
@@ -24,6 +28,7 @@ from digimon_gym.db.auth import (
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import RefreshToken, User, UserPreferences
 from digimon_gym.db.schemas import (
+    GuestSessionResponse,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
@@ -180,3 +185,46 @@ async def logout(
         record.revoked = 1
         await db.commit()
     return {"status": "logged_out"}
+
+
+def _generate_guest_suffix() -> str:
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(4))
+
+
+@router.post(
+    "/guest",
+    response_model=GuestSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_guest(db: AsyncSession = Depends(get_db)) -> GuestSessionResponse:
+    """Create an anonymous guest account and return a long-lived access token.
+
+    Each call mints a distinct guest. Clients are expected to cache the
+    token in `localStorage` and reuse it on subsequent launches. Losing
+    the token creates a new identity next boot — acceptable because
+    guest-owned data (decks) lives on the client.
+    """
+    guest_id = f"guest_{_uuid.uuid4()}"
+    suffix = _generate_guest_suffix()
+    display_name = f"Guest-{suffix}"
+    # Use suffix in the synthetic email to keep the unique constraint happy.
+    placeholder_email = f"{guest_id}@guest.invalid"
+
+    user = User(
+        id=guest_id,
+        username=guest_id,
+        email=placeholder_email,
+        password_hash="!disabled-guest",
+        display_name=display_name,
+        is_guest=True,
+    )
+    db.add(user)
+    await db.commit()
+
+    token = create_guest_access_token(user_id=guest_id, display_name=display_name)
+    return GuestSessionResponse(
+        access_token=token,
+        user_id=guest_id,
+        display_name=display_name,
+    )

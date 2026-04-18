@@ -32,6 +32,13 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class GuestSessionResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    display_name: str
+
+
 # ── Users ───────────────────────────────────────────────────────────────
 
 class UserPublic(BaseModel):
