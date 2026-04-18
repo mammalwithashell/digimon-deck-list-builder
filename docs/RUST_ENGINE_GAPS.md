@@ -6,6 +6,47 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 
 Each entry lists the cards that surfaced it, but the entry itself describes a reusable engine primitive. If two cards need the same primitive, they share one entry — not two.
 
+> **Canonical API signatures live here.** Fix-plans in `.claude/plans/rust-engine-gaps-*.md` should reference gap titles rather than restate signatures, to prevent divergence as the engine evolves.
+
+## At a glance
+
+Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count — most primitives unblock more cards archetype-wide. `Key files` is the primary surface the fix touches.
+
+| Gap | Severity | #cards | Key files |
+|---|---|---|---|
+| [Global `OnOpponentSecurityRemoved` observer timing](#global-onopponentsecurityremoved-observer-timing) | 🔴 | 15 | `combat.rs`, `effect_queue.rs`, `enums.rs` |
+| [Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings](#global-onanydigimonplayed--onanydeletion-observer-timings) | 🔴 | 3 | `game.rs`, `permanent.rs`, `effect_queue.rs` |
+| [Phase-granular turn timings (`StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`)](#phase-granular-turn-timings-startofyourmainphase-whenattacking-endofattack-endofbattle) | 🔴 | 8 | `game.rs`, `combat.rs`, `effect.rs` |
+| [Observer timings tied to specific events (`OnDigivolve` trait-filter, `OnSuspend`, `OnAttackTargetChange`, `[When Moving]`)](#observer-timings-tied-to-specific-events-ondigivolve-trait-filter-onsuspend-onattacktargetchange-when-moving) | 🔴 | 6 | `game.rs`, `permanent.rs`, `combat.rs`, `enums.rs` |
+| [`WhenWouldBeDeleted` / leave-field replacement-effect framework](#whenwouldbedeleted--leave-field-replacement-effect-framework) | 🔴 | 5 | `game.rs`, `effect.rs`, `enums.rs` |
+| [Selection: multi-select with aggregate-sum constraint](#selection-multi-select-with-aggregate-sum-constraint) | 🔴 | 2 | `effect_context.rs`, `action/` |
+| [Selection: ordered permutation (place N cards in any order)](#selection-ordered-permutation-place-n-cards-in-any-order) | 🔴 | 8 | `effect_context.rs`, `action/` |
+| [Selection: opponent-as-selecting-player, cross-side target, union-zone (hand OR trash), DNA-pair](#selection-opponent-as-selecting-player-cross-side-target-union-zone-hand-or-trash-dna-pair) | 🔴 | 10 | `effect_context.rs`, `action/` |
+| [Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)](#zone-manipulation-play-from-hand--trash-without-paying-cost--cost-override) | 🔴 | 11+ | `effect_context.rs`, `game.rs` |
+| [Zone-manipulation: effect-initiated digivolve (free / reduced / with trait filter)](#zone-manipulation-effect-initiated-digivolve-free--reduced--with-trait-filter) | 🔴 | 8 | `effect_context.rs`, `game.rs`, `modifiers.rs` |
+| [Zone-manipulation: return-to-hand / return-to-deck (top/bottom) / bounce self](#zone-manipulation-return-to-hand--return-to-deck-topbottom--bounce-self) | 🔴 | 7 | `effect_context.rs`, `permanent.rs` |
+| [Zone-manipulation: reveal-top-N deck + add-to-hand + hatch](#zone-manipulation-reveal-top-n-deck--add-to-hand--hatch) | 🔴 | 10 | `effect_context.rs`, `game.rs` |
+| [Zone-manipulation: security stack operations (trash top, place bottom, trash N)](#zone-manipulation-security-stack-operations-trash-top-place-bottom-trash-n) | 🔴 | 6 | `effect_context.rs`, `combat.rs` |
+| [Token creation + `CardKind::Token` + Petrification Token definition](#token-creation--cardkindtoken--petrification-token-definition) | 🔴 | 3 | `card_data.rs`, `cards.rs`, `effect_context.rs` |
+| [Place card at a specific stack position (bottom-source / under another permanent) + alt-digivolve](#place-card-at-a-specific-stack-position-bottom-source--under-another-permanent--alt-digivolve) | 🔴 | 2 | `effect_context.rs`, `permanent.rs`, `game.rs` |
+| [Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N)](#native-printed-keyword-parsing-rush-raid-piercing-blocker-reboot-jamming-blitz-vortex-alliance-security-a%C2%B1n) | 🔴 | 17+ | `card_data.rs`, `cards.rs`, `card_registry.rs` |
+| [`<Progress>` keyword + `ImmunityToOpponentEffects` modifier](#progress-keyword--immunitytoopponenteffects-modifier) | 🔴 | 6 | `enums.rs`, `modifiers.rs`, `combat.rs`, `effect_context.rs` |
+| [`<Armor Purge>` keyword (leave-field replacement variant)](#armor-purge-keyword-leave-field-replacement-variant) | 🔴 | 2 | `enums.rs`, `effect.rs` (builds on replacement framework) |
+| [`<Training>` keyword](#training-keyword) | 🔴 | 1 | `enums.rs`, `card_source.rs`, `effect_context.rs`, `action/` |
+| [`<Delay>` keyword + placement-turn gating for Option cards](#delay-keyword--placement-turn-gating-for-option-cards) | 🔴 | 6 | `enums.rs`, `effect.rs`, `action/` (builds on Option flow) |
+| [Raid target-switch interrupt (scripting-surface, not mask-only)](#raid-target-switch-interrupt-scripting-surface-not-mask-only) | 🔴 | 5+ | `combat.rs`, `enums.rs` |
+| [De-Digivolve N primitive (single + mass)](#de-digivolve-n-primitive-single--mass) | 🔴 | 2 | `effect_context.rs`, `permanent.rs` |
+| [Ace Overflow: inherited memory penalty on zone-change from field / under-card](#ace-overflow-inherited-memory-penalty-on-zone-change-from-field--under-card) | 🔴 | 4 | `card_data.rs`, `game.rs`, `effect.rs` |
+| [Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated)](#dynamic-cost-reduction-at-beforepaycost-closure-valued--selection-gated) | 🔴 | 4 | `effect.rs`, `game.rs` |
+| [Dynamic DP scaling modifier (per-stack-depth / per-opponent-board)](#dynamic-dp-scaling-modifier-per-stack-depth--per-opponent-board) | 🔴 | 2 | `effect.rs`, `tensor.rs` |
+| [Condition-gated modifier entries](#condition-gated-modifier-entries) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
+| [Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement)](#player-scoped-modifier-registry-cannotplayfromtrash-cannotplaydigimonbyeffect-opponentcannotreducedigivolvecost-ignorecolorrequirement) | 🔴 | 6+ | `modifiers.rs`, `enums.rs`, `action/`, `effect_context.rs` |
+| [Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic](#option-card-play-flow-resolve--trash-vs-place-on-field-mainsecurity-activation--plug-in--link-mechanic) | 🔴 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
+| [Scheduled end-of-turn effect queue (for transient Options)](#scheduled-end-of-turn-effect-queue-for-transient-options) | 🔴 | 1 | `game.rs`, `effect_context.rs` |
+| [Effect re-firing / cross-timing self-trigger](#effect-re-firing--cross-timing-self-trigger) | 🔴 | 1 | `effect_context.rs`, `effect_queue.rs` |
+| [Force-follow-up-attack / "may attack without suspending" script helpers](#force-follow-up-attack--may-attack-without-suspending-script-helpers) | 🔴 | 6 | `effect_context.rs`, `modifiers.rs`, `combat.rs` |
+| [Trait-filter helpers on `CardSource` / `Permanent`](#trait-filter-helpers-on-cardsource--permanent) | 🟡 | pervasive | `card_source.rs`, `permanent.rs` |
+
 ## Open gaps
 
 ### Global `OnOpponentSecurityRemoved` observer timing

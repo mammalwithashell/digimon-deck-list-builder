@@ -6,7 +6,7 @@ Close the 31 blocking and 1 partial engine gaps below so that **Medusamon** (met
 
 The archetype is red/LIBERATOR-centric and pivots on three tentpole mechanics the current Rust engine does not yet expose:
 
-- An **"opponent's security stack was removed from"** recurring observer that gates the inherit effects on 15+ cards.
+- An **"opponent's security stack was removed from"** recurring observer that gates the inherited effects on 15+ cards.
 - **Petrification Tokens** — full token infrastructure with baked-in abilities.
 - **Face-printed keyword parsing** — Progress, Raid, Piercing, Blocker, Armor Purge and friends on 17+ cards.
 
@@ -144,21 +144,23 @@ Counts below reflect Medusamon archetype only — most of these primitives unblo
 
 ## Ask
 
+**Canonical API signatures live in `docs/RUST_ENGINE_GAPS.md`** — each gap's `Suggested API shape` is authoritative. The phase descriptions below name the **gap titles** each phase closes; when drafting the plan, copy signatures from the gaps doc verbatim rather than re-paraphrasing them here. If the plan needs to amend a signature, update the gaps doc first, then reference it.
+
 Produce a phased implementation plan (per `superpowers:writing-plans`) that:
 
 1. **Groups gaps by subsystem**, with clear inter-phase dependencies:
-   - **Phase A — Observer plumbing:** fire the timings already declared in `enums.rs` (`OnEnterFieldAnyone`, `OnDigivolve`, `OnSuspend`, `OnLeaveField`, `EndOfAttack`, `WhenAttacking`, `OnSecurityCheck`, `OnAnyDeletion`). This phase alone unblocks ~20 cards, mostly via gap #1 (opponent-security-removed observer). No new data types — just dispatch sites + builder constructors + a handful of tests.
-   - **Phase B — Native keyword parsing** (gap #2): one architectural decision — parse `effect_text` at registry build, or add `CardData::keywords: Vec<Keyword>` + ingest. Unblocks ~17 cards' face-keyword behavior in one shot.
-   - **Phase C — Zone-manipulation helpers** (gaps #4, #5, #9, #10): `play_from_hand_free`, `play_from_trash_free`, `return_to_hand`, `return_to_deck`, `reveal_top`, `add_to_hand`, security-stack ops. Mostly additive to `EffectContext`; each needs a behavioral test.
-   - **Phase D — Selection primitives** (gap #12 + #24 + #25): opponent-as-selector, cross-side, union-zone, ordered permutation, multi-select-with-sum. These share the `install_field_selection` machinery.
-   - **Phase E — Option card play flow + `<Delay>`** (gap #3): architectural; needs its own spec under `docs/superpowers/specs/` before implementation. Depends on Phase C (most Option [Main] bodies need the zone helpers).
-   - **Phase F — Token infrastructure + `WhenWouldBeDeleted` replacement framework** (gaps #7, #8, #13): `CardKind::Token`, `TokenRegistry`, Petrification Token data, replacement-effect plumbing. `<Armor Purge>` is a downstream consumer.
+   - **Phase A — Observer plumbing:** fire the timings already declared in `enums.rs` but unwired. Closes gap #1 (the "Global `OnOpponentSecurityRemoved` observer timing" entry in the gaps doc) and touches variants `OnEnterFieldAnyone`, `OnDigivolve`, `OnSuspend`, `OnLeaveField`, `EndOfAttack`, `WhenAttacking`, `OnSecurityCheck`, `OnAnyDeletion`. This phase alone unblocks ~20 cards. No new data types — just dispatch sites + builder constructors + tests.
+   - **Phase B — Native keyword parsing** (gap #2, "Native printed keyword parsing"): one architectural decision — parse `effect_text` at registry build, or add `CardData::keywords: Vec<Keyword>` + ingest. Unblocks ~17 cards' face-keyword behavior in one shot.
+   - **Phase C — Zone-manipulation helpers** (gaps #4, #5, #9, #10 — the four "Zone-manipulation:" entries in the gaps doc). Mostly additive to `EffectContext`; each needs a behavioral test.
+   - **Phase D — Selection primitives** (gaps #12 "Selection: opponent-as-selecting-player…", #24 "Selection: multi-select with aggregate-sum constraint", #25 "Selection: ordered permutation"). These share the `install_field_selection` machinery.
+   - **Phase E — Option card play flow + `<Delay>`** (gap #3, "Option card play flow" + "`<Delay>` keyword"): architectural; needs its own spec under `docs/superpowers/specs/` before implementation. Depends on Phase C (most Option [Main] bodies need the zone helpers).
+   - **Phase F — Token infrastructure + `WhenWouldBeDeleted` replacement framework** (gaps #7 "Token creation + CardKind::Token", #8 "`WhenWouldBeDeleted` / leave-field replacement-effect framework", #13 "`<Armor Purge>` keyword"). `<Armor Purge>` is a downstream consumer of the replacement framework.
    - **Phase G — `<Progress>` keyword + `ImmunityToOpponentEffects` modifier** (gap #6): threads the immunity check through every opponent-targeting mutation site.
-   - **Phase H — Raid target-switch interrupt + `OnAttackTargetChange`** (gap #11 + §22's target-switch observer): combat state-machine extension (`RaidOpen`) + event emission.
-   - **Phase I — Cost reduction + dynamic DP infrastructure** (gaps #17, #18): closure-valued `cost_reduction_fn` + `dp_modifier_fn` + selection-gated BeforePayCost cost hook.
-   - **Phase J — Player-scoped modifier registry + new ModifierType variants** (gaps #19, #20): `ModifierRegistry` extension + specific `ModifierType` additions.
-   - **Phase K — Tier-3/4 keyword infrastructure** (gaps #14, #15, #16, #26, #27): De-Digivolve primitive, `<Training>`, Ace Overflow, alt-digivolve, Plug-In / Link (likely its own spec).
-   - **Phase L — Misc helpers** (gaps #21, #22, #23, #28, #29, #30, #31): phase-granular timings, event-scoped observers, scheduled EOT queue, effect re-firing, force-follow-up-attack, trait-filter sugar.
+   - **Phase H — Raid target-switch interrupt + `OnAttackTargetChange`** (gap #11 "Raid target-switch interrupt" + §22's target-switch observer): combat state-machine extension + event emission.
+   - **Phase I — Cost reduction + dynamic DP infrastructure** (gaps #17 "Dynamic cost reduction at `BeforePayCost`", #18 "Dynamic DP scaling modifier").
+   - **Phase J — Player-scoped modifier registry + new ModifierType variants** (gaps #19, #20): `ModifierRegistry` extension + the specific `ModifierType` additions named in the gaps doc entry.
+   - **Phase K — Tier-3/4 keyword infrastructure** (gaps #14 "`<Training>` keyword", #15 "De-Digivolve N primitive", #16 "Ace Overflow", #26 "Place card at a specific stack position", #27 Plug-In / Link — likely its own spec).
+   - **Phase L — Misc helpers** (gaps #21–#23, #28–#31 — phase-granular timings, event-scoped observers, scheduled EOT queue, effect re-firing, force-follow-up-attack, trait-filter sugar).
 
 2. **Orders phases by dependency and blast radius within each dependency tier:**
    - Observer plumbing (A) and native keyword parsing (B) share no dependencies and deliver the highest card coverage per unit of work. Run in parallel if practical.
