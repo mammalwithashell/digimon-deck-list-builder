@@ -15,7 +15,8 @@ export function ImportExport({ isOpen, onClose }: ImportExportProps) {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [importSuccess, setImportSuccess] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const { mainDeck, eggDeck, loadDeck, deckName, setIsDirty } = useDeckBuilderStore();
+  const { mainDeck, eggDeck, loadDeck, deckName, setIsDirty, testedCardIds } =
+    useDeckBuilderStore();
 
   const handleImport = async () => {
     if (!text.trim()) return;
@@ -25,6 +26,25 @@ export function ImportExport({ isOpen, onClose }: ImportExportProps) {
     setImportSuccess(false);
     try {
       const parsed = await deckApi.parseDeck(text.trim());
+
+      // Alpha gate: reject imports that contain any card without behavioral
+      // test coverage. Fail the whole import rather than silently dropping
+      // cards so the user knows exactly what's wrong.
+      if (testedCardIds) {
+        const untested = new Set<string>();
+        for (const id of [...parsed.main_deck, ...parsed.egg_deck]) {
+          if (!testedCardIds.has(id)) untested.add(id);
+        }
+        if (untested.size > 0) {
+          const ids = Array.from(untested).sort();
+          setError(
+            `Import blocked: ${untested.size} card(s) are not available ` +
+              `in the alpha release — ${ids.slice(0, 5).join(', ')}` +
+              (ids.length > 5 ? `, +${ids.length - 5} more` : ''),
+          );
+          return;
+        }
+      }
 
       // Fetch card data for imported cards to get names/types
       const allIds = [...new Set([...parsed.main_deck, ...parsed.egg_deck])];

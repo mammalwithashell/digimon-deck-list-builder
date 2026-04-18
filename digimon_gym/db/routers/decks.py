@@ -19,8 +19,29 @@ from digimon_gym.db.schemas import (
     UpdateDeckRequest,
 )
 from digimon_gym.engine.data.deck_loader import validate_deck, RESTRICTED_LIST, CardRestriction
+from digimon_gym.engine.data.tested_cards import out_of_set_cards
 
 router = APIRouter(prefix="/decks", tags=["decks"])
+
+
+def _reject_untested_cards(main_deck: list[str], egg_deck: list[str]) -> None:
+    """Hard-reject any deck containing cards without behavioral test coverage.
+
+    Alpha gate: prevents un-QA'd card scripts from being saved to the DB
+    and later loaded into a game.
+    """
+    untested = out_of_set_cards(main_deck + egg_deck)
+    if untested:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": (
+                    "Deck contains cards that are not available in the "
+                    "alpha release (no test coverage)."
+                ),
+                "untested_card_ids": untested,
+            },
+        )
 
 
 def _validate_for_mode(card_ids: list[str], game_mode: str, titan_role: str | None) -> tuple[bool, list[str]]:
@@ -137,6 +158,9 @@ async def create_deck(
     if request.game_mode != "titan" and request.titan_role:
         raise HTTPException(status_code=400, detail="titan_role only valid for titan mode")
 
+    # Alpha gate: reject cards without behavioral test coverage.
+    _reject_untested_cards(request.main_deck, request.egg_deck)
+
     # Run validation
     all_cards = request.main_deck + request.egg_deck
     is_valid, errors = _validate_for_mode(all_cards, request.game_mode, request.titan_role)
@@ -250,6 +274,18 @@ async def update_deck(
         raise HTTPException(status_code=404, detail="Deck not found")
     if deck.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Access denied")
+
+    # Alpha gate: reject cards without behavioral test coverage. Use the
+    # submitted lists if provided, otherwise fall back to the current deck.
+    proposed_main = (
+        request.main_deck if request.main_deck is not None else json.loads(deck.main_deck)
+    )
+    proposed_egg = (
+        request.egg_deck
+        if request.egg_deck is not None
+        else json.loads(deck.egg_deck or "[]")
+    )
+    _reject_untested_cards(proposed_main, proposed_egg)
 
     # Apply updates
     if request.name is not None:

@@ -89,6 +89,16 @@ export async function parseDeck(deckString: string): Promise<ParseDeckResponse> 
   return data;
 }
 
+interface TestedCardsResponse {
+  card_ids: string[];
+  card_count: number;
+}
+
+export async function listTestedCards(): Promise<string[]> {
+  const { data } = await client.get<TestedCardsResponse>('/decks/tested-cards');
+  return data.card_ids;
+}
+
 export async function validateDeckRaw(
   mainDeck: string[],
   eggDeck: string[],

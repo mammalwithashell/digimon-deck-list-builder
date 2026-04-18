@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CardSearchPanel } from '@/components/deckbuilder/CardSearchPanel';
 import { DeckListPanel } from '@/components/deckbuilder/DeckListPanel';
 import { DeckStats } from '@/components/deckbuilder/DeckStats';
@@ -21,10 +21,25 @@ export function DeckBuilderPage() {
     setIsDirty,
     setValidationResult,
     selectedCardId,
+    testedCardIds,
+    setTestedCardIds,
   } = useDeckBuilderStore();
 
   const [showImport, setShowImport] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Alpha gate: fetch the tested-cards allowlist once per session.
+  useEffect(() => {
+    if (testedCardIds !== null) return;
+    deckApi
+      .listTestedCards()
+      .then(setTestedCardIds)
+      .catch(() => {
+        // If the endpoint is unreachable, fall back to an empty set so
+        // the user sees no cards rather than the unrestricted pool.
+        setTestedCardIds([]);
+      });
+  }, [testedCardIds, setTestedCardIds]);
 
   const handleSave = async () => {
     setSaving(true);

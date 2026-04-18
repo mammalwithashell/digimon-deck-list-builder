@@ -20,6 +20,9 @@ interface DeckBuilderStore {
   isDirty: boolean;
   validationResult: DeckValidationResult | null;
 
+  // Alpha allowlist: cards with behavioral test coverage. Null until fetched.
+  testedCardIds: Set<string> | null;
+
   // Saved decks
   savedDecks: DeckSummary[];
 
@@ -31,6 +34,8 @@ interface DeckBuilderStore {
   setSearchPage: (page: number) => void;
   setIsSearching: (loading: boolean) => void;
   setSelectedCardId: (id: string | null) => void;
+
+  setTestedCardIds: (ids: string[]) => void;
 
   addCardToDeck: (cardId: string, cardData: DigimonCardData, isAltArt?: boolean) => void;
   removeCardFromDeck: (cardId: string, isAltArt?: boolean) => void;
@@ -58,6 +63,8 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
   isDirty: false,
   validationResult: null,
 
+  testedCardIds: null,
+
   savedDecks: [],
 
   setSearchQuery: (q) => set({ searchQuery: q, searchPage: 0 }),
@@ -69,8 +76,14 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
   setIsSearching: (loading) => set({ isSearching: loading }),
   setSelectedCardId: (id) => set({ selectedCardId: id }),
 
+  setTestedCardIds: (ids) => set({ testedCardIds: new Set(ids) }),
+
   addCardToDeck: (cardId, cardData, isAltArt = false) =>
     set((s) => {
+      // Alpha gate: refuse to add cards that lack behavioral test coverage.
+      if (s.testedCardIds && !s.testedCardIds.has(cardId)) {
+        return s;
+      }
       const isEgg = cardData.type === 'Digi-Egg';
       const deck = isEgg ? [...s.eggDeck] : [...s.mainDeck];
       // The 4-per-card limit spans both art variants: sum counts for every

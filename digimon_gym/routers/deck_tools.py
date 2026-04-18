@@ -7,9 +7,17 @@ from fastapi import APIRouter, HTTPException
 from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.deck_loader import parse_deck, summarize_deck, validate_deck
 from digimon_gym.engine.data.enums import CardKind
+from digimon_gym.engine.data.tested_cards import load_tested_cards, out_of_set_cards
 from digimon_gym.routers.schemas import DeckParseRequest, DeckValidateRequest
 
 router = APIRouter(tags=["deck-tools"])
+
+
+def _alpha_pool_error(card_id: str) -> str:
+    return (
+        f"Card {card_id} is not available in the alpha release "
+        "(no test coverage)"
+    )
 
 
 @router.post("/decks/parse")
@@ -62,11 +70,33 @@ def deck_validate(request: DeckValidateRequest):
 
     result = validate_deck(card_ids)
     summary = summarize_deck(card_ids)
+
+    # Alpha gate: reject decks with any card that lacks behavioral test
+    # coverage. Keeps out-of-scope card scripts from reaching the engine.
+    errors = list(result.errors)
+    out_of_pool = out_of_set_cards(card_ids)
+    is_valid = result.is_valid
+    if out_of_pool:
+        errors.extend(_alpha_pool_error(cid) for cid in out_of_pool)
+        is_valid = False
+
     return {
-        "is_valid": result.is_valid,
-        "errors": result.errors,
+        "is_valid": is_valid,
+        "errors": errors,
         "warnings": result.warnings,
         "summary": summary,
         "total_cards": len(card_ids),
     }
+
+
+@router.get("/decks/tested-cards")
+def list_tested_cards():
+    """Return the allowlist of card IDs available in the alpha deck builder.
+
+    The list is derived from per-card behavioral tests under
+    ``tests/behavioral/`` at build time and committed as
+    ``digimon_gym/engine/data/tested_cards.json``.
+    """
+    card_ids = sorted(load_tested_cards())
+    return {"card_ids": card_ids, "card_count": len(card_ids)}
 
