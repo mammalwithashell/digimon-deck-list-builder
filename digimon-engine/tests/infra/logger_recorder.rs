@@ -210,5 +210,10 @@ fn recorder_to_json_has_expected_top_level_keys() {
     assert_eq!(json["actions"].as_array().unwrap().len(), 0);
     assert_eq!(json["total_actions"], serde_json::json!(0));
     assert_eq!(json["tensor_snapshots_count"], serde_json::json!(0));
-    assert!(json["tensor_snapshots"].is_array());
+    // "tensor_snapshots" is omitted when empty — matches Python's conditional
+    // inclusion in GameRecorder.to_dict (recording.py:213-222).
+    assert!(
+        json.get("tensor_snapshots").is_none(),
+        "tensor_snapshots should be absent when empty"
+    );
 }

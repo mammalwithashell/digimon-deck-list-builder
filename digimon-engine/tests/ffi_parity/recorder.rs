@@ -51,30 +51,43 @@ fn recording_has_expected_top_level_keys() {
     r.step(62);
 
     let rec = r.get_recording().expect("recorder enabled → recording present");
-    for key in [
-        "initial_state",
-        "actions",
-        "total_actions",
-        "tensor_snapshots_count",
-        "tensor_snapshots",
-    ] {
-        assert!(rec.as_object().unwrap().contains_key(key), "missing {:?}", key);
+    let obj = rec.as_object().unwrap();
+    for key in ["initial_state", "actions", "total_actions", "tensor_snapshots_count"] {
+        assert!(obj.contains_key(key), "missing {:?}", key);
     }
+    // "tensor_snapshots" is omitted when empty — matches Python's schema.
+    assert!(
+        !obj.contains_key("tensor_snapshots"),
+        "tensor_snapshots should be absent when record_tensors=false"
+    );
     assert_eq!(rec["total_actions"], serde_json::json!(3));
     assert_eq!(rec["actions"].as_array().unwrap().len(), 3);
+    assert_eq!(rec["tensor_snapshots_count"], serde_json::json!(0));
 }
 
 #[test]
 fn recording_initial_state_has_both_players() {
     let db = minimal_db();
     let deck = test_deck();
-    let r = HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(7)).unwrap();
+    let mut r =
+        HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(7)).unwrap();
+    // Must call step() at least once so the lazy capture fires after mulligan.
+    // Action 0 = mulligan-keep for player 1; step again for player 2.
+    r.step(0); // player 1 keeps mulligan
+    r.step(0); // player 2 keeps mulligan
+
     let rec = r.get_recording().expect("recorder enabled");
     let init = &rec["initial_state"];
     assert!(init["player1"].is_object());
     assert!(init["player2"].is_object());
     assert!(init["first_player_id"].is_i64());
     assert!(init["timestamp"].is_string());
+
+    // Verify ISO-8601 timestamp format (YYYY-MM-DDTHH:MM:SS+00:00 = 25 chars).
+    let ts = init["timestamp"].as_str().unwrap();
+    assert_eq!(ts.len(), 25, "timestamp should be 25-char ISO-8601: {:?}", ts);
+    assert_eq!(&ts[19..], "+00:00");
+
     for key in [
         "player_id",
         "deck_list",
@@ -89,6 +102,18 @@ fn recording_initial_state_has_both_players() {
             key
         );
     }
+
+    // Security must be populated (5 cards after mulligan) — guards Issue 1 regression.
+    assert_eq!(
+        init["player1"]["security_order"].as_array().unwrap().len(),
+        5,
+        "player1 security_order should have 5 cards"
+    );
+    assert_eq!(
+        init["player2"]["security_order"].as_array().unwrap().len(),
+        5,
+        "player2 security_order should have 5 cards"
+    );
 }
 
 #[test]

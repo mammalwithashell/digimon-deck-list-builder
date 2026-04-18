@@ -35,6 +35,9 @@ pub struct HeadlessRunner {
     record_tensors: bool,
     /// Recorder — `Some` when `record_actions` is true, `None` otherwise.
     recorder: Option<GameRecorder>,
+    /// Original deck lists retained for lazy `capture_initial_state`.
+    deck1_ids: Vec<String>,
+    deck2_ids: Vec<String>,
 }
 
 impl HeadlessRunner {
@@ -55,10 +58,11 @@ impl HeadlessRunner {
         let decks = vec![deck1_ids.clone(), deck2_ids.clone()];
         let game = Game::new(&decks, all_card_data, Rules::standard(), seed)?;
 
+        // Do NOT capture initial state here — security is not yet dealt
+        // (Game is still in Mulligan phase). Capture lazily on first step()
+        // after mulligan completes. See Issue 1 in the spec-compliance fixes.
         let recorder = if record_actions {
-            let mut rec = GameRecorder::new(record_tensors);
-            rec.capture_initial_state(&game, (&deck1_ids, &deck2_ids));
-            Some(rec)
+            Some(GameRecorder::new(record_tensors))
         } else {
             None
         };
@@ -70,6 +74,8 @@ impl HeadlessRunner {
             record_actions,
             record_tensors,
             recorder,
+            deck1_ids,
+            deck2_ids,
         })
     }
 
@@ -80,6 +86,15 @@ impl HeadlessRunner {
             return;
         }
         let pid = self.current_decision_player();
+
+        // Lazy initial-state capture (pre-action): fires if mulligan is already
+        // done before this action (e.g. the very first post-mulligan step).
+        if let Some(r) = self.recorder.as_mut() {
+            if r.initial_state().is_none() && self.game.mulligan_current_player().is_none() {
+                r.capture_initial_state(&self.game, (&self.deck1_ids, &self.deck2_ids));
+            }
+        }
+
         let idx = self
             .recorder
             .as_mut()
@@ -87,6 +102,15 @@ impl HeadlessRunner {
         self.game.decode_action(action_id, pid);
         if let (Some(i), Some(r)) = (idx, self.recorder.as_mut()) {
             r.finalize_action(i, &self.game);
+        }
+
+        // Lazy initial-state capture (post-action): fires if this action just
+        // completed the mulligan phase (last player's mulligan decision).
+        // Security is now dealt; this is the correct moment to capture.
+        if let Some(r) = self.recorder.as_mut() {
+            if r.initial_state().is_none() && self.game.mulligan_current_player().is_none() {
+                r.capture_initial_state(&self.game, (&self.deck1_ids, &self.deck2_ids));
+            }
         }
     }
 

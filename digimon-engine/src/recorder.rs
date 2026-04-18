@@ -118,7 +118,7 @@ impl GameRecorder {
 
         self.initial = Some(InitialState {
             first_player_id: game.turn_order[0],
-            timestamp: unix_secs_string(),
+            timestamp: timestamp_iso8601(),
             player1: PlayerInitialState {
                 player_id: p1.id,
                 deck_list: deck_lists.0.to_vec(),
@@ -251,26 +251,32 @@ impl GameRecorder {
             })
             .collect();
 
-        let tensors: Vec<Value> = self
-            .tensor_snapshots
-            .iter()
-            .map(|ts| {
-                json!({
-                    "step": ts.step,
-                    "player_id": py_pid(ts.player_id),
-                    "tensor": ts.tensor,
-                    "action_mask": ts.action_mask.iter().map(|m| *m as i64).collect::<Vec<_>>(),
+        let mut result = serde_json::Map::new();
+        result.insert("initial_state".into(), initial_state);
+        result.insert("actions".into(), Value::Array(actions));
+        result.insert("total_actions".into(), json!(self.actions.len()));
+        result.insert(
+            "tensor_snapshots_count".into(),
+            json!(self.tensor_snapshots.len()),
+        );
+        // Omit "tensor_snapshots" when empty — mirrors Python's conditional
+        // inclusion in `GameRecorder.to_dict` (recording.py:213-222).
+        if !self.tensor_snapshots.is_empty() {
+            let tensors: Vec<Value> = self
+                .tensor_snapshots
+                .iter()
+                .map(|ts| {
+                    json!({
+                        "step": ts.step,
+                        "player_id": py_pid(ts.player_id),
+                        "tensor": ts.tensor,
+                        "action_mask": ts.action_mask.iter().map(|m| *m as i64).collect::<Vec<_>>(),
+                    })
                 })
-            })
-            .collect();
-
-        json!({
-            "initial_state": initial_state,
-            "actions": actions,
-            "total_actions": self.actions.len(),
-            "tensor_snapshots_count": self.tensor_snapshots.len(),
-            "tensor_snapshots": tensors,
-        })
+                .collect();
+            result.insert("tensor_snapshots".into(), Value::Array(tensors));
+        }
+        Value::Object(result)
     }
 }
 
@@ -288,14 +294,71 @@ fn player_initial_json(
     })
 }
 
-/// Seconds since UNIX epoch as a string. Used as a lightweight timestamp
-/// that matches Python's `datetime.now(timezone.utc).isoformat()` at
-/// second resolution for replay identification purposes.
-fn unix_secs_string() -> String {
+/// Produce an ISO-8601 UTC timestamp string matching Python's
+/// `datetime.now(timezone.utc).isoformat()` format:
+/// `YYYY-MM-DDTHH:MM:SS+00:00`.
+///
+/// Uses a manual epoch-to-calendar conversion (Howard Hinnant's
+/// `civil_from_days` algorithm) to avoid external crate dependencies.
+fn timestamp_iso8601() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    format!("{}", secs)
+    let days = (secs / 86_400) as i64;
+    let time_of_day = secs % 86_400;
+    let hour = (time_of_day / 3600) as u32;
+    let minute = ((time_of_day % 3600) / 60) as u32;
+    let second = (time_of_day % 60) as u32;
+    let (year, month, day) = civil_from_days(days);
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}+00:00",
+        year, month, day, hour, minute, second
+    )
+}
+
+/// Howard Hinnant's `civil_from_days` algorithm. Returns `(year, month, day)`
+/// in the proleptic Gregorian calendar for a count of days since 1970-01-01.
+fn civil_from_days(z: i64) -> (i32, u32, u32) {
+    let z = z + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64; // [0, 146096]
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365; // [0, 399]
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // [0, 365]
+    let mp = (5 * doy + 2) / 153; // [0, 11]
+    let d = doy - (153 * mp + 2) / 5 + 1; // [1, 31]
+    let m = if mp < 10 { mp + 3 } else { mp - 9 }; // [1, 12]
+    let y = if m <= 2 { y + 1 } else { y };
+    (y as i32, m as u32, d as u32)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timestamp_is_iso8601_format() {
+        let ts = timestamp_iso8601();
+        // Basic ISO-8601 shape: YYYY-MM-DDTHH:MM:SS+00:00 (25 chars)
+        assert_eq!(ts.len(), 25, "unexpected timestamp length: {:?}", ts);
+        assert_eq!(&ts[4..5], "-");
+        assert_eq!(&ts[7..8], "-");
+        assert_eq!(&ts[10..11], "T");
+        assert_eq!(&ts[13..14], ":");
+        assert_eq!(&ts[16..17], ":");
+        assert_eq!(&ts[19..], "+00:00");
+    }
+
+    #[test]
+    fn civil_from_days_epoch_is_1970_01_01() {
+        assert_eq!(civil_from_days(0), (1970, 1, 1));
+    }
+
+    #[test]
+    fn civil_from_days_known_date() {
+        // 2026-04-18: days since epoch = 20561
+        assert_eq!(civil_from_days(20561), (2026, 4, 18));
+    }
 }
