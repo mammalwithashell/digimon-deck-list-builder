@@ -80,20 +80,30 @@ pub fn decks_list(app: AppHandle) -> Result<Vec<DeckSummary>, String> {
     let mut out = Vec::new();
     for entry in fs::read_dir(&dir).map_err(|e| format!("read decks dir: {e}"))? {
         let entry = entry.map_err(|e| format!("dir entry: {e}"))?;
+        // Only `.json` is considered — this also hides `.json.tmp` files left
+        // behind by a crashed `decks_put` (their extension is `tmp`, not `json`).
         if entry.path().extension().and_then(|s| s.to_str()) != Some("json") {
             continue;
         }
-        if let Some(deck) = read_deck_file(&entry.path()) {
-            out.push(DeckSummary {
-                id: deck.id,
-                name: deck.name,
-                game_mode: deck.game_mode,
-                main_deck_size: deck.main_deck.len(),
-                egg_deck_size: deck.egg_deck.len(),
-                meta_tier: deck.meta_tier,
-                meta_archetype: deck.meta_archetype,
-                updated_at: deck.updated_at,
-            });
+        match read_deck_file(&entry.path()) {
+            Some(deck) => {
+                out.push(DeckSummary {
+                    id: deck.id,
+                    name: deck.name,
+                    game_mode: deck.game_mode,
+                    main_deck_size: deck.main_deck.len(),
+                    egg_deck_size: deck.egg_deck.len(),
+                    meta_tier: deck.meta_tier,
+                    meta_archetype: deck.meta_archetype,
+                    updated_at: deck.updated_at,
+                });
+            }
+            None => {
+                eprintln!(
+                    "deck_storage: skipping unreadable deck file: {}",
+                    entry.path().display()
+                );
+            }
         }
     }
     out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
@@ -120,9 +130,15 @@ pub fn decks_put(app: AppHandle, deck: Deck) -> Result<Deck, String> {
     }
     deck.updated_at = now;
     let path = dir.join(format!("{}.json", deck.id));
+    let tmp_path = dir.join(format!("{}.json.tmp", deck.id));
     let json = serde_json::to_vec_pretty(&deck)
         .map_err(|e| format!("serialize deck: {e}"))?;
-    fs::write(&path, json).map_err(|e| format!("write deck: {e}"))?;
+    // Crash-atomic write: write the full body to a sibling `.tmp` then
+    // rename into place. `rename` is atomic on POSIX and on Windows when
+    // source + dest sit on the same volume (same directory here). Matches
+    // the pattern in `models.rs::download`.
+    fs::write(&tmp_path, json).map_err(|e| format!("write deck: {e}"))?;
+    fs::rename(&tmp_path, &path).map_err(|e| format!("rename deck: {e}"))?;
     Ok(deck)
 }
 
@@ -192,5 +208,36 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         fs::write(tmp.path().join("broken.json"), b"{not json").unwrap();
         assert!(read_deck_file(&tmp.path().join("broken.json")).is_none());
+    }
+
+    #[test]
+    fn write_is_crash_atomic_no_tmp_left_behind() {
+        let tmp = TempDir::new().unwrap();
+        let deck = sample_deck("d1");
+        // Simulate a successful put by writing to a .tmp and renaming.
+        let tmp_path = tmp.path().join("d1.json.tmp");
+        let final_path = tmp.path().join("d1.json");
+        fs::write(&tmp_path, serde_json::to_vec(&deck).unwrap()).unwrap();
+        fs::rename(&tmp_path, &final_path).unwrap();
+        assert!(final_path.exists());
+        assert!(!tmp_path.exists(), "no temp file should linger after rename");
+    }
+
+    #[test]
+    fn listing_ignores_tmp_files() {
+        // Leftover .tmp files from a crashed write should not appear in the
+        // listing and should not try to parse as JSON.
+        let tmp = TempDir::new().unwrap();
+        let good = sample_deck("good");
+        write_deck(tmp.path(), &good);
+        fs::write(tmp.path().join("partial.json.tmp"), b"{incomplete").unwrap();
+
+        let jsons: Vec<_> = fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("json"))
+            .collect();
+        assert_eq!(jsons.len(), 1);
+        assert_eq!(jsons[0].path().file_name().unwrap(), "good.json");
     }
 }
