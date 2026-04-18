@@ -46,7 +46,7 @@ async def client(db_engine, monkeypatch):
     code_to_game.clear()
 
     # Alpha-gate bypass: decks router rejects cards outside
-    # tested_cards.json. Matchmaking tests use BT14-002 + synthetic IDs —
+    # tested_cards.json. Matchmaking tests use BT14-003 + synthetic IDs —
     # short-circuit the gate.
     monkeypatch.setattr(decks_router, "out_of_set_cards", lambda _cards: [])
 
@@ -77,6 +77,22 @@ async def _register_login(client: AsyncClient, username: str) -> str:
         "password": "secure-password-123",
     })
     return resp.json()["access_token"]
+
+
+def _legal_deck() -> list[str]:
+    """Return a 50-card main deck that passes the standard ban list.
+
+    Uses 13 distinct BT14 Digimon IDs (4 copies each, last one 2 copies)
+    that are Digimon (not Digi-Eggs) and absent from the restricted list,
+    so `validate_deck(..., RESTRICTED_LIST)` accepts them."""
+    ids = [f"BT14-{i:03d}" for i in range(10, 23)]
+    deck: list[str] = []
+    for cid in ids:
+        for _ in range(4):
+            deck.append(cid)
+            if len(deck) == 50:
+                return deck
+    return deck
 
 
 # ── Pure matcher logic ──────────────────────────────────────────────────
@@ -212,10 +228,10 @@ class TestMatcherLogic:
 
 class TestQueueEndpoints:
     async def _seed_deck(self, client: AsyncClient, headers: dict, name: str,
-                         card_ids: list[str]) -> str:
+                         card_ids: list[str], game_mode: str = "standard") -> str:
         resp = await client.post("/decks", json={
             "name": name,
-            "game_mode": "standard",
+            "game_mode": game_mode,
             "main_deck": card_ids,
         }, headers=headers)
         return resp.json()["id"]
@@ -223,7 +239,7 @@ class TestQueueEndpoints:
     async def test_queue_returns_ticket_id(self, client: AsyncClient):
         token = await _register_login(client, "qa1")
         headers = {"Authorization": f"Bearer {token}"}
-        deck_id = await self._seed_deck(client, headers, "D", ["BT14-001"] * 50)
+        deck_id = await self._seed_deck(client, headers, "D", _legal_deck())
 
         resp = await client.post("/matchmaking/queue", json={
             "queue_type": "casual",
@@ -236,7 +252,7 @@ class TestQueueEndpoints:
     async def test_duplicate_queue_returns_409(self, client: AsyncClient):
         token = await _register_login(client, "qa2")
         headers = {"Authorization": f"Bearer {token}"}
-        deck_id = await self._seed_deck(client, headers, "D", ["BT14-001"] * 50)
+        deck_id = await self._seed_deck(client, headers, "D", _legal_deck())
 
         r1 = await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": deck_id, "opponent_tier_filter": "any",
@@ -260,7 +276,7 @@ class TestQueueEndpoints:
     async def test_cancel_removes_ticket(self, client: AsyncClient):
         token = await _register_login(client, "qa4")
         headers = {"Authorization": f"Bearer {token}"}
-        deck_id = await self._seed_deck(client, headers, "D", ["BT14-001"] * 50)
+        deck_id = await self._seed_deck(client, headers, "D", _legal_deck())
 
         r = await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": deck_id, "opponent_tier_filter": "any",
@@ -285,8 +301,8 @@ class TestQueueEndpoints:
         tok2 = await _register_login(client, "bob")
         h1 = {"Authorization": f"Bearer {tok1}"}
         h2 = {"Authorization": f"Bearer {tok2}"}
-        d1 = await self._seed_deck(client, h1, "DA", ["BT14-001"] * 50)
-        d2 = await self._seed_deck(client, h2, "DB", ["BT14-002"] * 50)
+        d1 = await self._seed_deck(client, h1, "DA", _legal_deck())
+        d2 = await self._seed_deck(client, h2, "DB", _legal_deck())
 
         r1 = await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": d1, "opponent_tier_filter": "any",
@@ -320,11 +336,11 @@ class TestQueueEndpoints:
         h1 = {"Authorization": f"Bearer {tok1}"}
         h2 = {"Authorization": f"Bearer {tok2}"}
 
-        d1 = await self._seed_deck(client, h1, "Std", ["BT14-001"] * 50)
+        d1 = await self._seed_deck(client, h1, "Std", _legal_deck())
         # Second deck in no_restriction mode
         resp = await client.post("/decks", json={
             "name": "NR", "game_mode": "no_restriction",
-            "main_deck": ["BT14-001"] * 50,
+            "main_deck": _legal_deck(),
         }, headers=h2)
         d2 = resp.json()["id"]
 
@@ -346,8 +362,8 @@ class TestQueueEndpoints:
         tok2 = await _register_login(client, "pollB")
         h1 = {"Authorization": f"Bearer {tok1}"}
         h2 = {"Authorization": f"Bearer {tok2}"}
-        d1 = await self._seed_deck(client, h1, "DA", ["BT14-001"] * 50)
-        d2 = await self._seed_deck(client, h2, "DB", ["BT14-002"] * 50)
+        d1 = await self._seed_deck(client, h1, "DA", _legal_deck())
+        d2 = await self._seed_deck(client, h2, "DB", _legal_deck())
 
         r1 = await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": d1, "opponent_tier_filter": "any",
@@ -374,8 +390,8 @@ class TestQueueEndpoints:
         tok2 = await _register_login(client, "noc2")
         h1 = {"Authorization": f"Bearer {tok1}"}
         h2 = {"Authorization": f"Bearer {tok2}"}
-        d1 = await self._seed_deck(client, h1, "DA", ["BT14-001"] * 50)
-        d2 = await self._seed_deck(client, h2, "DB", ["BT14-002"] * 50)
+        d1 = await self._seed_deck(client, h1, "DA", _legal_deck())
+        d2 = await self._seed_deck(client, h2, "DB", _legal_deck())
 
         r1 = await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": d1, "opponent_tier_filter": "any",
@@ -397,8 +413,8 @@ class TestQueueEndpoints:
         tok2 = await _register_login(client, "join2")
         h1 = {"Authorization": f"Bearer {tok1}"}
         h2 = {"Authorization": f"Bearer {tok2}"}
-        d1 = await self._seed_deck(client, h1, "DA", ["BT14-001"] * 50)
-        d2 = await self._seed_deck(client, h2, "DB", ["BT14-002"] * 50)
+        d1 = await self._seed_deck(client, h1, "DA", _legal_deck())
+        d2 = await self._seed_deck(client, h2, "DB", _legal_deck())
 
         await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": d1, "opponent_tier_filter": "any",
@@ -412,11 +428,133 @@ class TestQueueEndpoints:
 
         # The non-host matched player joins using the code
         rj = await client.post(f"/lobby/join/{join_code}", json={
-            "deck": ["BT14-002"] * 50,
+            "deck": _legal_deck(),
         }, headers=h2)
         assert rj.status_code == 200
         assert rj.json()["game_id"] == game_id
         assert game_id in active_games
+
+
+# ── Enqueue-time ban-list enforcement (defense in depth) ────────────────
+
+class TestEnqueueFormatValidation:
+    """Matchmaking must re-validate the deck against the standard ban list
+    at enqueue time. Protects against stale decks saved before a card was
+    banned, or decks whose game_mode was altered after save."""
+
+    async def _seed_deck(self, client: AsyncClient, headers: dict, name: str,
+                         card_ids: list[str], game_mode: str = "standard") -> str:
+        resp = await client.post("/decks", json={
+            "name": name,
+            "game_mode": game_mode,
+            "main_deck": card_ids,
+        }, headers=headers)
+        return resp.json()["id"]
+
+    async def test_standard_deck_with_banned_card_rejected_at_enqueue(
+        self, client: AsyncClient
+    ):
+        """BT2-090 Matt Ishida is banned. A standard deck containing it must
+        be rejected with 422 even though deck save stored it (save flags
+        invalid but does not hard-reject)."""
+        token = await _register_login(client, "banned1")
+        headers = {"Authorization": f"Bearer {token}"}
+        # 49 legal + 1 banned = 50-card main deck
+        deck_cards = _legal_deck()[:49] + ["BT2-090"]
+        deck_id = await self._seed_deck(client, headers, "D", deck_cards)
+
+        resp = await client.post("/matchmaking/queue", json={
+            "queue_type": "casual",
+            "deck_id": deck_id,
+            "opponent_tier_filter": "any",
+        }, headers=headers)
+        assert resp.status_code == 422
+        detail = resp.json()["detail"]
+        assert detail["game_mode"] == "standard"
+        assert any("BT2-090" in e for e in detail["errors"])
+
+    async def test_no_restriction_deck_with_banned_card_allowed_at_enqueue(
+        self, client: AsyncClient
+    ):
+        """A no_restriction deck containing a banned card must still be
+        queueable — the user explicitly opted out of the ban list."""
+        token = await _register_login(client, "nr_banned")
+        headers = {"Authorization": f"Bearer {token}"}
+        deck_cards = _legal_deck()[:49] + ["BT2-090"]
+        deck_id = await self._seed_deck(
+            client, headers, "D", deck_cards, game_mode="no_restriction"
+        )
+
+        resp = await client.post("/matchmaking/queue", json={
+            "queue_type": "casual",
+            "deck_id": deck_id,
+            "opponent_tier_filter": "any",
+        }, headers=headers)
+        assert resp.status_code == 201
+
+    async def test_standard_deck_exceeding_restricted_limit_rejected(
+        self, client: AsyncClient
+    ):
+        """BT14-002 Bukamon is restricted to 1 copy. 4 copies in a standard
+        deck must be rejected at enqueue."""
+        token = await _register_login(client, "restr1")
+        headers = {"Authorization": f"Bearer {token}"}
+        # 46 legal + 4 restricted = 50
+        deck_cards = _legal_deck()[:46] + ["BT14-002"] * 4
+        deck_id = await self._seed_deck(client, headers, "D", deck_cards)
+
+        resp = await client.post("/matchmaking/queue", json={
+            "queue_type": "casual",
+            "deck_id": deck_id,
+            "opponent_tier_filter": "any",
+        }, headers=headers)
+        assert resp.status_code == 422
+        detail = resp.json()["detail"]
+        assert any("BT14-002" in e for e in detail["errors"])
+
+    async def test_clean_standard_deck_enqueues_ok(self, client: AsyncClient):
+        """Sanity check: a clean standard deck still queues fine after the
+        new validation layer."""
+        token = await _register_login(client, "clean1")
+        headers = {"Authorization": f"Bearer {token}"}
+        deck_id = await self._seed_deck(client, headers, "D", _legal_deck())
+
+        resp = await client.post("/matchmaking/queue", json={
+            "queue_type": "casual",
+            "deck_id": deck_id,
+            "opponent_tier_filter": "any",
+        }, headers=headers)
+        assert resp.status_code == 201
+
+    async def test_rejection_leaves_no_ticket_or_user_lock(
+        self, client: AsyncClient
+    ):
+        """A rejected enqueue must not register a ticket — the user must be
+        able to retry with a clean deck without hitting the 'already has an
+        active ticket' 409 guard."""
+        from digimon_gym.routers.matchmaking import tickets, user_to_ticket
+        token = await _register_login(client, "retry1")
+        headers = {"Authorization": f"Bearer {token}"}
+        bad_deck = await self._seed_deck(
+            client, headers, "Bad", _legal_deck()[:49] + ["BT2-090"],
+        )
+        good_deck = await self._seed_deck(
+            client, headers, "Good", _legal_deck(),
+        )
+
+        bad = await client.post("/matchmaking/queue", json={
+            "queue_type": "casual", "deck_id": bad_deck,
+            "opponent_tier_filter": "any",
+        }, headers=headers)
+        assert bad.status_code == 422
+        assert len(tickets) == 0
+        assert len(user_to_ticket) == 0
+
+        good = await client.post("/matchmaking/queue", json={
+            "queue_type": "casual", "deck_id": good_deck,
+            "opponent_tier_filter": "any",
+        }, headers=headers)
+        assert good.status_code == 201
 
 
 # ── WebSocket flow ──────────────────────────────────────────────────────
@@ -525,7 +663,7 @@ class TestMatchmakingWebSocket:
             tok_b = self._register_login_sync(client, "intruder1")
             ha = {"Authorization": f"Bearer {tok_a}"}
 
-            deck = self._seed_deck_sync(client, ha, ["BT14-001"] * 50)
+            deck = self._seed_deck_sync(client, ha, _legal_deck())
             r = client.post("/matchmaking/queue", json={
                 "queue_type": "casual", "deck_id": deck, "opponent_tier_filter": "any",
             }, headers=ha)
@@ -548,8 +686,8 @@ class TestMatchmakingWebSocket:
             tok_b = self._register_login_sync(client, "wsB")
             ha = {"Authorization": f"Bearer {tok_a}"}
             hb = {"Authorization": f"Bearer {tok_b}"}
-            da = self._seed_deck_sync(client, ha, ["BT14-001"] * 50)
-            db_ = self._seed_deck_sync(client, hb, ["BT14-002"] * 50)
+            da = self._seed_deck_sync(client, ha, _legal_deck())
+            db_ = self._seed_deck_sync(client, hb, _legal_deck())
 
             r_a = client.post("/matchmaking/queue", json={
                 "queue_type": "casual", "deck_id": da, "opponent_tier_filter": "any",
@@ -587,8 +725,8 @@ class TestMatchmakingWebSocket:
             tok_b = self._register_login_sync(client, "mmB")
             ha = {"Authorization": f"Bearer {tok_a}"}
             hb = {"Authorization": f"Bearer {tok_b}"}
-            da = self._seed_deck_sync(client, ha, ["BT14-001"] * 50)
-            db_ = self._seed_deck_sync(client, hb, ["BT14-002"] * 50)
+            da = self._seed_deck_sync(client, ha, _legal_deck())
+            db_ = self._seed_deck_sync(client, hb, _legal_deck())
 
             r_a = client.post("/matchmaking/queue", json={
                 "queue_type": "casual", "deck_id": da, "opponent_tier_filter": "any",
@@ -614,7 +752,7 @@ class TestMatchmakingWebSocket:
             from digimon_gym.routers.matchmaking import tickets
             tok = self._register_login_sync(client, "ghost1")
             h = {"Authorization": f"Bearer {tok}"}
-            d = self._seed_deck_sync(client, h, ["BT14-001"] * 50)
+            d = self._seed_deck_sync(client, h, _legal_deck())
             r = client.post("/matchmaking/queue", json={
                 "queue_type": "casual", "deck_id": d, "opponent_tier_filter": "any",
             }, headers=h)
@@ -641,8 +779,8 @@ class TestMatchmakingWebSocket:
             tok_b = self._register_login_sync(client, "postB")
             ha = {"Authorization": f"Bearer {tok_a}"}
             hb = {"Authorization": f"Bearer {tok_b}"}
-            da = self._seed_deck_sync(client, ha, ["BT14-001"] * 50)
-            db_ = self._seed_deck_sync(client, hb, ["BT14-002"] * 50)
+            da = self._seed_deck_sync(client, ha, _legal_deck())
+            db_ = self._seed_deck_sync(client, hb, _legal_deck())
 
             r_a = client.post("/matchmaking/queue", json={
                 "queue_type": "casual", "deck_id": da, "opponent_tier_filter": "any",
