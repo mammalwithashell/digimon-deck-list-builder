@@ -4,6 +4,18 @@ Capability gaps in the Rust engine's scripting surface (`digimon-engine/`), disc
 
 Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). Every entry is **capability-centric** — card IDs are listed as evidence, not as the gap's identity.
 
+## Severity legend
+
+- **🔴 BLOCKING** — no faithful workaround exists; card cannot be authored without this primitive.
+- **🟡 PARTIAL** — the primitive or a workaround exists but has a specific fidelity cost (degraded UX, hidden RL choice, scope over-reach). Sub-kinds marked inline:
+  - *"ergonomics / sugar"* — fully expressible today but awkward; scripts currently need to reach around `EffectContext` or duplicate state.
+  - *"primitive-with-fidelity-cost"* — a modifier / keyword exists but its scope is too coarse for the card text's restriction.
+- Pure verification / test-coverage items are **not** filed as gaps — see the "Deferred" section at the bottom of this file.
+
+## Open gaps — tally
+
+As of 2026-04-17: **68 entries** — **62 🔴 BLOCKING + 6 🟡 PARTIAL**. Of the 6 partials, 3 are "ergonomics / sugar" (OPT recording helper, dual-timing builder, aggregate filter helpers) and 3 are "primitive-with-fidelity-cost" (native printed-keyword parsing, attack-without-suspending for MayAttack, if-effect-didn't-resolve else-branch).
+
 ## Open gaps
 
 ### Play card from hand without paying the cost
@@ -267,7 +279,7 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 - **Related:** "Play from materials without paying cost", "OnLeaveField cause discrimination".
 
 ### Native printed keyword parsing (Raid / Jamming / Blocker / Rush / Blitz / Security A.)
-- **Severity:** 🟡 PARTIAL
+- **Severity:** 🟡 PARTIAL — *primitive-with-fidelity-cost*
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** BT17-078 Omnimon (native Raid, Blocker), BT23-018 Garurumon (Jamming), P-182 WarGreymon (Security A.+1, Blocker), AD1-001 Greymon (Raid), AD1-010 Garurumon (Jamming), BT17-095 (Delay), others.
 - **Effect text:** "＜Raid＞ … ＜Blocker＞ … ＜Jamming＞"
@@ -336,16 +348,6 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 - **Workaround:** None — BLOCKED.
 - **Related:** Option play flow.
 
-### Tamer play-from-security pipeline verified
-- **Severity:** 🟡 PARTIAL
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-081 Tai Kamiya & Matt Ishida, BT22-089 Mirei Mikagura, BT5-092 Nokia Shiramine, EX9-066 Tai Kamiya & Matt Ishida, ST20-15, EX4-061 Matt Ishida & Tai Kamiya
-- **Effect text:** "Security Effect [Security] Play this card without paying the cost."
-- **What's missing:** `ctx.play_from_security` exists but was written against Digimon-kind; `CardKind::Tamer` routing through the same path + Tamer-specific observer chain (SecurityEffect + subsequent `[Your Turn]` / `[All Turns]` triggers) is unverified. §2.5j also blocks re-entry into attack / combat state machine from mid-security selections.
-- **Suggested API shape:** Verify `play_from_security` is CardKind-agnostic; add targeted tests for `CardKind::Tamer` path.
-- **Workaround:** Mechanically likely correct; pending test coverage.
-- **Related:** RUST_PYTHON_PARITY §2.5a, §2.5j.
-
 ### Granted triggered ability — attach an `Effect` to another permanent
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** DNA Omnimon (2026-04-17)
@@ -407,7 +409,7 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 - **Related:** RUST_PYTHON_PARITY §4.7x.
 
 ### Attack-without-suspending for effect-granted MayAttack
-- **Severity:** 🟡 PARTIAL
+- **Severity:** 🟡 PARTIAL — *primitive-with-fidelity-cost*
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** BT20-102 Omnimon (X Antibody), AD1-009 BlitzGreymon
 - **Effect text:** "gain ＜Rush＞ for the turn and attack without suspending."
@@ -627,7 +629,7 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 - **Related:** RUST_PYTHON_PARITY §2.1b.
 
 ### Per-permanent OPT activation recording (EffectContext sugar)
-- **Severity:** 🟡 PARTIAL
+- **Severity:** 🟡 PARTIAL — *ergonomics / sugar*
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** BT23-008 Greymon, BT15-020 Gabumon, and any `[Once Per Turn]` clause with compound sub-effects
 - **Effect text:** "[Main] [Once Per Turn] …"
@@ -637,7 +639,7 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 - **Related:** RUST_ENGINE_API §13.
 
 ### Dual-timing composite clause ("[When Digivolving] [When Attacking] …")
-- **Severity:** 🟡 PARTIAL
+- **Severity:** 🟡 PARTIAL — *ergonomics / sugar*
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** ST20-11 WarGreymon, BT15-020 Gabumon, others
 - **Effect text:** "[When Digivolving] [When Attacking] Delete 1 of your opponent's lowest DP Digimon."
@@ -647,7 +649,7 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 - **Related:** `effect.rs`.
 
 ### Aggregate filter helpers (lowest DP / lowest level / highest DP with tie-break)
-- **Severity:** 🟡 PARTIAL
+- **Severity:** 🟡 PARTIAL — *ergonomics / sugar*
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** BT22-013 WarGreymon (lowest DP), BT22-026 MetalGarurumon (lowest level), AD1-012 CresGarurumon (lowest level), ST20-11 (lowest DP), EX10-010 (Raid highest DP tie-break)
 - **Effect text:** "Delete 1 of your opponent's Digimon with the lowest DP."
@@ -687,7 +689,7 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 - **Related:** Free-play gaps.
 
 ### If-effect-didn't-resolve branch ("If this effect didn't return, …")
-- **Severity:** 🟡 PARTIAL
+- **Severity:** 🟡 PARTIAL — *primitive-with-fidelity-cost*
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** EX9-066 Tai Kamiya & Matt Ishida, BT16-082 Ukkomon (optional hatch tail)
 - **Effect text:** "You may return 1 Digimon card … If this effect didn't return, ＜Draw 1＞"
@@ -696,15 +698,13 @@ Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). 
 - **Workaround:** Track via closure-captured bool; depends on callback firing on decline, which is not guaranteed.
 - **Related:** Selection family.
 
-### Option color match semantics verification (multi-color intersection vs. union)
-- **Severity:** 🟡 PARTIAL
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095 Miraculous Mega Knight (Red/Blue Option)
-- **Effect text:** (implicit — mask gating on multi-color Options)
-- **What's missing:** RUST_PYTHON_PARITY §4.2 implements color match; §4.2b discusses script-based bypasses. Multi-color Options require verification that Rust's rule matches DCGO (intersection: Digimon/Tamer of each color present).
-- **Suggested API shape:** Add behavioral test confirming semantics.
-- **Workaround:** Likely works; pending test.
-- **Related:** RUST_PYTHON_PARITY §4.2, §4.2b.
+## Deferred — verification / test coverage only
+
+Items where the existing primitive **likely works** but no behavioral test covers the specific pathway. Not engine gaps; filed here so they surface when the archetype moves to `/batch-implement-cards-rust` and a faithful DebugRunner test must be written. Do not count toward the BLOCKING / PARTIAL tallies above.
+
+- **Tamer play-from-security pipeline** — `ctx.play_from_security` was written against `CardKind::Digimon`; `CardKind::Tamer` routing through the same path + subsequent `[Your Turn]` / `[All Turns]` observers is unverified. Cards: BT17-081, BT22-089, BT5-092, EX9-066, ST20-15, EX4-061. See RUST_PYTHON_PARITY §2.5a, §2.5j.
+- **Option multi-color match semantics** — RUST_PYTHON_PARITY §4.2 implements color match; verify multi-color Options require at least one matching own-side permanent **per** printed color (intersection), not any-one (union). Card: BT17-095. See RUST_PYTHON_PARITY §4.2, §4.2b.
+- **Conditional inherited DP based on top-card name** — fully expressible today via `Effect::inherited(card).dp_modifier(n).condition(|ctx| ctx.source_permanent()...)`. Confirm the per-source walker passes the correct `source_permanent` into the read context. Cards: BT12-059, BT23-008.
 
 ## Resolved gaps
 
