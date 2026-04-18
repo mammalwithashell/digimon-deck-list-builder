@@ -853,6 +853,10 @@ impl Game {
                 SecurityPhase::SecuritySkillDrain => {
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
+                    // Advance phase BEFORE draining so on pause+resume we
+                    // re-enter in the next phase (the drain tail in
+                    // `resolve_generic_selection` finishes the queue for us).
+                    self.set_security_phase(SecurityPhase::BattleResolved);
                     self.enqueue_triggered(
                         EffectTiming::SecuritySkill,
                         TriggerSource::SecurityRevealed {
@@ -864,7 +868,6 @@ impl Game {
                     if self.pending_selection.is_some() {
                         return None;
                     }
-                    self.set_security_phase(SecurityPhase::BattleResolved);
                 }
                 SecurityPhase::BattleResolved => {
                     let Some(state) = self.security_resolution.as_ref() else {
@@ -899,12 +902,18 @@ impl Game {
                     let Some(state) = self.security_resolution.as_ref() else {
                         break;
                     };
-                    if let Some(attacker) = state.attacker {
+                    // Advance phase BEFORE draining (see SecuritySkillDrain).
+                    let attacker_opt = state.attacker;
+                    let defender = state.defender;
+                    let revealed_card = state.revealed_card;
+                    let was_face_up = state.was_face_up;
+                    self.set_security_phase(SecurityPhase::OnLoseSecurityDrain);
+                    if let Some(attacker) = attacker_opt {
                         let trigger = TriggerSource::OnSecurityCheck {
                             attacker,
-                            defender: state.defender,
-                            revealed_card: state.revealed_card,
-                            was_face_up: state.was_face_up,
+                            defender,
+                            revealed_card,
+                            was_face_up,
                         };
                         self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger);
                         self.drain_effect_queue();
@@ -912,7 +921,6 @@ impl Game {
                             return None;
                         }
                     }
-                    self.set_security_phase(SecurityPhase::OnLoseSecurityDrain);
                 }
                 SecurityPhase::OnLoseSecurityDrain => {
                     let Some(state) = self.security_resolution.as_ref() else {
@@ -920,6 +928,8 @@ impl Game {
                     };
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
+                    // Advance phase BEFORE draining (see SecuritySkillDrain).
+                    self.set_security_phase(SecurityPhase::Dispose);
                     self.enqueue_triggered(
                         EffectTiming::OnLoseSecurity,
                         TriggerSource::SecurityRevealed {
@@ -931,7 +941,6 @@ impl Game {
                     if self.pending_selection.is_some() {
                         return None;
                     }
-                    self.set_security_phase(SecurityPhase::Dispose);
                 }
                 SecurityPhase::Dispose => {
                     let state = self
