@@ -23,6 +23,7 @@ const ArenaPage = lazy(() => import('@/pages/ArenaPage').then(m => ({ default: m
 const GauntletPage = lazy(() => import('@/pages/GauntletPage').then(m => ({ default: m.GauntletPage })));
 const DeckPoolPage = lazy(() => import('@/pages/DeckPoolPage').then(m => ({ default: m.DeckPoolPage })));
 const AdminPatchNotesPage = lazy(() => import('@/pages/AdminPatchNotesPage').then(m => ({ default: m.AdminPatchNotesPage })));
+const AdminModelsPage = lazy(() => import('@/pages/AdminModelsPage').then(m => ({ default: m.AdminModelsPage })));
 
 function suspended(Component: React.LazyExoticComponent<React.ComponentType>) {
   return (
@@ -64,6 +65,7 @@ export function App() {
               <Route path="/admin/deck-pools" element={suspended(DeckPoolPage)} />
               <Route path="/admin/deck-pools/:id" element={suspended(DeckPoolPage)} />
               <Route path="/admin/patch-notes" element={suspended(AdminPatchNotesPage)} />
+              <Route path="/admin/models" element={suspended(AdminModelsPage)} />
             </Route>
           )}
         </Route>

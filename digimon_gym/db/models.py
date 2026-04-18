@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -958,3 +959,43 @@ class KnownIssue(Base):
     description = Column(Text, nullable=False, default="")
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+# ── AI Models ────────────────────────────────────────────────────────────
+
+class AIModel(Base):
+    __tablename__ = "ai_models"
+    __table_args__ = (
+        CheckConstraint(
+            "model_type IN ('mlp', 'lstm')",
+            name="ck_ai_models_model_type",
+        ),
+        CheckConstraint(
+            "state IN ('pending', 'uploaded', 'failed')",
+            name="ck_ai_models_state",
+        ),
+        UniqueConstraint("spaces_key", name="uq_ai_models_spaces_key"),
+        Index("idx_ai_models_deck_id", "deck_id"),
+        Index("idx_ai_models_published", "published"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    name = Column(String, nullable=False)
+    model_type = Column(String, nullable=False)        # 'mlp' | 'lstm'
+    tensor_size = Column(Integer, nullable=True)       # set on confirm
+    action_space_size = Column(Integer, nullable=True)
+    engine_commit = Column(String, nullable=True)      # admin-entered at create
+    trained_at = Column(DateTime(timezone=True), nullable=True)
+    file_sha256 = Column(String, nullable=True)        # set on confirm
+    file_size_bytes = Column(Integer, nullable=True)
+    spaces_key = Column(String, nullable=False)        # e.g. "models/<uuid>/policy.onnx"
+    deck_id = Column(String, ForeignKey("decks.id", ondelete="SET NULL"), nullable=True)
+    uploaded_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    published = Column(Boolean, nullable=False, default=False)
+    state = Column(String, nullable=False, default="pending")  # 'pending'|'uploaded'|'failed'
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    deck = relationship("Deck", foreign_keys=[deck_id])
+    uploader = relationship("User", foreign_keys=[uploaded_by])

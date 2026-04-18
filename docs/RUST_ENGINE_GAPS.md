@@ -1,711 +1,464 @@
 # Rust Engine Gaps
 
-Capability gaps in the Rust engine's scripting surface (`digimon-engine/`), discovered during archetype audits by `/assess-archetype-rust`. Distinct from `RUST_PYTHON_PARITY.md`, which tracks Rust↔Python divergences in shared subsystems — this file tracks *Rust-only* missing primitives: timings, `EffectContext` helpers, `ModifierType` variants, `Keyword` variants, selection kinds, and trigger fan-outs that cards in the pool need but the curated API does not yet expose.
+Capability gaps in the Rust engine's scripting surface (`digimon-engine/`), discovered during archetype audits by `/assess-archetype-rust`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
-Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). Every entry is **capability-centric** — card IDs are listed as evidence, not as the gap's identity.
+Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). Gap titles are **capability-centric**, never card-centric.
+
+Each entry lists the cards that surfaced it, but the entry itself describes a reusable engine primitive. If two cards need the same primitive, they share one entry — not two. When a new archetype audit surfaces the same primitive, the existing entry's `Discovered in:` and `Card(s):` lines accumulate — they do not fork into a new entry.
+
+> **Canonical API signatures live here.** Fix-plans in `.claude/plans/rust-engine-gaps-*.md` should reference gap titles rather than restate signatures, to prevent divergence as the engine evolves.
 
 ## Severity legend
 
-- **🔴 BLOCKING** — no faithful workaround exists; card cannot be authored without this primitive.
-- **🟡 PARTIAL** — the primitive or a workaround exists but has a specific fidelity cost (degraded UX, hidden RL choice, scope over-reach). Sub-kinds marked inline:
-  - *"ergonomics / sugar"* — fully expressible today but awkward; scripts currently need to reach around `EffectContext` or duplicate state.
-  - *"primitive-with-fidelity-cost"* — a modifier / keyword exists but its scope is too coarse for the card text's restriction.
+- **🔴 BLOCKING** — no faithful workaround exists; affected cards cannot be authored without this primitive.
+- **🟡 PARTIAL** — a workaround exists with a specific fidelity cost. Sub-kinds marked inline: *ergonomics / sugar* (expressible today but awkward; scripts reach around `EffectContext`); *primitive-with-fidelity-cost* (modifier or keyword exists but its scope is too coarse for the card text's restriction).
 - Pure verification / test-coverage items are **not** filed as gaps — see the "Deferred" section at the bottom of this file.
 
-## Open gaps — tally
+## Audit index
 
-As of 2026-04-17: **68 entries** — **62 🔴 BLOCKING + 6 🟡 PARTIAL**. Of the 6 partials, 3 are "ergonomics / sugar" (OPT recording helper, dual-timing builder, aggregate filter helpers) and 3 are "primitive-with-fidelity-cost" (native printed-keyword parsing, attack-without-suspending for MayAttack, if-effect-didn't-resolve else-branch).
+| Archetype | Audited | Cards | 🟢 Supported | 🟡 Partial | 🔴 Blocked |
+|---|---|---|---|---|---|
+| Medusamon | 2026-04-17 | — | — | — | — |
+| DNA Omnimon | 2026-04-17 | 64 | 1 | 4 | 59 |
+
+## At a glance
+
+Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count — most primitives unblock many more cards archetype-wide (DNA Omnimon audit surfaces ~30 of the 32 entries below as further evidence; see per-entry `Card(s):` lines). `Key files` is the primary surface the fix touches.
+
+| Gap | Severity | #cards | Key files |
+|---|---|---|---|
+| [Global `OnOpponentSecurityRemoved` observer timing](#global-onopponentsecurityremoved-observer-timing) | 🔴 | 15 | `combat.rs`, `effect_queue.rs`, `enums.rs` |
+| [Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings](#global-onanydigimonplayed--onanydeletion-observer-timings) | 🔴 | 3 | `game.rs`, `permanent.rs`, `effect_queue.rs` |
+| [Phase-granular turn timings (`StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`)](#phase-granular-turn-timings-startofyourmainphase-whenattacking-endofattack-endofbattle) | 🔴 | 8 | `game.rs`, `combat.rs`, `effect.rs` |
+| [Observer timings tied to specific events (`OnDigivolve` trait-filter, `OnSuspend`, `OnAttackTargetChange`, `[When Moving]`)](#observer-timings-tied-to-specific-events-ondigivolve-trait-filter-onsuspend-onattacktargetchange-when-moving) | 🔴 | 6 | `game.rs`, `permanent.rs`, `combat.rs`, `enums.rs` |
+| [`WhenWouldBeDeleted` / leave-field replacement-effect framework](#whenwouldbedeleted--leave-field-replacement-effect-framework) | 🔴 | 5 | `game.rs`, `effect.rs`, `enums.rs` |
+| [Selection: multi-select with aggregate-sum constraint](#selection-multi-select-with-aggregate-sum-constraint) | 🔴 | 2 | `effect_context.rs`, `action/` |
+| [Selection: ordered permutation (place N cards in any order)](#selection-ordered-permutation-place-n-cards-in-any-order) | 🔴 | 8 | `effect_context.rs`, `action/` |
+| [Selection: opponent-as-selecting-player, cross-side target, union-zone (hand OR trash), DNA-pair](#selection-opponent-as-selecting-player-cross-side-target-union-zone-hand-or-trash-dna-pair) | 🔴 | 10 | `effect_context.rs`, `action/` |
+| [Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)](#zone-manipulation-play-from-hand--trash-without-paying-cost--cost-override) | 🔴 | 11+ | `effect_context.rs`, `game.rs` |
+| [Zone-manipulation: effect-initiated digivolve (free / reduced / with trait filter)](#zone-manipulation-effect-initiated-digivolve-free--reduced--with-trait-filter) | 🔴 | 8 | `effect_context.rs`, `game.rs`, `modifiers.rs` |
+| [Zone-manipulation: return-to-hand / return-to-deck (top/bottom) / bounce self](#zone-manipulation-return-to-hand--return-to-deck-topbottom--bounce-self) | 🔴 | 7 | `effect_context.rs`, `permanent.rs` |
+| [Zone-manipulation: reveal-top-N deck + add-to-hand + hatch](#zone-manipulation-reveal-top-n-deck--add-to-hand--hatch) | 🔴 | 10 | `effect_context.rs`, `game.rs` |
+| [Zone-manipulation: security stack operations (trash top, place bottom, trash N)](#zone-manipulation-security-stack-operations-trash-top-place-bottom-trash-n) | 🔴 | 6 | `effect_context.rs`, `combat.rs` |
+| [Token creation + `CardKind::Token` + Petrification Token definition](#token-creation--cardkindtoken--petrification-token-definition) | 🔴 | 3 | `card_data.rs`, `cards.rs`, `effect_context.rs` |
+| [Place card at a specific stack position (bottom-source / under another permanent) + alt-digivolve](#place-card-at-a-specific-stack-position-bottom-source--under-another-permanent--alt-digivolve) | 🔴 | 2 | `effect_context.rs`, `permanent.rs`, `game.rs` |
+| [Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N)](#native-printed-keyword-parsing-rush-raid-piercing-blocker-reboot-jamming-blitz-vortex-alliance-security-a%C2%B1n) | 🔴 | 17+ | `card_data.rs`, `cards.rs`, `card_registry.rs` |
+| [`<Progress>` keyword + `ImmunityToOpponentEffects` modifier](#progress-keyword--immunitytoopponenteffects-modifier) | 🔴 | 6 | `enums.rs`, `modifiers.rs`, `combat.rs`, `effect_context.rs` |
+| [`<Armor Purge>` keyword (leave-field replacement variant)](#armor-purge-keyword-leave-field-replacement-variant) | 🔴 | 2 | `enums.rs`, `effect.rs` (builds on replacement framework) |
+| [`<Training>` keyword](#training-keyword) | 🔴 | 1 | `enums.rs`, `card_source.rs`, `effect_context.rs`, `action/` |
+| [`<Delay>` keyword + placement-turn gating for Option cards](#delay-keyword--placement-turn-gating-for-option-cards) | 🔴 | 6 | `enums.rs`, `effect.rs`, `action/` (builds on Option flow) |
+| [Raid target-switch interrupt (scripting-surface, not mask-only)](#raid-target-switch-interrupt-scripting-surface-not-mask-only) | 🔴 | 5+ | `combat.rs`, `enums.rs` |
+| [De-Digivolve N primitive (single + mass)](#de-digivolve-n-primitive-single--mass) | 🔴 | 2 | `effect_context.rs`, `permanent.rs` |
+| [Ace Overflow: inherited memory penalty on zone-change from field / under-card](#ace-overflow-inherited-memory-penalty-on-zone-change-from-field--under-card) | 🔴 | 4 | `card_data.rs`, `game.rs`, `effect.rs` |
+| [Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated)](#dynamic-cost-reduction-at-beforepaycost-closure-valued--selection-gated) | 🔴 | 4 | `effect.rs`, `game.rs` |
+| [Dynamic DP scaling modifier (per-stack-depth / per-opponent-board)](#dynamic-dp-scaling-modifier-per-stack-depth--per-opponent-board) | 🔴 | 2 | `effect.rs`, `tensor.rs` |
+| [Condition-gated modifier entries](#condition-gated-modifier-entries) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
+| [Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement)](#player-scoped-modifier-registry-cannotplayfromtrash-cannotplaydigimonbyeffect-opponentcannotreducedigivolvecost-ignorecolorrequirement) | 🔴 | 6+ | `modifiers.rs`, `enums.rs`, `action/`, `effect_context.rs` |
+| [Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic](#option-card-play-flow-resolve--trash-vs-place-on-field-mainsecurity-activation--plug-in--link-mechanic) | 🔴 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
+| [Scheduled end-of-turn effect queue (for transient Options)](#scheduled-end-of-turn-effect-queue-for-transient-options) | 🔴 | 1 | `game.rs`, `effect_context.rs` |
+| [Effect re-firing / cross-timing self-trigger](#effect-re-firing--cross-timing-self-trigger) | 🔴 | 1 | `effect_context.rs`, `effect_queue.rs` |
+| [Force-follow-up-attack / "may attack without suspending" script helpers](#force-follow-up-attack--may-attack-without-suspending-script-helpers) | 🔴 | 6 | `effect_context.rs`, `modifiers.rs`, `combat.rs` |
+| [Trait-filter helpers on `CardSource` / `Permanent`](#trait-filter-helpers-on-cardsource--permanent) | 🟡 | pervasive | `card_source.rs`, `permanent.rs` |
+| [Granted triggered ability — attach an `Effect` to another permanent](#granted-triggered-ability--attach-an-effect-to-another-permanent) | 🔴 | 1 | `modifiers.rs`, `effect_queue.rs`, `effect_context.rs` |
+| [Named-target declarative aura (DP / keyword grants filtered by name/trait/level)](#named-target-declarative-aura-dp--keyword-grants-filtered-by-nametraitlevel) | 🔴 | 3+ | `effect.rs`, `modifiers.rs`, `tensor.rs`, `combat.rs` |
+| [Declarative aura sourced from security zone](#declarative-aura-sourced-from-security-zone) | 🔴 | 1 | `effect.rs`, `tensor.rs`, `game.rs` |
+| [Digivolution-stack name overlay ("has all names of materials")](#digivolution-stack-name-overlay-has-all-names-of-materials) | 🔴 | 1 | `effect.rs`, `card_source.rs`, `permanent.rs` |
+| [Decode keyword (play from own digivolution stack without paying cost on non-battle leave)](#decode-keyword-play-from-own-digivolution-stack-without-paying-cost-on-non-battle-leave) | 🔴 | 1 | `enums.rs`, `effect.rs` (builds on replacement framework + SelectSource) |
+| [Ergonomics partials](#ergonomics-partials) | 🟡 | pervasive | `effect.rs`, `effect_context.rs` |
 
 ## Open gaps
 
-### Play card from hand without paying the cost
+### Global `OnOpponentSecurityRemoved` observer timing
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095 Miraculous Mega Knight, BT22-084 Nokia Shiramine, BT22-089 Mirei Mikagura, BT17-081 Tai Kamiya & Matt Ishida, BT5-092 Nokia Shiramine, BT17-102 Greymon, BT21-102 Tai Kamiya, BT17-093 Tai Kamiya & Kari Kamiya, BT22-026 MetalGarurumon (via `[Hand][Main]`), EX4-061 Matt Ishida & Tai Kamiya, ST20-15 Island of Adventure, LM-034 Wisteria Memory Boost!, BT22-099 Kuremi Detective Agency, BT23-018 Garurumon (cost-reduction variant), BT22-094 Yuugo Kamishiro, BT13-012 GeoGreymon (from security)
-- **Effect text:** "you may play 1 [Agumon] or [Gabumon] from your hand without paying the cost." (and ~15 other phrasings)
-- **What's missing:** `EffectContext` only has `play_from_security()`. `Game::play_from_hand` unconditionally calls `pay_memory(base_cost)`; there is no effect-initiated free-play or cost-override variant. Python has `Game.effect_play_from_zone` covering hand / trash / security uniformly.
-- **Suggested API shape:** `ctx.play_from_hand_free(player, hand_index) -> Option<PermanentHandle>`, `ctx.play_from_hand_for_cost(player, hand_index, cost: u16)`, analogous `ctx.play_from_trash_free(player, trash_index)`. All fire `OnPlay` / `WhenPlayedFromHand`, skip `pay_memory` when free.
-- **Workaround:** None — BLOCKED. Reaching into `players[p].hand.remove` + `battle_area.push` misses OnPlay firing, `turn_played` bookkeeping, and field-slot limits.
-- **Related:** RUST_PYTHON_PARITY.md §1.1; `ctx.play_from_security` is the shape to clone.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-008 Elizamon, BT21-017 Dimetromon, BT21-025 Lamiamon, BT24-018 Styracomon, BT24-016 Lamiamon, BT21-001 Gigimon, BT24-008 Elizamon, BT18-087 Owen Dreadnought, BT21-093 Raging Serpentine, BT21-029 Medusamon, EX11-008 Elizamon, P-189 Dimetromon, BT24-012 Dimetromon, BT24-001 Gigimon, BT14-001 Koromon — DNA Omnimon adds: BT22-013 WarGreymon (inherited trash top opp security), BT17-015 WarGreymon (inherited trash top opp security), EX4-073 Omnimon Alter-B (trash top 2 opp security)
+- **Effect text:** "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory." (and many archetype variants: play a trait-matched Digimon free, digivolve with −1 cost, delete low-DP Digimon, play a Petrification token)
+- **What's missing:** The engine's existing `OnLoseSecurity` fires only on the revealed card itself via `TriggerSource::SecurityRevealed`. There is **no global fan-out** that enqueues the observer against every other permanent / inherited-stack effect on either side. `EffectTiming::OnSecurityCheck` exists but is unfired (see parity §2.5b). This timing is the **archetype's core engine** — 15+ cards pivot on it.
+- **Suggested API shape:** Fire `EffectTiming::OnSecurityCheck` (or introduce `EffectTiming::OnOpponentSecurityRemoved`) from `combat::resolve_security_card` after per-card `OnLoseSecurity`, dispatching to all battle-area + inherited-stack effects with a context snapshot `{attacker, defender, revealed_card}`. Must also fire for non-attack security removal (effect-driven security trashing).
+- **Workaround:** None — BLOCKED. Without it, 15+ cards' main recurring payoff never fires.
+- **Related:** RUST_PYTHON_PARITY.md §2.5b (OnSecurityCheck not fired), §2.5g, §2.5m
 
-### Return permanent to bottom of deck
+### Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-078 Omnimon, BT22-015 Omnimon, BT22-026 MetalGarurumon (opponent's lowest-level), BT22-089 Mirei Mikagura (self-return cost), BT21-102 Tai Kamiya (self), BT22-094 Yuugo Kamishiro (self), BT17-093 Tai Kamiya & Kari Kamiya (self), AD1-025 Omnimon, BT20-102 Omnimon (X Antibody), EX4-060 Omnimon Alter-S, EX1-021 MetalGarurumon
-- **Effect text:** "return all of your opponent's Digimon with the same level as it to the bottom of the deck" / "By returning this Tamer to the bottom of the deck, …"
-- **What's missing:** No `EffectContext` helper moves a permanent (top card + its digivolution stack) to `player.deck[0]`. `delete_permanent` trashes; `return_to_hand` is also absent (see sibling gap). Must handle leave-field firing, modifier cleanup, source-card disposition per DCGO (top card to deck-bottom, materials to trash).
-- **Suggested API shape:** `ctx.return_permanent_to_deck(target: PermanentHandle, position: DeckPosition::Bottom | Top, keep_sources: bool)`. Fires `OnLeaveField` with `cause = Effect`, clears modifier entries for the handle.
-- **Workaround:** None — BLOCKED. `delete_permanent` trashes (wrong destination).
-- **Related:** "Return permanent to hand"; `OnLeaveField` replacement gap below.
-
-### Return permanent to hand
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-026 MetalGarurumon, AD1-012 CresGarurumon
-- **Effect text:** "Return 1 of your opponent's Digimon with the lowest level to the hand." / "You may return 1 of your opponent's lowest level Digimon to the hand."
-- **What's missing:** No `ctx.return_permanent_to_hand(target)`. Bounce is one of the most common removal primitives; `ModifierType::CannotReturnToHand` exists but the action verb does not.
-- **Suggested API shape:** `ctx.return_permanent_to_hand(target)` — top card to owner's hand, remaining sources to trash (DCGO rule), fires `OnLeaveField`.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** EX8-074 MedievalGallantmon ("When Digimon are played"), BT21-029 Medusamon ("When any of your opponent's Digimon are deleted"), BT21-026 WarGreymon ("When any of your opponent's Digimon are deleted") — DNA Omnimon adds: BT22-005 Tsumemon (trait-filtered OnPlayed observer), EX9-066 Tai Kamiya & Matt Ishida (suspend-self cost on any ally played), BT17-081 Tai Kamiya & Matt Ishida (observer on ally played or digivolves), EX9-019 WereGarurumon: Sagittarius Mode / EX9-012 MetalGreymon: Alterous Mode / AD1-001 Greymon / AD1-010 Garurumon (hand-resident observers on ally played or digivolves — expands the fan-out target from "battle area" to "hand"), EX4-061 Matt Ishida & Tai Kamiya
+- **Effect text:** "[All Turns] [Once Per Turn] When Digimon are played, you may activate…" / "When any of your opponent's Digimon are deleted, this Digimon may unsuspend."
+- **What's missing:** `EffectTiming::OnEnterFieldAnyone` is declared but no dispatch site in `play_from_hand` / digivolve paths. `OnDeletion` fires only on the deleted permanent; no cross-zone fan-out for deletion events.
+- **Suggested API shape:** Enqueue `OnEnterFieldAnyone` from every play / digivolve entry site with `{player, card_id, kind}` trigger context. Add `EffectTiming::OnAnyDeletion` (or promote `OnDeletion` fan-out via `TriggerSource::GlobalDeletion`).
 - **Workaround:** None — BLOCKED.
-- **Related:** "Return permanent to bottom of deck".
+- **Related:** None (both enum variants declared, neither fired).
 
-### Move card from trash to hand
+### Phase-granular turn timings (`StartOfYourTurn`, `StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`)
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-008 Agumon, EX9-066 Tai Kamiya & Matt Ishida, BT17-007 Agumon, ST21-13 Matt Ishida & T.K. Takaishi (indirect)
-- **Effect text:** "You may return 1 Digimon card with [Greymon], [Garurumon] or [Omnimon] in its name from your trash to the hand."
-- **What's missing:** `ctx.select_trash` exposes the choice, but there is no `ctx.move_trash_to_hand(player, trash_index)` mutator. Reaching into `players[p].trash/hand` directly skips `OnAddToHand` event plumbing.
-- **Suggested API shape:** `ctx.move_trash_to_hand(player, trash_index)` removing the entry and firing `OnAddToHand`.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-081 Owen Dreadnought (`StartOfYourMainPhase`), BT24-016 Lamiamon (`WhenAttacking`), LM-021 Agumon – Bond of Bravery (`WhenAttacking`), BT23-014 Gallantmon (`WhenAttacking`), BT17-018 Gallantmon: Crimson Mode (`WhenAttacking`), BT21-029 Medusamon (`EndOfAttack`), EX11-012 Medusamon (`EndOfAttack`), BT21-015 Cyclonemon (`EndOfBattle` sub-timing within security resolution) — DNA Omnimon adds: BT17-019 Gabumon (`StartOfYourMainPhase`), BT22-084 Nokia Shiramine (`StartOfYourMainPhase`), BT22-089 Mirei Mikagura (`StartOfYourMainPhase`), BT17-007 Agumon (`StartOfYourMainPhase`), BT15-020 Gabumon (`StartOfYourMainPhase`), BT5-093 Tai Kamiya & Matt Ishida (`StartOfYourTurn` — enum declared, never enqueued), BT21-102 Tai Kamiya (`StartOfYourTurn`), EX9-021 Omnimon Alter-S (`EndOfAttack`), EX4-073 Omnimon Alter-B (`WhenAttacking`), EX1-068 Ice Wall! (granted `WhenAttacking` to targeted permanent), ST20-11 WarGreymon (`WhenAttacking`)
+- **Effect text:** Various — "[Start of Your Main Phase] …", "[When Attacking] …", "[End of Attack] …", "[Security] At the end of the battle …"
+- **What's missing:** `EffectTiming::WhenAttacking` and `EffectTiming::EndOfAttack` are in the enum but `Effect::when_attacking(card)` / `Effect::end_of_attack(card)` builder constructors don't exist, and combat doesn't enqueue either. `StartOfYourMainPhase` is entirely absent — existing `StartOfYourTurn` fires before Draw, not at Main-phase entry. `EndOfBattle` sub-timing for security effects is also absent (cards that say "[Security] At the end of the battle, …" need to fire after the Digimon-vs-security resolution, not on reveal).
+- **Suggested API shape:** Add `EffectTiming::StartOfYourMainPhase` + fire from `enter_main_phase`. Add builder constructors and fire sites for `WhenAttacking` (in `combat::begin_attack` pre-block) and `EndOfAttack` (in `combat::cleanup_attack` before clearing `is_attacking`). For security sub-timing, either add `.security_timing(SecurityTiming::EndOfBattle)` on `Effect::security` or extend `OnEndBattle` firing to include security-card effects while `pending_security` is still live.
+- **Workaround:** Collapse into nearest existing timing — violates no-approximations policy (order-sensitive with Block / Alliance / OnLoseSecurity).
+- **Related:** RUST_ENGINE_API.md §9 ("OnEndBattle / OnEndAttack timings are not yet fired").
+
+### Observer timings tied to specific events (`OnDigivolve` trait-filter, `OnSuspend`, `OnAttackTargetChange`, `[When Moving]`, `OnHatch`)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT24-082 Owen Dreadnought (`OnDigivolve` trait-filtered, with DP + extra-attack riders), BT24-089 Unique Emblem: Blazing Conductor (`OnSuspend` of named card), BT21-025 Lamiamon (`OnAttackTargetChange`), P-137 Flamedramon (`OnAttackTargetSwitched`), EX11-008 Elizamon (`[When Moving]` breeding→battle), BT16-082 Ukkomon (`[When Moving]` observer) — DNA Omnimon adds: BT15-101 MetalGarurumon (`OnSuspend` self-trigger), BT13-012 GeoGreymon (`OnSuspend` ally Tamer observer), P-123 Ukkomon (`[When Moving]` breeding→battle — shares shape with EX11-008/BT16-082), BT17-093 Tai Kamiya & Kari Kamiya (`OnHatch` — new sub-variant, fires when controller hatches in breeding), AD1-012 CresGarurumon (`OnAttackTargetChange` / `ctx.redirect_attack` primitive), EX4-039 Gabumon (`OnDigivolve` ally observer), EX4-003 Tsunomon (`OnDigivolve` ally — DigiEgg inherited), EX4-061 Matt Ishida & Tai Kamiya (`OnDigivolve` with digivolved-card name filter)
+- **Effect text:** Various — "When any of your Digimon digivolve into a [Reptile] or [Dragonkin] Digimon, …" / "When any of your [Owen Dreadnought]s suspend, …" / "When any of your … trait Digimon's attack targets change, …" / "[When Moving] [On Play] …"
+- **What's missing:** `OnDigivolve` and `OnSuspend` enum variants exist but no trigger sources fire them. `OnAttackTargetChange` enum variant doesn't exist at all — no `combat.rs` emission from Block / Raid / Alliance redirect paths. `[When Moving]` has no variant (`OnEnterField` exists but is not observably fired from `Game::move_from_breeding` and doesn't broadcast to global observers).
+- **Suggested API shape:** Wire `OnDigivolve` from `digivolve_from_hand` with `{digivolver, target}` context. Fire `OnSuspend` from `Permanent::set_suspended(true)`. Add `EffectTiming::OnAttackTargetChange` + emit from block-accept / raid-redirect / collision-redirect paths. Add `EffectTiming::WhenMoving` + fire from `Game::move_from_breeding` alongside a broadcast `OnEnterFieldAnyone`.
+- **Workaround:** None — BLOCKED. Approximating with `OnEnterField` or periodic condition checks misses the causal link to the originating event.
+- **Related:** None.
+
+### `WhenWouldBeDeleted` / leave-field replacement-effect framework
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT24-018 Styracomon (Armor Purge + prevent-leave), EX11-012 Medusamon (delete token to cancel leave), BT24-012 Dimetromon (return self to hand to cancel leave), P-137 Flamedramon (Armor Purge), BT20-016 Paildramon (would-be-deleted → DNA digivolve) — DNA Omnimon adds: BT17-095 Miraculous Mega Knight (observer on "level 6 Greymon/Garurumon would leave outside of battle" — non-battle leave-cause discriminator), BT22-015 Omnimon (Decode — would-leave-outside-battle + play material free), AD1-025 Omnimon (Partition — "would leave other than by own effects or battle", requires source-player attribution), EX4-060 Omnimon Alter-S ("would leave other than by one of your effects" + play from own digivolution stack + place self to security bottom face-down), EX5-015 Gabumon (X Antibody) (pre-deletion-in-battle interrupt with optional cost), BT15-101 MetalGarurumon (Evade — suspend-self-to-prevent-delete), AD1-012 CresGarurumon (Evade), AD1-014 MetalGarurumon (Evade)
+- **Effect text:** "When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion." / "When this Digimon would leave the battle area, by deleting 1 Token, it doesn't leave." / "When any of your other Digimon with the [Reptile] or [Dragonkin] trait would leave the battle area by your opponent's effects, by returning this Digimon to the hand, they don't leave." / "When any of your [Paildramon] or [Dinobeemon] would be deleted, 2 of your Digimon may DNA digivolve into [Imperialdramon: Dragon Mode] in the hand."
+- **What's missing:** Rust's zone-transition paths (`delete_permanent`, return-to-hand, trash, bounce) complete unconditionally. There is no pre-resolution replacement hook that can (a) install a "may pay cost" prompt, (b) cancel the original mutation on acceptance, and (c) attribute the original cause to an opponent effect vs. combat vs. self. `OnDeletion` / `OnLeaveField` (where wired) are observers, not replacements.
+- **Suggested API shape:** `EffectTiming::WhenWouldBeDeleted` / `EffectTiming::WouldLeaveField` that fires before resolution, receives a mutable `ReplacementContext { cancel: bool, source_player: PlayerId }`, and gates on the resolver checking `cancel`. Authors pay cost inside the closure and call `ctx.cancel_leave()`. Must carry source-attribution so "by your opponent's effects" filters work.
+- **Workaround:** None — BLOCKED. Observer-style `OnLeaveField` cannot undo the transition.
+- **Related:** None.
+
+### Selection: multi-select with aggregate-sum constraint
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT17-018 Gallantmon: Crimson Mode, LM-021 Agumon – Bond of Bravery — DNA Omnimon adds: EX4-073 Omnimon Alter-B ("delete up to 6 play cost's total worth"), AD1-014 MetalGarurumon (pick N opponents per 2 own-tamer-colors), ST20-11 WarGreymon (per-Tamer-color N-Digimon immunity assignment), BT15-101 MetalGarurumon (pick 3 distinct opponent permanents for CannotUnsuspend), EX4-073 (self-stack materials multi-select with level filter — related pattern, may need a sibling `select_materials_multi` primitive)
+- **Effect text:** "Choose any number of your opponent's Digimon whose total DP adds up to 15000 or less and delete them." / "Delete any number of your opponent's Digimon whose total DP adds up to equal or less than this Digimon's DP."
+- **What's missing:** All `select_*` helpers pick exactly one. No primitive for "pick a subset with running aggregate ≤ N" with a PASS-to-finish terminator.
+- **Suggested API shape:** `ctx.select_multiple_opponent_permanents(prompt, is_optional, filter_each, running_predicate: Fn(&Game, &[PermanentHandle], PermanentHandle) -> bool, callback: Fn(&mut Ctx, Vec<PermanentHandle>))`. Install a new `SelectionKind::MultiField` emitting PASS as terminator; accumulate picks until PASS or no valid remaining.
+- **Workaround:** None — BLOCKED. Simplifying to "single highest-DP ≤ threshold" violates no-approximations.
+- **Related:** Parity §4.6d-residual (selection-kind coverage).
+
+### Selection: ordered permutation (place N cards in any order)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** P-035 Red Memory Boost!, P-151 Digimon Liberator, BT21-008 Elizamon, BT24-018 Styracomon, P-103 Offense Training, P-206 Digital Gate Open, EX7-074 Vortex Resonance, BT16-082 Ukkomon — DNA Omnimon adds: EX4-039 Gabumon, EX4-038 Agumon, BT12-059 Agumon, BT22-099 Kuremi Detective Agency, LM-034 Wisteria Memory Boost!, BT22-094 Yuugo Kamishiro, EX5-015 Gabumon (X Antibody)
+- **Effect text:** "Return the rest to the bottom of the deck in any order." / "Place the remaining cards at the bottom of your deck in any order."
+- **What's missing:** No `select_order(items, callback)` primitive. Cards commonly need to permute up to ~4 revealed cards for deck-bottom placement or digivolution-stack ordering.
+- **Suggested API shape:** `ctx.select_ordering(prompt, candidate_count, callback: Fn(Vec<usize>))` — modeled either as a chain of single-select prompts with a running exclusion set, or as an action-space encoding of a permutation over ≤8 items.
+- **Workaround:** Chained `select_reveal` with exclusion state in captured `Arc<Mutex<Vec<usize>>>` — functional but ergonomically expensive. Fidelity-preserving.
+- **Related:** None.
+
+### Selection: opponent-as-selecting-player, cross-side target, union-zone (hand OR trash), DNA-pair, multi-pick from reveal
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-024 Cyberdramon (opponent picks from own hand), BT24-016 Lamiamon (opponent places as security), BT21-029 Medusamon (opponent plays a token), BT20-102 Omnimon (X Antibody) (cross-side target), BT21-013 Agunimon (hand OR trash), P-189 Dimetromon (hand OR trash), EX7-074 Vortex Resonance (hand OR trash), P-206 Digital Gate Open (hand OR trash in [Security]), EX9-013 BlitzGreymon (DNA-pair), BT20-016 Paildramon (DNA-pair) — DNA Omnimon adds: BT17-095 Miraculous Mega Knight (hand OR trash in security effect + DNA-pair via effect), EX4-061 Matt Ishida & Tai Kamiya (hand OR trash play), BT17-093 Tai Kamiya & Kari Kamiya, BT22-008 Agumon (DNA-pair inherited EOT), BT22-017 Gabumon (DNA-pair inherited EOT), BT17-019 Gabumon (DNA-pair inherited EOT), BT17-007 Agumon (DNA-pair inherited EOT), AD1-009 BlitzGreymon (DNA into specific named hand card), AD1-012 CresGarurumon (defender-side reactive DNA on opp attack), BT17-078 Omnimon (Blast DNA pair), BT22-017 / EX4-039 / EX4-038 / BT12-059 (multi-pick from reveal with per-category filters — extends ordered-permutation), EX9-066 Tai Kamiya & Matt Ishida (if-effect-didn't-resolve on-decline callback hook), BT16-082 Ukkomon (optional hatch tail with on-decline)
+- **Effect text:** Various — "Your opponent places 1 card from their hand as the bottom security card" / "Choose 1 of both players' Digimon" / "You may play 1 card … from your hand or trash without paying the cost" / "2 of your Digimon may DNA digivolve into [X] in the hand"
+- **What's missing:** All `select_*` helpers install `selecting_player = self.player` and scope to a single zone / single side. Four distinct selection-kind gaps:
+  1. Opponent-as-selecting-player variants (`select_hand_of(player, …)`).
+  2. `select_any_permanent` that walks both players' battle areas.
+  3. `select_hand_or_trash` unified prompt (action-space has room — PLAY_HAND 0-29 and TRASH_EFFECT 1150-1194 are disjoint).
+  4. `select_dna_pair` that validates a pair of own Digimon against a hand card's DNA costs.
+- **Suggested API shape:** `ctx.select_hand_of(player, prompt, filter, callback)`; `ctx.select_any_permanent(prompt, filter, callback)`; `ctx.select_hand_or_trash(player, prompt, filter_hand, filter_trash, callback)`; `ctx.select_dna_pair(hand_index, callback)`.
+- **Workaround:** Two-step `select_effect_choice` decomposition gives the player two prompts where the card describes one — degrades RL action-tree shape.
+- **Related:** Parity §4.6d-residual.
+
+### Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-017 Dimetromon, BT21-025 Lamiamon, BT24-016 Lamiamon, BT24-082 Owen Dreadnought, BT24-089 Unique Emblem, LM-027 Red Scramble, P-189 Dimetromon, P-151 Digimon Liberator, EX7-074 Vortex Resonance, P-206 Digital Gate Open, BT9-112 DeathXmon (dynamic cost) — DNA Omnimon adds (~16 more cards): BT17-095 Miraculous Mega Knight, BT22-084 Nokia Shiramine, BT22-089 Mirei Mikagura, BT17-081 Tai Kamiya & Matt Ishida, BT5-092 Nokia Shiramine, BT17-102 Greymon, BT21-102 Tai Kamiya, BT17-093 Tai Kamiya & Kari Kamiya, BT22-026 MetalGarurumon (via `[Hand][Main]`), EX4-061 Matt Ishida & Tai Kamiya, ST20-15 Island of Adventure, LM-034 Wisteria Memory Boost!, BT22-099 Kuremi Detective Agency, BT23-018 Garurumon (cost-reduction variant), BT22-094 Yuugo Kamishiro, BT13-012 GeoGreymon (play from security stack after search — needs a `play_from_security_at(player, security_index)` variant distinct from `play_from_security()` which reads `pending_security`)
+- **Effect text:** "you may play 1 [X] from your hand without paying the cost" / "play 1 [X] from your trash without paying the cost" / "play 1 Tamer card … with the play cost reduced by 4"
+- **What's missing:** `ctx.play_from_security()` exists; no analogous `play_from_hand_free(hand_index)` / `play_from_trash_free(trash_index)` / `play_from_hand_with_cost_delta(hand_index, delta)`. The cost-override variant is load-bearing for P-206's Delay sub-effect.
+- **Suggested API shape:** `ctx.play_from_hand_free(player, hand_index) -> Option<PermanentHandle>`; `ctx.play_from_trash_free(player, trash_index) -> Option<PermanentHandle>`; `ctx.play_from_hand_with_cost_delta(player, hand_index, delta: i16)`. Each must fire `OnPlay` through the standard queue.
+- **Workaround:** None — BLOCKED. Raw `player.hand.remove(i)` + `battle_area.push(Permanent::new(…))` skips OnPlay observers.
+- **Related:** RUST_PYTHON_PARITY §1.1 (play cost deduction — this gap is upstream of the free-play variant but distinct), §2.5a (play_from_security landed).
+
+### Zone-manipulation: effect-initiated digivolve (free / reduced / with trait filter / ignore requirements / DNA / Blast / detect-DNA-origin)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-001 Gigimon, BT21-093 Raging Serpentine, LM-027 Red Scramble, BT24-089 Unique Emblem, EX7-074 Vortex Resonance, BT23-005 Elizamon (passive trait-gated reduction), BT21-013 Agunimon, P-103 Offense Training — DNA Omnimon adds: BT22-013 WarGreymon (digivolve ignoring requirements + Tamer-gated cost override), BT17-015 WarGreymon, BT17-027 MetalGarurumon, BT22-026 MetalGarurumon, BT17-095 Miraculous Mega Knight (DNA digivolve via effect into named hand card with both materials still in hand), BT17-078 Omnimon (Blast DNA Digivolve from Counter — extends Counter window to pair two field materials with hand card), EX10-010 BlackWarGreymon (Blast Digivolve from Counter with Ace Overflow), AD1-009 BlitzGreymon (effect-initiated DNA into named hand card on EOT, outside Main phase), ST20-10 Agumon (alt-digivolve source registration with cost override + ignore reqs — `_alt_digi_*` scripting data channel), BT15-101 MetalGarurumon (alt-digivolve from hand), EX9-021 Omnimon Alter-S (needs `ctx.was_dna_digivolve()` context flag in `WhenDigivolving` — detect DNA origin), EX9-019 / EX9-012 / AD1-001 / AD1-010 (free-digivolve-from-hand-on-observer-trigger — hand-resident effects that initiate digivolve onto self when observer fires)
+- **Effect text:** "1 of your Digimon may digivolve into a [X] trait Digimon card in the hand with the digivolution cost reduced by N" (and "without paying the cost" variants)
+- **What's missing:** `Game::digivolve_from_hand` exists as an action entry but is not surfaced through `EffectContext`, and there is no way to apply a one-shot cost reduction or full-free flag to an effect-driven digivolve. `ModifierType::ChangeDigivolveCost` is permanent-keyed, not event-keyed. Passive "reduce by N when digivolving into trait-matched X" (BT23-005) needs a `BeforePayCost`-style hook during `digivolve_from_hand` that the current cost path doesn't consult.
+- **Suggested API shape:** `ctx.prompt_digivolve(base_filter, target_filter, reduction: u8, is_optional, callback)` installs a chained own-permanent + hand-card selection and performs the digivolve at reduced/free cost. Extend `Game::digivolve_from_hand` to scan `ChangeDigivolveCost` modifiers with trait-filter predicates.
+- **Workaround:** None faithful. The whole archetype's recurring digivolve-from-hand payoff (7+ cards) routes through this primitive.
+- **Related:** RUST_ENGINE_API §9 ("BeforePayCost for cost reduction … not implemented").
+
+### Zone-manipulation: return-to-hand / return-to-deck (top/bottom) / bounce self / trash-from-hand
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT24-012 Dimetromon (return self to hand), BT24-082 Owen Dreadnought (return Tamer to deck bottom), BT20-102 Omnimon (X Antibody) (return opp permanent to deck bottom), EX11-012 Medusamon (return card from opp trash to deck bottom), P-151 Digimon Liberator / BT16-082 Ukkomon / P-206 Digital Gate Open (return revealed rest to deck bottom), BT24-017 Medusamon (opponent returns 2 cards from trash to deck bottom as cost) — DNA Omnimon adds: BT17-078 Omnimon (return-to-bottom all opp Digimon of same level), BT22-015 Omnimon (return-to-bottom opp per-2-source-count), BT22-026 MetalGarurumon (return opp lowest-level to hand), BT22-089 Mirei Mikagura / BT21-102 Tai Kamiya / BT22-094 Yuugo Kamishiro / BT17-093 Tai Kamiya & Kari Kamiya (self-return to deck bottom as activation cost — needs `.pay_cost_return_self_to_deck_bottom()` builder hook), AD1-025 Omnimon, EX4-060 Omnimon Alter-S, EX1-021 MetalGarurumon (return opp On-Deletion-having Digimon to deck bottom), AD1-012 CresGarurumon (bounce lowest-level to hand), BT22-008 Agumon / EX9-066 Tai Kamiya & Matt Ishida / BT17-007 Agumon (return-from-trash-to-hand), BT22-089 Mirei Mikagura / EX5-015 Gabumon (X Antibody) (trash-from-hand by index — no `ctx.trash_from_hand(player, hand_index)` helper today)
+- **Effect text:** Various — "return this Digimon to the hand" / "By returning this Tamer to the bottom of the deck" / "return 1 of your opponent's Digimon to the bottom of the deck" / "Return the rest to the bottom of the deck"
+- **What's missing:** No helpers for: `return_permanent_to_hand(handle)`, `return_permanent_to_deck(handle, DeckEnd)`, `return_trash_to_deck(player, trash_index, DeckEnd)`, `return_revealed_to_deck(index, DeckEnd)`. `delete_permanent` trashes everything; there's no "extract top card, send materials to trash, move top to X" primitive.
+- **Suggested API shape:** `ctx.return_permanent_to_hand(handle)`; `ctx.return_permanent_to_deck(handle, end: DeckEnd)`; `ctx.return_trash_to_deck(player, trash_index, end)`; `ctx.return_revealed_to_deck(reveal_index, end)`. Each must correctly route digivolution materials per the rules (top card → destination, others → trash) and fire appropriate triggers.
 - **Workaround:** None — BLOCKED.
-- **Related:** `EffectTiming::OnAddToHand` declared but never fired.
+- **Related:** None.
 
-### Reveal top N cards of deck
+### Zone-manipulation: reveal-top-N deck + add-to-hand + hatch
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-017 Gabumon, EX4-039 Gabumon, P-206 Digital Gate Open, BT16-082 Ukkomon, EX4-038 Agumon, BT12-059 Agumon, LM-034 Wisteria Memory Boost!, BT22-099 Kuremi Detective Agency, BT22-094 Yuugo Kamishiro, EX5-015 Gabumon (X Antibody)
-- **Effect text:** "Reveal the top 3 cards of your deck." (and similar for N=3/4)
-- **What's missing:** `Game.revealed_cards` vec and `select_reveal` helper exist (RUST_PYTHON_PARITY §3.4) but nothing populates the pool from the top of the deck. No `ctx.reveal_top(player, n)`.
-- **Suggested API shape:** `ctx.reveal_top(player, n: u8) -> Vec<CardSource>` — pops top N from deck, pushes to `game.revealed_cards`, fires `OnReveal`. Returns the revealed handles for composable callback chains.
-- **Workaround:** None — BLOCKED. Every reveal-and-search Option/Tamer/OnPlay effect in the pool needs this.
-- **Related:** RUST_PYTHON_PARITY.md §3.4 (tensor slot exists, no writer).
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-008 Elizamon, P-103 Offense Training, P-035 Red Memory Boost!, EX7-074 Vortex Resonance, BT16-082 Ukkomon, P-151 Digimon Liberator, P-206 Digital Gate Open, BT21-007 Agumon (return trash to hand — shares `add_to_hand`) — DNA Omnimon adds: BT22-017 Gabumon (reveal 3 + multi-pick by name + text filter + return rest to deck bottom), EX4-039 Gabumon, EX4-038 Agumon, BT12-059 Agumon, LM-034 Wisteria Memory Boost!, BT22-099 Kuremi Detective Agency, BT22-094 Yuugo Kamishiro, EX5-015 Gabumon (X Antibody) (reveal 4 + pick 2), P-123 Ukkomon (optional hatch via `ctx.hatch` helper), BT17-093 Tai Kamiya & Kari Kamiya (OnHatch trigger + hatch helper)
+- **Effect text:** "Reveal the top N cards of your deck. Add 1 [card-kind/trait] card among them to the hand. Return the rest to the bottom of the deck. [Then, you may hatch in your breeding area.]"
+- **What's missing:** `Game.revealed_cards` exists (§3.4 tensor scaffold) and `select_reveal` helper exists (§4.6d), but there is no `ctx.reveal_top(player, n)` that populates `revealed_cards`. No `ctx.add_to_hand(player, card)` (required by many search/recursion effects). No `ctx.hatch(player)` — `Game::hatch` is action-decoder-only.
+- **Suggested API shape:** `ctx.reveal_top(player, n) -> &[CardSource]`; `ctx.move_revealed_to_hand(reveal_index)`; `ctx.move_revealed_to_deck_bottom_ordered(order)` (couples with ordered-selection gap); `ctx.add_to_hand(player, CardSource)`; `ctx.hatch(player)`.
+- **Workaround:** Direct `ctx.game.player_mut(...)` mutation works but violates curated-API contract and bypasses `OnAddToHand` + hand-size-limit checks.
+- **Related:** Parity §3.4 (revealed_cards scaffold landed).
 
-### Move revealed card to hand / resolve reveal pool
+### Zone-manipulation: security stack operations (trash top, place top/bottom, trash N, Recovery +N, shuffle security)
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** Every reveal-using card above.
-- **Effect text:** "Add 1 Digimon card with [Greymon] in its name … to your hand."
-- **What's missing:** `select_reveal` returns an index but there is no `ctx.add_revealed_to_hand(index)`, `ctx.return_revealed_to_deck_bottom(indices_in_order)`, `ctx.return_revealed_to_deck_top(indices_in_order)`, or `ctx.clear_revealed()`. Effects with phrasing "Add 1 X **and** 1 Y" need multi-pick (see selection gap).
-- **Suggested API shape:** `ctx.add_revealed_to_hand(player, reveal_index)`, `ctx.return_revealed_to_deck_bottom(player, order: Vec<usize>)`, `ctx.return_revealed_to_deck_top(player, order: Vec<usize>)`. Paired `ctx.resolve_reveal_pool()` that sends anything un-dispatched back to deck.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-025 Lamiamon, BT24-016 Lamiamon, LM-021 Agumon – Bond of Bravery, BT17-018 Gallantmon: Crimson Mode ("trash N from top"), BT24-016 Lamiamon / BT21-024 Cyberdramon (place as bottom security), P-137 Flamedramon (move top security to hand) — DNA Omnimon adds: BT22-013 WarGreymon / BT17-015 WarGreymon (trash opp security top from inherited effect), EX4-073 Omnimon Alter-B (trash top 2 opp security), ST20-15 Island of Adventure (add own top security to hand + place self on security top face-up), EX9-021 Omnimon Alter-S (place permanent as own top security), EX4-060 Omnimon Alter-S (place self at own security bottom face-down), BT13-012 GeoGreymon (Recovery +1 Deck — deck-top → security-top + shuffle security)
+- **Effect text:** "trash your opponent's top security card" / "trash 1 card from the top of your opponent's security stack" / "places 1 card from their hand as the bottom security card" / "your opponent adds the top card of their security stack to the hand"
+- **What's missing:** `EffectContext` exposes `trash_from_top(player, N)` for **decks** only. No helpers for: `trash_top_security(player, N)` (must fire `OnLoseSecurity` per card popped), `place_security_bottom(player, card)`, `place_security_top(player, card)`, `move_top_security_to_hand(player)`.
+- **Suggested API shape:** `ctx.trash_top_security(of_player: PlayerId, count: u8) -> u8`; `ctx.place_security_bottom(player, CardSource)`; `ctx.place_security_top(player, CardSource)`; `ctx.move_top_security_to_hand(player)`. All must fire `OnLoseSecurity` / `OnAddToHand` and update `face_up_security` bookkeeping.
+- **Workaround:** Raw `player.security` manipulation skips observer triggers — correctness class same as the global-security-observer gap.
+- **Related:** Parity §2.5k (face_up_security stale entries), §2.5m (security_reveal event).
+
+### Token creation + `CardKind::Token` + Petrification Token definition
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17)
+- **Card(s):** BT24-017 Medusamon, BT21-029 Medusamon, EX11-012 Medusamon
+- **Effect text:** "they play 1 [Petrification] Token. (Digimon/White/3000 DP/[Your Turn] This Digimon can't suspend. [On Deletion] Trash your top security card.)"
+- **What's missing:** No `CardKind::Token` variant (parity §4.6b-residual). No `ctx.play_token(player, token_id)` helper. No Petrification Token data or registered `CardEffect`. Token baked-in abilities (CannotSuspend gated on [Your Turn], OnDeletion trash-top-security) also need their own primitives, though CannotSuspend's modifier exists.
+- **Suggested API shape:** Introduce `CardKind::Token` + `TokenRegistry`. `ctx.play_token(controller, token_id) -> Option<PermanentHandle>` creates a synthetic `CardSource`, places a `Permanent`, fires `OnPlay`. Ship Petrification Token data + `CardEffect` (CannotSuspend [Your Turn] + OnDeletion → `trash_top_security`).
 - **Workaround:** None — BLOCKED.
-- **Related:** Reveal-top-N gap; multi-pick selection gap below.
+- **Related:** Parity §4.6b-residual.
 
-### Place card on top / bottom of deck in player-chosen order
+### Place card at a specific stack position (bottom-source / under another permanent) + alt-digivolve + stack reorder
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX4-039 Gabumon, EX4-038 Agumon, BT12-059 Agumon, P-206, BT22-099 — every multi-reveal card with "Place the rest on top/bottom of the deck in any order"
-- **Effect text:** "Place the remaining cards at the bottom of your deck in any order." / "Place the rest on top of your deck in any order."
-- **What's missing:** No `SelectionKind::Order` / ordering prompt. The existing `select_reveal` is single-pick. Auto-ordering (arbitrary) hides a player choice with real game state implications — violates §17.
-- **Suggested API shape:** `SelectionKind::Ordering { pool: Vec<usize>, destination: DeckEnd }`, exposed via `ctx.select_deck_order(prompt, pool, destination, callback: Fn(Vec<usize>))`. Or compose via repeated single-picks that each append to the destination.
-- **Workaround:** Auto-order is an approximation; rejected under §17.
-- **Related:** Multi-select / ordering family.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-013 Agunimon, BT24-016 Lamiamon (alt-digivolve variant) — DNA Omnimon adds: BT23-008 Greymon (move own top stacked card to own bottom source as activation cost — `ctx.move_source_to_bottom(target, source_index)`), BT23-018 Garurumon (same primitive)
+- **Effect text:** "place 1 [Hybrid] or [Hero] trait Digimon card from your hand or trash as this Digimon's bottom digivolution card or under any of your red Tamers with inherited effects." / "by placing 1 [Dimetromon] from your trash as any of your [Elizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
+- **What's missing:** No primitive to append a `CardSource` to the **bottom** of a permanent's `card_sources` (current digivolve always pushes top). No helper to target "another own permanent" as attachment point. No alt-digivolve primitive with override cost + ignore-digivolution-requirements flag.
+- **Suggested API shape:** `ctx.place_as_bottom_source(target, card)`; `ctx.place_as_top_source(target, card)`; `ctx.digivolve_into_source_from_hand(target, hand_index, bottom_trash_index, cost_override: u16, ignore_reqs: bool)`.
+- **Workaround:** None — BLOCKED. Raw `battle_area[i].card_sources.insert(0, ...)` skips OnEnterField / inherited-stack recomputation.
+- **Related:** None.
 
-### Trash opponent security top N from effect (outside attack)
+### Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N)
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-013 WarGreymon (inherited), BT17-015 WarGreymon (inherited), EX4-073 Omnimon Alter-B
-- **Effect text:** "trash the top card of your opponent's security stack." / "trash the top 2 cards of your opponent's security stack."
-- **What's missing:** `ctx.trash_security_top(player, count)` helper that pops top N, routes to trash, fires `OnLoseSecurity`, cleans `face_up_security`. Distinct from `resolve_security_card` (attack-driven).
-- **Suggested API shape:** `ctx.trash_security_top(of_player, count: u8) -> u8` returning actual trashed.
-- **Workaround:** Raw pop mis-handles `OnLoseSecurity` + face_up_security bookkeeping. BLOCKED.
-- **Related:** RUST_PYTHON_PARITY.md §2.5k (face_up_security), §2.5m (event surface).
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-081, BT24-018, BT24-011, BT24-017, BT21-025, EX11-012, P-189, BT21-072, BT21-029, EX10-010, BT21-026, BT20-102, EX8-074, EX9-013, BT17-018, P-137, EX9-008 (inherited Raid), ST1-07 (inherited Sec A+1) — 17+ cards in Medusamon alone. DNA Omnimon adds: BT17-078 Omnimon (native Raid + Blocker), BT23-018 Garurumon (native Jamming), P-182 WarGreymon (native Security A.+1 + Blocker), AD1-001 Greymon (inherited Raid), AD1-010 Garurumon (inherited Jamming), BT17-095 Miraculous Mega Knight (printed Delay)
+- **Effect text:** `<Rush>`, `<Raid>`, `<Piercing>`, `<Blocker>`, `<Reboot>`, `<Jamming>`, `<Blitz>`, `<Vortex>`, `<Alliance>`, `<Security A. +N>` printed on the card face
+- **What's missing:** `CardData` has no `keywords: Vec<Keyword>` field; printed keywords live inside `effect_text: String`. Combat / mask / security modules consult only modifier-granted keywords via `ModifierRegistry::has_keyword`. Parity catalogs sub-cases for Rush (§2.1b), Blitz (§4.3b), Jamming (§2.5f) — this gap unifies them: an architectural cross-cutting fix covering all statically-printed keywords.
+- **Suggested API shape:** Add `keywords: Vec<Keyword>` to `CardData` + ingest parse pass from `effect_text`, **or** auto-emit `Effect::declarative(card).grants_keyword(kw)` at `CardEffectRegistry` build time. Combat / mask helpers then OR modifier-granted with native. Native parsing must capture parametric variants (`SecurityAttackPlus(N)`, `DeDigivolve(N)`).
+- **Workaround:** Per-card `Effect::on_play(card).process(|ctx| ctx.grant_keyword(self, Keyword::X, Expiry::Permanent))` — medium fidelity, but brittle for cards placed via Blast Digivolve / Training / material-reveal and doesn't populate face-keyword tensor slots.
+- **Related:** RUST_PYTHON_PARITY §2.1b, §4.3b, §2.5f.
 
-### Add top security card to own hand
+### `<Progress>` keyword + `ImmunityToOpponentEffects` modifier
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** ST20-15 Island of Adventure
-- **Effect text:** "[Main] Add your top security card to the hand."
-- **What's missing:** No `ctx.move_security_to_hand(player, security_index)`. Must fire `OnLoseSecurity`, clean `face_up_security`, route to hand, emit `security_moved` event.
-- **Suggested API shape:** `ctx.move_security_to_hand(player, security_index)`.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-025 Lamiamon, BT24-018 Styracomon, BT24-017 Medusamon, BT21-029 Medusamon, EX11-012 Medusamon, P-189 Dimetromon — DNA Omnimon adds (same `ImmunityToOpponentEffects` underlying need, non-Progress wording): EX9-021 Omnimon Alter-S ("opponent's effects don't affect this Digimon for the turn" — turn-scoped variant), AD1-009 BlitzGreymon (per-target opponent-only immunity until opp turn ends), EX10-010 BlackWarGreymon (DP-gated "opponent's Digimon's effects don't affect this Digimon" — couples with condition-gated modifier entries), ST20-11 WarGreymon (per-Tamer-color N-Digimon assignment of the same immunity)
+- **Effect text:** "`<Progress>` (While attacking, your opponent's effects don't affect this Digimon.)"
+- **What's missing:** No `Keyword::Progress` variant. No `ModifierType::ImmunityToOpponentEffects`. Every opponent-targeting effect-resolution site would need to consult the gate (select_opponent_permanent filter, delete_permanent when called from opp effect, security check pipeline).
+- **Suggested API shape:** Add `Keyword::Progress` + `ModifierType::ImmunityToOpponentEffects`; add `Game::is_immune_to_opponent_effects(handle, source_player)` consulted by every opponent-directed mutation. Already partially scoped by parity §2.5c (security branch) — extend across all effect sites.
+- **Workaround:** None — the keyword is load-bearing for every attacker in the archetype.
+- **Related:** RUST_PYTHON_PARITY §2.5c.
+
+### `<Armor Purge>` keyword (leave-field replacement variant)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17)
+- **Card(s):** BT24-018 Styracomon, P-137 Flamedramon
+- **Effect text:** "`<Armor Purge>` (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)"
+- **What's missing:** A specific instance of the leave-field replacement framework gap, plus a dedicated `Keyword::ArmorPurge` and a "trash top source of self" primitive.
+- **Suggested API shape:** Built atop the `WhenWouldBeDeleted` replacement framework (separate gap). `Keyword::ArmorPurge` + `ctx.trash_top_source_of_self()` primitive; auto-emit the replacement effect from native-keyword parsing.
+- **Workaround:** None — BLOCKED without the replacement-effect framework.
+- **Related:** See "WhenWouldBeDeleted / leave-field replacement-effect framework" above.
+
+### `<Training>` keyword
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17)
+- **Card(s):** EX9-008 Biyomon
+- **Effect text:** "`<Training>` (In the main phase, by suspending this Digimon, place your deck's top card face down as this Digimon's bottom digivolution card. This effect can also activate in the breeding area.)"
+- **What's missing:** (a) No `Keyword::Training` variant. (b) No primitive to move top-of-deck onto a permanent's `card_sources` at bottom position. (c) No `face_down: bool` flag on `CardSource` (with hidden-info tensor implications). (d) `[Main]` activation mask doesn't extend to breeding-area permanents.
+- **Suggested API shape:** `Keyword::Training` + `ctx.push_deck_top_under_self(face_down: bool)` + `CardSource::face_down` field (zero-out data_index in observation tensors) + extend `MainOnField` activation to breeding-area when effect keyword is Training.
 - **Workaround:** None — BLOCKED.
-- **Related:** `OnLoseSecurity` event surface.
+- **Related:** None.
 
-### Place permanent as top/bottom of security (face-up / face-down)
+### `<Delay>` keyword + placement-turn gating for Option cards
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX9-021 Omnimon Alter-S, ST20-15 Island of Adventure, EX4-060 Omnimon Alter-S
-- **Effect text:** "place this Digimon as your top security card." / "place this card face up as the top security card." / "place this Digimon at the bottom of your security stack face down."
-- **What's missing:** `mark_security_face_up` only flips visibility on an already-in-stack card. No primitive inserts a field permanent (or a hand card) into the security stack at the top/bottom with a face-up/face-down flag, and no `OnPlaceSecurity` firing site.
-- **Suggested API shape:** `ctx.place_permanent_to_security(target, position: SecurityEnd, face_up: bool)` — pops permanent, pushes (or trashes sources per DCGO), fires `OnLeaveField` + `OnPlaceSecurity`.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** P-103 Offense Training, LM-027 Red Scramble, BT24-089 Unique Emblem, P-035 Red Memory Boost!, BT21-093 Raging Serpentine, P-206 Digital Gate Open — DNA Omnimon adds: BT17-095 Miraculous Mega Knight (Delay on Ace Option), LM-034 Wisteria Memory Boost! (`<Delay>` gain 2 memory), BT22-099 Kuremi Detective Agency, BT23-096 Comet Hammer
+- **Effect text:** "`<Delay>` (By trashing this card after the placing turn, activate the effect below.)"
+- **What's missing:** Delay Options (a) stay on the battle area after initial resolution (tied to Option play-flow gap), (b) become activatable on turns after placement (`turn_played` tracking exists but no activation mask path), (c) activate by trashing self via an `[Main]` or reactive observer prompt. Multiple Delay variants have conditional activation triggers (BT24-089: OnSuspend of named card; LM-027: StartOfYourTurn + opponent-has-Digimon; BT21-093: OnOpponentSecurityRemoved).
+- **Suggested API shape:** `Keyword::Delay` on Option-card permanents. `EffectTiming::DelayMain` (gated on `turn_count > turn_played`). Mask emits at a `FIELD_EFFECT_DELAY` slot when activation is legal. Activation trashes self from battle area and runs the post-Delay body.
+- **Workaround:** None — BLOCKED. Intertwined with Option-card play flow.
+- **Related:** See Option card play flow gap.
+
+### Raid target-switch interrupt (scripting-surface, not mask-only) + effect-driven attack redirect
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT24-017 Medusamon, BT24-011 Cyclonemon, EX11-012 Medusamon, P-137 Flamedramon, BT21-025 Lamiamon (target-switch observer), plus every other Raid card — DNA Omnimon adds: BT23-008 Greymon (native Raid with switch-to-highest-DP), EX10-010 BlackWarGreymon (Raid on Ace), AD1-012 CresGarurumon (`ctx.redirect_attack(new_target)` primitive — "change the attack target to 1 of your Digimon" during opp-turn observer)
+- **Effect text:** "`<Raid>` (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+- **What's missing:** Raid is currently mask-only (§4.4) — gates legal target bits at Main-phase selection. The card text is an **optional mid-attack switch** after declaration. No `RaidOpen` state in the attack state machine; no `OnAttackTargetChange` event fires even when redirection occurs through Block.
+- **Suggested API shape:** Add `RaidOpen` state to `PendingAttack` between `Declared` and `AllianceOpen`. `combat::try_enter_raid` installs a may-switch selection of highest-DP unsuspended opponent Digimon; attacker PASS keeps declared target. Fire `EffectTiming::OnAttackTargetChange` after any switch (Block / Raid / Collision).
+- **Workaround:** Mask-time Raid (§4.4) covers "pick the Raid target up front" but fails the text when attacking into security (no mid-attack redirect).
+- **Related:** Parity §4.4 (Raid mask), §2.3 (combat interrupts).
+
+### De-Digivolve N primitive (single + mass)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** EX9-013 BlitzGreymon ("De-Digivolve 3" single target), BT9-112 DeathXmon ("De-Digivolve 1" all opponent Digimon) — DNA Omnimon adds: EX4-073 Omnimon Alter-B (De-Digivolve 3 single), BT23-096 Comet Hammer (De-Digivolve 4), EX9-019 WereGarurumon: Sagittarius Mode (inherited [When Attacking][Once Per Turn] De-Digivolve 1)
+- **Effect text:** "`<De-Digivolve N>` 1 of your opponent's Digimon. (Trash up to N cards from the top. You can't trash past level 3 cards.)"
+- **What's missing:** `Keyword::DeDigivolve(u8)` exists in enums.rs, but no implementation that pops top N `card_sources` from a target permanent, stopping at the first Lv.3-or-lower revealed, moving popped sources to trash. No mass variant.
+- **Suggested API shape:** `ctx.de_digivolve(target: PermanentHandle, amount: u8) -> u8` — pops while `popped < amount && next_top.level > 3`, moves each popped source to owner's trash, fires `OnTrash` / `OnLoseField` as appropriate. `ctx.de_digivolve_all_opponent(amount)` sugar for the mass case.
+- **Workaround:** None — BLOCKED. Level-3 floor rule and trash routing need centralized handling.
+- **Related:** None.
+
+### Ace Overflow: inherited memory penalty on zone-change from field / under-card
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** EX10-010 BlackWarGreymon, EX9-013 BlitzGreymon, BT17-018 Gallantmon: Crimson Mode, LM-021 Agumon – Bond of Bravery — DNA Omnimon adds: BT17-078 Omnimon (Ace Overflow -5), BT17-095 Miraculous Mega Knight (Ace Option), ST20-11 WarGreymon (Ace)
+- **Effect text:** "Ace Overflow `<-N>` (As this card moves from the field or under a card to an area other than those, lose N memory.)"
+- **What's missing:** No Ace-card identification, no Overflow metadata, no zone-transition firing of a penalty effect. `EffectTiming::OnLeaveField` is declared but I couldn't locate a dispatch site. "Under a card" (digivolution stack) zone distinction needs modeling separately from `BattleArea`.
+- **Suggested API shape:** `CardData::ace_overflow: Option<i8>` + firing of `OnLeaveField` with `LeaveFieldContext { destination: Zone }` from every zone-change path (permanent trash, return-to-hand/deck/security, digivolution-source → out-of-stack). `Effect::ace_overflow(n)` builder sugar.
 - **Workaround:** None — BLOCKED.
-- **Related:** `OnPlaceSecurity` timing declared but unused.
+- **Related:** None.
 
-### Recovery +N (Deck) — deck top → security top
+### Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated + suspend/self-return as cost)
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT13-012 GeoGreymon
-- **Effect text:** "＜Recovery +1 (Deck)＞"
-- **What's missing:** `ctx.recover_security_from_deck(player, count)` — pops the top N cards of the deck, pushes onto security top, fires `OnPlaceSecurity`. Not wired today.
-- **Suggested API shape:** `ctx.recovery_from_deck(player, count: u8) -> u8` returning actual placed.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT8-097 Crimson Blaze, BT9-112 DeathXmon, BT21-026 WarGreymon, EX8-074 MedievalGallantmon (selection-gated) — DNA Omnimon adds: BT17-027 MetalGarurumon (Tamer-name-gated play-cost reduction — BeforePayCost scan must include battle-area-effect condition closures, not just on-card effects), BT17-015 WarGreymon (same), BT5-092 Nokia Shiramine (suspend-this-Tamer-as-cost to reduce digivolve cost), BT23-008 Greymon (move-top-source-to-bottom-as-cost), BT22-094 Yuugo Kamishiro (return-self-to-deck-bottom-as-cost), BT23-018 Garurumon, ST21-13 Matt Ishida & T.K. Takaishi (suspend-this-Tamer-as-cost by trait filter). Surfaces a general `.pay_cost(|ctx| bool)` builder hook on `EffectBuilder` covering suspend-self, return-self-to-deck-bottom, trash-from-hand, and trash-material payment shapes
+- **Effect text:** "Reduce the memory cost of this card in your hand by 1 for each Digimon your opponent has in play." / "reduce its memory cost by 3 for each Digimon and Tamer your opponent has in play" / "reduce the play cost by 2 for each of your opponent's Digimon" / "by suspending 2 Digimon, reduce the play cost by 4"
+- **What's missing:** `.cost_reduction(n)` accepts only a static `i32`. `BeforePayCost` dispatch is not wired into `calculate_play_cost` (API §9). No closure-valued reduction and no selection-at-cost-time (for the "suspend 2 Digimon" variant).
+- **Suggested API shape:** `.cost_reduction_fn(|&EffectReadContext| i16)` closure-valued variant, evaluated inside `calculate_play_cost`. For selection-gated variants: `Effect::before_pay_cost(card).with_optional_payment(cost_delta, select_filter, execute)` — offers a prompt at cost-time, completes before resolving payment.
+- **Workaround:** None — BLOCKED for BT8-097 (cost-reduction scanning isn't wired at all per §9).
+- **Related:** RUST_ENGINE_API §9, Parity §4.7e (DigiXros cost reduction).
+
+### Dynamic DP scaling modifier (per-stack-depth / per-opponent-board / per-color)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-072 Arresterdramon: Superior Mode (per digivolution cards), BT24-017 Medusamon (per opponent Digimon) — DNA Omnimon adds: P-182 WarGreymon (+1000 DP per distinct color across own Digimon + Tamers)
+- **Effect text:** "This Digimon gets +1000 DP for each of its digivolution cards." / "this Digimon gets +2000 DP for each of your opponent's Digimon until their turn ends."
+- **What's missing:** `EffectBuilder::dp_modifier(n)` is static. Per §13, modifier-registry DP grants are NOT summed into `source_dp_contribution` tensor slots — so `add_dp_modifier` also can't express tensor-correct dynamic DP.
+- **Suggested API shape:** `.dp_modifier_fn(|&EffectReadContext| i16)` closure-valued variant evaluated at tensor-build time. Or `ModifierType::ChangeDpDynamic(Box<dyn Fn(...)>)` with tensor-aware summation.
+- **Workaround:** Static snapshot at cast time for the opponent-scaling variant — fails faithfulness when opponent board changes. Per-stack-depth has no snapshot equivalent.
+- **Related:** RUST_ENGINE_API §13.
+
+### Condition-gated modifier entries + new `Expiry` variants
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** EX10-010 BlackWarGreymon (already listed) — DNA Omnimon adds: EX9-021 Omnimon Alter-S (source-scope condition — "opponent's effects only"), AD1-009 BlitzGreymon (same source-scope filter), AD1-014 MetalGarurumon ("can't suspend until their turn ends" — needs `Expiry::EndOfTargetsNextTurn` where the anchor is the MODIFIER TARGET's next turn end, not the source player's), EX1-068 Ice Wall! ("until the end of their next turn" — same `EndOfOpponentsNextTurn` / `EndOfTargetsNextTurn` need). Both the condition-closure and the new `Expiry` variants are prerequisites for `ModifierEntry` to faithfully represent these clauses
+- **Effect text:** "While your opponent has a Digimon with 13000 DP or more, your opponent's Digimon's effects don't affect this Digimon, and it gets +3000 DP."
+- **What's missing:** `ModifierEntry` has no condition closure (parity §4.7x). Can't express "active only while opp has ≥13k DP Digimon" without an observer for arbitrary DP-threshold transitions.
+- **Suggested API shape:** Add `condition: Option<Box<dyn Fn(&EffectReadContext) -> bool>>` to `ModifierEntry`; or passive `Effect::declarative(card).modifier_when(type, value, condition)` builder that the affect-resolution code consults per query.
+- **Workaround:** Permanent grant over-applies when condition is false.
+- **Related:** Parity §4.7x.
+
+### Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement, MayAttackPlayerOnly)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT23-014 Gallantmon (CannotPlayFromTrash by effect), BT8-097 Crimson Blaze (CannotPlayDigimonByEffect), BT5-008 Gaossmon (opp cannot reduce digivolution costs), P-151 Digimon Liberator / EX7-074 Vortex Resonance / P-206 Digital Gate Open / ST22-08 Offensive Plug-In V (IgnoreColorRequirement aura) — DNA Omnimon adds: BT8-097 Crimson Blaze (also listed; `CannotPlayDigimonByEffect` specifically distinct from `CannotPlayFromHand` which is player-action-only), LM-034 Wisteria Memory Boost! / BT22-099 Kuremi Detective Agency / BT23-096 Comet Hammer / ST20-15 Island of Adventure (IgnoreColorRequirement variants, several with condition closures). BT17-081 Tai Kamiya & Matt Ishida surfaces a sibling need — `ModifierType::MayAttackPlayerOnly` (grant attacks to a named permanent scoped to player-target only, unlike the existing `MayAttack` which mask-emits both Digimon and player targets)
+- **Effect text:** "Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash." / "Your opponent can't play Digimon by effects until the end of their turn." / "[Opponent's Turn] Your opponent can't reduce digivolution costs." / "While you have [LIBERATOR] trait Digimon or Tamer, you can ignore this card's color requirements."
+- **What's missing:** `ModifierRegistry` is keyed by `PermanentHandle` only — no player-scoped store. Missing variants: `CannotPlayFromTrash`, `CannotPlayDigimonByEffect`, `OpponentCannotReduceDigivolveCost`, `IgnoreColorRequirement`. Effect-vs-action-initiated play distinction isn't modeled either.
+- **Suggested API shape:** Extend `ModifierRegistry` with `player_modifiers: HashMap<PlayerId, Vec<ModifierEntry>>` + `add_player_modifier / has_player_modifier / expire_*` with shared `Expiry` handling. Add the missing `ModifierType` variants. Consult `has_player_modifier` from every effect-play helper and the color-check mask.
 - **Workaround:** None — BLOCKED.
-- **Related:** "Place permanent as top/bottom of security".
+- **Related:** Parity §4.2b (IgnoreColorRequirement), §4.7x (context-aware modifier queries).
 
-### Shuffle security stack
+### Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic + Security-effect return-to-hand / place-on-field
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT13-012 GeoGreymon
-- **Effect text:** "Then, shuffle your security stack."
-- **What's missing:** `ctx.shuffle_security(player)` has no analogue; `player.shuffle_deck` covers only the deck. Needs access to `game.rng`; must clear `face_up_security` entries whose positions are now unknown.
-- **Suggested API shape:** `ctx.shuffle_security(player)`.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** P-103, LM-027, BT24-089, BT8-097, P-035, BT21-093, EX7-074, P-151, P-206, BT1-090 (Option cards); ST22-08 Offensive Plug-In V (Plug-In / Link mechanic) — DNA Omnimon adds: BT17-095 Miraculous Mega Knight (Ace Option, Delay, security-effect "Then, add this card to the hand" — new disposition distinct from "trash" and "place on field"), LM-034 Wisteria Memory Boost! / BT22-099 Kuremi Detective Agency / BT23-096 Comet Hammer / ST20-15 Island of Adventure / ST2-13 Hammer Spark / EX1-068 Ice Wall! (Option cards needing [Main] flow). ST20-15 surfaces a further sub-gap: security-effect "place this card in the battle area" disposition (OptionSecurity → battle-area permanent)
+- **Effect text:** All [Main] top-line clauses of Option cards; all "[Main] You may link this card to 1 of your Digimon without paying the cost" of Plug-In cards.
+- **What's missing:** Per RUST_ENGINE_API §9, "Option cards have no play flow yet (they hit the field as a permanent like Digimon)." Need: (a) play path that fires `OptionMain` then trashes the card (or places it on field when `<Delay>`); (b) security effects that re-activate the card's [Main]; (c) `ctx.place_self_in_battle_area()` / `ctx.trash_self_from_option()` / `ctx.activate_own_main_effects()` helpers; (d) Plug-In / Link mechanic: `Permanent.linked_cards: Vec<CardSource>` storage exists but no `ctx.link_card_to_permanent(card, target)` API, no play-flow for Plug-In card kind, no link-cost evaluation, no interaction between linked Plug-Ins and their carrier.
+- **Suggested API shape:** `Game::play_option_from_hand` branched inside `play_from_hand` based on `CardKind::Option`. `EffectTiming::OptionMain` and `OptionSecurity` (variants exist; need dispatch). `ctx.place_self_in_battle_area()` + `ctx.activate_own_main_effects()`. For Plug-In: `ctx.link_from_hand_to_own_permanent(filter, callback)` + `EffectTiming::OnLink` / `WhileLinked` + `ModifierType::LinkRequirement` metadata on `CardData`.
+- **Workaround:** None — BLOCKED. Option-card play flow is a foundational architectural gap; Plug-In is arguably its own sub-spec.
+- **Related:** RUST_ENGINE_API §9.
+
+### Scheduled end-of-turn effect queue (for transient Options)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT1-090 Gravity Crush (shared across both audits — "[Main] Gain 2 memory. At end of turn, lose 2 memory.")
+- **Effect text:** "[Main] Gain 2 memory. At end of turn, lose 2 memory."
+- **What's missing:** Transient Option cards resolve + trash before `end_turn`; existing `EndOfYourTurn` timing only walks live permanents. No mechanism to enqueue a closure from an Option's `[Main]` that fires at turn end after the card is in trash.
+- **Suggested API shape:** `ctx.schedule_end_of_turn(|ctx| { … })` enqueues a boxed closure onto `Game.scheduled_eot: Vec<…>`. `Game::end_turn` drains after standard `EndOfYourTurn` triggers, before memory reset.
 - **Workaround:** None — BLOCKED.
-- **Related:** RUST_PYTHON_PARITY.md §3.3, §2.5k.
+- **Related:** Couples with Option-card play-flow gap.
 
-### Trash from hand (by index)
+### Effect re-firing / cross-timing self-trigger
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-089 Mirei Mikagura, EX5-015 Gabumon (X Antibody)
-- **Effect text:** "By trashing 1 card with the [Holy Beast], [Angel], … trait from your hand, ＜Draw 2＞" / "trash 1 card in your hand."
-- **What's missing:** `ctx.trash_from_top` exists for deck; no `ctx.trash_from_hand(player, hand_index)`. `select_hand` gives the index but the callback has no matching mutator.
-- **Suggested API shape:** `ctx.trash_from_hand(player, hand_index) -> Option<CardSource>`. Fires `OnTrash`.
-- **Workaround:** Raw `hand.remove` / `trash.push` violates curated-API rule (§7 anti-pattern).
-- **Related:** `OnTrash` timing exists but no firing site.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** EX8-074 MedievalGallantmon — DNA Omnimon additionally surfaces a *related-but-distinct* "grant triggered ability to another permanent" need; see "Granted triggered ability — attach an `Effect` to another permanent" new entry below
+- **Effect text:** "[All Turns] [Once Per Turn] When Digimon are played, you may activate 1 of this Digimon's [When Digivolving] effects."
+- **What's missing:** No API to invoke another of the source card's effects from within a `process` closure. `EffectContext` has mutation helpers but no `ctx.fire_effect_of_self(timing: EffectTiming)`.
+- **Suggested API shape:** `ctx.fire_effect_of_self(timing)` — looks up source card's effects via `CardEffectRegistry::get(card_id)`, filters by timing + matching condition, enqueues via `effect_queue`.
+- **Workaround:** Duplicating the [When Digivolving] body inline is brittle if the primary effect changes.
+- **Related:** None.
 
-### Play card from digivolution sources (materials) without paying cost
+### Force-follow-up-attack / "may attack without suspending" script helpers
 - **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX9-021 Omnimon Alter-S, AD1-025 Omnimon (Partition), EX4-060 Omnimon Alter-S, BT22-015 Omnimon (Decode)
-- **Effect text:** "play 1 card with [Greymon] in its name … from this Digimon's digivolution cards without paying the costs."
-- **What's missing:** `select_material` picks a source but cannot remove it and instantiate it as a new battle-area permanent for free. No `ctx.play_from_materials(of_permanent, source_index)`.
-- **Suggested API shape:** `ctx.play_from_materials(target, source_index)` — removes source from stack, creates new permanent, fires OnPlay, skips memory payment.
-- **Workaround:** None — BLOCKED. Related to Decode and Partition gaps.
-- **Related:** "Decode keyword" and "Partition keyword" gaps.
-
-### Digivolution-stack reorder — move top source to bottom (and general reorder)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT23-008 Greymon, BT23-018 Garurumon
-- **Effect text:** "By placing this Digimon's top stacked card as its bottom digivolution card, …"
-- **What's missing:** `Permanent.card_sources` is editable in engine but `EffectContext` has no `move_source_to_bottom(target, source_index)` / `reorder_sources(target, from, to)` helper. Cost is mandatory and rearranges stack composition (affects inherited effects + DP math).
-- **Suggested API shape:** `ctx.move_source_to_bottom(target, source_index)`.
-- **Workaround:** None — BLOCKED (faithful cost).
-- **Related:** none.
-
-### Digivolve (effect-driven) ignoring requirements at fixed or zero cost
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-013 WarGreymon, BT17-015 WarGreymon, BT17-027 MetalGarurumon, BT22-026 MetalGarurumon, BT17-095 Miraculous Mega Knight, EX9-019 / EX9-012 / AD1-001 / AD1-010 (observer-driven free digivolve from hand)
-- **Effect text:** "1 of your [Gabumon] may digivolve into [MetalGarurumon] in your hand, ignoring its digivolution requirements and without paying the cost."
-- **What's missing:** `Game::digivolve_from_hand` validates color/level against `CardData.evo_costs`; no effect-callable helper digivolves a battle-area permanent onto a target card in hand (or in a material pile) with override cost and `can_digivolve` bypass. Must still fire `WhenDigivolving`, install source-card lifecycle, optionally bypass digivolve-draw.
-- **Suggested API shape:** `ctx.digivolve_override(from_hand_index, target: PermanentHandle, cost: u16, ignore_requirements: bool)` + `ctx.digivolve_onto_free(base, via_card_source, ignore_requirements: bool)`.
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-081 Owen Dreadnought ("Then, that Digimon attacks"), BT24-082 Owen Dreadnought ("it may attack"), BT20-016 Paildramon ("this Digimon may attack"), BT20-102 Omnimon (X Antibody) ("attack without suspending"), BT21-072 Arresterdramon: Superior Mode ("This Digimon may attack without suspending"), EX9-013 BlitzGreymon ("1 of your Digimon may attack") — DNA Omnimon adds: BT20-102 Omnimon (X Antibody) (Rush + attack without suspending), AD1-009 BlitzGreymon ([End of Your Turn] "1 of your Digimon may attack"), BT22-015 Omnimon ("Then, this Digimon may attack" after WhenDigivolving — grant-attack-after-digivolve, expected to work even on negative memory). Related: BT17-081 Tai Kamiya & Matt Ishida needs the `MayAttackPlayerOnly` variant captured in the player-scoped-modifier entry above
+- **Effect text:** Variants of "it may attack" / "attack without suspending" immediately following another effect.
+- **What's missing:** Engine internally supports `PendingAttack::is_overclock = true` to skip suspend (§4.6c-residual) but the flag is not exposed to scripts. No `ctx.force_follow_up_attack(attacker)` / `ctx.grant_may_attack_without_suspend(target, expiry)`. `ModifierType::MayAttack` exists but is EndOfTurnAction-scoped; the immediate force-attack case needs a distinct primitive.
+- **Suggested API shape:** `ctx.force_follow_up_attack(attacker: PermanentHandle)` installs an EndOfTurnAction-slotted attack scoped to that attacker. `ctx.grant_may_attack_without_suspend(target, expiry)` / new `ModifierType::AttackWithoutSuspend(u8)` consumed by `begin_attack_impl`.
 - **Workaround:** None — BLOCKED.
-- **Related:** `Game::digivolve_onto`, RUST_PYTHON_PARITY.md §4.5a.
+- **Related:** Parity §4.6c / §4.6c-residual.
 
-### DNA digivolve from hand via effect (both materials or one hand + one field)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095 Miraculous Mega Knight, BT22-017 Gabumon (inherited EOT), BT22-008 Agumon (inherited EOT), BT17-019 Gabumon (inherited EOT), BT17-007 Agumon (inherited EOT), AD1-009 BlitzGreymon (EOT into named hand card), AD1-012 CresGarurumon (defender-side reactive DNA)
-- **Effect text:** "That Digimon and a card in the hand may DNA digivolve into a Digimon card with [Omnimon] in its name in the hand." / "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
-- **What's missing:** DNA digivolve today is driven only by Main-phase hand mask and is further blocked by empty `dna_costs` (RUST_PYTHON_PARITY §4.5b). No `ctx.offer_dna_digivolve_into_hand(...)` that fires outside Main, no support for granted DNA-digivolve permission (inherited aura granting the action to the whole board), no way to target a specific named card in hand ignoring per-card DNA requirements.
-- **Suggested API shape:** `ctx.offer_dna_digivolve(of_player, attacker_filter, hand_filter, cost_override: Option<u16>)` + `ModifierType::GrantDnaDigivolveFromHand` for aura-grants. Depends on §4.5b data.
-- **Workaround:** None — BLOCKED.
-- **Related:** RUST_PYTHON_PARITY.md §4.5a, §4.5b.
-
-### Blast DNA / Blast Digivolve from hand (Counter window)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-078 Omnimon (Blast DNA Digivolve), EX10-010 BlackWarGreymon (Blast Digivolve, Ace)
-- **Effect text:** "[Hand] [Counter] ＜Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])＞" / "[Hand] [Counter] ＜Blast Digivolve＞"
-- **What's missing:** RUST_PYTHON_PARITY §2.3 supports `blast_digivolve = true` for single-target blast; Blast **DNA** Digivolve pairs two field materials with a hand card and has no scanner. Ace-card Blast Digivolve additionally requires Ace Overflow bookkeeping (separate gap).
-- **Suggested API shape:** Extend `combat::try_enter_counter` hand-scan to check `Effect.blast_dna_digivolve = true` and iterate battle-area pairs via `has_valid_dna_targets`; stack the counter card on the fused stack.
-- **Workaround:** None — BLOCKED.
-- **Related:** RUST_PYTHON_PARITY §2.3, DNA digivolve from hand gap, Ace Overflow gap.
-
-### Alternate digivolution source registration (alt-digi scripting channel)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-017 Gabumon, BT22-026 MetalGarurumon, EX9-021 Omnimon Alter-S, ST20-10 Agumon, BT15-101 MetalGarurumon
-- **Effect text:** (ST20-10) "this Digimon can digivolve into [WarGreymon] in the hand for a digivolution cost of 4, ignoring digivolution requirements" / `AddSelfDigivolutionRequirementStaticEffect` in DCGO.
-- **What's missing:** Python's engine carries `_alt_digi_*` attributes on effects; Rust has no scripting data channel. No `Effect::alt_digivolve(...)` builder, no mask emission for conditional alt-digivolve bits, no `ignore_requirements` flag on the digivolve validator.
-- **Suggested API shape:** `Effect::alt_digivolve(card).from_zone(Zone).name_filter(...).cost(n).ignore_requirements(bool).condition(...)` consulted by the Main-phase mask digivolve loop.
-- **Workaround:** None — BLOCKED.
-- **Related:** "Digivolve ignoring requirements at fixed cost".
-
-### Detect DNA digivolve origin within WhenDigivolving
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX9-021 Omnimon Alter-S
-- **Effect text:** "[When Digivolving] If DNA digivolving, your opponent's effects don't affect this Digimon for the turn."
-- **What's missing:** `EffectContext` in a `WhenDigivolving` process has no `ctx.was_dna_digivolve() -> bool`. Python carries an `is_dna` context key. `OnDnaDigivolve` is a separate timing in Rust but DCGO branches inside WhenDigivolving.
-- **Suggested API shape:** Add `digivolve_was_dna: Option<bool>` on the trigger context fed into `EffectContext`; accessor `ctx.was_dna_digivolve()`.
-- **Workaround:** None faithful.
-- **Related:** RUST_PYTHON_PARITY §2.5g (context-args pattern).
-
-### BeforePayCost cost-reduction scanning (play and digivolve)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-027 MetalGarurumon, BT17-015 WarGreymon, BT8-097 Crimson Blaze (self-scaling by opp-Digimon count), BT5-092 Nokia Shiramine (Tamer suspend-to-reduce), BT23-008 Greymon, BT22-094 Yuugo Kamishiro, BT23-018 Garurumon, ST21-13 Matt Ishida & T.K. Takaishi
-- **Effect text:** "When this card would be played, if you have a Tamer with [Matt Ishida] in its name, reduce the play cost by 3." / "Reduce the memory cost of this card in your hand by 1 for each Digimon your opponent has in play." / "By suspending this Tamer, reduce the digivolution cost by 1."
-- **What's missing:** `calculate_play_cost` / `calculate_digivolve_cost` do not scan `BeforePayCost` effects on (a) the card being played itself, (b) battle-area permanents, (c) Tamers — with a condition closure that inspects a `PlayContext { card, player, base_cost }`. `Effect::cost_reduction(n)` is a static field; not dynamic. Also missing: activated suspend-as-cost / return-to-bottom-as-cost payment shapes that feed into the reduction.
-- **Suggested API shape:** Fire `EffectTiming::BeforePayCost` before `pay_memory` with `PlayContext`; effects can mutate `current_cost: Cell<i32>` or call `ctx.reduce_play_cost(n)`. Add `.pay_cost_suspend_self()` / `.pay_cost_return_self_to_deck_bottom()` builder hooks for activated replacement costs.
-- **Workaround:** None — BLOCKED. Python's Issue 24 shows the scan path must be condition-guarded; do it right from the start in Rust.
-- **Related:** RUST_PYTHON_PARITY §1.1, §4.7e (DigiXros shares this shape), CLAUDE.md memory "BeforePayCost cost_reduction leak".
-
-### Ace Overflow memory penalty
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-078 Omnimon, BT17-095 Miraculous Mega Knight, EX10-010 BlackWarGreymon, ST20-11 WarGreymon
-- **Effect text:** "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)"
-- **What's missing:** No `Keyword::Ace(i8)` / `Keyword::AceOverflow(i8)`; no timing `OnLeaveFieldOrStackToOther` firing on every zone-transition path (delete / return-to-hand / return-to-deck / go-to-security). Mandatory memory swing on source-position (buried material) removal, not just top-card removal.
-- **Suggested API shape:** `Keyword::AceOverflow(i8)` + data field `CardData.ace_overflow: Option<i8>` + enqueue hook in every Permanent / CardSource zone-transition path.
-- **Workaround:** None — BLOCKED. Faking with `OnDeletion` misses return-to-hand/deck paths.
-- **Related:** "Return permanent to hand/deck" sibling gaps, "OnLeaveField cause discrimination".
-
-### Delay keyword — place-then-later-trash activated ability
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095 Miraculous Mega Knight, P-206 Digital Gate Open, LM-034 Wisteria Memory Boost!, BT22-099 Kuremi Detective Agency, BT23-096 Comet Hammer
-- **Effect text:** "＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)"
-- **What's missing:** `Keyword::Delay` variant; per-permanent `placed_turn` gate; mask bit emitted only from turn N+1 onward; execution path that trashes the Option and runs the delayed effect; Option-in-battle-area residency (see Option play flow).
-- **Suggested API shape:** `Keyword::Delay` + `Effect::delay_ability(card)` builder treating body as `MainOnField` with implicit trash-self cost + `turn_played < turn_count` gate.
-- **Workaround:** None — BLOCKED.
-- **Related:** "Option card play flow".
-
-### Evade keyword + player-elected deletion prevention
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT15-101 MetalGarurumon, AD1-012 CresGarurumon, AD1-014 MetalGarurumon
-- **Effect text:** "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)"
-- **What's missing:** No `Keyword::Evade` variant; `delete_permanent` / `delete_permanent_with_effects` are atomic with no pre-delete interrupt phase. No replacement-effect infra for deletion-class events (also needed for Armor / Fortitude / Barrier).
-- **Suggested API shape:** `Keyword::Evade` + `attempt_delete(target, reason) -> bool` that enqueues an optional `EffectTiming::WouldBeDeleted` prompt for each applicable keyword; accepted prompt suspends and cancels.
-- **Workaround:** None — BLOCKED (hiding the choice violates §17).
-- **Related:** "Replacement effect: prevent battle deletion by paying a cost" (EX5-015).
-
-### De-Digivolve N execution primitive
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX4-073 Omnimon Alter-B, BT23-096 Comet Hammer, EX9-019 WereGarurumon: Sagittarius Mode (inherited)
-- **Effect text:** "＜De-Digivolve 3＞ 1 of your opponent's Digimon. (Trash up to 3 cards from the top. You can't trash past level 3 cards.)"
-- **What's missing:** `Keyword::DeDigivolve(u8)` enum variant exists but no `ctx.de_digivolve(target, n)` helper. Must trash top sources until N trashed or first source with `level ≥ 3`.
-- **Suggested API shape:** `ctx.de_digivolve(target: PermanentHandle, n: u8) -> u8` returning actual trashed; fires `OnTrash`, refreshes top card.
-- **Workaround:** None — BLOCKED.
-- **Related:** enum variant exists, executor absent.
-
-### Partition keyword + provenance-filtered leave-field replacement
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** AD1-025 Omnimon
-- **Effect text:** "＜Partition ([WarGreymon] & [MetalGarurumon])＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)"
-- **What's missing:** `Keyword::Partition` exists as enum variant; no inspection. Requires (a) leave-field replacement hook (acts before the move), (b) provenance filter ("other than by own effects or battle"), (c) play-from-materials-free (sibling gap).
-- **Suggested API shape:** `Effect::on_partition(card).names(&[...]).process(...)` fired from the same hook as OnLeaveField replacement, gated by provenance.
-- **Workaround:** None — BLOCKED.
-- **Related:** "Play from materials without paying cost", "OnLeaveField cause discrimination".
-
-### Native printed keyword parsing (Raid / Jamming / Blocker / Rush / Blitz / Security A.)
-- **Severity:** 🟡 PARTIAL — *primitive-with-fidelity-cost*
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-078 Omnimon (native Raid, Blocker), BT23-018 Garurumon (Jamming), P-182 WarGreymon (Security A.+1, Blocker), AD1-001 Greymon (Raid), AD1-010 Garurumon (Jamming), BT17-095 (Delay), others.
-- **Effect text:** "＜Raid＞ … ＜Blocker＞ … ＜Jamming＞"
-- **What's missing:** `CardData` has no parsed `keywords: Vec<Keyword>` field; static keywords live only inside `effect_text: String`. Combat / mask / security-attack calculation honor only modifier-granted keywords, so face-printed keywords never fire on vanilla-keyword cards.
-- **Suggested API shape:** Add `CardData.keywords: Vec<Keyword>` populated by cards.json ingest (or a load-time parser over `effect_text`) + `Permanent::has_printed_keyword(kw) -> bool`. Update combat's Jamming / can-be-blocker / security-attack-modifier paths to union printed + granted.
-- **Workaround:** Declaring `Effect::declarative(card).grant_keyword(...)` at registration is brittle (grants expire on leave; native keywords persist) and doesn't activate until an effect-processing hook fires. Accepted as a temporary measure but not faithful.
-- **Related:** RUST_PYTHON_PARITY §2.1b, §2.5f, §4.3b.
-
-### Raid "may switch target" OnAttack retarget interrupt
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT23-008 Greymon, EX10-010 BlackWarGreymon
-- **Effect text:** "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)"
-- **What's missing:** Raid is modeled as a Main-phase targeting mask expansion (RUST_PYTHON_PARITY §4.4) but the *mid-attack* "you may retarget" interrupt window is not wired. Combat has no `RaidTiming` / `OnAttackRetarget` phase and no `ctx.redirect_attack(new_target)`.
-- **Suggested API shape:** New `GamePhase::RaidTiming` parked after OnAttack fires; `combat::try_enter_raid` installs an optional selection over tied-for-highest-DP unsuspended Digimon; on resolution rewrite `PendingAttack.effective_target`.
-- **Workaround:** Main-phase Raid mask covers the targeting half but silently drops the mid-attack switch.
-- **Related:** §4.4, §2.3 interrupt state machine.
-
-### Redirect attack target from effect (cross-cutting primitive)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** AD1-012 CresGarurumon
-- **Effect text:** "you may change the attack target to 1 of your Digimon."
-- **What's missing:** `ctx.redirect_attack(new_target: AttackTarget) -> bool` usable while `Game.pending_attack.is_some()`. Block already does internal rewrite; card scripts need the lever exposed.
-- **Suggested API shape:** As above.
-- **Workaround:** None — BLOCKED.
-- **Related:** Raid interrupt gap.
-
-### Option card [Main] play flow (resolve-and-trash)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095, P-206, BT8-097 Crimson Blaze, LM-034, BT22-099, ST2-13 Hammer Spark, ST20-15 Island of Adventure, BT23-096 Comet Hammer, BT1-090 Gravity Crush, EX1-068 Ice Wall!
-- **Effect text:** `[Main]` effects on cards with `card_kind: Option`.
-- **What's missing:** RUST_ENGINE_API.md §9 explicit known gap. `play_from_hand` pushes a `Permanent` regardless of kind; no branch on `CardKind::Option`, no `OptionMain` resolution pipeline, no "resolve-then-trash" disposition. `EffectTiming::OptionMain` / `OptionSecurity` exist in the enum but are never fired.
-- **Suggested API shape:** Branch in `play_from_hand` on Option kind: drain `OptionMain` effect queue, route to trash (or to battle_area for Delay/Ace lingering, or to security for place-as-security variants).
-- **Workaround:** None — BLOCKED.
-- **Related:** RUST_ENGINE_API.md §9; Delay / Ace / place-as-security sibling gaps.
-
-### Option card persistent placement in battle area
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095, P-206, LM-034, BT22-099, BT23-096
-- **Effect text:** "Then, place this card in the battle area." (Delay / Ace Option residency)
-- **What's missing:** Even with an Option play flow, Options that linger on the field (Delay, Ace Option) need a distinct "place as Option permanent" disposition + a mask/action-slot that lets their activated abilities fire later. `Permanent.placed_turn` already exists; needs wiring to `CardKind::Option` residency.
-- **Suggested API shape:** `ctx.place_option_in_battle_area()` turning the current Option resolution into a lingering permanent of `CardKind::Option`.
-- **Workaround:** None — BLOCKED.
-- **Related:** Option play flow, Delay keyword.
-
-### Script-driven color-requirement bypass for Options
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095, P-206, LM-034, BT22-099, BT23-096, ST20-15
-- **Effect text:** "You can ignore this card's color requirements." / "Red also meets this card's color requirements."
-- **What's missing:** Mask's `option_color_match_available` is unconditional. `CardData` has no `match_color_requirement: Option<Condition>` hook and there's no `Effect::color_bypass(card).condition(...)` builder. Rust over-masks these Options — the mask never emits play bits when color requirements aren't met, even when the bypass clause would allow it.
-- **Suggested API shape:** `Effect::color_bypass(card).condition(|rctx| bool)` consulted by mask via `Game::effect_ignores_color(card_id, player)`.
-- **Workaround:** None — BLOCKED (RL agent literally cannot pick the play).
-- **Related:** RUST_PYTHON_PARITY §4.2b.
-
-### Security effect "return this card to hand / place as security"
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095 Miraculous Mega Knight, P-206 Digital Gate Open
-- **Effect text:** "[Security] You may play 1 Digimon card … . Then, add this card to the hand." / "Then, place this card in the battle area."
-- **What's missing:** Security loop trashes the revealed card unless `pending_security.played` is raised by `play_from_security`. No `ctx.return_revealed_security_to_hand()` (card goes to hand, not trash/field) and no `ctx.place_revealed_security_on_field()` (Option-as-permanent disposition).
-- **Suggested API shape:** `ctx.return_revealed_security_to_hand()`, `ctx.place_revealed_security_on_field()` — both set `pending_security.disposition` explicitly.
-- **Workaround:** None — BLOCKED.
-- **Related:** Option play flow.
+### Trait-filter helpers on `CardSource` / `Permanent`
+- **Severity:** 🟡 PARTIAL — *ergonomics / sugar*
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
+- **Card(s):** BT21-093, EX11-008, P-189, BT21-029, EX11-012 (LIBERATOR-typed), plus many search / filter effects — DNA Omnimon adds: BT22-005 Tsumemon ([Unidentified]/[CS]), BT22-089 Mirei Mikagura ([CS] / [Holy Beast] / [Angel] / [Archangel] / [Fallen Angel]), ST20-10 Agumon (cross-tamer trait union), BT22-099 Kuremi Detective Agency ([CS]), BT22-094 Yuugo Kamishiro ([CS]), BT22-084 Nokia Shiramine (named-trait aura), ST21-13 Matt Ishida & T.K. Takaishi ([ADVENTURE])
+- **Effect text:** "1 of your [Reptile] or [Dragonkin] trait Digimon …" / "1 card with the [LIBERATOR] trait …"
+- **What's missing:** `CardData.type_eng` is present, but no ergonomic `CardSource::has_type(&str)` / `Permanent::has_any_type(&[&str])` accessor. Authors dip into `ctx.card_data()[idx].type_eng.contains(...)` directly — verbose, case-sensitivity bugs likely.
+- **Suggested API shape:** `CardSource::has_type(card_data, trait_name)` + `Permanent::top_card_has_type(...)` / `has_any_type(...)`, case-insensitive.
+- **Workaround:** Raw card_data scan — functional but API-convention-violating.
+- **Related:** Parity §2.1b (same effect-listing / text-parsing class).
 
 ### Granted triggered ability — attach an `Effect` to another permanent
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX1-068 Ice Wall!, BT22-084 Nokia Shiramine (aura-like DP grant by name — adjacent), BT5-093 Tai Kamiya & Matt Ishida (Security A.+1 to all Omnimon), ST21-13 Matt Ishida & T.K. Takaishi (Rush aura)
-- **Effect text:** "All of your opponent's Digimon gain \"[When Attacking] lose 2 memory\" until the end of their next turn."
-- **What's missing:** `ModifierRegistry` carries only scalar `ModifierType` values + `grant_keyword`. No primitive attaches a full `Effect` (timing + condition + process) to another permanent with bounded expiry. Python has `effect_grant_ability`.
-- **Suggested API shape:** Extend `ModifierRegistry` (or add a sibling `GrantedEffectRegistry`) to hold `(target: PermanentHandle, effect: Arc<Effect>, expiry: Expiry)`. `enqueue_from_permanent` also walks `granted_effects[target]` when building the fire list. Expose `ctx.grant_effect(target, effect, expiry)`.
-- **Workaround:** None faithful.
-- **Related:** Named-target aura gap, Expiry variants gap.
+- **Card(s):** EX1-068 Ice Wall! ("All of your opponent's Digimon gain \"[When Attacking] lose 2 memory\" until the end of their next turn.")
+- **Effect text:** As above.
+- **What's missing:** Distinct from "Effect re-firing / cross-timing self-trigger" (same-card timing invocation). `ModifierRegistry` carries scalar `ModifierType` values + `grant_keyword`; no primitive attaches a full `Effect` (timing + condition + process) to another permanent with bounded expiry. Python has `effect_grant_ability`.
+- **Suggested API shape:** Extend `ModifierRegistry` (or add a sibling `GrantedEffectRegistry`) to hold `(target: PermanentHandle, effect: Arc<Effect>, expiry: Expiry)`. `enqueue_from_permanent` also walks `granted_effects[target]` when building the fire list. Expose `ctx.grant_effect(target, effect, expiry)`. Depends on `Expiry::EndOfOpponentsNextTurn` variant (see "Condition-gated modifier entries + new Expiry variants").
+- **Workaround:** None — BLOCKED. Scalar modifiers can't represent "when this Digimon attacks, run X."
+- **Related:** "Condition-gated modifier entries + new Expiry variants", "Effect re-firing / cross-timing self-trigger", "Named-target declarative aura".
 
-### Named-target declarative aura (DP and keyword grants filtered by name/trait/level)
+### Named-target declarative aura (DP / keyword grants filtered by name/trait/level)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-084 Nokia Shiramine (+1000 DP to Greymon/Garurumon/Omnimon), BT5-093 Tai Kamiya & Matt Ishida (Security A.+1 to Omnimon), ST21-13 Matt Ishida & T.K. Takaishi (Rush to Lv5+ ADVENTURE Digimon), BT17-095 (observer filter), ST20-15 (security zone aura)
-- **Effect text:** "[All Turns] All your Digimon with [Greymon], [Garurumon] or [Omnimon] in their names get +1000 DP." / "gain ＜Rush＞"
-- **What's missing:** `Effect::declarative(card).dp_modifier(n)` buffs only the source permanent and consumes a static integer. No primitive for aura-style static DP/keyword grants to **other** permanents filtered by name/trait/level, re-evaluated as the field changes. Mask/tensor/combat queries must consult active auras at read time, not bake fixed modifiers.
-- **Suggested API shape:** `Effect::aura(card).target_filter(|rctx, h| bool).grant_keyword(Keyword).dp_modifier(n)` consulted by `effective_dp`, `has_keyword`, and mask at query time. Alternative: explicit `ModifierRegistry::query_aura` pass.
-- **Workaround:** Iteratively applying per-permanent modifiers on every state change leaks on new plays and can't be revoked when the source leaves. Not faithful.
-- **Related:** Granted-triggered-ability gap, Native keyword parsing.
+- **Card(s):** BT22-084 Nokia Shiramine ("[All Turns] All your Digimon with [Greymon], [Garurumon] or [Omnimon] in their names get +1000 DP."), BT5-093 Tai Kamiya & Matt Ishida ("[Your Turn] All of your Digimon with [Omnimon] in their name gain ＜Security A. +1＞"), ST21-13 Matt Ishida & T.K. Takaishi ("[Your Turn] All of your level 5 or higher Digimon with the [ADVENTURE] trait gain ＜Rush＞")
+- **Effect text:** As above.
+- **What's missing:** `Effect::declarative(card).dp_modifier(n)` buffs only the source permanent and consumes a static integer ("Dynamic DP scaling modifier" entry addresses formula values on SELF). This gap is about broadcasting DP/keyword grants from one permanent to OTHER permanents on the same side, filtered by a live predicate (name/trait/level), re-evaluated as the field changes. Distinct from `grant_keyword`+`add_dp_modifier` manual iteration: leaks on new plays and can't be revoked when the source leaves.
+- **Suggested API shape:** `Effect::aura(card).target_filter(|rctx, h| bool).grants_keyword(Keyword).dp_modifier(n)` consulted by `effective_dp`, `has_keyword`, and mask at query time. Alternative: `ModifierRegistry::query_aura` pass that iterates live aura sources whenever a permanent's effective value is asked.
+- **Workaround:** None — BLOCKED. Manual per-permanent modifier application on every state change is not faithful.
+- **Related:** "Dynamic DP scaling modifier", "Granted triggered ability", "Effect re-firing / cross-timing self-trigger", "Native printed keyword parsing".
 
 ### Declarative aura sourced from security zone
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** ST20-15 Island of Adventure
-- **Effect text:** "[Security] [All Turns] All of your level 3 or higher Digimon get +2000 DP."
-- **What's missing:** Tensor / mask / modifier passes iterate only `battle_area` permanents. No "active aura sourced from a face-up security card" query path; `ctx.source_permanent` is `Option<PermanentHandle>` with no security-source variant.
-- **Suggested API shape:** Promote face-up security entries to effect sources; extend DP / source-aggregation walks to include face-up security; add `SecuritySource { player, security_index, card_index }` variant on effect-source handles.
+- **Card(s):** ST20-15 Island of Adventure ("[Security] [All Turns] All of your level 3 or higher Digimon get +2000 DP.")
+- **Effect text:** As above.
+- **What's missing:** Tensor / mask / modifier passes iterate only `battle_area` permanents. No "active aura sourced from a face-up security card" query path; `ctx.source_permanent` is `Option<PermanentHandle>` with no security-source variant. Card is an Option living in the security stack, not on the field — but its [All Turns] aura must still apply to friendly Digimon.
+- **Suggested API shape:** Promote face-up security entries to enumerable effect sources; extend DP aggregation / keyword queries / tensor walks to include face-up security entries; add a `SecuritySource { player, security_index, card_index }` variant on effect-source handles.
 - **Workaround:** None — BLOCKED.
-- **Related:** RUST_PYTHON_PARITY §3.3.
+- **Related:** RUST_PYTHON_PARITY §3.3 (face_up_security tensor scaffolding); "Named-target declarative aura".
 
-### Variable / computed static DP modifier (formula per-count)
+### Digivolution-stack name overlay ("has all names of materials")
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** P-182 WarGreymon (+1000 per color across own Digimon + Tamers)
-- **Effect text:** "[All Turns] This Digimon gets +1000 DP for each color Digimon and Tamers have."
-- **What's missing:** `EffectBuilder::dp_modifier(n: i32)` is static; `source_dp_contribution` consumes a fixed integer. No `dp_modifier_fn(|&EffectReadContext| -> i32)` accessor.
-- **Suggested API shape:** Add `EffectBuilder::dp_modifier_fn(Arc<dyn Fn(&EffectReadContext) -> i32 + Send + Sync>)` stored in a new optional field and consulted when present.
-- **Workaround:** None — BLOCKED (approximating violates §17).
-- **Related:** RUST_PYTHON_PARITY §3.1.
-
-### Digivolution-stack name overlay ("has all names of Lv.N cards in materials")
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-102 Greymon
-- **Effect text:** "[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards."
-- **What's missing:** `Permanent::contains_card_name` already walks the stack for self-checks but external name lookups on this permanent see only the top card's printed name. No "virtual name overlay" mechanism synthesizing additional names for external queries.
-- **Suggested API shape:** `Effect::declarative(card).name_overlay_from_sources(|src, data| bool)`; update name-lookup surfaces to union overlays.
-- **Workaround:** None faithful for external observers.
-- **Related:** none.
-
-### Source-scoped CannotBeAffected (opponent-sourced only)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX9-021 Omnimon Alter-S, AD1-009 BlitzGreymon, EX10-010 BlackWarGreymon, ST20-11 WarGreymon
-- **Effect text:** "your opponent's effects don't affect this Digimon for the turn."
-- **What's missing:** `ModifierType::CannotBeAffected` is a coarse flag. `ModifierEntry` carries `source_player` but effect-application sites don't consult it; no scope discriminator between "opponent-sourced" and "own-sourced" (or "opponent-Digimon-effects-only" variant).
-- **Suggested API shape:** Either `ModifierType::CannotBeAffectedByOpponent`, or `ModifierEntry::scope: Option<SourceScope>` honored at every effect-application site.
-- **Workaround:** Applying unconditional `CannotBeAffected` also blocks controller's own buffs. Not faithful.
-- **Related:** RUST_PYTHON_PARITY §4.7x.
-
-### Attack-without-suspending for effect-granted MayAttack
-- **Severity:** 🟡 PARTIAL — *primitive-with-fidelity-cost*
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT20-102 Omnimon (X Antibody), AD1-009 BlitzGreymon
-- **Effect text:** "gain ＜Rush＞ for the turn and attack without suspending."
-- **What's missing:** The no-suspend attack path is wired only for Vortex / Overclock (`begin_attack_overclock`). `ModifierType::MayAttack` in `EndOfTurnAction` goes through the standard `begin_attack`, which suspends. No `ModifierType::MayAttackWithoutSuspending` variant or `no_suspend: bool` bit on `ModifierEntry`.
-- **Suggested API shape:** Either add `ModifierType::MayAttackWithoutSuspending` or thread a `no_suspend` flag into `begin_attack_impl`'s suspension branch.
-- **Workaround:** Grant Rush + MayAttack — faithfully wrong (still suspends).
-- **Related:** RUST_PYTHON_PARITY §4.6b.
-
-### MayAttack scoped to player-target only
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-081 Tai Kamiya & Matt Ishida
-- **Effect text:** "[End of Your Turn] 1 of your Digimon with [Omnimon] in its name may attack a player."
-- **What's missing:** `ModifierType::MayAttack` mask emission covers both Digimon and player targets; no variant for "attack a player only."
-- **Suggested API shape:** `ModifierType::MayAttackPlayer` or a `target_scope` field on `MayAttack` honored by mask.
-- **Workaround:** Granting generic MayAttack over-grants Digimon-target attacks the card text disallows. Violates §17.
-- **Related:** RUST_PYTHON_PARITY §4.6c.
-
-### StartOfYourTurn timing firing (enum exists, never fired)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-019 Gabumon, BT5-093 Tai Kamiya & Matt Ishida, BT21-102 Tai Kamiya, BT15-020 Gabumon
-- **Effect text:** "[Start of Your Turn] …"
-- **What's missing:** `Game::begin_turn` does not enqueue `EffectTiming::StartOfYourTurn`. Variant exists but no drainer. Also no `StartOfOpponentsTurn` firing.
-- **Suggested API shape:** `Game::fire_start_of_your_turn(player)` mirroring `fire_end_of_your_turn`, called from `begin_turn` after Draw, before Breeding.
-- **Workaround:** None — BLOCKED.
-- **Related:** RUST_ENGINE_API.md §9.
-
-### StartOfYourMainPhase timing
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-019 Gabumon, BT22-084 Nokia Shiramine, BT22-089 Mirei Mikagura, BT17-007 Agumon, BT15-020 Gabumon
-- **Effect text:** "[Start of Your Main Phase] …"
-- **What's missing:** No `EffectTiming::StartOfYourMainPhase` variant (distinct from `StartOfYourTurn` which fires before Draw/Breeding). Python distinguishes the two.
-- **Suggested API shape:** Add variant + enqueue hook in `Game::enter_main_phase` (new fn).
-- **Workaround:** Folding into `StartOfYourTurn` is wrong — fires before Draw.
-- **Related:** StartOfYourTurn gap.
-
-### OnLeaveField observer firing + cause discrimination
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-095, BT22-015 Omnimon (Decode "other than in battle"), AD1-025 Omnimon (Partition "other than by own effects or battle"), EX4-060 Omnimon Alter-S ("other than by one of your effects")
-- **Effect text:** "When this Digimon would leave the battle area other than in battle, …" / "… other than by one of your effects"
-- **What's missing:** `EffectTiming::OnLeaveField` variant exists but no firing site; `OnDeletion` fires uniformly with no cause/provenance. Need `LeaveCause { Battle, OwnEffect, OpponentEffect, Rules }` threaded through all exit paths (`delete_permanent`, `return_to_hand`, `return_to_deck`, security-move) and exposed on `EffectContext` for observer / replacement conditions.
-- **Suggested API shape:** `Game::fire_on_leave_field(leaver, cause, source_player)` invoked at every exit path; `TriggerSource::ForeignPermanentObservers` fan-out; `EffectContext.leave_cause: Option<LeaveCause>`. Also "would leave field" replacement variant (`WouldLeaveField`) with cancel semantics.
-- **Workaround:** None — BLOCKED.
-- **Related:** Ace Overflow, Partition, Decode, Self-replacement on leave-field gaps all depend on this.
-
-### OnAllyPlayed / OnEnterFieldAnyone observer fan-out
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-005 Tsumemon, EX9-066 Tai Kamiya & Matt Ishida, BT17-081 Tai Kamiya & Matt Ishida, EX9-019, EX9-012, AD1-001, AD1-010, EX4-061 Matt Ishida & Tai Kamiya
-- **Effect text:** "When any of your Digimon are played / When you play a [Gabumon] or [Agumon] …"
-- **What's missing:** `play_from_hand` → `fire_on_play` fires OnPlay for the played card only. No fan-out to other permanents' `OnEnterFieldAnyone` observers, and — critically — no fan-out to **hand-resident** effects (needed for EX9-019/EX9-012/AD1-001/AD1-010 whose hand cards listen for ally plays). `EffectTiming::OnEnterFieldAnyone` declared, never fired.
-- **Suggested API shape:** After `fire_on_play`, enqueue `OnEnterFieldAnyone` via `TriggerSource::PlayerBattleArea(player)` AND via a new `TriggerSource::HandObserver { controller }` that scans hand cards for matching observer effects. `EffectContext` exposes `triggering_permanent` / `triggering_card`.
-- **Workaround:** None — BLOCKED.
-- **Related:** OnDigivolve fan-out (sibling).
-
-### OnDigivolve / OnDnaDigivolve observer fan-out
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX4-039 Gabumon, EX4-061 Matt Ishida & Tai Kamiya, EX4-003 Tsunomon, BT17-081, EX9-019, EX9-012, AD1-001, AD1-010, EX4-003 Tsunomon
-- **Effect text:** "[Your Turn] [Once Per Turn] When one of your other Digimon digivolves, …" (and variants)
-- **What's missing:** `EffectTiming::OnDigivolve` / `OnDnaDigivolve` variants declared; the digivolve code path enqueues only `WhenDigivolving` on the digivolving card itself, never broadcasts to observers. No `TriggerSource::PlayerBattleAreaExcluding { except }` for "other Digimon" filter, and no hand-observer fan-out.
-- **Suggested API shape:** Broadcast `OnDigivolve` via `PlayerBattleArea(controller)` + hand observer fan-out after a successful digivolve; expose digivolved permanent to observer context.
-- **Workaround:** None — BLOCKED.
-- **Related:** OnAllyPlayed sibling; "Free-digivolve-from-hand on trigger" depends on this.
-
-### OnSecurityCheck / opponent-security-removed observer
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT14-001 Koromon
-- **Effect text:** "[Your Turn] When a card is removed from your opponent's security stack, ＜Draw 1＞"
-- **What's missing:** `EffectTiming::OnSecurityCheck` variant exists but is never enqueued. DigiEgg inherited effect on a field permanent needs the observer to fire across all effect-carriers on the controller's side. Also: non-combat security removal (effect-driven) needs the same enqueue.
-- **Suggested API shape:** Fire `OnSecurityCheck` in `resolve_security_card` + at every `player.security.pop`/`remove` site; `EffectContext.triggering_defender / triggering_card` available.
-- **Workaround:** None — BLOCKED.
-- **Related:** RUST_PYTHON_PARITY §2.5b.
-
-### OnSuspend observer firing (self + ally)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT15-101 MetalGarurumon (self), BT13-012 GeoGreymon (inherited — ally Tamer suspend)
-- **Effect text:** "[All Turns] [Once Per Turn] When this Digimon becomes suspended, you may unsuspend it." / "When one of your red or yellow Tamers becomes suspended, you may delete 1 of your opponent's Digimon with 3000 DP or less."
-- **What's missing:** `EffectTiming::OnSuspend` variant declared; no enqueue site. Every suspend-mutating path (`ctx.suspend`, combat attack declaration, Alliance declaration, Force/May-attack suspend) must fire it.
-- **Suggested API shape:** Enqueue `TriggerSource::PermanentSuspended { perm, previous_state }` at every mutation site; drainer dispatches `OnSuspend` self + ally observer fan-out.
-- **Workaround:** None — BLOCKED.
-- **Related:** Observer fan-out family.
-
-### OnHatch / OnMoveFromBreeding trigger
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT17-093 Tai Kamiya & Kari Kamiya (OnHatch), BT16-082 Ukkomon (OnMoveFromBreeding), P-123 Ukkomon (OnMoveFromBreeding)
-- **Effect text:** "When you hatch in the breeding area, …" / "When one of your Digimon moves from the breeding area to the battle area, …"
-- **What's missing:** `Game::hatch` and `Game::move_from_breeding` mutate state silently. No `EffectTiming::OnHatch` / `OnPromoteFromBreeding` variants and no enqueue sites. Also needed: `ctx.hatch(player)` helper (today only `Game::hatch`, not exposed through `EffectContext`).
-- **Suggested API shape:** Add variants + enqueue at both sites. Expose `ctx.hatch(player) -> bool`.
-- **Workaround:** None — BLOCKED.
-- **Related:** none.
-
-### EndOfAttack / WhenAttacking timings firing
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX9-021 Omnimon Alter-S (EndOfAttack), EX4-073 Omnimon Alter-B (WhenAttacking), EX1-068 Ice Wall! (WhenAttacking granted), ST20-11 WarGreymon (WhenAttacking)
-- **Effect text:** "[End of Attack] You may play 1 card with [Greymon] …" / "[When Attacking] By trashing up to 3 level 6 or higher cards …"
-- **What's missing:** Both `EffectTiming::EndOfAttack` and `EffectTiming::WhenAttacking` are enum variants but never fired by combat. `Effect::when_attacking(card)` builder constructor doesn't exist. DCGO fires WhenAttacking per attack-start (distinct from OnAttack mandatory declaration).
-- **Suggested API shape:** In `combat.rs::advance_pending_attack`, after OnAttack fires, enqueue `WhenAttacking` on the attacker; enqueue `EndOfAttack` at the tail of attack resolution before EndOfBattle modifier clear. Add matching builder constructors.
-- **Workaround:** None — BLOCKED (OnAttack is mandatory; WhenAttacking is optional — conflating loses fidelity).
-- **Related:** RUST_ENGINE_API.md §9.
-
-### Ally-observer triggering context (attacker / defender / played card accessor)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT14-001 Koromon, BT22-005 Tsumemon, EX4-039, EX4-061, EX9-066, EX9-019, and every observer-trigger card above.
-- **Effect text:** "When one of your Digimon with the [Unidentified] or [CS] trait is played …"
-- **What's missing:** `EffectContext` has no `triggering_permanent` / `triggering_card` / `triggering_defender` / `leave_cause` accessors. Observers can't inspect the event they're responding to.
-- **Suggested API shape:** Extend `EffectContext` with `triggering_permanent: Option<PermanentHandle>`, `triggering_card: Option<CardSource>`, `triggering_player: Option<PlayerId>`, `triggering_defender: Option<PermanentHandle>`, populated per-enqueue.
-- **Workaround:** None — BLOCKED.
-- **Related:** RUST_PYTHON_PARITY §2.5g.
-
-### Delayed one-shot turn-scheduled trigger
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT1-090 Gravity Crush
-- **Effect text:** "At end of turn, lose 2 memory."
-- **What's missing:** A scheduler for one-shot triggers installed from a resolving Option effect; survives the source leaving all zones; fires once at the scheduled phase.
-- **Suggested API shape:** `ctx.schedule_delayed_trigger(timing, once: true, effect: Effect)` storing to a per-player list consumed at phase transition.
-- **Workaround:** None — BLOCKED.
-- **Related:** Option play flow.
-
-### Replacement effect: prevent battle deletion by paying a cost
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX5-015 Gabumon (X Antibody)
-- **Effect text:** "[All Turns] [Once Per Turn] When this Digimon … would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion."
-- **What's missing:** No pre-deletion interrupt in `combat.rs::resolve_pending_battle`; deletion is atomic. `CannotBeDestroyedByBattle` modifier is unconditional and can't gate on paying a cost.
-- **Suggested API shape:** New `EffectTiming::WouldBeDeletedInBattle`; `resolve_pending_battle` enqueues per-combatant with `cause = Battle`, suspends the combat state machine on a `PendingSelection`, paired `ctx.prevent_deletion()` primitive.
-- **Workaround:** None — BLOCKED.
-- **Related:** Evade keyword sibling gap; general replacement-effect infrastructure.
-
-### Suspend-self as activation cost (pay-cost builder hook)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX9-066 Tai Kamiya & Matt Ishida, EX4-061 Matt Ishida & Tai Kamiya, BT17-081 Tai Kamiya & Matt Ishida, BT21-102 Tai Kamiya, BT17-093 Tai Kamiya & Kari Kamiya, BT5-092 Nokia Shiramine, BT13-012 GeoGreymon, ST21-13
-- **Effect text:** "by suspending this Tamer, …"
-- **What's missing:** `ctx.suspend` exists but the cost shape — "prompt controller to consent, pay cost iff suspend succeeds, otherwise skip effect" — isn't modeled. `Effect::optional()` handles yes/no but doesn't bind to a state-mutating cost atomic with the effect.
-- **Suggested API shape:** `EffectBuilder::pay_cost_suspend_self()` + generalized `.pay_cost(|ctx| bool)` that aborts the process if returns false.
-- **Workaround:** Check `is_suspended` in condition + manually suspend in process; scatters cost logic, muddy cost-vs-effect atomicity.
-- **Related:** BeforePayCost family.
-
-### Return-self-to-bottom-of-deck as activation cost
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-089 Mirei Mikagura, BT17-093 Tai Kamiya & Kari Kamiya, BT22-094 Yuugo Kamishiro, BT21-102 Tai Kamiya
-- **Effect text:** "By returning this Tamer to the bottom of the deck, …"
-- **What's missing:** Depends on "Return permanent to bottom of deck" primitive + the cost-builder hook above.
-- **Suggested API shape:** `.pay_cost_return_self_to_deck_bottom()` on `EffectBuilder`.
-- **Workaround:** None — BLOCKED.
-- **Related:** Return-to-bottom-of-deck gap; suspend-as-cost gap.
-
-### Multi-target permanent selection (pick N distinct)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT15-101 MetalGarurumon (3 opp Digimon/Tamers), AD1-014 MetalGarurumon (N per 2 tamer-colors), ST20-11 WarGreymon (N per 2 tamer-colors), BT20-102 Omnimon (X Antibody) (cross-player pick-one)
-- **Effect text:** "3 of your opponent's Digimon and Tamers can't suspend until the end of their turn."
-- **What's missing:** `select_*` helpers are single-pick. No N-pick with per-pick filter, no "pick one of either player" variant.
-- **Suggested API shape:** `ctx.select_multi_permanent(prompt, of_player, count, is_optional, filter, on_resolve)` + `ctx.select_any_permanent(prompt, filter, callback)` spanning both sides.
-- **Workaround:** Callback chaining loses "distinct" invariant without manual bookkeeping.
-- **Related:** Budgeted multi-select below.
-
-### Budgeted multi-select ("delete up to N cost-worth")
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX4-073 Omnimon Alter-B
-- **Effect text:** "Then, delete up to 6 play cost's total worth of their Digimon."
-- **What's missing:** New `SelectionKind::BudgetedMulti` parameterized by budget + cost-fn + per-pick callback + optional stop.
-- **Suggested API shape:** `ctx.select_budgeted(budget, cost_fn, is_optional_stop, callback_per_pick)`.
-- **Workaround:** Auto-delete lowest-cost violates §17.
-- **Related:** Multi-target selection.
-
-### Multi-pick from revealed pool with per-category filters
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-017 Gabumon, EX4-039 Gabumon, EX4-038 Agumon, BT12-059 Agumon, P-206 Digital Gate Open, EX5-015 Gabumon (X Antibody)
-- **Effect text:** "Add 1 Digimon card with [Greymon] and 1 Tamer card with [Tai Kamiya] among them to your hand."
-- **What's missing:** `select_reveal` is single-pick; multi-pick with per-slot filters and sequential state-shrinking must be chained manually, and there's no `add_revealed_to_hand` to connect the picks to the outcome. Auto-picking first legal card in each category violates §17.
-- **Suggested API shape:** `select_reveal_multi(categories: Vec<(filter, optional)>, callback)` or documented callback-chaining idiom with `add_revealed_to_hand`.
-- **Workaround:** None faithful today.
-- **Related:** Reveal-top-N + add-revealed-to-hand gaps.
-
-### Self-stack material trash by filter (up to N sources)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX4-073 Omnimon Alter-B
-- **Effect text:** "By trashing up to 3 level 6 or higher cards in this Digimon's digivolution cards, for each card trashed, activate the effect below."
-- **What's missing:** `select_material` is single-pick + doesn't trash. Needs up-to-N multi-pick with filter + per-trash sub-effect loop + `ctx.trash_material(target, source_index)`.
-- **Suggested API shape:** `ctx.select_materials_multi(target, max, filter, callback_per_pick, on_finish)` + `ctx.trash_material(target, source_index)`.
-- **Workaround:** Auto-trash top N violates §17.
-- **Related:** Budgeted multi-select.
-
-### Expiry::EndOfOpponentsNextTurn (duration spans opponent's entire next turn)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX1-068 Ice Wall!, AD1-014 MetalGarurumon (cross-turn CannotUnsuspend)
-- **Effect text:** "until the end of their next turn."
-- **What's missing:** `Expiry` has `EndOfTurn`, `EndOfOpponentsTurn`, `EndOfAttack`, `EndOfBattle`, `UntilLeaveField`, `Permanent` — but no "end of target's NEXT turn" variant. Played on the controller's own turn, `EndOfOpponentsTurn` fires at the wrong anchor.
-- **Suggested API shape:** Add `Expiry::EndOfTargetsNextTurn` or `Expiry::EndOfTurnAfter { player, turns_forward: u8 }` resolved by modifier sweep consulting turn-rotation.
-- **Workaround:** None — BLOCKED.
-- **Related:** Modifier registry.
-
-### Trait parsing in `CardData`
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-005 Tsumemon ([Unidentified]/[CS]), BT22-089 Mirei Mikagura ([CS]/[Holy Beast]/[Angel]/etc.), ST20-10 Agumon (Tamer trait union), BT22-099 Kuremi Detective Agency ([CS]), BT22-094 Yuugo Kamishiro ([CS]), BT22-084 Nokia Shiramine (named-trait aura), ST21-13 ([ADVENTURE])
-- **Effect text:** "with the [Unidentified] or [CS] trait" and similar
-- **What's missing:** `CardData.traits` exists as `Vec<String>` per resolve_deck, but `CardSource::has_trait(name)` / `Permanent::has_trait(name)` surface is not guaranteed available from every observer/filter closure, and traits aren't parsed from `effect_text` of cards that reference them (printed text only has keyword-style tags that need normalized parsing for reliable matching).
-- **Suggested API shape:** Ensure `CardSource::has_trait(data, name)` and `Permanent::has_trait(data, name)` exist; document case-insensitivity; ensure cards.json ingest populates traits.
-- **Workaround:** Manual iteration over `card_data.traits` in closures — verbose but likely viable once ingest is verified.
-- **Related:** RUST_PYTHON_PARITY §2.1b.
-
-### Per-permanent OPT activation recording (EffectContext sugar)
-- **Severity:** 🟡 PARTIAL — *ergonomics / sugar*
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT23-008 Greymon, BT15-020 Gabumon, and any `[Once Per Turn]` clause with compound sub-effects
-- **Effect text:** "[Main] [Once Per Turn] …"
-- **What's missing:** RUST_ENGINE_API §13 flags "`ctx.record_activation()` helper would be a nice follow-up". Today, effects with sub-selections that decouple cost-payment from resolution can't control OPT counter timing cleanly.
-- **Suggested API shape:** `ctx.record_activation()` and `ctx.activation_count()` keyed on the slot.
-- **Workaround:** Reach into `Permanent::record_activation` — works, violates curated-API discipline.
-- **Related:** RUST_ENGINE_API §13.
-
-### Dual-timing composite clause ("[When Digivolving] [When Attacking] …")
-- **Severity:** 🟡 PARTIAL — *ergonomics / sugar*
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** ST20-11 WarGreymon, BT15-020 Gabumon, others
-- **Effect text:** "[When Digivolving] [When Attacking] Delete 1 of your opponent's lowest DP Digimon."
-- **What's missing:** `EffectBuilder::process` closure is `Fn + Send + Sync + 'static` (not Clone); a single closure can't be installed in two `Effect` records without manual `Arc`. Ergonomics.
-- **Suggested API shape:** `EffectBuilder::on_timings(&[EffectTiming])` stamping multiple `Effect` records sharing an `Arc`'d process closure.
-- **Workaround:** Duplicate closure body in two Effects; viable, risk of drift.
-- **Related:** `effect.rs`.
-
-### Aggregate filter helpers (lowest DP / lowest level / highest DP with tie-break)
-- **Severity:** 🟡 PARTIAL — *ergonomics / sugar*
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-013 WarGreymon (lowest DP), BT22-026 MetalGarurumon (lowest level), AD1-012 CresGarurumon (lowest level), ST20-11 (lowest DP), EX10-010 (Raid highest DP tie-break)
-- **Effect text:** "Delete 1 of your opponent's Digimon with the lowest DP."
-- **What's missing:** `select_opponent_permanent` accepts a filter; scripts must pre-compute min/max externally. No convenience helpers. Works today via inline iteration.
-- **Suggested API shape:** `ctx.select_opp_permanent_by_min(|perm| extractor, prompt, callback)` / `_by_max`.
-- **Workaround:** Inline iteration is faithful.
-- **Related:** none.
+- **Card(s):** BT17-102 Greymon ("[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards.")
+- **Effect text:** As above.
+- **What's missing:** `Permanent::contains_card_name` already walks the stack for self-checks, but external name lookups on this permanent from other cards see only the top card's printed name. No "virtual name overlay" mechanism that synthesizes additional names for external queries (e.g., another Tamer's aura that checks "[Koromon]" should see the overlay names).
+- **Suggested API shape:** `Effect::declarative(card).name_overlay_from_sources(|src, data| src.level(data).map_or(false, |l| l <= 3))`; update all name-lookup surfaces (aura filters, inherited-effect name checks, trait-from-name derivations) to union overlays into the lookup set.
+- **Workaround:** None — BLOCKED for external observers that query names on this permanent.
+- **Related:** "Named-target declarative aura".
 
 ### Decode keyword (play from own digivolution stack without paying cost on non-battle leave)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-015 Omnimon
-- **Effect text:** "＜Decode (Red/Black Lv.3)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 Red or Black Level 3 Digimon card from its digivolution cards without paying the cost.)"
-- **What's missing:** Combines (a) `OnLeaveFieldNonBattle` replacement timing, (b) `ctx.play_from_materials` free-play, (c) select-source helper with filter. All are unbuilt.
-- **Suggested API shape:** Composed across existing gaps.
-- **Workaround:** None — BLOCKED.
-- **Related:** OnLeaveField cause, Play-from-materials, Selection family.
+- **Card(s):** BT22-015 Omnimon ("＜Decode (Red/Black Lv.3)＞ — When this Digimon would leave the battle area other than in battle, you may play 1 Red or Black Level 3 Digimon card from its digivolution cards without paying the cost.")
+- **Effect text:** As above.
+- **What's missing:** Composite of three primitives already tracked above: (a) `WhenWouldBeDeleted` / leave-field replacement framework with cause-discriminator (Battle vs Effect vs other); (b) `SelectSource` helper for choosing which material card to play; (c) a new `ctx.play_material_without_paying(target, source_index)` that pops a `CardSource` from the triggering permanent's `card_sources` and instantiates it as a fresh battle-area permanent firing OnPlay without memory cost.
+- **Suggested API shape:** `Keyword::Decode(Vec<Color>, u8)` + a Decode-aware enqueue in the leave-field replacement path; `ctx.select_source(perm, filter, callback)`; `ctx.play_material_without_paying(source_perm, source_index)`.
+- **Workaround:** None — BLOCKED. Auto-selecting a material violates §17 no-approximations; faking a "top-of-stack" play misses the selection semantics of "any material card" which the card text grants.
+- **Related:** "WhenWouldBeDeleted / leave-field replacement-effect framework"; "Zone-manipulation: return-to-hand / return-to-deck / bounce self" (sibling for trash-stack-to-destination disposition); `select_source` is listed as 🔴-residual in RUST_PYTHON_PARITY §4.6d.
 
-### Grant attack permission after WhenDigivolving (inline unsuspend / "this Digimon may attack")
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT22-015 Omnimon ("Then, this Digimon may attack.")
-- **Effect text:** "Then, this Digimon may attack."
-- **What's missing:** After WhenDigivolving resolves, let the freshly-digivolved permanent attack this turn ignoring summoning sickness and (for this specific clause) memory-sign. `ModifierType::MayAttack` wired only for `EndOfTurnAction`; Rush covers summoning sickness but not negative memory; Blitz allows negative memory but semantically wrong keyword.
-- **Suggested API shape:** `ModifierType::MayAttackThisTurn` granting attack now regardless of memory sign + turn_played.
-- **Workaround:** Blitz grant is PARTIAL (wrong keyword).
-- **Related:** RUST_PYTHON_PARITY §4.3 / §4.6c.
+### Ergonomics partials
 
-### CannotPlayDigimonByEffect modifier (distinct from CannotPlayFromHand)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** BT8-097 Crimson Blaze
-- **Effect text:** "Your opponent can't play Digimon by effects until the end of their turn."
-- **What's missing:** `CannotPlayFromHand` covers player-initiated plays; does NOT cover effect-driven plays (`ctx.play_from_hand_free`, future `effect_play_from_deck`, `play_from_trash_free`). Needs a separate modifier + checkpoint at every effect_play_* site.
-- **Suggested API shape:** `ModifierType::CannotPlayDigimonByEffect` keyed by player; gated at every effect-initiated play site.
-- **Workaround:** None — BLOCKED.
-- **Related:** Free-play gaps.
+🟡 PARTIAL — *ergonomics / sugar*. These are expressible today but awkward; scripts currently reach around `EffectContext` or duplicate state. Filed to keep the authoring surface approachable as more cards land.
 
-### If-effect-didn't-resolve branch ("If this effect didn't return, …")
-- **Severity:** 🟡 PARTIAL — *primitive-with-fidelity-cost*
-- **Discovered in:** DNA Omnimon (2026-04-17)
-- **Card(s):** EX9-066 Tai Kamiya & Matt Ishida, BT16-082 Ukkomon (optional hatch tail)
-- **Effect text:** "You may return 1 Digimon card … If this effect didn't return, ＜Draw 1＞"
-- **What's missing:** Builder's `optional()` is pre-prompt; if declined the whole process is skipped with no else-branch. No `ctx.was_optional_declined()` / `on_decline` hook. `PendingSelection.on_decline` field exists but no builder exposes it.
-- **Suggested API shape:** Expose `select_*_with_decline(..., on_decline)`; or `select_*`'s callback takes `Option<usize>`.
-- **Workaround:** Track via closure-captured bool; depends on callback firing on decline, which is not guaranteed.
-- **Related:** Selection family.
+- **Per-permanent OPT activation recording** (BT23-008 Greymon, BT15-020 Gabumon, any `[Once Per Turn]` clause with compound sub-effects). `ctx.record_activation()` / `ctx.activation_count()` sugar over the existing `Permanent::record_activation` / `activation_count` methods, keyed by slot — flagged in RUST_ENGINE_API.md §13 as "nice follow-up".
+- **Dual-timing composite clause builder** (ST20-11 WarGreymon, BT15-020 Gabumon — "[When Digivolving] [When Attacking] …"). `EffectBuilder::on_timings(&[EffectTiming])` that stamps out multiple `Effect` records sharing an `Arc`'d process closure, avoiding manual closure duplication.
+- **Aggregate filter helpers** (BT22-013 lowest DP, BT22-026 lowest level, AD1-012 lowest level, ST20-11 lowest DP, EX10-010 Raid highest DP). `ctx.select_opp_permanent_min_by(|perm| extractor, …)` / `_max_by` sugar over the existing `select_opponent_permanent` filter closure — fully expressible today, just verbose.
+- **If-effect-didn't-resolve on-decline callback** (EX9-066 Tai Kamiya & Matt Ishida, BT16-082 Ukkomon optional hatch tail). `PendingSelection.on_decline` field exists; no builder exposes it. Either `select_*_with_decline(..., on_decline)` or making the callback take `Option<usize>` where `None` means declined. Marked *primitive-with-fidelity-cost* (not pure sugar): today's closure-captured-bool workaround depends on the callback firing synchronously in the no-valid-targets / declined cases, which isn't guaranteed.
 
 ## Deferred — verification / test coverage only
 
-Items where the existing primitive **likely works** but no behavioral test covers the specific pathway. Not engine gaps; filed here so they surface when the archetype moves to `/batch-implement-cards-rust` and a faithful DebugRunner test must be written. Do not count toward the BLOCKING / PARTIAL tallies above.
+Items where the existing primitive **likely works** but no behavioral test covers the specific pathway. Not engine gaps; filed here so they surface when the archetype moves to `/batch-implement-cards-rust` and a faithful DebugRunner test must be written. **Do not count toward BLOCKING / PARTIAL tallies.**
 
-- **Tamer play-from-security pipeline** — `ctx.play_from_security` was written against `CardKind::Digimon`; `CardKind::Tamer` routing through the same path + subsequent `[Your Turn]` / `[All Turns]` observers is unverified. Cards: BT17-081, BT22-089, BT5-092, EX9-066, ST20-15, EX4-061. See RUST_PYTHON_PARITY §2.5a, §2.5j.
-- **Option multi-color match semantics** — RUST_PYTHON_PARITY §4.2 implements color match; verify multi-color Options require at least one matching own-side permanent **per** printed color (intersection), not any-one (union). Card: BT17-095. See RUST_PYTHON_PARITY §4.2, §4.2b.
-- **Conditional inherited DP based on top-card name** — fully expressible today via `Effect::inherited(card).dp_modifier(n).condition(|ctx| ctx.source_permanent()...)`. Confirm the per-source walker passes the correct `source_permanent` into the read context. Cards: BT12-059, BT23-008.
+- **Tamer play-from-security pipeline** — `ctx.play_from_security` was written against `CardKind::Digimon`; `CardKind::Tamer` routing through the same path + subsequent `[Your Turn]` / `[All Turns]` observers is unverified. Cards: BT17-081 Tai Kamiya & Matt Ishida, BT22-089 Mirei Mikagura, BT5-092 Nokia Shiramine, EX9-066 Tai Kamiya & Matt Ishida, ST20-15 Island of Adventure, EX4-061 Matt Ishida & Tai Kamiya (DNA Omnimon). See RUST_PYTHON_PARITY §2.5a, §2.5j.
+- **Option multi-color match semantics** — RUST_PYTHON_PARITY §4.2 implements color match; verify multi-color Options require at least one matching own-side permanent **per** printed color (intersection), not any-one (union). Card: BT17-095 Miraculous Mega Knight (Red/Blue Option, DNA Omnimon). See RUST_PYTHON_PARITY §4.2, §4.2b.
+- **Conditional inherited DP based on top-card name** — fully expressible today via `Effect::inherited(card).dp_modifier(n).condition(|ctx| ctx.source_permanent().map_or(false, |p| p.contains_card_name("X", ctx.card_data())))`. Confirm the per-source walker passes the correct `source_permanent` into the read context. Cards: BT12-059 Agumon, BT23-008 Greymon (DNA Omnimon).
 
 ## Resolved gaps
 
-(none yet)
+_(None yet — this document was created on 2026-04-17.)_
