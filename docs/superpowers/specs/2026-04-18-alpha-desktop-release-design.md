@@ -145,12 +145,14 @@ Small, needed for the frontend design to work.
   interrupted mid-session by a refresh flow; nothing important is anchored
   to the guest `user_id` on the server (decks live client-side — see below),
   so losing the token is harmless.
-- **`POST /games` model resolution** — today `resolve_model_path` takes a
-  filename and expects it under a server-local directory. Extend to accept a
-  manifest-row ID, resolve it to the DO Spaces key, download to a server-side
-  cache (`/tmp/digimon-models/<sha256>.onnx`) on first use, and hand the
-  local path to `InteractiveGame`. Cache is keyed by sha256 so repeated
-  requests hit warm.
+- **`POST /models/{id}/prepare`** — new endpoint on the DB-coupled
+  `admin_models` public router that resolves a manifest row ID to a local
+  ONNX filename (downloading from DO Spaces on cache miss,
+  `/tmp/digimon-models/<sha256>.onnx`) and returns
+  `{filename, cached}`. `games.py` stays engine-only per Working Rule #11;
+  the frontend calls `prepare` first, then posts to the unchanged `/games`
+  with `player2_model=<returned filename>`. Cache is keyed by sha256 so
+  repeated requests hit warm.
 - **Matchmaking queue accepts a raw deck payload** — today
   `POST /matchmaking/queue` takes a `deck_id` and hits the DB. Add an
   alternative body shape that carries the deck inline (`main_deck`,
