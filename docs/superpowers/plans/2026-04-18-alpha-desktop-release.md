@@ -42,7 +42,7 @@
 
 ### Frontend — modify
 
-- `src-tauri/src/lib.rs` — register new deck-storage commands in the `.invoke_handler`
+- `src-tauri/src/main.rs` — register new deck-storage commands in the `.invoke_handler`
 - `frontend/src/stores/authStore.ts` — `hydrate()` delegates to the guest bootstrap on desktop
 - `frontend/src/components/auth/AuthGuard.tsx` — on desktop, gate on "guest token exists" rather than "user is logged in"
 - `frontend/src/pages/HomePage.tsx` — five-card grid + AlphaBanner
@@ -812,7 +812,7 @@ git commit -m "feat(models): POST /models/{id}/prepare stages manifest ONNX for 
 
 **Files:**
 - Create: `src-tauri/src/deck_storage.rs`
-- Modify: `src-tauri/src/lib.rs`
+- Modify: `src-tauri/src/main.rs`
 
 - [ ] **Step 1: Write the Rust unit tests (inline)**
 
@@ -1019,7 +1019,7 @@ mod tests {
 
 - [ ] **Step 2: Register the module + commands**
 
-In `src-tauri/src/lib.rs`, at the top with the other `mod` declarations:
+In `src-tauri/src/main.rs`, at the top with the other `mod` declarations:
 
 ```rust
 mod deck_storage;
@@ -1055,7 +1055,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src-tauri/src/deck_storage.rs src-tauri/src/lib.rs src-tauri/Cargo.toml
+git add src-tauri/src/deck_storage.rs src-tauri/src/main.rs src-tauri/Cargo.toml
 git commit -m "feat(desktop): local deck storage via Tauri commands"
 ```
 
