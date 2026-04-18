@@ -55,4 +55,38 @@ describe('ensureGuestSession', () => {
     await expect(ensureGuestSession()).rejects.toThrow(/guest session/i);
     expect(localStorage.getItem(GUEST_TOKEN_KEY)).toBeNull();
   });
+
+  it('rolls back all guest keys if a setItem throws mid-sequence', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        access_token: 'jwt',
+        user_id: 'guest_partial',
+        display_name: 'Guest-PART',
+      }),
+    }) as unknown as typeof fetch;
+
+    const realSetItem = Storage.prototype.setItem;
+    let call = 0;
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+      this: Storage,
+      key: string,
+      value: string,
+    ) {
+      call += 1;
+      if (call === 3) {
+        throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+      }
+      return realSetItem.call(this, key, value);
+    });
+
+    await expect(ensureGuestSession()).rejects.toThrow(/Failed to persist guest session/);
+
+    expect(localStorage.getItem(GUEST_TOKEN_KEY)).toBeNull();
+    expect(localStorage.getItem(GUEST_USER_ID_KEY)).toBeNull();
+    expect(localStorage.getItem(GUEST_NAME_KEY)).toBeNull();
+
+    spy.mockRestore();
+  });
 });

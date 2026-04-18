@@ -1268,7 +1268,7 @@ export interface GuestSession {
   displayName: string;
 }
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 interface GuestResponse {
   access_token: string;
@@ -2159,7 +2159,7 @@ Create `frontend/.env.desktop`:
 
 ```
 VITE_BUILD_TARGET=desktop
-VITE_API_BASE_URL=https://api.digimon-tcg.example
+VITE_API_URL=https://api.digimon-tcg.example
 VITE_MODELS_MANIFEST_URL=https://api.digimon-tcg.example
 ```
 

@@ -19,7 +19,7 @@ export interface GuestSession {
   displayName: string;
 }
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 interface GuestResponse {
   access_token: string;
@@ -40,9 +40,18 @@ export async function ensureGuestSession(): Promise<GuestSession> {
     throw new Error(`Failed to mint guest session (${resp.status})`);
   }
   const body = (await resp.json()) as GuestResponse;
-  localStorage.setItem(GUEST_TOKEN_KEY, body.access_token);
-  localStorage.setItem(GUEST_USER_ID_KEY, body.user_id);
-  localStorage.setItem(GUEST_NAME_KEY, body.display_name);
+  try {
+    localStorage.setItem(GUEST_TOKEN_KEY, body.access_token);
+    localStorage.setItem(GUEST_USER_ID_KEY, body.user_id);
+    localStorage.setItem(GUEST_NAME_KEY, body.display_name);
+  } catch (e) {
+    // Partial writes would orphan the guest identity on next boot — if any
+    // key write fails, roll back all three so the next launch starts clean.
+    localStorage.removeItem(GUEST_TOKEN_KEY);
+    localStorage.removeItem(GUEST_USER_ID_KEY);
+    localStorage.removeItem(GUEST_NAME_KEY);
+    throw new Error(`Failed to persist guest session: ${e instanceof Error ? e.message : String(e)}`);
+  }
   return {
     token: body.access_token,
     userId: body.user_id,
