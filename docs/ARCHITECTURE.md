@@ -326,6 +326,34 @@ engine contract before the download starts so a tensor-shape change in
 - `frontend/src/api/rustGameApi.ts`, `deckApi.ts`, `desktopModelsApi.ts`: Tauri-`invoke` adapters
 - `frontend/src/pages/ModelsPage.tsx`: manifest browser, download progress, per-seat model selection
 
+### Publishing Models (Ops)
+
+Models land on desktop clients through the hosted API's `/admin/models` +
+`/models/manifest.json` endpoints, backed by DigitalOcean Spaces (S3-compatible
+object storage). Admin publish flow:
+
+1. `POST /admin/models` — admin creates a pending row and receives a presigned
+   PUT URL (signature-v4, 15-min expiry, `ACL=public-read`).
+2. Admin PUTs the exported `.onnx` directly to the presigned URL.
+3. `POST /admin/models/{id}/confirm` — backend streams the object once, records
+   SHA256 + size, inspects the ONNX to capture `tensor_size` / `action_space_size`,
+   and transitions the row to `uploaded`.
+4. `PATCH /admin/models/{id}` with `{"published": true}` — only accepted once
+   the row is in `uploaded` state.
+5. Desktop clients `GET /models/manifest.json`, filtered to published +
+   uploaded rows, each entry carrying an absolute download URL.
+
+Required env vars on the hosted API: `SPACES_ENDPOINT`, `SPACES_BUCKET`,
+`SPACES_REGION`, `SPACES_KEY`, `SPACES_SECRET`. Set `SPACES_CDN_URL` to a
+Spaces CDN base (e.g.
+`https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com`) to serve manifest
+downloads through the edge cache; when unset, the manifest falls back to the
+path-style origin URL (`{SPACES_ENDPOINT}/{bucket}/{key}`). The desktop client
+treats the manifest URL as opaque — switching between origin and CDN requires
+no client change because SHA256 verification matches byte-for-byte either way.
+See [ENVIRONMENT.md → Model publishing](ENVIRONMENT.md#model-publishing--digitalocean-spaces)
+for the full reference and `.env.example` for the seed block.
+
 ### Working Rules for Desktop
 
 1. The Tauri build must not link any Python runtime. All gameplay, inference, and deck tooling dispatch through Tauri `invoke()` into `digimon-engine`.

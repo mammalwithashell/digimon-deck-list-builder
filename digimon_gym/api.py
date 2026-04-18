@@ -49,10 +49,13 @@ async def lifespan(app: FastAPI):
     if training_enabled:
         await training_job_worker.start()
     matchmaking_enabled = os.getenv("MATCHMAKING_DISABLED", "0") != "1"
-    if matchmaking_enabled:
+    # Sweep only serves ranked rating-window expansion; skip it when ranked
+    # is gated off for alpha.
+    sweep_enabled = matchmaking_enabled and matchmaking.ranked_enabled()
+    if sweep_enabled:
         await matchmaking.start_sweep()
     yield
-    if matchmaking_enabled:
+    if sweep_enabled:
         await matchmaking.stop_sweep()
     if training_enabled:
         await training_job_worker.stop()
