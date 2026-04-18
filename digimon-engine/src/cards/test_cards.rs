@@ -308,6 +308,117 @@ impl CardEffect for Test022 {
     }
 }
 
+/// TEST-023: "[Security] (Optional) Trash 1 card from your hand, draw 2."
+/// Pilot for §2.5j re-entrant security-selection. SecuritySkill installs
+/// a `select_hand(optional)` and returns; callback trashes + draws.
+pub struct Test023;
+impl CardEffect for Test023 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::security(card)
+            .name("[Security] (Opt) Trash hand, draw 2")
+            .process(|ctx| {
+                let me = ctx.player;
+                ctx.select_hand(me, "Trash a hand card", true, |_g, _i| true, |ctx, hi| {
+                    let me = ctx.player;
+                    let p = ctx.game.player_mut(me);
+                    if hi < p.hand.len() {
+                        let c = p.hand.remove(hi);
+                        p.trash.push(c);
+                    }
+                    ctx.draw(me, 2);
+                });
+            })
+            .build()]
+    }
+}
+
+/// TEST-024: "[On Security Check] Gain 1 memory."
+/// Pilot for §2.5b OnSecurityCheck observer.
+pub struct Test024;
+impl CardEffect for Test024 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_security_check(card)
+            .name("[OnSecCheck] +1 memory")
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
+
+/// TEST-025: "[Security] Trash 1 hand card; then play this from security."
+/// Pilot for pause + play_from_security.
+pub struct Test025;
+impl CardEffect for Test025 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::security(card)
+            .name("[Security] Pause then play_from_security")
+            .process(|ctx| {
+                let me = ctx.player;
+                ctx.select_hand(me, "Trash a hand card", false, |_g, _i| true, |ctx, hi| {
+                    let me = ctx.player;
+                    let p = ctx.game.player_mut(me);
+                    if hi < p.hand.len() {
+                        let c = p.hand.remove(hi);
+                        p.trash.push(c);
+                    }
+                    ctx.play_from_security();
+                });
+            })
+            .build()]
+    }
+}
+
+/// TEST-026: "[Security] (condition=false) Gain 5 memory."
+/// Pilot for §2.5h — condition is skipped for SecuritySkill.
+pub struct Test026;
+impl CardEffect for Test026 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::security(card)
+            .name("[Security] Gain 5 (false cond)")
+            .condition(|_| false)
+            .process(|ctx| ctx.gain_memory(5))
+            .build()]
+    }
+}
+
+/// TEST-027: "[Security] If ctx.attacker populated + turn_player matches,
+/// gain 7 memory." Pilot for §2.5g EffectContext enrichment.
+pub struct Test027;
+impl CardEffect for Test027 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::security(card)
+            .name("[Security] Verify ctx.attacker")
+            .process(|ctx| {
+                if let Some(a) = ctx.attacker {
+                    if ctx.turn_player == a.player {
+                        ctx.gain_memory(7);
+                    }
+                }
+            })
+            .build()]
+    }
+}
+
+/// TEST-028: "[Security] Pause twice (nested select_hand)."
+/// Pilot for nested selections during security resolve.
+pub struct Test028;
+impl CardEffect for Test028 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::security(card)
+            .name("[Security] Nested pause")
+            .process(|ctx| {
+                let me = ctx.player;
+                ctx.select_hand(me, "First", true, |_g, _i| true, |ctx, _| {
+                    let me = ctx.player;
+                    ctx.gain_memory(1);
+                    ctx.select_hand(me, "Second", true, |_g, _i| true, |ctx, _| {
+                        ctx.gain_memory(2);
+                    });
+                });
+            })
+            .build()]
+    }
+}
+
 /// TEST-008: "End of your turn: Lose 3 memory."
 /// Paired with TEST-006 in drainer tests to disambiguate resolution
 /// order from final-state aggregates.
@@ -342,6 +453,12 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-020", Arc::new(Test020));
     registry.insert("TEST-021", Arc::new(Test021));
     registry.insert("TEST-022", Arc::new(Test022));
+    registry.insert("TEST-023", Arc::new(Test023));
+    registry.insert("TEST-024", Arc::new(Test024));
+    registry.insert("TEST-025", Arc::new(Test025));
+    registry.insert("TEST-026", Arc::new(Test026));
+    registry.insert("TEST-027", Arc::new(Test027));
+    registry.insert("TEST-028", Arc::new(Test028));
 
     // Suppress unused warning on ModifierType (referenced via add_dp_modifier helper).
     let _ = ModifierType::ChangeDp;
