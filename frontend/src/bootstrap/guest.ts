@@ -1,0 +1,51 @@
+/**
+ * Anonymous guest-session bootstrap for the desktop alpha build.
+ *
+ * On first launch, POST /auth/guest and cache the JWT + display name in
+ * localStorage. On subsequent launches, the cached token is reused.
+ *
+ * Policy: we never silently re-mint a token on 401. Losing the guest
+ * user_id silently mid-session would be surprising; if a 401 comes back
+ * for a decodable token, the caller surfaces it as an auth error.
+ */
+
+export const GUEST_TOKEN_KEY = 'guest_access_token';
+export const GUEST_USER_ID_KEY = 'guest_user_id';
+export const GUEST_NAME_KEY = 'guest_display_name';
+
+export interface GuestSession {
+  token: string;
+  userId: string;
+  displayName: string;
+}
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
+
+interface GuestResponse {
+  access_token: string;
+  user_id: string;
+  display_name: string;
+}
+
+export async function ensureGuestSession(): Promise<GuestSession> {
+  const cachedToken = localStorage.getItem(GUEST_TOKEN_KEY);
+  const cachedId = localStorage.getItem(GUEST_USER_ID_KEY);
+  const cachedName = localStorage.getItem(GUEST_NAME_KEY);
+  if (cachedToken && cachedId && cachedName) {
+    return { token: cachedToken, userId: cachedId, displayName: cachedName };
+  }
+
+  const resp = await fetch(`${API_BASE}/auth/guest`, { method: 'POST' });
+  if (!resp.ok) {
+    throw new Error(`Failed to mint guest session (${resp.status})`);
+  }
+  const body = (await resp.json()) as GuestResponse;
+  localStorage.setItem(GUEST_TOKEN_KEY, body.access_token);
+  localStorage.setItem(GUEST_USER_ID_KEY, body.user_id);
+  localStorage.setItem(GUEST_NAME_KEY, body.display_name);
+  return {
+    token: body.access_token,
+    userId: body.user_id,
+    displayName: body.display_name,
+  };
+}
