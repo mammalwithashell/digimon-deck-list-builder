@@ -1009,4 +1009,4 @@ class ManifestResponse(BaseModel):
 
 class PrepareModelResponse(BaseModel):
     filename: str
-    cached: bool
+    downloaded: bool

@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import AIModel
-from digimon_gym.engine.model_utils import (
+from digimon_gym.storage.model_resolver import (
     resolve_manifest_model_path,
     _manifest_cache_dir,
 )
@@ -71,8 +71,9 @@ async def test_resolve_manifest_writes_to_sha_keyed_cache(db_session, tmp_path, 
         return expected_sha, len(payload)
 
     with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_download):
-        path_str = await resolve_manifest_model_path(db_session, model_id)
+        path_str, downloaded = await resolve_manifest_model_path(db_session, model_id)
 
+    assert downloaded is True
     cached = Path(path_str)
     assert cached.exists()
     assert cached.parent == _manifest_cache_dir()
@@ -103,10 +104,12 @@ async def test_resolve_manifest_hits_cache_on_second_call(db_session, tmp_path, 
         return expected_sha, len(payload)
 
     with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_download):
-        await resolve_manifest_model_path(db_session, model_id)
-        await resolve_manifest_model_path(db_session, model_id)
+        _, dl1 = await resolve_manifest_model_path(db_session, model_id)
+        _, dl2 = await resolve_manifest_model_path(db_session, model_id)
 
     assert calls["n"] == 1, "second call should hit the on-disk cache"
+    assert dl1 is True
+    assert dl2 is False
 
 
 @pytest.mark.asyncio
@@ -144,9 +147,67 @@ async def test_prepare_model_returns_filename_and_caches(
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["filename"] == f"{sha}.onnx"
-    assert body["cached"] is True
+    assert body["downloaded"] is True
     # The file is under the configured models dir so /games can resolve it.
     assert (tmp_path / body["filename"]).exists()
+
+
+@pytest.mark.asyncio
+async def test_prepare_model_reports_cache_hit_on_second_call(
+    client: AsyncClient, db_session, tmp_path, monkeypatch
+) -> None:
+    model_id = str(_uuid.uuid4())
+    payload = _fake_onnx_bytes()
+    sha = hashlib.sha256(payload).hexdigest()
+    db_session.add(AIModel(
+        id=model_id, name="t", model_type="mlp",
+        tensor_size=1375, action_space_size=2168,
+        spaces_key=f"models/{model_id}/policy.onnx",
+        file_sha256=sha, file_size_bytes=len(payload),
+        state="uploaded", published=True,
+    ))
+    await db_session.commit()
+    monkeypatch.setenv("MANIFEST_MODEL_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("ONNX_MODELS_DIR", str(tmp_path))
+
+    def fake_dl(key, dest):
+        Path(dest).write_bytes(payload)
+        return sha, len(payload)
+
+    with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_dl) as m:
+        r1 = await client.post(f"/models/{model_id}/prepare")
+        r2 = await client.post(f"/models/{model_id}/prepare")
+
+    assert r1.json()["downloaded"] is True
+    assert r2.json()["downloaded"] is False
+    assert m.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_resolve_manifest_rejects_sha_mismatch(db_session, tmp_path, monkeypatch) -> None:
+    model_id = str(_uuid.uuid4())
+    claimed_sha = "a" * 64  # intentional mismatch
+    db_session.add(AIModel(
+        id=model_id, name="t", model_type="mlp",
+        tensor_size=1375, action_space_size=2168,
+        spaces_key=f"models/{model_id}/policy.onnx",
+        file_sha256=claimed_sha, file_size_bytes=10,
+        state="uploaded", published=True,
+    ))
+    await db_session.commit()
+    monkeypatch.setenv("MANIFEST_MODEL_CACHE_DIR", str(tmp_path))
+
+    def fake_dl(key, dest):
+        Path(dest).write_bytes(b"different-bytes")
+        return hashlib.sha256(b"different-bytes").hexdigest(), 15
+
+    with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_dl):
+        with pytest.raises(FileNotFoundError) as excinfo:
+            await resolve_manifest_model_path(db_session, model_id)
+
+    # No partial file should remain at the final cache path.
+    assert not (tmp_path / f"{claimed_sha}.onnx").exists()
+    assert "sha" in str(excinfo.value).lower()
 
 
 @pytest.mark.asyncio

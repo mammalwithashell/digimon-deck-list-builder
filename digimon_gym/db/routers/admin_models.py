@@ -28,11 +28,9 @@ from digimon_gym.db.schemas import (
     ManifestResponse,
     PrepareModelResponse,
 )
-from digimon_gym.engine.model_utils import (
-    get_models_dir,
-    resolve_manifest_model_path,
-)
+from digimon_gym.engine.model_utils import get_models_dir
 from digimon_gym.storage import spaces
+from digimon_gym.storage.model_resolver import resolve_manifest_model_path
 
 admin_router = APIRouter(prefix="/admin/models", tags=["admin-models"])
 public_router = APIRouter(prefix="/models", tags=["models-public"])
@@ -406,7 +404,7 @@ async def prepare_model(
     calls: the file is keyed by sha256 and hits the cache.
     """
     try:
-        path = await resolve_manifest_model_path(db, model_id)
+        path, downloaded = await resolve_manifest_model_path(db, model_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -419,4 +417,4 @@ async def prepare_model(
             models_dir.mkdir(parents=True, exist_ok=True)
             import shutil
             shutil.copy2(path, target)
-    return PrepareModelResponse(filename=filename, cached=True)
+    return PrepareModelResponse(filename=filename, downloaded=downloaded)
