@@ -74,7 +74,10 @@ Rejected alternatives:
 
 - Tauri desktop build as the only release artifact.
 - Anonymous guest identity (`POST /auth/guest`) minted on first launch,
-  stored in `localStorage`, refreshed on 401.
+  stored in `localStorage`. Token is long-lived; no refresh flow needed.
+- Deck lists live **client-side** in Tauri `app_data_dir`, not on the
+  server. Matchmaking and server-side games take the deck as an inline
+  payload.
 - PvP via matchmaking (casual + ranked UI survives; ranked rating display is
   hidden until accounts land).
 - Vs-AI online — server-side inference against models in the DO Spaces
@@ -114,7 +117,16 @@ Rejected alternatives:
 - **`frontend/src/pages/LobbyPage.tsx`** — hide the Browse tab for alpha;
   keep Play (matchmaking), Create, Join.
 - **`frontend/src/pages/DeckBuilderPage.tsx`** — lock `game_mode` to
-  `standard`; remove the format picker.
+  `standard`; remove the format picker. Save/load path switches from the
+  hosted `/decks` API to the local deck store (below).
+- **`frontend/src/storage/deckStore.ts`** *(new)* — thin wrapper over a
+  Tauri command pair (`decks_list`, `decks_get`, `decks_put`, `decks_delete`)
+  backed by JSON files under `app_data_dir()/decks/`. Same `DeckSummary` /
+  `Deck` shapes the existing `deckApi.ts` returns, so the Lobby and Deck
+  Builder pages can swap the source behind a single import. No network
+  roundtrip, no server schema for guest decks, no token anchoring concern.
+- **`src-tauri/src/deck_storage.rs`** *(new)* — the Rust side of those
+  commands. JSON-on-disk is sufficient; lists are small (tens of decks).
 - **`frontend/src/components/layout/Layout.tsx`** — drop admin/training
   links from the side nav.
 - **`frontend/src/components/auth/AuthGuard.tsx`** — on desktop, gate on
@@ -129,25 +141,23 @@ Small, needed for the frontend design to work.
   row in a `guest_users` table (or a new `User.is_guest` flag on the
   existing `users` table — implementer's call) so `get_current_user` returns
   a usable object exposing `id`, `display_name`, and `rating` (default 1500)
-  to the matchmaking and deck routers. The token is long-lived on purpose:
-  the guest `user_id` is the anchor for their server-persisted decks, so
-  losing the token means losing the decks. A client that loses its token
-  creates a brand-new guest account on next launch; this is acceptable
-  data-loss for an alpha and mirrors "app uninstall = lost save".
-- **Guest decks reuse the existing deck API** — `POST /decks`, `GET /decks`,
-  `GET /decks/{id}` accept guest tokens unchanged. The `Deck.owner_id`
-  foreign key points at the guest user's row. No schema changes required if
-  guest and named users share the `users` table via `is_guest`; one added
-  column if they don't.
+  to the matchmaking router. The token is long-lived so the user isn't
+  interrupted mid-session by a refresh flow; nothing important is anchored
+  to the guest `user_id` on the server (decks live client-side — see below),
+  so losing the token is harmless.
 - **`POST /games` model resolution** — today `resolve_model_path` takes a
   filename and expects it under a server-local directory. Extend to accept a
   manifest-row ID, resolve it to the DO Spaces key, download to a server-side
   cache (`/tmp/digimon-models/<sha256>.onnx`) on first use, and hand the
   local path to `InteractiveGame`. Cache is keyed by sha256 so repeated
   requests hit warm.
-- **Matchmaking `/matchmaking/queue`** — no protocol change. Guests send a
-  `deck_id` pointing at a deck they POSTed via the normal deck API; the
-  existing lookup works because guest users own real `Deck` rows.
+- **Matchmaking queue accepts a raw deck payload** — today
+  `POST /matchmaking/queue` takes a `deck_id` and hits the DB. Add an
+  alternative body shape that carries the deck inline (`main_deck`,
+  `egg_deck`, `game_mode`), skipping the DB lookup. The tier classifier
+  already takes a card-ID list, so it runs against the inline payload
+  unchanged. Accounts-based flows can keep using `deck_id` when that lands
+  post-alpha.
 
 ## Error handling and edge cases
 
@@ -162,10 +172,10 @@ Small, needed for the frontend design to work.
   model…" spinner for up to ~15s before the WS starts streaming state.
   If the fetch takes longer, surface the error and let the user retry.
 - **Guest token missing or unreadable** — bootstrap mints a fresh one via
-  `POST /auth/guest`, creating a new guest user. A 401 on a *present,
-  decodable* token is not refreshed silently — it surfaces as an auth error,
-  since the expected case for a long-lived guest JWT is that it stays
-  valid. This preserves the "decks anchored to guest user_id" invariant.
+  `POST /auth/guest`, creating a new guest user. No data loss because decks
+  are local. A 401 on a *present, decodable* token surfaces as an auth
+  error rather than silently re-minting, so the user sees a real problem
+  rather than their identity quietly changing mid-session.
 - **Matchmaking WS disconnect** — existing ghost-ticket cleanup already
   drops the ticket on disconnect; no changes.
 
@@ -178,6 +188,9 @@ Small, needed for the frontend design to work.
   calling Tauri commands for the opponent.
 - **Frontend unit**: `ModelsPage` renders the correct button set per row
   state.
+- **Tauri unit** (`cargo test --manifest-path src-tauri/Cargo.toml`):
+  `deck_storage` round-trips a deck list through `app_data_dir`, deletes
+  are visible on the next list, malformed JSON on disk doesn't panic.
 - **Backend pytest**: `POST /auth/guest` mints a usable token and
   matchmaking accepts it.
 - **Backend pytest**: `POST /games` with a manifest_id triggers a Spaces
