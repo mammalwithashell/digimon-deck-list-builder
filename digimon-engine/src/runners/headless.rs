@@ -31,7 +31,6 @@ pub struct HeadlessRunner {
     verbose: bool,
     #[allow(dead_code)]
     record_actions: bool,
-    #[allow(dead_code)]
     record_tensors: bool,
     /// Recorder — `Some` when `record_actions` is true, `None` otherwise.
     recorder: Option<GameRecorder>,
@@ -93,6 +92,21 @@ impl HeadlessRunner {
             if r.initial_state().is_none() && self.game.mulligan_current_player().is_none() {
                 r.capture_initial_state(&self.game, (&self.deck1_ids, &self.deck2_ids));
             }
+        }
+
+        // Snapshot tensor BEFORE taking &mut self.recorder (avoids borrow
+        // conflict). Only snapshot after mulligan is complete, matching Python
+        // parity: headless_game.py:46-49 captures tensor before record_action.
+        let snapshot = if self.record_tensors
+            && self.recorder.is_some()
+            && self.game.mulligan_current_player().is_none()
+        {
+            Some((self.get_board_tensor(None), self.get_action_mask()))
+        } else {
+            None
+        };
+        if let (Some((t, m)), Some(r)) = (snapshot, self.recorder.as_mut()) {
+            r.record_tensor(pid, t, m);
         }
 
         let idx = self

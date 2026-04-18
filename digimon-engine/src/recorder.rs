@@ -155,7 +155,7 @@ impl GameRecorder {
             step_number: self.step_counter,
             player_id,
             action_id,
-            phase: format!("{:?}", game.current_phase),
+            phase: game.current_phase.py_name().to_string(),
             memory_before: game.memory,
             memory_after: game.memory,
             turn_number: game.turn_count,
