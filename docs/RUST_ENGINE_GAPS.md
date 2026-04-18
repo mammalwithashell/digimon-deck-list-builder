@@ -20,6 +20,7 @@ Each entry lists the cards that surfaced it, but the entry itself describes a re
 |---|---|---|---|---|---|
 | Medusamon | 2026-04-17 | — | — | — | — |
 | DNA Omnimon | 2026-04-17 | 64 | 1 | 4 | 59 |
+| TS Olympos | 2026-04-18 | 105 | 1 | 4 | 100 |
 
 ## At a glance
 
@@ -450,6 +451,156 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Dual-timing composite clause builder** (ST20-11 WarGreymon, BT15-020 Gabumon — "[When Digivolving] [When Attacking] …"). `EffectBuilder::on_timings(&[EffectTiming])` that stamps out multiple `Effect` records sharing an `Arc`'d process closure, avoiding manual closure duplication.
 - **Aggregate filter helpers** (BT22-013 lowest DP, BT22-026 lowest level, AD1-012 lowest level, ST20-11 lowest DP, EX10-010 Raid highest DP). `ctx.select_opp_permanent_min_by(|perm| extractor, …)` / `_max_by` sugar over the existing `select_opponent_permanent` filter closure — fully expressible today, just verbose.
 - **If-effect-didn't-resolve on-decline callback** (EX9-066 Tai Kamiya & Matt Ishida, BT16-082 Ukkomon optional hatch tail). `PendingSelection.on_decline` field exists; no builder exposes it. Either `select_*_with_decline(..., on_decline)` or making the callback take `Option<usize>` where `None` means declined. Marked *primitive-with-fidelity-cost* (not pure sugar): today's closure-captured-bool workaround depends on the callback firing synchronously in the no-valid-targets / declined cases, which isn't guaranteed.
+
+### `<Barrier>` keyword (battle-only leave-field replacement with security-trash cost)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** P-194 Aegiomon (face + inherited), BT24-034 Aegiomon (face + inherited), BT24-035 Gatomon (inherited), BT24-062 MasterBlimpmon (face), P-165 ShoeShoemon (inherited), BT24-039 Piximon (face), BT24-033 Salamon (inherited), EX11-019 Shoemon (inherited), BT24-024 Submarimon (face)
+- **Effect text:** "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)"
+- **What's missing:** `Keyword::Barrier` and `ModifierType::GrantBarrier` are declared in `enums.rs` but `combat.rs` never consults either — the keyword has no behavior. Barrier is a leave-field replacement scoped specifically to "deleted in battle" (cause = combat), paying the top security card as cost. Requires: (a) the leave-field replacement framework with a `cause = Battle` discriminator (existing gap); (b) `ctx.trash_top_security(player, 1)` as a cost-payment helper (listed under the security-stack-operations gap); (c) auto-emission from native-keyword parsing so face-printed Barrier works without per-card scripts; (d) inherited-stack application (Effect::inherited(card) + the replacement-framework body).
+- **Suggested API shape:** Built atop the "WhenWouldBeDeleted / leave-field replacement-effect framework" gap (cause = `Battle` branch). `Keyword::Barrier` + auto-emit `Effect::on_would_be_deleted(card).cause(Battle).optional().process(|ctx| { if ctx.trash_top_security(ctx.player, 1) > 0 { ctx.cancel_leave(); } })` at registry-build time when native keyword is parsed.
+- **Workaround:** "None — BLOCKED." Sibling keyword to `<Armor Purge>` (same framework, different cost shape — trash top of own security instead of trash top of self's digivolution stack).
+- **Related:** "WhenWouldBeDeleted / leave-field replacement-effect framework"; "`<Armor Purge>` keyword (leave-field replacement variant)"; "Native printed keyword parsing"; "Zone-manipulation: security stack operations".
+
+### `<Collision>` keyword (attack-scoped opposing Blocker aura + must-block enforcement)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-063 Locomon (face + inherited)
+- **Effect text:** "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)"
+- **What's missing:** Three sub-parts: (a) `Keyword::Collision` variant + native-printed parsing; (b) an attack-scoped aura that grants `Keyword::Blocker` to every opposing battle-area permanent for the duration of the current attack (aura scope = "all opponents of attacker's controller", expiry = `EndOfAttack`); (c) a **must-block-if-possible** compulsion that, during the Block interrupt window, forces an unsuspended opposing Blocker to block rather than making it optional. (c) inverts the Block interrupt's "may block" default into a "must block unless no legal blocker" rule.
+- **Suggested API shape:** `Keyword::Collision` + auto-emit a declarative attack-aura at native-keyword parse time. `AuraScope::OpposingBattleAreaDuringSelfAttack` + a `MustBlockIfPossible` flag consumed by the Block interrupt resolver — the defender's mask exposes block-only (skipping "decline block") whenever a legal blocker exists and the attacker has Collision.
+- **Workaround:** "None — BLOCKED." Per-attack grant of `GrantBlocker` to every opponent permanent is expressible once Block interrupts land, but the must-block compulsion has no representation in the mask/interrupt surface.
+- **Related:** "Native printed keyword parsing"; "Phase-granular turn timings"; RUST_PYTHON_PARITY §2.3 (combat interrupts); RUST_ENGINE_API.md §9 (Block / Counter / Alliance interrupt phases not yet wired).
+
+### `Keyword::Decoy` color-filter parameter + replacement-framework wiring
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** ST12-12 Sistermon Blanc
+- **Effect text:** "this Digimon gains ＜Decoy (Red/Black)＞ (When your other Red or Black Digimon would be deleted by an opponent's effect, you may delete this Digimon to prevent 1 of those Digimon's deletion.)"
+- **What's missing:** `Keyword::Decoy` in `enums.rs` is a unit variant with no payload. The card text specifies which colors of Digimon the Decoy protects; there is no way to encode the color filter. `Decoy` and `GrantDecoy` are also entirely absent from `combat.rs` — no resolution path consults either. Requires both the color-parameter and the leave-field replacement framework.
+- **Suggested API shape:** `Keyword::Decoy(Vec<Color>)` (or bitmask `u8` for copy-safety). Update `ModifierType::GrantDecoy` to carry the same payload. Replacement-framework hook filters candidate protected-ally slots by the color list. Native-keyword parsing emits `Decoy(colors)` when it parses `<Decoy (Red/Black)>` from card text.
+- **Workaround:** "None — BLOCKED." A parameterless Decoy overapplies (protects all colors) and still requires the unimplemented replacement framework.
+- **Related:** "WhenWouldBeDeleted / leave-field replacement-effect framework"; "Native printed keyword parsing".
+
+### Trash all digivolution cards of a permanent (unbounded stack-peel)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-040 Venusmon
+- **Effect text:** "Trash all digivolution cards of 1 of your opponent's Digimon."
+- **What's missing:** No primitive to pop the entire `card_sources` stack beneath the top card of a target permanent and route them to trash. `ctx.de_digivolve(target, n)` (itself a tracked gap) stops at the first Lv.3-or-lower source — this clause explicitly does NOT stop at Lv.3, so it is a distinct primitive. `delete_permanent` trashes the whole permanent including the top card. Preserves the top card as a vanilla Digimon.
+- **Suggested API shape:** `ctx.trash_all_digivolution_cards(target: PermanentHandle) -> u8` — drains the below-top sources to trash, preserves the top card, fires `OnTrash` per popped source.
+- **Workaround:** "None — BLOCKED." Looping `de_digivolve(target, 1)` stops at Lv.3 and silently drops lower sources; raw stack drain skips trash-routing and observer triggers.
+- **Related:** "De-Digivolve N primitive (single + mass)" (sibling primitive with bounded stopping rule).
+
+### Permanent-scoped modifier to suppress effect activation by timing
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT10-042 Venusmon ("opponent's Digimon with ＜Security A.＞ … can't activate [When Attacking] and [When Digivolving] effects"), BT24-040 Venusmon ("2 of their Digimon or Tamers can't suspend or activate [When Digivolving] effects")
+- **Effect text:** "can't activate [When Attacking] and [When Digivolving] effects" / "can't suspend or activate [When Digivolving] effects"
+- **What's missing:** No `ModifierType` variant gates a permanent's effects out of a specific `EffectTiming`. `ModifierRegistry` covers DP, suspension, targeting, destruction; no per-target suppression of specific triggered-ability timings. `effect_queue::enqueue_from_permanent` and the digivolve-flow trigger dispatch must consult this modifier when fanning triggered abilities. Permanent-scoped (distinct from the player-scoped registry gap) and timing-parametric.
+- **Suggested API shape:** `ModifierType::CannotActivateEffectsByTiming(EffectTiming)` applied via `ctx.add_modifier(target, ModifierType::CannotActivateEffectsByTiming(EffectTiming::WhenDigivolving), 1, Expiry::EndOfOpponentsTurn)`. Consult in every triggered-effect enqueue site; skip effects whose `timing` is suppressed. Or an aura form: `Effect::aura(card).filter(predicate).suppress_timings(&[WhenAttacking, WhenDigivolving])`.
+- **Workaround:** "None — BLOCKED." Over-applying `CannotBeAffected` blocks far more than the card's text allows; per-effect enable flags would race with dispatch.
+- **Related:** "Player-scoped modifier registry" (sibling, different scope); "Granted triggered ability — attach an Effect to another permanent".
+
+### Grant Security A. ±N modifier to a targeted permanent (parametric `SecurityAttackChange`)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT10-042 Venusmon, P-134 Shoemon
+- **Effect text:** "[When Digivolving] All of your opponent's Digimon gain ＜Security A. -1＞ until the end of your opponent's turn."
+- **What's missing:** `Keyword::SecurityAttackMinus(i8)` / `SecurityAttackPlus(i8)` and `ModifierType::SecurityAttackChange` exist in enums.rs, but (a) no primitive grants a parametric Security A. keyword to a target with an expiry (`grant_keyword` takes a plain `Keyword`, which accepts `SecurityAttackMinus(1)`, but the security-check pipeline doesn't appear to consume granted variants — only the modifier's i32 delta); (b) the security-check pipeline in `combat.rs` must sum both native and modifier-granted Security A. deltas on the attacker; (c) no iteration helper `ctx.for_each_opponent_permanent(|h| …)` for mass application.
+- **Suggested API shape:** `ctx.grant_security_attack_change(target, delta: i8, expiry)` wrapping `add_modifier(target, ModifierType::SecurityAttackChange, delta as i32, expiry)`. Plus `ctx.for_each_opponent_permanent(|h| …)` sugar for mass application (or an aura form for ongoing).
+- **Workaround:** Manual loop over `battle_area(opp_id)` at firing time covers the snapshot variant — fidelity-acceptable for WhenDigivolving cards. Aura form ("all opp Digimon have…") remains BLOCKED.
+- **Related:** "Named-target declarative aura (DP / keyword grants filtered by name/trait/level)"; "Native printed keyword parsing".
+
+### Play / digivolve origin context flag ("if played by effects", "if digivolved by this effect")
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-023 Calmaramon ("if played by effects, 1 of their Digimon or Tamers can't suspend"), BT14-033 Patamon ("If digivolved by this effect, you may place 1 yellow Vaccine card from hand to security bottom")
+- **Effect text:** "if played by effects, …" / "If digivolved by this effect, …"
+- **What's missing:** `EffectContext` carries no flag distinguishing action-initiated plays from effect-initiated plays, and no per-activation identifier for "digivolved by THIS effect" vs. any other effect-driven digivolve. Sibling to the `ctx.was_dna_digivolve()` need tracked inside the "Zone-manipulation: effect-initiated digivolve" gap.
+- **Suggested API shape:** Add `PlayCause { Action, Effect { source_card: CardHandle } }` threaded through `Game::play_from_hand` / `digivolve_from_hand`. Expose `ctx.was_played_by_effect()`, `ctx.was_digivolved_by_effect(self_source_card) -> bool` sugar. Fold into the same context struct as `was_dna_digivolve`.
+- **Workaround:** "None — BLOCKED." Auto-firing the rider unconditionally violates no-approximations; dropping it silently drops a clause.
+- **Related:** "Zone-manipulation: effect-initiated digivolve" (setter site); `ctx.was_dna_digivolve()` item within that entry.
+
+### Search-own-security-stack primitive (reveal full stack + select by filter)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT14-033 Patamon
+- **Effect text:** "Search your security stack." (full-stack reveal feeding a downstream filtered choice; must be followed by a shuffle)
+- **What's missing:** No `ctx.search_security(player, filter, callback)` prompt. Naive iteration would leak hidden-info through an unregistered `PendingSelection` and bypass mask emission. Distinct from `play_from_security` (which consumes the currently-revealed `pending_security` card on security-check resolution).
+- **Suggested API shape:** `ctx.search_own_security(prompt, filter, optional, callback: Fn(&mut Ctx, Option<usize>))` — pushes a full-stack selection, returns the chosen security index; downstream code pairs with `shuffle_security` to re-hide info.
+- **Workaround:** "None — BLOCKED." Mask-time exposure of security card IDs is a hidden-info correctness concern.
+- **Related:** "Zone-manipulation: security stack operations"; "Effect-initiated digivolve from security stack" (co-required for Patamon).
+
+### Effect-initiated digivolve from security stack (free, trait-filtered)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT14-033 Patamon
+- **Effect text:** "This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them [= searched security stack] without paying the cost."
+- **What's missing:** The existing "Zone-manipulation: effect-initiated digivolve" gap is framed around digivolving from the **hand**; its suggested `ctx.prompt_digivolve` reads the target out of `player.hand`. Patamon digivolves using a card pulled from the **security stack** — a source zone not covered by the existing API.
+- **Suggested API shape:** `ctx.prompt_digivolve_from_security(base, security_index, cost_override, ignore_reqs, callback)` — or extend the existing `prompt_digivolve` with a `source_zone: Zone` parameter. Must remove the chosen card from `player.security` (not hand), push onto `base`'s `card_sources`, fire `WhenDigivolving`, honor the search-then-shuffle ordering.
+- **Workaround:** "None — BLOCKED." Faking a hand transit (move security → hand → digivolve → discard leftover) violates no-approximations (wrong zones, wrong OnAddToHand/OnLoseSecurity fan-out).
+- **Related:** "Zone-manipulation: effect-initiated digivolve"; "Search-own-security-stack primitive".
+
+### `OnPlaceSecurity` / `OnAddedToSecurity` observer timing dispatch
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT14-033 Patamon (inherited "[Your Turn] [Once Per Turn] When a card is added to your security stack, gain 1 memory.")
+- **Effect text:** "When a card is added to your security stack, gain 1 memory."
+- **What's missing:** `EffectTiming::OnPlaceSecurity` is declared in `enums.rs:129` but has no fire sites. Every code path that pushes onto `Player.security` (setup, effect-driven place-top, Recovery +N, opponent-forced placement) must enqueue a fan-out to battle-area + inherited-stack observers. Sibling to `OnOpponentSecurityRemoved` — mirror primitive for addition events.
+- **Suggested API shape:** Fire `EffectTiming::OnPlaceSecurity` after each push onto `Player.security` from all entry points. Context `{player, count_added, cause: PlaceCause::{Setup, Recovery, EffectPlaceTop, EffectPlaceBottom, OpponentForced}}`. Fan-out to every battle-area + inherited-stack effect.
+- **Workaround:** "None — BLOCKED." Pure dispatch wiring; the enum variant already exists.
+- **Related:** "Global `OnOpponentSecurityRemoved` observer timing" (mirror event).
+
+### `OnDiscardSecurity` — effect-driven security-card trash trigger
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT13-106 Odin's Breath
+- **Effect text:** "When an effect trashes this card from the security stack, activate this card's [Main] effect."
+- **What's missing:** `OnLoseSecurity` fires unconditionally inside `resolve_security_card` (attack path) and `SecuritySkill` fires on the revealed card during attack checks. Neither models `OnDiscardSecurity`, which fires on the trashed security card only when removed by an **effect** (not by the normal attack reveal). Card should NOT trigger on attack-reveal (that fires SecuritySkill → [Security] re-activation) but SHOULD trigger when an effect trashes the top security card.
+- **Suggested API shape:** `EffectTiming::OnDiscardedFromSecurityByEffect`. Fire from `ctx.trash_top_security(player, n)` iterating each popped card's own effects with this timing; condition = "trash initiated by an effect object, not the attack engine".
+- **Workaround:** "None — BLOCKED." Even with `trash_top_security`, no mechanism fires the trashed card's observer.
+- **Related:** "Zone-manipulation: security stack operations"; "Option card play flow"; RUST_PYTHON_PARITY §2.5b (OnSecurityCheck).
+
+### `<Reboot>` keyword enforcement in opponent's unsuspend phase
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-058 Blimpmon (inherited `<Reboot>`)
+- **Effect text:** "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
+- **What's missing:** `Keyword::Reboot` and `ModifierType::GrantReboot` exist, but `game_phases.rs::begin_turn` calls only `player_mut(tp).unsuspend_all()` — no cross-player Reboot pass over the opposing battle area. Distinct from the native-keyword-parsing gap: even with Reboot correctly granted, there is no enforcement pass.
+- **Suggested API shape:** In `begin_turn`, after `unsuspend_all()` on the active player, iterate `player(opponent_id).battle_area`/breeding for permanents with `Keyword::Reboot` and unsuspend each. Also fire `EffectTiming::OnUnsuspend` once that timing is wired.
+- **Workaround:** "None — BLOCKED." Manual modifier grant doesn't help; the enforcement pass is absent.
+- **Related:** "Native printed keyword parsing" (prerequisite for automatic grant); "Observer timings tied to specific events" (OnUnsuspend).
+
+### Digivolution-stack source extraction (`pop_top_source` from named permanent)
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-093 Temple of Beginnings
+- **Effect text:** "You may place the top stacked card of any of your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card."
+- **What's missing:** No helper to extract a `CardSource` from the top of a specific permanent's `card_sources` for arbitrary re-routing. `ctx.de_digivolve` pops+trashes and does not return the extracted card. Needs `ctx.pop_top_digivolution_source(target) -> Option<CardSource>` that removes the topmost digivolution source (not the active top card), returning it for caller placement (e.g., to security top), with no `OnDeletion` fire since the card is moved not deleted.
+- **Suggested API shape:** `ctx.pop_top_digivolution_source(target: PermanentHandle) -> Option<CardSource>` — removes `card_sources.last()`, returns it for caller re-routing. Combined with `ctx.place_security_top(player, card)` from the security-stack-operations gap.
+- **Workaround:** "None — BLOCKED." Raw `battle_area[i].card_sources.pop()` skips any `OnLeaveField` / inherited-stack recomputation and breaks the curated-API contract.
+- **Related:** "Zone-manipulation: security stack operations"; "Zone-manipulation: return-to-hand / return-to-deck / bounce self".
+
+### Fixed attack target — `CannotBeRedirectedAsAttackTarget` modifier
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-062 MasterBlimpmon (inherited "[Your Turn] This Digimon's attack target can't change.")
+- **Effect text:** "[Your Turn] This Digimon's attack target can't change."
+- **What's missing:** No `ModifierType` gates Block/Raid/Collision target-redirection per permanent. `try_enter_block` and Raid redirect paths unconditionally rewrite `effective_target`. Distinct from `CannotBeAffected` (suppresses effect-driven mutations, not combat-interrupt paths).
+- **Suggested API shape:** `ModifierType::AttackTargetCannotChange`. In `try_enter_block` / `try_enter_raid` / any `effective_target` mutation site, guard: `if modifiers.has_modifier(declared_target, ModifierType::AttackTargetCannotChange) { skip redirect }`. Expose via `ctx.add_modifier(target, ..., Expiry::EndOfTurn)`.
+- **Workaround:** "None — BLOCKED." No scripting-surface equivalent prevents Block/Raid redirect.
+- **Related:** "Raid target-switch interrupt (scripting-surface, not mask-only)"; RUST_PYTHON_PARITY §2.3.
+
+### In-effect branch-choice selector (`select_effect_choice` / "choose one of N effects")
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** P-195 Inori Misono ("[On Play] Activate 1 of the effects below: ・…  ・…")
+- **Effect text:** "[On Play] Activate 1 of the effects below: ・You may play 1 [Elecmon] from hand without paying cost. ・1 of your Digimon may digivolve into [Aegiomon] in the hand without paying cost."
+- **What's missing:** No `ctx.select_effect_choice` primitive that presents a named menu of discrete branches and routes into the selected branch. `PendingSelection` covers zone-targeting but not abstract "which sub-effect" decisions. Auto-selecting violates §17; encoding as two independent optional effects changes semantics from "exactly one" to "at most one each".
+- **Suggested API shape:** `ctx.select_effect_choice(prompt, choices: Vec<(label, process_fn)>, callback)` — installs `SelectionKind::EffectChoice(n)` in `PendingSelection`; action space maps to `EFFECT_CHOICE_0..N` slots; on resolution routes into `choices[i].process(ctx)`.
+- **Workaround:** "None — BLOCKED." Two optional effects with a shared "already-chosen" flag corrupts the RL action distribution.
+- **Related:** "Selection: opponent-as-selecting-player, cross-side target, union-zone, DNA-pair" (same selection infrastructure class).
 
 ## Deferred — verification / test coverage only
 
