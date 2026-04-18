@@ -1,13 +1,19 @@
 //! Card effect registry — maps card_id strings to their CardEffect implementation.
 //!
-//! Each set has its own submodule that registers all its cards.
+//! Each set has its own submodule (e.g. `bt17/`) that registers all of its
+//! cards via a `register(registry)` fn. `build_registry()` calls every set's
+//! `register()` — one place to add a new set.
+//!
+//! Layout convention is one file per card, locked in in `src/cards/test/`:
+//! `cards/<set>/<card_id>.rs` exports a single `CardEffect` struct.
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::effect::CardEffect;
 
-pub mod test_cards;
+pub mod bt17;
+pub mod test;
 
 /// Registry of card_id -> CardEffect implementation.
 #[derive(Default)]
@@ -48,9 +54,10 @@ impl CardEffectRegistry {
 }
 
 /// Build the default registry with all built-in card effects.
-/// Test cards are always included; production cards register from set modules.
+/// Test cards are always included; production set modules register their cards here.
 pub fn build_registry() -> CardEffectRegistry {
     let mut registry = CardEffectRegistry::new();
-    test_cards::register(&mut registry);
+    test::register(&mut registry);
+    bt17::register(&mut registry);
     registry
 }

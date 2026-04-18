@@ -6,6 +6,8 @@ pub mod card_source;
 pub mod permanent;
 pub mod player;
 pub mod game;
+pub mod game_actions;
+pub mod game_phases;
 pub mod action;
 pub mod phases;
 pub mod tensor;
