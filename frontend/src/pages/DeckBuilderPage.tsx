@@ -7,9 +7,9 @@ import { ValidationPanel } from '@/components/deckbuilder/ValidationPanel';
 import { ImportExport } from '@/components/deckbuilder/ImportExport';
 import { CardDetail } from '@/components/shared/CardDetail';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
+import { useAuthStore } from '@/stores/authStore';
 import * as deckApi from '@/api/deckApi';
 import * as deckStore from '@/storage/deckStore';
-import { GUEST_USER_ID_KEY } from '@/bootstrap/guest';
 
 // Desktop saves decks to the local Tauri-backed store; web keeps hitting
 // the hosted `/decks` API. The tested-cards allowlist + raw-validate calls
@@ -64,7 +64,7 @@ export function DeckBuilderPage() {
         // Single write path on desktop: `putDeck` creates when `id` is
         // empty and updates when present. Stamp the guest owner_id from
         // the bootstrap cache so decks get associated with the caller.
-        const ownerId = localStorage.getItem(GUEST_USER_ID_KEY) ?? 'guest';
+        const ownerId = useAuthStore.getState().user?.id ?? 'guest';
         const saved = await deckStore.putDeck({
           id: deckId ?? undefined,
           owner_id: ownerId,
