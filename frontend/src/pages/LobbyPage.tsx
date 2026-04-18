@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import { useWebSocketGame } from '@/hooks/useWebSocketGame';
+import { useMatchmaking } from '@/hooks/useMatchmaking';
 import * as lobbyApi from '@/api/lobbyApi';
 import * as deckApiMod from '@/api/deckApi';
 import type { LobbyGame } from '@/api/lobbyApi';
+import type { QueueType, TierFilter } from '@/api/matchmaking';
+import type { DeckSummary } from '@/types/deck';
 
 export function LobbyPage() {
   const navigate = useNavigate();
@@ -16,7 +19,62 @@ export function LobbyPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tab state
-  const [tab, setTab] = useState<'create' | 'join' | 'browse'>('create');
+  const [tab, setTab] = useState<'play' | 'create' | 'join' | 'browse'>('play');
+
+  // Play (matchmaking queue) tab state
+  const [playQueueType, setPlayQueueType] = useState<QueueType>('casual');
+  const [playDeckId, setPlayDeckId] = useState('');
+  const [playTierFilter, setPlayTierFilter] = useState<TierFilter>('any');
+  const matchmaking = useMatchmaking();
+
+  // When a match is found, join the synthesized lobby by code and navigate
+  // to the game — same handoff as the manual "Join by code" flow.
+  useEffect(() => {
+    if (matchmaking.status !== 'matched' || !matchmaking.match || !playDeckId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const deck = await deckApiMod.getDeck(playDeckId);
+        const result = await lobbyApi.joinLobby(matchmaking.match!.join_code, {
+          deck: [...deck.egg_deck, ...deck.main_deck],
+        });
+        if (!cancelled) {
+          navigate(`/game/${result.game_id}?mode=pvp&player=${result.player_id}`);
+        }
+      } catch (err) {
+        console.error('Failed to join matched game:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [matchmaking.status, matchmaking.match, playDeckId, navigate]);
+
+  // Drive a local waited-seconds counter between WS heartbeats so the
+  // "Searching..." display updates every second without server pings.
+  const [localWaited, setLocalWaited] = useState(0);
+  useEffect(() => {
+    if (matchmaking.status !== 'waiting' && matchmaking.status !== 'connecting') {
+      setLocalWaited(0);
+      return;
+    }
+    const interval = setInterval(() => setLocalWaited((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [matchmaking.status]);
+  useEffect(() => {
+    if (matchmaking.waitedSeconds > 0) {
+      setLocalWaited(Math.floor(matchmaking.waitedSeconds));
+    }
+  }, [matchmaking.waitedSeconds]);
+
+  const handleQueue = useCallback(() => {
+    if (!playDeckId) return;
+    void matchmaking.enqueue({
+      queue_type: playQueueType,
+      deck_id: playDeckId,
+      opponent_tier_filter: playQueueType === 'casual' ? playTierFilter : undefined,
+    });
+  }, [matchmaking, playDeckId, playQueueType, playTierFilter]);
 
   // Create tab state
   const [selectedDeckId, setSelectedDeckId] = useState('');
@@ -146,7 +204,7 @@ export function LobbyPage() {
 
       {/* Tabs */}
       <div className="mb-6 flex gap-2">
-        {(['create', 'join', 'browse'] as const).map((t) => (
+        {(['play', 'create', 'join', 'browse'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -156,10 +214,36 @@ export function LobbyPage() {
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            {t === 'create' ? 'Create Game' : t === 'join' ? 'Join Game' : 'Browse Games'}
+            {t === 'play'
+              ? 'Play'
+              : t === 'create'
+                ? 'Create Game'
+                : t === 'join'
+                  ? 'Join Game'
+                  : 'Browse Games'}
           </button>
         ))}
       </div>
+
+      {/* Play (matchmaking queue) Tab */}
+      {tab === 'play' && (
+        <PlayTab
+          decks={savedDecks}
+          queueType={playQueueType}
+          onQueueType={setPlayQueueType}
+          deckId={playDeckId}
+          onDeckId={setPlayDeckId}
+          tierFilter={playTierFilter}
+          onTierFilter={setPlayTierFilter}
+          onQueue={handleQueue}
+          onCancel={() => void matchmaking.cancel()}
+          status={matchmaking.status}
+          match={matchmaking.match}
+          waitedSeconds={localWaited}
+          ratingWindow={matchmaking.ratingWindow}
+          errorMsg={matchmaking.error}
+        />
+      )}
 
       {/* Create Tab */}
       {tab === 'create' && (
@@ -308,6 +392,160 @@ export function LobbyPage() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+
+function tierBadge(tier: string | null | undefined): { label: string; className: string } {
+  if (tier === 'meta') return { label: 'meta', className: 'bg-red-700 text-red-100' };
+  if (tier === 'rogue') return { label: 'rogue', className: 'bg-amber-700 text-amber-100' };
+  if (tier === 'jank') return { label: 'jank', className: 'bg-emerald-700 text-emerald-100' };
+  return { label: 'unclassified', className: 'bg-gray-700 text-gray-300' };
+}
+
+
+interface PlayTabProps {
+  decks: DeckSummary[];
+  queueType: QueueType;
+  onQueueType: (q: QueueType) => void;
+  deckId: string;
+  onDeckId: (id: string) => void;
+  tierFilter: TierFilter;
+  onTierFilter: (f: TierFilter) => void;
+  onQueue: () => void;
+  onCancel: () => void;
+  status: ReturnType<typeof useMatchmaking>['status'];
+  match: ReturnType<typeof useMatchmaking>['match'];
+  waitedSeconds: number;
+  ratingWindow: number | null;
+  errorMsg: string | null;
+}
+
+function PlayTab(props: PlayTabProps) {
+  const {
+    decks, queueType, onQueueType, deckId, onDeckId, tierFilter, onTierFilter,
+    onQueue, onCancel, status, match, waitedSeconds, ratingWindow, errorMsg,
+  } = props;
+  const selectedDeck = decks.find((d) => d.id === deckId);
+  const badge = selectedDeck ? tierBadge(selectedDeck.meta_tier) : null;
+  const isQueued = status === 'waiting' || status === 'connecting';
+  const isTerminal = status === 'matched' || status === 'error' || status === 'cancelled';
+
+  if (isQueued) {
+    const label = queueType === 'ranked'
+      ? `Searching ranked — window ±${ratingWindow ?? 50}`
+      : 'Searching casual...';
+    return (
+      <div className="rounded border border-blue-600 bg-blue-900/20 p-8 text-center">
+        <div className="mb-2 text-lg font-medium text-white">{label}</div>
+        <div className="mb-4 font-mono text-3xl text-blue-300">
+          {Math.floor(waitedSeconds / 60)}:{String(waitedSeconds % 60).padStart(2, '0')}
+        </div>
+        <button
+          onClick={onCancel}
+          className="rounded bg-red-700 px-4 py-2 text-white hover:bg-red-600"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  if (status === 'matched' && match) {
+    return (
+      <div className="rounded border border-green-600 bg-green-900/20 p-8 text-center">
+        <div className="mb-2 text-lg font-medium text-white">Match found!</div>
+        {match.opponent.display_name ? (
+          <p className="mb-2 text-gray-300">vs {match.opponent.display_name}</p>
+        ) : null}
+        <p className="text-sm text-gray-400">Connecting to game…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {isTerminal && errorMsg ? (
+        <div className="rounded border border-red-600 bg-red-900/20 p-3 text-sm text-red-200">
+          {errorMsg}
+        </div>
+      ) : null}
+
+      <div>
+        <label className="mb-1 block text-sm text-gray-300">Queue</label>
+        <div className="flex gap-2">
+          {(['casual', 'ranked'] as const).map((q) => (
+            <button
+              key={q}
+              onClick={() => onQueueType(q)}
+              className={`flex-1 rounded px-4 py-2 text-sm font-medium ${
+                queueType === q
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              {q === 'casual' ? 'Casual' : 'Ranked'}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          {queueType === 'casual'
+            ? 'Filtered by opponent tier; no rating changes.'
+            : 'Matched by skill rating; rating updates after the game.'}
+        </p>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm text-gray-300">Your Deck</label>
+        <select
+          value={deckId}
+          onChange={(e) => onDeckId(e.target.value)}
+          className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+        >
+          <option value="">Select a deck...</option>
+          {decks.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name} {d.meta_tier ? `— ${d.meta_tier}` : ''}
+            </option>
+          ))}
+        </select>
+        {selectedDeck && badge ? (
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <span className={`rounded px-2 py-0.5 font-medium ${badge.className}`}>
+              {badge.label}
+            </span>
+            {selectedDeck.meta_archetype ? (
+              <span className="text-gray-400">→ {selectedDeck.meta_archetype}</span>
+            ) : null}
+            <span className="text-gray-500">· format: {selectedDeck.game_mode}</span>
+          </div>
+        ) : null}
+      </div>
+
+      {queueType === 'casual' && (
+        <div>
+          <label className="mb-1 block text-sm text-gray-300">Opponent</label>
+          <select
+            value={tierFilter}
+            onChange={(e) => onTierFilter(e.target.value as TierFilter)}
+            className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+          >
+            <option value="any">Any — face anyone</option>
+            <option value="same">Same tier as my deck</option>
+            <option value="meta_only">Meta only — try to beat the best</option>
+            <option value="jank_only">Jank only — off-meta safe space</option>
+          </select>
+        </div>
+      )}
+
+      <button
+        onClick={onQueue}
+        disabled={!deckId}
+        className="w-full rounded bg-blue-600 px-6 py-3 text-base font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+      >
+        Find Match
+      </button>
     </div>
   );
 }
