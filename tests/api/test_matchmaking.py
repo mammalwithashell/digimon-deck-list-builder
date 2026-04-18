@@ -34,8 +34,9 @@ async def db_engine():
 
 
 @pytest.fixture
-async def client(db_engine):
+async def client(db_engine, monkeypatch):
     from digimon_gym.api import app
+    from digimon_gym.db.routers import decks as decks_router
     from digimon_gym.routers.matchmaking import reset_state as reset_mm
     from digimon_gym.routers.lobby import pending_games, code_to_game
 
@@ -43,6 +44,11 @@ async def client(db_engine):
     reset_mm()
     pending_games.clear()
     code_to_game.clear()
+
+    # Alpha-gate bypass: decks router rejects cards outside
+    # tested_cards.json. Matchmaking tests use BT14-002 + synthetic IDs —
+    # short-circuit the gate.
+    monkeypatch.setattr(decks_router, "out_of_set_cards", lambda _cards: [])
 
     session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -433,12 +439,17 @@ class TestMatchmakingWebSocket:
         from digimon_gym.api import app
         from digimon_gym.db.database import get_db
         from digimon_gym.db.models import Base
+        from digimon_gym.db.routers import decks as decks_router
         from digimon_gym.routers.lobby import pending_games, code_to_game
         from digimon_gym.routers.matchmaking import reset_state as reset_mm
 
         reset_mm()
         pending_games.clear()
         code_to_game.clear()
+
+        # Alpha-gate bypass; restored in teardown.
+        original_gate = decks_router.out_of_set_cards
+        decks_router.out_of_set_cards = lambda _cards: []
 
         loop = _asyncio.new_event_loop()
         _asyncio.set_event_loop(loop)
@@ -466,6 +477,7 @@ class TestMatchmakingWebSocket:
 
         def teardown():
             app.dependency_overrides.clear()
+            decks_router.out_of_set_cards = original_gate
             reset_mm()
             pending_games.clear()
             code_to_game.clear()

@@ -403,12 +403,16 @@ class TestMetaTierGating:
     def _stub_classifier(self, monkeypatch):
         """Install a deterministic mini-library so tests don't depend on
         the live deck_library.json (which drifts as tournament data
-        updates). Uses the same fingerprint shape the real loader produces."""
+        updates). Uses the same fingerprint shape the real loader produces.
+        Also bypasses the alpha-release tested-cards gate so synthetic IDs
+        like META-001 round-trip through POST /decks."""
         from digimon_gym.classifier import deck_tagger
         from digimon_gym.classifier.meta_tier import (
             ArchetypeFingerprint,
             ClassifierLibrary,
         )
+        from digimon_gym.db.routers import decks as decks_router
+        monkeypatch.setattr(decks_router, "out_of_set_cards", lambda _cards: [])
 
         lib = ClassifierLibrary(
             archetypes=[
