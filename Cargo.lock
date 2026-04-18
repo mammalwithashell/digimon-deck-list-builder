@@ -583,6 +583,7 @@ dependencies = [
  "digimon-engine",
  "numpy",
  "pyo3",
+ "serde_json",
 ]
 
 [[package]]

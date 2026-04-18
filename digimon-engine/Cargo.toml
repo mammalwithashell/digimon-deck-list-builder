@@ -56,3 +56,7 @@ path = "tests/onnx_parity/main.rs"
 [[test]]
 name = "deck_tools"
 path = "tests/deck_tools/main.rs"
+
+[[test]]
+name = "ffi_parity"
+path = "tests/ffi_parity/main.rs"

@@ -74,6 +74,19 @@ impl Game {
         player.battle_area.push(perm);
         let field_index = player.battle_area.len() - 1;
 
+        // Emit Play event: permanent is on field, before OnPlay effects fire.
+        let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
+            .top_card()
+            .card_id(&self.card_data)
+            .to_string();
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Play {
+            seq,
+            player: player_id,
+            card_id: emitted_card_id,
+            field_index: field_index as u8,
+        });
+
         self.fire_on_play(player_id, field_index);
 
         Some(field_index)

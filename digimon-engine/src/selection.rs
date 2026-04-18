@@ -117,6 +117,55 @@ impl std::fmt::Debug for PendingSelection {
     }
 }
 
+/// Pure-data subset of `PendingSelection` — excludes the non-serializable
+/// `callback` / `on_decline` closures so this type is `Clone` + `Send` and
+/// can cross the FFI boundary. Matches the Python `pendingSelection` dict
+/// shape emitted by `digimon_gym/engine/game/serialization.py:338`.
+#[derive(Debug, Clone)]
+pub struct PendingSelectionView {
+    pub kind: SelectionKind,
+    pub selecting_player: PlayerId,
+    pub previous_phase: GamePhase,
+    pub valid_action_ids: Vec<u16>,
+    pub is_optional: bool,
+    pub prompt: String,
+    pub effect_choices: Option<Vec<EffectChoiceEntry>>,
+    pub source_card: CardHandle,
+    pub source_permanent: Option<PermanentHandle>,
+}
+
+impl PendingSelectionView {
+    /// Stable string form of `kind`, used for JSON/PyDict output. Debug
+    /// formatting is deliberate — every variant stringifies to its Rust
+    /// identifier so Python consumers can pattern-match without a shared
+    /// schema.
+    pub fn kind_str(&self) -> String {
+        format!("{:?}", self.kind)
+    }
+
+    /// Stable string form of `previous_phase`.
+    pub fn previous_phase_str(&self) -> String {
+        format!("{:?}", self.previous_phase)
+    }
+}
+
+impl PendingSelection {
+    /// Snapshot of the serializable fields for FFI / UI consumers.
+    pub fn view(&self) -> PendingSelectionView {
+        PendingSelectionView {
+            kind: self.kind,
+            selecting_player: self.selecting_player,
+            previous_phase: self.previous_phase,
+            valid_action_ids: self.valid_action_ids.clone(),
+            is_optional: self.is_optional,
+            prompt: self.prompt.clone(),
+            effect_choices: self.effect_choices.clone(),
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+        }
+    }
+}
+
 /// A triggered effect waiting to resolve. The queue holds these; the drainer
 /// picks one at a time, respecting turn-player-bundle-first ordering and
 /// giving the controller a `TriggerOrder` prompt whenever their bundle
