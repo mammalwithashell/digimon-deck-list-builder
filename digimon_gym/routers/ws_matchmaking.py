@@ -60,12 +60,13 @@ def _match_found_payload(ticket: mm.QueueTicket) -> dict:
 def _waiting_payload(ticket: mm.QueueTicket) -> dict:
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
-    win = mm.rating_window(ticket, now) if ticket.queue_type == "ranked" else None
-    return {
+    payload: dict = {
         "type": "waiting",
         "waited_seconds": (now - ticket.created_at).total_seconds(),
-        "rating_window": win,
     }
+    if ticket.queue_type == "ranked":
+        payload["rating_window"] = mm.rating_window(ticket, now)
+    return payload
 
 
 @router.websocket("/ws/matchmaking/{ticket_id}")
