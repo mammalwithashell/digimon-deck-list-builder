@@ -285,3 +285,20 @@ pub enum SkipDraw {
     /// No skip
     None,
 }
+
+/// Format / game-mode selector. Mirrors Python `digimon_gym.engine.data.enums.GameMode`.
+/// Maps to a `Rules` preset via `Rules::for_mode`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum GameMode {
+    Standard,
+    NoRestriction,
+    EdhCommander,
+    Titan,
+}
+
+/// Role-within-format for asymmetric formats. Currently only Titan uses it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TitanRole {
+    Boss,
+    Team,
+}

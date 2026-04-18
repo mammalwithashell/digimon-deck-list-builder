@@ -24,7 +24,7 @@ pub mod recorder;
 
 // Re-export key types at crate root
 pub use enums::*;
-pub use rules::Rules;
+pub use rules::{CardRestriction, Rules};
 pub use card_data::CardData;
 pub use card_registry::CardRegistry;
 pub use card_source::{CardHandle, CardSource};
