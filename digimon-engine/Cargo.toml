@@ -10,3 +10,39 @@ serde_json = "1"
 rand = "0.8"
 
 [dev-dependencies]
+
+# Tests are grouped by domain into 7 binaries. Each binary's entry point is
+# `tests/<domain>/main.rs`; sibling files are `mod`-imported and supply the
+# `#[test]` fns. Run a single domain with `cargo test --test <domain>`.
+#
+# Cargo does not auto-discover `tests/<dir>/main.rs`, so each domain needs
+# an explicit `[[test]]` entry here. When adding a new domain directory,
+# add a matching entry below.
+
+[[test]]
+name = "combat"
+path = "tests/combat/main.rs"
+
+[[test]]
+name = "selection"
+path = "tests/selection/main.rs"
+
+[[test]]
+name = "mask_and_tensor"
+path = "tests/mask_and_tensor/main.rs"
+
+[[test]]
+name = "phase_flow"
+path = "tests/phase_flow/main.rs"
+
+[[test]]
+name = "effects"
+path = "tests/effects/main.rs"
+
+[[test]]
+name = "infra"
+path = "tests/infra/main.rs"
+
+[[test]]
+name = "cards_behavioral"
+path = "tests/cards_behavioral/main.rs"

@@ -1,319 +1,34 @@
-//! EffectContext — the curated API surface for card effect scripts.
+//! Selection-prompt helpers on `EffectContext` — extracted from `mod.rs` for
+//! readability. These are the 11 player-choice primitives card scripts use to
+//! install a `PendingSelection`: field, hand, trash, material, reveal,
+//! security, effect-choice, plus `mark_security_face_up` and
+//! `play_from_security`.
 //!
-//! Card scripts mutate the game through this context (never directly).
-//! `EffectContext` wraps `&mut Game` for `process` closures; `EffectReadContext`
-//! wraps `&Game` for `condition` closures and tensor-time effect inspection.
-//! Both expose the same read-only query surface.
+//! The "no-approximations" contract (CLAUDE.md §17–18) lives here: every
+//! optional card choice surfaces through one of these helpers — no
+//! auto-selections, no silent drops. When the gap-closing roadmap adds
+//! new selection kinds (multi-select, ordered permutation, cross-player,
+//! budgeted multi-select), they land alongside the existing helpers in
+//! this file.
+//!
+//! After calling any of these helpers the effect's `process` closure must
+//! return — the callback fires later (when the game resolves the selection
+//! via `Game::resolve_selection`), and further mutations from within the
+//! original `process` would race with queue state.
+//!
+//! The filter runs **at install time** to produce `valid_action_ids`. It
+//! does not re-run at resolution; the selection is validated against that
+//! frozen set. Single-threaded engine, queue pauses while a selection is
+//! parked, so state cannot drift.
 
-use crate::card_data::CardData;
-use crate::card_source::{CardHandle, CardSource};
-use crate::enums::{Expiry, Keyword, ModifierType, PlayerId};
+use crate::card_source::CardSource;
+use crate::effect_context::EffectContext;
+use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
-use crate::modifiers::ModifierEntry;
-use crate::permanent::{Permanent, PermanentHandle};
-use crate::player::Player;
-use crate::rules::Rules;
-
-/// Read-only view of game state for effect condition closures.
-///
-/// Wraps `&Game` so conditions can be evaluated without a mutable borrow —
-/// which is required at tensor-build time (§3.1 / §3.2 parity fixes) to
-/// decide whether a conditional DP modifier currently contributes.
-pub struct EffectReadContext<'a> {
-    pub game: &'a Game,
-    pub source_card: CardHandle,
-    pub source_permanent: Option<PermanentHandle>,
-    pub player: PlayerId,
-}
-
-impl<'a> EffectReadContext<'a> {
-    pub fn new(
-        game: &'a Game,
-        source_card: CardHandle,
-        source_permanent: Option<PermanentHandle>,
-        player: PlayerId,
-    ) -> Self {
-        Self {
-            game,
-            source_card,
-            source_permanent,
-            player,
-        }
-    }
-
-    pub fn memory(&self) -> i16 {
-        self.game.memory
-    }
-
-    pub fn turn_count(&self) -> u16 {
-        self.game.turn_count
-    }
-
-    pub fn rules(&self) -> &Rules {
-        &self.game.rules
-    }
-
-    pub fn card_data(&self) -> &[CardData] {
-        &self.game.card_data
-    }
-
-    pub fn player(&self, id: PlayerId) -> &Player {
-        self.game.player(id)
-    }
-
-    pub fn my_player(&self) -> &Player {
-        self.game.player(self.player)
-    }
-
-    pub fn opponent_id(&self) -> PlayerId {
-        self.game.next_clockwise(self.player)
-    }
-
-    pub fn opponent(&self) -> &Player {
-        self.game.player(self.opponent_id())
-    }
-
-    pub fn opponents(&self) -> Vec<PlayerId> {
-        self.game.opponents(self.player)
-    }
-
-    pub fn battle_area(&self, id: PlayerId) -> &[Permanent] {
-        &self.game.player(id).battle_area
-    }
-
-    pub fn hand(&self, id: PlayerId) -> &[crate::card_source::CardSource] {
-        &self.game.player(id).hand
-    }
-
-    pub fn trash(&self, id: PlayerId) -> &[crate::card_source::CardSource] {
-        &self.game.player(id).trash
-    }
-
-    pub fn security_count(&self, id: PlayerId) -> usize {
-        self.game.player(id).security.len()
-    }
-
-    pub fn source_permanent(&self) -> Option<&Permanent> {
-        let h = self.source_permanent?;
-        let player = self.game.player(h.player);
-        player.battle_area.get(h.index as usize)
-    }
-}
-
-/// The context passed to every effect's `process` closure.
-/// For `condition` closures see `EffectReadContext`.
-pub struct EffectContext<'a> {
-    pub game: &'a mut Game,
-    /// Card whose effect is being resolved.
-    pub source_card: CardHandle,
-    /// The permanent containing the source card, if applicable.
-    pub source_permanent: Option<PermanentHandle>,
-    /// Player who controls the source.
-    pub player: PlayerId,
-}
+use crate::permanent::PermanentHandle;
+use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
 
 impl<'a> EffectContext<'a> {
-    pub fn new(
-        game: &'a mut Game,
-        source_card: CardHandle,
-        source_permanent: Option<PermanentHandle>,
-        player: PlayerId,
-    ) -> Self {
-        Self {
-            game,
-            source_card,
-            source_permanent,
-            player,
-        }
-    }
-
-    // ─── Read-only queries ────────────────────────────────────────────
-
-    pub fn memory(&self) -> i16 {
-        self.game.memory
-    }
-
-    pub fn turn_count(&self) -> u16 {
-        self.game.turn_count
-    }
-
-    pub fn rules(&self) -> &Rules {
-        &self.game.rules
-    }
-
-    pub fn card_data(&self) -> &[CardData] {
-        &self.game.card_data
-    }
-
-    pub fn player(&self, id: PlayerId) -> &Player {
-        self.game.player(id)
-    }
-
-    pub fn my_player(&self) -> &Player {
-        self.game.player(self.player)
-    }
-
-    /// First clockwise opponent (sugar for `opponents()[0]`).
-    pub fn opponent_id(&self) -> PlayerId {
-        self.game.next_clockwise(self.player)
-    }
-
-    pub fn opponent(&self) -> &Player {
-        self.game.player(self.opponent_id())
-    }
-
-    pub fn opponents(&self) -> Vec<PlayerId> {
-        self.game.opponents(self.player)
-    }
-
-    pub fn battle_area(&self, id: PlayerId) -> &[Permanent] {
-        &self.game.player(id).battle_area
-    }
-
-    pub fn hand(&self, id: PlayerId) -> &[crate::card_source::CardSource] {
-        &self.game.player(id).hand
-    }
-
-    pub fn trash(&self, id: PlayerId) -> &[crate::card_source::CardSource] {
-        &self.game.player(id).trash
-    }
-
-    pub fn security_count(&self, id: PlayerId) -> usize {
-        self.game.player(id).security.len()
-    }
-
-    pub fn source_permanent(&self) -> Option<&Permanent> {
-        let h = self.source_permanent?;
-        let player = self.game.player(h.player);
-        player.battle_area.get(h.index as usize)
-    }
-
-    /// Reborrow this mut context as a read-only context — for condition
-    /// closures, which take `&EffectReadContext`.
-    pub fn as_read(&self) -> EffectReadContext<'_> {
-        EffectReadContext {
-            game: self.game,
-            source_card: self.source_card,
-            source_permanent: self.source_permanent,
-            player: self.player,
-        }
-    }
-
-    // ─── Memory mutations ─────────────────────────────────────────────
-
-    pub fn gain_memory(&mut self, amount: i16) {
-        self.game.gain_memory(amount);
-    }
-
-    pub fn lose_memory(&mut self, amount: i16) {
-        let new_memory = self.game.memory - amount;
-        self.game.set_memory(new_memory);
-    }
-
-    pub fn set_memory(&mut self, value: i16) {
-        self.game.set_memory(value);
-    }
-
-    // ─── Card draw / trash ────────────────────────────────────────────
-
-    pub fn draw(&mut self, player: PlayerId, count: u8) -> u8 {
-        self.game.player_mut(player).draw_many(count)
-    }
-
-    /// Trash the top N cards of a player's deck.
-    pub fn trash_from_top(&mut self, player: PlayerId, count: u8) -> u8 {
-        let p = self.game.player_mut(player);
-        let mut trashed = 0;
-        for _ in 0..count {
-            if let Some(card) = p.deck.pop() {
-                p.trash.push(card);
-                trashed += 1;
-            } else {
-                break;
-            }
-        }
-        trashed
-    }
-
-    // ─── Field mutations ──────────────────────────────────────────────
-
-    pub fn delete_permanent(&mut self, target: PermanentHandle) {
-        let player = self.game.player_mut(target.player);
-        if (target.index as usize) < player.battle_area.len() {
-            player.delete_permanent(target.index as usize);
-            self.game.modifiers.clear_permanent(target);
-        }
-    }
-
-    pub fn suspend(&mut self, target: PermanentHandle) {
-        let player = self.game.player_mut(target.player);
-        if let Some(perm) = player.battle_area.get_mut(target.index as usize) {
-            perm.is_suspended = true;
-        }
-    }
-
-    pub fn unsuspend(&mut self, target: PermanentHandle) {
-        let player = self.game.player_mut(target.player);
-        if let Some(perm) = player.battle_area.get_mut(target.index as usize) {
-            perm.is_suspended = false;
-        }
-    }
-
-    // ─── Modifier registration ────────────────────────────────────────
-
-    pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
-        self.game.modifiers.add(
-            target,
-            ModifierEntry {
-                modifier: ModifierType::ChangeDp,
-                value,
-                expiry,
-                source_player: self.player,
-            },
-        );
-    }
-
-    pub fn add_modifier(
-        &mut self,
-        target: PermanentHandle,
-        modifier: ModifierType,
-        value: i32,
-        expiry: Expiry,
-    ) {
-        self.game.modifiers.add(
-            target,
-            ModifierEntry {
-                modifier,
-                value,
-                expiry,
-                source_player: self.player,
-            },
-        );
-    }
-
-    pub fn grant_keyword(
-        &mut self,
-        target: PermanentHandle,
-        keyword: Keyword,
-        expiry: Expiry,
-    ) {
-        self.game
-            .modifiers
-            .grant_keyword(target, keyword, expiry, self.player);
-    }
-
-    // ─── Selection prompts ────────────────────────────────────────────
-    //
-    // After calling one of these helpers the effect's `process` closure must
-    // return — the callback fires later (when the game resolves the
-    // selection via `Game::resolve_selection`), and any further mutations
-    // from within the original `process` would race with queue state.
-    //
-    // The filter runs **at install time** to produce `valid_action_ids`.
-    // It does not re-run at resolution; the selection is validated against
-    // that frozen set. Single-threaded engine, queue pauses while a
-    // selection is parked, so state cannot drift.
-
     /// Prompt `self.player` to pick a Digimon from their clockwise-next
     /// opponent's battle area. The `filter` decides which field slots are
     /// legal targets (called once per slot at install time).
@@ -344,8 +59,8 @@ impl<'a> EffectContext<'a> {
     {
         let target_player = self.game.next_clockwise(self.player);
         self.install_field_selection(
-            crate::selection::SelectionKind::OppField,
-            crate::enums::GamePhase::SelectTarget,
+            SelectionKind::OppField,
+            GamePhase::SelectTarget,
             target_player,
             prompt,
             is_optional,
@@ -370,8 +85,8 @@ impl<'a> EffectContext<'a> {
     {
         let target_player = self.player;
         self.install_field_selection(
-            crate::selection::SelectionKind::OwnField,
-            crate::enums::GamePhase::SelectTarget,
+            SelectionKind::OwnField,
+            GamePhase::SelectTarget,
             target_player,
             prompt,
             is_optional,
@@ -423,9 +138,9 @@ impl<'a> EffectContext<'a> {
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
-        self.game.current_phase = crate::enums::GamePhase::SelectHand;
-        self.game.pending_selection = Some(crate::selection::PendingSelection {
-            kind: crate::selection::SelectionKind::Hand,
+        self.game.current_phase = GamePhase::SelectHand;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Hand,
             selecting_player,
             previous_phase,
             valid_action_ids,
@@ -480,9 +195,9 @@ impl<'a> EffectContext<'a> {
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
-        self.game.current_phase = crate::enums::GamePhase::SelectTrash;
-        self.game.pending_selection = Some(crate::selection::PendingSelection {
-            kind: crate::selection::SelectionKind::Trash,
+        self.game.current_phase = GamePhase::SelectTrash;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Trash,
             selecting_player,
             previous_phase,
             valid_action_ids,
@@ -520,9 +235,7 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
-        use crate::action::space::{
-            SOURCES_PER_FIELD, SOURCE_SELECT_START,
-        };
+        use crate::action::space::{SOURCES_PER_FIELD, SOURCE_SELECT_START};
 
         let field_index = of_permanent.index as u16;
         let source_count = match self
@@ -554,9 +267,9 @@ impl<'a> EffectContext<'a> {
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
-        self.game.current_phase = crate::enums::GamePhase::SelectMaterial;
-        self.game.pending_selection = Some(crate::selection::PendingSelection {
-            kind: crate::selection::SelectionKind::Material,
+        self.game.current_phase = GamePhase::SelectMaterial;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Material,
             selecting_player,
             previous_phase,
             valid_action_ids,
@@ -590,7 +303,6 @@ impl<'a> EffectContext<'a> {
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
         use crate::action::space::{HAND_EFFECT_START, HAND_MAIN_LIMIT};
-        use crate::selection::EffectChoiceEntry;
 
         if labels.is_empty() {
             return;
@@ -616,9 +328,9 @@ impl<'a> EffectContext<'a> {
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
-        self.game.current_phase = crate::enums::GamePhase::EffectChoice;
-        self.game.pending_selection = Some(crate::selection::PendingSelection {
-            kind: crate::selection::SelectionKind::EffectChoice,
+        self.game.current_phase = GamePhase::EffectChoice;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::EffectChoice,
             selecting_player,
             previous_phase,
             valid_action_ids,
@@ -676,9 +388,9 @@ impl<'a> EffectContext<'a> {
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
-        self.game.current_phase = crate::enums::GamePhase::SelectReveal;
-        self.game.pending_selection = Some(crate::selection::PendingSelection {
-            kind: crate::selection::SelectionKind::Reveal,
+        self.game.current_phase = GamePhase::SelectReveal;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Reveal,
             selecting_player,
             previous_phase,
             valid_action_ids,
@@ -745,9 +457,9 @@ impl<'a> EffectContext<'a> {
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
-        self.game.current_phase = crate::enums::GamePhase::SelectSecurity;
-        self.game.pending_selection = Some(crate::selection::PendingSelection {
-            kind: crate::selection::SelectionKind::Security,
+        self.game.current_phase = GamePhase::SelectSecurity;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Security,
             selecting_player,
             previous_phase,
             valid_action_ids,
@@ -823,8 +535,8 @@ impl<'a> EffectContext<'a> {
     /// target half of the action space — matches Python's strategy).
     fn install_field_selection<F, C>(
         &mut self,
-        kind: crate::selection::SelectionKind,
-        phase: crate::enums::GamePhase,
+        kind: SelectionKind,
+        phase: GamePhase,
         target_player: PlayerId,
         prompt: &str,
         is_optional: bool,
@@ -834,7 +546,7 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, PermanentHandle) -> bool,
         C: FnOnce(&mut EffectContext<'_>, PermanentHandle) + Send + Sync + 'static,
     {
-        use crate::action::space::{encode_attack, ATTACK_START};
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
 
         let target_count = self.game.player(target_player).battle_area.len();
         let mut valid_action_ids: Vec<u16> = Vec::new();
@@ -867,7 +579,7 @@ impl<'a> EffectContext<'a> {
 
         let previous_phase = self.game.current_phase;
         self.game.current_phase = phase;
-        self.game.pending_selection = Some(crate::selection::PendingSelection {
+        self.game.pending_selection = Some(PendingSelection {
             kind,
             selecting_player,
             previous_phase,
@@ -882,7 +594,7 @@ impl<'a> EffectContext<'a> {
                 // we always encode with attacker=0, the modulus isolates
                 // target_field_index directly.
                 let offset = action_id.saturating_sub(ATTACK_START);
-                let target_index = (offset % crate::action::space::TARGETS_PER_ATTACKER) as u8;
+                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
                 let h = PermanentHandle {
                     player: target_player,
                     index: target_index,
@@ -893,40 +605,5 @@ impl<'a> EffectContext<'a> {
             }),
             on_decline: None,
         });
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::card_data::CardData;
-    use crate::rules::Rules;
-    use std::collections::HashMap;
-
-    fn min_db() -> HashMap<String, CardData> {
-        let json = r#"{
-            "BT1-001": {
-                "card_id": "BT1-001", "card_name_eng": "Koromon",
-                "card_effect_class_name": "BT1_001", "play_cost": 0, "dp": -1,
-                "level": 2, "card_kind": 3, "rarity": 0, "card_colors": [0],
-                "type_eng": [], "form_eng": [], "attribute_eng": [],
-                "effect_description_eng": "", "inherited_effect_description_eng": "",
-                "security_effect_description_eng": "", "evo_costs": []
-            }
-        }"#;
-        CardData::load_from_str(json).unwrap()
-    }
-
-    #[test]
-    fn memory_mutations() {
-        let db = min_db();
-        let deck = vec!["BT1-001".to_string(); 10];
-        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
-        let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
-        ctx.set_memory(0);
-        ctx.gain_memory(3);
-        assert_eq!(ctx.memory(), 3);
-        ctx.lose_memory(2);
-        assert_eq!(ctx.memory(), 1);
     }
 }
