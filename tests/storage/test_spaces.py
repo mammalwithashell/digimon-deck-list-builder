@@ -161,3 +161,36 @@ def test_missing_env_var_raises_at_call_time(monkeypatch):
 
     with pytest.raises(RuntimeError, match="SPACES_ENDPOINT"):
         spaces.head_object("models/any/policy.onnx")
+
+
+def test_public_url_falls_back_to_endpoint_when_cdn_unset(monkeypatch):
+    """Without SPACES_CDN_URL, public_url must return the path-style origin URL."""
+    monkeypatch.delenv("SPACES_CDN_URL", raising=False)
+    url = spaces.public_url("models/abc/policy.onnx")
+    assert url == f"{_ENDPOINT}/{_BUCKET}/models/abc/policy.onnx"
+
+
+def test_public_url_prefers_cdn_when_set(monkeypatch):
+    """With SPACES_CDN_URL set, public_url must return {CDN}/{key} (no bucket path)."""
+    monkeypatch.setenv(
+        "SPACES_CDN_URL", "https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com"
+    )
+    url = spaces.public_url("models/xyz/policy.onnx")
+    assert url == (
+        "https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/"
+        "models/xyz/policy.onnx"
+    )
+
+
+def test_public_url_strips_trailing_slash_on_cdn(monkeypatch):
+    """Trailing slash on SPACES_CDN_URL must not produce a double slash."""
+    monkeypatch.setenv("SPACES_CDN_URL", "https://cdn.example.com/")
+    url = spaces.public_url("models/abc/policy.onnx")
+    assert url == "https://cdn.example.com/models/abc/policy.onnx"
+
+
+def test_public_url_ignores_empty_cdn(monkeypatch):
+    """An empty/whitespace SPACES_CDN_URL must be treated as unset (fall back)."""
+    monkeypatch.setenv("SPACES_CDN_URL", "   ")
+    url = spaces.public_url("models/abc/policy.onnx")
+    assert url == f"{_ENDPOINT}/{_BUCKET}/models/abc/policy.onnx"
