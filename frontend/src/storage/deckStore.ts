@@ -4,6 +4,8 @@
 
 import { invoke } from '@tauri-apps/api/core';
 
+import type { DeckSummary } from '@/types/deck';
+
 export interface Deck {
   id: string;
   owner_id: string;
@@ -25,16 +27,9 @@ export interface Deck {
   updated_at: string;
 }
 
-export interface DeckSummary {
-  id: string;
-  name: string;
-  game_mode: string;
-  main_deck_size: number;
-  egg_deck_size: number;
-  meta_tier?: string | null;
-  meta_archetype?: string | null;
-  updated_at: string;
-}
+// Re-export the shared DeckSummary so callers can treat this module and
+// `deckApi.ts` as swap-compatible.
+export type { DeckSummary } from '@/types/deck';
 
 export async function listDecks(): Promise<DeckSummary[]> {
   return invoke<DeckSummary[]>('decks_list');
@@ -54,6 +49,8 @@ export async function putDeck(deck: Partial<Deck> & {
   const now = new Date().toISOString();
   const full: Deck = {
     id: deck.id ?? '',
+    // TODO(task-8): once bootstrap/guest.ts lands, stamp the actual guest
+    // user_id from localStorage instead of the 'guest' placeholder.
     owner_id: deck.owner_id ?? 'guest',
     name: deck.name,
     description: deck.description ?? '',

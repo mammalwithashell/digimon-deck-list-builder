@@ -48,12 +48,14 @@ pub struct DeckSummary {
     pub id: String,
     pub name: String,
     pub game_mode: String,
-    pub main_deck_size: usize,
-    pub egg_deck_size: usize,
+    pub is_valid: bool,
+    pub is_public: bool,
+    pub card_count: usize,
     #[serde(default)]
     pub meta_tier: Option<String>,
     #[serde(default)]
     pub meta_archetype: Option<String>,
+    pub created_at: String,
     pub updated_at: String,
 }
 
@@ -91,10 +93,12 @@ pub fn decks_list(app: AppHandle) -> Result<Vec<DeckSummary>, String> {
                     id: deck.id,
                     name: deck.name,
                     game_mode: deck.game_mode,
-                    main_deck_size: deck.main_deck.len(),
-                    egg_deck_size: deck.egg_deck.len(),
+                    is_valid: deck.is_valid,
+                    is_public: deck.is_public,
+                    card_count: deck.main_deck.len() + deck.egg_deck.len(),
                     meta_tier: deck.meta_tier,
                     meta_archetype: deck.meta_archetype,
+                    created_at: deck.created_at,
                     updated_at: deck.updated_at,
                 });
             }
