@@ -9,6 +9,7 @@
 | [TOOLS.md](TOOLS.md) | CLI tools reference — card pipeline, transpiler, Pinecone, model export |
 | [RUST_ENGINE_API.md](RUST_ENGINE_API.md) | Rust engine scripting reference — `CardEffect`, `EffectContext`, `Expiry`, `ModifierType`, common patterns, DebugRunner |
 | [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) | Rust ↔ Python engine parity tracker — every known behavioral divergence with severity and fix order |
+| [RUST_ENGINE_GAPS.md](RUST_ENGINE_GAPS.md) | Rust-only engine capability gaps discovered during archetype audits (`/assess-archetype-rust`) |
 | [RULES_CONTEXT.md](RULES_CONTEXT.md) | Official Digimon TCG rules reference |
 | [TITAN_MODE.md](TITAN_MODE.md) | Titan/Commander variant rules |
 | [EDH_COMMANDER_MODE.md](EDH_COMMANDER_MODE.md) | EDH Commander mode design |
