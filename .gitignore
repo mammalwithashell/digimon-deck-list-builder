@@ -50,3 +50,6 @@ dist/
 # PM Agent
 .claude/pm/sessions/
 .claude/pm/.briefing-lock
+
+# Generated ONNX test fixtures
+tests/api/fixtures/*.onnx
