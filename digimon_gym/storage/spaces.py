@@ -1,9 +1,9 @@
 """Thin boto3 client for DigitalOcean Spaces (S3-compatible).
 
 Keyed off env vars: SPACES_ENDPOINT, SPACES_BUCKET, SPACES_REGION,
-SPACES_KEY, SPACES_SECRET. Raises RuntimeError if any are unset at call time
-(fail loud, not on import, so desktop_main.py can still import the module
-transitively via db.routers — though in practice the router never imports it).
+SPACES_KEY, SPACES_SECRET. Raises RuntimeError if any are unset at call
+time (fail loud, not on import) so consumers can import the module even
+when credentials aren't configured.
 """
 from __future__ import annotations
 
@@ -110,13 +110,15 @@ def download_and_hash(key: str, dest_path: str) -> tuple[str, int]:
 
 
 def public_url(key: str) -> str:
-    """Path-style URL: ``{SPACES_ENDPOINT}/{bucket}/{key}``.
+    """Public URL for a Spaces object.
 
-    DigitalOcean Spaces serves both path-style and virtual-hosted-style URLs;
-    this function uses the path form because it derives entirely from the
-    configured endpoint and doesn't require parsing region/bucket into a
-    subdomain. Callers that need the virtual-hosted form should build it
-    themselves.
+    Prefers ``SPACES_CDN_URL`` (DigitalOcean Spaces CDN base, e.g.
+    ``https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com``) when set,
+    producing ``{SPACES_CDN_URL}/{key}``. Otherwise falls back to the
+    path-style origin form ``{SPACES_ENDPOINT}/{bucket}/{key}``.
     """
+    cdn = os.environ.get("SPACES_CDN_URL", "").strip().rstrip("/")
+    if cdn:
+        return f"{cdn}/{key}"
     endpoint = _require_env("SPACES_ENDPOINT").rstrip("/")
     return f"{endpoint}/{_bucket()}/{key}"

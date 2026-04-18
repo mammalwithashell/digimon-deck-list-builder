@@ -1,0 +1,328 @@
+//! Behavioural parity tests for `deck_tools` — every assertion targets a
+//! semantics that has to match `digimon_gym/engine/data/deck_loader.py` so
+//! desktop and hosted API can't diverge on deck validation.
+
+use digimon_engine::deck_tools::{
+    card_database, classify_parsed, is_card_tested, out_of_set_cards, parse_deck,
+    parse_text, parse_tts, summarize_deck, tested_cards_sorted, validate_deck,
+};
+
+// ─── Card ID pattern ───────────────────────────────────────────────────
+
+#[test]
+fn parse_text_expands_quantities() {
+    let raw = "// Deck list\n3 Agumon BT1-001\n1 Greymon AD1-001\n";
+    let ids = parse_text(raw).unwrap();
+    assert_eq!(
+        ids,
+        vec![
+            "BT1-001".to_string(),
+            "BT1-001".to_string(),
+            "BT1-001".to_string(),
+            "AD1-001".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn parse_text_skips_invalid_lines() {
+    let raw = "// header\nthis is garbage\n2 Vanilla BT24-017\n";
+    let ids = parse_text(raw).unwrap();
+    assert_eq!(ids.len(), 2);
+    assert!(ids.iter().all(|c| c == "BT24-017"));
+}
+
+#[test]
+fn parse_text_errors_on_empty_or_invalid_only() {
+    assert!(parse_text("// just a comment").is_err());
+    assert!(parse_text("").is_err());
+}
+
+#[test]
+fn parse_tts_accepts_json_array_and_filters_noise() {
+    let raw = r#"["Exported from https://digimoncard.io", "BT24-017", "BT24-017", "not a card"]"#;
+    let ids = parse_tts(raw).unwrap();
+    assert_eq!(ids, vec!["BT24-017".to_string(), "BT24-017".to_string()]);
+}
+
+#[test]
+fn parse_tts_rejects_non_array_json() {
+    assert!(parse_tts(r#"{"nope": true}"#).is_err());
+    assert!(parse_tts("not even json").is_err());
+}
+
+#[test]
+fn parse_deck_auto_detects_format() {
+    // TTS when input starts with `[`
+    let ids = parse_deck(r#"["BT24-017"]"#).unwrap();
+    assert_eq!(ids, vec!["BT24-017".to_string()]);
+
+    // Text otherwise
+    let ids = parse_deck("1 Whatever BT24-017").unwrap();
+    assert_eq!(ids, vec!["BT24-017".to_string()]);
+}
+
+#[test]
+fn parse_deck_falls_through_to_text_when_tts_parse_fails() {
+    // Starts with `[` but isn't valid JSON — Python parser falls through
+    // to text parsing in this case, and we match that behaviour.
+    let ids = parse_deck("[this is text\n1 Agumon BT1-001").unwrap();
+    assert_eq!(ids, vec!["BT1-001".to_string()]);
+}
+
+#[test]
+fn parse_deck_empty_is_error() {
+    assert!(parse_deck("   ").is_err());
+}
+
+// ─── Card database loader ─────────────────────────────────────────────
+
+#[test]
+fn card_database_loads_real_cards_json() {
+    let db = card_database();
+    // cards.json is ~4000 entries — allow wide bounds in case the file grows.
+    assert!(db.len() > 1000, "card DB too small: {}", db.len());
+    // AD1-001 is Greymon (Digimon, card_kind=0) with a Digi-Egg counterpart.
+    let greymon = db.get("AD1-001").expect("AD1-001 should exist");
+    assert_eq!(greymon.card_kind, 0);
+    assert_eq!(greymon.card_name_eng, "Greymon");
+}
+
+#[test]
+fn card_database_defaults_max_copies_to_4() {
+    let db = card_database();
+    for entry in db.values().take(100) {
+        // Default is 4; overrides are rare and always <= 50.
+        assert!(
+            entry.max_count_in_deck >= 1 && entry.max_count_in_deck <= 50,
+            "{}: unexpected max_count {}",
+            entry.card_id,
+            entry.max_count_in_deck
+        );
+    }
+}
+
+// ─── Tested cards ─────────────────────────────────────────────────────
+
+#[test]
+fn tested_cards_sorted_is_sorted_and_nonempty() {
+    let cards = tested_cards_sorted();
+    assert!(!cards.is_empty());
+    let mut sorted = cards.clone();
+    sorted.sort();
+    assert_eq!(cards, sorted);
+}
+
+#[test]
+fn out_of_set_preserves_order_and_deduplicates() {
+    // Use card IDs that definitely aren't tested to exercise the filter.
+    let probe = vec![
+        "ZZZ-999".to_string(),
+        "ZZZ-999".to_string(),
+        "ZZY-998".to_string(),
+    ];
+    let out = out_of_set_cards(&probe);
+    assert_eq!(out, vec!["ZZZ-999".to_string(), "ZZY-998".to_string()]);
+}
+
+#[test]
+fn tested_cards_allowlist_is_consistent_with_membership_helper() {
+    let sorted = tested_cards_sorted();
+    if let Some(first) = sorted.first() {
+        assert!(is_card_tested(first));
+    }
+    assert!(!is_card_tested("ZZZ-999"));
+}
+
+// ─── classify_parsed ──────────────────────────────────────────────────
+
+#[test]
+fn classify_parsed_separates_eggs_and_unknown() {
+    // Build a list mixing a known Digimon, a known Digi-Egg (card_kind=3),
+    // and an unknown id. Have to pick real entries from the DB so the
+    // classifier lands the right buckets.
+    let db = card_database();
+    let egg_id = db
+        .values()
+        .find(|c| c.card_kind == 3)
+        .expect("a Digi-Egg must exist in the DB")
+        .card_id
+        .clone();
+    let digimon_id = db
+        .values()
+        .find(|c| c.card_kind == 0)
+        .expect("a Digimon must exist")
+        .card_id
+        .clone();
+    let parsed = classify_parsed(vec![
+        egg_id.clone(),
+        digimon_id.clone(),
+        digimon_id.clone(),
+        "ZZZ-999".to_string(),
+        "ZZZ-999".to_string(), // duplicate unknown → only one warning
+    ]);
+    assert_eq!(parsed.egg_deck, vec![egg_id]);
+    assert_eq!(parsed.main_deck.iter().filter(|c| *c == &digimon_id).count(), 2);
+    assert!(parsed.main_deck.contains(&"ZZZ-999".to_string()));
+    assert_eq!(parsed.warnings.len(), 1);
+    assert!(parsed.warnings[0].contains("ZZZ-999"));
+}
+
+// ─── Validation ───────────────────────────────────────────────────────
+
+/// Build a minimum legal 50-card main deck + 0 eggs from a card that has
+/// no restrictions and is not banned. Pick one vanilla Digimon that
+/// allows 4 copies.
+fn make_legal_deck() -> Vec<String> {
+    let db = card_database();
+    // Prefer a card whose max_count_in_deck is 4 and is not on the
+    // banned/restricted list, since we'll have to repeat it up to 50x.
+    let card_id = db
+        .values()
+        .find(|c| {
+            c.card_kind == 0
+                && c.max_count_in_deck >= 4
+                && !is_banned_or_restricted(&c.card_id)
+        })
+        .expect("need at least one unrestricted 4-copy Digimon in the DB")
+        .card_id
+        .clone();
+    // 50 / 4 = 12 remainder 2; but repeating the same id 50x breaks copy
+    // limit (max 4). Instead pick 13 distinct legal ids, 4 copies each =
+    // 52 — trim back to 50.
+    let ids: Vec<String> = db
+        .values()
+        .filter(|c| {
+            c.card_kind == 0
+                && c.max_count_in_deck >= 4
+                && !is_banned_or_restricted(&c.card_id)
+        })
+        .take(13)
+        .map(|c| c.card_id.clone())
+        .collect();
+    let mut deck = Vec::with_capacity(50);
+    for cid in &ids {
+        for _ in 0..4 {
+            if deck.len() < 50 {
+                deck.push(cid.clone());
+            }
+        }
+    }
+    let _ = card_id; // suppress unused warning when taken path above
+    assert_eq!(deck.len(), 50);
+    deck
+}
+
+fn is_banned_or_restricted(card_id: &str) -> bool {
+    const BANNED: &[&str] = &["BT2-090", "BT5-109", "EX5-065"];
+    if BANNED.contains(&card_id) {
+        return true;
+    }
+    // restricted list is long — just check the choice-group members too,
+    // since those cards are on the restricted side of validate.
+    const CHOICE_GROUP_MEMBERS: &[&str] = &["EX2-007", "EX7-064", "BT20-037", "BT17-035", "EX8-037"];
+    CHOICE_GROUP_MEMBERS.contains(&card_id)
+}
+
+#[test]
+fn validate_deck_accepts_a_legal_50_card_deck() {
+    let deck = make_legal_deck();
+    let result = validate_deck(&deck);
+    assert!(
+        result.is_valid,
+        "expected legal deck, got errors: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn validate_deck_rejects_wrong_main_size() {
+    let mut deck = make_legal_deck();
+    deck.pop();
+    let result = validate_deck(&deck);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.contains("Main deck must be")));
+}
+
+#[test]
+fn validate_deck_rejects_too_many_egg_cards() {
+    let db = card_database();
+    // Eggs cap at 4 copies each — use two distinct egg IDs so we can land
+    // 6 total without tripping a per-card limit error.
+    let eggs: Vec<String> = db
+        .values()
+        .filter(|c| c.card_kind == 3 && c.max_count_in_deck >= 4)
+        .take(2)
+        .map(|c| c.card_id.clone())
+        .collect();
+    assert!(eggs.len() >= 2, "need two distinct Digi-Eggs in the DB");
+    let mut deck = make_legal_deck();
+    // 4 of egg[0] + 2 of egg[1] = 6 total eggs, both under per-card cap.
+    for _ in 0..4 {
+        deck.push(eggs[0].clone());
+    }
+    for _ in 0..2 {
+        deck.push(eggs[1].clone());
+    }
+    let result = validate_deck(&deck);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.contains("Digi-Egg deck")));
+}
+
+#[test]
+fn validate_deck_rejects_banned_card() {
+    let mut deck = make_legal_deck();
+    // Replace one of the valid ids with a banned one.
+    deck[0] = "BT2-090".to_string();
+    let result = validate_deck(&deck);
+    assert!(!result.is_valid);
+    assert!(result.errors.iter().any(|e| e.contains("is banned")));
+}
+
+#[test]
+fn validate_deck_rejects_restricted_limit_exceeded() {
+    let mut deck = make_legal_deck();
+    // BT1-090 is restricted to 1 copy. Stuff two in and drop two of the
+    // other legal cards to stay at 50.
+    deck[0] = "BT1-090".to_string();
+    deck[1] = "BT1-090".to_string();
+    let result = validate_deck(&deck);
+    assert!(!result.is_valid);
+    assert!(result
+        .errors
+        .iter()
+        .any(|e| e.contains("BT1-090") && e.contains("restricted limit")));
+}
+
+#[test]
+fn validate_deck_enforces_choice_groups() {
+    // Choice group: {EX2-007} vs {EX7-064}. Having 1 of each should error.
+    let mut deck = make_legal_deck();
+    deck[0] = "EX2-007".to_string();
+    deck[1] = "EX7-064".to_string();
+    let result = validate_deck(&deck);
+    assert!(!result.is_valid);
+    assert!(result
+        .errors
+        .iter()
+        .any(|e| e.contains("Choice restriction violated")));
+}
+
+#[test]
+fn validate_deck_warns_on_unknown_cards() {
+    let mut deck = make_legal_deck();
+    deck[0] = "ZZZ-999".to_string();
+    let result = validate_deck(&deck);
+    // Unknown → warning, not an error (matches Python).
+    assert!(result.warnings.iter().any(|w| w.contains("ZZZ-999")));
+}
+
+// ─── summarize_deck ───────────────────────────────────────────────────
+
+#[test]
+fn summarize_deck_counts_duplicates() {
+    let deck = vec!["A-1".to_string(), "A-1".to_string(), "B-2".to_string()];
+    let counts = summarize_deck(&deck);
+    assert_eq!(counts.get("A-1"), Some(&2));
+    assert_eq!(counts.get("B-2"), Some(&1));
+}

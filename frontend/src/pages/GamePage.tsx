@@ -35,6 +35,9 @@ import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSo
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as gameApi from '@/api/gameApi';
 import * as deckApiMod from '@/api/deckApi';
+import type { LocalModelMeta } from '@/api/desktopModelsApi';
+
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 import {
   ACTION,
   ATTACK_TARGETS_PER_SLOT,
@@ -92,6 +95,27 @@ export function GamePage() {
   const [opponentDeckId, setOpponentDeckId] = useState<string>('');
   const [agentType, setAgentType] = useState<string>('greedy');
   const [starting, setStarting] = useState(false);
+  const [localModels, setLocalModels] = useState<LocalModelMeta[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string>('');
+
+  // Desktop only — hydrate the model list so the "Trained (ONNX)" option
+  // can populate its dropdown. Silently no-ops on the web build.
+  useEffect(() => {
+    if (!IS_DESKTOP) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const mod = await import('@/api/desktopModelsApi');
+        const models = await mod.listLocal();
+        if (!cancelled) setLocalModels(models);
+      } catch {
+        // Non-fatal — leave list empty; user can still pick greedy/random.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Hydrate store from URL param when navigating to /game/:id
   useEffect(() => {
@@ -153,6 +177,7 @@ export function GamePage() {
 
   const handleStartGame = async () => {
     if (!selectedDeckId || !opponentDeckId) return;
+    if (agentType === 'trained' && !selectedModelId) return;
     setStarting(true);
     try {
       const [deck, oppDeck] = await Promise.all([
@@ -160,12 +185,29 @@ export function GamePage() {
         deckApiMod.getDeck(opponentDeckId),
       ]);
 
+      // Desktop + trained: ensure the selected model is loaded into the
+      // inference cache before we ask the engine to create a game that
+      // references it. `loadCached` is idempotent, so re-activating the
+      // same model across games is cheap.
+      if (IS_DESKTOP && agentType === 'trained' && selectedModelId) {
+        const mod = await import('@/api/desktopModelsApi');
+        await mod.loadCached(selectedModelId);
+      }
+
       const result = await gameApi.createGame({
         deck1: [...deck.egg_deck, ...deck.main_deck],
         deck2: [...oppDeck.egg_deck, ...oppDeck.main_deck],
         player1_type: 'human',
         player2_type: 'agent',
         player2_policy: agentType,
+        player_kinds: [
+          'human',
+          agentType === 'trained' ? 'trained' : 'greedy',
+        ],
+        player_model_ids: [
+          null,
+          agentType === 'trained' ? selectedModelId : null,
+        ],
       });
 
       // Set game state before gameId so the board has player data when it first renders
@@ -476,12 +518,40 @@ export function GamePage() {
             >
               <option value="greedy">Greedy Agent</option>
               <option value="random">Random Agent</option>
+              {IS_DESKTOP && (
+                <option value="trained" disabled={localModels.length === 0}>
+                  Trained (ONNX){localModels.length === 0 ? ' — none downloaded' : ''}
+                </option>
+              )}
             </select>
           </div>
 
+          {IS_DESKTOP && agentType === 'trained' && (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Model</label>
+              <select
+                value={selectedModelId}
+                onChange={(e) => setSelectedModelId(e.target.value)}
+                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              >
+                <option value="">Select a model…</option>
+                {localModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.model_type.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
             onClick={handleStartGame}
-            disabled={!selectedDeckId || !opponentDeckId || starting}
+            disabled={
+              !selectedDeckId
+              || !opponentDeckId
+              || starting
+              || (agentType === 'trained' && !selectedModelId)
+            }
             className="px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-50 text-white font-medium rounded"
           >
             {starting ? 'Starting...' : 'Start Game'}

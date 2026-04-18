@@ -55,6 +55,34 @@ pub enum GamePhase {
     GameOver,
 }
 
+impl GamePhase {
+    /// Python-parity phase name. Use this when serializing phase into a
+    /// string field that will be compared against Python's `GamePhase.name`.
+    pub fn py_name(&self) -> &'static str {
+        match self {
+            GamePhase::Mulligan => "Mulligan",
+            GamePhase::Unsuspend => "Start",            // Python enum name
+            GamePhase::Draw => "Draw",
+            GamePhase::Breeding => "Breeding",
+            GamePhase::Main => "Main",
+            GamePhase::EndTurn => "End",                // Python enum name
+            GamePhase::SelectTarget => "SelectTarget",
+            GamePhase::SelectMaterial => "SelectMaterial",
+            GamePhase::SelectTrash => "SelectTrash",
+            GamePhase::SelectSource => "SelectSource",
+            GamePhase::SelectHand => "SelectHand",
+            GamePhase::SelectReveal => "SelectReveal",
+            GamePhase::SelectSecurity => "SelectSecurity",
+            GamePhase::EffectChoice => "SelectEffectChoice", // Python name
+            GamePhase::BlockTiming => "BlockTiming",
+            GamePhase::CounterTiming => "CounterTiming",
+            GamePhase::AllianceTiming => "AllianceTiming",
+            GamePhase::EndOfTurnAction => "EndOfTurnAction",
+            GamePhase::GameOver => "GameOver",
+        }
+    }
+}
+
 /// When a card effect triggers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EffectTiming {

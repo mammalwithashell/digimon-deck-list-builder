@@ -8,5 +8,55 @@ description = "Headless Digimon TCG game engine for RL training and desktop play
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rand = "0.8"
+ort = { version = "2.0.0-rc.10", default-features = false, features = ["ndarray", "std", "download-binaries", "tls-rustls"] }
+ndarray = "0.17"
 
 [dev-dependencies]
+
+# Tests are grouped by domain into 7 binaries. Each binary's entry point is
+# `tests/<domain>/main.rs`; sibling files are `mod`-imported and supply the
+# `#[test]` fns. Run a single domain with `cargo test --test <domain>`.
+#
+# Cargo does not auto-discover `tests/<dir>/main.rs`, so each domain needs
+# an explicit `[[test]]` entry here. When adding a new domain directory,
+# add a matching entry below.
+
+[[test]]
+name = "combat"
+path = "tests/combat/main.rs"
+
+[[test]]
+name = "selection"
+path = "tests/selection/main.rs"
+
+[[test]]
+name = "mask_and_tensor"
+path = "tests/mask_and_tensor/main.rs"
+
+[[test]]
+name = "phase_flow"
+path = "tests/phase_flow/main.rs"
+
+[[test]]
+name = "effects"
+path = "tests/effects/main.rs"
+
+[[test]]
+name = "infra"
+path = "tests/infra/main.rs"
+
+[[test]]
+name = "cards_behavioral"
+path = "tests/cards_behavioral/main.rs"
+
+[[test]]
+name = "onnx_parity"
+path = "tests/onnx_parity/main.rs"
+
+[[test]]
+name = "deck_tools"
+path = "tests/deck_tools/main.rs"
+
+[[test]]
+name = "ffi_parity"
+path = "tests/ffi_parity/main.rs"

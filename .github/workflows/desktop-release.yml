@@ -15,16 +15,12 @@ jobs:
         include:
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
-            sidecar_profile: gameplay
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
-            sidecar_profile: gameplay
           - platform: ubuntu-22.04
             args: ''
-            sidecar_profile: gameplay
           - platform: windows-latest
             args: ''
-            sidecar_profile: gameplay
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -35,14 +31,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: pip install -r requirements-desktop.txt pyinstaller
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -59,17 +47,13 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      # Build the Python sidecar binary for this platform
-      - name: Build sidecar
-        run: ./tools/build-sidecar.sh ${{ matrix.sidecar_profile }}
-
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
       - name: Build frontend (desktop mode)
         working-directory: frontend
-        run: VITE_BUILD_TARGET=desktop npm run build
+        run: npm run build -- --mode desktop
 
       - uses: tauri-apps/tauri-action@v0
         env:

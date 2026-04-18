@@ -577,6 +577,72 @@ The rest (face-down security §3.3, remaining selection kinds §4.6d-residual `S
 
 ---
 
+## 9. PyO3 PvP bindings (2026-04-18)
+
+The following Python-parity behaviors are known to diverge and will be
+addressed as card-migration and engine completeness work proceeds.
+
+### Stubbed per-permanent fields (card-script-dependent)
+
+`serialization::to_ui_json` emits neutral/empty defaults for these per-permanent fields until the corresponding card scripts are migrated to Rust:
+
+- `mainEffectText` — empty string
+- `inheritedEffectText` — empty string
+- `inheritedEffects` — empty array
+- `keywords` — empty array
+- `keywordBreakdown` — `{innate: [], gained: []}`
+- `securityAttackModifier` — 0
+- `dpBreakdown.sources` — empty array
+- `dpBreakdown.aura` — 0
+- `dpBreakdown.temporary` — 0.0
+- Per-source `optState`, `dpContribution` — 0.0 / 0
+
+Rule 17 (no-approximations) applies to card effects; these are UI-rendering
+artifacts that follow naturally once card scripts land in Rust.
+
+### GameEvent emission coverage
+
+Rust emits `MemoryChange`, `Play`, and `GameOver` today. `TurnStart`,
+`PhaseChange`, `Digivolve`, `Attack`, `Trash`, `Mill`, and `SecurityReveal`
+variants are defined but unwired; the PyO3 `event_to_pydict` handles all
+variants so emission can be added without schema churn.
+
+### Recording initial_state timing
+
+Python's `GameRecorder.capture_initial_state` is called by `base_runner.py`
+after `start_game()` completes. Rust captures lazily in `HeadlessRunner::step`
+the first time mulligan is complete. Net effect for recorded games:
+
+- `initial_hand` reflects the POST-mulligan hand in Rust; PRE-mulligan in Python
+- `security_order` is populated on both sides
+
+This is a deliberate Rust choice ("correct over strict parity") because
+Python's timing captures empty security.
+
+### Recording timestamp precision
+
+Python's `datetime.now(timezone.utc).isoformat()` produces microsecond
+precision (e.g. `2026-04-18T12:34:56.123456+00:00`). Rust produces
+second precision via a hand-written `civil_from_days` algorithm. Replay
+tooling that parses timestamps should tolerate both.
+
+### pendingSelection.kind
+
+Rust emits an extra `kind` string (e.g. `"OppField"`) not present in
+Python. It's a deliberate affordance for typed WebSocket consumers.
+Python's `pendingSelection` dict does not contain this key, but Task 6
+parity tests compare only top-level `to_ui_json` keys, so the divergence
+is tolerated.
+
+### pendingSelection.keywordPrompt
+
+Python's `PendingSelection` has an optional `keyword_prompt: dict` field.
+Rust's `PendingSelection` struct does not (no equivalent field). When this
+field would be non-null in Python, Rust simply omits it — net result on
+the wire is the absence of the key.
+
+---
+
 ## 8. Test strategy
 
 For each 🔴 item, we want a paired test:

@@ -10,47 +10,47 @@ A Digimon TCG rules engine with a Gymnasium RL environment, React frontend, Fast
 - **No-approximations policy** — every card effect faithfully implements all card text. No stubs, no auto-selections; every choice surfaces through `pending_selection` so the RL action space sees it and agents can learn to pick optimally. Gaps are marked BLOCKED and logged to [qa/archetype-qa/engine-gaps.md](qa/archetype-qa/engine-gaps.md) / [docs/RUST_ENGINE_GAPS.md](docs/RUST_ENGINE_GAPS.md).
 - **Gymnasium RL environment** — 1375-float observation tensor, 2168 discrete actions with phase-aware masking, dense reward shaping.
 - **Multiplayer PvP** — WebSocket real-time gameplay with lobby matchmaking, join codes, and spectating (with hidden-information filtering).
-- **Desktop app** — Tauri v2 shell. Default build bundles a Python sidecar (engine-only, no DB/auth) for offline play against ONNX-exported AI agents. A `no-sidecar` cargo feature links the Rust engine directly into the Tauri shell for an all-Rust desktop path.
+- **Desktop app** — Tauri v2 shell with the embedded Rust engine (no Python at runtime); ONNX models downloaded at runtime from the hosted API's manifest.
 - **Admin AI pipeline** — LLM-powered card script transpilation, automated fixes, batch orchestration with safe-apply checks (hosted API only).
 - **Training infrastructure** — MetaGauntlet opponent sampling, staged training pipeline, PFSP opponent weighting, deck variant generation; Q-DeckRec architect agents for deck optimization.
 
 ## Architecture
 
 ```
-  ┌─────────────────────────────────────────────────────────────────┐
-  │                  React Frontend (TypeScript)                     │
-  │        GamePage · LobbyPage · DeckBuilder · Admin UI             │
-  └──────────┬────────────────────────────────┬─────────────────────┘
-             │ HTTP (local)  / invoke (Rust)  │ HTTP + WebSocket
-  ┌──────────▼──────────────┐      ┌──────────▼──────────────────┐
-  │  Tauri v2 Desktop Shell  │      │   Hosted FastAPI Server      │
-  │  default: bundled Python │      │   api.py + routers/          │
-  │    sidecar (externalBin) │      │   lobby · WS PvP · auth · DB │
-  │  no-sidecar: links       │      │   admin AI pipeline          │
-  │    digimon-engine direct │      └──────────┬───────────────────┘
-  └──────────┬───────────────┘                 │
-             └──────────────┬──────────────────┘
-                            │
-         ┌──────────────────┼─────────────────────────┐
-         │                  │                         │
-   ┌─────▼──────────┐ ┌─────▼────────────┐ ┌──────────▼──────────┐
-   │ digimon_gym/    │ │  DigimonEnv       │ │  Training CLI       │
-   │   engine/       │ │  (Gymnasium)      │ │  pilot_training.py  │
-   │ (transitional   │ │  1375-obs         │ │  MaskablePPO        │
-   │  Python)        │ │  2168-act mask    │ │  LSTM + Mask        │
-   └─────┬──────────┘ └─────┬────────────┘ │  MetaGauntlet       │
-         │                  │              └─────────────────────┘
-         │   ┌──────────────▼──────────────┐
-         └──▶│  digimon-engine-py (PyO3)   │
-             │  RustHeadlessGame           │
-             └──────────────┬──────────────┘
-                            │
-             ┌──────────────▼──────────────┐     ┌──────────────┐
-             │  digimon-engine/ (Rust)     │◀────│  DCGO/       │
-             │  target source of truth     │ ref │  C# submodule│
-             │  game · effects · combat    │     └──────────────┘
-             │  tensor · actions · cards   │
-             └─────────────────────────────┘
+   ┌───────────────────────────────────────────────────────────┐
+   │              Tauri v2 Desktop Shell (Rust)                 │
+   │   Links digimon-engine statically — no Python runtime      │
+   │   ONNX models downloaded from hosted API manifest          │
+   └──────────────────────┬────────────────────────────────────┘
+                          │ Tauri invoke()
+   ┌──────────────────────▼────────────────────────────────────┐
+   │         React Frontend (TypeScript)                        │
+   │   GamePage · DeckBuilder · ModelsPage (desktop only)      │
+   └─────────┬──────────────────────────┬──────────────────────┘
+   invoke()  │ (desktop)                 │ WebSocket / HTTPS (web)
+   ┌─────────▼────────────┐     ┌────────▼───────────────────┐
+   │  digimon-engine      │     │  FastAPI Server (Python)    │
+   │  (Rust, in-process)  │     │  api.py + routers/          │
+   │  game · ONNX · deck  │     │  PvP / lobby / auth / DB    │
+   │  tools; no DB        │     │  + /models/manifest.json    │
+   └──────────────────────┘     └────────┬───────────────────┘
+                                         │ PyO3 + transitional Python engine
+                     ┌───────────────────┼───────────────────┐
+                     │                   │                   │
+              ┌──────▼───────┐ ┌─────────▼──────┐ ┌─────────▼───────┐
+              │ DigimonEnv   │ │ Python engine  │ │ Admin AI        │
+              │ (Gymnasium)  │ │ (transitional) │ │ ai/             │
+              │ via PyO3     │ │ digimon_gym/   │ │ LLM dispatch    │
+              │ 1375-obs     │ │ engine/        │ │ batch orch.     │
+              └──────┬───────┘ └────────────────┘ └─────────────────┘
+                     │
+            ┌────────▼────────┐
+            │  RL Agents      │
+            │  MaskablePPO    │   ┌──────────────┐
+            │  LSTM + Mask    │   │  DCGO/       │
+            │  MetaGauntlet   │   │  C# submod   │ ← behavioral reference
+            └─────────────────┘   │  for cards   │   for card scripting
+                                  └──────────────┘
 ```
 
 ## Repository Map
@@ -63,6 +63,7 @@ A Digimon TCG rules engine with a Gymnasium RL environment, React frontend, Fast
 | `digimon-engine/src/combat.rs`, `selection.rs` | Attack state machine, pending-selection / interrupt handling |
 | `digimon-engine/src/tensor.rs`, `action/` | 1375-float observation + 2168-action mask/decoder |
 | `digimon-engine/src/cards/`, `debug_runner.rs` | Hand-written `CardEffect` impls + deterministic test harness |
+| `digimon-engine/src/inference/` | Rust ONNX inference (MLP + LSTM) used by the desktop app |
 | `digimon-engine-py/` | PyO3 bindings (`RustHeadlessGame`), built via `maturin` |
 | `DCGO/` | Git submodule — C# client source, behavioral reference for card effects |
 | `digimon_gym/engine/` | Transitional Python engine (retired when Rust card-script migration completes) |
@@ -73,14 +74,13 @@ A Digimon TCG rules engine with a Gymnasium RL environment, React frontend, Fast
 | `digimon_gym/api.py`, `digimon_gym/routers/` | Hosted FastAPI app + gameplay routes |
 | `digimon_gym/routers/lobby.py`, `ws_games.py`, `ws_manager.py` | Lobby, WebSocket PvP, connection manager |
 | `digimon_gym/engine/state_filter.py` | Hidden-info filtering for network clients |
-| `digimon_gym/engine/onnx_policy.py` | ONNX inference (no PyTorch) |
-| `digimon_gym/desktop_main.py` | Desktop sidecar entry point (engine-only, no DB/auth) |
+| `digimon_gym/engine/onnx_policy.py` | ONNX inference wrapper (hosted API / training) |
 | `digimon_gym/db/`, `digimon_gym/ai/` | Hosted-API-only: auth, decks, admin AI |
-| `src-tauri/` | Tauri v2 desktop shell; depends on `digimon-engine` directly and optionally bundles the Python sidecar |
+| `src-tauri/` | Tauri v2 desktop shell — Python-free; gameplay, inference, deck tools, model cache |
 | `frontend/src/` | React UI (desktop build tree-shakes admin/training via `VITE_BUILD_TARGET=desktop`) |
-| `tools/export_onnx.py`, `tools/build-sidecar.sh` | Model export and desktop sidecar build |
+| `tools/export_onnx.py` | SB3 → ONNX model conversion |
 | `qa/archetype-qa/`, `qa/qa-reports/` | Per-archetype QA, engine-gap tracker, dated gameplay reports |
-| `requirements.txt`, `requirements-desktop.txt`, `requirements-training.txt` | Full hosted API / desktop sidecar / training CLI dep sets |
+| `requirements.txt`, `requirements-training.txt` | Full hosted API / training CLI dep sets |
 
 ## Quick Start
 
@@ -97,7 +97,6 @@ Pick the dep set that matches what you're running:
 
 ```bash
 pip install -r requirements.txt            # full hosted API (everything)
-pip install -r requirements-desktop.txt    # desktop sidecar (engine + ONNX, no DB/torch)
 pip install -r requirements-training.txt   # training CLI (engine + torch/SB3, no FastAPI/DB)
 ```
 
@@ -174,24 +173,15 @@ python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output m
 
 ### Build the Desktop App
 
-```bash
-# Build the Python sidecar (greedy bots only, fast)
-./tools/build-sidecar.sh gameplay
-
-# Or: sidecar with auto-exported ONNX models bundled
-./tools/build-sidecar.sh full
-
-# Build the Tauri installer (default path — bundles the Python sidecar)
-cd src-tauri && cargo tauri build
-
-# All-Rust desktop path (no Python sidecar)
-cd src-tauri && cargo tauri build --features no-sidecar --config tauri.rust.conf.json
-```
-
-### Run the Desktop Sidecar Standalone
+The desktop build is Python-free — gameplay, ONNX inference, and deck
+tools all run inside the embedded `digimon-engine` crate via Tauri
+`invoke()` commands. Trained AI models are downloaded at runtime from
+the hosted API's `/models/manifest.json` into an OS-local cache.
 
 ```bash
-python -m digimon_gym.desktop_main --port 8321 --models-dir ./models
+# Prerequisites: Rust toolchain, Node.js
+cd frontend && npm ci && npm run build -- --mode desktop
+cd ../src-tauri && cargo tauri build
 ```
 
 ## Documentation Index
@@ -225,11 +215,10 @@ Start at [docs/INDEX.md](docs/INDEX.md) for the full catalog.
 
 - Rust engine (`digimon-engine/`) as target source of truth, with PyO3 bindings (`digimon-engine-py/`) and a `DIGIMON_BACKEND=rust` switch in `DigimonEnv`.
 - TDD card-script harness in Rust (`DebugRunner`, hand-written `CardEffect` impls in `src/cards/`).
-- Three-service split: desktop sidecar, hosted API, training CLI — each with its own requirements file.
-- Tauri v2 desktop shell with a `no-sidecar` feature that links `digimon-engine` directly (no Python).
+- Three-service split: desktop, hosted API, training CLI — each with its own requirements file.
+- Python-free Tauri v2 desktop shell — `digimon-engine` embedded directly, ONNX models cached from the hosted API manifest.
 - Archetype-scoped AI workflows: `/implement-archetype`, `/batch-fix-cards`, `/batch-implement-cards-rust`, `/assess-archetype-rust`.
 - WebSocket PvP with lobby matchmaking + spectating (hidden-info filtering).
-- ONNX inference for trained agents (play against ML models without PyTorch).
 
 **Planned but not yet implemented:**
 

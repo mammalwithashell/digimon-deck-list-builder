@@ -1,4 +1,6 @@
+pub mod serialization;
 pub mod enums;
+pub mod events;
 pub mod rules;
 pub mod card_data;
 pub mod card_registry;
@@ -6,6 +8,8 @@ pub mod card_source;
 pub mod permanent;
 pub mod player;
 pub mod game;
+pub mod game_actions;
+pub mod game_phases;
 pub mod action;
 pub mod phases;
 pub mod tensor;
@@ -21,6 +25,8 @@ pub mod debug_runner;
 pub mod runners;
 pub mod logger;
 pub mod recorder;
+pub mod inference;
+pub mod deck_tools;
 
 // Re-export key types at crate root
 pub use enums::*;
@@ -41,9 +47,11 @@ pub use combat::AttackResult;
 pub use debug_runner::{DebugRunner, DebugRunnerBuilder};
 pub use runners::HeadlessRunner;
 pub use logger::{GameLogger, SilentLogger, VerboseLogger};
-pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedAction};
+pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedAction, TensorSnapshot};
+pub use inference::{load_policy, InferenceError, OnnxLstmPolicy, OnnxMlpPolicy, OnnxPolicy};
+pub use crate::events::GameEvent;
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,
-    PendingSelection, QueuedEffect, SelectionCallback, SelectionError, SelectionKind,
-    TriggerSource,
+    PendingSelection, PendingSelectionView, QueuedEffect, SelectionCallback, SelectionError,
+    SelectionKind, TriggerSource,
 };

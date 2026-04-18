@@ -27,8 +27,6 @@
       "icons/128x128.png",
       "icons/icon.ico",
       "icons/icon.png"
-    ],
-    "externalBin": ["binaries/digimon-server"],
-    "resources": ["resources/**/*"]
+    ]
   }
 }

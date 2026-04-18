@@ -1,9 +1,8 @@
 """Deck optimizer endpoints — REST API for on-demand deck optimization.
 
 Engine-only router — no database or auth dependencies.
-Safe to mount in the desktop sidecar alongside the hosted API.
 
-Register in api.py and/or desktop_main.py:
+Register in api.py:
     from digimon_gym.routers.deck_optimizer import router as deck_optimizer_router
     app.include_router(deck_optimizer_router)
 """
