@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   deleteModel as deleteModelApi,
   downloadModel,
@@ -11,11 +12,11 @@ import {
   type LocalModelMeta,
   type ManifestModel,
 } from '@/api/desktopModelsApi';
+import * as deckStore from '@/storage/deckStore';
+import { createVsAiGame } from '@/api/gameApi';
 
-const DEFAULT_MANIFEST_URL =
+const MANIFEST_URL =
   (import.meta.env.VITE_MODELS_MANIFEST_URL as string | undefined) ?? '';
-
-const MANIFEST_URL_STORAGE_KEY = 'digimon-tcg:models:manifest-url';
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -23,279 +24,249 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDate(epochSec: number): string {
-  return new Date(epochSec * 1000).toLocaleString();
-}
-
-function shortSha(sha: string): string {
-  return sha.slice(0, 10);
+interface MergedRow {
+  id: string;
+  manifest?: ManifestModel;
+  local?: LocalModelMeta;
 }
 
 export function ModelsPage() {
-  const [baseUrl, setBaseUrl] = useState<string>(
-    () => localStorage.getItem(MANIFEST_URL_STORAGE_KEY) ?? DEFAULT_MANIFEST_URL,
-  );
+  const navigate = useNavigate();
   const [contract, setContract] = useState<EngineContract | null>(null);
   const [manifest, setManifest] = useState<ManifestModel[]>([]);
   const [local, setLocal] = useState<LocalModelMeta[]>([]);
-  const [loadingManifest, setLoadingManifest] = useState(false);
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [decks, setDecks] = useState<deckStore.DeckSummary[]>([]);
+  const [playDeckId, setPlayDeckId] = useState<string>('');
 
-  const localIds = useMemo(() => new Set(local.map((m) => m.id)), [local]);
-
-  const refreshLocal = useCallback(async () => {
-    try {
-      setLocal(await listLocal());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, []);
-
-  const refreshContract = useCallback(async () => {
-    try {
-      setContract(await engineContract());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshContract();
-    void refreshLocal();
-  }, [refreshContract, refreshLocal]);
-
-  const handleFetch = useCallback(async () => {
-    if (!baseUrl) {
-      setError('Enter a manifest URL first.');
-      return;
-    }
-    setLoadingManifest(true);
+  const refresh = useCallback(async () => {
     setError(null);
     try {
-      localStorage.setItem(MANIFEST_URL_STORAGE_KEY, baseUrl);
-      setManifest(await fetchManifest(baseUrl));
+      const [c, m, l, d] = await Promise.all([
+        engineContract(),
+        MANIFEST_URL ? fetchManifest(MANIFEST_URL) : Promise.resolve([] as ManifestModel[]),
+        listLocal(),
+        deckStore.listDecks(),
+      ]);
+      setContract(c);
+      setManifest(m);
+      setLocal(l);
+      setDecks(d);
+      if (d.length > 0 && !playDeckId && d[0]) setPlayDeckId(d[0].id);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoadingManifest(false);
+      setLoading(false);
     }
-  }, [baseUrl]);
+  }, [playDeckId]);
 
-  const withBusy = useCallback(
-    async (id: string, fn: () => Promise<void>) => {
-      setBusyIds((prev) => new Set(prev).add(id));
+  useEffect(() => {
+    void refresh();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const rows = useMemo<MergedRow[]>(() => {
+    const byId = new Map<string, MergedRow>();
+    for (const m of manifest) byId.set(m.id, { id: m.id, manifest: m });
+    for (const l of local) {
+      const row = byId.get(l.id) ?? { id: l.id };
+      row.local = l;
+      byId.set(l.id, row);
+    }
+    return Array.from(byId.values());
+  }, [manifest, local]);
+
+  const withBusy = useCallback(async (id: string, fn: () => Promise<void>) => {
+    setBusyIds((prev) => new Set(prev).add(id));
+    try {
+      await fn();
+    } finally {
+      setBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }, []);
+
+  const handleDownload = (m: ManifestModel) =>
+    withBusy(m.id, async () => {
+      await downloadModel(m);
+      await refresh();
+    });
+
+  const handleDelete = (id: string) =>
+    withBusy(id, async () => {
+      if (!window.confirm(`Delete cached model ${id}?`)) return;
+      await deleteModelApi(id);
+      await refresh();
+    });
+
+  const handleActivate = (id: string) => withBusy(id, () => loadCached(id).then());
+
+  const handleTryOnline = async (row: MergedRow) => {
+    if (!playDeckId) {
+      setError('Select a deck to play with first.');
+      return;
+    }
+    await withBusy(row.id, async () => {
       try {
-        await fn();
-      } finally {
-        setBusyIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
+        const deck = await deckStore.getDeck(playDeckId);
+        // For now the opponent uses the same deck — the manifest entry may
+        // advertise an intended deck in a future iteration.
+        const { game_id } = await createVsAiGame({
+          modelId: row.id,
+          userDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
+          opponentDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
         });
+        navigate(`/game/${game_id}?mode=vsai&player=1`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
       }
-    },
-    [],
-  );
-
-  const handleDownload = useCallback(
-    (model: ManifestModel) =>
-      withBusy(model.id, async () => {
-        setError(null);
-        try {
-          await downloadModel(model);
-          await refreshLocal();
-        } catch (err) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      }),
-    [refreshLocal, withBusy],
-  );
-
-  const handleLoad = useCallback(
-    (modelId: string) =>
-      withBusy(modelId, async () => {
-        setError(null);
-        try {
-          await loadCached(modelId);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      }),
-    [withBusy],
-  );
-
-  const handleDelete = useCallback(
-    (modelId: string) =>
-      withBusy(modelId, async () => {
-        if (!window.confirm(`Delete cached model ${modelId}?`)) return;
-        setError(null);
-        try {
-          await deleteModelApi(modelId);
-          await refreshLocal();
-        } catch (err) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      }),
-    [refreshLocal, withBusy],
-  );
+    });
+  };
 
   return (
     <div className="p-6 text-gray-100">
-      <h1 className="text-2xl font-bold mb-2">AI Models</h1>
-      <p className="text-sm text-gray-400 mb-4">
-        Download trained ONNX policies to play against. Only models whose tensor and
-        action-space shapes match this build of the engine can be used.
+      <h1 className="mb-2 text-2xl font-bold">AI Models</h1>
+      <p className="mb-4 text-sm text-gray-400">
+        Try models online, or download them for offline play. Models whose
+        tensor/action shapes don&apos;t match this build are greyed out.
       </p>
 
       {contract && (
         <div className="mb-6 text-xs text-gray-400">
-          Engine contract: tensor={contract.tensor_size}, actions={contract.action_space_size}
-          {contract.engine_commit ? `, commit=${contract.engine_commit.slice(0, 10)}` : ''}
+          Engine contract: tensor={contract.tensor_size}, actions=
+          {contract.action_space_size}
+          {contract.engine_commit
+            ? `, commit=${contract.engine_commit.slice(0, 10)}`
+            : ''}
         </div>
       )}
 
       {error && (
-        <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-red-200 mb-4 text-sm">
+        <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
           {error}
         </div>
       )}
 
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-2">Downloaded</h2>
-        {local.length === 0 ? (
-          <p className="text-sm text-gray-500">No models downloaded yet.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-gray-400">
-              <tr>
-                <th className="text-left py-2 pr-4">Name</th>
-                <th className="text-left py-2 pr-4">Type</th>
-                <th className="text-left py-2 pr-4">Downloaded</th>
-                <th className="text-left py-2 pr-4">Size</th>
-                <th className="text-left py-2 pr-4">SHA256</th>
-                <th className="text-right py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {local.map((m) => {
-                const busy = busyIds.has(m.id);
-                return (
-                  <tr key={m.id} className="border-t border-gray-700">
-                    <td className="py-2 pr-4">{m.name}</td>
-                    <td className="py-2 pr-4 uppercase">{m.model_type}</td>
-                    <td className="py-2 pr-4 text-gray-400">{formatDate(m.downloaded_at)}</td>
-                    <td className="py-2 pr-4">{formatBytes(m.file_size_bytes)}</td>
-                    <td className="py-2 pr-4 text-gray-500 font-mono">{shortSha(m.file_sha256)}</td>
-                    <td className="py-2 text-right space-x-2">
-                      <button
-                        disabled={busy}
-                        onClick={() => handleLoad(m.id)}
-                        className="px-2 py-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded text-xs"
-                      >
-                        Activate
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => handleDelete(m.id)}
-                        className="px-2 py-1 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded text-xs"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold mb-2">Remote manifest</h2>
-        <div className="flex flex-wrap gap-2 items-end mb-4">
-          <div className="flex-1 min-w-[320px]">
-            <label className="block text-xs text-gray-400 mb-1">
-              Manifest base URL (e.g. <code>https://api.example.com</code>)
-            </label>
-            <input
-              type="url"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="https://…"
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
-            />
-          </div>
-          <button
-            onClick={handleFetch}
-            disabled={loadingManifest || !baseUrl}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded"
+      <div className="mb-6 flex items-end gap-3">
+        <div>
+          <label className="mb-1 block text-xs text-gray-400">Your deck</label>
+          <select
+            value={playDeckId}
+            onChange={(e) => setPlayDeckId(e.target.value)}
+            className="rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
           >
-            {loadingManifest ? 'Fetching…' : 'Fetch manifest'}
-          </button>
+            {decks.length === 0 ? (
+              <option value="">No decks yet — build one in the Deck Builder</option>
+            ) : (
+              decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))
+            )}
+          </select>
         </div>
+        <button
+          onClick={() => void refresh()}
+          className="rounded bg-gray-700 px-3 py-2 text-sm hover:bg-gray-600"
+        >
+          Refresh
+        </button>
+      </div>
 
-        {manifest.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            {loadingManifest
-              ? 'Loading manifest…'
-              : 'No remote models listed yet — set a URL and click "Fetch manifest."'}
-          </p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-gray-400">
-              <tr>
-                <th className="text-left py-2 pr-4">Name</th>
-                <th className="text-left py-2 pr-4">Type</th>
-                <th className="text-left py-2 pr-4">Shape</th>
-                <th className="text-left py-2 pr-4">Size</th>
-                <th className="text-right py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {manifest.map((m) => {
-                const compatible = !contract || isCompatible(m, contract);
-                const have = localIds.has(m.id);
-                const busy = busyIds.has(m.id);
-                return (
-                  <tr key={m.id} className="border-t border-gray-700">
-                    <td className="py-2 pr-4">
-                      {m.name}
-                      {m.notes ? (
-                        <div className="text-xs text-gray-500">{m.notes}</div>
-                      ) : null}
-                    </td>
-                    <td className="py-2 pr-4 uppercase">{m.model_type}</td>
-                    <td className="py-2 pr-4 text-gray-400">
-                      {m.tensor_size}→{m.action_space_size}
-                      {!compatible && (
-                        <span className="ml-2 text-red-400" title="Shape mismatch">
-                          incompatible
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-4">{formatBytes(m.file_size_bytes)}</td>
-                    <td className="py-2 text-right">
-                      {have ? (
-                        <span className="text-xs text-green-400">downloaded</span>
-                      ) : (
+      {loading ? (
+        <p className="text-sm text-gray-400">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          No models available. Check that <code>VITE_MODELS_MANIFEST_URL</code> is set
+          and the server is reachable.
+        </p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead className="text-xs uppercase text-gray-400">
+            <tr>
+              <th className="py-2 pr-4 text-left">Name</th>
+              <th className="py-2 pr-4 text-left">Type</th>
+              <th className="py-2 pr-4 text-left">Size</th>
+              <th className="py-2 pr-4 text-left">Status</th>
+              <th className="py-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const busy = busyIds.has(row.id);
+              const compatible =
+                !contract ||
+                !row.manifest ||
+                isCompatible(row.manifest, contract);
+              const have = !!row.local;
+              const name = row.manifest?.name ?? row.local?.name ?? row.id;
+              const type = (row.manifest?.model_type ?? row.local?.model_type ?? '').toUpperCase();
+              const size = row.manifest?.file_size_bytes ?? row.local?.file_size_bytes ?? 0;
+              return (
+                <tr key={row.id} className="border-t border-gray-700">
+                  <td className="py-2 pr-4">{name}</td>
+                  <td className="py-2 pr-4">{type}</td>
+                  <td className="py-2 pr-4 text-gray-400">{formatBytes(size)}</td>
+                  <td className="py-2 pr-4">
+                    {have ? (
+                      <span className="text-xs text-green-400">downloaded</span>
+                    ) : compatible ? (
+                      <span className="text-xs text-gray-400">online only</span>
+                    ) : (
+                      <span className="text-xs text-red-400">incompatible</span>
+                    )}
+                  </td>
+                  <td className="py-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      {row.manifest && compatible && (
                         <button
-                          disabled={busy || !compatible}
-                          onClick={() => handleDownload(m)}
-                          title={!compatible ? 'Shape mismatch' : undefined}
-                          className="px-2 py-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 rounded text-xs"
+                          disabled={busy || !playDeckId}
+                          onClick={() => void handleTryOnline(row)}
+                          className="rounded bg-blue-600 px-2 py-1 text-xs hover:bg-blue-500 disabled:opacity-40"
                         >
-                          {busy ? 'Downloading…' : 'Download'}
+                          {busy ? '…' : 'Try online'}
                         </button>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </section>
+                      {row.manifest && !have && compatible && (
+                        <button
+                          disabled={busy}
+                          onClick={() => void handleDownload(row.manifest!)}
+                          className="rounded bg-gray-700 px-2 py-1 text-xs hover:bg-gray-600 disabled:opacity-40"
+                        >
+                          Download
+                        </button>
+                      )}
+                      {have && (
+                        <>
+                          <button
+                            disabled={busy}
+                            onClick={() => void handleActivate(row.id)}
+                            className="rounded bg-green-700 px-2 py-1 text-xs hover:bg-green-600 disabled:opacity-40"
+                          >
+                            Activate
+                          </button>
+                          <button
+                            disabled={busy}
+                            onClick={() => void handleDelete(row.id)}
+                            className="rounded bg-red-700 px-2 py-1 text-xs hover:bg-red-600 disabled:opacity-40"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

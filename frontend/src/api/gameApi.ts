@@ -1,4 +1,4 @@
-import { getGameClient } from './client';
+import client, { getGameClient } from './client';
 import type { GameState, GameEvent } from '@/types/game';
 import * as rustGameApi from './rustGameApi';
 
@@ -119,4 +119,28 @@ export async function deleteGame(gameId: string): Promise<void> {
   if (IS_DESKTOP) return rustGameApi.deleteGame(gameId);
   const client = getGameClient();
   await client.delete(`/games/${gameId}`);
+}
+
+/** Stage a manifest model on the server, then create a server-side
+ *  vs-AI game. Used by the Models page `Try online` button. */
+export async function createVsAiGame(params: {
+  modelId: string;
+  userDeck: { main_deck: string[]; egg_deck: string[] };
+  opponentDeck: { main_deck: string[]; egg_deck: string[] };
+}): Promise<{ game_id: string }> {
+  // Step 1: ask the server to stage the ONNX blob by model_id.
+  const { data: prepared } = await client.post<{ filename: string; downloaded: boolean }>(
+    `/models/${params.modelId}/prepare`,
+  );
+  // Step 2: create the game against the staged filename.
+  const { data } = await client.post<{ game_id: string }>('/games', {
+    deck1: [...params.userDeck.egg_deck, ...params.userDeck.main_deck],
+    deck2: [...params.opponentDeck.egg_deck, ...params.opponentDeck.main_deck],
+    player1_type: 'human',
+    player2_type: 'agent',
+    player1_policy: 'human',
+    player2_policy: 'trained',
+    player2_model: prepared.filename,
+  });
+  return data;
 }
