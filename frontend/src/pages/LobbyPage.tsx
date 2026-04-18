@@ -5,9 +5,12 @@ import { useWebSocketGame } from '@/hooks/useWebSocketGame';
 import { useMatchmaking } from '@/hooks/useMatchmaking';
 import * as lobbyApi from '@/api/lobbyApi';
 import * as deckApiMod from '@/api/deckApi';
-import type { LobbyGame } from '@/api/lobbyApi';
+import * as deckStore from '@/storage/deckStore';
 import type { QueueType, TierFilter } from '@/api/matchmaking';
 import type { DeckSummary } from '@/types/deck';
+
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+const decks = IS_DESKTOP ? deckStore : deckApiMod;
 
 export function LobbyPage() {
   const navigate = useNavigate();
@@ -15,11 +18,11 @@ export function LobbyPage() {
 
   // Load decks
   useEffect(() => {
-    deckApiMod.listDecks().then(setSavedDecks).catch(() => {});
+    decks.listDecks().then(setSavedDecks).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tab state
-  const [tab, setTab] = useState<'play' | 'create' | 'join' | 'browse'>('play');
+  const [tab, setTab] = useState<'play' | 'create' | 'join'>('play');
 
   // Play (matchmaking queue) tab state
   const [playQueueType, setPlayQueueType] = useState<QueueType>('casual');
@@ -34,7 +37,7 @@ export function LobbyPage() {
     let cancelled = false;
     (async () => {
       try {
-        const deck = await deckApiMod.getDeck(playDeckId);
+        const deck = await decks.getDeck(playDeckId);
         const result = await lobbyApi.joinLobby(matchmaking.match!.join_code, {
           deck: [...deck.egg_deck, ...deck.main_deck],
         });
@@ -67,11 +70,16 @@ export function LobbyPage() {
     }
   }, [matchmaking.waitedSeconds]);
 
-  const handleQueue = useCallback(() => {
+  const handleQueue = useCallback(async () => {
     if (!playDeckId) return;
+    // Always send the inline deck shape in desktop — the guest user has no
+    // server-side Deck row to reference.
+    const deck = await decks.getDeck(playDeckId);
     void matchmaking.enqueue({
       queue_type: playQueueType,
-      deck_id: playDeckId,
+      main_deck: deck.main_deck,
+      egg_deck: deck.egg_deck,
+      game_mode: deck.game_mode,
       opponent_tier_filter: playQueueType === 'casual' ? playTierFilter : undefined,
     });
   }, [matchmaking, playDeckId, playQueueType, playTierFilter]);
@@ -109,36 +117,11 @@ export function LobbyPage() {
   const [joinDeckId, setJoinDeckId] = useState('');
   const [joining, setJoining] = useState(false);
 
-  // Browse tab state
-  const [games, setGames] = useState<LobbyGame[]>([]);
-  const [loadingGames, setLoadingGames] = useState(false);
-
-  const refreshGames = useCallback(async () => {
-    setLoadingGames(true);
-    try {
-      const list = await lobbyApi.listLobbyGames();
-      setGames(list);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingGames(false);
-    }
-  }, []);
-
-  // Auto-refresh browse tab
-  useEffect(() => {
-    if (tab === 'browse') {
-      refreshGames();
-      const interval = setInterval(refreshGames, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [tab, refreshGames]);
-
   const handleCreate = async () => {
     if (!selectedDeckId) return;
     setCreating(true);
     try {
-      const deck = await deckApiMod.getDeck(selectedDeckId);
+      const deck = await decks.getDeck(selectedDeckId);
       const result = await lobbyApi.createLobby({
         deck: [...deck.egg_deck, ...deck.main_deck],
         is_public: isPublic,
@@ -158,7 +141,7 @@ export function LobbyPage() {
     if (!deckId || !code) return;
     setJoining(true);
     try {
-      const deck = await deckApiMod.getDeck(deckId);
+      const deck = await decks.getDeck(deckId);
       const result = await lobbyApi.joinLobby(code, {
         deck: [...deck.egg_deck, ...deck.main_deck],
       });
@@ -204,7 +187,7 @@ export function LobbyPage() {
 
       {/* Tabs */}
       <div className="mb-6 flex gap-2">
-        {(['play', 'create', 'join', 'browse'] as const).map((t) => (
+        {(['play', 'create', 'join'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -214,13 +197,7 @@ export function LobbyPage() {
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            {t === 'play'
-              ? 'Play'
-              : t === 'create'
-                ? 'Create Game'
-                : t === 'join'
-                  ? 'Join Game'
-                  : 'Browse Games'}
+            {t === 'play' ? 'Play' : t === 'create' ? 'Create Game' : 'Join Game'}
           </button>
         ))}
       </div>
@@ -346,52 +323,6 @@ export function LobbyPage() {
         </div>
       )}
 
-      {/* Browse Tab */}
-      {tab === 'browse' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">
-              {games.length} game{games.length !== 1 ? 's' : ''} available
-            </p>
-            <button
-              onClick={refreshGames}
-              disabled={loadingGames}
-              className="text-sm text-blue-400 hover:text-blue-300"
-            >
-              {loadingGames ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-          {games.length === 0 ? (
-            <p className="py-8 text-center text-gray-500">
-              No public games available. Create one or join with a code.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {games.map((game) => (
-                <div
-                  key={game.game_id}
-                  className="flex items-center justify-between rounded border border-gray-700 bg-gray-800 p-3"
-                >
-                  <div>
-                    <span className="font-medium text-white">{game.host_display_name}</span>
-                    <span className="ml-3 font-mono text-sm text-gray-400">{game.join_code}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <DeckSelect value={joinDeckId} onChange={setJoinDeckId} />
-                    <button
-                      onClick={() => handleJoin(game.join_code, joinDeckId)}
-                      disabled={!joinDeckId || joining}
-                      className="whitespace-nowrap rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-500 disabled:opacity-50"
-                    >
-                      Join
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

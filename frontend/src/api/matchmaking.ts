@@ -6,7 +6,11 @@ export type TicketStatus = 'waiting' | 'matched' | 'cancelled';
 
 export interface QueueRequest {
   queue_type: QueueType;
-  deck_id: string;
+  // One of these two shapes:
+  deck_id?: string;
+  main_deck?: string[];
+  egg_deck?: string[];
+  game_mode?: string;
   opponent_tier_filter?: TierFilter;
 }
 

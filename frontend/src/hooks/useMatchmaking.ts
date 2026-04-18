@@ -37,7 +37,11 @@ type ServerMessage = WaitingMessage | MatchFoundMessage | CancelledMessage;
 
 export interface QueueParams {
   queue_type: mmApi.QueueType;
-  deck_id: string;
+  // One of these two shapes:
+  deck_id?: string;
+  main_deck?: string[];
+  egg_deck?: string[];
+  game_mode?: string;
   opponent_tier_filter?: mmApi.TierFilter;
 }
 
