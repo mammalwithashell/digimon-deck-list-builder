@@ -2,7 +2,13 @@ import { useEffect } from 'react';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import { getCardById } from '@/api/digimonCardApi';
 import * as deckApi from '@/api/deckApi';
+import * as deckStore from '@/storage/deckStore';
 import type { DeckEntry } from '@/types/deck';
+
+// Keep the deck selector's source in lockstep with DeckBuilderPage's
+// save path — desktop reads/writes the local store, web hits the API.
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+const decks = IS_DESKTOP ? deckStore : deckApi;
 
 /** Group a flat array of card IDs + parallel alt-art bool array into
  *  DeckEntry objects, keeping base and alt printings as separate entries. */
@@ -25,7 +31,7 @@ export function DeckSelector() {
   const { savedDecks, setSavedDecks, loadDeck, deckId, clearDeck } = useDeckBuilderStore();
 
   useEffect(() => {
-    deckApi.listDecks().then(setSavedDecks).catch(() => {});
+    decks.listDecks().then(setSavedDecks).catch(() => {});
   }, [setSavedDecks]);
 
   const handleSelect = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -35,7 +41,7 @@ export function DeckSelector() {
       return;
     }
     try {
-      const deck = await deckApi.getDeck(val);
+      const deck = await decks.getDeck(val);
 
       // Group duplicate IDs into entries with correct counts, preserving
       // which slots were saved as alt-art printings.

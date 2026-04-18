@@ -8,6 +8,13 @@ import { ImportExport } from '@/components/deckbuilder/ImportExport';
 import { CardDetail } from '@/components/shared/CardDetail';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as deckApi from '@/api/deckApi';
+import * as deckStore from '@/storage/deckStore';
+import { GUEST_USER_ID_KEY } from '@/bootstrap/guest';
+
+// Desktop saves decks to the local Tauri-backed store; web keeps hitting
+// the hosted `/decks` API. The tested-cards allowlist + raw-validate calls
+// already branch inside `deckApi` itself, so they stay on `deckApi`.
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
 export function DeckBuilderPage() {
   const {
@@ -53,7 +60,23 @@ export function DeckBuilderPage() {
         (e) => Array(e.count).fill(!!e.isAltArt) as boolean[],
       );
 
-      if (deckId) {
+      if (IS_DESKTOP) {
+        // Single write path on desktop: `putDeck` creates when `id` is
+        // empty and updates when present. Stamp the guest owner_id from
+        // the bootstrap cache so decks get associated with the caller.
+        const ownerId = localStorage.getItem(GUEST_USER_ID_KEY) ?? 'guest';
+        const saved = await deckStore.putDeck({
+          id: deckId ?? undefined,
+          owner_id: ownerId,
+          name: deckName,
+          game_mode: 'standard',
+          main_deck: mainIds,
+          egg_deck: eggIds,
+          main_deck_alt_arts: mainAlts,
+          egg_deck_alt_arts: eggAlts,
+        });
+        setDeckId(saved.id);
+      } else if (deckId) {
         await deckApi.updateDeck(deckId, {
           name: deckName,
           main_deck: mainIds,
