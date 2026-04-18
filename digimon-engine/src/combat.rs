@@ -26,12 +26,12 @@
 //! Vortex short-circuits directly from `Declared` to `Battle` after OnAttack
 //! — Vortex attacks are uninterruptible per Digimon TCG rules.
 
-use crate::card_source::CardSource;
-use crate::enums::{CardKind, GamePhase, Keyword, ModifierType, PlayerId};
+use crate::enums::{CardKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{
-    AttackState, AttackTarget, PendingAttack, PendingSelection, SelectionKind,
+    AttackState, AttackTarget, PendingAttack, PendingSecurity, PendingSelection, SecurityPhase,
+    SecurityResolutionState, SecurityRevealSnapshot, SelectionKind, TriggerSource,
 };
 
 /// Result of an attack resolution.
@@ -296,6 +296,15 @@ impl Game {
                 }
                 AttackState::Battle => {
                     let outcome = self.resolve_pending_battle();
+                    if matches!(outcome, AttackResult::InProgress) {
+                        // Paused mid-security (SecuritySkill effect
+                        // installed a pending_selection). Keep
+                        // `pending_attack` alive in `Battle` so
+                        // `advance_security_resolution` finalizes combat
+                        // via `cleanup_attack` once the selection resolves.
+                        // RUST_PYTHON_PARITY §2.5j.
+                        return AttackResult::InProgress;
+                    }
                     return self.cleanup_attack(outcome);
                 }
                 AttackState::Cleanup => {
@@ -746,9 +755,12 @@ impl Game {
         }
     }
 
-    /// Security-check loop for a `Player` attack. Extracted from the old
-    /// atomic `attack_player` so `resolve_pending_battle` can call it once
-    /// the interrupt windows have cleared.
+    /// Security-check loop for a `Player` attack. Installs the first
+    /// `SecurityResolutionState` and drives the phase state machine. On
+    /// pause returns `AttackResult::InProgress` — caller leaves
+    /// `pending_attack` alive in `AttackState::Battle` so
+    /// `advance_security_resolution` can finish combat once the selection
+    /// resolves. RUST_PYTHON_PARITY §2.5j.
     fn resolve_player_security_loop(
         &mut self,
         attacker: PermanentHandle,
@@ -757,42 +769,232 @@ impl Game {
         let sa_bonus = self
             .modifiers
             .sum(attacker, ModifierType::SecurityAttackChange);
-        let checks = (1 + sa_bonus).max(0) as usize;
+        let checks = (1 + sa_bonus).max(0) as u8;
+        if checks == 0 {
+            return AttackResult::SecurityCheckSurvived;
+        }
+        if !self.pop_and_start_security_check(attacker, defender_player, checks - 1) {
+            return AttackResult::GameWon;
+        }
+        match self.drive_security_resolution() {
+            None => AttackResult::InProgress,
+            Some(outcome) => outcome,
+        }
+    }
 
-        let mut attacker_alive = true;
-        for _ in 0..checks {
+    /// Pop top of `defender.security`, snapshot face-up state, install
+    /// `security_resolution`. Returns false iff security was empty (caller
+    /// declares winner). `checks_remaining` is the number of additional
+    /// checks queued behind this one.
+    fn pop_and_start_security_check(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PlayerId,
+        checks_remaining: u8,
+    ) -> bool {
+        let sec_card = match self.player_mut(defender).security.pop() {
+            Some(c) => c,
+            None => {
+                let winner = attacker.player;
+                self.declare_winner(winner);
+                return false;
+            }
+        };
+        // §2.5k: remove from face_up_security on actual reveal.
+        let was_face_up = self
+            .player_mut(defender)
+            .face_up_security
+            .remove(&sec_card.card_index);
+        let card_handle = sec_card.handle();
+        let kind = sec_card.card_kind(&self.card_data);
+        // §2.5l: snapshot on defender.
+        self.player_mut(defender).last_security_reveal = Some(SecurityRevealSnapshot {
+            card: card_handle,
+            was_face_up,
+        });
+        self.pending_security = Some(PendingSecurity {
+            defender,
+            card: sec_card,
+            played: false,
+        });
+        let turn_player = self.turn_player();
+        self.security_resolution = Some(SecurityResolutionState {
+            attacker: Some(attacker),
+            defender,
+            turn_player,
+            revealed_card: card_handle,
+            card_kind: kind,
+            was_face_up,
+            phase: SecurityPhase::SecuritySkillDrain,
+            checks_remaining,
+            outcome_so_far: AttackResult::SecurityCheckSurvived,
+        });
+        true
+    }
+
+    /// Run the security-resolution phase machine until terminal or paused
+    /// by a `pending_selection`. `None` = paused, `Some(outcome)` = fully
+    /// finished (may include iteration across multiple security cards).
+    /// Phase order matches Python: SecuritySkill → battle →
+    /// OnSecurityCheck → OnLoseSecurity → dispose.
+    /// RUST_PYTHON_PARITY §2.5b / §2.5j.
+    fn drive_security_resolution(&mut self) -> Option<AttackResult> {
+        loop {
             if self.game_over {
-                break;
+                self.pending_security = None;
+                self.security_resolution = None;
+                return Some(AttackResult::GameWon);
             }
-            if !self.handle_valid(attacker) {
-                attacker_alive = false;
-                break;
-            }
-            let sec_card = match self.player_mut(defender_player).security.pop() {
-                Some(c) => c,
-                None => {
-                    let winner = attacker.player;
-                    self.declare_winner(winner);
-                    return AttackResult::GameWon;
-                }
+            let Some(state) = self.security_resolution.as_ref() else {
+                return Some(AttackResult::SecurityCheckSurvived);
             };
-            let outcome = self.resolve_security_card(attacker, sec_card, defender_player);
-            match outcome {
-                AttackResult::AttackerDeletedBySecurity => {
-                    attacker_alive = false;
-                    break;
+            let phase = state.phase;
+            match phase {
+                SecurityPhase::SecuritySkillDrain => {
+                    let defender = state.defender;
+                    let card_handle = state.revealed_card;
+                    self.enqueue_triggered(
+                        EffectTiming::SecuritySkill,
+                        TriggerSource::SecurityRevealed {
+                            defender,
+                            card: card_handle,
+                        },
+                    );
+                    self.drain_effect_queue();
+                    if self.pending_selection.is_some() {
+                        return None;
+                    }
+                    self.set_security_phase(SecurityPhase::BattleResolved);
                 }
-                AttackResult::GameWon => {
-                    return AttackResult::GameWon;
+                SecurityPhase::BattleResolved => {
+                    let Some(state) = self.security_resolution.as_ref() else {
+                        break;
+                    };
+                    let kind = state.card_kind;
+                    let attacker_opt = state.attacker;
+                    if kind == CardKind::Digimon {
+                        if let Some(attacker) = attacker_opt {
+                            if self.handle_valid(attacker) {
+                                let attacker_dp = self.effective_dp(attacker).unwrap_or(0);
+                                let sec_dp = self
+                                    .pending_security
+                                    .as_ref()
+                                    .and_then(|p| p.card.dp(&self.card_data))
+                                    .unwrap_or(0);
+                                if attacker_dp < sec_dp
+                                    && !self.modifiers.has_keyword(attacker, Keyword::Jamming)
+                                {
+                                    self.delete_permanent_with_effects(attacker);
+                                    if let Some(st) = self.security_resolution.as_mut() {
+                                        st.outcome_so_far =
+                                            AttackResult::AttackerDeletedBySecurity;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    self.set_security_phase(SecurityPhase::OnSecurityCheckDrain);
                 }
-                _ => {}
+                SecurityPhase::OnSecurityCheckDrain => {
+                    let Some(state) = self.security_resolution.as_ref() else {
+                        break;
+                    };
+                    if let Some(attacker) = state.attacker {
+                        let trigger = TriggerSource::OnSecurityCheck {
+                            attacker,
+                            defender: state.defender,
+                            revealed_card: state.revealed_card,
+                            was_face_up: state.was_face_up,
+                        };
+                        self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger);
+                        self.drain_effect_queue();
+                        if self.pending_selection.is_some() {
+                            return None;
+                        }
+                    }
+                    self.set_security_phase(SecurityPhase::OnLoseSecurityDrain);
+                }
+                SecurityPhase::OnLoseSecurityDrain => {
+                    let Some(state) = self.security_resolution.as_ref() else {
+                        break;
+                    };
+                    let defender = state.defender;
+                    let card_handle = state.revealed_card;
+                    self.enqueue_triggered(
+                        EffectTiming::OnLoseSecurity,
+                        TriggerSource::SecurityRevealed {
+                            defender,
+                            card: card_handle,
+                        },
+                    );
+                    self.drain_effect_queue();
+                    if self.pending_selection.is_some() {
+                        return None;
+                    }
+                    self.set_security_phase(SecurityPhase::Dispose);
+                }
+                SecurityPhase::Dispose => {
+                    let state = self
+                        .security_resolution
+                        .take()
+                        .expect("checked Some above");
+                    let defender = state.defender;
+                    let attacker_opt = state.attacker;
+                    let remaining = state.checks_remaining;
+                    let outcome = state.outcome_so_far;
+                    if let Some(pending) = self.pending_security.take() {
+                        if !pending.played {
+                            self.player_mut(defender).trash.push(pending.card);
+                        }
+                    }
+                    if matches!(outcome, AttackResult::AttackerDeletedBySecurity) {
+                        return Some(outcome);
+                    }
+                    if remaining == 0 {
+                        return Some(AttackResult::SecurityCheckSurvived);
+                    }
+                    let attacker = match attacker_opt {
+                        Some(a) => a,
+                        None => return Some(AttackResult::SecurityCheckSurvived),
+                    };
+                    if !self.handle_valid(attacker) {
+                        return Some(AttackResult::AttackerDeletedBySecurity);
+                    }
+                    if !self.pop_and_start_security_check(attacker, defender, remaining - 1) {
+                        return Some(AttackResult::GameWon);
+                    }
+                    // Loop continues into the fresh state's SecuritySkillDrain.
+                }
             }
         }
+        Some(AttackResult::SecurityCheckSurvived)
+    }
 
-        if !attacker_alive {
-            AttackResult::AttackerDeletedBySecurity
-        } else {
-            AttackResult::SecurityCheckSurvived
+    /// Resume the security state machine after a `pending_selection`
+    /// installed mid-drain has resolved. Called from
+    /// `resolve_generic_selection` in `effect_queue.rs` after post-callback
+    /// drain. Idempotent. If resumption finishes the security loop and a
+    /// `pending_attack` is still alive, finalize combat via `cleanup_attack`.
+    /// RUST_PYTHON_PARITY §2.5j.
+    pub(crate) fn advance_security_resolution(&mut self) {
+        if self.pending_selection.is_some() {
+            return;
+        }
+        if self.security_resolution.is_none() {
+            return;
+        }
+        let outcome = match self.drive_security_resolution() {
+            None => return,
+            Some(o) => o,
+        };
+        if self.pending_attack.is_some() {
+            self.cleanup_attack(outcome);
+        }
+    }
+
+    fn set_security_phase(&mut self, phase: SecurityPhase) {
+        if let Some(st) = self.security_resolution.as_mut() {
+            st.phase = phase;
         }
     }
 
@@ -876,102 +1078,6 @@ impl Game {
                 self.delete_permanent_with_effects(attacker);
             }
             AttackResult::MutualDestruction
-        }
-    }
-
-    /// Resolve a single security card being revealed.
-    ///
-    /// Flow (mirrors Python's `Player.security_attack`, RUST_PYTHON_PARITY §2.5):
-    /// 1. Park `sec_card` in `Game.pending_security` so effect scripts can
-    ///    observe it and raise the `played` bit via `play_from_security`.
-    /// 2. Enqueue `SecuritySkill` triggers on the revealed card and drain.
-    ///    Effects that play the card from security raise
-    ///    `pending_security.played = true`.
-    /// 3. For `CardKind::Digimon`, run the DP battle against the attacker.
-    ///    Jamming on the attacker suppresses attacker deletion on a loss.
-    /// 4. Fire `OnLoseSecurity` on the revealed card (observer timing).
-    /// 5. If `played == false`, trash the card; otherwise it's already on
-    ///    the defender's field and `pending_security` is cleared.
-    fn resolve_security_card(
-        &mut self,
-        attacker: PermanentHandle,
-        sec_card: CardSource,
-        defender_player: PlayerId,
-    ) -> AttackResult {
-        let kind = sec_card.card_kind(&self.card_data);
-        let card_handle = sec_card.handle();
-
-        // Park the revealed card for the duration of the check. Effects
-        // access it through `EffectContext::play_from_security` / ctx queries.
-        self.pending_security = Some(crate::selection::PendingSecurity {
-            defender: defender_player,
-            card: sec_card,
-            played: false,
-        });
-
-        // Fire SecuritySkill effects for all card kinds. Digimon security
-        // cards with SecuritySkill text (rare, but Armor evolution etc. can
-        // produce them) should behave the same as Option/Tamer.
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::SecuritySkill,
-            crate::selection::TriggerSource::SecurityRevealed {
-                defender: defender_player,
-                card: card_handle,
-            },
-        );
-        self.drain_effect_queue();
-
-        // Determine battle outcome for Digimon-kind security (independent of
-        // whether the card was played — Python battles *after* the effect
-        // fires, and `play_from_security` leaves battle untouched because the
-        // battle comparison reads the card's printed DP, not its field form).
-        let mut outcome = AttackResult::SecurityCheckSurvived;
-        if kind == CardKind::Digimon {
-            if let Some(pending) = self.pending_security.as_ref() {
-                let attacker_dp = self.effective_dp(attacker).unwrap_or(0);
-                let sec_dp = pending.card.dp(&self.card_data).unwrap_or(0);
-                if attacker_dp < sec_dp {
-                    // Security Digimon wins the DP comparison. Jamming on
-                    // the attacker prevents the attacker from being deleted.
-                    if !self.modifiers.has_keyword(attacker, Keyword::Jamming) {
-                        self.delete_permanent_with_effects(attacker);
-                        outcome = AttackResult::AttackerDeletedBySecurity;
-                    }
-                }
-            }
-        }
-
-        // Fire OnLoseSecurity regardless of play-vs-trash outcome.
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnLoseSecurity,
-            crate::selection::TriggerSource::SecurityRevealed {
-                defender: defender_player,
-                card: card_handle,
-            },
-        );
-        self.drain_effect_queue();
-
-        // Dispose: trash the card unless an effect played it.
-        if let Some(pending) = self.pending_security.take() {
-            if !pending.played {
-                if kind == CardKind::DigiEgg {
-                    // Eggs in security are just trashed (shouldn't happen
-                    // normally — matches the pre-rewrite behavior).
-                    self.player_mut(defender_player).trash.push(pending.card);
-                } else {
-                    self.player_mut(defender_player).trash.push(pending.card);
-                }
-            }
-        }
-
-        // Legacy `match kind` block preserved for symmetry with AttackResult
-        // return shape — all non-Digimon kinds hit the default SurvivalSurvived
-        // outcome unless overridden by the Digimon DP branch above.
-        match kind {
-            CardKind::Digimon
-            | CardKind::Option
-            | CardKind::Tamer
-            | CardKind::DigiEgg => outcome,
         }
     }
 

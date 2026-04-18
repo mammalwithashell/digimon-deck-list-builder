@@ -162,6 +162,55 @@ pub enum TriggerSource {
         defender: PlayerId,
         card: CardHandle,
     },
+    /// Global observer timing fired after a security card's own
+    /// `SecuritySkill` effects resolve and the Digimon battle (if any) has
+    /// been decided. Scans every permanent in the defender's battle area for
+    /// `OnSecurityCheck`-timed effects. Mirrors Python's
+    /// `EffectTiming.OnSecurityCheck` fire site in `combat.py:206-214`
+    /// (RUST_PYTHON_PARITY §2.5b).
+    OnSecurityCheck {
+        attacker: PermanentHandle,
+        defender: PlayerId,
+        revealed_card: CardHandle,
+        was_face_up: bool,
+    },
+}
+
+/// Phase of an in-flight security-card resolution. Drives the
+/// `drive_security_resolution` state machine in `combat.rs`. Order matches
+/// Python's `_execute_security_checks` sequence. See RUST_PYTHON_PARITY
+/// §2.5b / §2.5j.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecurityPhase {
+    SecuritySkillDrain,
+    BattleResolved,
+    OnSecurityCheckDrain,
+    OnLoseSecurityDrain,
+    Dispose,
+}
+
+/// Mid-security-check state. Parks `drive_security_resolution` across
+/// `pending_selection` pauses so `Game::advance_security_resolution` can
+/// resume cleanly. See RUST_PYTHON_PARITY §2.5j.
+#[derive(Debug, Clone)]
+pub struct SecurityResolutionState {
+    pub attacker: Option<PermanentHandle>,
+    pub defender: PlayerId,
+    pub turn_player: PlayerId,
+    pub revealed_card: CardHandle,
+    pub card_kind: crate::enums::CardKind,
+    pub was_face_up: bool,
+    pub phase: SecurityPhase,
+    pub checks_remaining: u8,
+    pub outcome_so_far: crate::combat::AttackResult,
+}
+
+/// Snapshot of the most recently revealed security card. Consumed by
+/// `OnSecurityCheck` observer effects. RUST_PYTHON_PARITY §2.5l.
+#[derive(Debug, Clone, Copy)]
+pub struct SecurityRevealSnapshot {
+    pub card: CardHandle,
+    pub was_face_up: bool,
 }
 
 /// Transient per-security-check state. Lives on `Game` from the moment the

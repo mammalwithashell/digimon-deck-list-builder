@@ -62,6 +62,20 @@ impl Game {
             TriggerSource::SecurityRevealed { defender, card } => {
                 self.enqueue_from_security_card(timing, defender, card);
             }
+            TriggerSource::OnSecurityCheck { defender, .. } => {
+                // Observer timing: scan defender's battle area for
+                // `OnSecurityCheck` effects. Attacker + revealed card flow
+                // through `game.security_resolution` to `EffectContext`.
+                // RUST_PYTHON_PARITY §2.5b.
+                let count = self.player(defender).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player: defender,
+                        index: i as u8,
+                    };
+                    self.enqueue_from_permanent(timing, handle);
+                }
+            }
         }
     }
 
@@ -269,15 +283,21 @@ impl Game {
             return;
         };
 
-        if let Some(cond) = &effect.condition {
-            let ctx = EffectContext::new(
-                self,
-                qe.source_card,
-                qe.source_permanent,
-                qe.controller,
-            );
-            if !cond(&ctx.as_read()) {
-                return;
+        // RUST_PYTHON_PARITY §2.5h: Python's `_fire_security_skill` does not
+        // evaluate `can_use_condition` for `SecuritySkill` effects. Match
+        // that by skipping the condition check when timing is SecuritySkill.
+        let skip_condition = qe.timing == EffectTiming::SecuritySkill;
+        if !skip_condition {
+            if let Some(cond) = &effect.condition {
+                let ctx = EffectContext::new(
+                    self,
+                    qe.source_card,
+                    qe.source_permanent,
+                    qe.controller,
+                );
+                if !cond(&ctx.as_read()) {
+                    return;
+                }
             }
         }
         if let Some(process) = &effect.process {
@@ -442,6 +462,13 @@ impl Game {
         // flow, so callers don't have to remember to drain.
         if self.pending_selection.is_none() {
             self.drain_effect_queue();
+        }
+        // RUST_PYTHON_PARITY §2.5j: re-enter the security state machine
+        // after the post-callback drain, so a selection installed inside a
+        // SecuritySkill process resumes through Battle / OnSecurityCheck /
+        // OnLoseSecurity / Dispose. Idempotent when not mid-security.
+        if self.pending_selection.is_none() {
+            self.advance_security_resolution();
         }
         Ok(())
     }

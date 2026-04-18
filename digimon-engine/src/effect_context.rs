@@ -24,6 +24,9 @@ pub struct EffectReadContext<'a> {
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
     pub player: PlayerId,
+    pub turn_player: PlayerId,
+    pub attacker: Option<PermanentHandle>,
+    pub security_digimon: Option<CardHandle>,
 }
 
 impl<'a> EffectReadContext<'a> {
@@ -33,11 +36,25 @@ impl<'a> EffectReadContext<'a> {
         source_permanent: Option<PermanentHandle>,
         player: PlayerId,
     ) -> Self {
+        let (turn_player, attacker, security_digimon) = match &game.security_resolution {
+            Some(state) => {
+                let sec_digi = if state.card_kind == crate::enums::CardKind::Digimon {
+                    Some(state.revealed_card)
+                } else {
+                    None
+                };
+                (state.turn_player, state.attacker, sec_digi)
+            }
+            None => (game.turn_player(), None, None),
+        };
         Self {
             game,
             source_card,
             source_permanent,
             player,
+            turn_player,
+            attacker,
+            security_digimon,
         }
     }
 
@@ -110,6 +127,12 @@ pub struct EffectContext<'a> {
     pub source_permanent: Option<PermanentHandle>,
     /// Player who controls the source.
     pub player: PlayerId,
+    pub turn_player: PlayerId,
+    /// Populated during security drains from `game.security_resolution`.
+    /// RUST_PYTHON_PARITY §2.5g.
+    pub attacker: Option<PermanentHandle>,
+    /// Revealed security card when it's a Digimon; `None` otherwise. §2.5g.
+    pub security_digimon: Option<CardHandle>,
 }
 
 impl<'a> EffectContext<'a> {
@@ -119,11 +142,25 @@ impl<'a> EffectContext<'a> {
         source_permanent: Option<PermanentHandle>,
         player: PlayerId,
     ) -> Self {
+        let (turn_player, attacker, security_digimon) = match &game.security_resolution {
+            Some(state) => {
+                let sec_digi = if state.card_kind == crate::enums::CardKind::Digimon {
+                    Some(state.revealed_card)
+                } else {
+                    None
+                };
+                (state.turn_player, state.attacker, sec_digi)
+            }
+            None => (game.turn_player(), None, None),
+        };
         Self {
             game,
             source_card,
             source_permanent,
             player,
+            turn_player,
+            attacker,
+            security_digimon,
         }
     }
 
@@ -196,6 +233,9 @@ impl<'a> EffectContext<'a> {
             source_card: self.source_card,
             source_permanent: self.source_permanent,
             player: self.player,
+            turn_player: self.turn_player,
+            attacker: self.attacker,
+            security_digimon: self.security_digimon,
         }
     }
 
