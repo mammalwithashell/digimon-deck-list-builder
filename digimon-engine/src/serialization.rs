@@ -11,11 +11,13 @@
 
 use serde_json::{json, Map, Value};
 
+use crate::action::space::SECURITY_TARGET;
 use crate::card_data::CardData;
 use crate::enums::{CardKind, GamePhase};
 use crate::game::Game;
 use crate::permanent::Permanent;
 use crate::player::Player;
+use crate::selection::AttackTarget;
 
 /// Translate a Rust `PlayerId` (0 / 1) into the Python 1 / 2 convention.
 fn py_pid(rust_pid: u8) -> i64 {
@@ -117,14 +119,16 @@ fn kind_int(cd: &CardData) -> i64 {
 }
 
 fn evo_costs_of(cd: &CardData) -> Vec<Value> {
-    // EvoCost fields: card_color: u8, level: u8, memory_cost: u16
+    // EvoCost fields: card_color: u8, level: u8, memory_cost: u16.
+    // Key names match Python's serialization.py:313 — {"color", "level", "cost"}.
+    // card_color is a raw u8 (same integer value Python's enum.value emits).
     cd.evo_costs
         .iter()
         .map(|ec| {
             json!({
-                "cardColor": ec.card_color,
+                "color": ec.card_color,
                 "level": ec.level,
-                "memoryCost": ec.memory_cost,
+                "cost": ec.memory_cost,
             })
         })
         .collect()
@@ -194,6 +198,10 @@ pub fn to_ui_json(game: &Game) -> Value {
         None => Value::Null,
         Some(v) => {
             let mut m = Map::new();
+            // "kind" is a deliberate Rust-additive key not present in Python's
+            // serialization.py:338 output — it surfaces the SelectionKind variant
+            // string so typed WebSocket/UI consumers can route selection prompts
+            // without re-deriving the kind from phase + validIndices alone.
             m.insert("kind".into(), Value::String(v.kind_str()));
             m.insert("phase".into(), Value::String(v.previous_phase_str()));
             m.insert(
@@ -225,11 +233,19 @@ pub fn to_ui_json(game: &Game) -> Value {
         .pending_attack
         .as_ref()
         .map(|pa| {
+            // Shape matches Python's serialization.py:370-373.
+            // attacker_slot: index of the attacker in the turn-player's battle_area.
+            // target_slot: index in enemy battle_area (Digimon target) or
+            //   SECURITY_TARGET (14) for a direct/player attack — mirrors Python's
+            //   isinstance(pa.effective_target, Permanent) branch.
+            let attacker_slot = pa.attacker.index as i64;
+            let target_slot: i64 = match pa.effective_target {
+                AttackTarget::Digimon(ph) => ph.index as i64,
+                AttackTarget::Player(_) => SECURITY_TARGET as i64,
+            };
             json!({
-                "attackerPlayer": py_pid(pa.attacker.player),
-                "attackerFieldIndex": pa.attacker.index,
-                "isBlocked": pa.is_blocked,
-                "state": format!("{:?}", pa.state),
+                "attackerSlot": attacker_slot,
+                "targetSlot": target_slot,
             })
         })
         .unwrap_or(Value::Null);
