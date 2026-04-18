@@ -1,6 +1,8 @@
 import { useAuthStore } from '@/stores/authStore';
 import { useNavigate } from 'react-router-dom';
 
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+
 export function UserMenu() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -11,6 +13,10 @@ export function UserMenu() {
   };
 
   if (!isAuthenticated) {
+    if (IS_DESKTOP) {
+      // Desktop uses guest sessions; no login UI.
+      return null;
+    }
     return (
       <button
         onClick={() => navigate('/login')}
