@@ -273,3 +273,55 @@ fn reveal_top_deck_handles_empty_deck() {
     assert_eq!(revealed.len(), 1);
     assert_eq!(r.deck_size(0), 0);
 }
+
+// ─── return_to_hand ───────────────────────────────────────────────────────────
+
+#[test]
+fn return_to_hand_moves_top_card_to_hand_and_sources_to_trash() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("TOP", "Top", 5))
+        .add_card(plain_digimon("UNDER", "Under", 3))
+        .start();
+
+    // Seed a permanent with UNDER on bottom, TOP on top.
+    let handle = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_data = g.card_data.iter().position(|c| c.card_id == "UNDER").unwrap();
+        let top_data = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let idx_under = g.next_card_index();
+        let idx_top = g.next_card_index();
+        let under = digimon_engine::card_source::CardSource::new(under_data, 0, idx_under);
+        let top = digimon_engine::card_source::CardSource::new(top_data, 0, idx_top);
+        let mut perm = digimon_engine::permanent::Permanent::new(under, turn);
+        perm.card_sources.push(top);
+        g.players[0].battle_area.push(perm);
+        digimon_engine::permanent::PermanentHandle { player: 0, index: 0 }
+    };
+
+    let returned = r.game_mut().return_to_hand(handle);
+    assert!(returned.is_some(), "returned a card handle");
+    assert_eq!(r.battle_area_size(0), 0, "permanent gone");
+    assert_eq!(r.hand_size(0), 1, "top card went to hand");
+    assert_eq!(r.trash_size(0), 1, "under card went to trash");
+
+    let hand_id = {
+        let g = r.game_mut();
+        g.player(0).hand[0].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(hand_id, "TOP");
+    let trash_id = {
+        let g = r.game_mut();
+        g.player(0).trash[0].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(trash_id, "UNDER");
+}
+
+#[test]
+fn return_to_hand_bad_handle_returns_none() {
+    let mut r = DebugRunner::builder().start();
+    let returned = r.game_mut().return_to_hand(
+        digimon_engine::permanent::PermanentHandle { player: 0, index: 99 }
+    );
+    assert!(returned.is_none());
+}

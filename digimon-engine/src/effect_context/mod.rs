@@ -344,6 +344,14 @@ impl<'a> EffectContext<'a> {
         })
     }
 
+    /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
+    pub fn return_to_hand(
+        &mut self,
+        target: PermanentHandle,
+    ) -> Option<crate::card_source::CardHandle> {
+        self.game.return_to_hand(target)
+    }
+
     // ─── Modifier registration ────────────────────────────────────────
 
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {

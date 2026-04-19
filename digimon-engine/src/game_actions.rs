@@ -462,6 +462,39 @@ impl Game {
         true
     }
 
+    /// Bounce a permanent to its owner's hand: the top card moves to hand,
+    /// every card beneath it goes to the owner's trash (per DCGO leave-field
+    /// rules). Linked cards go to trash. Returns the handle of the card that
+    /// ended up in hand.
+    ///
+    /// Does not fire OnLeaveField observers — that's Phase 1 timing-dispatch
+    /// infrastructure. Modifiers targeting the returned permanent are cleared.
+    pub fn return_to_hand(
+        &mut self,
+        handle: PermanentHandle,
+    ) -> Option<crate::card_source::CardHandle> {
+        let player = self.player_mut(handle.player);
+        if (handle.index as usize) >= player.battle_area.len() {
+            return None;
+        }
+        let perm = player.battle_area.remove(handle.index as usize);
+
+        let mut sources = perm.card_sources;
+        let top = sources.pop()?;
+        let top_handle = top.handle();
+        player.hand.push(top);
+
+        for card in sources {
+            player.trash.push(card);
+        }
+        for card in perm.linked_cards {
+            player.trash.push(card);
+        }
+
+        self.modifiers.clear_permanent(handle);
+        Some(top_handle)
+    }
+
     /// Full "digivolve from hand" action — Python parity for
     /// `action_digivolve(field_idx, hand_idx)`. Validates phase, indices,
     /// `CannotDigivolve` modifier, and evo-cost fit; pays memory; removes
