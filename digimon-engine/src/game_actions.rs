@@ -963,6 +963,76 @@ impl Game {
         true
     }
 
+    /// Move a card from `source` to `player_id`'s security stack at the given
+    /// `position` (Top, Bottom, Random). If `face_up` is true, the card's
+    /// `card_index` is inserted into `face_up_security` so subsequent reveals
+    /// know it was placed face-up. Returns false if the source index is invalid.
+    ///
+    /// Does not fire `OnLoseSecurity` or any security-related observers.
+    pub fn place_on_security(
+        &mut self,
+        player_id: PlayerId,
+        source: crate::enums::CardSourceRef,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        // Take the card out of its source zone. Mirror the pattern from
+        // place_as_bottom_source.
+        let taken = match source {
+            crate::enums::CardSourceRef::Hand(p, i) => {
+                let player = self.player_mut(p);
+                if i >= player.hand.len() {
+                    return false;
+                }
+                player.hand.remove(i)
+            }
+            crate::enums::CardSourceRef::Trash(p, i) => {
+                let player = self.player_mut(p);
+                if i >= player.trash.len() {
+                    return false;
+                }
+                player.trash.remove(i)
+            }
+            crate::enums::CardSourceRef::DeckTop(p) => {
+                let Some(c) = self.player_mut(p).deck.pop() else {
+                    return false;
+                };
+                c
+            }
+            crate::enums::CardSourceRef::Reveal(h) => {
+                let Some(idx) = self.revealed_cards.iter().position(|c| c.handle() == h) else {
+                    return false;
+                };
+                self.revealed_cards.remove(idx)
+            }
+        };
+
+        // face_up_security is HashSet<u16> keyed by card_index.
+        let face_up_key = taken.card_index;
+
+        match position {
+            crate::enums::StackPosition::Top => {
+                self.player_mut(player_id).security.push(taken);
+            }
+            crate::enums::StackPosition::Bottom => {
+                self.player_mut(player_id).security.insert(0, taken);
+            }
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                // Split-borrow: read length from immutable borrow first, then
+                // mutably insert — mirrors the pattern in return_to_deck.
+                let sec_len = self.player(player_id).security.len();
+                let idx = if sec_len == 0 { 0 } else { self.rng.gen_range(0..=sec_len) };
+                self.player_mut(player_id).security.insert(idx, taken);
+            }
+        }
+
+        if face_up {
+            self.player_mut(player_id).face_up_security.insert(face_up_key);
+        }
+        true
+    }
+
     /// Script-initiated digivolve: place the card at `hand_index` from
     /// `player_id`'s hand onto `target`, bypassing the phase check and
     /// optionally the color check. Memory is paid according to `cost_delta`.

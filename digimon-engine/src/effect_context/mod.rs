@@ -470,6 +470,18 @@ impl<'a> EffectContext<'a> {
 
     // ─── Breeding-area mutations ──────────────────────────────────────
 
+    /// Move a card from `source` to `player`'s security stack. Does not
+    /// fire `OnLoseSecurity` observers. See `Game::place_on_security`.
+    pub fn place_on_security(
+        &mut self,
+        player: PlayerId,
+        source: crate::enums::CardSourceRef,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        self.game.place_on_security(player, source, position, face_up)
+    }
+
     /// Move the top of `player`'s digitama deck into the breeding area.
     ///
     /// Returns `true` if a hatch occurred — i.e. the breeding slot was

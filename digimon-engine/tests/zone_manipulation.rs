@@ -837,3 +837,84 @@ fn ctx_hatch_moves_top_of_digitama_to_breeding() {
         "egg hatched into breeding area"
     );
 }
+
+// ─── place_on_security ────────────────────────────────────────────────────────
+
+#[test]
+fn place_on_security_from_hand_grows_security_stack() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("SHIELD", "Shield", 4))
+        .hand(0, &["SHIELD"])
+        .start();
+
+    let before = r.security_count(0);
+    let ok = r.game_mut().place_on_security(
+        0,
+        CardSourceRef::Hand(0, 0),
+        StackPosition::Top,
+        /* face_up = */ false,
+    );
+    assert!(ok);
+    assert_eq!(r.security_count(0), before + 1);
+    assert_eq!(r.hand_size(0), 0);
+}
+
+#[test]
+fn place_on_security_face_up_marks_card_visible() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("VIS", "Visible", 4))
+        .hand(0, &["VIS"])
+        .start();
+
+    // Capture the card's face_up_security key BEFORE moving it.
+    // face_up_security is keyed by card_index (u16) from CardSource.
+    let card_key = {
+        let g = r.game_mut();
+        g.player(0).hand[0].card_index
+    };
+
+    let ok = r.game_mut().place_on_security(
+        0,
+        CardSourceRef::Hand(0, 0),
+        StackPosition::Top,
+        /* face_up = */ true,
+    );
+    assert!(ok);
+    assert!(r.game_mut().player(0).face_up_security.contains(&card_key));
+}
+
+#[test]
+fn place_on_security_bottom_places_at_index_zero() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BOT", "Bottom", 4))
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .hand(0, &["BOT"])
+        .security(0, &["FILLER", "FILLER"])
+        .start();
+
+    let ok = r.game_mut().place_on_security(
+        0,
+        CardSourceRef::Hand(0, 0),
+        StackPosition::Bottom,
+        false,
+    );
+    assert!(ok);
+    // security is Vec; bottom = index 0
+    let bottom_id = {
+        let g = r.game_mut();
+        g.player(0).security.first().unwrap().card_id(&g.card_data).to_string()
+    };
+    assert_eq!(bottom_id, "BOT");
+}
+
+#[test]
+fn place_on_security_bad_source_returns_false() {
+    let mut r = DebugRunner::builder().start();
+    let ok = r.game_mut().place_on_security(
+        0,
+        CardSourceRef::Hand(0, 99),
+        StackPosition::Top,
+        false,
+    );
+    assert!(!ok);
+}
