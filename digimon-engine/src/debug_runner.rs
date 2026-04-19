@@ -171,6 +171,12 @@ impl DebugRunner {
         self.game.memory
     }
 
+    /// Mutable access to the underlying `Game` — for tests that drive new
+    /// APIs before the higher-level `DebugRunner` helpers exist.
+    pub fn game_mut(&mut self) -> &mut Game {
+        &mut self.game
+    }
+
     pub fn turn_count(&self) -> u16 {
         self.game.turn_count
     }

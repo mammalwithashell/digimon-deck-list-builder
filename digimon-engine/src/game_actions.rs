@@ -28,30 +28,49 @@ impl Game {
         }
     }
 
-    /// Play a card from hand to field for a player.
+    /// Play a card from hand to field for a player, paying the printed cost.
     ///
-    /// Flow (matches Python):
-    /// 1. Validate hand index and field capacity.
-    /// 2. Read the card's play cost from `card_data`.
-    /// 3. Call `pay_memory(cost)`; if unaffordable, abort with `None` and
-    ///    leave state unchanged.
-    /// 4. Remove the card from hand, create a Permanent on the field.
-    /// 5. Fire `OnPlay` effects via the registry.
-    ///
-    /// Cost reduction (BeforePayCost scanning, DigiXros reductions, etc.) is
-    /// not yet implemented — the base `play_cost` is used verbatim. See §4.7
-    /// and the deferred list in docs/RUST_PYTHON_PARITY.md.
+    /// Delegates to [`Self::play_from_hand_with_cost`] with
+    /// `CostDelta::Reduce(0)` (pay the printed cost verbatim).
     ///
     /// Does NOT call `check_turn_end`. Callers that want to end the turn when
     /// memory goes negative after OnPlay effects resolve should invoke
     /// `check_turn_end` explicitly.
     pub fn play_from_hand(&mut self, player_id: PlayerId, hand_index: usize) -> Option<usize> {
+        self.play_from_hand_with_cost(player_id, hand_index, crate::enums::CostDelta::Reduce(0))
+    }
+
+    /// Generalization of `play_from_hand` — computes memory cost via the given
+    /// `CostDelta` and plays the card. The caller's `CostDelta::Reduce(0)` is
+    /// equivalent to paying the printed cost.
+    ///
+    /// Flow (matches Python):
+    /// 1. Validate hand index and field capacity.
+    /// 2. Read the card's printed play cost from `card_data`.
+    /// 3. Apply `cost_delta.resolve(printed_cost)` to get the effective cost.
+    /// 4. Call `pay_memory(effective_cost)`; if unaffordable, abort with `None`
+    ///    and leave state unchanged.
+    /// 5. Remove the card from hand, create a Permanent on the field.
+    /// 6. Fire `OnPlay` effects via the registry.
+    ///
+    /// Returns `Some(field_index)` on success, `None` if the hand index is
+    /// invalid, the battle area is full, or memory is insufficient.
+    ///
+    /// Does NOT call `check_turn_end`. Callers that want to end the turn when
+    /// memory goes negative after OnPlay effects resolve should invoke
+    /// `check_turn_end` explicitly.
+    pub fn play_from_hand_with_cost(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<usize> {
         let turn = self.turn_count;
         let field_slots = self.rules.field_slots;
 
         // Borrow-check-friendly pre-checks: gather everything we need from
         // immutable borrows before taking a mutable borrow.
-        let cost = {
+        let printed_cost = {
             let player = self.player(player_id);
             if hand_index >= player.hand.len() {
                 return None;
@@ -62,8 +81,10 @@ impl Game {
             player.hand[hand_index].play_cost(&self.card_data)
         };
 
+        let effective_cost = cost_delta.resolve(printed_cost);
+
         // Pay the cost up-front. If unaffordable, do not remove the card.
-        if !self.pay_memory(cost) {
+        if !self.pay_memory(effective_cost) {
             return None;
         }
 
