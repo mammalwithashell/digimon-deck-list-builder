@@ -628,3 +628,172 @@ fn place_as_bottom_source_bad_source_index_returns_false() {
     assert!(!r.game_mut().place_as_bottom_source(CardSourceRef::Trash(0, 99), target));
     assert!(!r.game_mut().place_as_bottom_source(CardSourceRef::DeckTop(0), target)); // empty deck
 }
+
+// ─── effect_initiated_digivolve ───────────────────────────────────────────────
+
+/// Build a plain Digimon with a specific level and evo_costs, for digivolve tests.
+fn digimon_with_evo_costs(
+    card_id: &str,
+    name: &str,
+    level: u8,
+    evo_costs: Vec<digimon_engine::card_data::EvoCost>,
+) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(level),
+        dp: Some(3000),
+        play_cost: 3,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs,
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+#[test]
+fn effect_initiated_digivolve_places_card_on_target_for_free() {
+    // BASE Lv.3 Red on field, EVO Lv.4 with evo_cost (from Lv3, Red=0, cost=2) in hand.
+    let base = plain_digimon("BASE3", "Base3", 3);
+    let evo = digimon_with_evo_costs(
+        "EVO4",
+        "Evo4",
+        4,
+        vec![digimon_engine::card_data::EvoCost {
+            card_color: 0, // Red
+            level: 3,
+            memory_cost: 2,
+        }],
+    );
+
+    let mut r = DebugRunner::builder()
+        .add_card(base.clone())
+        .add_card(evo.clone())
+        .hand(0, &["EVO4"])
+        .memory(0)
+        .start();
+
+    // Seed BASE3 on the field directly.
+    let target = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let data_idx = g.card_data.iter().position(|c| c.card_id == "BASE3").unwrap();
+        let card_idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
+        g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
+        PermanentHandle { player: 0, index: 0 }
+    };
+
+    let memory_before = r.memory();
+    let ok = r.game_mut().effect_initiated_digivolve(
+        0,
+        0, // hand_index of EVO4
+        target,
+        CostDelta::Free,
+        false,
+    );
+    assert!(ok, "digivolve should succeed");
+    assert_eq!(r.hand_size(0), 0, "EVO4 left hand");
+    assert_eq!(r.battle_area_size(0), 1, "stack grew, didn't split");
+
+    let stack_size = {
+        let g = r.game_mut();
+        g.player(0).battle_area[0].card_sources.len()
+    };
+    assert_eq!(stack_size, 2, "EVO4 stacked on top of BASE3");
+    assert_eq!(r.memory(), memory_before, "CostDelta::Free paid 0");
+}
+
+#[test]
+fn effect_initiated_digivolve_ignore_color_bypasses_color_check() {
+    // BASE is Red (card_color=0), EVO requires Blue (card_color=1).
+    // ignore_color=false should fail, ignore_color=true should succeed.
+    let base = plain_digimon("B3", "Base3", 3); // Red by default
+    let evo = digimon_with_evo_costs(
+        "E4",
+        "Evo4",
+        4,
+        vec![digimon_engine::card_data::EvoCost {
+            card_color: 1, // Blue
+            level: 3,
+            memory_cost: 0,
+        }],
+    );
+
+    let mut r = DebugRunner::builder()
+        .add_card(base.clone())
+        .add_card(evo.clone())
+        .hand(0, &["E4"])
+        .memory(5)
+        .start();
+
+    let target = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let data_idx = g.card_data.iter().position(|c| c.card_id == "B3").unwrap();
+        let card_idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
+        g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
+        PermanentHandle { player: 0, index: 0 }
+    };
+
+    // With ignore_color = false, should fail (Red base vs Blue evo cost).
+    let ok_strict = r.game_mut().effect_initiated_digivolve(
+        0, 0, target, CostDelta::Free, false,
+    );
+    assert!(!ok_strict, "color mismatch should block without ignore_color");
+    assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
+
+    // With ignore_color = true, should succeed.
+    let ok_loose = r.game_mut().effect_initiated_digivolve(
+        0, 0, target, CostDelta::Free, true,
+    );
+    assert!(ok_loose, "ignore_color bypasses color check");
+    assert_eq!(r.hand_size(0), 0, "EVO moved to stack");
+}
+
+#[test]
+fn effect_initiated_digivolve_bad_level_returns_false() {
+    // EVO requires Lv.5, target is Lv.3 → no matching evo_cost.
+    let base = plain_digimon("B3", "Base3", 3);
+    let evo = digimon_with_evo_costs(
+        "E4",
+        "Evo4",
+        4,
+        vec![digimon_engine::card_data::EvoCost {
+            card_color: 0, // Red
+            level: 5,      // requires Lv.5, but target is Lv.3
+            memory_cost: 0,
+        }],
+    );
+
+    let mut r = DebugRunner::builder()
+        .add_card(base.clone())
+        .add_card(evo.clone())
+        .hand(0, &["E4"])
+        .memory(5)
+        .start();
+
+    let target = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let data_idx = g.card_data.iter().position(|c| c.card_id == "B3").unwrap();
+        let card_idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
+        g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
+        PermanentHandle { player: 0, index: 0 }
+    };
+
+    let ok = r.game_mut().effect_initiated_digivolve(
+        0, 0, target, CostDelta::Free, true,
+    );
+    assert!(!ok, "level mismatch should return false even with ignore_color=true");
+    assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
+}

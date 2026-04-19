@@ -408,6 +408,23 @@ impl<'a> EffectContext<'a> {
         self.game.return_to_deck(target, position)
     }
 
+    /// Digivolve a card from `player`'s hand at `hand_index` onto `target`
+    /// by effect. Bypasses the Main-phase check; optionally ignores color
+    /// requirements (`ignore_color=true`); pays memory via `cost_delta`.
+    ///
+    /// Returns `true` on success. See `Game::effect_initiated_digivolve`.
+    pub fn effect_initiated_digivolve(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        ignore_color: bool,
+    ) -> bool {
+        self.game
+            .effect_initiated_digivolve(player, hand_index, target, cost_delta, ignore_color)
+    }
+
     // ─── Modifier registration ────────────────────────────────────────
 
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {

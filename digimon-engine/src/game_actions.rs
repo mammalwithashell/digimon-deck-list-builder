@@ -962,4 +962,104 @@ impl Game {
         });
         true
     }
+
+    /// Script-initiated digivolve: place the card at `hand_index` from
+    /// `player_id`'s hand onto `target`, bypassing the phase check and
+    /// optionally the color check. Memory is paid according to `cost_delta`.
+    ///
+    /// Unlike `digivolve_from_hand`, this does **not** check `GamePhase::Main`
+    /// or fire `check_turn_end` — it is designed for use inside effect
+    /// callbacks where those invariants don't apply. It also does **not**
+    /// draw a card (that's a player-action benefit, not an effect mechanic).
+    ///
+    /// Returns `true` on success, `false` if validation fails (bad index,
+    /// no matching evo cost, or insufficient memory).
+    pub fn effect_initiated_digivolve(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        ignore_color: bool,
+    ) -> bool {
+        // 1. Validate hand index and target index.
+        {
+            let player = self.player(player_id);
+            if hand_index >= player.hand.len() {
+                self.logger.log(&format!(
+                    "[Rejected] effect_initiated_digivolve: hand index {} out of range (hand size={})",
+                    hand_index,
+                    player.hand.len()
+                ));
+                return false;
+            }
+        }
+        {
+            let target_player = self.player(target.player);
+            if (target.index as usize) >= target_player.battle_area.len() {
+                self.logger.log(&format!(
+                    "[Rejected] effect_initiated_digivolve: target index {} out of range (battle_area size={})",
+                    target.index,
+                    target_player.battle_area.len()
+                ));
+                return false;
+            }
+        }
+
+        // 2. Find a matching evo cost.
+        let (evo_card_data_index, base_level, base_colors) = {
+            let player = self.player(player_id);
+            let card = &player.hand[hand_index];
+            let target_player = self.player(target.player);
+            let perm = &target_player.battle_area[target.index as usize];
+            let Some(base_level) = perm.top_card().level(&self.card_data) else {
+                self.logger.log(
+                    "[Rejected] effect_initiated_digivolve: target top card has no level",
+                );
+                return false;
+            };
+            let base_colors = perm.top_card().colors(&self.card_data);
+            (card.data_index, base_level, base_colors)
+        };
+
+        let evo_costs = &self.card_data[evo_card_data_index].evo_costs;
+        let matching_cost = evo_costs.iter().find(|ec| {
+            ec.level == base_level
+                && (ignore_color
+                    || crate::action::mask::evo_color(ec.card_color)
+                        .map(|c| base_colors.contains(&c))
+                        .unwrap_or(false))
+        });
+        let Some(matching) = matching_cost else {
+            self.logger.log(&format!(
+                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={}, ignore_color={})",
+                base_level, ignore_color
+            ));
+            return false;
+        };
+        let effective_cost = cost_delta.resolve(matching.memory_cost);
+
+        // 3. Pay memory.
+        if !self.pay_memory(effective_cost) {
+            self.logger.log(&format!(
+                "[Rejected] effect_initiated_digivolve: cannot pay memory cost {} (current memory={})",
+                effective_cost, self.memory
+            ));
+            return false;
+        }
+
+        // 4. Move the card from hand onto the target permanent's stack.
+        let turn = self.turn_count;
+        let card = self.player_mut(player_id).hand.remove(hand_index);
+        self.player_mut(target.player).battle_area[target.index as usize].digivolve(card, turn);
+
+        // 5. Fire WhenDigivolving triggers.
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            TriggerSource::Permanent(target),
+        );
+        self.drain_effect_queue();
+
+        true
+    }
 }
