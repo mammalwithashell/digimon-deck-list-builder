@@ -1,3 +1,4 @@
+use crate::card_source::CardHandle;
 use serde::{Deserialize, Serialize};
 
 /// Identifies a player in the game. 0-indexed internally.
@@ -368,6 +369,17 @@ pub enum StackPosition {
     Top,
     Bottom,
     Random,
+}
+
+/// Where a card originates from for `place_as_bottom_source` and similar
+/// cross-zone moves. Named `Ref` because it indexes a live zone; the
+/// caller must ensure the index/handle is valid at call time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CardSourceRef {
+    Hand(PlayerId, usize),
+    Trash(PlayerId, usize),
+    DeckTop(PlayerId),
+    Reveal(CardHandle),
 }
 
 #[cfg(test)]

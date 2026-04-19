@@ -381,6 +381,16 @@ impl<'a> EffectContext<'a> {
         })
     }
 
+    /// Insert a card at the bottom of `target`'s digivolution stack. See
+    /// `Game::place_as_bottom_source`.
+    pub fn place_as_bottom_source(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+    ) -> bool {
+        self.game.place_as_bottom_source(source, target)
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     pub fn return_to_hand(
         &mut self,

@@ -803,6 +803,60 @@ impl Game {
         true
     }
 
+    /// Insert a card at the bottom of `target`'s digivolution stack. The
+    /// source card is taken from the zone specified by `source` (hand slot,
+    /// trash slot, deck top, or reveal pool). Returns false if the source
+    /// or target is invalid.
+    ///
+    /// On target-invalid after source-taken: the taken card is routed to
+    /// the target player's trash as a safe-failure mode (source already
+    /// mutated; no way to roll back).
+    pub fn place_as_bottom_source(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+    ) -> bool {
+        // Take the card out of its source zone.
+        let taken = match source {
+            crate::enums::CardSourceRef::Hand(p, i) => {
+                let player = self.player_mut(p);
+                if i >= player.hand.len() {
+                    return false;
+                }
+                player.hand.remove(i)
+            }
+            crate::enums::CardSourceRef::Trash(p, i) => {
+                let player = self.player_mut(p);
+                if i >= player.trash.len() {
+                    return false;
+                }
+                player.trash.remove(i)
+            }
+            crate::enums::CardSourceRef::DeckTop(p) => {
+                let Some(c) = self.player_mut(p).deck.pop() else {
+                    return false;
+                };
+                c
+            }
+            crate::enums::CardSourceRef::Reveal(h) => {
+                let Some(idx) = self.revealed_cards.iter().position(|c| c.handle() == h) else {
+                    return false;
+                };
+                self.revealed_cards.remove(idx)
+            }
+        };
+
+        // Push under the target permanent.
+        let target_player = self.player_mut(target.player);
+        if (target.index as usize) >= target_player.battle_area.len() {
+            // Source already mutated — safe-fail by routing to trash.
+            target_player.trash.push(taken);
+            return false;
+        }
+        target_player.battle_area[target.index as usize].push_under(taken);
+        true
+    }
+
     /// Install a `SelectMaterial` pending selection for DNA digivolve.
     /// Python parity for `_initiate_dna_digivolve(hand_idx)`. The
     /// second-material selection + actual digivolve execution is stubbed

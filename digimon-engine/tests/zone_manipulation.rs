@@ -497,3 +497,134 @@ fn reveal_mover_missing_handle_is_noop() {
     assert!(!r.game_mut().trash_from_reveal(0, bogus));
     assert!(!r.game_mut().return_to_deck_from_reveal(0, bogus, StackPosition::Top));
 }
+
+// ─── place_as_bottom_source ───────────────────────────────────────────────────
+
+use digimon_engine::enums::CardSourceRef;
+
+fn seed_single_card_permanent_with_id(
+    r: &mut DebugRunner,
+    card_id: &str,
+) -> PermanentHandle {
+    let g = r.game_mut();
+    let turn = g.turn_count;
+    let data_idx = g.card_data.iter().position(|c| c.card_id == card_id).unwrap();
+    let card_idx = g.next_card_index();
+    let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
+    g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
+    PermanentHandle { player: 0, index: 0 }
+}
+
+#[test]
+fn place_as_bottom_source_from_hand_stacks_under_target() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BASE", "Base", 4))
+        .add_card(plain_digimon("FUEL", "Fuel", 2))
+        .hand(0, &["FUEL"])
+        .start();
+
+    let target = seed_single_card_permanent_with_id(&mut r, "BASE");
+
+    let ok = r.game_mut().place_as_bottom_source(CardSourceRef::Hand(0, 0), target);
+    assert!(ok);
+    assert_eq!(r.hand_size(0), 0);
+
+    let (bottom_id, top_id) = {
+        let g = r.game_mut();
+        let perm = &g.player(0).battle_area[0];
+        assert_eq!(perm.card_sources.len(), 2);
+        (
+            perm.card_sources[0].card_id(&g.card_data).to_string(),
+            perm.card_sources[1].card_id(&g.card_data).to_string(),
+        )
+    };
+    assert_eq!(bottom_id, "FUEL");
+    assert_eq!(top_id, "BASE");
+}
+
+#[test]
+fn place_as_bottom_source_from_trash() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BASE", "Base", 4))
+        .add_card(plain_digimon("DEAD", "Dead", 2))
+        .start();
+
+    let target = seed_single_card_permanent_with_id(&mut r, "BASE");
+
+    // Seed trash
+    {
+        let g = r.game_mut();
+        let data_idx = g.card_data.iter().position(|c| c.card_id == "DEAD").unwrap();
+        let card_idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
+        g.player_mut(0).trash.push(card);
+    }
+    assert_eq!(r.trash_size(0), 1);
+
+    let ok = r.game_mut().place_as_bottom_source(CardSourceRef::Trash(0, 0), target);
+    assert!(ok);
+    assert_eq!(r.trash_size(0), 0);
+
+    let bottom_id = {
+        let g = r.game_mut();
+        g.player(0).battle_area[0].card_sources[0].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(bottom_id, "DEAD");
+}
+
+#[test]
+fn place_as_bottom_source_from_deck_top() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BASE", "Base", 4))
+        .add_card(plain_digimon("TOP", "DeckTop", 2))
+        .deck(0, &["TOP"])
+        .start();
+
+    let target = seed_single_card_permanent_with_id(&mut r, "BASE");
+    assert_eq!(r.deck_size(0), 1);
+
+    let ok = r.game_mut().place_as_bottom_source(CardSourceRef::DeckTop(0), target);
+    assert!(ok);
+    assert_eq!(r.deck_size(0), 0);
+
+    let bottom_id = {
+        let g = r.game_mut();
+        g.player(0).battle_area[0].card_sources[0].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(bottom_id, "TOP");
+}
+
+#[test]
+fn place_as_bottom_source_from_reveal() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BASE", "Base", 4))
+        .add_card(plain_digimon("RV", "Rev", 2))
+        .deck(0, &["RV"])
+        .start();
+
+    let target = seed_single_card_permanent_with_id(&mut r, "BASE");
+    let revealed = r.game_mut().reveal_top_deck(0, 1);
+    let handle = revealed[0];
+
+    let ok = r.game_mut().place_as_bottom_source(CardSourceRef::Reveal(handle), target);
+    assert!(ok);
+    assert_eq!(r.game_mut().revealed_cards.len(), 0);
+
+    let bottom_id = {
+        let g = r.game_mut();
+        g.player(0).battle_area[0].card_sources[0].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(bottom_id, "RV");
+}
+
+#[test]
+fn place_as_bottom_source_bad_source_index_returns_false() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BASE", "Base", 4))
+        .start();
+    let target = seed_single_card_permanent_with_id(&mut r, "BASE");
+
+    assert!(!r.game_mut().place_as_bottom_source(CardSourceRef::Hand(0, 99), target));
+    assert!(!r.game_mut().place_as_bottom_source(CardSourceRef::Trash(0, 99), target));
+    assert!(!r.game_mut().place_as_bottom_source(CardSourceRef::DeckTop(0), target)); // empty deck
+}

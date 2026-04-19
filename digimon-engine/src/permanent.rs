@@ -153,6 +153,13 @@ impl Permanent {
         self.turn_digivolved = turn;
     }
 
+    /// Insert `card` at the bottom of the digivolution stack (position 0).
+    /// The current top card remains on top. Matches DCGO's "place X as the
+    /// bottom digivolution source" semantics.
+    pub fn push_under(&mut self, card: crate::card_source::CardSource) {
+        self.card_sources.insert(0, card);
+    }
+
     /// Reset per-turn state.
     pub fn new_turn(&mut self) {
         self.attacks_this_turn = 0;
