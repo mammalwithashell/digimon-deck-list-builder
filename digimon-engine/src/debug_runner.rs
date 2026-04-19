@@ -177,6 +177,16 @@ impl DebugRunner {
         &mut self.game
     }
 
+    /// Install a `CardEffect` into the registry under a card id. Tests can
+    /// declare one-off effects inline without a frozen `cards/` entry.
+    pub fn register_effect(
+        &mut self,
+        card_id: &str,
+        effect: std::sync::Arc<dyn crate::effect::CardEffect>,
+    ) {
+        self.game.effect_registry.insert(card_id, effect);
+    }
+
     pub fn turn_count(&self) -> u16 {
         self.game.turn_count
     }

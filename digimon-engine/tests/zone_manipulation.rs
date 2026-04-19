@@ -3,8 +3,11 @@
 //! See docs/superpowers/plans/2026-04-19-rust-engine-phase-2-zone-manipulation.md.
 
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, CostDelta};
+use std::sync::Arc;
 
 /// Helper: a Lv.3 Red Digimon with configurable play_cost and no effects.
 fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
@@ -87,4 +90,46 @@ fn play_from_hand_fixed_pays_exactly() {
     let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Fixed(5));
     assert_eq!(res, Some(0), "fixed cost 5 at memory 0 is affordable (goes to -5)");
     assert_eq!(r.memory(), before - 5, "exactly 5 memory paid");
+}
+
+// ─── Script-driven test: EffectContext::play_from_hand_with_cost ─────────────
+
+/// TEST-P2-001: on play, if hand slot 0 has a card, play it free via
+/// EffectContext::play_from_hand_with_cost.
+struct TestP2_001;
+impl CardEffect for TestP2_001 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Play top of hand free")
+            .process(|ctx| {
+                let me = ctx.player;
+                if ctx.hand(me).is_empty() {
+                    return;
+                }
+                ctx.play_from_hand_with_cost(me, 0, CostDelta::Free);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn ctx_play_from_hand_free_plays_target() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("TEST-P2-001", "P2-001", 3))
+        .add_card(plain_digimon("TARGET", "Target", 10))
+        .hand(0, &["TEST-P2-001", "TARGET"])
+        .memory(3)
+        .start();
+
+    r.register_effect("TEST-P2-001", Arc::new(TestP2_001));
+
+    // Play TEST-P2-001 (hand slot 0). After OnPlay fires, it should have
+    // played TARGET (now hand slot 0 since TEST-P2-001 was removed first)
+    // for free.
+    let res = r.play(0, 0);
+    assert_eq!(res, Some(0));
+    assert_eq!(r.battle_area_size(0), 2, "both cards entered battle area");
+    assert_eq!(r.hand_size(0), 0, "hand emptied");
+    // Memory: started 3, paid 3 for TEST-P2-001, then 0 for TARGET (free).
+    assert_eq!(r.memory(), 0);
 }

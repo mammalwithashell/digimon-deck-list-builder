@@ -268,6 +268,26 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Play a card from `player`'s hand at `hand_index`, deducting memory
+    /// according to `cost_delta`. OnPlay effects fire.
+    ///
+    /// Returns the `PermanentHandle` of the new field permanent, or `None`
+    /// if the hand index is invalid, the battle area is full, or memory is
+    /// insufficient.
+    pub fn play_from_hand_with_cost(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<PermanentHandle> {
+        let field_index = self.game.play_from_hand_with_cost(player, hand_index, cost_delta)?;
+        Some(PermanentHandle {
+            player,
+            index: field_index as u8,
+        })
+    }
+
+
     // ─── Modifier registration ────────────────────────────────────────
 
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
