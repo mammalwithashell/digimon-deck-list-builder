@@ -797,3 +797,43 @@ fn effect_initiated_digivolve_bad_level_returns_false() {
     assert!(!ok, "level mismatch should return false even with ignore_color=true");
     assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
 }
+
+// ─── EffectContext::hatch ─────────────────────────────────────────────────────
+
+/// TEST-P2-Hatch: on play, hatch the controller's top digitama into
+/// the breeding area via EffectContext::hatch.
+struct TestP2Hatch;
+impl CardEffect for TestP2Hatch {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Hatch")
+            .process(|ctx| {
+                let me = ctx.player;
+                ctx.hatch(me);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn ctx_hatch_moves_top_of_digitama_to_breeding() {
+    let mut egg = plain_digimon("EGG", "Egg", 0);
+    egg.level = Some(2);
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("HATCHER", "Hatch", 3))
+        .add_card(egg)
+        .hand(0, &["HATCHER"])
+        .digitama(0, &["EGG"])
+        .memory(3)
+        .start();
+
+    r.register_effect("HATCHER", Arc::new(TestP2Hatch));
+
+    assert!(r.game_mut().player(0).breeding_area.is_none());
+    let played = r.play(0, 0);
+    assert_eq!(played, Some(0));
+    assert!(
+        r.game_mut().player(0).breeding_area.is_some(),
+        "egg hatched into breeding area"
+    );
+}

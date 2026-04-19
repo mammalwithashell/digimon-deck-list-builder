@@ -467,6 +467,22 @@ impl<'a> EffectContext<'a> {
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);
     }
+
+    // ─── Breeding-area mutations ──────────────────────────────────────
+
+    /// Move the top of `player`'s digitama deck into the breeding area.
+    ///
+    /// Returns `true` if a hatch occurred — i.e. the breeding slot was
+    /// empty and the digitama deck had at least one card.  Returns `false`
+    /// if the breeding slot was already occupied or the digitama deck was
+    /// empty.
+    ///
+    /// No `PermanentHandle` is returned: breeding-area permanents are
+    /// addressed separately from battle-area permanents and do not use
+    /// the same handle type.
+    pub fn hatch(&mut self, player: PlayerId) -> bool {
+        self.game.hatch(player)
+    }
 }
 
 #[cfg(test)]
