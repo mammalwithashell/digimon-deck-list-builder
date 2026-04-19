@@ -1,7 +1,6 @@
 import client from './client';
 
-export type QueueType = 'casual' | 'ranked';
-export type TierFilter = 'same' | 'any' | 'meta_only' | 'jank_only';
+export type QueueType = 'jank' | 'casual' | 'sweat' | 'ranked';
 export type TicketStatus = 'waiting' | 'matched' | 'cancelled';
 
 export interface QueueRequest {
@@ -11,7 +10,16 @@ export interface QueueRequest {
   main_deck?: string[];
   egg_deck?: string[];
   game_mode?: string;
-  opponent_tier_filter?: TierFilter;
+}
+
+export interface MatchmakingConfig {
+  ranked_enabled: boolean;
+  queues: QueueType[];
+}
+
+export async function getConfig(): Promise<MatchmakingConfig> {
+  const { data } = await client.get<MatchmakingConfig>('/matchmaking/config');
+  return data;
 }
 
 export interface WaitingResponse {

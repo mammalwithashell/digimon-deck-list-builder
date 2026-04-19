@@ -49,12 +49,14 @@ async def test_queue_accepts_inline_deck_for_guest(client: AsyncClient) -> None:
     guest = (await client.post("/auth/guest")).json()
     headers = {"Authorization": f"Bearer {guest['access_token']}"}
 
+    # Use no_restriction to skip the ban-list validation layer — this test
+    # is exercising the inline-deck path, not format rules (covered by
+    # test_matchmaking.py).
     body = {
         "queue_type": "casual",
         "main_deck": ["BT1-001"] * 50,
         "egg_deck": ["BT1-002"] * 5,
-        "game_mode": "standard",
-        "opponent_tier_filter": "any",
+        "game_mode": "no_restriction",
     }
     resp = await client.post("/matchmaking/queue", json=body, headers=headers)
     assert resp.status_code in (200, 201), resp.text
@@ -64,8 +66,12 @@ async def test_queue_accepts_inline_deck_for_guest(client: AsyncClient) -> None:
 
     ticket = mm.tickets[ticket_id]
     assert ticket.deck == ["BT1-001"] * 50 + ["BT1-002"] * 5
-    assert ticket.game_mode == "standard"
+    assert ticket.game_mode == "no_restriction"
     assert ticket.user_id == guest["user_id"]
+    # Inline-deck (guest) path leaves self_tier unset so jank/sweat queues
+    # aren't eligible — the alpha design explicitly defers classifier
+    # support for guests.
+    assert ticket.self_tier is None
 
 
 @pytest.mark.asyncio
@@ -79,3 +85,21 @@ async def test_queue_rejects_request_missing_both_deck_id_and_inline(client: Asy
     )
     assert resp.status_code == 400
     assert "deck" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_inline_deck_cannot_queue_for_jank(client: AsyncClient) -> None:
+    """Guest-inline tickets have self_tier=None, which is deliberately not
+    eligible for jank or sweat queues (those require a classifier-assigned
+    tier that only lives on server-side Deck rows)."""
+    guest = (await client.post("/auth/guest")).json()
+    headers = {"Authorization": f"Bearer {guest['access_token']}"}
+    body = {
+        "queue_type": "jank",
+        "main_deck": ["BT1-001"] * 50,
+        "egg_deck": ["BT1-002"] * 5,
+        "game_mode": "no_restriction",
+    }
+    resp = await client.post("/matchmaking/queue", json=body, headers=headers)
+    assert resp.status_code == 422
+    assert "jank" in resp.json()["detail"].lower()

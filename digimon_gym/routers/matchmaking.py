@@ -1,4 +1,11 @@
-"""Matchmaking queue — casual (tier-filtered) + ranked (rating-window) tickets.
+"""Matchmaking queue — four queue types, alpha gated.
+
+Queues:
+    - ``jank``   : both decks must be classified ``jank``
+    - ``casual`` : any-vs-any, no tier constraint, FIFO
+    - ``sweat``  : both decks must be ``meta`` or ``rogue`` (tournament-shape)
+    - ``ranked`` : rating-window widening over time; gated behind the
+                   ``MATCHMAKING_RANKED_ENABLED`` env var (off for alpha)
 
 State lives in-memory in the API process, mirroring the existing lobby
 `pending_games` pattern. Matched pairs are handed off to the existing
@@ -15,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import os
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
@@ -29,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from digimon_gym.db.auth import get_current_user
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import Deck, User
+from digimon_gym.engine.data.deck_loader import RESTRICTED_LIST, validate_deck
 from digimon_gym.engine.runners.interactive_game import InteractiveGame  # noqa: F401
 from digimon_gym.routers.lobby import (
     PendingGame,
@@ -44,9 +53,20 @@ router = APIRouter(prefix="/matchmaking", tags=["matchmaking"])
 
 # ── Types ───────────────────────────────────────────────────────────────
 
-QueueType = Literal["casual", "ranked"]
-TierFilter = Literal["same", "any", "meta_only", "jank_only"]
+QueueType = Literal["jank", "casual", "sweat", "ranked"]
 TicketStatus = Literal["waiting", "matched", "cancelled"]
+
+# Alpha public queues — ranked is gated behind MATCHMAKING_RANKED_ENABLED.
+# Typed against QueueType so adding a new queue value surfaces a type error
+# here if it isn't classified as alpha vs. gated.
+ALPHA_QUEUES: tuple[QueueType, ...] = ("jank", "casual", "sweat")
+SWEAT_TIERS: frozenset[str] = frozenset({"meta", "rogue"})
+
+
+def ranked_enabled() -> bool:
+    """Runtime gate for the ranked queue. Read on every call so tests and
+    ops can flip the flag without process restarts."""
+    return os.getenv("MATCHMAKING_RANKED_ENABLED", "0") == "1"
 
 # Rating-window tuning (plan §Matcher "Ranked"):
 RATING_WINDOW_INITIAL = 50.0
@@ -71,7 +91,6 @@ class QueueTicket(BaseModel):
     deck_raw: Optional[str] = None
     game_mode: str                        # acts as the "format" filter
     self_tier: Optional[str] = None       # classifier output, snapshotted at queue time
-    opponent_tier_filter: TierFilter = "any"
     rating: Optional[float] = None        # ranked only
     created_at: datetime
     status: TicketStatus = "waiting"
@@ -126,26 +145,6 @@ def rating_window(ticket: QueueTicket, now: datetime) -> float:
     return min(RATING_WINDOW_INITIAL + RATING_WINDOW_STEP * steps, RATING_WINDOW_CAP)
 
 
-def _casual_compatible(a: QueueTicket, b: QueueTicket) -> bool:
-    """Symmetric tier-filter compatibility."""
-    return _accepts(a, b) and _accepts(b, a)
-
-
-def _accepts(self_ticket: QueueTicket, opponent: QueueTicket) -> bool:
-    """Does `self_ticket.opponent_tier_filter` accept `opponent.self_tier`?"""
-    f = self_ticket.opponent_tier_filter
-    tier = opponent.self_tier
-    if f == "any":
-        return True
-    if f == "meta_only":
-        return tier == "meta"
-    if f == "jank_only":
-        return tier == "jank"
-    if f == "same":
-        return tier == self_ticket.self_tier
-    return False
-
-
 def _ranked_compatible(a: QueueTicket, b: QueueTicket, now: datetime) -> bool:
     if a.rating is None or b.rating is None:
         return False
@@ -159,7 +158,14 @@ def find_match(
     *,
     now: datetime,
 ) -> Optional[QueueTicket]:
-    """FIFO: return the oldest compatible `waiting` ticket, or None."""
+    """FIFO: return the oldest compatible `waiting` ticket, or None.
+
+    Queue semantics:
+    - jank / casual / sweat: queue_type IS the tier filter. Tier eligibility
+      is enforced at enqueue (422 rejection), so any ticket already in the
+      pool with matching queue_type + game_mode is compatible.
+    - ranked: rating-window compatibility, widening over time.
+    """
     candidates = [
         t for t in pool
         if t.ticket_id != incoming.ticket_id
@@ -168,9 +174,7 @@ def find_match(
         and t.queue_type == incoming.queue_type
         and t.game_mode == incoming.game_mode
     ]
-    if incoming.queue_type == "casual":
-        candidates = [t for t in candidates if _casual_compatible(incoming, t)]
-    else:
+    if incoming.queue_type == "ranked":
         candidates = [t for t in candidates if _ranked_compatible(incoming, t, now)]
 
     candidates.sort(key=lambda t: t.created_at)
@@ -182,13 +186,14 @@ def find_match(
 class QueueRequest(BaseModel):
     queue_type: QueueType
     # Either deck_id (resolves a server-side Deck row) or the inline
-    # triple below. Inline is the guest path; deck_id is the accounts path
-    # for post-alpha.
+    # triple below. Inline is the guest path (no server-side Deck row);
+    # deck_id is the accounts path. Inline decks cannot queue for jank or
+    # sweat because those require a classifier-assigned tier that only
+    # lives on server-side Deck rows.
     deck_id: Optional[str] = None
     main_deck: Optional[list[str]] = None
     egg_deck: Optional[list[str]] = None
     game_mode: Optional[str] = None
-    opponent_tier_filter: TierFilter = "any"
 
 
 class TicketInfoResponse(BaseModel):
@@ -276,6 +281,18 @@ def cancel_waiting_ticket(ticket_id: str) -> bool:
 
 # ── REST endpoints ──────────────────────────────────────────────────────
 
+@router.get("/config")
+async def get_matchmaking_config() -> dict:
+    """Public queue-discovery endpoint. Lets the UI hide queues that are
+    gated off without trial-and-error 403s. No auth required (no secrets
+    exposed — just which queues are currently open)."""
+    enabled = ranked_enabled()
+    queues = list(ALPHA_QUEUES)
+    if enabled:
+        queues.append("ranked")
+    return {"ranked_enabled": enabled, "queues": queues}
+
+
 @router.post("/queue")
 async def enqueue(
     request: QueueRequest,
@@ -289,10 +306,23 @@ async def enqueue(
     """
     _prune_stale_tickets()
 
+    # 409 (already queued) takes precedence over the 403 ranked-gate so a
+    # user with an active ticket gets the same duplicate-ticket error
+    # regardless of which queue they tried to double-enqueue into.
     if user.id in user_to_ticket:
         raise HTTPException(status.HTTP_409_CONFLICT, "User already has an active ticket")
 
-    # Resolve the deck: prefer inline payload, else DB lookup.
+    if request.queue_type == "ranked" and not ranked_enabled():
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Ranked matchmaking is not available",
+        )
+
+    # Resolve the deck. Two paths:
+    # - Inline payload (guest): request carries main_deck + egg_deck +
+    #   game_mode, no server-side Deck row exists. self_tier stays None.
+    # - deck_id (accounts): look up the server-side Deck row, snapshot
+    #   its meta_tier as self_tier for jank/sweat eligibility.
     self_tier: Optional[str] = None
     if request.main_deck is not None:
         if request.game_mode is None:
@@ -304,7 +334,6 @@ async def enqueue(
         if not card_ids:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Deck is empty")
         game_mode = request.game_mode
-        # Tier classifier is optional for guests — leave as None for alpha.
     elif request.deck_id is not None:
         result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
         deck = result.scalar_one_or_none()
@@ -322,6 +351,39 @@ async def enqueue(
             "Request must include either deck_id or inline deck (main_deck + game_mode)",
         )
 
+    # Defense-in-depth: re-validate against the standard ban list at enqueue
+    # time. Deck save already enforces this (decks.py), but a deck saved
+    # before a card was banned — or tampered with via admin / direct DB —
+    # would otherwise bypass the format. no_restriction opts out explicitly.
+    # Applies equally to the inline-deck path so guests can't queue a
+    # banned card either.
+    if game_mode != "no_restriction":
+        ban_result = validate_deck(card_ids, RESTRICTED_LIST)
+        if not ban_result.is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "Deck violates format restrictions",
+                    "errors": ban_result.errors,
+                    "game_mode": game_mode,
+                },
+            )
+
+    # Queue-specific tier eligibility. Jank/sweat require a specific
+    # classifier tier; casual + ranked have no tier gate. Inline-deck
+    # (guest) tickets have `self_tier=None` and are therefore ineligible
+    # for jank/sweat — guests can queue for casual or (if enabled) ranked.
+    if request.queue_type == "jank" and self_tier != "jank":
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"Deck tier {self_tier!r} is not eligible for jank queue",
+        )
+    if request.queue_type == "sweat" and self_tier not in SWEAT_TIERS:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"Deck tier {self_tier!r} is not eligible for sweat queue",
+        )
+
     rating = None
     if request.queue_type == "ranked":
         rating = float(getattr(user, "rating", 1500.0) or 1500.0)
@@ -334,7 +396,6 @@ async def enqueue(
         deck=card_ids,
         game_mode=game_mode,
         self_tier=self_tier,
-        opponent_tier_filter=request.opponent_tier_filter,
         rating=rating,
         created_at=datetime.now(timezone.utc),
     )
