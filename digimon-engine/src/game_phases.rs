@@ -17,6 +17,15 @@ impl Game {
     pub(crate) fn begin_turn(&mut self) {
         let tp = self.turn_player();
 
+        // StartOfYourTurn fires BEFORE Unsuspend — matches Python's OnStartTurn.
+        // Scripts that care about turn beginning (e.g. "at the start of your turn,
+        // +1 memory") observe this timing.
+        self.enqueue_triggered(
+            EffectTiming::StartOfYourTurn,
+            crate::selection::TriggerSource::PlayerBattleArea(tp),
+        );
+        self.drain_effect_queue();
+
         // Reset per-turn state
         self.player_mut(tp).new_turn();
 

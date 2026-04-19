@@ -4,9 +4,12 @@
 //! compile and produce an Effect with the correct timing. Actual dispatch
 //! wiring is tested in subsequent Phase 1 tasks.
 
+use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
-use digimon_engine::effect::Effect;
-use digimon_engine::enums::EffectTiming;
+use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use std::sync::Arc;
 
 fn dummy() -> CardHandle {
     CardHandle(0)
@@ -93,4 +96,90 @@ fn existing_builders_still_correct() {
     let e = Effect::declarative(card).build();
     assert_eq!(e.timing, EffectTiming::Declarative);
     assert!(e.declarative);
+}
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
+
+/// A Lv.3 Red Digimon with configurable play_cost and no inherent effects.
+fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(3),
+        dp: Some(3000),
+        play_cost,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+// ─── TEST-P1-T2 ───────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory at the start of the controller's turn.
+struct StartTurnMemoryGain;
+impl CardEffect for StartTurnMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::start_of_your_turn(card)
+            .name("+1 at turn start")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn start_of_your_turn_fires_for_controller() {
+    // Provide non-empty decks for both players so neither decks out on draw.
+    let filler: Vec<&str> = vec!["FILLER"; 5];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("STM", "StartMem", 3))
+        .add_card(plain_digimon("FILLER", "Filler", 1))
+        .hand(0, &["STM"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(3)
+        .start();
+
+    r.register_effect("STM", Arc::new(StartTurnMemoryGain));
+
+    // Play STM on turn 1 (controller = player 0). StartOfYourTurn does NOT
+    // fire on the same turn the card was played (begin_turn already ran).
+    let played = r.play(0, 0);
+    assert_eq!(played, Some(0));
+
+    // Pass turn — now player 1's turn. STM's start_of_your_turn should NOT
+    // fire (player 0 is not the turn player).
+    r.pass_turn();
+    // Pass again — back to player 0. Now STM's start_of_your_turn fires.
+    r.pass_turn();
+
+    // Build a control game without the STM effect to derive the baseline
+    // memory value after the same sequence of two pass_turn calls.
+    let mut control = DebugRunner::builder()
+        .add_card(plain_digimon("FILLER", "Filler", 1))
+        .hand(0, &["FILLER"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(3)
+        .start();
+    let _ = control.play(0, 0);
+    control.pass_turn();
+    control.pass_turn();
+    let expected_no_effect = control.memory();
+
+    assert_eq!(
+        r.memory(),
+        expected_no_effect + 1,
+        "StartOfYourTurn should have fired for player 0, granting +1 memory"
+    );
 }
