@@ -36,6 +36,12 @@ flamegraph.svg
 
 # Tauri
 src-tauri/target/
+src-tauri/binaries/
+src-tauri/resources/models/
+src-tauri/resources/onnxruntime/
+tools/onnxruntime-vendor/**/*.dll
+tools/onnxruntime-vendor/**/*.so
+tools/onnxruntime-vendor/**/*.dylib
 *.AppImage
 *.dmg
 *.msi

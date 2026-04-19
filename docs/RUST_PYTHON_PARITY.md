@@ -659,3 +659,27 @@ P0 plays two 3-cost cards (second goes into negative).
 P0 passes.
 P1's memory should be +3 (Python) — this will fail in Rust today until §1.2/§1.3 land.
 ```
+
+---
+
+## Policies (ONNX + greedy)
+
+This section tracks parity of opponent policies across engines, introduced alongside the Rust-native AI-opponent integration in the Tauri desktop build.
+
+### P.1 🟡 Greedy heuristic re-implemented in Rust
+
+**Python** — [`digimon_gym/agents/architect_simulator.py:37`](../digimon_gym/agents/architect_simulator.py#L37) delegates to `greedy_policy()` in [`digimon_gym/digimon_gym.py`](../digimon_gym/digimon_gym.py). The heuristic inspects full game state (phases, hand/field, level/DP/cost) and prioritizes Digivolve > Attack > Play > Pass in Main, Hatch > Move > Pass in Breeding.
+
+**Rust** — `digimon-engine/src/policies/greedy.rs` hand-ports the same heuristic.
+
+**Parity hazard:** if Python's `greedy_policy()` changes (new tie-break rule, phase handling, archetype-specific logic), the Rust port will silently diverge. Any edit to the Python greedy must be mirrored in Rust and covered by a deterministic-seed behavioral test under `digimon-engine/tests/policies_greedy.rs`.
+
+### P.2 🟡 ONNX inference shape contract
+
+**Python** — [`digimon_gym/engine/onnx_policy.py`](../digimon_gym/engine/onnx_policy.py) binds input `"obs"` (shape `(1, TENSOR_SIZE)`) and output `"logits"` (shape `(1, ACTION_SPACE_SIZE)`). LSTM variant adds `h_in`/`c_in`/`h_out`/`c_out` at `(1, 1, 256)`.
+
+**Rust** — `src-tauri/src/policies/onnx.rs` binds the same names and hard-asserts the same shapes at model-load time.
+
+**Historical drift (resolved):** pre-2026-04-17, `tools/export_onnx.py` hardcoded `obs=981 / logits=2120` — the pre-rewrite layout. Any `.onnx` on disk dated before the fix is unusable by either engine. Re-export from the original `.zip` checkpoint is mandatory; if that checkpoint was trained against the old layout, it must be retrained from scratch.
+
+**Ongoing hazard:** any future change to `digimon-engine/src/tensor.rs` (TENSOR_SIZE) or `digimon-engine/src/action/space.rs` (ACTION_SPACE_SIZE) invalidates every bundled `.onnx`. The Rust loader's shape assertion surfaces this as a clear load-time error rather than silent inference corruption — drift will be visible, not stealthy. When you edit either file, re-run the export pipeline and bump the manifest's bundled checkpoints.

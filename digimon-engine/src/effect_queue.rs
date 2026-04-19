@@ -62,6 +62,22 @@ impl Game {
             TriggerSource::SecurityRevealed { defender, card } => {
                 self.enqueue_from_security_card(timing, defender, card);
             }
+            TriggerSource::OnSecurityCheck { defender, .. } => {
+                // Observer timing: scan every permanent in the defender's
+                // battle area for `OnSecurityCheck`-timed effects. Attacker
+                // + revealed card metadata are carried through
+                // `game.security_resolution` for the drained effects to
+                // read via `EffectContext::attacker` / `security_digimon`
+                // / the defender's `last_security_reveal` snapshot.
+                let count = self.player(defender).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player: defender,
+                        index: i as u8,
+                    };
+                    self.enqueue_from_permanent(timing, handle);
+                }
+            }
         }
     }
 
@@ -269,15 +285,25 @@ impl Game {
             return;
         };
 
-        if let Some(cond) = &effect.condition {
-            let ctx = EffectContext::new(
-                self,
-                qe.source_card,
-                qe.source_permanent,
-                qe.controller,
-            );
-            if !cond(&ctx.as_read()) {
-                return;
+        // Python parity (§2.5h): `_fire_security_skill` iterates
+        // `effect_list(SecuritySkill)` and invokes the callback directly —
+        // it never evaluates `effect.can_use_condition`. Matching that
+        // behavior here so a conditional `[Security]` effect
+        // (`[Security] If opp has a Digimon, delete it.`) fires with the
+        // same semantics on both engines. The script is responsible for
+        // any conditionality via an `if` inside its `process` closure.
+        let skip_condition = qe.timing == EffectTiming::SecuritySkill;
+        if !skip_condition {
+            if let Some(cond) = &effect.condition {
+                let ctx = EffectContext::new(
+                    self,
+                    qe.source_card,
+                    qe.source_permanent,
+                    qe.controller,
+                );
+                if !cond(&ctx.as_read()) {
+                    return;
+                }
             }
         }
         if let Some(process) = &effect.process {
@@ -442,6 +468,15 @@ impl Game {
         // flow, so callers don't have to remember to drain.
         if self.pending_selection.is_none() {
             self.drain_effect_queue();
+        }
+        // After any post-callback draining, re-enter the security state
+        // machine if a check is mid-resolve (RUST_PYTHON_PARITY §2.5j).
+        // Idempotent when `security_resolution.is_none()`; safe to call
+        // unconditionally. Nested selections (the callback installed a
+        // further select) leave `pending_selection = Some(...)` so the
+        // advance guards re-pause cleanly.
+        if self.pending_selection.is_none() {
+            self.advance_security_resolution();
         }
         Ok(())
     }

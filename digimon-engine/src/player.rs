@@ -27,6 +27,14 @@ pub struct Player {
     /// in here. Matches Python's `Player.face_up_security`.
     pub face_up_security: HashSet<u16>,
 
+    /// Snapshot of the most recently revealed security card, set by
+    /// `Game::resolve_security_card` before firing `SecuritySkill` effects.
+    /// Consumed by `OnSecurityCheck` observer effects so they can inspect
+    /// the revealed card even after `pending_security` has been cleared.
+    /// Mirrors Python's `_last_security_card` / `_last_security_was_face_up`
+    /// pair (RUST_PYTHON_PARITY §2.5l).
+    pub last_security_reveal: Option<crate::selection::SecurityRevealSnapshot>,
+
     // Commander/multiplayer fields
     pub commander_zone: Option<CardSource>,
     pub commander_tax: u16,
@@ -46,6 +54,7 @@ impl Player {
             battle_area: Vec::new(),
             breeding_area: None,
             face_up_security: HashSet::new(),
+            last_security_reveal: None,
             commander_zone: None,
             commander_tax: 0,
             is_eliminated: false,

@@ -211,6 +211,18 @@ pub enum TriggerSource {
         defender: PlayerId,
         card: CardHandle,
     },
+    /// Global observer timing fired after a security card's own
+    /// `SecuritySkill` effects resolve and the Digimon battle (if any) has
+    /// been decided. Scans every permanent in the defender's battle area for
+    /// `OnSecurityCheck`-timed effects. Mirrors Python's
+    /// `EffectTiming.OnSecurityCheck` fire site in `combat.py:206-214`
+    /// (RUST_PYTHON_PARITY §2.5b).
+    OnSecurityCheck {
+        attacker: PermanentHandle,
+        defender: PlayerId,
+        revealed_card: CardHandle,
+        was_face_up: bool,
+    },
 }
 
 /// Transient per-security-check state. Lives on `Game` from the moment the
@@ -225,6 +237,73 @@ pub struct PendingSecurity {
     pub defender: PlayerId,
     pub card: CardSource,
     pub played: bool,
+}
+
+/// Phase of an in-flight security-card resolution. Drives the
+/// `drive_security_resolution` state machine in `combat.rs` so that a
+/// `pending_selection` installed inside a `SecuritySkill` process can pause
+/// the flow and resume from the same phase after the selection resolves.
+///
+/// Order matches Python's `Player.security_attack` / `_execute_security_checks`
+/// sequence: SecuritySkill → battle → OnSecurityCheck → OnLoseSecurity → dispose.
+/// See RUST_PYTHON_PARITY §2.5b / §2.5j.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecurityPhase {
+    /// Enqueue + drain `SecuritySkill` effects on the revealed card.
+    SecuritySkillDrain,
+    /// Digimon-vs-security DP battle (skipped for non-Digimon security).
+    BattleResolved,
+    /// Enqueue + drain `OnSecurityCheck` observer effects over the defender's
+    /// battle area.
+    OnSecurityCheckDrain,
+    /// Enqueue + drain `OnLoseSecurity` on the revealed card (observer timing).
+    OnLoseSecurityDrain,
+    /// Trash the card (unless `pending_security.played` is set) and clear
+    /// the resolution state.
+    Dispose,
+}
+
+/// Mid-security-check state. Installed by `Game::resolve_security_card` at
+/// the start of each check, mutated by `drive_security_resolution` as phases
+/// advance, and cleared at `Dispose`.
+///
+/// When a `SecuritySkill` process installs a `pending_selection`, the
+/// outer combat flow unwinds; `Game::advance_security_resolution` re-enters
+/// the state machine after `resolve_generic_selection` invokes the
+/// callback. See RUST_PYTHON_PARITY §2.5j.
+#[derive(Debug, Clone)]
+pub struct SecurityResolutionState {
+    /// The attacking permanent. `None` iff the reveal was not triggered by
+    /// a combat check (reserved for future non-combat reveal-from-security
+    /// effects).
+    pub attacker: Option<PermanentHandle>,
+    pub defender: PlayerId,
+    pub turn_player: PlayerId,
+    /// Handle of the revealed card, repeated here so the context enrichers
+    /// don't need to re-read `pending_security` after it's cleared.
+    pub revealed_card: CardHandle,
+    pub card_kind: crate::enums::CardKind,
+    /// True iff the card was in `face_up_security` when popped — exposed to
+    /// `OnSecurityCheck` observers via `SecurityRevealSnapshot`.
+    pub was_face_up: bool,
+    pub phase: SecurityPhase,
+    /// Remaining security-check iterations for the owning `Player` attack.
+    /// Absorbed from the outer loop counter so a pause inside phase 1
+    /// doesn't drop the remaining checks.
+    pub checks_remaining: u8,
+    /// Running outcome for the current card's resolution. Updated when the
+    /// DP battle concludes; returned at `Dispose`.
+    pub outcome_so_far: crate::combat::AttackResult,
+}
+
+/// Snapshot of the most recently revealed security card on a player, used
+/// to enrich `OnSecurityCheck` observer effect contexts. Lives on `Player`
+/// alongside `face_up_security`. Mirrors Python's `_last_security_card` /
+/// `_last_security_was_face_up` pair (RUST_PYTHON_PARITY §2.5l).
+#[derive(Debug, Clone, Copy)]
+pub struct SecurityRevealSnapshot {
+    pub card: CardHandle,
+    pub was_face_up: bool,
 }
 
 /// Mid-attack state. Held separately from the effect queue because interrupt
