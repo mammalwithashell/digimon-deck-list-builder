@@ -19,47 +19,41 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 ## 1. Core game flow
 
-### 1.1 🔴 Play cost not deducted from memory
-
-**Rust** — [game.rs:357-391](../digimon-engine/src/game.rs#L357) `play_from_hand` removes the card, creates a `Permanent`, fires `OnPlay`. It never calls `pay_memory`, so cards play for free.
+### 1.1 🟢 Play cost deducted from memory — implemented
 
 **Python** — [player.py](../digimon_gym/engine/core/player.py) + game flow: `calculate_play_cost` resolves the effective cost (including reductions), the player's play path deducts it from memory before placement, and any OnPlay effects resolve after the card is on the field.
 
-**Fix outline:** Before `player.hand.remove(hand_index)`, compute effective cost (base `play_cost` minus any applicable `BeforePayCost` reductions), call `pay_memory(cost)`. If `pay_memory` fails, return `None`. Move `fire_on_play` to run *after* memory is charged but *after* the permanent is on the field.
+**Rust** — [game_actions.rs:63-91](../digimon-engine/src/game_actions.rs#L63) `play_from_hand_with_cost` computes the effective cost via `cost_delta.resolve(printed_cost)`, then calls `self.pay_memory(effective_cost)` at line 88 before removing the card from hand. If `pay_memory` returns `false`, the function aborts with `None`. The old `play_from_hand` is now a thin wrapper that delegates to `play_from_hand_with_cost` with `CostDelta::Reduce(0)`. `OnPlay` fires through the standard effect queue after the permanent is placed.
 
-### 1.2 🔴 Memory reset on turn switch
+**Coverage:** confirmed by Phase 2 engine tests and `test_cards_behavioral.rs` pilots.
 
-**Rust** — [game.rs:236-246](../digimon-engine/src/game.rs#L236): both branches of the `if memory >= 0 / if memory <= 0` ladder clamp to 3. Overflow from over-cost plays is lost.
+### 1.2 🟢 Memory pure-negation on turn switch — implemented
 
 **Python** — [game/__init__.py:322](../digimon_gym/engine/game/__init__.py#L322) `self.memory = -self.memory`. No clamp. The seesaw is simply flipped from the next player's perspective.
 
-**Consequence:** P0 ends their turn at −5 (spent beyond 0). Python gives P1 +5. Rust gives P1 +3. Tempo math off by 2 whenever a turn over-commits.
+**Rust** — [game_phases.rs:129](../digimon-engine/src/game_phases.rs#L129) `rotate_turn_player` executes `self.memory = -self.memory;` with an explicit comment that no clamping is applied. Over-cost plays that push memory deep negative carry their full magnitude across the switch as positive memory for the next player — the intended tempo consequence.
 
-**Fix outline:** Replace the reset block with `self.memory = -self.memory;`. Remove the "at least 3" clamp entirely — that's not Digimon's rule.
+**Coverage:** confirmed by the first-turn draw and turn-rotation tests; no regression introduced by Phase 2.
 
-### 1.3 🔴 `pass_turn` clobbers overflow
-
-**Rust** — [game.rs:263-268](../digimon-engine/src/game.rs#L263): `self.memory = -3` unconditionally, then `end_turn()`.
+### 1.3 🟢 `pass_turn` preserves overflow — implemented
 
 **Python** — [game/__init__.py:329-334](../digimon_gym/engine/game/__init__.py#L329): `if self.memory >= 0: self.memory = -3`. Only forces the seesaw if the player still has memory to give. Over-cost plays that already put memory negative are preserved through the switch.
 
-**Fix outline:** Gate the assignment: `if self.memory >= 0 { self.memory = -3; }`.
+**Rust** — [game_phases.rs:333-335](../digimon-engine/src/game_phases.rs#L333) `pass_turn` gates the assignment: `if self.memory >= 0 { self.memory = -3; }`. If memory is already negative because an over-cost play pushed it there, the overflow is preserved and carried through via the subsequent `end_turn()` call. Matches Python exactly.
 
-### 1.4 🔴 `pay_memory` auto-ends turn on crossing zero
+### 1.4 🟢 `pay_memory` is a pure memory mutator — implemented
 
-**Rust** — [game.rs:279-282](../digimon-engine/src/game.rs#L279): if memory goes negative after paying, `end_turn()` fires inside `pay_memory`.
+**Python** — turn end is checked in `check_turn_end` ([__init__.py:336](../digimon_gym/engine/game/__init__.py#L336)) after effect resolution, not synchronously with payment. This lets OnPlay, WhenDigivolving, etc. resolve on the same turn even if their cost already pushed memory negative.
 
-**Python** — never: turn end is checked in `check_turn_end` ([__init__.py:336](../digimon_gym/engine/game/__init__.py#L336)) after effect resolution, not synchronously with payment. This lets OnPlay, WhenDigivolving, etc. resolve on the same turn even if their cost already pushed memory negative.
+**Rust** — [game.rs:445](../digimon-engine/src/game.rs#L445) `pay_memory` is a pure mutator: it updates `self.memory`, emits a `MemoryChange` event, and returns `true`/`false` — it never calls `end_turn()`. A separate [game.rs:466](../digimon-engine/src/game.rs#L466) `check_turn_end` method is provided for callers to invoke at the natural resolution boundary after all effects of a play/action have resolved. This matches the Python contract exactly.
 
-**Fix outline:** Delete the `if self.memory < 0 { self.end_turn(); }` in `pay_memory`. Add a distinct `check_turn_end()` method that callers run after effect resolution completes.
-
-### 1.5 🔴 Memory swing-back
+### 1.5 🟢 Memory swing-back on OnEndTurn — implemented
 
 **Python** — [game/__init__.py:276-280](../digimon_gym/engine/game/__init__.py#L276): if `OnEndTurn` effects restore memory from `< 0` back to `>= 0`, the turn continues and returns to Main. Real DCGO rule, used by some cards.
 
-**Rust** — absent.
+**Rust** — [game_phases.rs:78-85](../digimon-engine/src/game_phases.rs#L78) `end_turn` captures `memory_before = self.memory` before firing `fire_end_of_your_turn(ending_player)`. After the drain, it checks `if memory_before < 0 && self.memory >= 0 && !self.game_over`: if the sign flipped back, the function sets `self.current_phase = GamePhase::Main` and returns immediately, short-circuiting the turn switch. This matches the Python swing-back rule exactly.
 
-**Fix outline:** After firing `OnEndTurn` effects in `end_turn`, compare `memory_before` vs `memory` and short-circuit the turn switch if the sign flipped back. Gate behind `self.game_over == false`.
+**Coverage:** [tests/end_turn_phase_transition.rs](../digimon-engine/tests/end_turn_phase_transition.rs) `swing_back_short_circuit` case.
 
 ### 1.6 🟢 Mulligan phase — implemented
 
@@ -159,13 +153,15 @@ New `EffectContext` helpers landed alongside: `play_from_security`, `select_secu
 
 Enqueue + drain of the revealed card's `SecuritySkill` effects; `play_from_security` + `pending_security.played` flag; `OnLoseSecurity` fires unconditionally. Covered by the three pilots above. Any security effect that (a) is unconditional, (b) needs no context beyond `self.player`/`game`, and (c) installs no pending selection, now behaves identically in both engines.
 
-### 2.5b 🔴 `OnSecurityCheck` observer timing not fired
+### 2.5b 🟢 `OnSecurityCheck` observer timing fired — implemented
 
-**Python** — [combat.py:206-214](../digimon_gym/engine/game/combat.py#L206) `_execute_security_checks` calls `execute_effects(EffectTiming.OnSecurityCheck, sec_check_ctx)` after each reveal-and-resolve pass. Field / trash / hand effects that watch for security checks globally (e.g. "When your security is checked, gain 1 memory") rely on this timing.
+**Python** — [combat.py:206-214](../digimon_gym/engine/game/combat.py#L206) `_execute_security_checks` calls `execute_effects(EffectTiming.OnSecurityCheck, sec_check_ctx)` after each reveal-and-resolve pass. Field effects that watch for security checks globally (e.g. "When your security is checked, gain 1 memory") rely on this timing.
 
-**Rust** — [combat.rs:944-952](../digimon-engine/src/combat.rs#L944) enqueues `EffectTiming::OnLoseSecurity` on the revealed card itself but **never** enqueues `OnSecurityCheck` over other zones. The enum variant and builder exist (`Effect::on_security_check`), but no trigger source fires it.
+**Rust** — [combat.rs:949-955](../digimon-engine/src/combat.rs#L949) the `OnSecurityCheckDrain` security phase builds a `TriggerSource::OnSecurityCheck { attacker, defender, revealed_card, was_face_up }` and calls `self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger)`. [effect_queue.rs:65](../digimon-engine/src/effect_queue.rs#L65) dispatches `TriggerSource::OnSecurityCheck` by iterating the defender's entire `battle_area` and calling `enqueue_from_permanent` for each permanent — matching the Python fan-out. After draining, the state machine advances past `OnSecurityCheckDrain`.
 
-**Fix outline:** Add a `TriggerSource::Global` variant (or reuse `PlayerBattleArea` iterated over every player) for `OnSecurityCheck` enqueue after the `SecuritySkill` drain. Also expose `security_card` / `security_was_face_up` in the effect context — see §2.5g.
+**Note:** Non-combat security removal (effect-driven security trashing) does not yet emit this timing — that path is tracked in the engine-gaps doc under "Global `OnOpponentSecurityRemoved` observer timing". The attack-path dispatch (§2.5b) is confirmed equivalent.
+
+**Coverage:** [tests/security_effects.rs](../digimon-engine/tests/security_effects.rs) security-observer pilot cases.
 
 ### 2.5c 🔴 Progress / immunity-to-opponent-effects gate not wired
 
@@ -571,7 +567,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 11. ~~**§3.5 — Selection tensor slots**~~ ✅ done — `valid_count / ACTION_SPACE_SIZE` and `selecting_player` written at slots 1371/1372 whenever `pending_selection.is_some()`.
 12. ~~**§2.3 Counter + blast digivolve**~~ ✅ done — `Effect::blast_digivolve` flag, `Game::can_digivolve` validator, `combat::try_enter_counter` + `execute_blast_digivolve`. Defender-only, Digimon-target only (Python parity). Attacker-deletion cascade routes to Cleanup without re-running Block/Battle.
 
-13. **§2.5 — Security effect execution** — partial. ✅ §2.5a basic `SecuritySkill` dispatch (trigger → process → trash + `play_from_security` bypass + `OnLoseSecurity`); ✅ `face_up_security` tensor parity (§3.3); ✅ `SelectSecurity` / `SelectReveal` helpers (§4.6d). Outstanding, in rough order of load-bearing-ness: **§2.5j re-entrant selections mid-security-resolve** (blocks every real card with a selection-using `[Security]` effect), §2.5g EffectContext extras (attacker / security_digimon / turn_player), §2.5b `OnSecurityCheck` observer firing, §2.5c Progress immunity gate, §2.5d DontBattleSecurityDigimon modifier, §2.5e inherited-effect DP adjustments to security Digimon, §2.5f native Jamming (blocked on §2.1b), §2.5h condition-check divergence, §2.5i TriggerOrder-for-multi-security-effect, §2.5k `face_up_security` cleanup on reveal, §2.5l `_last_security_card` snapshot, §2.5m `security_reveal` event emission, §2.5-harness cross-engine YAML harness.
+13. **§2.5 — Security effect execution** — partial. ✅ §2.5a basic `SecuritySkill` dispatch (trigger → process → trash + `play_from_security` bypass + `OnLoseSecurity`); ✅ §2.5b `OnSecurityCheck` observer timing fired (attack path — `OnSecurityCheckDrain` phase + `effect_queue.rs:65` defender-battle-area fan-out); ✅ `face_up_security` tensor parity (§3.3); ✅ `SelectSecurity` / `SelectReveal` helpers (§4.6d). Outstanding, in rough order of load-bearing-ness: **§2.5j re-entrant selections mid-security-resolve** (blocks every real card with a selection-using `[Security]` effect), §2.5g EffectContext extras (attacker / security_digimon / turn_player), §2.5c Progress immunity gate, §2.5d DontBattleSecurityDigimon modifier, §2.5e inherited-effect DP adjustments to security Digimon, §2.5f native Jamming (blocked on §2.1b), §2.5h condition-check divergence, §2.5i TriggerOrder-for-multi-security-effect, §2.5k `face_up_security` cleanup on reveal, §2.5l `_last_security_card` snapshot, §2.5m `security_reveal` event emission, §2.5-harness cross-engine YAML harness.
 
 The rest (face-down security §3.3, remaining selection kinds §4.6d-residual `SelectSource`, etc.) can follow as cards that need them get implemented.
 

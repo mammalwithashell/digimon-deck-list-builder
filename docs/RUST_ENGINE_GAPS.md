@@ -165,6 +165,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None — BLOCKED. Raw `player.hand.remove(i)` + `battle_area.push(Permanent::new(…))` skips OnPlay observers.
 - **Related:** RUST_PYTHON_PARITY §1.1 (play cost deduction — this gap is upstream of the free-play variant but distinct), §2.5a (play_from_security landed).
 
+**Closed by Phase 2 (2026-04-19):** Implemented in `digimon-engine` — see `EffectContext::play_from_hand_with_cost` and `EffectContext::play_from_trash_with_cost` (digimon-engine/src/effect_context/mod.rs) and `Game::play_from_hand_with_cost` / `Game::play_from_trash_with_cost` (digimon-engine/src/game_actions.rs). The free-play and cost-delta variants are expressed via `CostDelta::Reduce(printed_cost)` and `CostDelta::Reduce(delta)` respectively. `OnPlay` is fired through the standard effect queue in both paths.
+
 ### Zone-manipulation: effect-initiated digivolve (free / reduced / with trait filter / ignore requirements / DNA / Blast / detect-DNA-origin)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -174,6 +176,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.prompt_digivolve(base_filter, target_filter, reduction: u8, is_optional, callback)` installs a chained own-permanent + hand-card selection and performs the digivolve at reduced/free cost. Extend `Game::digivolve_from_hand` to scan `ChangeDigivolveCost` modifiers with trait-filter predicates.
 - **Workaround:** None faithful. The whole archetype's recurring digivolve-from-hand payoff (7+ cards) routes through this primitive.
 - **Related:** RUST_ENGINE_API §9 ("BeforePayCost for cost reduction … not implemented").
+
+**Closed by Phase 2 (2026-04-19):** Implemented in `digimon-engine` — see `EffectContext::effect_initiated_digivolve` (digimon-engine/src/effect_context/mod.rs) and `Game::effect_initiated_digivolve` (digimon-engine/src/game_actions.rs). The primitive supports free and reduced-cost effect-initiated digivolves through the standard `WhenDigivolving` queue; trait filtering is applied at the selection prompt level. DNA and Blast digivolve variants, passive cost-reduction hooks (`BeforePayCost`), and ignore-requirements flags remain open sub-items.
 
 ### Zone-manipulation: return-to-hand / return-to-deck (top/bottom) / bounce self / trash-from-hand
 - **Severity:** 🔴 BLOCKING
@@ -185,6 +189,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None — BLOCKED.
 - **Related:** None.
 
+**Closed by Phase 2 (2026-04-19):** Core primitives implemented in `digimon-engine` — see `EffectContext::return_to_hand`, `EffectContext::return_to_deck`, `EffectContext::add_to_hand_from_trash`, and `EffectContext::trash_from_hand_by_index` (digimon-engine/src/effect_context/mod.rs) and corresponding `Game::*` methods (digimon-engine/src/game_actions.rs). Material routing (top card → destination, others → trash) and appropriate trigger dispatch are handled in each path. Extended variants (cross-permanent return-to-deck-top, return-from-trash-to-deck-top, self-return-as-cost builder hook) remain open sub-items not yet surfaced by a landing card script.
+
 ### Zone-manipulation: reveal-top-N deck + add-to-hand + hatch
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -195,6 +201,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** Direct `ctx.game.player_mut(...)` mutation works but violates curated-API contract and bypasses `OnAddToHand` + hand-size-limit checks.
 - **Related:** Parity §3.4 (revealed_cards scaffold landed).
 
+**Closed by Phase 2 (2026-04-19):** Core primitives implemented in `digimon-engine` — see `EffectContext::reveal_top_deck`, `EffectContext::add_to_hand_from_deck`, `EffectContext::add_to_hand_from_trash`, and `EffectContext::hatch` (digimon-engine/src/effect_context/mod.rs) and `Game::reveal_top_deck` / `Game::add_to_hand_from_deck` / `Game::add_to_hand_from_trash` / `Game::hatch` (digimon-engine/src/game_actions.rs). `reveal_top_deck` populates `Game.revealed_cards`; `hatch` is now surfaced through `EffectContext` (not action-decoder-only). Multi-pick from reveal, ordered-deck-bottom return, and `play_from_revealed_free` remain open sub-items.
+
 ### Zone-manipulation: security stack operations (trash top, place top/bottom, trash N, Recovery +N, shuffle security)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -204,6 +212,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.trash_top_security(of_player: PlayerId, count: u8) -> u8`; `ctx.place_security_bottom(player, CardSource)`; `ctx.place_security_top(player, CardSource)`; `ctx.move_top_security_to_hand(player)`. All must fire `OnLoseSecurity` / `OnAddToHand` and update `face_up_security` bookkeeping.
 - **Workaround:** Raw `player.security` manipulation skips observer triggers — correctness class same as the global-security-observer gap.
 - **Related:** Parity §2.5k (face_up_security stale entries), §2.5m (security_reveal event).
+
+**Closed by Phase 2 (2026-04-19):** Core placement primitive implemented in `digimon-engine` — see `EffectContext::place_on_security` (digimon-engine/src/effect_context/mod.rs) and `Game::place_on_security` (digimon-engine/src/game_actions.rs). The method accepts a `StackPosition` enum (`Top` / `Bottom`) so both `place_security_top` and `place_security_bottom` shapes are covered by a single primitive. `OnLoseSecurity` firing and `face_up_security` bookkeeping are handled inside the method. Remaining open sub-items: `trash_top_security(player, N)`, `move_top_security_to_hand`, face-up flip, Recovery +N deck-top variant, and security-stack extraction with face-up filter.
 
 ### Token creation + `CardKind::Token` + Petrification Token definition
 - **Severity:** 🔴 BLOCKING
@@ -224,6 +234,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.place_as_bottom_source(target, card)`; `ctx.place_as_top_source(target, card)`; `ctx.digivolve_into_source_from_hand(target, hand_index, bottom_trash_index, cost_override: u16, ignore_reqs: bool)`.
 - **Workaround:** None — BLOCKED. Raw `battle_area[i].card_sources.insert(0, ...)` skips OnEnterField / inherited-stack recomputation.
 - **Related:** None.
+
+**Closed by Phase 2 (2026-04-19):** Core `place_as_bottom_source` primitive implemented in `digimon-engine` — see `EffectContext::place_as_bottom_source` (digimon-engine/src/effect_context/mod.rs) and `Game::place_as_bottom_source` (digimon-engine/src/game_actions.rs). The unified `CardSourceRef` form accepts a card from hand, trash, or revealed pool and appends it to the bottom of the target permanent's `card_sources`, triggering inherited-stack recomputation. Open sub-items: `place_as_top_source`, alt-digivolve with override-cost + ignore-requirements flag, stack reorder / `move_source_to_bottom`, face-down placement, and cross-permanent-source (from-permanent) variants.
 
 ### Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N, Fragment, Save, Collision)
 - **Severity:** 🔴 BLOCKING
