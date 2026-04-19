@@ -10,7 +10,10 @@ use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::player::Player;
 use crate::rules::Rules;
-use crate::selection::{EffectQueue, PendingAttack, PendingSecurity, PendingSelection, SelectionError};
+use crate::selection::{
+    EffectQueue, PendingAttack, PendingSecurity, PendingSelection, SecurityResolutionState,
+    SelectionError,
+};
 
 /// Reasons `Game::activate_overclock` can fail. Exposed so callers
 /// (Tauri commands, tests, Python bindings) can distinguish between
@@ -113,6 +116,14 @@ pub struct Game {
     /// cleared afterward. `EffectContext::play_from_security` inspects and
     /// mutates this slot to keep the revealed card from being trashed.
     pub pending_security: Option<PendingSecurity>,
+    /// Mid-security-check resolution state. Set by `resolve_security_card`
+    /// at phase entry, mutated by `drive_security_resolution` as phases
+    /// advance, and cleared at `Dispose`. Non-`None` when the engine is
+    /// paused inside a security check — a `pending_selection` installed by
+    /// a `SecuritySkill` process pauses resolution here; resumption is
+    /// driven by `Game::advance_security_resolution`, called from
+    /// `resolve_generic_selection`. See RUST_PYTHON_PARITY §2.5j.
+    pub security_resolution: Option<SecurityResolutionState>,
     /// Safety rail matching Python's `_resolve_effect_stack` max-iterations=50
     /// cap. Incremented per drain step; reset to 0 when the queue empties.
     /// Prevents a self-triggering chain from hanging the engine.
@@ -240,6 +251,7 @@ impl Game {
             effect_queue: EffectQueue::new(),
             pending_attack: None,
             pending_security: None,
+            security_resolution: None,
             effect_chain_depth: 0,
             logger: Box::new(SilentLogger),
             events: Vec::new(),
