@@ -211,6 +211,29 @@ impl Game {
         true
     }
 
+    /// Reveal up to `n` cards from the top of `player`'s deck. Cards move
+    /// into `self.revealed_cards` (transient reveal pool, cleared on turn
+    /// rotation). Returns the list of revealed card handles in top-first
+    /// order.
+    ///
+    /// Does not fire `OnDraw` or modify hand. Callers that want to then
+    /// move a revealed card to hand/deck/trash use the reveal-pool
+    /// follow-up helpers added in Task 9.
+    pub fn reveal_top_deck(
+        &mut self,
+        player_id: PlayerId,
+        n: u8,
+    ) -> Vec<crate::card_source::CardHandle> {
+        let mut handles = Vec::new();
+        for _ in 0..n {
+            let p = self.player_mut(player_id);
+            let Some(card) = p.deck.pop() else { break };
+            handles.push(card.handle());
+            self.revealed_cards.push(card);
+        }
+        handles
+    }
+
     /// Shuffle `player`'s deck.
     pub fn shuffle_deck(&mut self, player_id: PlayerId) {
         // Split-borrow idiom: take deck out, shuffle, put back.

@@ -286,6 +286,22 @@ impl<'a> EffectContext<'a> {
         self.game.add_to_hand_from_trash(player, card)
     }
 
+    /// Reveal up to `n` cards from the top of `player`'s deck. See
+    /// `Game::reveal_top_deck`.
+    pub fn reveal_top_deck(
+        &mut self,
+        player: PlayerId,
+        n: u8,
+    ) -> Vec<crate::card_source::CardHandle> {
+        self.game.reveal_top_deck(player, n)
+    }
+
+    /// Snapshot of the current reveal pool. Scripts inspect this to decide
+    /// follow-up moves.
+    pub fn revealed(&self) -> &[crate::card_source::CardSource] {
+        &self.game.revealed_cards
+    }
+
     /// Shuffle `player`'s deck. Pair with `add_to_hand_from_deck` for
     /// "search and shuffle" effects.
     pub fn shuffle_deck(&mut self, player: PlayerId) {

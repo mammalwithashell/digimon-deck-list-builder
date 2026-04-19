@@ -233,3 +233,43 @@ fn add_to_hand_missing_handle_returns_false() {
     assert!(!ok);
     assert_eq!(r.hand_size(0), 0);
 }
+
+// ─── reveal_top_deck ──────────────────────────────────────────────────────────
+
+#[test]
+fn reveal_top_deck_populates_reveal_pool() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("A", "A", 1))
+        .add_card(plain_digimon("B", "B", 1))
+        .add_card(plain_digimon("C", "C", 1))
+        .deck(0, &["A", "B", "C"])
+        .start();
+
+    let revealed = r.game_mut().reveal_top_deck(0, 2);
+    assert_eq!(revealed.len(), 2);
+    assert_eq!(r.deck_size(0), 1);
+    assert_eq!(r.game_mut().revealed_cards.len(), 2);
+
+    // Pop() returns the top of Vec, so reveal order is the reverse of
+    // insertion order. deck was built [A, B, C] with C on top. First
+    // reveal should be C, second B.
+    let card_ids: Vec<String> = {
+        let g = r.game_mut();
+        g.revealed_cards
+            .iter()
+            .map(|c| c.card_id(&g.card_data).to_string())
+            .collect()
+    };
+    assert_eq!(card_ids, vec!["C".to_string(), "B".to_string()], "revealed top-first");
+}
+
+#[test]
+fn reveal_top_deck_handles_empty_deck() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("A", "A", 1))
+        .deck(0, &["A"])
+        .start();
+    let revealed = r.game_mut().reveal_top_deck(0, 5);
+    assert_eq!(revealed.len(), 1);
+    assert_eq!(r.deck_size(0), 0);
+}
