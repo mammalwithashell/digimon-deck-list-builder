@@ -23,14 +23,6 @@ interface JoinLobbyResponse {
   player_id: number;
 }
 
-export interface LobbyGame {
-  game_id: string;
-  join_code: string;
-  host_display_name: string;
-  created_at: string;
-  allow_spectators: boolean;
-}
-
 export async function createLobby(params: CreateLobbyParams): Promise<CreateLobbyResponse> {
   const { data } = await client.post<CreateLobbyResponse>('/lobby/create', params);
   return data;
@@ -38,11 +30,6 @@ export async function createLobby(params: CreateLobbyParams): Promise<CreateLobb
 
 export async function joinLobby(joinCode: string, params: JoinLobbyParams): Promise<JoinLobbyResponse> {
   const { data } = await client.post<JoinLobbyResponse>(`/lobby/join/${joinCode}`, params);
-  return data;
-}
-
-export async function listLobbyGames(): Promise<LobbyGame[]> {
-  const { data } = await client.get<LobbyGame[]>('/lobby/games');
   return data;
 }
 

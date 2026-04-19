@@ -50,7 +50,7 @@ pub use runners::HeadlessRunner;
 pub use logger::{GameLogger, SilentLogger, VerboseLogger};
 pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedAction, TensorSnapshot};
 pub use inference::{load_policy, InferenceError, OnnxLstmPolicy, OnnxMlpPolicy, OnnxPolicy};
-pub use policies::{GreedyPolicy, Policy, RandomPolicy};
+pub use policies::{greedy_action, GreedyPolicy, Policy, RandomPolicy};
 pub use crate::events::GameEvent;
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,

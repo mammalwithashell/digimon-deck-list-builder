@@ -1,4 +1,4 @@
-//! Heuristic opponent policy — port of Python's `greedy_policy()` in
+//! Heuristic greedy opponent — port of Python's `greedy_policy()` in
 //! `digimon_gym/digimon_gym.py`.
 //!
 //! Priorities:
@@ -8,9 +8,14 @@
 //! - Breeding phase: Hatch > Move > Pass.
 //! - Main phase: best keep-turn Digivolve > best Attack > best Play > Pass.
 //!
-//! The heuristic inspects the full `Game` state rather than the obs tensor,
-//! so it is cheap and deterministic. Tie-breaks are deterministic (by
-//! level, DP, cost, index) to match the Python reference.
+//! The heuristic inspects the full `Game` state rather than the obs
+//! tensor, so it's cheap and deterministic. Tie-breaks are deterministic
+//! (by level, DP, cost, index) to match the Python reference.
+//!
+//! Replaces the `first_valid_action` placeholder previously wired into
+//! `PlayerKind::Greedy` (see commit 4ab3c87a). Parity hazard: any change
+//! to `greedy_policy()` in Python must be mirrored here — tracked in
+//! `docs/RUST_PYTHON_PARITY.md` under "Policies".
 
 use crate::action::space::{
     ATTACK_END, ATTACK_START, BREEDING_TARGET, DIGIVOLVE_END, DIGIVOLVE_START,
@@ -22,87 +27,86 @@ use crate::enums::{CardKind, GamePhase, PlayerId};
 use crate::game::Game;
 use crate::selection::SelectionKind;
 
-use super::{current_decision_player, Policy};
+/// Pick the next action for a `PlayerKind::Greedy` seat, using the
+/// Python-parity heuristic. The returned id is guaranteed to be a valid
+/// entry in the provided mask (or `PASS` if the mask is empty).
+pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
+    let valid: Vec<u16> = mask
+        .iter()
+        .enumerate()
+        .filter_map(|(i, v)| if *v > 0.0 { Some(i as u16) } else { None })
+        .collect();
 
-pub struct GreedyPolicy;
+    if valid.is_empty() {
+        return PASS;
+    }
 
-impl GreedyPolicy {
-    pub fn new() -> Self {
-        Self
+    // Mulligan phase — the deciding player is set by `mulligan_current_player`.
+    if game.current_phase == GamePhase::Mulligan {
+        return mulligan_choice(game, &valid);
+    }
+
+    // Selection-time: if the engine is asking for a hand card to trash,
+    // pick the lowest-value card rather than the first.
+    if let Some(sel) = game.pending_selection.as_ref() {
+        if sel.kind == SelectionKind::Trash {
+            if let Some(a) = best_trash_choice(game, sel.selecting_player, &valid) {
+                return a;
+            }
+        }
+    }
+
+    let player_id = current_decider(game);
+
+    match game.current_phase {
+        GamePhase::Breeding => {
+            if valid.contains(&HATCH) {
+                return HATCH;
+            }
+            if valid.contains(&MOVE_FROM_BREEDING) {
+                return MOVE_FROM_BREEDING;
+            }
+            if valid.contains(&PASS) {
+                return PASS;
+            }
+            first_non_pass(&valid)
+        }
+        GamePhase::Main => {
+            if let Some(a) = best_keep_turn_digivolve(game, player_id, &valid) {
+                return a;
+            }
+            if let Some(a) = best_attack(game, player_id, &valid) {
+                return a;
+            }
+            if let Some(a) = best_play(game, player_id, &valid) {
+                return a;
+            }
+            if valid.contains(&PASS) {
+                return PASS;
+            }
+            first_non_pass(&valid)
+        }
+        _ => {
+            if valid.contains(&PASS) {
+                return PASS;
+            }
+            first_non_pass(&valid)
+        }
     }
 }
 
-impl Default for GreedyPolicy {
-    fn default() -> Self {
-        Self::new()
+/// Who is expected to submit the next action — mulligan decider > pending
+/// selection holder > turn player. Mirrors
+/// `engine_commands.rs::current_decision_player` exactly so the heuristic
+/// reasons about the same seat the engine is asking.
+fn current_decider(game: &Game) -> PlayerId {
+    if let Some(p) = game.mulligan_current_player() {
+        return p;
     }
-}
-
-impl Policy for GreedyPolicy {
-    fn select(&mut self, game: &Game, mask: &[f32]) -> u16 {
-        let valid: Vec<u16> = mask
-            .iter()
-            .enumerate()
-            .filter_map(|(i, v)| if *v > 0.0 { Some(i as u16) } else { None })
-            .collect();
-
-        if valid.is_empty() {
-            return PASS;
-        }
-
-        // Mulligan — PlayerId is the decider, not turn_player.
-        if game.current_phase == GamePhase::Mulligan {
-            return mulligan_choice(game, &valid);
-        }
-
-        // Selection-time: if the engine is asking for a hand card to trash,
-        // pick the lowest-value card rather than the first.
-        if let Some(sel) = game.pending_selection.as_ref() {
-            if sel.kind == SelectionKind::Trash {
-                if let Some(a) = best_trash_choice(game, sel.selecting_player, &valid) {
-                    return a;
-                }
-            }
-        }
-
-        let player_id = current_decision_player(game);
-
-        match game.current_phase {
-            GamePhase::Breeding => {
-                if valid.contains(&HATCH) {
-                    return HATCH;
-                }
-                if valid.contains(&MOVE_FROM_BREEDING) {
-                    return MOVE_FROM_BREEDING;
-                }
-                if valid.contains(&PASS) {
-                    return PASS;
-                }
-                first_non_pass(&valid)
-            }
-            GamePhase::Main => {
-                if let Some(a) = best_keep_turn_digivolve(game, player_id, &valid) {
-                    return a;
-                }
-                if let Some(a) = best_attack(game, player_id, &valid) {
-                    return a;
-                }
-                if let Some(a) = best_play(game, player_id, &valid) {
-                    return a;
-                }
-                if valid.contains(&PASS) {
-                    return PASS;
-                }
-                first_non_pass(&valid)
-            }
-            _ => {
-                if valid.contains(&PASS) {
-                    return PASS;
-                }
-                first_non_pass(&valid)
-            }
-        }
+    if let Some(sel) = game.pending_selection.as_ref() {
+        return sel.selecting_player;
     }
+    game.turn_player()
 }
 
 fn first_non_pass(valid: &[u16]) -> u16 {
@@ -115,8 +119,8 @@ fn first_non_pass(valid: &[u16]) -> u16 {
 }
 
 /// Mulligan heuristic: keep (action 0) if hand has a level-3 Digimon,
-/// else mulligan (action 1). Matches Python's `greedy_policy` mulligan
-/// branch (digimon_gym.py:339).
+/// else mulligan (action 1). Matches Python's mulligan branch
+/// (`digimon_gym.py` around the `ACTION_PASS_TURN` mulligan block).
 fn mulligan_choice(game: &Game, valid: &[u16]) -> u16 {
     let pid = game.mulligan_current_player().unwrap_or(0);
     let has_level3 = game
@@ -184,9 +188,8 @@ fn estimate_digivolve_cost(
 fn best_keep_turn_digivolve(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
     let player = game.player(pid);
     let rel_mem = relative_memory(game, pid);
-    // Score tuple: (level, base_dp, -cost, -hand_idx, -field_idx) to match
-    // Python's tie-break (higher level/DP preferred, lower cost preferred,
-    // lower indices preferred).
+    // Score tuple: (level, base_dp, -cost, -hand_idx, -field_idx) — higher
+    // level/DP preferred, lower cost preferred, lower indices preferred.
     let mut best: Option<((i32, i32, i32, i32, i32), u16)> = None;
 
     for &action in valid {
@@ -325,9 +328,8 @@ fn best_trash_choice(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
     let player = game.player(pid);
     let mut best: Option<((i32, i32, i32), u16)> = None;
     for &action in valid {
-        // Trash-from-hand uses 0..hand_len() indices. PASS is always valid
-        // and exits the selection — treat any non-hand action as not a
-        // candidate for this branch.
+        // Trash-from-hand uses hand-index-shaped ids. PASS is always valid
+        // and exits the selection — treat non-hand actions as non-candidates.
         if action == PASS {
             continue;
         }

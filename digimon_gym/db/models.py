@@ -52,6 +52,7 @@ class User(Base):
     # Matchmaking rating — opaque scalar, updated by the ranked-rating spec.
     # Defaults to 1500 for new accounts; read by the matcher at queue time.
     rating = Column(Float, default=1500.0, nullable=False)
+    is_guest = Column(Boolean, default=False, nullable=False)
 
     # Relationships
     decks = relationship("Deck", back_populates="owner", cascade="all, delete-orphan")

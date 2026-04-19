@@ -35,9 +35,8 @@ import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSo
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as gameApi from '@/api/gameApi';
 import * as deckApiMod from '@/api/deckApi';
+import * as deckStore from '@/storage/deckStore';
 import type { LocalModelMeta } from '@/api/desktopModelsApi';
-
-const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 import {
   ACTION,
   ATTACK_TARGETS_PER_SLOT,
@@ -49,11 +48,22 @@ import {
 } from '@/utils/constants';
 import { GamePhase, type PermanentInfo } from '@/types/game';
 
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+// Desktop builds have no server-side Deck rows, so deck list/load must go
+// through the Tauri-backed deckStore. parseDeck / validateDeckRaw already
+// branch internally, so those stay on deckApiMod.
+const decks = IS_DESKTOP ? deckStore : deckApiMod;
+
 export function GamePage() {
   const { id: urlGameId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const isPvpMode = searchParams.get('mode') === 'pvp';
+  const mode = searchParams.get('mode');
+  const isPvpMode = mode === 'pvp';
+  const isVsAiOnline = mode === 'vsai';
   const isSpectator = searchParams.get('role') === 'spectator';
+  // WebSocket is used for both PvP and vs-AI-online: the server streams
+  // state and runs the AI turn internally for the 'vsai' mode.
+  const useWebSocket = isPvpMode || isVsAiOnline || isSpectator;
 
 
   const store = useGameStore();
@@ -61,9 +71,9 @@ export function GamePage() {
   useEffectHighlight();
   const parsedMask = useActionMask(store.actionMask);
 
-  // WebSocket connection (only active in PvP/spectator mode)
+  // WebSocket connection (active for PvP, vs-AI-online, and spectator modes)
   const wsOptions = useMemo<UseWebSocketGameOptions | null>(() => {
-    if (!urlGameId || (!isPvpMode && !isSpectator)) return null;
+    if (!urlGameId || !useWebSocket) return null;
     return {
       gameId: urlGameId,
       role: isSpectator ? 'spectator' : 'player',
@@ -75,19 +85,19 @@ export function GamePage() {
         if (payload.your_player_id != null) {
           store.setPlayerLabels({
             [payload.your_player_id]: 'You',
-            [payload.your_player_id === 1 ? 2 : 1]: 'Opponent',
+            [payload.your_player_id === 1 ? 2 : 1]: isVsAiOnline ? 'AI' : 'Opponent',
           });
         }
       },
       onGameOver: () => {},
       onError: (msg) => console.error('WebSocket error:', msg),
     };
-  }, [urlGameId, isPvpMode, isSpectator]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [urlGameId, useWebSocket, isSpectator, isVsAiOnline]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ws = useWebSocketGame(wsOptions);
 
-  // Use WebSocket sendAction for PvP, HTTP for local games
-  const sendAction = isPvpMode || isSpectator ? ws.sendAction : httpSendAction;
+  // Use WebSocket sendAction for PvP / vs-AI-online / spectator; HTTP for local games.
+  const sendAction = useWebSocket ? ws.sendAction : httpSendAction;
   const { savedDecks, setSavedDecks } = useDeckBuilderStore();
   const { getDropAction } = useDropZone(parsedMask);
 
@@ -120,8 +130,8 @@ export function GamePage() {
   // Hydrate store from URL param when navigating to /game/:id
   useEffect(() => {
     if (urlGameId && !store.gameId) {
-      if (isPvpMode || isSpectator) {
-        // PvP/spectator mode: WebSocket hook will send initial state
+      if (useWebSocket) {
+        // PvP / vs-AI-online / spectator: WebSocket hook will send initial state
         store.setGameId(urlGameId);
         store.clearLogs();
       } else {
@@ -166,7 +176,7 @@ export function GamePage() {
 
   // Load saved decks on first render
   useState(() => {
-    deckApiMod.listDecks().then(setSavedDecks).catch(() => {});
+    decks.listDecks().then(setSavedDecks).catch(() => {});
   });
 
   // DnD sensors: pointer with 8px activation distance, touch with 150ms delay
@@ -181,8 +191,8 @@ export function GamePage() {
     setStarting(true);
     try {
       const [deck, oppDeck] = await Promise.all([
-        deckApiMod.getDeck(selectedDeckId),
-        deckApiMod.getDeck(opponentDeckId),
+        decks.getDeck(selectedDeckId),
+        decks.getDeck(opponentDeckId),
       ]);
 
       // Desktop + trained: ensure the selected model is loaded into the

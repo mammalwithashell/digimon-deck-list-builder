@@ -84,6 +84,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   hydrate: async () => {
+    const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+
+    if (IS_DESKTOP) {
+      // Desktop alpha: mint/reuse a guest session. No account flows.
+      const { ensureGuestSession } = await import('@/bootstrap/guest');
+      try {
+        const session = await ensureGuestSession();
+        // The existing axios interceptor reads `access_token`; mirror the
+        // guest token there so authenticated calls "just work" without
+        // rewriting the interceptor.
+        localStorage.setItem('access_token', session.token);
+        set({
+          accessToken: session.token,
+          refreshToken: null,
+          isAuthenticated: true,
+          user: {
+            id: session.userId,
+            username: session.displayName,
+            email: '',
+            roles: [],
+          },
+        });
+      } catch {
+        // Offline: HomePage will render an offline banner and disable PvP + Try Online.
+        localStorage.removeItem('access_token');
+        set({
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          user: null,
+        });
+      }
+      return;
+    }
+
+    // Web build (unchanged)
     const accessToken = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
     let user: User | null = null;

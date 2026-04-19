@@ -54,7 +54,6 @@ router = APIRouter(prefix="/matchmaking", tags=["matchmaking"])
 # ── Types ───────────────────────────────────────────────────────────────
 
 QueueType = Literal["jank", "casual", "sweat", "ranked"]
-TierFilter = Literal["same", "any", "meta_only", "jank_only"]
 TicketStatus = Literal["waiting", "matched", "cancelled"]
 
 # Alpha public queues — ranked is gated behind MATCHMAKING_RANKED_ENABLED.
@@ -186,7 +185,15 @@ def find_match(
 
 class QueueRequest(BaseModel):
     queue_type: QueueType
-    deck_id: str
+    # Either deck_id (resolves a server-side Deck row) or the inline
+    # triple below. Inline is the guest path (no server-side Deck row);
+    # deck_id is the accounts path. Inline decks cannot queue for jank or
+    # sweat because those require a classifier-assigned tier that only
+    # lives on server-side Deck rows.
+    deck_id: Optional[str] = None
+    main_deck: Optional[list[str]] = None
+    egg_deck: Optional[list[str]] = None
+    game_mode: Optional[str] = None
 
 
 class TicketInfoResponse(BaseModel):
@@ -311,21 +318,46 @@ async def enqueue(
             "Ranked matchmaking is not available",
         )
 
-    result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
-    deck = result.scalar_one_or_none()
-    if deck is None or deck.owner_id != user.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Deck not found")
-
-    import json
-    card_ids = json.loads(deck.main_deck) + json.loads(deck.egg_deck or "[]")
-    if not card_ids:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Deck is empty")
+    # Resolve the deck. Two paths:
+    # - Inline payload (guest): request carries main_deck + egg_deck +
+    #   game_mode, no server-side Deck row exists. self_tier stays None.
+    # - deck_id (accounts): look up the server-side Deck row, snapshot
+    #   its meta_tier as self_tier for jank/sweat eligibility.
+    self_tier: Optional[str] = None
+    if request.main_deck is not None:
+        if request.game_mode is None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Inline deck requires game_mode",
+            )
+        card_ids = list(request.main_deck) + list(request.egg_deck or [])
+        if not card_ids:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Deck is empty")
+        game_mode = request.game_mode
+    elif request.deck_id is not None:
+        result = await db.execute(select(Deck).where(Deck.id == request.deck_id))
+        deck = result.scalar_one_or_none()
+        if deck is None or deck.owner_id != user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Deck not found")
+        import json
+        card_ids = json.loads(deck.main_deck) + json.loads(deck.egg_deck or "[]")
+        if not card_ids:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Deck is empty")
+        game_mode = deck.game_mode
+        self_tier = deck.meta_tier
+    else:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Request must include either deck_id or inline deck (main_deck + game_mode)",
+        )
 
     # Defense-in-depth: re-validate against the standard ban list at enqueue
     # time. Deck save already enforces this (decks.py), but a deck saved
     # before a card was banned — or tampered with via admin / direct DB —
     # would otherwise bypass the format. no_restriction opts out explicitly.
-    if deck.game_mode != "no_restriction":
+    # Applies equally to the inline-deck path so guests can't queue a
+    # banned card either.
+    if game_mode != "no_restriction":
         ban_result = validate_deck(card_ids, RESTRICTED_LIST)
         if not ban_result.is_valid:
             raise HTTPException(
@@ -333,22 +365,23 @@ async def enqueue(
                 detail={
                     "message": "Deck violates format restrictions",
                     "errors": ban_result.errors,
-                    "game_mode": deck.game_mode,
+                    "game_mode": game_mode,
                 },
             )
 
     # Queue-specific tier eligibility. Jank/sweat require a specific
-    # classifier tier; casual + ranked have no tier gate.
-    deck_tier = deck.meta_tier
-    if request.queue_type == "jank" and deck_tier != "jank":
+    # classifier tier; casual + ranked have no tier gate. Inline-deck
+    # (guest) tickets have `self_tier=None` and are therefore ineligible
+    # for jank/sweat — guests can queue for casual or (if enabled) ranked.
+    if request.queue_type == "jank" and self_tier != "jank":
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Deck tier {deck_tier!r} is not eligible for jank queue",
+            f"Deck tier {self_tier!r} is not eligible for jank queue",
         )
-    if request.queue_type == "sweat" and deck_tier not in SWEAT_TIERS:
+    if request.queue_type == "sweat" and self_tier not in SWEAT_TIERS:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Deck tier {deck_tier!r} is not eligible for sweat queue",
+            f"Deck tier {self_tier!r} is not eligible for sweat queue",
         )
 
     rating = None
@@ -361,8 +394,8 @@ async def enqueue(
         display_name=user.display_name or user.username,
         queue_type=request.queue_type,
         deck=card_ids,
-        game_mode=deck.game_mode,
-        self_tier=deck_tier,
+        game_mode=game_mode,
+        self_tier=self_tier,
         rating=rating,
         created_at=datetime.now(timezone.utc),
     )

@@ -5,9 +5,13 @@ import { useWebSocketGame } from '@/hooks/useWebSocketGame';
 import { useMatchmaking } from '@/hooks/useMatchmaking';
 import * as lobbyApi from '@/api/lobbyApi';
 import * as deckApiMod from '@/api/deckApi';
-import type { LobbyGame } from '@/api/lobbyApi';
-import type { QueueType, TierFilter } from '@/api/matchmaking';
+import * as deckStore from '@/storage/deckStore';
+import { getConfig as getMatchmakingConfig } from '@/api/matchmaking';
+import type { QueueType } from '@/api/matchmaking';
 import type { DeckSummary } from '@/types/deck';
+
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+const decks = IS_DESKTOP ? deckStore : deckApiMod;
 
 export function LobbyPage() {
   const navigate = useNavigate();
@@ -15,17 +19,26 @@ export function LobbyPage() {
 
   // Load decks
   useEffect(() => {
-    deckApiMod.listDecks().then(setSavedDecks).catch(() => {});
+    decks.listDecks().then(setSavedDecks).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tab state
-  const [tab, setTab] = useState<'play' | 'create' | 'join' | 'browse'>('play');
+  const [tab, setTab] = useState<'play' | 'create' | 'join'>('play');
 
   // Play (matchmaking queue) tab state
   const [playQueueType, setPlayQueueType] = useState<QueueType>('casual');
   const [playDeckId, setPlayDeckId] = useState('');
-  const [playTierFilter, setPlayTierFilter] = useState<TierFilter>('any');
+  const [availableQueues, setAvailableQueues] = useState<QueueType[]>(['jank', 'casual', 'sweat']);
   const matchmaking = useMatchmaking();
+
+  // Discover which queues the server currently accepts. `ranked` is gated
+  // behind a server-side feature flag, so fetch the config rather than
+  // hard-coding the visible set.
+  useEffect(() => {
+    getMatchmakingConfig()
+      .then((cfg) => setAvailableQueues(cfg.queues))
+      .catch(() => {/* fall back to the default alpha set */});
+  }, []);
 
   // When a match is found, join the synthesized lobby by code and navigate
   // to the game — same handoff as the manual "Join by code" flow.
@@ -34,7 +47,7 @@ export function LobbyPage() {
     let cancelled = false;
     (async () => {
       try {
-        const deck = await deckApiMod.getDeck(playDeckId);
+        const deck = await decks.getDeck(playDeckId);
         const result = await lobbyApi.joinLobby(matchmaking.match!.join_code, {
           deck: [...deck.egg_deck, ...deck.main_deck],
         });
@@ -67,14 +80,20 @@ export function LobbyPage() {
     }
   }, [matchmaking.waitedSeconds]);
 
-  const handleQueue = useCallback(() => {
+  const handleQueue = useCallback(async () => {
     if (!playDeckId) return;
+    // Always send the inline deck shape in desktop — the guest user has no
+    // server-side Deck row to reference. Queue type IS the tier filter:
+    // jank/sweat gate on classifier output, casual is open, ranked (when
+    // enabled) matches by rating.
+    const deck = await decks.getDeck(playDeckId);
     void matchmaking.enqueue({
       queue_type: playQueueType,
-      deck_id: playDeckId,
-      opponent_tier_filter: playQueueType === 'casual' ? playTierFilter : undefined,
+      main_deck: deck.main_deck,
+      egg_deck: deck.egg_deck,
+      game_mode: deck.game_mode,
     });
-  }, [matchmaking, playDeckId, playQueueType, playTierFilter]);
+  }, [matchmaking, playDeckId, playQueueType]);
 
   // Create tab state
   const [selectedDeckId, setSelectedDeckId] = useState('');
@@ -109,36 +128,11 @@ export function LobbyPage() {
   const [joinDeckId, setJoinDeckId] = useState('');
   const [joining, setJoining] = useState(false);
 
-  // Browse tab state
-  const [games, setGames] = useState<LobbyGame[]>([]);
-  const [loadingGames, setLoadingGames] = useState(false);
-
-  const refreshGames = useCallback(async () => {
-    setLoadingGames(true);
-    try {
-      const list = await lobbyApi.listLobbyGames();
-      setGames(list);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingGames(false);
-    }
-  }, []);
-
-  // Auto-refresh browse tab
-  useEffect(() => {
-    if (tab === 'browse') {
-      refreshGames();
-      const interval = setInterval(refreshGames, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [tab, refreshGames]);
-
   const handleCreate = async () => {
     if (!selectedDeckId) return;
     setCreating(true);
     try {
-      const deck = await deckApiMod.getDeck(selectedDeckId);
+      const deck = await decks.getDeck(selectedDeckId);
       const result = await lobbyApi.createLobby({
         deck: [...deck.egg_deck, ...deck.main_deck],
         is_public: isPublic,
@@ -158,7 +152,7 @@ export function LobbyPage() {
     if (!deckId || !code) return;
     setJoining(true);
     try {
-      const deck = await deckApiMod.getDeck(deckId);
+      const deck = await decks.getDeck(deckId);
       const result = await lobbyApi.joinLobby(code, {
         deck: [...deck.egg_deck, ...deck.main_deck],
       });
@@ -204,7 +198,7 @@ export function LobbyPage() {
 
       {/* Tabs */}
       <div className="mb-6 flex gap-2">
-        {(['play', 'create', 'join', 'browse'] as const).map((t) => (
+        {(['play', 'create', 'join'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -214,13 +208,7 @@ export function LobbyPage() {
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
-            {t === 'play'
-              ? 'Play'
-              : t === 'create'
-                ? 'Create Game'
-                : t === 'join'
-                  ? 'Join Game'
-                  : 'Browse Games'}
+            {t === 'play' ? 'Play' : t === 'create' ? 'Create Game' : 'Join Game'}
           </button>
         ))}
       </div>
@@ -231,10 +219,9 @@ export function LobbyPage() {
           decks={savedDecks}
           queueType={playQueueType}
           onQueueType={setPlayQueueType}
+          availableQueues={availableQueues}
           deckId={playDeckId}
           onDeckId={setPlayDeckId}
-          tierFilter={playTierFilter}
-          onTierFilter={setPlayTierFilter}
           onQueue={handleQueue}
           onCancel={() => void matchmaking.cancel()}
           status={matchmaking.status}
@@ -346,52 +333,6 @@ export function LobbyPage() {
         </div>
       )}
 
-      {/* Browse Tab */}
-      {tab === 'browse' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-400">
-              {games.length} game{games.length !== 1 ? 's' : ''} available
-            </p>
-            <button
-              onClick={refreshGames}
-              disabled={loadingGames}
-              className="text-sm text-blue-400 hover:text-blue-300"
-            >
-              {loadingGames ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
-          {games.length === 0 ? (
-            <p className="py-8 text-center text-gray-500">
-              No public games available. Create one or join with a code.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {games.map((game) => (
-                <div
-                  key={game.game_id}
-                  className="flex items-center justify-between rounded border border-gray-700 bg-gray-800 p-3"
-                >
-                  <div>
-                    <span className="font-medium text-white">{game.host_display_name}</span>
-                    <span className="ml-3 font-mono text-sm text-gray-400">{game.join_code}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <DeckSelect value={joinDeckId} onChange={setJoinDeckId} />
-                    <button
-                      onClick={() => handleJoin(game.join_code, joinDeckId)}
-                      disabled={!joinDeckId || joining}
-                      className="whitespace-nowrap rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-500 disabled:opacity-50"
-                    >
-                      Join
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -409,10 +350,9 @@ interface PlayTabProps {
   decks: DeckSummary[];
   queueType: QueueType;
   onQueueType: (q: QueueType) => void;
+  availableQueues: QueueType[];
   deckId: string;
   onDeckId: (id: string) => void;
-  tierFilter: TierFilter;
-  onTierFilter: (f: TierFilter) => void;
   onQueue: () => void;
   onCancel: () => void;
   status: ReturnType<typeof useMatchmaking>['status'];
@@ -422,9 +362,23 @@ interface PlayTabProps {
   errorMsg: string | null;
 }
 
+const QUEUE_DESCRIPTIONS: Record<QueueType, string> = {
+  jank: 'Off-meta safe space — jank-vs-jank only.',
+  casual: 'Any deck, any tier. No rating changes.',
+  sweat: 'Tournament-shape — meta + rogue only.',
+  ranked: 'Matched by skill rating; rating updates after the game.',
+};
+
+const QUEUE_LABELS: Record<QueueType, string> = {
+  jank: 'Jank',
+  casual: 'Casual',
+  sweat: 'Sweat',
+  ranked: 'Ranked',
+};
+
 function PlayTab(props: PlayTabProps) {
   const {
-    decks, queueType, onQueueType, deckId, onDeckId, tierFilter, onTierFilter,
+    decks, queueType, onQueueType, availableQueues, deckId, onDeckId,
     onQueue, onCancel, status, match, waitedSeconds, ratingWindow, errorMsg,
   } = props;
   const selectedDeck = decks.find((d) => d.id === deckId);
@@ -435,7 +389,7 @@ function PlayTab(props: PlayTabProps) {
   if (isQueued) {
     const label = queueType === 'ranked'
       ? `Searching ranked — window ±${ratingWindow ?? 50}`
-      : 'Searching casual...';
+      : `Searching ${QUEUE_LABELS[queueType].toLowerCase()}...`;
     return (
       <div className="rounded border border-blue-600 bg-blue-900/20 p-8 text-center">
         <div className="mb-2 text-lg font-medium text-white">{label}</div>
@@ -475,7 +429,7 @@ function PlayTab(props: PlayTabProps) {
       <div>
         <label className="mb-1 block text-sm text-gray-300">Queue</label>
         <div className="flex gap-2">
-          {(['casual', 'ranked'] as const).map((q) => (
+          {availableQueues.map((q) => (
             <button
               key={q}
               onClick={() => onQueueType(q)}
@@ -485,14 +439,12 @@ function PlayTab(props: PlayTabProps) {
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
-              {q === 'casual' ? 'Casual' : 'Ranked'}
+              {QUEUE_LABELS[q]}
             </button>
           ))}
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          {queueType === 'casual'
-            ? 'Filtered by opponent tier; no rating changes.'
-            : 'Matched by skill rating; rating updates after the game.'}
+          {QUEUE_DESCRIPTIONS[queueType]}
         </p>
       </div>
 
@@ -522,22 +474,6 @@ function PlayTab(props: PlayTabProps) {
           </div>
         ) : null}
       </div>
-
-      {queueType === 'casual' && (
-        <div>
-          <label className="mb-1 block text-sm text-gray-300">Opponent</label>
-          <select
-            value={tierFilter}
-            onChange={(e) => onTierFilter(e.target.value as TierFilter)}
-            className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white"
-          >
-            <option value="any">Any — face anyone</option>
-            <option value="same">Same tier as my deck</option>
-            <option value="meta_only">Meta only — try to beat the best</option>
-            <option value="jank_only">Jank only — off-meta safe space</option>
-          </select>
-        </div>
-      )}
 
       <button
         onClick={onQueue}
