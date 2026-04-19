@@ -17,8 +17,8 @@ RUN cd digimon-engine-py && maturin build --release --out /wheels
 # ── Stage 2: Python wheel builder ─────────────────────────────────────────
 FROM python:3.11-slim AS py-builder
 WORKDIR /build
-COPY requirements.txt .
-RUN pip wheel --no-cache-dir -r requirements.txt -w /wheels
+COPY requirements-server.txt .
+RUN pip wheel --no-cache-dir -r requirements-server.txt -w /wheels
 COPY --from=rust-builder /wheels/*.whl /wheels/
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────
