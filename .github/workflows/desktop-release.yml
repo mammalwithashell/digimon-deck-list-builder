@@ -51,9 +51,22 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build frontend (desktop mode)
+      - name: Build frontend (desktop mode, prod API baked in)
         working-directory: frontend
+        env:
+          VITE_API_URL: https://inbetweentheatre.duckdns.org
         run: npm run build -- --mode desktop
+
+      - name: Read release notes template
+        id: notes
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          {
+            echo "body<<EOF_NOTES"
+            sed "s/{{VERSION}}/$VERSION/g" .github/RELEASE_NOTES.md
+            echo "EOF_NOTES"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -61,7 +74,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'Digimon TCG v__VERSION__'
-          releaseBody: 'Desktop release. See assets for platform installers.'
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           projectPath: src-tauri
