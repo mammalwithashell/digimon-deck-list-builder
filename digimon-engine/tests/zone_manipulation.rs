@@ -325,3 +325,91 @@ fn return_to_hand_bad_handle_returns_none() {
     );
     assert!(returned.is_none());
 }
+
+// ─── return_to_deck ───────────────────────────────────────────────────────────
+
+use digimon_engine::enums::StackPosition;
+use digimon_engine::permanent::PermanentHandle;
+
+fn seed_single_card_permanent(r: &mut DebugRunner, card_id: &str) -> PermanentHandle {
+    let g = r.game_mut();
+    let turn = g.turn_count;
+    let data_idx = g.card_data.iter().position(|c| c.card_id == card_id).unwrap();
+    let card_idx = g.next_card_index();
+    let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
+    g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
+    PermanentHandle { player: 0, index: 0 }
+}
+
+#[test]
+fn return_to_deck_top_places_on_top() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("TOP", "Top", 4))
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .deck(0, &["FILLER", "FILLER"])
+        .start();
+
+    let handle = seed_single_card_permanent(&mut r, "TOP");
+    let ok = r.game_mut().return_to_deck(handle, StackPosition::Top);
+    assert!(ok);
+    assert_eq!(r.battle_area_size(0), 0);
+    assert_eq!(r.deck_size(0), 3);
+    let top_id = {
+        let g = r.game_mut();
+        g.player(0).deck.last().unwrap().card_id(&g.card_data).to_string()
+    };
+    assert_eq!(top_id, "TOP");
+}
+
+#[test]
+fn return_to_deck_bottom_places_at_position_zero() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BOTTOM", "Bot", 4))
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .deck(0, &["FILLER", "FILLER"])
+        .start();
+
+    let handle = seed_single_card_permanent(&mut r, "BOTTOM");
+    let ok = r.game_mut().return_to_deck(handle, StackPosition::Bottom);
+    assert!(ok);
+    let bottom_id = {
+        let g = r.game_mut();
+        g.player(0).deck.first().unwrap().card_id(&g.card_data).to_string()
+    };
+    assert_eq!(bottom_id, "BOTTOM");
+}
+
+#[test]
+fn return_to_deck_random_inserts_somewhere() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("RANDOM", "R", 4))
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .deck(0, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .start();
+
+    let handle = seed_single_card_permanent(&mut r, "RANDOM");
+    let ok = r.game_mut().return_to_deck(handle, StackPosition::Random);
+    assert!(ok);
+    assert_eq!(r.deck_size(0), 6);
+    let positions: Vec<usize> = {
+        let g = r.game_mut();
+        g.player(0)
+            .deck
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.card_id(&g.card_data) == "RANDOM")
+            .map(|(i, _)| i)
+            .collect()
+    };
+    assert_eq!(positions.len(), 1, "exactly one copy in deck");
+}
+
+#[test]
+fn return_to_deck_bad_handle_returns_false() {
+    let mut r = DebugRunner::builder().start();
+    let ok = r.game_mut().return_to_deck(
+        PermanentHandle { player: 0, index: 99 },
+        StackPosition::Top,
+    );
+    assert!(!ok);
+}

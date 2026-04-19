@@ -352,6 +352,15 @@ impl<'a> EffectContext<'a> {
         self.game.return_to_hand(target)
     }
 
+    /// Return a permanent's top card to its owner's deck. See `Game::return_to_deck`.
+    pub fn return_to_deck(
+        &mut self,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+    ) -> bool {
+        self.game.return_to_deck(target, position)
+    }
+
     // ─── Modifier registration ────────────────────────────────────────
 
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {

@@ -495,6 +495,57 @@ impl Game {
         Some(top_handle)
     }
 
+    /// Return a permanent's top card to its owner's deck at `position`.
+    /// Sources under the top go to trash; linked_cards go to trash.
+    /// Modifiers targeting the permanent are cleared. Returns true on
+    /// success, false if the handle is invalid or the stack is empty.
+    ///
+    /// Does not fire OnLeaveField observers.
+    pub fn return_to_deck(
+        &mut self,
+        handle: PermanentHandle,
+        position: crate::enums::StackPosition,
+    ) -> bool {
+        let player_id = handle.player;
+        {
+            let player = self.player_mut(player_id);
+            if (handle.index as usize) >= player.battle_area.len() {
+                return false;
+            }
+        }
+        let mut perm = self.player_mut(player_id).battle_area.remove(handle.index as usize);
+
+        let Some(top) = perm.card_sources.pop() else {
+            return false;
+        };
+
+        match position {
+            crate::enums::StackPosition::Top => {
+                self.player_mut(player_id).deck.push(top);
+            }
+            crate::enums::StackPosition::Bottom => {
+                self.player_mut(player_id).deck.insert(0, top);
+            }
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                let deck_len = self.player(player_id).deck.len();
+                let idx = if deck_len == 0 { 0 } else { self.rng.gen_range(0..=deck_len) };
+                self.player_mut(player_id).deck.insert(idx, top);
+            }
+        }
+
+        // Sources under the top go to trash.
+        for card in perm.card_sources {
+            self.player_mut(player_id).trash.push(card);
+        }
+        for card in perm.linked_cards {
+            self.player_mut(player_id).trash.push(card);
+        }
+
+        self.modifiers.clear_permanent(handle);
+        true
+    }
+
     /// Full "digivolve from hand" action — Python parity for
     /// `action_digivolve(field_idx, hand_idx)`. Validates phase, indices,
     /// `CannotDigivolve` modifier, and evo-cost fit; pays memory; removes
