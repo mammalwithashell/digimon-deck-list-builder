@@ -133,3 +133,34 @@ fn ctx_play_from_hand_free_plays_target() {
     // Memory: started 3, paid 3 for TEST-P2-001, then 0 for TARGET (free).
     assert_eq!(r.memory(), 0);
 }
+
+// ─── play_from_trash_with_cost ────────────────────────────────────────────────
+
+#[test]
+fn play_from_trash_free_moves_card_to_field() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BURIED", "Buried", 6))
+        .memory(0)
+        .start();
+
+    // Seed trash directly using the same CardSource idiom as place_on_field.
+    {
+        let g = r.game_mut();
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BURIED")
+            .expect("BURIED not in card_data");
+        let next_idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, 0, next_idx);
+        g.players[0].trash.push(card);
+    }
+
+    assert_eq!(r.trash_size(0), 1);
+    let res = r
+        .game_mut()
+        .play_from_trash_with_cost(0, 0, CostDelta::Free);
+    assert_eq!(res, Some(0));
+    assert_eq!(r.trash_size(0), 0, "card left trash");
+    assert_eq!(r.battle_area_size(0), 1, "card entered battle area");
+}

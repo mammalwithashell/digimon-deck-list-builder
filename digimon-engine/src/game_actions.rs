@@ -113,6 +113,67 @@ impl Game {
         Some(field_index)
     }
 
+    /// Play a card from `player`'s trash to field, paying the printed cost.
+    ///
+    /// Delegates to [`Self::play_from_trash_with_cost`] with
+    /// `CostDelta::Reduce(0)` (pay the printed cost verbatim).
+    pub fn play_from_trash(&mut self, player_id: PlayerId, trash_index: usize) -> Option<usize> {
+        self.play_from_trash_with_cost(player_id, trash_index, crate::enums::CostDelta::Reduce(0))
+    }
+
+    /// Play a card from `player`'s trash. Like `play_from_hand_with_cost` but
+    /// reads and removes from `player.trash`. Returns `Some(field_index)` on
+    /// success, `None` if trash_index is invalid, battle area full, or memory
+    /// insufficient.
+    pub fn play_from_trash_with_cost(
+        &mut self,
+        player_id: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<usize> {
+        let turn = self.turn_count;
+        let field_slots = self.rules.field_slots;
+
+        let printed_cost = {
+            let player = self.player(player_id);
+            if trash_index >= player.trash.len() {
+                return None;
+            }
+            if player.battle_area.len() >= field_slots as usize {
+                return None;
+            }
+            player.trash[trash_index].play_cost(&self.card_data)
+        };
+
+        let effective_cost = cost_delta.resolve(printed_cost);
+
+        if !self.pay_memory(effective_cost) {
+            return None;
+        }
+
+        let player = self.player_mut(player_id);
+        let card = player.trash.remove(trash_index);
+        let perm = crate::permanent::Permanent::new(card, turn);
+        player.battle_area.push(perm);
+        let field_index = player.battle_area.len() - 1;
+
+        let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
+            .top_card()
+            .card_id(&self.card_data)
+            .to_string();
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Play {
+            seq,
+            player: player_id,
+            card_id: emitted_card_id,
+            field_index: field_index as u8,
+        });
+
+        self.fire_on_play(player_id, field_index);
+
+        Some(field_index)
+    }
+
     /// Fire OnPlay effects for the permanent at `(player, field_index)`.
     /// Called by play_from_hand; can also be called directly by tests.
     ///
