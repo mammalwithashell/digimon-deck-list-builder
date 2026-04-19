@@ -802,9 +802,7 @@ fn run_agent_steps(
             PlayerKind::Human => return Ok(()),
             PlayerKind::Greedy => {
                 let mask = build_action_mask(game, pid);
-                first_valid_action(&mask).ok_or_else(|| {
-                    format!("greedy agent for player {pid} has no valid actions")
-                })?
+                digimon_engine::policies::greedy_action(game, &mask) as usize
             }
             PlayerKind::Trained => {
                 let model_id = session
@@ -831,19 +829,6 @@ fn run_agent_steps(
     Err(format!(
         "agent step loop exceeded {MAX_AGENT_STEPS} iterations; possible mask bug"
     ))
-}
-
-/// Greedy-bot action selection: prefer any valid non-PASS action so the game
-/// actually progresses, fall back to PASS when nothing else is legal. Two
-/// greedy seats pitted against each other would otherwise loop forever
-/// passing turns at each other.
-fn first_valid_action(mask: &[f32]) -> Option<usize> {
-    let pass = digimon_engine::action::space::PASS as usize;
-    mask.iter()
-        .enumerate()
-        .find(|(i, &v)| *i != pass && v > 0.0)
-        .map(|(i, _)| i)
-        .or_else(|| mask.iter().position(|&v| v > 0.0))
 }
 
 /// Sanity-check obs/mask sizes before feeding them to the policy so a
