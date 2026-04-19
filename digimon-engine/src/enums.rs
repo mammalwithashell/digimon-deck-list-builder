@@ -330,3 +330,80 @@ pub enum TitanRole {
     Boss,
     Team,
 }
+
+/// How a play-from-zone helper should compute the memory cost deducted.
+///
+/// - `Free` — pay 0 memory regardless of printed cost. Used by "play without
+///   paying its cost" effects.
+/// - `Reduce(n)` — pay max(0, printed_cost - n). Used by "play with cost
+///   reduced by n" effects. Negative reductions (cost increases) are allowed.
+/// - `Fixed(n)` — pay exactly n regardless of printed cost. Used by the rare
+///   "play for exactly n memory" effects. Negative values clamp to 0.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CostDelta {
+    Free,
+    Reduce(i16),
+    Fixed(i16),
+}
+
+impl CostDelta {
+    /// Resolve the concrete memory cost to deduct given a printed cost.
+    pub fn resolve(self, printed_cost: u16) -> u16 {
+        match self {
+            CostDelta::Free => 0,
+            CostDelta::Reduce(n) => {
+                let reduced = printed_cost as i32 - n as i32;
+                reduced.max(0) as u16
+            }
+            CostDelta::Fixed(n) => n.max(0) as u16,
+        }
+    }
+}
+
+/// Placement position when moving a card to the deck, security stack, or
+/// digivolution source stack. `Random` shuffles the single card into a
+/// random index — used by "shuffle into the deck" effects.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StackPosition {
+    Top,
+    Bottom,
+    Random,
+}
+
+#[cfg(test)]
+mod cost_delta_tests {
+    use super::*;
+
+    #[test]
+    fn free_is_always_zero() {
+        assert_eq!(CostDelta::Free.resolve(0), 0);
+        assert_eq!(CostDelta::Free.resolve(12), 0);
+    }
+
+    #[test]
+    fn reduce_subtracts() {
+        assert_eq!(CostDelta::Reduce(3).resolve(10), 7);
+        assert_eq!(CostDelta::Reduce(0).resolve(10), 10);
+    }
+
+    #[test]
+    fn reduce_clamps_at_zero() {
+        assert_eq!(CostDelta::Reduce(100).resolve(10), 0);
+    }
+
+    #[test]
+    fn reduce_negative_increases_cost() {
+        assert_eq!(CostDelta::Reduce(-2).resolve(10), 12);
+    }
+
+    #[test]
+    fn fixed_replaces_cost() {
+        assert_eq!(CostDelta::Fixed(4).resolve(10), 4);
+        assert_eq!(CostDelta::Fixed(0).resolve(10), 0);
+    }
+
+    #[test]
+    fn fixed_clamps_at_zero() {
+        assert_eq!(CostDelta::Fixed(-3).resolve(10), 0);
+    }
+}
