@@ -113,9 +113,15 @@ pub enum EffectTiming {
     // Turn-based
     StartOfYourTurn,
     StartOfOpponentsTurn,
+    /// Fires at the start of the controller's Main phase (after Draw).
+    /// Card scripts can use this for "at the start of your main phase" effects.
+    StartOfYourMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
     EndOfAttack,
+    /// Fires when a battle resolves (DP comparison complete) but before
+    /// `EndOfAttack`. Used for "if this Digimon wins/loses a battle" effects.
+    EndOfBattle,
 
     // Triggered by game events
     OnAllyAttack,
@@ -128,11 +134,18 @@ pub enum EffectTiming {
     OnAddToHand,
     OnReveal,
     OnPlaceSecurity,
+    /// Fires when an attack declaration's target changes mid-combat (e.g.
+    /// Blocker redirect). Observer timing for effects that react to the
+    /// new target.
+    OnAttackTargetChange,
 
     // Entry/exit
     OnEnterField,
     OnEnterFieldAnyone,
     OnLeaveField,
+    /// Fires when a Digimon is hatched from the breeding area into the
+    /// battle area. Observer timing for the hatching player's permanents.
+    OnHatch,
 
     // Cost/play modification
     BeforePayCost,
@@ -142,6 +155,12 @@ pub enum EffectTiming {
     OnDigivolve,
     OnDnaDigivolve,
     OnDigiXros,
+
+    // Deletion observers
+    /// Fires when any permanent is deleted for either player — covers
+    /// battle DP-loss, effect-driven deletion, and security-check deletion.
+    /// Global observer; card scripts filter by owner/opponent as needed.
+    OnAnyDeletion,
 
     // Continuous / always active
     AlwaysActive,
@@ -160,6 +179,15 @@ pub enum EffectTiming {
     MainFromHand,
     MainOnField,
     MainFromTrash,
+
+    // Archetype-specific observers
+    /// Fires when an opponent's security card is removed from the stack
+    /// (by security check or by effect). Medusamon core archetype observer.
+    OnOpponentSecurityRemoved,
+    /// Fires when a card is trashed from a permanent's digivolution stack
+    /// (cost payment, source-displacement effects, etc.). Rocks core
+    /// archetype observer.
+    OnDigivolutionCardTrashed,
 
     // Special
     None,

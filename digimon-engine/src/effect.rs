@@ -114,6 +114,88 @@ impl Effect {
     pub fn end_of_your_turn(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::EndOfYourTurn)
     }
+
+    /// Fires at the start of the controller's turn (before draw).
+    pub fn start_of_your_turn(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::StartOfYourTurn)
+    }
+
+    /// Fires at the start of the opponent's turn.
+    pub fn start_of_opponents_turn(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::StartOfOpponentsTurn)
+    }
+
+    /// Fires at the start of the controller's Main phase (after Draw).
+    pub fn start_of_your_main_phase(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::StartOfYourMainPhase)
+    }
+
+    /// Fires at the end of the opponent's turn.
+    pub fn end_of_opponents_turn(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::EndOfOpponentsTurn)
+    }
+
+    /// Fires when this Digimon is attacking (before security check).
+    pub fn when_attacking(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenAttacking)
+    }
+
+    /// Fires when an attack sequence ends (after all battle resolution).
+    pub fn end_of_attack(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::EndOfAttack)
+    }
+
+    /// Fires when a battle resolves (DP comparison done) but before `EndOfAttack`.
+    pub fn end_of_battle(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::EndOfBattle)
+    }
+
+    /// Fires when any Digimon enters any player's battle area (global observer).
+    pub fn on_enter_field_anyone(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnEnterFieldAnyone)
+    }
+
+    /// Fires when any permanent is deleted, for either player's battle area.
+    pub fn on_any_deletion(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnAnyDeletion)
+    }
+
+    /// Fires when this Digimon digivolves (as the evolving card).
+    pub fn on_digivolve(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnDigivolve)
+    }
+
+    /// Fires when this permanent becomes suspended.
+    pub fn on_suspend(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnSuspend)
+    }
+
+    /// Fires when this permanent becomes unsuspended.
+    pub fn on_unsuspend(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnUnsuspend)
+    }
+
+    /// Fires when an attack declaration's target changes mid-combat.
+    pub fn on_attack_target_change(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnAttackTargetChange)
+    }
+
+    /// Fires when a Digimon hatches from the breeding area into the battle area.
+    pub fn on_hatch(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnHatch)
+    }
+
+    /// Fires when an opponent's security card is removed from their security stack.
+    /// Medusamon core archetype observer.
+    pub fn on_opponent_security_removed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnOpponentSecurityRemoved)
+    }
+
+    /// Fires when a card is trashed from a permanent's digivolution stack.
+    /// Rocks core archetype observer.
+    pub fn on_digivolution_card_trashed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnDigivolutionCardTrashed)
+    }
 }
 
 /// Builder for constructing effects ergonomically.
