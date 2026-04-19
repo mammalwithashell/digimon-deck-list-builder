@@ -339,7 +339,7 @@ pub enum TitanRole {
 ///   reduced by n" effects. Negative reductions (cost increases) are allowed.
 /// - `Fixed(n)` — pay exactly n regardless of printed cost. Used by the rare
 ///   "play for exactly n memory" effects. Negative values clamp to 0.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CostDelta {
     Free,
     Reduce(i16),
@@ -363,7 +363,7 @@ impl CostDelta {
 /// Placement position when moving a card to the deck, security stack, or
 /// digivolution source stack. `Random` shuffles the single card into a
 /// random index — used by "shuffle into the deck" effects.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum StackPosition {
     Top,
     Bottom,
