@@ -755,3 +755,76 @@ Before claiming IMPLEMENTED, re-read the card text against the implementation an
 6. Inherited effects use `Effect::inherited(card)`, not `Effect::on_play(card)` with a manual under-the-stack check.
 7. Trait / name matching uses `CardSource::contains_card_name` / trait accessors (case-insensitive), not raw string equality.
 8. Every closure is `Send + Sync + 'static` — if you have lifetime errors, you're capturing a borrow; use handles (`Copy`) instead.
+
+---
+
+## 14. Zone Manipulation (Phase 2)
+
+Added in Phase 2 to support card-script movement between zones (hand, deck, trash, battle area, digivolution stack, security, reveal pool) and effect-initiated plays. All methods live on `EffectContext` and delegate to `Game`-level helpers. Card-moving methods return `Option<PermanentHandle>` or `Option<CardHandle>` for provenance — follow-up effects thread the handle into the next primitive.
+
+### Shared types
+
+```rust
+pub enum CostDelta {
+    Free,               // pay 0
+    Reduce(i16),        // max(0, printed - n); negative n increases cost
+    Fixed(i16),         // max(0, n); replaces printed cost
+}
+
+pub enum StackPosition { Top, Bottom, Random }
+
+pub enum CardSourceRef {
+    Hand(PlayerId, usize),
+    Trash(PlayerId, usize),
+    DeckTop(PlayerId),
+    Reveal(CardHandle),
+}
+```
+
+### Play from zone
+
+| Method | Purpose |
+|--------|---------|
+| `play_from_hand_with_cost(player, hand_index, CostDelta) -> Option<PermanentHandle>` | Play from hand at a computed cost. `CostDelta::Free` bypasses printed cost. |
+| `play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<PermanentHandle>` | Play from trash. Same cost-delta contract. |
+
+Example — free play from hand inside an OnPlay effect:
+
+```rust
+Effect::on_play(card).process(|ctx| {
+    ctx.play_from_hand_with_cost(ctx.player, 0, CostDelta::Free);
+}).build()
+```
+
+### Card movement
+
+| Method | Purpose |
+|--------|---------|
+| `add_to_hand_from_deck(player, CardHandle)` → `bool` | Move a specific deck card to hand. Does NOT shuffle. |
+| `add_to_hand_from_trash(player, CardHandle)` → `bool` | Same, from trash. |
+| `add_to_hand_from_reveal(player, CardHandle)` → `bool` | Same, from the reveal pool. |
+| `trash_from_hand_by_index(player, hand_index)` → `Option<CardHandle>` | Trash a specific hand slot. |
+| `trash_from_reveal(player, CardHandle)` → `bool` | Trash a revealed card. |
+| `return_to_hand(PermanentHandle)` → `Option<CardHandle>` | Bounce a permanent: top → hand, sources under → trash. |
+| `return_to_deck(PermanentHandle, StackPosition)` → `bool` | Bounce to deck at Top/Bottom/Random. |
+| `return_to_deck_from_reveal(player, CardHandle, StackPosition)` → `bool` | Reveal pool → deck. |
+| `shuffle_deck(player)` | Pair with `add_to_hand_from_deck` for "search and shuffle" effects. |
+
+### Reveal pool
+
+`reveal_top_deck(player, n) -> Vec<CardHandle>` — move up to N cards from deck top into the transient reveal pool (`game.revealed_cards`, cleared on turn rotation).
+
+`revealed() -> &[CardSource]` — read-only snapshot of the pool. Scripts inspect it to decide follow-up moves.
+
+### Placement
+
+| Method | Purpose |
+|--------|---------|
+| `place_as_bottom_source(CardSourceRef, target: PermanentHandle)` → `bool` | Insert a card at the bottom of target's digivolution stack. |
+| `place_on_security(player, CardSourceRef, StackPosition, face_up: bool)` → `bool` | Move to security stack at Top/Bottom/Random; optionally face-up. |
+| `hatch(player) -> bool` | Move top of digitama deck to breeding area. Returns false if breeding is occupied or digitama deck is empty. |
+| `effect_initiated_digivolve(player, hand_index, target, CostDelta, ignore_color)` → `bool` | Script-driven digivolve. Validates level match; optionally bypasses color check. Fires WhenDigivolving. |
+
+### No-approximations note
+
+Each of these primitives is a pure movement or cost-payment operation. *Which* card to move is always the caller's responsibility, and the choice must surface through a `PendingSelection` built with `select_hand`, `select_trash`, `select_reveal`, or `select_own_permanent`. Never let a script auto-pick a target without a selection — the RL action space must observe the branch.
