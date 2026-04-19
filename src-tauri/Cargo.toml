@@ -17,9 +17,14 @@ dirs = "5"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 
+[lib]
+name = "digimon_tcg"
+path = "src/lib.rs"
+
 [dev-dependencies]
 tempfile = "3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+wiremock = "0.6"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
