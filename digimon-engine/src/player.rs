@@ -71,6 +71,30 @@ impl Player {
         }
     }
 
+    /// Remove the first card in `deck` matching `handle`. Returns the removed
+    /// card if found.
+    pub fn remove_from_deck_by_handle(
+        &mut self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<crate::card_source::CardSource> {
+        let pos = self.deck.iter().position(|c| c.handle() == handle)?;
+        Some(self.deck.remove(pos))
+    }
+
+    /// Remove the first card in `trash` matching `handle`.
+    pub fn remove_from_trash_by_handle(
+        &mut self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<crate::card_source::CardSource> {
+        let pos = self.trash.iter().position(|c| c.handle() == handle)?;
+        Some(self.trash.remove(pos))
+    }
+
+    /// Append `card` to hand.
+    pub fn add_to_hand(&mut self, card: crate::card_source::CardSource) {
+        self.hand.push(card);
+    }
+
     /// Draw multiple cards. Returns number actually drawn.
     pub fn draw_many(&mut self, count: u8) -> u8 {
         let mut drawn = 0;

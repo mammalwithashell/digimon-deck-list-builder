@@ -164,3 +164,72 @@ fn play_from_trash_free_moves_card_to_field() {
     assert_eq!(r.trash_size(0), 0, "card left trash");
     assert_eq!(r.battle_area_size(0), 1, "card entered battle area");
 }
+
+// ─── add_to_hand_from_deck / add_to_hand_from_trash / shuffle_deck ────────────
+
+#[test]
+fn add_to_hand_from_deck_moves_specific_card() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("WANTED", "Wanted", 4))
+        .add_card(plain_digimon("FILLER", "Filler", 4))
+        .deck(0, &["FILLER", "WANTED", "FILLER"])
+        .start();
+
+    // Grab the CardHandle of the WANTED card (deck slot 1).
+    let target_handle = r.game_mut().player(0).deck[1].handle();
+
+    let ok = r.game_mut().add_to_hand_from_deck(0, target_handle);
+    assert!(ok);
+    assert_eq!(r.hand_size(0), 1);
+    assert_eq!(r.deck_size(0), 2, "one card left deck");
+
+    // Confirm the correct card moved.
+    let moved_id = {
+        let g = r.game_mut();
+        g.player(0).hand[0].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(moved_id, "WANTED");
+}
+
+#[test]
+fn add_to_hand_from_trash_moves_card() {
+    // Seed trash the same way Task 4's test does — mirror that idiom.
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("DEAD", "Dead", 5))
+        .start();
+
+    let handle = {
+        let g = r.game_mut();
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "DEAD")
+            .expect("DEAD not in card_data");
+        let card_idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
+        let h = card.handle();
+        g.players[0].trash.push(card);
+        h
+    };
+
+    let ok = r.game_mut().add_to_hand_from_trash(0, handle);
+    assert!(ok);
+    assert_eq!(r.hand_size(0), 1);
+    assert_eq!(r.trash_size(0), 0);
+}
+
+#[test]
+fn add_to_hand_missing_handle_returns_false() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("DEAD", "Dead", 5))
+        .deck(0, &["DEAD"])
+        .start();
+
+    // CardHandle(u16::MAX) is guaranteed to never be assigned by the builder
+    // (the builder starts card indices at 0 and counts up; u16::MAX is sentinel).
+    let bogus_handle = CardHandle(u16::MAX);
+
+    let ok = r.game_mut().add_to_hand_from_deck(0, bogus_handle);
+    assert!(!ok);
+    assert_eq!(r.hand_size(0), 0);
+}

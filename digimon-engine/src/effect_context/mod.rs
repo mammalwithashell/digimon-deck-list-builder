@@ -268,6 +268,30 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Move a specific card from `player`'s deck to their hand.
+    pub fn add_to_hand_from_deck(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        self.game.add_to_hand_from_deck(player, card)
+    }
+
+    /// Move a specific card from `player`'s trash to their hand.
+    pub fn add_to_hand_from_trash(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        self.game.add_to_hand_from_trash(player, card)
+    }
+
+    /// Shuffle `player`'s deck. Pair with `add_to_hand_from_deck` for
+    /// "search and shuffle" effects.
+    pub fn shuffle_deck(&mut self, player: PlayerId) {
+        self.game.shuffle_deck(player);
+    }
+
     /// Play a card from `player`'s hand at `hand_index`, deducting memory
     /// according to `cost_delta`. OnPlay effects fire.
     ///

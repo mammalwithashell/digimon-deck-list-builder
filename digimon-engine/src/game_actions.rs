@@ -11,6 +11,7 @@ use crate::enums::{EffectTiming, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind, TriggerSource};
+use rand::seq::SliceRandom;
 
 impl Game {
     /// Move from breeding to battle area for a player.
@@ -180,6 +181,42 @@ impl Game {
         self.fire_on_play(player_id, field_index);
 
         Some(field_index)
+    }
+
+    /// Move a specific card from `player`'s deck to their hand. Returns false
+    /// if the handle isn't in the deck. Does NOT shuffle — callers that mirror
+    /// the printed "search then shuffle" rule must call `shuffle_deck` after.
+    pub fn add_to_hand_from_deck(
+        &mut self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(removed) = self.player_mut(player_id).remove_from_deck_by_handle(card) else {
+            return false;
+        };
+        self.player_mut(player_id).add_to_hand(removed);
+        true
+    }
+
+    /// Move a specific card from `player`'s trash to their hand.
+    pub fn add_to_hand_from_trash(
+        &mut self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(removed) = self.player_mut(player_id).remove_from_trash_by_handle(card) else {
+            return false;
+        };
+        self.player_mut(player_id).add_to_hand(removed);
+        true
+    }
+
+    /// Shuffle `player`'s deck.
+    pub fn shuffle_deck(&mut self, player_id: PlayerId) {
+        // Split-borrow idiom: take deck out, shuffle, put back.
+        let mut deck = std::mem::take(&mut self.player_mut(player_id).deck);
+        deck.shuffle(&mut self.rng);
+        self.player_mut(player_id).deck = deck;
     }
 
     /// Fire OnPlay effects for the permanent at `(player, field_index)`.
