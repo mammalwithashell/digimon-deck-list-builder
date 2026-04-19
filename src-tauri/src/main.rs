@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod deck_commands;
+mod deck_storage;
 mod engine_commands;
 mod inference_state;
 mod models;
@@ -58,6 +59,10 @@ fn main() {
             deck_commands::rust_parse_deck,
             deck_commands::rust_validate_deck_raw,
             deck_commands::rust_list_tested_cards,
+            deck_storage::decks_list,
+            deck_storage::decks_get,
+            deck_storage::decks_put,
+            deck_storage::decks_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

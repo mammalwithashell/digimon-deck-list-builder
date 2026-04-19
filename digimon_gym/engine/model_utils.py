@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -42,3 +43,13 @@ def resolve_model_path(
             f"Available models: {available}"
         )
     return str(model_path)
+
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I
+)
+
+
+def looks_like_manifest_id(s: str) -> bool:
+    """True if `s` parses as a UUID (the shape of AIModel.id)."""
+    return bool(_UUID_RE.match(s))

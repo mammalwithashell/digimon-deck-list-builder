@@ -35,11 +35,7 @@ interface CancelledMessage {
 
 type ServerMessage = WaitingMessage | MatchFoundMessage | CancelledMessage;
 
-export interface QueueParams {
-  queue_type: mmApi.QueueType;
-  deck_id: string;
-  opponent_tier_filter?: mmApi.TierFilter;
-}
+export type QueueParams = mmApi.QueueRequest;
 
 export interface UseMatchmakingResult {
   status: MatchmakingStatus;

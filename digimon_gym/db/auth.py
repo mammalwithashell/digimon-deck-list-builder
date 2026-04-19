@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import secrets
+import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence, Set
 
@@ -19,7 +21,19 @@ from digimon_gym.db.models import RefreshToken, Role, User, UserRole
 
 # ── Configuration ───────────────────────────────────────────────────────
 
-SECRET_KEY = "CHANGE-ME-IN-PRODUCTION"  # Override via environment variable
+_DEFAULT_SECRET_KEY = "CHANGE-ME-IN-PRODUCTION"
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or _DEFAULT_SECRET_KEY
+if SECRET_KEY == _DEFAULT_SECRET_KEY and os.environ.get("DIGIMON_ENV") == "production":
+    raise RuntimeError(
+        "JWT_SECRET_KEY must be set in production. Refusing to start with "
+        "the default development key."
+    )
+if SECRET_KEY == _DEFAULT_SECRET_KEY:
+    warnings.warn(
+        "Using default JWT_SECRET_KEY. Set JWT_SECRET_KEY environment "
+        "variable for non-development deployments.",
+        stacklevel=2,
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 30
@@ -56,6 +70,29 @@ def create_access_token(user_id: str, username: str, roles: Sequence[str] | None
         "roles": list(roles or []),
         "exp": expire,
         "type": "access",
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+GUEST_TOKEN_EXPIRE_DAYS = 365
+
+
+def create_guest_access_token(user_id: str, display_name: str) -> str:
+    """Mint a long-lived access token for an anonymous guest session.
+
+    The token is flagged with `is_guest: True` so downstream code can
+    cheaply distinguish guests without a DB lookup. Expiry is one year
+    because nothing the guest owns is server-side — a token rotation
+    would cost the user a new identity for no upside.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(days=GUEST_TOKEN_EXPIRE_DAYS)
+    payload = {
+        "sub": user_id,
+        "username": display_name,
+        "roles": [],
+        "exp": expire,
+        "type": "access",
+        "is_guest": True,
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
