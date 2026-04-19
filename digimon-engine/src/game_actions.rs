@@ -117,6 +117,10 @@ impl Game {
     ///
     /// Delegates to [`Self::play_from_trash_with_cost`] with
     /// `CostDelta::Reduce(0)` (pay the printed cost verbatim).
+    ///
+    /// Does NOT call `check_turn_end`. Callers that want to end the turn when
+    /// memory goes negative after OnPlay effects resolve should invoke
+    /// `check_turn_end` explicitly.
     pub fn play_from_trash(&mut self, player_id: PlayerId, trash_index: usize) -> Option<usize> {
         self.play_from_trash_with_cost(player_id, trash_index, crate::enums::CostDelta::Reduce(0))
     }
@@ -125,6 +129,10 @@ impl Game {
     /// reads and removes from `player.trash`. Returns `Some(field_index)` on
     /// success, `None` if trash_index is invalid, battle area full, or memory
     /// insufficient.
+    ///
+    /// Does NOT call `check_turn_end`. Callers that want to end the turn when
+    /// memory goes negative after OnPlay effects resolve should invoke
+    /// `check_turn_end` explicitly.
     pub fn play_from_trash_with_cost(
         &mut self,
         player_id: PlayerId,
