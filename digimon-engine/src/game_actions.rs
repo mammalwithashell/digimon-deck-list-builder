@@ -446,6 +446,82 @@ impl Game {
         false
     }
 
+    /// Trash a specific hand card by index. Returns the trashed card's handle
+    /// on success, None if the index is out of range.
+    pub fn trash_from_hand_by_index(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> Option<crate::card_source::CardHandle> {
+        let player = self.player_mut(player_id);
+        if hand_index >= player.hand.len() {
+            return None;
+        }
+        let card = player.hand.remove(hand_index);
+        let h = card.handle();
+        player.trash.push(card);
+        Some(h)
+    }
+
+    /// Move a specific revealed card (identified by `card` handle) into
+    /// `player`'s hand. Returns false if the handle is not in
+    /// `self.revealed_cards`.
+    pub fn add_to_hand_from_reveal(
+        &mut self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(pos) = self.revealed_cards.iter().position(|c| c.handle() == card) else {
+            return false;
+        };
+        let taken = self.revealed_cards.remove(pos);
+        self.player_mut(player_id).hand.push(taken);
+        true
+    }
+
+    /// Move a specific revealed card into `player`'s trash.
+    pub fn trash_from_reveal(
+        &mut self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(pos) = self.revealed_cards.iter().position(|c| c.handle() == card) else {
+            return false;
+        };
+        let taken = self.revealed_cards.remove(pos);
+        self.player_mut(player_id).trash.push(taken);
+        true
+    }
+
+    /// Move a specific revealed card back to `player`'s deck at `position`.
+    /// Returns false if the handle is not in the reveal pool.
+    pub fn return_to_deck_from_reveal(
+        &mut self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+        position: crate::enums::StackPosition,
+    ) -> bool {
+        let Some(pos_idx) = self.revealed_cards.iter().position(|c| c.handle() == card) else {
+            return false;
+        };
+        let taken = self.revealed_cards.remove(pos_idx);
+        match position {
+            crate::enums::StackPosition::Top => {
+                self.player_mut(player_id).deck.push(taken);
+            }
+            crate::enums::StackPosition::Bottom => {
+                self.player_mut(player_id).deck.insert(0, taken);
+            }
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                let deck_len = self.player(player_id).deck.len();
+                let idx = if deck_len == 0 { 0 } else { self.rng.gen_range(0..=deck_len) };
+                self.player_mut(player_id).deck.insert(idx, taken);
+            }
+        }
+        true
+    }
+
     /// Digivolve: push a card onto a permanent's stack.
     pub fn digivolve_onto(
         &mut self,

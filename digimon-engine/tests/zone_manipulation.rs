@@ -413,3 +413,87 @@ fn return_to_deck_bad_handle_returns_false() {
     );
     assert!(!ok);
 }
+
+// ─── trash_from_hand_by_index ─────────────────────────────────────────────────
+
+#[test]
+fn trash_from_hand_by_index_moves_card_to_trash() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("DOOMED", "D", 3))
+        .hand(0, &["DOOMED"])
+        .start();
+
+    let trashed = r.game_mut().trash_from_hand_by_index(0, 0);
+    assert!(trashed.is_some());
+    assert_eq!(r.hand_size(0), 0);
+    assert_eq!(r.trash_size(0), 1);
+}
+
+#[test]
+fn trash_from_hand_bad_index_is_noop() {
+    let mut r = DebugRunner::builder().start();
+    assert!(r.game_mut().trash_from_hand_by_index(0, 10).is_none());
+}
+
+// ─── reveal-pool movers ───────────────────────────────────────────────────────
+
+#[test]
+fn add_to_hand_from_reveal_moves_and_shrinks_pool() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("A", "A", 1))
+        .add_card(plain_digimon("B", "B", 1))
+        .deck(0, &["A", "B"])
+        .start();
+
+    let revealed = r.game_mut().reveal_top_deck(0, 2);
+    assert_eq!(revealed.len(), 2);
+
+    let handle = revealed[0];
+    let ok = r.game_mut().add_to_hand_from_reveal(0, handle);
+    assert!(ok);
+    assert_eq!(r.game_mut().revealed_cards.len(), 1);
+    assert_eq!(r.hand_size(0), 1);
+}
+
+#[test]
+fn trash_from_reveal_moves_and_shrinks_pool() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("A", "A", 1))
+        .deck(0, &["A"])
+        .start();
+
+    let revealed = r.game_mut().reveal_top_deck(0, 1);
+    let h = revealed[0];
+    let ok = r.game_mut().trash_from_reveal(0, h);
+    assert!(ok);
+    assert_eq!(r.game_mut().revealed_cards.len(), 0);
+    assert_eq!(r.trash_size(0), 1);
+}
+
+#[test]
+fn return_to_deck_from_reveal_top_puts_card_on_top() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("A", "A", 1))
+        .add_card(plain_digimon("B", "B", 1))
+        .deck(0, &["A", "B"])
+        .start();
+
+    // reveal top 2 (B then A pops out in top-first order)
+    let revealed = r.game_mut().reveal_top_deck(0, 2);
+    let first = revealed[0];
+
+    let ok = r.game_mut().return_to_deck_from_reveal(0, first, StackPosition::Top);
+    assert!(ok);
+    // Card back on top of now-1-card deck.
+    assert_eq!(r.deck_size(0), 1);
+    assert_eq!(r.game_mut().revealed_cards.len(), 1);
+}
+
+#[test]
+fn reveal_mover_missing_handle_is_noop() {
+    let mut r = DebugRunner::builder().start();
+    let bogus = digimon_engine::card_source::CardHandle(u16::MAX);
+    assert!(!r.game_mut().add_to_hand_from_reveal(0, bogus));
+    assert!(!r.game_mut().trash_from_reveal(0, bogus));
+    assert!(!r.game_mut().return_to_deck_from_reveal(0, bogus, StackPosition::Top));
+}

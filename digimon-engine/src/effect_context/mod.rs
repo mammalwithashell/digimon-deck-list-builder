@@ -302,6 +302,43 @@ impl<'a> EffectContext<'a> {
         &self.game.revealed_cards
     }
 
+    /// Trash a specific hand card by index.
+    pub fn trash_from_hand_by_index(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<crate::card_source::CardHandle> {
+        self.game.trash_from_hand_by_index(player, hand_index)
+    }
+
+    /// Move a specific revealed card into `player`'s hand.
+    pub fn add_to_hand_from_reveal(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        self.game.add_to_hand_from_reveal(player, card)
+    }
+
+    /// Move a specific revealed card into `player`'s trash.
+    pub fn trash_from_reveal(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        self.game.trash_from_reveal(player, card)
+    }
+
+    /// Move a specific revealed card back to `player`'s deck at `position`.
+    pub fn return_to_deck_from_reveal(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+        position: crate::enums::StackPosition,
+    ) -> bool {
+        self.game.return_to_deck_from_reveal(player, card, position)
+    }
+
     /// Shuffle `player`'s deck. Pair with `add_to_hand_from_deck` for
     /// "search and shuffle" effects.
     pub fn shuffle_deck(&mut self, player: PlayerId) {
