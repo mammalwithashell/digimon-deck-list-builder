@@ -157,3 +157,46 @@ This runbook MUST be exercised end-to-end once before alpha opens. See Task 9 in
 Set a 14-day auto-delete rule on the `backups/` prefix of the Spaces bucket via
 the DO web UI (Spaces → Bucket → Settings → Lifecycle rules). Models under
 `models/` are NOT subject to any rule.
+
+## Tooling used for bootstrap + deploy
+
+All bootstrap + deploy steps in this repo use CLIs (no web UIs except DuckDNS +
+GitHub package-visibility settings). Future developers replaying this from
+scratch need these installed and authenticated before running anything above.
+
+| Tool | Purpose | Auth state |
+|------|---------|------------|
+| `doctl` | DigitalOcean droplet + SSH key provisioning. | `doctl auth init` once with a DO API token (Account → API → Tokens). |
+| `gh` | Repo secret setting, PR creation, status checks. | `gh auth login` once. |
+| `ssh` + `scp` | Droplet access via dedicated `digimon_deploy` keypair (not the developer's personal key). | Key at `~/.ssh/digimon_deploy`; public half registered with DO via `doctl compute ssh-key import`. |
+| `docker` + `docker compose` | Multi-stage Dockerfile build; prod compose stack on droplet. | Docker Desktop locally; daemon + compose plugin installed on droplet. |
+| `openssl` | Generating `POSTGRES_PASSWORD` + `JWT_SECRET` on the droplet directly (kept out of local shell history). | n/a |
+| Caddy 2 | Automatic Let's Encrypt TLS for `inbetweentheatre.duckdns.org`. Runs as a compose service, no config beyond `Caddyfile`. | LE cert acquired automatically on first HTTPS request. |
+| DuckDNS | Free dynamic DNS (`*.duckdns.org`) — used instead of paying for a domain. | Sign in with GitHub at duckdns.org, set the subdomain's IP to the droplet's public IP. |
+| DO Spaces | S3-compatible object storage: `models/` prefix (no expiry) for RL models, `backups/` prefix (14-day lifecycle rule) for Postgres dumps. | `SPACES_KEY` + `SPACES_SECRET` via DO → API → Spaces Keys → Generate New Key. |
+| GHCR | Container registry for the API image, pushed by GHA on every merge. | `${{ secrets.GITHUB_TOKEN }}` in workflow writes; package made public after first build so droplet pulls without auth. |
+
+## Development patterns established this session
+
+- **Torch split.** `requirements-server.txt` excludes torch + SB3 for the API image. Admin training endpoints (`/admin/training/*`, `/admin/ai/*`, `/deck-optimizer/*`) will 500 if called; gated off via `TRAINING_WORKER_DISABLED=1` + `AI_WORKER_DISABLED=1`. If admin features are needed, run a dev server from the full `requirements.txt`.
+- **LF line endings.** `.gitattributes` forces LF on `*.sh`, `*.yml`, `Dockerfile`, `Caddyfile` so files authored on Windows still run on Linux runners / droplet.
+- **Dedicated deploy keypair.** Don't reuse the developer's personal SSH key. GHA stores the private half; if logs leak, rotate just that key.
+- **Rust integration tests use `wiremock`.** For testing HTTP clients (model manifest fetch, Spaces download), mount a local `wiremock::MockServer` and assert exact call counts via `.expect(n)`. No manual port picking — wiremock auto-assigns.
+- **`#[cfg(test)]` hacks discouraged.** If Rust code needs a test seam, prefer a small refactor (struct accepts injected config) over sprinkling test-only code paths in the real module. Done in Task 16 for `ModelsManager`.
+- **Tauri testing requires a `frontend/dist/index.html` stub** so `tauri::generate_context!()` compiles under `cargo test`. The stub is committed (1 line); `npm run build` overwrites it harmlessly.
+- **Playwright test authorship was delegated** to fresh-context agents via `mcp__ccd_session__spawn_task`. The agent that implemented a feature does NOT write its own Playwright test — a different agent reads the code cold and authors the test. Scoped to the three alpha-readiness journey tests only; not a general project policy.
+
+## Bootstrap notes (2026-04-19)
+
+Record of what actually happened during the initial droplet bootstrap. Update
+this section on every re-bootstrap (disaster recovery, droplet migration, etc.).
+
+- **Droplet:** `digimon-api` (DO ID `565912379`) — 2 GB / 1 vCPU / 50 GB SSD, Ubuntu 24.04, NYC3. Public IP `64.225.21.6`.
+- **SSH key:** `digimon-deploy` (DO ID `55736461`, fingerprint `84:c5:62:60:3f:29:bb:ca:5d:21:3e:e5:f2:e5:fe:4a`). Private half at `~/.ssh/digimon_deploy`; pushed to GH repo secret `DROPLET_SSH_KEY`.
+- **DNS:** `inbetweentheatre.duckdns.org` A-record manually pointed at `64.225.21.6` via duckdns.org.
+- **Docker versions on droplet:** Docker Engine 29.4.0, Docker Compose v5.1.3. Installed via Docker's official apt repo (https://download.docker.com/linux/ubuntu).
+- **Spaces bucket:** `digimon-tcg-models` in NYC3 — created fresh during this bootstrap. CDN URL `https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com`. Lifecycle rule on `backups/` (14-day expiry) **still to be set via DO web UI** as of 2026-04-19.
+- **Secrets rotation:** `POSTGRES_PASSWORD` + `JWT_SECRET` generated on the droplet via `openssl rand -hex`. `SPACES_KEY` / `SPACES_SECRET` provided by user during bootstrap; if these leak, rotate via DO web UI and update `/opt/digimon/.env`.
+- **GHA secrets set:** `DROPLET_SSH_KEY`, `DROPLET_HOST=64.225.21.6`, `DROPLET_USER=deploy`.
+- **Skipped:** Local `docker build` validation of the multi-stage Dockerfile (Docker Desktop not running during this session — per user "1b" decision, relying on CI's build job to validate).
+- **Deferred:** First `docker compose pull` on droplet — awaiting PR #339's build job to push the first image to GHCR. GHCR package visibility must be flipped to Public (GH → packages → `digimon-api` → settings) before the droplet can pull without auth.
