@@ -14,6 +14,8 @@
 
 mod selections;
 
+pub use selections::CountCappedZone;
+
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
 use crate::enums::{Expiry, Keyword, ModifierType, PlayerId};
