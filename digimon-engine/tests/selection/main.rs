@@ -2,6 +2,7 @@
 //! machine: opponent-field targeting, DNA material picks, and the
 //! selection-kind routing dispatch.
 
+mod behavioral_end_to_end;
 mod count_capped;
 mod kinds;
 mod kinds_exist;
