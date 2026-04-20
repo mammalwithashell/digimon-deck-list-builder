@@ -81,6 +81,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None — BLOCKED. Without it, 15+ cards' main recurring payoff never fires.
 - **Related:** RUST_PYTHON_PARITY.md §2.5b (OnSecurityCheck not fired), §2.5g, §2.5m
 
+**Closed by Phase 1 (2026-04-19):** Fire sites wired in `digimon-engine` — see `fire_on_opponent_security_removed()` in `digimon-engine/src/combat.rs` and `Effect::on_opponent_security_removed(card)` builder in `digimon-engine/src/effect.rs`. Fires at `SecurityPhase::Dispose` against the attacking player's battle area. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatch and observer timing documentation.
+
 ### Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -90,6 +92,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** Enqueue `OnEnterFieldAnyone` from every play / digivolve entry site with `{player, card_id, kind}` trigger context. Add `EffectTiming::OnAnyDeletion` (or promote `OnDeletion` fan-out via `TriggerSource::GlobalDeletion`).
 - **Workaround:** None — BLOCKED.
 - **Related:** None (both enum variants declared, neither fired).
+
+**Closed by Phase 1 (2026-04-19):** Both fire sites wired in `digimon-engine` — see `fire_on_enter_field_anyone()` in `digimon-engine/src/game_actions.rs` (called after OnPlay from `play_from_hand_with_cost` and `play_from_trash_with_cost`) and `fire_on_any_deletion()` in `digimon-engine/src/combat.rs` (called from `delete_permanent_with_effects`). Builders: `Effect::on_enter_field_anyone(card)` and `Effect::on_any_deletion(card)` in `digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher and observer timing documentation.
 
 ### Phase-granular turn timings (`StartOfYourTurn`, `StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`)
 - **Severity:** 🔴 BLOCKING
@@ -101,6 +105,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** Collapse into nearest existing timing — violates no-approximations policy (order-sensitive with Block / Alliance / OnLoseSecurity).
 - **Related:** RUST_ENGINE_API.md §9 ("OnEndBattle / OnEndAttack timings are not yet fired").
 
+**Closed by Phase 1 (2026-04-19):** All five timings wired in `digimon-engine` — see `fire_start_of_your_turn()` in `begin_turn` (before unsuspend), `fire_start_of_your_main_phase()` in `enter_main_phase`, `fire_on_attack()` and `fire_when_attacking()` in `combat::fire_on_attack`, `fire_end_of_attack()` in `cleanup_attack`, and `fire_end_of_battle()` in `resolve_battle` (Digimon-vs-Digimon only). Builders: `Effect::start_of_your_turn/start_of_your_main_phase/when_attacking/end_of_attack/end_of_battle(card)` in `digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
+
 ### Observer timings tied to specific events (`OnDigivolve` trait-filter, `OnSuspend`, `OnAttackTargetChange`, `[When Moving]`, `OnHatch`, `OnAllyAttack`/`OnOpponentAttack`)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -109,6 +115,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **What's missing:** `OnDigivolve` and `OnSuspend` enum variants exist but no trigger sources fire them. `OnAttackTargetChange` enum variant doesn't exist at all — no `combat.rs` emission from Block / Raid / Alliance redirect paths. `[When Moving]` has no variant (`OnEnterField` exists but is not observably fired from `Game::move_from_breeding` and doesn't broadcast to global observers).
 - **Suggested API shape:** Wire `OnDigivolve` from `digivolve_from_hand` with `{digivolver, target}` context. Fire `OnSuspend` from `Permanent::set_suspended(true)`. Add `EffectTiming::OnAttackTargetChange` + emit from block-accept / raid-redirect / collision-redirect paths. Add `EffectTiming::WhenMoving` + fire from `Game::move_from_breeding` alongside a broadcast `OnEnterFieldAnyone`.
 - **Workaround:** None — BLOCKED. Approximating with `OnEnterField` or periodic condition checks misses the causal link to the originating event.
+
+**Closed by Phase 1 (2026-04-19):** Five of the six variants wired in `digimon-engine` — see `fire_on_digivolve()` in both digivolve paths (after WhenDigivolving drains), `fire_on_suspend()`/`fire_on_unsuspend()` in `Game::suspend`/`Game::unsuspend`, `fire_on_hatch()` in `Game::hatch`, and `fire_on_attack_target_change()` in Block interrupt (after effective_target rewrite). Builders: `Effect::on_digivolve/on_suspend/on_unsuspend/on_hatch/on_attack_target_change(card)` in `digimon-engine/src/effect.rs`. `[When Moving]` / `OnEnterFieldAnyone` global observer wired in Phase 1 as part of OnEnterFieldAnyone (see Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings closure). See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
 - **Related:** None.
 
 ### `WhenWouldBeDeleted` / leave-field replacement-effect framework
@@ -786,6 +794,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** "None — BLOCKED."
 - **Related:** "Phase-granular turn timings"; RUST_PYTHON_PARITY.md §1.4 (end_turn flow).
 
+**Closed by Phase 1 (2026-04-19):** Fire site wired in `digimon-engine` — see `fire_end_of_opponents_turn()` called in `rotate_turn_player()` (between EndOfYourTurn drain and turn advance). Dispatches to the non-ending player's battle area. Builder: `Effect::end_of_opponents_turn(card)` in `digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
+
 ### Forced opponent hand reduction primitive (`ctx.trash_opponent_hand_to_count`)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Dark Masters (2026-04-18)
@@ -833,6 +843,8 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Suggested API shape:** Add `EffectTiming::OnDigivolutionCardTrashed` + `TriggerSource::SourceTrashedFromStack { host: PermanentHandle, trashed_sources: Vec<CardHandle>, cause: TrashCause }` with `TrashCause = { Effect, Combat, DigivolveOverflow, ReturnToDeck }`. Fire per-batch from every source-trashing path: `de_digivolve`, `Permanent::trash_specific_digivolution_cards`, Fragment / Armor Purge cancel-delete costs, Digi-Burst cost, Decode material-play, future `ctx.trash_sources(target, indices)`, return-to-hand/deck material-disposition. Fan-out (a) walks each trashed `CardSource`'s inherited effects via `CardEffectRegistry::get(card_id).effects(...)` filtered on `.inherited == true` BEFORE the card lands in trash (so the effect's `ctx.source_permanent` can still resolve to the host), (b) enqueues against all battle-area / hand-resident observer effects with the context `{host, trashed_sources, cause}`. Extend `EffectContext` with `ctx.event_trashed_sources()` and `ctx.event_host_permanent()` accessors. Builder sugar: `Effect::inherited(card).when_source_trashed(trait_filter, cause_filter)` and `Effect::on_digivolution_card_trashed(card)` global observer.
 - **Workaround:** None — BLOCKED. This timing is **the Rocks archetype's central engine**: ~15 unique cards (≈25 if duplicates by name) pivot on it. Firing `OnTrash` after the card is in trash loses the host attribution and trait condition. Approximating as `OnDeletion` of the host misfires because the host survives when Pyramidimon pays its own cost to fuel its cost-reduction clause (host isn't deleted but sources are trashed — EX10-063 and EX11-044 must still fire).
 - **Related:** Existing "Observer timings tied to specific events" (sibling — same observer-timing architectural class); "De-Digivolve N primitive" (primary producer of this event); "Zone-manipulation: return-to-hand / return-to-deck / bounce self" (another producer); "Decode keyword" (producer); new "`<Fragment (N)>` keyword" (producer — fires per-source on cost payment); new "`<Digi-Burst N>` keyword" (producer); RUST_PYTHON_PARITY.md §2.5b (architectural parallel — global fan-out for security observer).
+
+**Closed by Phase 1 (2026-04-19):** Observer timing wired in `digimon-engine` — see `fire_on_digivolution_card_trashed()` in `digimon-engine/src/game_actions.rs` (called per-batch from `return_to_hand`/`return_to_deck` with `TrashCause::Effect`). Builder: `Effect::on_digivolution_card_trashed(card)` in `digimon-engine/src/effect.rs`. Fires in each player's battle area to notify Tamer observers (e.g., P-169 Close, EX10-063 Close). See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
 
 ### `<Fragment (N)>` keyword — leave-field replacement via N-source self-trash
 - **Severity:** 🔴 BLOCKING

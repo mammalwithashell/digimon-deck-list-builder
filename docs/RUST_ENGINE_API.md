@@ -828,3 +828,58 @@ Effect::on_play(card).process(|ctx| {
 ### No-approximations note
 
 Each of these primitives is a pure movement or cost-payment operation. *Which* card to move is always the caller's responsibility, and the choice must surface through a `PendingSelection` built with `select_hand`, `select_trash`, `select_reveal`, or `select_own_permanent`. Never let a script auto-pick a target without a selection — the RL action space must observe the branch.
+
+---
+
+## Phase 1 — Timing Dispatch
+
+Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 new observer variants for Medusamon and Rocks archetypes. Card scripts can now hook into turn phases, combat events, and global observers via dedicated `Effect::*` builders.
+
+### Turn phases
+
+| Timing | Builder | Fire site |
+|--------|---------|-----------|
+| `StartOfYourTurn` | `Effect::start_of_your_turn(card)` | `begin_turn` (before Unsuspend) |
+| `StartOfYourMainPhase` | `Effect::start_of_your_main_phase(card)` | `enter_main_phase` (before phase set to Main) |
+| `EndOfYourTurn` | `Effect::end_of_your_turn(card)` | `fire_end_of_your_turn` (already wired) |
+| `EndOfOpponentsTurn` | `Effect::end_of_opponents_turn(card)` | `rotate_turn_player` (between EndOfYourTurn drain and turn advance) |
+
+### Combat timings
+
+| Timing | Builder | Fire site |
+|--------|---------|-----------|
+| `OnAttack` | `Effect::on_attack(card)` | `fire_on_attack` (already wired; per-attacker) |
+| `WhenAttacking` | `Effect::when_attacking(card)` | `fire_on_attack` (observer — attacker's battle area) |
+| `EndOfBattle` | `Effect::end_of_battle(card)` | `resolve_battle` (Digimon-vs-Digimon only) |
+| `EndOfAttack` | `Effect::end_of_attack(card)` | `cleanup_attack` (global) |
+| `OnAttackTargetChange` | `Effect::on_attack_target_change(card)` | Block interrupt, after `effective_target` rewrite |
+
+### Global observers
+
+| Timing | Builder | Fire site |
+|--------|---------|-----------|
+| `OnEnterFieldAnyone` | `Effect::on_enter_field_anyone(card)` | `play_from_hand_with_cost` + `play_from_trash_with_cost` (after OnPlay) |
+| `OnAnyDeletion` | `Effect::on_any_deletion(card)` | `delete_permanent_with_effects` (single chokepoint for all deletions) |
+| `OnSuspend` | `Effect::on_suspend(card)` | `Game::suspend` (guarded on state change) |
+| `OnUnsuspend` | `Effect::on_unsuspend(card)` | `Game::unsuspend` (bulk unsuspend_all does NOT fire — StartOfYourTurn is the canonical turn-start timing) |
+| `OnHatch` | `Effect::on_hatch(card)` | `Game::hatch` (after successful hatch) |
+| `OnDigivolve` | `Effect::on_digivolve(card)` | After `WhenDigivolving` drains in both digivolve paths |
+
+### New archetype-specific observers
+
+| Timing | Builder | Fire site | Archetype |
+|--------|---------|-----------|-----------|
+| `OnOpponentSecurityRemoved` | `Effect::on_opponent_security_removed(card)` | `SecurityPhase::Dispose` (attacker's battle area only) | Medusamon core |
+| `OnDigivolutionCardTrashed` | `Effect::on_digivolution_card_trashed(card)` | Per-source in `return_to_hand` / `return_to_deck` (sources-below-top, not linked_cards) | Rocks core |
+
+### Scoping
+
+All observer fire sites use `TriggerSource::PlayerBattleArea(PlayerId)` — effects with the given timing in a player's battle area fire.
+
+Per-permanent events (`OnAttack` on the attacker) use `TriggerSource::Permanent(handle)`.
+
+The global observer pattern iterates every player and enqueues per-player; the queue drainer handles turn-order resolution. Scripts can observe events caused by opponents by registering effects with the global timings.
+
+### No-approximations note
+
+Every observer fire site eagerly drains the effect queue, so chained effects resolve before the originating event returns. The no-auto-selection principle (see §2) applies: optional effects registered against these timings must surface as `PendingSelection` branches for RL to observe.
