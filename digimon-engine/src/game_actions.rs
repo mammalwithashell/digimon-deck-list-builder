@@ -569,22 +569,36 @@ impl Game {
         &mut self,
         handle: PermanentHandle,
     ) -> Option<crate::card_source::CardHandle> {
-        let player = self.player_mut(handle.player);
-        if (handle.index as usize) >= player.battle_area.len() {
-            return None;
+        {
+            let player = self.player_mut(handle.player);
+            if (handle.index as usize) >= player.battle_area.len() {
+                return None;
+            }
         }
-        let perm = player.battle_area.remove(handle.index as usize);
+        let perm = self.player_mut(handle.player).battle_area.remove(handle.index as usize);
 
         let mut sources = perm.card_sources;
-        let top = sources.pop()?;
+        let Some(top) = sources.pop() else {
+            return None;
+        };
         let top_handle = top.handle();
-        player.hand.push(top);
+        self.player_mut(handle.player).hand.push(top);
 
+        // Sources below the top go to trash and fire OnDigivolutionCardTrashed
+        // (digivolution stack sources only — not linked_cards which are Tamer
+        // equipment and separate semantic category).
         for card in sources {
-            player.trash.push(card);
+            self.player_mut(handle.player).trash.push(card);
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.drain_effect_queue();
         }
         for card in perm.linked_cards {
-            player.trash.push(card);
+            self.player_mut(handle.player).trash.push(card);
         }
 
         self.modifiers.clear_permanent(handle);
@@ -630,9 +644,18 @@ impl Game {
             }
         }
 
-        // Sources under the top go to trash.
+        // Sources below the top go to trash and fire OnDigivolutionCardTrashed
+        // (digivolution stack sources only — not linked_cards which are Tamer
+        // equipment and separate semantic category).
         for card in perm.card_sources {
             self.player_mut(player_id).trash.push(card);
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.drain_effect_queue();
         }
         for card in perm.linked_cards {
             self.player_mut(player_id).trash.push(card);

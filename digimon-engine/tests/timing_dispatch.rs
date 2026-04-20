@@ -791,3 +791,265 @@ fn on_digivolve_fires_globally_when_any_digimon_digivolves() {
         r.memory()
     );
 }
+
+// ─── TEST-P1-T13 ─────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory when an attack's target is redirected.
+struct AtkChangeObsMem;
+impl CardEffect for AtkChangeObsMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_attack_target_change(card)
+            .name("+1 on attack target change")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_attack_target_change_fires_on_block_redirect() {
+    // ATK (9000 DP) attacks player 1 directly. BLK (5000 DP, Blocker keyword)
+    // on player 1's field intercepts. OnAttackTargetChange fires for OBS on
+    // player 0's side when the blocker redirect rewrites effective_target.
+    use digimon_engine::action::space::encode_attack;
+    use digimon_engine::enums::{Expiry, Keyword};
+
+    let mut atk_data = plain_digimon("ATK13", "Attacker13", 5);
+    atk_data.level = Some(5);
+    atk_data.dp = Some(9000);
+
+    let mut blk_data = plain_digimon("BLK13", "Blocker13", 4);
+    blk_data.level = Some(4);
+    blk_data.dp = Some(5000);
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(atk_data)
+        .add_card(blk_data)
+        .add_card(plain_digimon("OBS13", "AtkChangeObs", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(5)
+        .start();
+    r.register_effect("OBS13", Arc::new(AtkChangeObsMem));
+
+    // Place ATK and OBS on player 0's field directly (bypasses summoning sickness).
+    let atk_h = r.place_on_field(0, "ATK13", Some(0));
+    let _obs_h = r.place_on_field(0, "OBS13", Some(0));
+
+    // Place BLK on player 1's field and grant it Blocker.
+    let blk_h = r.place_on_field(1, "BLK13", Some(0));
+    r.game_mut()
+        .modifiers
+        .grant_keyword(blk_h, Keyword::Blocker, Expiry::Permanent, 1);
+
+    let before = r.memory();
+    // Attack player 1 directly — vortex=false so the Block interrupt window
+    // opens. Permanents were placed with turn_played=Some(0) so they are not
+    // fresh (game is at turn 1) and summoning sickness does not apply.
+    let result = r.attack_player(atk_h, 1, false);
+    // Blocker present → BlockTiming installed.
+    assert!(
+        matches!(result, digimon_engine::combat::AttackResult::InProgress),
+        "BlockTiming should be installed when Blocker is present"
+    );
+
+    // Defender resolves selection: declare the blocker (index 0 on player 1).
+    let block_action = encode_attack(0, 0);
+    r.game_mut()
+        .resolve_selection(1, block_action)
+        .expect("declaring a valid blocker must succeed");
+
+    // OnAttackTargetChange fired during the block callback → OBS gained +1.
+    assert!(
+        r.memory() > before,
+        "OnAttackTargetChange should have fired when Block redirected the attack (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
+
+// ─── TEST-P1-T14 ─────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory when an opponent's security card is removed.
+struct OppSecRemovedObsMem;
+impl CardEffect for OppSecRemovedObsMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_opponent_security_removed(card)
+            .name("+1 when opp security removed")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_opponent_security_removed_fires_for_attacker() {
+    // ATK (9000 DP) attacks player 1 directly. Player 1 has 2 security cards.
+    // OnOpponentSecurityRemoved fires in player 0's battle area (where OBS lives)
+    // after the security card leaves the stack.
+    let mut atk_data = plain_digimon("ATK14", "Attacker14", 5);
+    atk_data.level = Some(5);
+    atk_data.dp = Some(9000);
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(atk_data)
+        .add_card(plain_digimon("OBS14", "OppSecObs", 3))
+        .add_card(plain_digimon("SEC14", "SecurityCard14", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .security(1, &["SEC14", "SEC14"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(5)
+        .start();
+    r.register_effect("OBS14", Arc::new(OppSecRemovedObsMem));
+
+    // Place ATK and OBS on player 0's field.
+    let atk_h = r.place_on_field(0, "ATK14", Some(0));
+    let _obs_h = r.place_on_field(0, "OBS14", Some(0));
+
+    let before = r.memory();
+    // Attack player 1 directly (vortex=true to bypass summoning sickness).
+    // Security check will reveal and trash one card from player 1's stack.
+    let _ = r.attack_player(atk_h, 1, true);
+
+    // OnOpponentSecurityRemoved should have fired → OBS gained +1 memory.
+    assert!(
+        r.memory() > before,
+        "OnOpponentSecurityRemoved should fire when security card leaves the stack (before={}, after={})",
+        before,
+        r.memory()
+    );
+    // Confirm one security card was actually consumed.
+    assert_eq!(
+        r.security_count(1),
+        1,
+        "one security card should have been consumed"
+    );
+}
+
+// ─── TEST-P1-T15 ─────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory when a digivolution source is trashed.
+struct DigCardTrashedObsMem;
+impl CardEffect for DigCardTrashedObsMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("+1 when source trashed")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_digivolution_card_trashed_fires_on_return_to_hand() {
+    // Seed a permanent with a 2-card stack (UNDER on bottom, TOP on top).
+    // OBS on the same side observes OnDigivolutionCardTrashed.
+    // Calling return_to_hand: TOP goes to hand, UNDER goes to trash.
+    // OnDigivolutionCardTrashed fires once (for UNDER).
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::permanent::Permanent;
+    use digimon_engine::permanent::PermanentHandle;
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("TOP15", "Top15", 4))
+        .add_card(plain_digimon("UNDER15", "Under15", 3))
+        .add_card(plain_digimon("OBS15", "DigTrashObs", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(5)
+        .start();
+    r.register_effect("OBS15", Arc::new(DigCardTrashedObsMem));
+
+    // Place OBS on player 0's field (index 0).
+    let _obs_h = r.place_on_field(0, "OBS15", Some(0));
+
+    // Manually seed a 2-card permanent: UNDER (bottom) + TOP (top).
+    let target = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g.card_data.iter().position(|c| c.card_id == "UNDER15").unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP15").unwrap();
+        let i_under = g.next_card_index();
+        let i_top = g.next_card_index();
+        let under_src = CardSource::new(under_idx, 0, i_under);
+        let top_src = CardSource::new(top_idx, 0, i_top);
+        // Permanent::new takes the bottom card as its sole source; push TOP on top.
+        let mut perm = Permanent::new(under_src, turn);
+        perm.card_sources.push(top_src);
+        g.players[0].battle_area.push(perm);
+        let idx = g.players[0].battle_area.len() - 1;
+        PermanentHandle { player: 0, index: idx as u8 }
+    };
+
+    let before = r.memory();
+    // return_to_hand: TOP → hand, UNDER → trash, fires OnDigivolutionCardTrashed.
+    let result = r.game_mut().return_to_hand(target);
+    assert!(result.is_some(), "return_to_hand should succeed on a 2-card stack");
+
+    // OBS observed UNDER being trashed.
+    assert!(
+        r.memory() > before,
+        "OnDigivolutionCardTrashed should fire when UNDER was trashed from the stack (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
+
+#[test]
+fn on_digivolution_card_trashed_fires_on_return_to_deck() {
+    // Same setup as return_to_hand but calls return_to_deck.
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::permanent::Permanent;
+    use digimon_engine::permanent::PermanentHandle;
+    use digimon_engine::enums::StackPosition;
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("TOP15B", "Top15B", 4))
+        .add_card(plain_digimon("UNDER15B", "Under15B", 3))
+        .add_card(plain_digimon("OBS15B", "DigTrashObs2", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(5)
+        .start();
+    r.register_effect("OBS15B", Arc::new(DigCardTrashedObsMem));
+
+    let _obs_h = r.place_on_field(0, "OBS15B", Some(0));
+
+    let target = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g.card_data.iter().position(|c| c.card_id == "UNDER15B").unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP15B").unwrap();
+        let i_under = g.next_card_index();
+        let i_top = g.next_card_index();
+        let under_src = CardSource::new(under_idx, 0, i_under);
+        let top_src = CardSource::new(top_idx, 0, i_top);
+        let mut perm = Permanent::new(under_src, turn);
+        perm.card_sources.push(top_src);
+        g.players[0].battle_area.push(perm);
+        let idx = g.players[0].battle_area.len() - 1;
+        PermanentHandle { player: 0, index: idx as u8 }
+    };
+
+    let before = r.memory();
+    let ok = r.game_mut().return_to_deck(target, StackPosition::Top);
+    assert!(ok, "return_to_deck should succeed on a 2-card stack");
+
+    assert!(
+        r.memory() > before,
+        "OnDigivolutionCardTrashed should fire when UNDER was trashed from the stack via return_to_deck (before={}, after={})",
+        before,
+        r.memory()
+    );
+}

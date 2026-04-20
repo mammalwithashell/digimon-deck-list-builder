@@ -711,6 +711,16 @@ impl Game {
                     pa.effective_target = AttackTarget::Digimon(blocker);
                     pa.state = AttackState::Battle;
                 }
+                // OnAttackTargetChange: fires in all players' battle areas
+                // when Block rewrites effective_target. Observer timing for
+                // "when an attack is redirected" effects (e.g. Medusamon).
+                for pid in 0..game.players.len() {
+                    game.enqueue_triggered(
+                        crate::enums::EffectTiming::OnAttackTargetChange,
+                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                    );
+                }
+                game.drain_effect_queue();
                 game.advance_pending_attack();
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
@@ -996,6 +1006,18 @@ impl Game {
                         if !pending.played {
                             self.player_mut(defender).trash.push(pending.card);
                         }
+                    }
+
+                    // OnOpponentSecurityRemoved: fires in the attacker's
+                    // battle area after a security card leaves the defender's
+                    // stack (trashed or played from security). Medusamon core
+                    // archetype observer.
+                    if let Some(atk) = attacker_opt {
+                        self.enqueue_triggered(
+                            crate::enums::EffectTiming::OnOpponentSecurityRemoved,
+                            crate::selection::TriggerSource::PlayerBattleArea(atk.player),
+                        );
+                        self.drain_effect_queue();
                     }
 
                     // Hard terminal: attacker was deleted mid-check.
