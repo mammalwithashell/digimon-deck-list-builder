@@ -6,4 +6,5 @@ mod kinds;
 mod kinds_exist;
 mod material;
 mod opponent_permanent;
+mod ordered_permutation;
 mod union_zone;

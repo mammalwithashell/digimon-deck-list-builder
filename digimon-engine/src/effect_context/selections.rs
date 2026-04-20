@@ -587,6 +587,77 @@ impl<'a> EffectContext<'a> {
         });
     }
 
+    /// Prompt `self.player` to place N `items` in a chosen order via sequential
+    /// single-item picks. After the player selects all items the final
+    /// `callback` fires with a `Vec<CardHandle>` in chosen order.
+    ///
+    /// **Encoding**: each step reuses the `SEL_REVEAL_START` (30–39) range.
+    /// `valid_action_ids[i] = SEL_REVEAL_START + i` where `i` is an index
+    /// into the *remaining* (not yet picked) list. After each pick the engine
+    /// re-installs a fresh `PendingSelection` for the next step with the
+    /// picked item removed. Phase is `GamePhase::SelectPermutation`;
+    /// `kind = SelectionKind::OrderedPermutation { remaining: n }`.
+    ///
+    /// **No-approximations contract**: even singleton permutations surface as a
+    /// one-choice selection so the RL agent sees every ordering decision.
+    ///
+    /// **Empty items**: final callback fires immediately; no selection installed.
+    ///
+    /// **Cap**: capped at 10 items (`debug_assert` in debug builds; clamp in
+    /// release). This matches `SEL_REVEAL_START` range width (30–39 = 10 slots).
+    pub fn select_ordered_permutation<C>(
+        &mut self,
+        items: Vec<crate::card_source::CardHandle>,
+        prompt: &str,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>) + Send + Sync + 'static,
+    {
+        debug_assert!(items.len() <= 10, "ordered permutation capped at 10 items");
+        let items = if items.len() > 10 {
+            items.into_iter().take(10).collect()
+        } else {
+            items
+        };
+
+        // Empty: skip all selection steps, invoke the callback immediately.
+        if items.is_empty() {
+            let mut ctx = EffectContext::new(
+                self.game,
+                self.source_card,
+                self.source_permanent,
+                self.player,
+            );
+            callback(&mut ctx, Vec::new());
+            return;
+        }
+
+        let selecting_player = self.player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let previous_phase = self.game.current_phase;
+        let prompt_owned = prompt.to_string();
+
+        let final_callback: Box<
+            dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
+        > = Box::new(move |game: &mut Game, ordered: Vec<crate::card_source::CardHandle>| {
+            let mut ctx = EffectContext::new(game, source_card, source_permanent, selecting_player);
+            callback(&mut ctx, ordered);
+        });
+
+        install_permutation_step(
+            self.game,
+            items,
+            Vec::new(),
+            prompt_owned,
+            source_card,
+            source_permanent,
+            selecting_player,
+            previous_phase,
+            final_callback,
+        );
+    }
+
     /// Mark a security slot face-up. Consumed by the observation tensor so
     /// the card's identity is exposed to the RL agent (it would otherwise be
     /// zeroed for hidden-information safety — §3.3). The slot is keyed by
@@ -715,4 +786,81 @@ impl<'a> EffectContext<'a> {
             on_decline: None,
         });
     }
+}
+
+// ── ordered permutation trampoline ──────────────────────────────────────────
+
+/// Install one step of an ordered-permutation selection into `game`.
+///
+/// Each step presents the player with `remaining.len()` choices encoded as
+/// `SEL_REVEAL_START + i`. When the player picks index `i`, the chosen item
+/// is appended to `accum`, removed from `remaining`, and this function is
+/// called again for the next step — until `remaining` is empty, at which
+/// point `final_callback` fires with `accum` (the full ordered result).
+///
+/// This is a free function (not a method on `EffectContext`) so it can be
+/// called from inside a `Box<dyn FnOnce>` without any recursive closure
+/// or `Arc` indirection. The pattern works because each step's closure is a
+/// plain `FnOnce` that captures `remaining`, `accum`, and a new box for the
+/// next step — no closure references itself.
+#[allow(clippy::too_many_arguments)]
+fn install_permutation_step(
+    game: &mut Game,
+    remaining: Vec<crate::card_source::CardHandle>,
+    accum: Vec<crate::card_source::CardHandle>,
+    prompt: String,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<crate::permanent::PermanentHandle>,
+    selecting_player: crate::enums::PlayerId,
+    previous_phase: GamePhase,
+    final_callback: Box<
+        dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
+    >,
+) {
+    use crate::action::space::SEL_REVEAL_START;
+    use crate::selection::{PendingSelection, SelectionKind};
+
+    let n = remaining.len() as u8;
+    let valid_action_ids: Vec<u16> = (0..remaining.len())
+        .map(|i| SEL_REVEAL_START + i as u16)
+        .collect();
+
+    game.current_phase = GamePhase::SelectPermutation;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::OrderedPermutation { remaining: n },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: false,
+        prompt: prompt.clone(),
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        callback: Box::new(move |game: &mut Game, action_id: u16| {
+            let pick_idx = (action_id - SEL_REVEAL_START) as usize;
+            let mut new_remaining = remaining;
+            let mut new_accum = accum;
+            let picked = new_remaining.remove(pick_idx);
+            new_accum.push(picked);
+
+            if new_remaining.is_empty() {
+                // All items placed — invoke the final callback.
+                final_callback(game, new_accum);
+            } else {
+                // More items remain — install the next step.
+                install_permutation_step(
+                    game,
+                    new_remaining,
+                    new_accum,
+                    prompt,
+                    source_card,
+                    source_permanent,
+                    selecting_player,
+                    previous_phase,
+                    final_callback,
+                );
+            }
+        }),
+        on_decline: None,
+    });
 }
