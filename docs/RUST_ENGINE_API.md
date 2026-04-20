@@ -924,3 +924,249 @@ enum plus three parametric patterns:
 Unrecognized keyword names are ignored silently. Cards that need
 behavior not covered by the `Keyword` enum must use the modifier-based
 API via `Effect` builders.
+
+---
+
+## Phase 4 — Selection Kinds
+
+Added in Phase 4 to surface ordered permutations, union-zone picks, count-capped multi-selects, and opponent-as-selector flows through `PendingSelection` so the RL action space observes every branch.
+
+All four helpers live in `digimon-engine/src/effect_context/selections.rs`. Three new `SelectionKind` variants (`UnionZone`, `OrderedPermutation`, `CountCappedMultiSelect`) and three new `GamePhase` variants (`SelectUnion`, `SelectPermutation`, `SelectBudgeted`) are added in `selection.rs` and `enums.rs` respectively. No new action-range constants — all four helpers reuse existing ranges (Python-parity pattern).
+
+Commits: `67e0afa4`..`65f0b3a6` (8 commits). Full suite: **495 passing** (+32 from Phase 3 baseline of 463).
+
+**No-approximations note (applies to all four helpers):** Singleton or trivially-small selections must still surface through `PendingSelection` — never auto-select. A 1-item permutation still installs the selection; a 1-card union-zone still installs it. The RL action space must observe every branch.
+
+---
+
+### `select_union_zone`
+
+```rust
+pub fn select_union_zone<F, C>(
+    &mut self,
+    of_player: PlayerId,
+    zones: UnionZoneSet,      // bitset: UnionZoneSet::HAND | UnionZoneSet::TRASH
+    prompt: &str,
+    is_optional: bool,
+    filter: F,
+    callback: C,
+)
+where
+    F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
+    C: FnOnce(&mut EffectContext<'_>, CardHandle) + Send + Sync + 'static,
+```
+
+**Semantics.** Installs a single `PendingSelection` that lets the active player choose one card from the player's hand, trash, or both (per the `zones` bitset). The selection reuses existing action ranges — hand picks map to `PLAY_HAND_START + i`, trash picks map to `TRASH_EFFECT_START + i` — so no new action range is needed. The resolver classifies the incoming `action_id` by range and reconstructs the `CardHandle` from the appropriate zone. The callback receives a zone-agnostic `CardHandle`, so call-sites do not need to branch on the source zone.
+
+**Filter signature difference vs `select_hand`/`select_trash`.** The filter here is `Fn(&Game, &CardSource) -> bool` — zone-agnostic. `select_hand` and `select_trash` take `Fn(&Game, usize) -> bool` (index-based). This lets cross-zone predicates (e.g. "any Digimon with level ≥ 5") be expressed without duplicating logic.
+
+**Python parity.** Python's `effect_play_from_zone(player, 'hand_or_trash', ...)` populates both `SEL_HAND_START` and `SEL_TRASH_START` into `valid_indices` on one `PendingSelection`. Rust follows the same range-reuse pattern; the action-space encoding is compatible.
+
+```rust
+// "Search your hand or trash for a Digimon card and return it to your hand."
+Effect::on_play(card)
+    .name("Search hand or trash")
+    .process(|ctx| {
+        let me = ctx.player;
+        ctx.select_union_zone(
+            me,
+            UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            "Choose a Digimon from your hand or trash",
+            false,  // not optional
+            |_g, cs| cs.is_digimon(),
+            |ctx, handle| {
+                let me = ctx.player;
+                // handle is zone-agnostic; add_to_hand_from_trash / from_hand routes internally
+                ctx.add_to_hand_from_trash(me, handle);
+                // (hand→hand is a no-op; a complete script would check zone)
+            },
+        )
+    })
+    .build()
+```
+
+---
+
+### `select_ordered_permutation`
+
+```rust
+pub fn select_ordered_permutation<C>(
+    &mut self,
+    items: Vec<CardHandle>,   // cards to place in order; N_max = 10 (debug_assert)
+    prompt: &str,
+    callback: C,
+)
+where
+    C: FnOnce(&mut EffectContext<'_>, Vec<CardHandle>) + Send + Sync + 'static,
+```
+
+**Semantics.** Lets the player place N items in their chosen order. The implementation is sequential: one `PendingSelection` is installed per slot using `GamePhase::SelectPermutation` and `SelectionKind::OrderedPermutation { remaining }`. Each step's callback re-installs for the next slot with the chosen item removed from `remaining`. After all N picks the final callback fires with `Vec<CardHandle>` in chosen order. The internal state (accumulator + remaining list) is captured in the step closures — no heap-allocated mutex needed.
+
+Each step reuses the `SEL_REVEAL_START` action range; the resolver maps `action - SEL_REVEAL_START` to an index into the `remaining` list. N is capped at 10 (`debug_assert!(items.len() <= 10)`).
+
+**Empty items.** If `items` is empty, the callback fires immediately with an empty `Vec` — no `PendingSelection` is installed.
+
+**Singleton.** A 1-item list still installs a 1-choice selection (no auto-selection — RL sees the branch).
+
+**Python parity.** Python has no ordered-permutation primitive; the closest analog is a sequential multi-pass over a reveal pool (`effect_reveal_and_select_multi`). Rust's sequential re-install pattern is the correct analog. This is effectively net-new RL decision surface.
+
+```rust
+// "Return the rest to the bottom of the deck in any order."
+// (called after reveal_top_deck has returned the candidate handles)
+Effect::on_play(card)
+    .name("Order deck bottom")
+    .process(|ctx| {
+        let revealed = ctx.reveal_top_deck(ctx.player, 4);
+        // Suppose filter kept 1 in hand; rest need ordering:
+        let to_order: Vec<CardHandle> = revealed.iter()
+            .map(|cs| cs.card_handle())
+            .collect();
+        ctx.select_ordered_permutation(
+            to_order,
+            "Place remaining cards on bottom in any order",
+            |ctx, ordered| {
+                for handle in ordered.iter().rev() {
+                    ctx.return_to_deck_from_reveal(ctx.player, *handle, StackPosition::Bottom);
+                }
+            },
+        );
+    })
+    .build()
+```
+
+---
+
+### `select_count_capped_multi`
+
+```rust
+pub enum CountCappedZone { Hand, Trash }
+
+pub fn select_count_capped_multi<F, C>(
+    &mut self,
+    of_player: PlayerId,
+    zone: CountCappedZone,    // Hand or Trash
+    max: u8,                  // upper bound; debug_assert!(max <= 10)
+    prompt: &str,
+    is_optional_zero: bool,   // true → player may pick 0; PASS available from first step
+    filter: F,
+    callback: C,
+)
+where
+    F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
+    C: FnOnce(&mut EffectContext<'_>, Vec<CardHandle>) + Send + Sync + 'static,
+```
+
+**Semantics.** Lets the player pick up to `max` items from a single zone, one pick at a time. Each step uses `GamePhase::SelectBudgeted` / `SelectionKind::CountCappedMultiSelect { max, picked }`. Toggle actions reuse the existing zone range (`PLAY_HAND_START + i` for hand, `TRASH_EFFECT_START + i` for trash). The PASS action (id 62) is the early-commit sentinel; once submitted, the final callback fires with the accumulated `Vec<CardHandle>`.
+
+PASS availability is gated: available when `is_optional_zero || picked >= 1`. Reaching `picked == max` auto-commits (no extra PASS required — the last pick itself finalizes).
+
+**Empty filter.** If no cards pass the filter at install time, the callback fires immediately with an empty `Vec`.
+
+**Python parity.** Python has no clean count-capped multi-select primitive; some Python scripts (e.g. Baalmon) auto-mill N cards without offering a selection, violating the no-approximations policy. Rust must NOT copy this pattern — this helper mandates explicit per-pick actions.
+
+```rust
+// "Trash up to 2 cards from your hand."
+Effect::on_play(card)
+    .name("Trash up to 2 from hand")
+    .process(|ctx| {
+        let me = ctx.player;
+        ctx.select_count_capped_multi(
+            me,
+            CountCappedZone::Hand,
+            2,
+            "Choose up to 2 cards to trash",
+            true,  // is_optional_zero: player may pass immediately
+            |_g, _cs| true,  // all cards eligible
+            |ctx, picked| {
+                // picked is Vec<CardHandle> in pick order; trash each
+                for handle in picked {
+                    let me = ctx.player;
+                    if let Some(idx) = ctx.my_player().hand.iter()
+                        .position(|cs| cs.card_handle() == handle) {
+                        ctx.trash_from_hand_by_index(me, idx);
+                    }
+                }
+            },
+        )
+    })
+    .build()
+```
+
+---
+
+### `as_selecting_player` builder
+
+```rust
+impl<'g> EffectContext<'g> {
+    pub fn as_selecting_player(&mut self, player: PlayerId) -> EffectContextSelectorScope<'_, 'g>;
+}
+
+pub struct EffectContextSelectorScope<'a, 'g> {
+    ctx: &'a mut EffectContext<'g>,
+    selecting_player: PlayerId,
+}
+```
+
+**Semantics.** An opt-in player override for opponent-as-selector flows. `as_selecting_player(opp)` returns a scope that forwards the eight selection helpers listed below — but overrides the `selecting_player` field on the installed `PendingSelection` so the opponent's action mask lights up, not the active player's.
+
+`EffectContextSelectorScope` forwards:
+
+| Method forwarded | Notes |
+|---|---|
+| `select_own_permanent` | Selects from effect-controller's battle area; opponent is the chooser |
+| `select_opponent_permanent` | Selects from selector's battle area (opponent's own Digimon) |
+| `select_effect_choice` | Arbitrary N-option branch, chosen by opponent |
+| `select_hand` | Picks from a zone of the effect-controller's hand |
+| `select_trash` | Same, trash |
+| `select_union_zone` | Cross-zone (hand or trash) with opponent as chooser |
+| `select_count_capped_multi` | Up-to-N multi-pick with opponent as chooser |
+| `select_ordered_permutation` | Permutation ordered by the opponent |
+
+**Not forwarded:** `select_material`, `select_reveal`, `select_security` — these are rarely opponent-driven and have no audited card pattern requiring them; defer until a real card demands it.
+
+**Python parity.** Python has no analog. No Python script calls `request_selection(..., selecting_player=opponent, ...)`. The `selecting_player` field exists on Rust's `PendingSelection` and the mask layer already routes on it. `as_selecting_player` is net-new Rust capability with no Python precedent.
+
+```rust
+// "Your opponent chooses one of your Digimon and deletes it."
+Effect::on_play(card)
+    .name("Opponent trashes one of your Digimon")
+    .process(|ctx| {
+        let me = ctx.player;
+        let opp = ctx.opponent_id();
+        ctx.as_selecting_player(opp).select_own_permanent(
+            "Opponent: choose one of your Digimon to trash",
+            false,  // not optional — must choose
+            |_g, perm| perm.is_digimon(),
+            |ctx, handle| {
+                ctx.delete_permanent(handle);
+            },
+        );
+    })
+    .build()
+```
+
+Sequential cross-side chaining (one of your Digimon, then one of theirs) is handled by two back-to-back calls — a dedicated "choose both" primitive is not needed:
+
+```rust
+// "Your opponent chooses one of your Digimon to return to your hand,
+//  then you choose one of their Digimon to suspend."
+.process(|ctx| {
+    let me = ctx.player;
+    let opp = ctx.opponent_id();
+    ctx.as_selecting_player(opp).select_own_permanent(
+        "Opponent: choose one of your Digimon to return",
+        false,
+        |_g, _p| true,
+        |ctx, handle| {
+            ctx.return_to_hand(handle);
+            let me = ctx.player;
+            let opp = ctx.opponent_id();
+            ctx.select_opponent_permanent(
+                "Choose one of your opponent's Digimon to suspend",
+                false,
+                |_g, _p| true,
+                |ctx, h| { ctx.suspend(h); },
+            );
+        },
+    );
+})

@@ -139,6 +139,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None — BLOCKED. Simplifying to "single highest-DP ≤ threshold" violates no-approximations.
 - **Related:** Parity §4.6d-residual (selection-kind coverage).
 
+_Status (2026-04-20): **Partially closed by Phase 4.** The count-capped sibling (`select_count_capped_multi`) is implemented in `digimon-engine/src/effect_context/selections.rs`, surfacing as `SelectionKind::CountCappedMultiSelect` and `GamePhase::SelectBudgeted`. See `docs/RUST_ENGINE_API.md` §Phase 4. The aggregate-sum-constrained variant (DP-total cap across opponent permanents, `SelectionKind::MultiField`) remains **open** — no Phase 4 card exercises that shape._
+
 ### Selection: ordered permutation (place N cards in any order)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -148,6 +150,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.select_ordering(prompt, candidate_count, callback: Fn(Vec<usize>))` — modeled either as a chain of single-select prompts with a running exclusion set, or as an action-space encoding of a permutation over ≤8 items.
 - **Workaround:** Chained `select_reveal` with exclusion state in captured `Arc<Mutex<Vec<usize>>>` — functional but ergonomically expensive. Fidelity-preserving.
 - **Related:** None.
+
+_Status (2026-04-20): **Closed by Phase 4** — helper `select_ordered_permutation` in `digimon-engine/src/effect_context/selections.rs`, surfaces as `SelectionKind::OrderedPermutation` / `GamePhase::SelectPermutation`. Sequential pick-by-pick with accumulator; empty items call fires immediately; singleton still installs a 1-choice selection. See `docs/RUST_ENGINE_API.md` §Phase 4._
 
 ### Selection: opponent-as-selecting-player, cross-side target, union-zone (hand OR trash), DNA-pair, multi-pick from reveal
 - **Severity:** 🔴 BLOCKING
@@ -162,6 +166,11 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.select_hand_of(player, prompt, filter, callback)`; `ctx.select_any_permanent(prompt, filter, callback)`; `ctx.select_hand_or_trash(player, prompt, filter_hand, filter_trash, callback)`; `ctx.select_dna_pair(hand_index, callback)`.
 - **Workaround:** Two-step `select_effect_choice` decomposition gives the player two prompts where the card describes one — degrades RL action-tree shape.
 - **Related:** Parity §4.6d-residual.
+
+_Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps are closed:_
+- _**Opponent-as-selecting-player** — `ctx.as_selecting_player(player)` builder in `digimon-engine/src/effect_context/selections.rs` overrides `PendingSelection.selecting_player`, routing the action mask to the opponent. The 8 forwarded helpers are: `select_own_permanent`, `select_opponent_permanent`, `select_effect_choice`, `select_hand`, `select_trash`, `select_union_zone`, `select_count_capped_multi`, `select_ordered_permutation`. Python has no analog — net-new Rust capability._
+- _**Union-zone (hand OR trash)** — `select_union_zone` in `digimon-engine/src/effect_context/selections.rs`, surfaces as `SelectionKind::UnionZone` / `GamePhase::SelectUnion`. Reuses `PLAY_HAND_START` + `TRASH_EFFECT_START` ranges (Python-parity). See `docs/RUST_ENGINE_API.md` §Phase 4._
+- _**Still open:** `select_any_permanent` (cross-side target across both players' battle areas) and `select_dna_pair` (DNA digivolve pair selection). No Phase 4 card forced these shapes._
 
 ### Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)
 - **Severity:** 🔴 BLOCKING
