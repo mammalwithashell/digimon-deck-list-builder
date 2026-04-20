@@ -928,8 +928,11 @@ impl<'a> EffectContext<'a> {
 ///
 /// This guarantees the override never outlives the method call — even if the
 /// underlying helper is a no-op (empty filter → early return).
+///
+/// Not forwarded: `select_material`, `select_reveal`, `select_security` —
+/// these are rarely routed to the opponent; add a forwarder here if a real card requires it.
 pub struct EffectContextSelectorScope<'scope, 'g> {
-    pub(crate) ctx: &'scope mut EffectContext<'g>,
+    ctx: &'scope mut EffectContext<'g>,
     selecting_player: crate::enums::PlayerId,
 }
 

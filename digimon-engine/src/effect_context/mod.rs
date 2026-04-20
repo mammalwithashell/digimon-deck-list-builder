@@ -125,7 +125,7 @@ pub struct EffectContext<'a> {
     /// scope methods. `None` at all times except during the body of an
     /// `EffectContextSelectorScope::select_*` call, where it is set to the
     /// desired selector and cleared again before the method returns.
-    pub(crate) override_selecting_player: Option<PlayerId>,
+    pub(super) override_selecting_player: Option<PlayerId>,
 }
 
 impl<'a> EffectContext<'a> {
