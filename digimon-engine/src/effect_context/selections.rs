@@ -492,6 +492,11 @@ impl<'a> EffectContext<'a> {
     ///
     /// If no card passes the filter (across all zones), this is a no-op —
     /// matching the silent-empty contract used by the other select_* helpers.
+    ///
+    /// **Filter signature:** unlike `select_hand`/`select_trash` (which pass a
+    /// `usize` index), this helper's filter receives `&CardSource` so cross-zone
+    /// predicates can inspect the card directly without branching on whether the
+    /// index is a hand or trash index.
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
@@ -504,7 +509,7 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, &CardSource) -> bool,
         C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
     {
-        use crate::action::space::{HAND_MAIN_LIMIT, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT};
+        use crate::action::space::{HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT};
         use crate::selection::UnionZoneSet;
 
         let mut valid_action_ids: Vec<u16> = Vec::new();
@@ -560,6 +565,11 @@ impl<'a> EffectContext<'a> {
             source_card,
             source_permanent,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
+                debug_assert!(
+                    action_id < PLAY_HAND_END || action_id >= TRASH_EFFECT_START,
+                    "select_union_zone: action_id {} falls in gap between PLAY_HAND ({}..{}) and TRASH_EFFECT ({}..); valid_action_ids was populated incorrectly",
+                    action_id, PLAY_HAND_START, PLAY_HAND_END, TRASH_EFFECT_START
+                );
                 // Disambiguate by range.
                 let handle = if action_id >= TRASH_EFFECT_START {
                     let idx = (action_id - TRASH_EFFECT_START) as usize;
