@@ -883,3 +883,44 @@ The global observer pattern iterates every player and enqueues per-player; the q
 ### No-approximations note
 
 Every observer fire site eagerly drains the effect queue, so chained effects resolve before the originating event returns. The no-auto-selection principle (see §2) applies: optional effects registered against these timings must surface as `PendingSelection` branches for RL to observe.
+
+---
+
+## Phase 3 — Native Keyword Parsing
+
+Added in Phase 3 to honor keywords printed on a card's face (not just
+modifier-granted keywords). Closes parity §2.1b (native Rush) and §2.5f
+(native Jamming).
+
+### CardData surface
+
+`CardData::keywords: Vec<Keyword>` — populated at load time by
+`parse_printed_keywords(effect_text, inherited_text, security_text)`.
+Parametric keywords (`Security A. ±N`, `De-Digivolve N`, `Draw N`) are
+parsed into their typed variants.
+
+### Unified query
+
+`Game::has_keyword(handle, Keyword) -> bool` — the canonical keyword
+lookup. Returns true if the permanent has the keyword either printed
+natively on its top card OR granted by an active modifier.
+
+**Call-site policy:** engine code never accesses
+`game.modifiers.has_keyword(...)` directly — that only sees granted
+keywords and would miss native printed keywords. Always use
+`game.has_keyword(...)`. All 14 pre-existing keyword check sites
+(combat.rs, action/mask.rs, game_phases.rs) migrated in Phase 3.
+
+### Keyword extraction patterns
+
+Keywords appear in card text as `＜Keyword＞` (full-width angle brackets).
+The parser recognizes the 19 non-parametric keywords in the `Keyword`
+enum plus three parametric patterns:
+
+- `＜Security A. +N＞` / `＜Security A. -N＞` → `SecurityAttackPlus(N)` / `SecurityAttackMinus(N)`
+- `＜De-Digivolve N＞` → `DeDigivolve(N)`
+- `＜Draw N＞` → `DrawX(N)`
+
+Unrecognized keyword names are ignored silently. Cards that need
+behavior not covered by the `Keyword` enum must use the modifier-based
+API via `Effect` builders.

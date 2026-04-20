@@ -255,6 +255,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** Per-card `Effect::on_play(card).process(|ctx| ctx.grant_keyword(self, Keyword::X, Expiry::Permanent))` — medium fidelity, but brittle for cards placed via Blast Digivolve / Training / material-reveal and doesn't populate face-keyword tensor slots.
 - **Related:** RUST_PYTHON_PARITY §2.1b, §4.3b, §2.5f.
 
+**Closed by Phase 3 (2026-04-19):** Native keyword parsing landed — see `CardData::keywords` (digimon-engine/src/card_data.rs) and `Game::has_keyword` unified query (digimon-engine/src/game.rs). All 14 keyword check sites migrated. See docs/RUST_ENGINE_API.md §Phase 3.
+
 ### `<Progress>` keyword + `ImmunityToOpponentEffects` modifier
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)

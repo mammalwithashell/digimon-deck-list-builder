@@ -89,9 +89,11 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 **Coverage:** [tests/rush_exemption.rs](../digimon-engine/tests/rush_exemption.rs) — `freshly_played_without_rush_cannot_attack`, `freshly_played_with_rush_can_attack`, `rush_does_not_override_suspended_state`, `freshly_played_with_vortex_can_attack`, `vortex_does_not_override_suspended_state`, `mask_allows_rush_granted_attack_on_turn_played`.
 
-### 2.1b 🟡 Native (card-text) Rush not parsed
+### 2.1b 🟢 Native (card-text) Rush parsed — implemented
 
-Rust's [CardData](../digimon-engine/src/card_data.rs#L18) has no `keywords: Vec<Keyword>` field — static card keywords live inside `effect_text: String`. Cards that print Rush on their face don't trigger the exemption in `can_attack` because there's nothing to inspect. Fix requires either a keyword-parsing pass over `effect_text` or an explicit `keywords` field on `CardData` + a migration of cards.json. Track with §4.5 effect-listing work.
+Phase 3 added `CardData::keywords` field populated at load time by `parse_printed_keywords` (card_data.rs). The unified `Game::has_keyword` query (game.rs) checks both modifier-granted AND native printed keywords. All 14 call sites migrated; cards printing ＜Rush＞ now exempt the permanent from summoning sickness in `can_attack` without needing a granting modifier. See docs/RUST_ENGINE_API.md §Phase 3.
+
+**Coverage:** `tests/keyword_parsing.rs` — `native_printed_rush_allows_same_turn_attack`.
 
 ### 2.2 🟢 `is_attacking` flag — implemented
 
@@ -187,13 +189,11 @@ Enqueue + drain of the revealed card's `SecuritySkill` effects; `play_from_secur
 
 **Fix outline:** Introduce an `Effect` flag `applies_to_opponent_security_dp` and an `attacker_security_dp_adjustment(attacker)` helper on `Game` that iterates the attacker's `card_sources[..last]` inherited effects.
 
-### 2.5f 🟡 Native Jamming not honored — only modifier-granted
+### 2.5f 🟢 Native Jamming honored — implemented
 
-**Python** — [player.py:670](../digimon_gym/engine/core/player.py#L670) `attacker.has_keyword('_is_jamming')` — Permanent.has_keyword scans granted modifiers AND native printed keywords on the top card.
+Phase 3 landed unified keyword lookup (see §2.1b). The security DP battle in `combat.rs` now checks `self.has_keyword(attacker, Keyword::Jamming)` which includes native printed Jamming. Cards with ＜Jamming＞ printed on their face survive losing security battles without needing a granting modifier.
 
-**Rust** — [combat.rs:936](../digimon-engine/src/combat.rs#L936) `self.modifiers.has_keyword(attacker, Keyword::Jamming)` — only checks modifier-granted keywords. Cards with Jamming printed on them (not granted by a modifier) will be deleted incorrectly against a winning security Digimon.
-
-Same class of gap as §2.1b (native static Rush). Blocked on native-keyword effect-listing, which is itself blocked on the broader card-text-to-Keyword parse pipeline.
+**Coverage:** `tests/keyword_parsing.rs` — `native_printed_jamming_survives_losing_security_battle`.
 
 ### 2.5g 🔴 EffectContext missing security-specific context
 
