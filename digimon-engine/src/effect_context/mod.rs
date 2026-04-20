@@ -14,7 +14,7 @@
 
 mod selections;
 
-pub use selections::CountCappedZone;
+pub use selections::{CountCappedZone, EffectContextSelectorScope};
 
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
@@ -121,6 +121,11 @@ pub struct EffectContext<'a> {
     pub source_permanent: Option<PermanentHandle>,
     /// Player who controls the source.
     pub player: PlayerId,
+    /// Temporary override for `selecting_player` inside `as_selecting_player`
+    /// scope methods. `None` at all times except during the body of an
+    /// `EffectContextSelectorScope::select_*` call, where it is set to the
+    /// desired selector and cleared again before the method returns.
+    pub(crate) override_selecting_player: Option<PlayerId>,
 }
 
 impl<'a> EffectContext<'a> {
@@ -135,6 +140,7 @@ impl<'a> EffectContext<'a> {
             source_card,
             source_permanent,
             player,
+            override_selecting_player: None,
         }
     }
 

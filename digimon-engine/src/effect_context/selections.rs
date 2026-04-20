@@ -140,7 +140,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -197,7 +197,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -269,7 +269,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -330,7 +330,7 @@ impl<'a> EffectContext<'a> {
             });
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -390,7 +390,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -459,7 +459,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -555,7 +555,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -636,7 +636,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let previous_phase = self.game.current_phase;
@@ -728,7 +728,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let previous_phase = self.game.current_phase;
@@ -847,7 +847,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
 
@@ -886,6 +886,201 @@ impl<'a> EffectContext<'a> {
             }),
             on_decline: None,
         });
+    }
+
+    // ─── Opponent-as-selector builder ─────────────────────────────────────────
+
+    /// Returns a scope that overrides `selecting_player` for any `select_*`
+    /// call made through it. Use when card text reads "your opponent chooses"
+    /// rather than "you choose".
+    ///
+    /// Example:
+    /// ```ignore
+    /// // "Your opponent chooses one of your Digimon and trashes it."
+    /// ctx.as_selecting_player(opponent).select_own_permanent(
+    ///     "Opponent: choose a Digimon to trash",
+    ///     false,
+    ///     |_g, _perm| true,
+    ///     |ctx, handle| { ctx.delete_permanent(handle); },
+    /// );
+    /// ```
+    ///
+    /// The override is set immediately before the underlying helper runs and
+    /// cleared before `select_*` returns — it does not persist past the
+    /// method call.
+    pub fn as_selecting_player(
+        &mut self,
+        player: crate::enums::PlayerId,
+    ) -> EffectContextSelectorScope<'_, 'a> {
+        EffectContextSelectorScope {
+            ctx: self,
+            selecting_player: player,
+        }
+    }
+}
+
+// ── EffectContextSelectorScope ───────────────────────────────────────────────
+
+/// Scope returned by [`EffectContext::as_selecting_player`]. Each `select_*`
+/// method on this scope temporarily sets `ctx.override_selecting_player` to
+/// `self.selecting_player` before delegating to the underlying
+/// `EffectContext::select_*` helper, then clears the override before returning.
+///
+/// This guarantees the override never outlives the method call — even if the
+/// underlying helper is a no-op (empty filter → early return).
+pub struct EffectContextSelectorScope<'scope, 'g> {
+    pub(crate) ctx: &'scope mut EffectContext<'g>,
+    selecting_player: crate::enums::PlayerId,
+}
+
+impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
+    /// Install a selection where `self.selecting_player` picks from the
+    /// effect controller's own battle area. Forwards to
+    /// `EffectContext::select_own_permanent` with the override applied.
+    pub fn select_own_permanent<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, crate::permanent::PermanentHandle) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_own_permanent(prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a selection where `self.selecting_player` picks from the
+    /// effect controller's opponent's battle area. Forwards to
+    /// `EffectContext::select_opponent_permanent` with the override applied.
+    pub fn select_opponent_permanent<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, crate::permanent::PermanentHandle) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_opponent_permanent(prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install an effect-choice selection where `self.selecting_player` picks
+    /// the branch. Forwards to `EffectContext::select_effect_choice`.
+    pub fn select_effect_choice<C>(
+        &mut self,
+        prompt: &str,
+        labels: Vec<String>,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_effect_choice(prompt, labels, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a hand-pick selection where `self.selecting_player` picks from
+    /// `of_player`'s hand. Forwards to `EffectContext::select_hand`.
+    pub fn select_hand<F, C>(
+        &mut self,
+        of_player: crate::enums::PlayerId,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_hand(of_player, prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a trash-pick selection where `self.selecting_player` picks from
+    /// `of_player`'s trash. Forwards to `EffectContext::select_trash`.
+    pub fn select_trash<F, C>(
+        &mut self,
+        of_player: crate::enums::PlayerId,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_trash(of_player, prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a union-zone selection where `self.selecting_player` picks.
+    /// Forwards to `EffectContext::select_union_zone`.
+    pub fn select_union_zone<F, C>(
+        &mut self,
+        of_player: crate::enums::PlayerId,
+        zones: crate::selection::UnionZoneSet,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_union_zone(of_player, zones, prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a count-capped multi-select where `self.selecting_player` picks.
+    /// Forwards to `EffectContext::select_count_capped_multi`.
+    pub fn select_count_capped_multi<F, C>(
+        &mut self,
+        of_player: crate::enums::PlayerId,
+        zone: crate::effect_context::CountCappedZone,
+        max: u8,
+        prompt: &str,
+        is_optional_zero: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_count_capped_multi(of_player, zone, max, prompt, is_optional_zero, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install an ordered-permutation selection where `self.selecting_player`
+    /// picks. Forwards to `EffectContext::select_ordered_permutation`.
+    pub fn select_ordered_permutation<C>(
+        &mut self,
+        items: Vec<crate::card_source::CardHandle>,
+        prompt: &str,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_ordered_permutation(items, prompt, callback);
+        self.ctx.override_selecting_player = prev;
     }
 }
 
