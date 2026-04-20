@@ -680,6 +680,40 @@ impl Game {
         })
     }
 
+    // ─── Unified keyword query (Phase 3 Task 2) ──────────────────────
+
+    /// Unified keyword query — returns `true` if the permanent's top card
+    /// has `keyword` either printed natively on its face (from
+    /// `CardData.keywords`) OR granted by an active modifier.
+    ///
+    /// This is the canonical engine-wide keyword lookup. Engine code MUST
+    /// NOT call `self.modifiers.has_keyword(...)` directly — that only
+    /// sees granted keywords and would miss native printed keywords.
+    ///
+    /// Returns `false` for out-of-range handles (e.g. player index or
+    /// battle-area index doesn't exist) so callers don't need a guard.
+    pub fn has_keyword(
+        &self,
+        handle: PermanentHandle,
+        keyword: crate::enums::Keyword,
+    ) -> bool {
+        // Modifier-granted (end-of-turn grants, Ally buffs, etc.)
+        if self.modifiers.has_keyword(handle, keyword) {
+            return true;
+        }
+        // Native printed on the top card's face.
+        let Some(player) = self.players.get(handle.player as usize) else {
+            return false;
+        };
+        let Some(perm) = player.battle_area.get(handle.index as usize) else {
+            return false;
+        };
+        let top = perm.top_card();
+        // `data_index` is a direct Vec index — O(1), no iteration needed.
+        let card_data = &self.card_data[top.data_index];
+        card_data.keywords.contains(&keyword)
+    }
+
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
 
     /// Enumerate a card's effects by asking the registry for its impl.

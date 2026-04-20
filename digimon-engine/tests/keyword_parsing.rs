@@ -94,3 +94,90 @@ fn parses_blast_digivolve_not_confused_with_blast() {
     let kw = parse_printed_keywords("\u{ff1c}Blast Digivolve\u{ff1e} (...)", "", "");
     assert_eq!(kw, vec![Keyword::Blast]);
 }
+
+// ─── Game::has_keyword integration tests ───────────────────────────────────
+
+use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::card_data::CardData;
+use digimon_engine::enums::{CardColor, CardKind, Expiry};
+use digimon_engine::permanent::PermanentHandle;
+
+fn digimon_with_text(card_id: &str, effect_text: &str) -> CardData {
+    let keywords = digimon_engine::card_data::parse_printed_keywords(effect_text, "", "");
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: card_id.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(3),
+        dp: Some(3000),
+        play_cost: 3,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: effect_text.to_string(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+        keywords,
+    }
+}
+
+#[test]
+fn game_has_keyword_sees_native_printed() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_with_text("NATIVE_RUSH", "\u{ff1c}Rush\u{ff1e} (...)"))
+        .hand(0, &["NATIVE_RUSH"])
+        .memory(5)
+        .start();
+
+    r.play(0, 0);
+    let handle = PermanentHandle { player: 0, index: 0 };
+
+    assert!(
+        r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush),
+        "Game::has_keyword should see native printed Rush"
+    );
+}
+
+#[test]
+fn game_has_keyword_sees_modifier_granted() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_with_text("NO_NATIVE", ""))
+        .hand(0, &["NO_NATIVE"])
+        .memory(5)
+        .start();
+
+    r.play(0, 0);
+    let handle = PermanentHandle { player: 0, index: 0 };
+    r.game_mut().modifiers.grant_keyword(
+        handle,
+        digimon_engine::enums::Keyword::Rush,
+        Expiry::EndOfTurn,
+        0,
+    );
+
+    assert!(r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush));
+}
+
+#[test]
+fn game_has_keyword_false_when_neither() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_with_text("NEITHER", ""))
+        .hand(0, &["NEITHER"])
+        .memory(5)
+        .start();
+
+    r.play(0, 0);
+    let handle = PermanentHandle { player: 0, index: 0 };
+    assert!(!r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush));
+}
+
+#[test]
+fn game_has_keyword_bad_handle_returns_false() {
+    let mut r = DebugRunner::builder().start();
+    let handle = PermanentHandle { player: 0, index: 99 };
+    assert!(!r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush));
+}
