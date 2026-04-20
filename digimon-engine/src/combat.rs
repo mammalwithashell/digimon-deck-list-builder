@@ -1222,6 +1222,19 @@ impl Game {
         // Clear any modifiers on the handle (by index), even if the permanent
         // was already gone — modifiers live in a separate registry.
         self.modifiers.clear_permanent(handle);
+
+        // OnAnyDeletion: global observer — fires in every player's battle area
+        // after a permanent is deleted (battle-driven, effect-driven, or
+        // security-check). The deleted permanent is already gone from
+        // battle_area at this point, so handle-based listeners won't encounter
+        // a stale entry.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnAnyDeletion,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
     }
 
 }

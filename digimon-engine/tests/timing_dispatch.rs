@@ -460,3 +460,106 @@ fn end_of_battle_fires_on_digimon_vs_digimon() {
         r.memory()
     );
 }
+
+// ─── TEST-P1-T8 ───────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory whenever any Digimon enters the field.
+struct EntryObserverMem;
+impl CardEffect for EntryObserverMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_enter_field_anyone(card)
+            .name("+1 when any Digimon enters")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_enter_field_anyone_fires_for_all_players() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Observer", 3))
+        .add_card(plain_digimon("P1", "Play1", 2))
+        .hand(0, &["OBS", "P1"])
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(EntryObserverMem));
+
+    // Play OBS first (its own entry triggers OnEnterFieldAnyone — but
+    // the observer is the card being played, so its effects fire on
+    // itself too, yielding +1). Then play P1, which also triggers
+    // OnEnterFieldAnyone for OBS (which is now on the field), yielding +1.
+    r.play(0, 0); // OBS
+    let after_obs = r.memory();
+    r.play(0, 0); // P1
+    let after_p1 = r.memory();
+
+    // The delta between after_obs and after_p1 includes:
+    //   -2 (play_cost of P1) + 1 (OBS observed P1's entry) = -1
+    // So after_p1 = after_obs - 1.
+    assert_eq!(
+        after_p1,
+        after_obs - 1,
+        "OnEnterFieldAnyone should have fired when P1 entered, granting OBS +1"
+    );
+}
+
+// ─── TEST-P1-T9 ───────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory whenever any Digimon is deleted.
+struct DeletionObserverMem;
+impl CardEffect for DeletionObserverMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_any_deletion(card)
+            .name("+1 when any Digimon deleted")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_any_deletion_fires_for_battle_deletion() {
+    let mut atk = plain_digimon("ATK", "Atk", 5);
+    atk.level = Some(5);
+    atk.dp = Some(9000);
+    let mut def = plain_digimon("DEF", "Def", 5);
+    def.level = Some(5);
+    def.dp = Some(3000); // weaker — will be deleted
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(atk.clone())
+        .add_card(def.clone())
+        .add_card(plain_digimon("OBS", "DelObs", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["ATK", "OBS"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(15)
+        .start();
+    r.register_effect("OBS", Arc::new(DeletionObserverMem));
+
+    r.play(0, 0); // ATK → battle_area[0]
+    r.play(0, 0); // OBS → battle_area[1]
+
+    // Seed DEF directly on player 1's field (bypasses memory seesaw).
+    let defender_h = r.place_on_field(1, "DEF", Some(0));
+
+    let attacker_h = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let before = r.memory();
+    let _ = r.attack_digimon(attacker_h, defender_h, true);
+
+    // OBS fires once (DEF deleted). Only OBS is registered against
+    // OnAnyDeletion, so any memory increase relative to `before` is
+    // attributable to OBS. Other new timings (EndOfBattle/EndOfAttack)
+    // have nothing registered against them in this test.
+    assert!(
+        r.memory() > before,
+        "OnAnyDeletion should have fired when DEF was deleted, granting OBS +1 (before={}, after={})",
+        before,
+        r.memory()
+    );
+}

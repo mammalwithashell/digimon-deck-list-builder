@@ -111,6 +111,16 @@ impl Game {
 
         self.fire_on_play(player_id, field_index);
 
+        // OnEnterFieldAnyone: global observer — fires in every player's battle
+        // area after OnPlay resolves. Python mirror: OnEnterFieldAnyone timing.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnEnterFieldAnyone,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+
         Some(field_index)
     }
 
@@ -179,6 +189,16 @@ impl Game {
         });
 
         self.fire_on_play(player_id, field_index);
+
+        // OnEnterFieldAnyone: global observer — fires in every player's battle
+        // area after OnPlay resolves. Python mirror: OnEnterFieldAnyone timing.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnEnterFieldAnyone,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+            );
+        }
+        self.drain_effect_queue();
 
         Some(field_index)
     }
