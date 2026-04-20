@@ -13,7 +13,6 @@ use crate::card_data::CardData;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
-use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::tensor::FIELD_SLOTS;
 
@@ -97,7 +96,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     handle,
                     game.turn_count,
                     &game.card_data,
-                    &game.modifiers,
+                    game,
                 ) {
                     continue;
                 }
@@ -105,7 +104,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     let digivolved_this_turn =
                         attacker.turn_digivolved == game.turn_count;
                     digivolved_this_turn
-                        && game.modifiers.has_keyword(handle, Keyword::Blitz)
+                        && game.has_keyword(handle, Keyword::Blitz)
                 };
                 if !memory_ok {
                     continue;
@@ -124,7 +123,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let can_attack_unsuspended = game
                     .modifiers
                     .has(handle, ModifierType::CanAttackUnsuspended);
-                let has_raid = game.modifiers.has_keyword(handle, Keyword::Raid);
+                let has_raid = game.has_keyword(handle, Keyword::Raid);
                 let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
 
                 // Precompute max effective DP among unsuspended enemy Digimon
@@ -422,7 +421,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 // effect range). Mirrors Python action_mask.py:354-361:
                 // emits when the Digimon has Overclock AND at least one
                 // other sacrificeable permanent exists on the battle area.
-                if game.modifiers.has_keyword(handle, Keyword::Overclock)
+                if game.has_keyword(handle, Keyword::Overclock)
                     && game.has_overclock_sacrifice(player_id, i)
                 {
                     let bit = FIELD_EFFECT_START
@@ -436,7 +435,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 // (any enemy Digimon + security, subject to
                 // CannotAttackTarget). Vortex uses the summoning-sickness
                 // exemption; the other two use normal `can_attack`.
-                let vortex = game.modifiers.has_keyword(handle, Keyword::Vortex);
+                let vortex = game.has_keyword(handle, Keyword::Vortex);
                 let may_attack = game.modifiers.has(handle, ModifierType::MayAttack);
                 let force_attack = game.modifiers.has(handle, ModifierType::ForceAttack);
                 if !vortex && !may_attack && !force_attack {
@@ -559,7 +558,7 @@ fn option_color_match_available(
 }
 
 /// Basic attack eligibility: unsuspended Digimon not played this turn,
-/// unless modifier-granted Rush exempts summoning sickness.
+/// unless Rush (native printed OR modifier-granted) exempts summoning sickness.
 ///
 /// Vortex is not checked here — Vortex attacks belong to `EndOfTurnAction`
 /// phase mask generation (§4.6), not the Main-phase attack range.
@@ -568,7 +567,7 @@ fn can_basic_attack(
     handle: PermanentHandle,
     turn: u16,
     card_data: &[CardData],
-    modifiers: &ModifierRegistry,
+    game: &Game,
 ) -> bool {
     if perm.is_suspended {
         return false;
@@ -577,10 +576,9 @@ fn can_basic_attack(
         return false;
     }
     // Summoning sickness: can't attack the turn it was played unless Rush
-    // has been granted (modifier-granted only; native/static Rush pending
-    // §2.1b).
+    // is present (native printed OR modifier-granted) — §2.1b.
     let is_fresh = perm.turn_played == turn && perm.turn_digivolved != turn;
-    if is_fresh && !modifiers.has_keyword(handle, Keyword::Rush) {
+    if is_fresh && !game.has_keyword(handle, Keyword::Rush) {
         return false;
     }
     true
@@ -679,7 +677,7 @@ fn apply_force_attack_mask_replacement(
             handle,
             game.turn_count,
             &game.card_data,
-            &game.modifiers,
+            game,
         ) {
             continue;
         }
@@ -693,7 +691,7 @@ fn apply_force_attack_mask_replacement(
         let can_attack_unsuspended = game
             .modifiers
             .has(handle, ModifierType::CanAttackUnsuspended);
-        let has_raid = game.modifiers.has_keyword(handle, Keyword::Raid);
+        let has_raid = game.has_keyword(handle, Keyword::Raid);
         let raid_max_dp = if has_raid && !can_attack_unsuspended {
             let mut best: Option<i32> = None;
             for j in 0..max_opp {

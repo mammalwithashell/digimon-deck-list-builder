@@ -197,13 +197,13 @@ impl Game {
                 index: i as u8,
             };
             // Vortex — matches Python `perm.can_attack(is_vortex=True)`.
-            if self.modifiers.has_keyword(handle, Keyword::Vortex)
+            if self.has_keyword(handle, Keyword::Vortex)
                 && self.can_attack(handle, /* vortex = */ true)
             {
                 return true;
             }
             // Overclock — needs at least one other sacrificeable permanent.
-            if self.modifiers.has_keyword(handle, Keyword::Overclock)
+            if self.has_keyword(handle, Keyword::Overclock)
                 && self.has_overclock_sacrifice(player, i)
             {
                 return true;
@@ -276,7 +276,7 @@ impl Game {
             .get(overclock_index)
             .ok_or(OverclockError::InvalidIndex)?;
 
-        if !self.modifiers.has_keyword(overclock_handle, Keyword::Overclock) {
+        if !self.has_keyword(overclock_handle, Keyword::Overclock) {
             return Err(OverclockError::NotOverclock);
         }
         if !overclock_perm.top_card().is_digimon(&self.card_data) {

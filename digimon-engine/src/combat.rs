@@ -90,13 +90,10 @@ impl Game {
             return false;
         }
         // Summoning sickness: can't attack on the turn it was played unless
-        // Rush has been granted or this is a Vortex end-of-turn attack
-        // (§2.1 parity fix). Native Rush from a card's static keyword list
-        // is not yet checked — that requires the effect-listing
-        // infrastructure (§2.1b / §4.5). For now, only modifier-granted
-        // Rush exempts a permanent.
+        // Rush is present (native printed OR modifier-granted) or this is a
+        // Vortex end-of-turn attack (§2.1b parity fix).
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
-        if is_fresh && !vortex && !self.modifiers.has_keyword(handle, Keyword::Rush) {
+        if is_fresh && !vortex && !self.has_keyword(handle, Keyword::Rush) {
             return false;
         }
         true
@@ -363,7 +360,7 @@ impl Game {
             if !perm.is_digimon(&self.card_data) {
                 continue;
             }
-            if !self.modifiers.has_keyword(h, Keyword::Alliance) {
+            if !self.has_keyword(h, Keyword::Alliance) {
                 continue;
             }
             candidates.push(i as u8);
@@ -633,7 +630,7 @@ impl Game {
         // Mirrors Python's `_is_collision` check in
         // `permanent.py::can_be_blocker`.
         let attacker_has_collision =
-            self.modifiers.has_keyword(attacker, Keyword::Collision);
+            self.has_keyword(attacker, Keyword::Collision);
 
         let battle_area_len = self.player(defender_player).battle_area.len();
         let mut candidates: Vec<u8> = Vec::new();
@@ -658,7 +655,7 @@ impl Game {
             // Blocker required UNLESS the attacker has Collision, which
             // grants Blocker to every opponent Digimon for this attack.
             if !attacker_has_collision
-                && !self.modifiers.has_keyword(h, Keyword::Blocker)
+                && !self.has_keyword(h, Keyword::Blocker)
             {
                 continue;
             }
@@ -935,7 +932,7 @@ impl Game {
                                     .and_then(|p| p.card.dp(&self.card_data))
                                     .unwrap_or(0);
                                 if attacker_dp < sec_dp
-                                    && !self.modifiers.has_keyword(attacker, Keyword::Jamming)
+                                    && !self.has_keyword(attacker, Keyword::Jamming)
                                 {
                                     self.delete_permanent_with_effects(attacker);
                                     if let Some(st) = self.security_resolution.as_mut() {

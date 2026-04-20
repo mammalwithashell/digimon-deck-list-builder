@@ -181,3 +181,65 @@ fn game_has_keyword_bad_handle_returns_false() {
     let handle = PermanentHandle { player: 0, index: 99 };
     assert!(!r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush));
 }
+
+// ─── Phase 3 Task 3 behavioral regression tests ────────────────────────────
+
+#[test]
+fn native_printed_rush_allows_same_turn_attack() {
+    // A freshly-played Digimon with native printed Rush can attack
+    // on the same turn (normally summoning-sickness blocks this).
+    let mut atk = digimon_with_text("R", "\u{ff1c}Rush\u{ff1e} (This Digimon can attack the turn it comes into play.)");
+    atk.level = Some(5);
+    atk.dp = Some(8000);
+
+    let filler = digimon_with_text("F", "");
+    let mut r = DebugRunner::builder()
+        .add_card(atk)
+        .add_card(filler.clone())
+        .hand(0, &["R"])
+        .deck(0, &["F"; 10])
+        .deck(1, &["F"; 10])
+        .memory(5)
+        .start();
+
+    r.play(0, 0);
+    let handle = PermanentHandle { player: 0, index: 0 };
+    assert!(
+        r.game_mut().can_attack(handle, false),
+        "native printed Rush should allow fresh-turn attack"
+    );
+}
+
+#[test]
+fn native_printed_jamming_survives_losing_security_battle() {
+    // Attacker has Jamming printed natively; loses DP comparison
+    // against a security Digimon; Jamming keeps it alive.
+    let mut atk = digimon_with_text("J", "\u{ff1c}Jamming\u{ff1e} (...)");
+    atk.level = Some(5);
+    atk.dp = Some(2000); // weak
+
+    let mut sec = digimon_with_text("SEC", "");
+    sec.level = Some(5);
+    sec.dp = Some(9000); // strong security
+
+    let filler = digimon_with_text("F", "");
+    let mut r = DebugRunner::builder()
+        .add_card(atk)
+        .add_card(sec)
+        .add_card(filler)
+        .hand(0, &["J"])
+        .deck(0, &["F"; 10])
+        .deck(1, &["F"; 10])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+
+    r.play(0, 0);
+    let handle = PermanentHandle { player: 0, index: 0 };
+    let _ = r.attack_player(handle, 1, true);
+
+    assert!(
+        r.battle_area_size(0) > 0,
+        "Jamming should protect the losing attacker from deletion"
+    );
+}
