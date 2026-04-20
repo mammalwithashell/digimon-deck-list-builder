@@ -622,13 +622,7 @@ impl<'a> EffectContext<'a> {
 
         // Empty: skip all selection steps, invoke the callback immediately.
         if items.is_empty() {
-            let mut ctx = EffectContext::new(
-                self.game,
-                self.source_card,
-                self.source_permanent,
-                self.player,
-            );
-            callback(&mut ctx, Vec::new());
+            callback(self, Vec::new());
             return;
         }
 
@@ -837,6 +831,11 @@ fn install_permutation_step(
         source_card,
         source_permanent,
         callback: Box::new(move |game: &mut Game, action_id: u16| {
+            debug_assert!(
+                action_id >= SEL_REVEAL_START && action_id < SEL_REVEAL_START + remaining.len() as u16,
+                "select_ordered_permutation: action_id {} outside expected range [{}, {}); valid_action_ids was populated incorrectly",
+                action_id, SEL_REVEAL_START, SEL_REVEAL_START + remaining.len() as u16
+            );
             let pick_idx = (action_id - SEL_REVEAL_START) as usize;
             let mut new_remaining = remaining;
             let mut new_accum = accum;
