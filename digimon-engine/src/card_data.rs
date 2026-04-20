@@ -71,6 +71,13 @@ pub struct CardData {
     /// Normalized ID (index / CAPACITY) from cards.json. 0.0 if unset.
     #[serde(default)]
     pub norm_id: f32,
+    /// Keywords printed on the card's face (Rush, Jamming, Blocker, etc.),
+    /// parsed from effect_text / inherited_text / security_text at load
+    /// time via parse_printed_keywords. Distinct from modifier-granted
+    /// keywords managed by ModifierRegistry. The unified Game::has_keyword
+    /// query considers both sources.
+    #[serde(default)]
+    pub keywords: Vec<crate::enums::Keyword>,
 }
 
 /// Raw JSON shape from cards.json — matches the actual file format.
@@ -170,6 +177,13 @@ impl CardData {
             traits.extend(raw_card.attribute_eng);
             traits.extend(raw_card.type_eng);
 
+            // Parse keywords before moving the text fields into CardData.
+            let keywords = parse_printed_keywords(
+                &raw_card.effect_description_eng,
+                &raw_card.inherited_effect_description_eng,
+                &raw_card.security_effect_description_eng,
+            );
+
             let card = CardData {
                 card_id: raw_card.card_id.clone(),
                 card_name: raw_card.card_name_eng,
@@ -198,6 +212,7 @@ impl CardData {
                 effect_text: raw_card.effect_description_eng,
                 inherited_text: raw_card.inherited_effect_description_eng,
                 security_text: raw_card.security_effect_description_eng,
+                keywords,
                 effect_class_name: raw_card.card_effect_class_name,
                 index: raw_card.index,
                 norm_id: raw_card.norm_id,
@@ -206,6 +221,120 @@ impl CardData {
         }
         Ok(cards)
     }
+}
+
+/// Extract printed keywords from a card's text fields.
+///
+/// Keywords appear in card text as `＜Keyword＞` (full-width angle
+/// brackets) optionally followed by a parenthetical English
+/// description. Parametric keywords (`Security A. +N`,
+/// `De-Digivolve N`, `Draw N`) are parsed into their typed variants.
+///
+/// Returns a deduplicated Vec in document order across the three
+/// input fields.
+pub fn parse_printed_keywords(
+    effect_text: &str,
+    inherited_text: &str,
+    security_text: &str,
+) -> Vec<crate::enums::Keyword> {
+    use crate::enums::Keyword;
+
+    let mut found: Vec<Keyword> = Vec::new();
+
+    let push_unique = |k: Keyword, found: &mut Vec<Keyword>| {
+        if !found.contains(&k) {
+            found.push(k);
+        }
+    };
+
+    for text in [effect_text, inherited_text, security_text] {
+        let mut remaining = text;
+        while let Some(start) = remaining.find('＜') {
+            let after_open = &remaining[start + '＜'.len_utf8()..];
+            let Some(end) = after_open.find('＞') else { break };
+            let inside = &after_open[..end];
+            remaining = &after_open[end + '＞'.len_utf8()..];
+
+            let trimmed = inside.trim();
+
+            // Try non-parametric keywords first (longest-prefix wins).
+            // Order matters: "Blast Digivolve" before "Blast" etc. —
+            // here we check each prefix and break on the first match.
+            let mut matched = false;
+            for (prefix, kw) in [
+                ("Blast Digivolve", Keyword::Blast),
+                ("Blocker", Keyword::Blocker),
+                ("Rush", Keyword::Rush),
+                ("Jamming", Keyword::Jamming),
+                ("Piercing", Keyword::Piercing),
+                ("Reboot", Keyword::Reboot),
+                ("Blitz", Keyword::Blitz),
+                ("Armor", Keyword::Armor),
+                ("Raid", Keyword::Raid),
+                ("Alliance", Keyword::Alliance),
+                ("Save", Keyword::Save),
+                ("Fortitude", Keyword::Fortitude),
+                ("Overclock", Keyword::Overclock),
+                ("Barrier", Keyword::Barrier),
+                ("Decoy", Keyword::Decoy),
+                ("Material", Keyword::Material),
+                ("Partition", Keyword::Partition),
+                ("Vortex", Keyword::Vortex),
+                ("Collision", Keyword::Collision),
+            ] {
+                if trimmed.starts_with(prefix) {
+                    push_unique(kw, &mut found);
+                    matched = true;
+                    break;
+                }
+            }
+
+            if matched {
+                continue;
+            }
+
+            // Parametric: Security A. +N / -N
+            if let Some(rest) = trimmed.strip_prefix("Security A.") {
+                let rest = rest.trim();
+                let (sign, digits) = if let Some(d) = rest.strip_prefix('+') {
+                    (1i8, d)
+                } else if let Some(d) = rest.strip_prefix('-') {
+                    (-1i8, d)
+                } else {
+                    (1i8, rest)
+                };
+                let n_str = digits.trim().split_whitespace().next().unwrap_or("");
+                if let Ok(n) = n_str.parse::<u8>() {
+                    if sign < 0 {
+                        push_unique(Keyword::SecurityAttackMinus(n as i8), &mut found);
+                    } else {
+                        push_unique(Keyword::SecurityAttackPlus(n as i8), &mut found);
+                    }
+                }
+                continue;
+            }
+
+            // Parametric: De-Digivolve N
+            if let Some(rest) = trimmed.strip_prefix("De-Digivolve") {
+                let n_str = rest.trim().split_whitespace().next().unwrap_or("");
+                if let Ok(n) = n_str.parse::<u8>() {
+                    push_unique(Keyword::DeDigivolve(n), &mut found);
+                }
+                continue;
+            }
+
+            // Parametric: Draw N
+            if let Some(rest) = trimmed.strip_prefix("Draw") {
+                let n_str = rest.trim().split_whitespace().next().unwrap_or("");
+                if let Ok(n) = n_str.parse::<u8>() {
+                    push_unique(Keyword::DrawX(n), &mut found);
+                }
+                continue;
+            }
+        }
+    }
+
+    found
 }
 
 #[cfg(test)]
