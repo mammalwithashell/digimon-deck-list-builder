@@ -4,11 +4,11 @@
 //! compile and produce an Effect with the correct timing. Actual dispatch
 //! wiring is tested in subsequent Phase 1 tasks.
 
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming};
 use std::sync::Arc;
 
 fn dummy() -> CardHandle {
@@ -559,6 +559,234 @@ fn on_any_deletion_fires_for_battle_deletion() {
     assert!(
         r.memory() > before,
         "OnAnyDeletion should have fired when DEF was deleted, granting OBS +1 (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
+
+// ─── TEST-P1-T10 ──────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory whenever any permanent suspends.
+struct SuspendObserverMem;
+impl CardEffect for SuspendObserverMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_suspend(card)
+            .name("+1 on suspend")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+/// A CardEffect that grants +1 memory whenever any permanent unsuspends.
+struct UnsuspendObserverMem;
+impl CardEffect for UnsuspendObserverMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_unsuspend(card)
+            .name("+1 on unsuspend")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_suspend_fires_when_permanent_suspends() {
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("SUS", "Suspended", 3))
+        .add_card(plain_digimon("OBS", "SuspendObs", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["OBS"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(SuspendObserverMem));
+
+    // Place OBS on field (it's in hand → play it, then place SUS directly).
+    r.play(0, 0); // OBS → battle_area[0]
+
+    // Seed SUS directly on field at index 1 (bypasses memory/summoning checks).
+    let sus_h = r.place_on_field(0, "SUS", Some(0));
+
+    let before = r.memory();
+    // Suspend SUS — fires OnSuspend → OBS gains +1.
+    r.game_mut().suspend(sus_h);
+
+    assert!(
+        r.memory() > before,
+        "OnSuspend should have fired when SUS was suspended (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
+
+#[test]
+fn on_unsuspend_fires_when_permanent_unsuspends() {
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("SUS", "Suspended", 3))
+        .add_card(plain_digimon("OBS", "UnsuspendObs", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["OBS"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(UnsuspendObserverMem));
+
+    // Play OBS onto field.
+    r.play(0, 0); // OBS → battle_area[0]
+
+    // Seed SUS directly on field and pre-suspend it by setting the flag
+    // directly (bypassing Game::suspend so OnSuspend doesn't interfere).
+    let sus_h = r.place_on_field(0, "SUS", Some(0));
+    r.game_mut().players[sus_h.player as usize].battle_area[sus_h.index as usize].is_suspended =
+        true;
+
+    let before = r.memory();
+    // Unsuspend SUS — fires OnUnsuspend → OBS gains +1.
+    r.game_mut().unsuspend(sus_h);
+
+    assert!(
+        r.memory() > before,
+        "OnUnsuspend should have fired when SUS was unsuspended (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
+
+// ─── TEST-P1-T11 ──────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory when an egg hatches.
+struct HatchObsMem;
+impl CardEffect for HatchObsMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_hatch(card)
+            .name("+1 on hatch")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_hatch_fires_when_egg_hatches() {
+    let mut egg = plain_digimon("EGG", "Egg", 0);
+    egg.level = Some(2); // Lv.2 eggs are standard digitama
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(egg)
+        .add_card(plain_digimon("OBS", "HatchObs", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["OBS"])
+        .digitama(0, &["EGG"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(HatchObsMem));
+
+    // Play OBS onto field so it can observe.
+    r.play(0, 0); // OBS → battle_area[0]
+
+    // No breeding-area yet.
+    assert!(r.game_mut().player(0).breeding_area.is_none());
+
+    let before = r.memory();
+    let ok = r.game_mut().hatch(0);
+    assert!(ok, "hatch should succeed when digitama deck is non-empty");
+
+    assert!(
+        r.memory() > before,
+        "OnHatch should have fired after the egg moved to breeding (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
+
+// ─── TEST-P1-T12 ──────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory whenever any Digimon digivolves.
+struct DigivolveObsMem;
+impl CardEffect for DigivolveObsMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_digivolve(card)
+            .name("+1 on digivolve")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+/// A Lv.4 Red Digimon that can digivolve onto a Lv.3 Red base for free.
+fn lv4_digimon(card_id: &str, name: &str) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(4),
+        dp: Some(5000),
+        play_cost: 5,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs: vec![EvoCost {
+            card_color: 0, // Red
+            level: 3,
+            memory_cost: 0,
+        }],
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+#[test]
+fn on_digivolve_fires_globally_when_any_digimon_digivolves() {
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("B3", "Base3", 3))
+        .add_card(lv4_digimon("E4", "Evo4"))
+        .add_card(plain_digimon("OBS", "DigObs", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["E4", "OBS"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(DigivolveObsMem));
+
+    // Place B3 directly on player 0's field (index 0).
+    let base_h = r.place_on_field(0, "B3", Some(0));
+    assert_eq!(base_h.index, 0);
+
+    // Play OBS from hand (hand[1]) → battle_area[1].
+    r.play(0, 1); // OBS → field
+
+    // E4 is still at hand[0]. Digivolve E4 onto B3 (hand_index=0, target=base_h).
+    let before = r.memory();
+    let ok = r.game_mut().effect_initiated_digivolve(
+        0,
+        0, // E4 is hand[0]
+        base_h,
+        CostDelta::Free,
+        false,
+    );
+    assert!(ok, "effect_initiated_digivolve should succeed");
+
+    assert!(
+        r.memory() > before,
+        "OnDigivolve should have fired globally after E4 digivolved onto B3 (before={}, after={})",
         before,
         r.memory()
     );

@@ -254,18 +254,16 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Suspend a permanent and fire `OnSuspend` observers.
+    /// Delegates to `Game::suspend` — the canonical single-target chokepoint.
     pub fn suspend(&mut self, target: PermanentHandle) {
-        let player = self.game.player_mut(target.player);
-        if let Some(perm) = player.battle_area.get_mut(target.index as usize) {
-            perm.is_suspended = true;
-        }
+        self.game.suspend(target);
     }
 
+    /// Unsuspend a permanent and fire `OnUnsuspend` observers.
+    /// Delegates to `Game::unsuspend` — the canonical single-target chokepoint.
     pub fn unsuspend(&mut self, target: PermanentHandle) {
-        let player = self.game.player_mut(target.player);
-        if let Some(perm) = player.battle_area.get_mut(target.index as usize) {
-            perm.is_suspended = false;
-        }
+        self.game.unsuspend(target);
     }
 
     /// Move a specific card from `player`'s deck to their hand.

@@ -741,7 +741,16 @@ impl Game {
         );
         self.drain_effect_queue();
 
-        // TODO(parity): digivolve_observer mechanism not ported.
+        // OnDigivolve: global observer — fires in every player's battle area
+        // after the evolving permanent's WhenDigivolving resolves. Distinct
+        // from WhenDigivolving (self-timing on the evolving permanent).
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnDigivolve,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
 
         self.check_turn_end();
         true
@@ -1148,6 +1157,17 @@ impl Game {
             EffectTiming::WhenDigivolving,
             TriggerSource::Permanent(target),
         );
+        self.drain_effect_queue();
+
+        // OnDigivolve: global observer — fires in every player's battle area
+        // after the evolving permanent's WhenDigivolving resolves. Distinct
+        // from WhenDigivolving (self-timing on the evolving permanent).
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnDigivolve,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
         self.drain_effect_queue();
 
         true

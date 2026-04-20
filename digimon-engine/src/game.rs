@@ -8,6 +8,7 @@ use crate::cards::{build_registry, CardEffectRegistry};
 use crate::enums::{GamePhase, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
+use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
 use crate::selection::{
@@ -566,10 +567,90 @@ impl Game {
 
     // --- Convenience methods that avoid borrow conflicts ---
 
+    /// Suspend a single permanent. Fires `OnSuspend` observers in every
+    /// player's battle area if the permanent was not already suspended.
+    ///
+    /// This is the canonical chokepoint for single-target suspension.
+    /// `Player::unsuspend_all` (bulk turn-begin unsuspend) intentionally
+    /// bypasses this path — `StartOfYourTurn` is the canonical timing for
+    /// turn-start effects.
+    pub fn suspend(&mut self, handle: PermanentHandle) {
+        let already = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.is_suspended)
+            .unwrap_or(true); // treat out-of-range as "already suspended" to no-op
+        if already {
+            return;
+        }
+        if let Some(perm) = self
+            .players
+            .get_mut(handle.player as usize)
+            .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+        {
+            perm.is_suspended = true;
+        }
+        let n = self.players.len();
+        for pid in 0..n {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnSuspend,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+    }
+
+    /// Unsuspend a single permanent. Fires `OnUnsuspend` observers in every
+    /// player's battle area if the permanent was suspended.
+    ///
+    /// See `suspend` for the bulk-unsuspend caveat.
+    pub fn unsuspend(&mut self, handle: PermanentHandle) {
+        let was_suspended = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.is_suspended)
+            .unwrap_or(false); // treat out-of-range as "not suspended" to no-op
+        if !was_suspended {
+            return;
+        }
+        if let Some(perm) = self
+            .players
+            .get_mut(handle.player as usize)
+            .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+        {
+            perm.is_suspended = false;
+        }
+        let n = self.players.len();
+        for pid in 0..n {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnUnsuspend,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+    }
+
     /// Hatch for a player (copies turn_count to avoid borrow conflict).
+    /// Fires `OnHatch` observers in every player's battle area after the egg
+    /// moves into the breeding area.
     pub fn hatch(&mut self, player_id: PlayerId) -> bool {
         let turn = self.turn_count;
-        self.player_mut(player_id).hatch(turn)
+        let ok = self.player_mut(player_id).hatch(turn);
+        if ok {
+            let n = self.players.len();
+            for pid in 0..n {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnHatch,
+                    crate::selection::TriggerSource::PlayerBattleArea(
+                        pid as crate::enums::PlayerId,
+                    ),
+                );
+            }
+            self.drain_effect_queue();
+        }
+        ok
     }
 
     /// Returns `true` when `card` may digivolve onto `perm` per standard
