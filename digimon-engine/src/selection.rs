@@ -19,6 +19,44 @@ use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{EffectTiming, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
 
+/// Bitset of zones for `SelectionKind::UnionZone`. Designed to be extended
+/// with additional zone bits in later Phase 4 tasks without breaking callers.
+///
+/// The `|` operator is implemented so callers can write
+/// `UnionZoneSet::HAND | UnionZoneSet::TRASH` in the same style as `bitflags`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnionZoneSet(pub u8);
+
+impl UnionZoneSet {
+    /// The player's hand.
+    pub const HAND: UnionZoneSet = UnionZoneSet(0b0001);
+    /// The player's trash.
+    pub const TRASH: UnionZoneSet = UnionZoneSet(0b0010);
+
+    /// Returns `true` if the given zone bit is set.
+    pub fn contains(self, other: UnionZoneSet) -> bool {
+        self.0 & other.0 == other.0
+    }
+
+    /// Returns `true` if no zone bits are set.
+    pub fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+}
+
+impl std::ops::BitOr for UnionZoneSet {
+    type Output = UnionZoneSet;
+    fn bitor(self, rhs: UnionZoneSet) -> UnionZoneSet {
+        UnionZoneSet(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for UnionZoneSet {
+    fn bitor_assign(&mut self, rhs: UnionZoneSet) {
+        self.0 |= rhs.0;
+    }
+}
+
 /// Called when a selection resolves with a concrete action ID.
 pub type SelectionCallback =
     Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
@@ -56,6 +94,25 @@ pub enum SelectionKind {
     /// two or more triggers queued at the same timing (Digimon rules let
     /// the controller order their own simultaneous triggers).
     TriggerOrder,
+
+    // ── Phase 4 kinds ─────────────────────────────────────────────────────
+    // Full mask + decoder + helper dispatch lands in Tasks 2-5. Defined
+    // here so all downstream match arms compile from day one.
+
+    /// Pick one card from a union of two or more zones (e.g. hand OR trash).
+    /// `zones` is a `UnionZoneSet` bitfield indicating which zones are in
+    /// scope. The action-space encoding for each zone is resolved in Task 2.
+    UnionZone { zones: UnionZoneSet },
+
+    /// Pick cards in an ordered sequence (permutation). The caller re-installs
+    /// the prompt after each pick, decrementing `remaining`; at 0 the callback
+    /// fires with the final pick. Full decoder lands in Task 3.
+    OrderedPermutation { remaining: u8 },
+
+    /// Pick up to `max` cards from a zone; `picked` tracks how many have been
+    /// chosen so far. The callback fires on each pick; the effect decides when
+    /// to stop (or the player passes once `picked >= 1`). Full decoder in Task 4.
+    CountCappedMultiSelect { max: u8, picked: u8 },
 }
 
 /// One branch of a `SelectionKind::EffectChoice` prompt.

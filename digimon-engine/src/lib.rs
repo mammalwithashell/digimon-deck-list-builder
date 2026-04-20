@@ -55,5 +55,5 @@ pub use crate::events::GameEvent;
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,
     PendingSelection, PendingSelectionView, QueuedEffect, SelectionCallback, SelectionError,
-    SelectionKind, TriggerSource,
+    SelectionKind, TriggerSource, UnionZoneSet,
 };

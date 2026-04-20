@@ -54,6 +54,11 @@ pub enum GamePhase {
     // Special
     EndOfTurnAction,
     GameOver,
+
+    // Phase 4 selection kinds — richer prompt types (Tasks 2-5 wire dispatch)
+    SelectUnion,
+    SelectPermutation,
+    SelectBudgeted,
 }
 
 impl GamePhase {
@@ -80,6 +85,10 @@ impl GamePhase {
             GamePhase::AllianceTiming => "AllianceTiming",
             GamePhase::EndOfTurnAction => "EndOfTurnAction",
             GamePhase::GameOver => "GameOver",
+            // Phase 4 variants — no Python equivalent yet; use identifier as name
+            GamePhase::SelectUnion => "SelectUnion",
+            GamePhase::SelectPermutation => "SelectPermutation",
+            GamePhase::SelectBudgeted => "SelectBudgeted",
         }
     }
 }

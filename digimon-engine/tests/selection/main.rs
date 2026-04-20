@@ -3,5 +3,6 @@
 //! selection-kind routing dispatch.
 
 mod kinds;
+mod kinds_exist;
 mod material;
 mod opponent_permanent;

@@ -47,7 +47,13 @@ impl Game {
             | GamePhase::EffectChoice
             | GamePhase::BlockTiming
             | GamePhase::CounterTiming
-            | GamePhase::AllianceTiming => {
+            | GamePhase::AllianceTiming
+            // Phase 4 selection kinds — full dispatch lands in Tasks 2-5;
+            // route through resolve_selection now so the state machine can
+            // already accept callbacks installed by later tasks.
+            | GamePhase::SelectUnion
+            | GamePhase::SelectPermutation
+            | GamePhase::SelectBudgeted => {
                 let _ = self.resolve_selection(player_id, action_id);
             }
             GamePhase::EndOfTurnAction => self.decode_end_of_turn_action(action_id),
