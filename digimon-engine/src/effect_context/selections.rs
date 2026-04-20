@@ -478,6 +478,105 @@ impl<'a> EffectContext<'a> {
         });
     }
 
+    /// Prompt `self.player` (or `of_player`) to pick one card from a union of
+    /// zones — e.g. hand OR trash. The `zones` bitset selects which zones
+    /// are in scope (`UnionZoneSet::HAND | UnionZoneSet::TRASH`). Filter runs
+    /// once per card at install time; callback receives a `CardHandle` for the
+    /// chosen card.
+    ///
+    /// Action IDs reuse existing ranges: hand slots map to `PLAY_HAND_START +
+    /// i`; trash slots map to `TRASH_EFFECT_START + i`. The inner callback
+    /// disambiguates by range before invoking the user callback. No new action
+    /// range is introduced. This matches Python's `effect_play_from_zone`
+    /// dual-range approach.
+    ///
+    /// If no card passes the filter (across all zones), this is a no-op —
+    /// matching the silent-empty contract used by the other select_* helpers.
+    pub fn select_union_zone<F, C>(
+        &mut self,
+        of_player: PlayerId,
+        zones: crate::selection::UnionZoneSet,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, &CardSource) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
+    {
+        use crate::action::space::{HAND_MAIN_LIMIT, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT};
+        use crate::selection::UnionZoneSet;
+
+        let mut valid_action_ids: Vec<u16> = Vec::new();
+
+        // Hand zone — collect lengths first, then filter per index to avoid
+        // simultaneous `&game` + `&game.player.hand[i]` borrows.
+        if zones.contains(UnionZoneSet::HAND) {
+            let hand_len = self.game.player(of_player).hand.len();
+            let cap = hand_len.min(HAND_MAIN_LIMIT);
+            for i in 0..cap {
+                // Clone the CardSource so we can release the borrow on
+                // `self.game` before passing `&Game` to the filter.
+                let card_clone = self.game.player(of_player).hand[i].clone();
+                if filter(self.game, &card_clone) {
+                    valid_action_ids.push(PLAY_HAND_START + i as u16);
+                }
+            }
+        }
+
+        // Trash zone — same pattern.
+        if zones.contains(UnionZoneSet::TRASH) {
+            let trash_len = self.game.player(of_player).trash.len();
+            let cap = trash_len.min(TRASH_MAIN_LIMIT);
+            for i in 0..cap {
+                let card_clone = self.game.player(of_player).trash[i].clone();
+                if filter(self.game, &card_clone) {
+                    valid_action_ids.push(TRASH_EFFECT_START + i as u16);
+                }
+            }
+        }
+
+        if valid_action_ids.is_empty() {
+            return;
+        }
+
+        let selecting_player = self.player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let user_callback: Box<
+            dyn FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync,
+        > = Box::new(callback);
+
+        let previous_phase = self.game.current_phase;
+        self.game.current_phase = crate::enums::GamePhase::SelectUnion;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::UnionZone { zones },
+            selecting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                // Disambiguate by range.
+                let handle = if action_id >= TRASH_EFFECT_START {
+                    let idx = (action_id - TRASH_EFFECT_START) as usize;
+                    game.player(of_player).trash[idx].handle()
+                } else {
+                    // PLAY_HAND_START range (0-29)
+                    let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
+                    game.player(of_player).hand[idx].handle()
+                };
+                let mut ctx =
+                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                user_callback(&mut ctx, handle);
+            }),
+            on_decline: None,
+        });
+    }
+
     /// Mark a security slot face-up. Consumed by the observation tensor so
     /// the card's identity is exposed to the RL agent (it would otherwise be
     /// zeroed for hidden-information safety — §3.3). The slot is keyed by
