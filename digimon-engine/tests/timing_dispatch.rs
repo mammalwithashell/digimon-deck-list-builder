@@ -183,3 +183,121 @@ fn start_of_your_turn_fires_for_controller() {
         "StartOfYourTurn should have fired for player 0, granting +1 memory"
     );
 }
+
+// ─── TEST-P1-T3 ───────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory at the start of the controller's main phase.
+struct MainPhaseMemoryGain;
+impl CardEffect for MainPhaseMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::start_of_your_main_phase(card)
+            .name("+1 at main phase start")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn start_of_your_main_phase_fires_for_controller() {
+    let filler: Vec<&str> = vec!["F"; 10];
+    // Both games use a cost-1 card so post-play memory is identical.
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("MPM", "MainPhase", 1))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["MPM"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(3)
+        .start();
+    r.register_effect("MPM", Arc::new(MainPhaseMemoryGain));
+
+    // Play the card (works from Breeding phase — play_from_hand has no phase check).
+    r.play(0, 0);
+
+    // Advance to Main phase on player 0's turn — fires StartOfYourMainPhase.
+    r.game_mut().enter_main_phase();
+    let mem_after = r.memory();
+
+    // Control: same sequence without the effect, using the same cost-1 card.
+    let mut ctrl = DebugRunner::builder()
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["F"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(3)
+        .start();
+    ctrl.play(0, 0);
+    ctrl.game_mut().enter_main_phase();
+    let ctrl_mem = ctrl.memory();
+
+    assert_eq!(
+        mem_after,
+        ctrl_mem + 1,
+        "StartOfYourMainPhase should have fired for player 0, granting +1 memory"
+    );
+}
+
+// ─── TEST-P1-T4 ───────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory at the end of the opponent's turn.
+struct EndOfOppTurnMem;
+impl CardEffect for EndOfOppTurnMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_opponents_turn(card)
+            .name("+1 at end of opponent's turn")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn end_of_opponents_turn_fires_for_non_turn_player() {
+    // Player 0 plays a card with EndOfOpponentsTurn; when player 1 ends
+    // their turn, player 0's effect should fire.
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("EOM", "EndOppMem", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["EOM"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(3)
+        .start();
+    r.register_effect("EOM", Arc::new(EndOfOppTurnMem));
+    r.play(0, 0);
+
+    // Control game without the effect.
+    let mut ctrl = DebugRunner::builder()
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["F"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(3)
+        .start();
+    ctrl.play(0, 0);
+
+    // Pass once: player 0 ends their turn → player 1's turn.
+    // EndOfOpponentsTurn does NOT fire here (player 1 is the non-turn player,
+    // but they have no permanents with the effect).
+    r.pass_turn();
+    ctrl.pass_turn();
+
+    // Pass again: player 1 ends their turn → EndOfOpponentsTurn fires for
+    // player 0's permanents (player 0 is the non-active player during player
+    // 1's turn ending).
+    r.pass_turn();
+    ctrl.pass_turn();
+
+    // gain_memory(1) fires during player 1's (ending) turn, so it shifts the
+    // seesaw in player 1's favour. After the memory flip, player 0's observed
+    // memory is 1 less than in the control game — proving the effect fired.
+    assert_eq!(
+        r.memory() + 1,
+        ctrl.memory(),
+        "EndOfOpponentsTurn should have fired for player 0's permanent at end of player 1's turn"
+    );
+}

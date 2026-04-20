@@ -61,6 +61,15 @@ impl Game {
 
     /// Advance from breeding to main phase.
     pub fn enter_main_phase(&mut self) {
+        let tp = self.turn_player();
+        // StartOfYourMainPhase fires after Draw/Breeding, before the turn player
+        // takes their main-phase actions. Matches Python's OnStartMainPhase.
+        self.enqueue_triggered(
+            EffectTiming::StartOfYourMainPhase,
+            crate::selection::TriggerSource::PlayerBattleArea(tp),
+        );
+        self.drain_effect_queue();
+
         self.current_phase = GamePhase::Main;
     }
 
@@ -117,6 +126,16 @@ impl Game {
 
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
         self.modifiers.expire_end_of_turn(ending_player);
+
+        // EndOfOpponentsTurn: every non-ending-player observes the turn ending.
+        // Fires after EndOfYourTurn has drained but before memory flip and rotation.
+        for opp in self.opponents(ending_player) {
+            self.enqueue_triggered(
+                EffectTiming::EndOfOpponentsTurn,
+                crate::selection::TriggerSource::PlayerBattleArea(opp),
+            );
+        }
+        self.drain_effect_queue();
 
         // Advance turn
         self.turn_player_idx = (self.turn_player_idx + 1) % self.turn_order.len();
