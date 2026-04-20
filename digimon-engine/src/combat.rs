@@ -1085,6 +1085,19 @@ impl Game {
                 perm.is_attacking = false;
             }
         }
+
+        // EndOfAttack: observer timing, fires in every player's battle area.
+        // Used by "at the end of an attack" effects. Fires before modifiers
+        // are expired and pending_attack is cleared, so effects can still
+        // inspect the attack context.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::EndOfAttack,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
         outcome
@@ -1107,7 +1120,8 @@ impl Game {
             .unwrap_or(false)
     }
 
-    /// Fire OnAttack effects for the attacker.
+    /// Fire OnAttack effects for the attacker, then WhenAttacking for every
+    /// permanent in the attacker's battle area (observer timing).
     ///
     /// Thin wrapper over the effect-queue drainer. Single-trigger cases
     /// fire in one step; multi-trigger cases park on a `TriggerOrder`
@@ -1118,9 +1132,24 @@ impl Game {
             crate::selection::TriggerSource::Permanent(handle),
         );
         self.drain_effect_queue();
+
+        // WhenAttacking: observer timing — fires for every permanent in the
+        // attacker's battle area right after OnAttack. Distinct from OnAttack
+        // (which is scoped to the single attacker). Both fire before the
+        // Alliance window opens.
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::WhenAttacking,
+            crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+        );
+        self.drain_effect_queue();
     }
 
     /// Resolve battle between two permanents by DP comparison.
+    ///
+    /// Fires `EndOfBattle` for all players' battle areas after the DP
+    /// comparison completes (before `EndOfAttack`). This timing only fires
+    /// for Digimon-vs-Digimon battles — direct player attacks go through
+    /// `resolve_player_security_loop` instead.
     fn resolve_battle(
         &mut self,
         attacker: PermanentHandle,
@@ -1129,7 +1158,7 @@ impl Game {
         let a_dp = self.effective_dp(attacker).unwrap_or(0);
         let d_dp = self.effective_dp(defender).unwrap_or(0);
 
-        if a_dp > d_dp {
+        let outcome = if a_dp > d_dp {
             // Attacker wins — defender is deleted.
             self.delete_permanent_with_effects(defender);
             AttackResult::AttackerWins
@@ -1150,7 +1179,20 @@ impl Game {
                 self.delete_permanent_with_effects(attacker);
             }
             AttackResult::MutualDestruction
+        };
+
+        // EndOfBattle: fires only when a Digimon-vs-Digimon battle resolves.
+        // Direct player attacks with security loops skip this timing.
+        // Fire in every player's battle area, before EndOfAttack.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::EndOfBattle,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
         }
+        self.drain_effect_queue();
+
+        outcome
     }
 
     /// Delete a permanent, firing its OnDeletion effects first.

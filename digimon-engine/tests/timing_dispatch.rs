@@ -301,3 +301,162 @@ fn end_of_opponents_turn_fires_for_non_turn_player() {
         "EndOfOpponentsTurn should have fired for player 0's permanent at end of player 1's turn"
     );
 }
+
+// ─── TEST-P1-T5 ───────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory when any Digimon in its battle area is
+/// attacking (observer timing — fires for the whole attacker's side).
+struct AttackingMemoryGain;
+impl CardEffect for AttackingMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_attacking(card)
+            .name("+1 when attacking")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn when_attacking_fires_for_attackers_battle_area() {
+    // ATK is the attacker (Lv5, 8000 DP so it survives any security hit).
+    // OBS is a bystander on the same side with WhenAttacking — it should fire.
+    let mut attacker_data = plain_digimon("ATK", "Attacker", 5);
+    attacker_data.level = Some(5);
+    attacker_data.dp = Some(8000);
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(attacker_data)
+        .add_card(plain_digimon("OBS", "Observer", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["ATK", "OBS"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(AttackingMemoryGain));
+
+    // Play ATK then OBS. ATK lands at battle_area[0], OBS at battle_area[1].
+    r.play(0, 0); // ATK (hand slot 0)
+    r.play(0, 0); // OBS (now the only card left in hand)
+
+    let attacker_handle = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let before = r.memory();
+    // vortex=true bypasses summoning sickness (both were just played this turn).
+    let _ = r.attack_player(attacker_handle, 1, /* vortex */ true);
+
+    // WhenAttacking fires for every permanent in player 0's battle area.
+    // OBS's effect grants +1 memory.
+    assert!(
+        r.memory() > before,
+        "WhenAttacking should have fired, granting +1 from OBS (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
+
+// ─── TEST-P1-T6 ───────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory at the end of any attack.
+struct EoAttackMemoryGain;
+impl CardEffect for EoAttackMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_attack(card)
+            .name("+1 end of attack")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn end_of_attack_fires_for_all_players() {
+    let mut attacker_data = plain_digimon("ATK", "Attacker", 5);
+    attacker_data.level = Some(5);
+    attacker_data.dp = Some(8000);
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(attacker_data)
+        .add_card(plain_digimon("OBS", "EoAObserver", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["ATK", "OBS"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(EoAttackMemoryGain));
+
+    r.play(0, 0); // ATK
+    r.play(0, 0); // OBS
+
+    let attacker_handle = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let before = r.memory();
+    let _ = r.attack_player(attacker_handle, 1, true);
+
+    assert!(
+        r.memory() > before,
+        "EndOfAttack should have fired, granting +1 from OBS (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
+
+// ─── TEST-P1-T7 ───────────────────────────────────────────────────────────────
+
+/// A CardEffect that grants +1 memory when a Digimon-vs-Digimon battle resolves.
+struct EoBattleMemoryGain;
+impl CardEffect for EoBattleMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_battle(card)
+            .name("+1 end of battle")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn end_of_battle_fires_on_digimon_vs_digimon() {
+    // ATK (9000 DP) beats DEF (5000 DP). OBS on ATK's side has EndOfBattle.
+    let mut atk = plain_digimon("ATK", "Attacker", 5);
+    atk.level = Some(5);
+    atk.dp = Some(9000);
+    let mut def = plain_digimon("DEF", "Defender", 5);
+    def.level = Some(5);
+    def.dp = Some(5000); // will lose to ATK
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(atk)
+        .add_card(def)
+        .add_card(plain_digimon("OBS", "BattleObs", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["ATK", "OBS"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(EoBattleMemoryGain));
+
+    r.play(0, 0); // ATK → battle_area[0]
+    r.play(0, 0); // OBS → battle_area[1]
+
+    // Place DEF on player 1's field directly (bypasses the memory seesaw).
+    let defender_h = r.place_on_field(1, "DEF", Some(0));
+
+    let attacker_h = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let before = r.memory();
+    let _ = r.attack_digimon(attacker_h, defender_h, true);
+
+    assert!(
+        r.memory() > before,
+        "EndOfBattle should have fired on the ATK vs DEF battle (before={}, after={})",
+        before,
+        r.memory()
+    );
+}
