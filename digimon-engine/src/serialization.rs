@@ -189,11 +189,15 @@ mod tests {
 
 fn kind_int(cd: &CardData) -> i64 {
     // Match Python CardKind int values: 0=Digimon, 1=Tamer, 2=Option, 3=DigiEgg.
+    // Token is serialized as Digimon (0) for Python-parity purposes — the
+    // Python side has no Token variant, and token permanents are indistinguishable
+    // from Digimon to the tensor/serializer. See Phase 10 plan.
     match cd.card_kind {
         CardKind::Digimon => 0,
         CardKind::Tamer => 1,
         CardKind::Option => 2,
         CardKind::DigiEgg => 3,
+        CardKind::Token => 0, // treated as Digimon
     }
 }
 
