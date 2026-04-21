@@ -693,9 +693,9 @@ across both engines.
 
 **Ongoing hazard:** any future change to [`digimon-engine/src/tensor.rs`](../digimon-engine/src/tensor.rs) (`TENSOR_SIZE`) or [`digimon-engine/src/action/space.rs`](../digimon-engine/src/action/space.rs) (`ACTION_SPACE_SIZE`) invalidates every bundled or cached `.onnx`. The compatibility gate in `models.rs` and the exporter's shape assertion together make this a loud error, not a silent regression — but re-exports of all live checkpoints are required whenever either constant changes.
 
-## 10. Phase 10 — Tokens + De-Digivolve
+## 11. Phase 10 — Tokens + De-Digivolve
 
-### 10.1 🟢 Token creation + CardKind::Token — implemented
+### 11.1 🟢 Token creation + CardKind::Token — implemented
 
 **Python** — `digimon_gym/engine/data/token_registry.py`: `TOKENS`
 dict mapping token names to metadata; `create_token_card_source`
@@ -724,7 +724,7 @@ surfaces tokens today).
 **Coverage:** `digimon-engine/tests/cards_behavioral/tokens.rs` +
 `digimon-engine/src/token_registry.rs` unit tests.
 
-### 10.2 🟢 De-Digivolve N — implemented (superset of Python)
+### 11.2 🟢 De-Digivolve N — implemented (superset of Python)
 
 **Python** — per-archetype scripts call `card.lose_digivolution(N)` or
 similar helpers.
