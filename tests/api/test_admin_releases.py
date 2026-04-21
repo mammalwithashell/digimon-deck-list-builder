@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 
 import boto3
 import pytest
@@ -309,3 +311,132 @@ class TestAdminReleasesConfirm:
             json={"signature_b64": "xx"},
         )
         assert resp.status_code == 404
+
+
+class TestAdminReleasesPublish:
+    """publish endpoint + manifest rewrite + list tests"""
+
+    async def test_publish_writes_manifest_to_spaces(
+        self, client: AsyncClient, session_factory
+    ):
+        token = await _register_and_login(client, "p_publisher1")
+        await _grant_admin(session_factory, "p_publisher1")
+
+        # Create + upload + confirm both targets
+        create_resp = await _create_release(
+            client,
+            token,
+            version="0.2.0",
+            engine_commit="abc1234",
+            min_version="0.1.0",
+            release_notes="first alpha",
+            targets=["windows-x86_64", "linux-x86_64"],
+        )
+        assert create_resp.status_code == 201, create_resp.text
+        create = create_resp.json()
+        rid = create["release_id"]
+
+        for art in create["artifacts"]:
+            _raw_client().put_object(
+                Bucket=os.environ["SPACES_BUCKET"],
+                Key=art["spaces_key"],
+                Body=b"x" * 1024,
+            )
+            await client.post(
+                f"/admin/releases/{rid}/artifacts/{art['target']}/confirm",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"signature_b64": f"sig-{art['target']}"},
+            )
+
+        pub = await client.post(
+            f"/admin/releases/{rid}/publish",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert pub.status_code == 200, pub.text
+
+        manifest_obj = _raw_client().get_object(
+            Bucket=os.environ["SPACES_BUCKET"],
+            Key="updates/alpha/latest.json",
+        )
+        manifest = json.loads(manifest_obj["Body"].read())
+
+        assert manifest["version"] == "0.2.0"
+        assert manifest["channel"] == "alpha"
+        assert manifest["release_id"] == rid
+        assert manifest["engine_commit"] == "abc1234"
+        assert manifest["min_version"] == "0.1.0"
+        assert manifest["notes"] == "first alpha"
+        assert set(manifest["platforms"].keys()) == {"windows-x86_64", "linux-x86_64"}
+        for target, plat in manifest["platforms"].items():
+            assert plat["signature"] == f"sig-{target}"
+            assert f"releases/{rid}" in plat["url"]
+
+    async def test_publish_refuses_if_artifact_unconfirmed(
+        self, client: AsyncClient, session_factory
+    ):
+        token = await _register_and_login(client, "p_publisher2")
+        await _grant_admin(session_factory, "p_publisher2")
+        create_resp = await _create_release(
+            client,
+            token,
+            version="0.2.1",
+            engine_commit="x",
+            min_version="0.1.0",
+            targets=["windows-x86_64"],
+        )
+        assert create_resp.status_code == 201
+        rid = create_resp.json()["release_id"]
+        pub = await client.post(
+            f"/admin/releases/{rid}/publish",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert pub.status_code == 409
+
+    async def test_publish_unpublishes_previous_on_same_channel(
+        self, client: AsyncClient, session_factory
+    ):
+        token = await _register_and_login(client, "p_publisher3")
+        await _grant_admin(session_factory, "p_publisher3")
+
+        async def _cut(version):
+            create_resp = await _create_release(
+                client,
+                token,
+                version=version,
+                engine_commit="e",
+                min_version="0.1.0",
+                targets=["windows-x86_64"],
+            )
+            assert create_resp.status_code == 201, create_resp.text
+            create = create_resp.json()
+            rid = create["release_id"]
+            for art in create["artifacts"]:
+                _raw_client().put_object(
+                    Bucket=os.environ["SPACES_BUCKET"],
+                    Key=art["spaces_key"],
+                    Body=b"x",
+                )
+                await client.post(
+                    f"/admin/releases/{rid}/artifacts/{art['target']}/confirm",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"signature_b64": "sig"},
+                )
+            pub = await client.post(
+                f"/admin/releases/{rid}/publish",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert pub.status_code == 200, pub.text
+            return rid
+
+        first = await _cut("0.2.0")
+        second = await _cut("0.2.1")
+
+        listing = await client.get(
+            "/admin/releases?channel=alpha",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert listing.status_code == 200, listing.text
+        rows = listing.json()["releases"]
+        by_id = {r["id"]: r for r in rows}
+        assert by_id[first]["published"] is False
+        assert by_id[second]["published"] is True

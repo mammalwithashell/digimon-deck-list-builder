@@ -11,7 +11,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,8 @@ from digimon_gym.db.schemas import (
     AppReleaseConfirmResponse,
     AppReleaseCreateRequest,
     AppReleaseCreateResponse,
+    AppReleaseResponse,
+    ListAppReleasesResponse,
 )
 from digimon_gym.storage import spaces
 
@@ -177,4 +179,132 @@ async def confirm_artifact(
         target=target,
         file_sha256=sha256_hex,
         file_size_bytes=total_bytes,
+    )
+
+
+async def _build_manifest(release: AppRelease) -> dict:
+    """Serialize a release + its artifacts into the Tauri-compatible
+    manifest JSON shape."""
+    platforms: dict[str, dict] = {}
+    for art in release.artifacts:
+        if art.file_sha256 is None or art.signature_b64 is None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"artifact {art.target} is unconfirmed; "
+                    "confirm it before publish"
+                ),
+            )
+        platforms[art.target] = {
+            "signature": art.signature_b64,
+            "url": spaces.public_url(art.spaces_key),
+        }
+    pub_iso = (release.published_at or _utcnow()).isoformat().replace("+00:00", "Z")
+    return {
+        "version": release.version,
+        "pub_date": pub_iso,
+        "notes": release.release_notes,
+        "platforms": platforms,
+        "min_version": release.min_version,
+        "engine_commit": release.engine_commit,
+        "channel": release.channel,
+        "release_id": release.id,
+    }
+
+
+def _manifest_key(channel: str) -> str:
+    return f"updates/{channel}/latest.json"
+
+
+async def _rewrite_channel_manifest(
+    db: AsyncSession, channel: str
+) -> dict | None:
+    """Regenerate updates/<channel>/latest.json from the newest published
+    release on that channel. Returns the manifest dict, or None (and
+    deletes the Spaces object) if no published release exists.
+    """
+    release = await db.scalar(
+        select(AppRelease)
+        .where(
+            AppRelease.channel == channel,
+            AppRelease.published == True,  # noqa: E712
+        )
+        .order_by(AppRelease.published_at.desc())
+        .limit(1)
+    )
+    key = _manifest_key(channel)
+    if release is None:
+        try:
+            await asyncio.to_thread(spaces.delete_object, key)
+        except ClientError:
+            pass  # 404 is fine
+        return None
+    manifest = await _build_manifest(release)
+    await asyncio.to_thread(spaces.put_json, key, manifest, 60)
+    return manifest
+
+
+@admin_router.post(
+    "/{release_id}/publish",
+    response_model=AppReleaseResponse,
+)
+async def publish_release(
+    release_id: str,
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+) -> AppReleaseResponse:
+    """Mark a release published, unpublish others on same channel, rewrite
+    the channel manifest in Spaces."""
+    release = await db.get(AppRelease, release_id)
+    if release is None:
+        raise HTTPException(status_code=404, detail="release not found")
+
+    for art in release.artifacts:
+        if art.file_sha256 is None or art.signature_b64 is None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"artifact {art.target} is unconfirmed",
+            )
+
+    # Unpublish any other row on this channel
+    others = await db.scalars(
+        select(AppRelease).where(
+            AppRelease.channel == release.channel,
+            AppRelease.published == True,  # noqa: E712
+            AppRelease.id != release.id,
+        )
+    )
+    for row in others.all():
+        row.published = False
+
+    release.state = "uploaded"
+    release.published = True
+    release.published_at = _utcnow()
+    await db.flush()
+
+    await _rewrite_channel_manifest(db, release.channel)
+    await db.commit()
+    await db.refresh(release)
+    return AppReleaseResponse.model_validate(release)
+
+
+@admin_router.get(
+    "",
+    response_model=ListAppReleasesResponse,
+)
+async def list_releases(
+    channel: str | None = Query(default=None),
+    published: bool | None = Query(default=None),
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+) -> ListAppReleasesResponse:
+    """List releases, optionally filtered by channel and/or published."""
+    stmt = select(AppRelease).order_by(AppRelease.created_at.desc())
+    if channel is not None:
+        stmt = stmt.where(AppRelease.channel == channel)
+    if published is not None:
+        stmt = stmt.where(AppRelease.published == published)
+    rows = (await db.scalars(stmt)).all()
+    return ListAppReleasesResponse(
+        releases=[AppReleaseResponse.model_validate(r) for r in rows]
     )
