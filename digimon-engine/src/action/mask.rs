@@ -61,7 +61,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // argument) isn't carried in Rust — tracked as §4.7x.
             let play_blocked = game
                 .modifiers
-                .any_with_type(ModifierType::CannotPlayFromHand);
+                .player_has(player_id, ModifierType::CannotPlayFromHand)
+                || game
+                    .modifiers
+                    .any_with_type(ModifierType::CannotPlayFromHand);
             for i in 0..max_hand as usize {
                 if play_blocked {
                     continue;
@@ -84,11 +87,19 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             }
 
             // --- Attack (100-399) ---
+            // §4.7e CannotAttack (player-scoped) — zero ALL attack bits for
+            // this player. Check before entering the per-attacker loop.
             // Memory gate is per-attacker: baseline requires memory >= 0,
             // but §4.3 Blitz carves out "Blitz + digivolved this turn" even
             // when memory < 0. Native/static Blitz parsing remains §4.3b.
+            let attack_blocked = game
+                .modifiers
+                .player_has(player_id, ModifierType::CannotAttack);
             let max_field = me.battle_area.len().min(FIELD_SLOTS);
             for i in 0..max_field {
+                if attack_blocked {
+                    continue;
+                }
                 let attacker = &me.battle_area[i];
                 let handle = PermanentHandle { player: player_id, index: i as u8 };
                 if !can_basic_attack(
@@ -292,8 +303,17 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // permanent at sub-slot `+2` (FIELD_EFFECT_SLOT_FOR_MAIN),
             // first-match-wins across the entire digivolution stack.
             // Inherited-vs-top filter matches `source_dp_contribution`.
+            //
+            // §4.7f CannotActivateMainEffects (player-scoped) — zero ALL
+            // FIELD_EFFECT bits for this player when the modifier is active.
+            let main_effects_blocked = game
+                .modifiers
+                .player_has(player_id, ModifierType::CannotActivateMainEffects);
             let field_limit = me.battle_area.len().min(FIELD_SLOTS);
             for i in 0..field_limit {
+                if main_effects_blocked {
+                    continue;
+                }
                 let perm = &me.battle_area[i];
                 let perm_handle = PermanentHandle {
                     player: player_id,
