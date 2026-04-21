@@ -14,6 +14,7 @@ use crate::effect::CardEffect;
 
 pub mod bt17;
 pub mod test;
+pub mod tokens;
 
 /// Registry of card_id -> CardEffect implementation.
 #[derive(Default)]
@@ -59,5 +60,6 @@ pub fn build_registry() -> CardEffectRegistry {
     let mut registry = CardEffectRegistry::new();
     test::register(&mut registry);
     bt17::register(&mut registry);
+    tokens::register(&mut registry);
     registry
 }
