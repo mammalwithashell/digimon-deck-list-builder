@@ -9,6 +9,7 @@
 //! conditional effect).
 
 mod test_cards;
+mod tokens;
 
 // Sample template for forthcoming hand-written production card tests.
 // Currently ignored pending the engine gaps that BT17-015 depends on.

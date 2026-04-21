@@ -254,6 +254,56 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Materialize a token on `controller`'s battle area.
+    ///
+    /// Looks up `token_name` in `game.token_registry`, synthesizes a
+    /// `CardSource` with `is_token = true`, wraps it in a `Permanent`, and
+    /// pushes onto `controller.battle_area`. No play cost, no OnPlay
+    /// observer fan-out (tokens enter via effect, not via `play_from_hand`).
+    ///
+    /// Returns the spawned permanent's handle, or `None` if the token name
+    /// is unknown or the field is full.
+    pub fn play_token(
+        &mut self,
+        controller: crate::enums::PlayerId,
+        token_name: &str,
+    ) -> Option<crate::permanent::PermanentHandle> {
+        use crate::card_source::CardSource;
+        use crate::permanent::{Permanent, PermanentHandle};
+
+        let def = self.game.token_registry.get(token_name)?;
+        let target_card_id = def.card_id.clone();
+        let data_index = self
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == target_card_id)?;
+        debug_assert_eq!(
+            self.game.card_data[data_index].card_kind,
+            crate::enums::CardKind::Token,
+            "token_registry entry must map to a CardKind::Token CardData row"
+        );
+
+        let slots = self.game.rules.field_slots as usize;
+        if self.game.player(controller).battle_area.len() >= slots {
+            return None;
+        }
+
+        let card_index = self.game.next_card_index();
+        let mut card = CardSource::new_token(data_index, controller, card_index);
+        card.card_index = card_index;
+        let turn = self.game.turn_count;
+        let perm = Permanent::new(card, turn);
+
+        let player = self.game.player_mut(controller);
+        player.battle_area.push(perm);
+        let idx = player.battle_area.len() - 1;
+        Some(PermanentHandle {
+            player: controller,
+            index: idx as u8,
+        })
+    }
+
     pub fn suspend(&mut self, target: PermanentHandle) {
         let player = self.game.player_mut(target.player);
         if let Some(perm) = player.battle_area.get_mut(target.index as usize) {
@@ -344,5 +394,14 @@ mod tests {
         assert_eq!(ctx.memory(), 3);
         ctx.lose_memory(2);
         assert_eq!(ctx.memory(), 1);
+    }
+
+    #[test]
+    fn play_token_unknown_name_returns_none() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+        assert!(ctx.play_token(0, "no-such-token-lol").is_none());
     }
 }
