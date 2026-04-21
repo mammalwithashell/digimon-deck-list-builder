@@ -2,17 +2,23 @@
 //!
 //! Covers:
 //!   - CannotPlayFromHand (player-scoped upgrade)
-//!   - CannotAttack (player-scoped gate on attack bits)
+//!   - CannotAttack (player-scoped gate on attack bits, Main phase AND EndOfTurnAction)
 //!   - CannotActivateMainEffects (player-scoped gate on FIELD_EFFECT bits)
 //!   - CannotSuspend — no mask bit exists (suspend is effect-only); skipped.
 
+use std::sync::Arc;
+
 use digimon_engine::action::{
-    build_action_mask, encode_attack, ACTION_SPACE_SIZE, ATTACK_END, ATTACK_START, FIELD_EFFECT_END,
-    FIELD_EFFECT_START, PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET,
+    build_action_mask, encode_attack, ACTION_SPACE_SIZE, ATTACK_END, ATTACK_START,
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET,
 };
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardHandle;
+use digimon_engine::cards::CardEffectRegistry;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, CardKind, Expiry, ModifierType};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType};
 use digimon_engine::modifiers::PlayerModifierEntry;
 
 // ─── Helper card factories ────────────────────────────────────────────────────
@@ -226,26 +232,119 @@ fn cannot_attack_only_affects_target_player() {
     );
 }
 
+/// CannotAttack (player-scoped) must also gate attack bits in EndOfTurnAction.
+///
+/// Regression guard for the §4.7e fix that extended the CannotAttack gate from
+/// the Main-phase attack loop into the EndOfTurnAction Vortex / MayAttack /
+/// ForceAttack window. Without this fix, a Digimon with Vortex would still
+/// expose attack bits under CannotAttack (e.g. EX8-026 MetalSeadramon Ace).
+#[test]
+fn cannot_attack_also_gates_end_of_turn_attack_bits() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATCK", 3000))
+        .add_card(make_digimon("DEF", 2000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+
+    // Place a Vortex-granted attacker (turn_played = 0, not summoning-sick).
+    let attacker = r.place_on_field(tp, "ATCK", Some(0));
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+
+    // Grant Vortex keyword so the EndOfTurnAction arm would normally emit attack bits.
+    r.game.modifiers.grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+
+    // Enter EndOfTurnAction.
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    // Confirm attack bits ARE lit before blocking (validates the test setup).
+    let mask_before = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask_before[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        "Vortex should emit security-attack bit in EndOfTurnAction before CannotAttack"
+    );
+    assert_eq!(
+        mask_before[encode_attack(attacker.index as u16, defender.index as u16) as usize], 1.0,
+        "Vortex should emit digimon-attack bit in EndOfTurnAction before CannotAttack"
+    );
+
+    // Install player-scoped CannotAttack on the turn player.
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry {
+            modifier: ModifierType::CannotAttack,
+            value: 0,
+            expiry: Expiry::Permanent,
+            source_permanent: None,
+            source_player: opp,
+        },
+    );
+
+    // All attack bits must now be zero — CannotAttack overrides Vortex.
+    let mask_blocked = build_action_mask(&r.game, tp);
+    for i in ATTACK_START..ATTACK_END {
+        assert_eq!(
+            mask_blocked[i as usize], 0.0,
+            "attack bit {} should be zero in EndOfTurnAction under CannotAttack",
+            i
+        );
+    }
+}
+
 // ─── CannotActivateMainEffects — player-scoped ───────────────────────────────
+
+// Minimal CardEffect stub: unconditional [Field] [Main] activatable effect.
+// Used to verify the CannotActivateMainEffects gate actually suppresses a
+// live bit (not just asserts zero on an already-zero range).
+struct FieldMainAlways;
+impl CardEffect for FieldMainAlways {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::declarative(card)
+            .name("Field Main — always (gate test fixture)")
+            .timing(EffectTiming::MainOnField)
+            .build()]
+    }
+}
+
+fn field_main_registry() -> CardEffectRegistry {
+    let mut r = CardEffectRegistry::default();
+    r.insert("FIELD-MAIN", Arc::new(FieldMainAlways));
+    r
+}
+
+fn field_main_bit(field_index: usize) -> usize {
+    (FIELD_EFFECT_START
+        + field_index as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+}
 
 /// Install CannotActivateMainEffects on the turn player → all FIELD_EFFECT bits must be zero.
 ///
-/// Even without an activatable field effect, the gate must zero the entire
-/// FIELD_EFFECT range for the target player. We verify the range is all-zero
-/// when the modifier is present (the range is already 0 without any
-/// activatable effect; the gate prevents any effect from being lit).
+/// The test first confirms a live FIELD_EFFECT bit exists (proving the card
+/// has a real MainOnField effect), then installs the modifier and asserts the
+/// bit is suppressed. This makes the test a genuine regression guard: removing
+/// the gate would cause the first assert to still pass but the second to fail.
 #[test]
 fn cannot_activate_main_effects_zeroes_field_effect_bits() {
     let mut r = DebugRunner::builder()
-        .add_card(make_digimon("ATCK", 3000))
+        .add_card(make_digimon("FIELD-MAIN", 3000))
+        .with_registry(field_main_registry())
         .start();
 
     let tp = r.game.turn_player();
 
-    r.place_on_field(tp, "ATCK", Some(0));
+    let perm = r.place_on_field(tp, "FIELD-MAIN", Some(0));
     r.game.enter_main_phase();
 
-    // Install CannotActivateMainEffects on the turn player.
+    // Step 1: confirm a FIELD_EFFECT bit is actually lit before the modifier.
+    let mask_before = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask_before[field_main_bit(perm.index as usize)], 1.0,
+        "FIELD_EFFECT bit for MainOnField card must be 1.0 before modifier — confirms fixture is wired correctly"
+    );
+
+    // Step 2: install CannotActivateMainEffects on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
         PlayerModifierEntry {
@@ -257,10 +356,11 @@ fn cannot_activate_main_effects_zeroes_field_effect_bits() {
         },
     );
 
-    let mask = build_action_mask(&r.game, tp);
+    // Step 3: all FIELD_EFFECT bits must now be zero — modifier suppressed the live bit.
+    let mask_after = build_action_mask(&r.game, tp);
     for i in FIELD_EFFECT_START..FIELD_EFFECT_END {
         assert_eq!(
-            mask[i as usize], 0.0,
+            mask_after[i as usize], 0.0,
             "FIELD_EFFECT bit {} should be zero under CannotActivateMainEffects",
             i
         );

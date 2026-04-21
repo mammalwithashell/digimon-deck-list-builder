@@ -428,6 +428,14 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // enforcement; the mask doesn't hide PASS).
             mask[PASS as usize] = 1.0;
 
+            // §4.7e CannotAttack (player-scoped) — zero ALL attack bits for
+            // this player, including the end-of-turn Vortex / MayAttack /
+            // ForceAttack window. Rules judgment: CannotAttack overrides
+            // ForceAttack; a "cannot attack" effect always wins.
+            let attack_blocked = game
+                .modifiers
+                .player_has(player_id, ModifierType::CannotAttack);
+
             let max_field = me.battle_area.len().min(FIELD_SLOTS);
             let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
 
@@ -448,6 +456,12 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         + i as u16 * EFFECTS_PER_PERMANENT
                         + FIELD_EFFECT_SLOT_FOR_OVERCLOCK;
                     mask[bit as usize] = 1.0;
+                }
+
+                // §4.7e CannotAttack gate — skip all attack-bit emission
+                // for this permanent when the player-scoped modifier is set.
+                if attack_blocked {
+                    continue;
                 }
 
                 // §4.6 attack bits: Vortex / MayAttack / ForceAttack all
