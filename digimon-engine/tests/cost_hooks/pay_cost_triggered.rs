@@ -8,7 +8,7 @@
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{DebugRunner, make_test_card};
 use digimon_engine::effect::{CardEffect, Effect};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 // ─── Helper CardEffect structs ────────────────────────────────────────────────
 
@@ -36,18 +36,24 @@ impl CardEffect for PayCostFalseSkipsProcess {
     }
 }
 
-/// OnPlay effect: pay_cost_fn loses 2 memory (side-effect), returns true →
-/// process gains 1 memory.
-struct PayCostMutatesState;
-impl CardEffect for PayCostMutatesState {
+/// OnPlay effect: pay_cost_fn and process each push their name into a shared
+/// log. Used to verify that pay_cost_fn runs BEFORE process (order-sensitive).
+struct PayCostOrderLog {
+    log: Arc<Mutex<Vec<&'static str>>>,
+}
+impl CardEffect for PayCostOrderLog {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let log_pay = Arc::clone(&self.log);
+        let log_proc = Arc::clone(&self.log);
         vec![Effect::on_play(card)
-            .name("pay_cost mutates state")
-            .pay_cost_fn(|ctx| {
-                ctx.lose_memory(2);
+            .name("pay_cost order log")
+            .pay_cost_fn(move |_ctx| {
+                log_pay.lock().unwrap().push("pay_cost");
                 true
             })
-            .process(|ctx| ctx.gain_memory(1))
+            .process(move |_ctx| {
+                log_proc.lock().unwrap().push("process");
+            })
             .build()]
     }
 }
@@ -156,49 +162,38 @@ fn pay_cost_returning_false_skips_process() {
 }
 
 #[test]
-fn pay_cost_can_mutate_game_state() {
-    // OnPlay effect: .pay_cost_fn(|ctx| { ctx.lose_memory(2); true })
-    //                .process(|ctx| ctx.gain_memory(1))
-    // Use printed_cost = 0 so the play cost is 0 and doesn't interfere.
-    // Start memory = 0. Play the card.
-    // Expected: memory = 0 - 2 + 1 = -1.
-    let card = make_test_card("PCMUTATE", "PayCostMutate");
-    // make_test_card defaults play_cost to 0 (it uses level-3 with play_cost 3,
-    // but we rely on the actual default — if the cost is non-zero, set memory
-    // high enough so the play doesn't fail, then account for it in the assert).
-    // To keep the math clean and explicit, start at memory=10 and account for
-    // the printed play cost separately.
+fn pay_cost_runs_before_process() {
+    // Ordering test: pay_cost_fn and process each append their name to a
+    // shared log. After the card is played, the log must read
+    // ["pay_cost", "process"] — confirming pay_cost_fn ran first.
+    //
+    // This is genuinely order-sensitive: if the implementation accidentally
+    // reversed the call sites (process before pay_cost_fn), the log would
+    // read ["process", "pay_cost"] and the assertion would fail. The previous
+    // net-arithmetic test (lose 2, gain 1 → net -1) could not catch this
+    // because arithmetic is commutative — the numbers come out the same
+    // regardless of execution order.
+    let log: Arc<Mutex<Vec<&'static str>>> = Arc::new(Mutex::new(Vec::new()));
+    let log_clone = Arc::clone(&log);
+
+    let card = make_test_card("PCORDER", "PayCostOrder");
+
     let mut r = DebugRunner::builder()
         .add_card(card)
-        .hand(0, &["PCMUTATE"])
+        .hand(0, &["PCORDER"])
         .memory(10)
         .start();
 
-    r.register_effect("PCMUTATE", Arc::new(PayCostMutatesState));
+    r.register_effect("PCORDER", Arc::new(PayCostOrderLog { log: log_clone }));
 
-    // Determine the card's printed play cost so we can account for it.
-    let printed_cost = r.game.card_data
-        .iter()
-        .find(|c| c.card_id == "PCMUTATE")
-        .map(|c| c.play_cost as i16)
-        .unwrap_or(0);
-
-    let memory_before = r.memory(); // 10
     r.play(0, 0);
 
-    // Playing the card costs `printed_cost` memory.
-    // pay_cost_fn fires: lose_memory(2) → memory drops by 2.
-    // process fires: gain_memory(1) → memory gains 1.
-    // Net: memory_before - printed_cost - 2 + 1
-    let expected = memory_before - printed_cost - 2 + 1;
+    let observed = log.lock().unwrap().clone();
     assert_eq!(
-        r.memory(),
-        expected,
-        "pay_cost_fn side-effect (lose 2) and process (gain 1) should both apply; \
-         expected {} - {} - 2 + 1 = {}",
-        memory_before,
-        printed_cost,
-        expected,
+        observed,
+        vec!["pay_cost", "process"],
+        "pay_cost_fn must run before process; observed order: {:?}",
+        observed,
     );
 }
 

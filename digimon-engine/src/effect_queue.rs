@@ -306,6 +306,10 @@ impl Game {
                 }
             }
         }
+        // Note: pay_cost_fn is NOT gated by skip_condition. For SecuritySkill
+        // timing, pay_cost_fn still fires (intentional — pay-costs are
+        // orthogonal to the condition-skipping behavior for security effects).
+        //
         // Phase 5 Task 3: pay-cost hook — fires after condition passes, before
         // process. Mirrors the condition-check pattern above: borrow
         // `&effect.pay_cost_fn` read-only, construct a fresh `EffectContext`
