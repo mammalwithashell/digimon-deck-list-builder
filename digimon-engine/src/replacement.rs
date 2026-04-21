@@ -50,6 +50,16 @@ pub enum ReplacementOutcome {
 
 /// Closure type for passive modifier replacement conditions. Evaluated at
 /// try_replace time to decide whether the modifier applies.
+///
+/// **`EffectReadContext` caveat:** passives have no installer `CardHandle`
+/// (modifiers live in the registry, not on a specific effect), so the
+/// context passed to this closure uses a sentinel `CardHandle(0)` for
+/// `source_card`. **Do not read `ctx.source_card` from this closure** —
+/// it aliases the first card allocated in the game, not the modifier's
+/// installer. The meaningful inputs are the `&ReplacementSubject`
+/// parameter (the event's target) and `ctx.source_permanent`, which for
+/// permanent-scoped passives points at the *target* permanent, and for
+/// player-scoped passives points at the installer permanent (if any).
 pub type ReplacementConditionFn =
     Box<dyn Fn(&EffectReadContext, &ReplacementSubject) -> bool + Send + Sync + 'static>;
 
@@ -249,7 +259,11 @@ fn try_replace_inner(
 /// `Candidate` per match. Order:
 /// 1. Subject's own effects at `timing` (only relevant for `Permanent` subject).
 /// 2. Other battle-area permanents' effects at `timing`.
-/// 3. Passive modifier candidates for the target (Task 2 stub — returns `Vec::new()`).
+/// 3. Passive modifier candidates via `passive_modifier_candidates` — scans
+///    both permanent- and player-scoped `CannotBe*` / `CannotBeDestroyed*`
+///    modifiers, honoring `cause_filter` and `replacement_condition`. Emits
+///    `PassiveCancel` candidates that synthesize `ReplacementOutcome::Cancelled`
+///    at dispatch. See §10 of the spec.
 fn collect_candidates(
     game: &crate::game::Game,
     timing: EffectTiming,
@@ -332,8 +346,10 @@ fn collect_candidates(
         }
     }
 
-    // (3) Passive modifier candidates. TODO(phase-7 Task 5): wire the
-    // `passive_modifier_to_would` mapping. v1 stub returns nothing.
+    // (3) Passive modifier candidates — scans the modifier registry for
+    // permanent- and player-scoped `CannotBe*` entries that map to this
+    // timing via `passive_modifier_to_would`. Each match emits a
+    // `PassiveCancel` candidate that synthesizes `Cancelled` at dispatch.
     out.extend(passive_modifier_candidates(game, timing, subject, cause));
 
     out
