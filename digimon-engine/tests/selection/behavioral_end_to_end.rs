@@ -1,9 +1,16 @@
-//! End-to-end behavioral test combining `select_ordered_permutation` (Task 3)
-//! with `as_selecting_player(opp).select_union_zone(...)` (Tasks 2 + 5).
+//! End-to-end behavioral test combining `place_remainder_on_deck` (Phase 4
+//! follow-up helper) with `as_selecting_player(opp).select_union_zone(...)`
+//! (Tasks 2 + 5).
 //!
 //! **Scenario** (synthesized from meta patterns — not a real printed card):
 //! > "Reveal top 3 cards of your deck. Place them on top of your deck in any
 //! >  order. Then your opponent chooses one card from your hand OR trash to trash."
+//!
+//! **Migration note**: the original test used `select_ordered_permutation` with
+//! a hand-rolled `for handle in ordered_vec.iter().rev()` loop inside the
+//! callback. This version replaces that with `place_remainder_on_deck` for the
+//! placement phase, then installs the opponent union-zone as a separate step
+//! after the permutation resolves. All original assertions are preserved.
 //!
 //! This test walks every resolution step, checks selection-kind and
 //! `selecting_player` routing, verifies mask-level action visibility for
@@ -135,57 +142,30 @@ fn permutation_then_opponent_union_zone_tech_flow() {
     assert!(r.game.players[p0 as usize].deck.is_empty(), "deck must be empty after reveal");
 
     // top3[0] = DECK-A (was top), top3[1] = DECK-B, top3[2] = DECK-C.
-    let handle_a = top3[0]; // DECK-A
-    let handle_b = top3[1]; // DECK-B
-    let handle_c = top3[2]; // DECK-C
+    // These handles are not passed directly to place_remainder_on_deck (it reads
+    // game.revealed_cards automatically), but are kept here for documentation.
+    let _handle_a = top3[0]; // DECK-A
+    let _handle_b = top3[1]; // DECK-B
+    let _handle_c = top3[2]; // DECK-C
 
-    // ─── 3. Install the permutation selection ────────────────────────────────
+    // ─── 3. Install the permutation selection via place_remainder_on_deck ───────
     //
-    // Callback: once the player has ordered [A, B, C], place the chosen order
-    // back on top of deck (ordered_vec[0] = first from top), then install the
-    // opponent union-zone selection.
+    // `place_remainder_on_deck` reads whatever remains in `game.revealed_cards`
+    // (all 3 cards from step 2) and installs an ordered-permutation selection.
+    // The callback places each card back on top with the correct iteration
+    // direction so ordered_vec[0] is drawn first.
     //
+    // The opponent union-zone is installed as a separate step after the
+    // permutation resolves (see step 5 below).
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, p0);
+        ctx.place_remainder_on_deck(p0, StackPosition::Top);
+    }
+
     // We capture whether the union-zone was eventually resolved by recording
     // the handle the union-zone callback fires with.
     let union_zone_cb_fired: Arc<Mutex<Option<CardHandle>>> = Arc::new(Mutex::new(None));
     let union_zone_slot = Arc::clone(&union_zone_cb_fired);
-
-    {
-        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, p0);
-        ctx.select_ordered_permutation(
-            vec![handle_a, handle_b, handle_c],
-            "Place top 3 in any order",
-            move |inner_ctx, ordered_vec| {
-                // Place cards back on deck: ordered_vec[0] goes on top, so
-                // push in reverse order (each push to Top lands as new top).
-                for handle in ordered_vec.iter().rev() {
-                    inner_ctx.game.return_to_deck_from_reveal(p0, *handle, StackPosition::Top);
-                }
-
-                // Install opponent union-zone: player 1 chooses from player 0's
-                // HAND | TRASH to trash.
-                inner_ctx
-                    .as_selecting_player(p1)
-                    .select_union_zone(
-                        p0,
-                        UnionZoneSet::HAND | UnionZoneSet::TRASH,
-                        "Opponent: choose a card from your opponent's hand or trash",
-                        false,
-                        |_, _| true,
-                        move |resolve_ctx, chosen_handle| {
-                            // Trash the chosen card. Find it in hand or trash and remove.
-                            // For the hand path: locate the hand index and trash it.
-                            let player_ref = resolve_ctx.game.player(p0);
-                            if let Some(idx) = player_ref.hand.iter().position(|c| c.handle() == chosen_handle) {
-                                resolve_ctx.game.trash_from_hand_by_index(p0, idx);
-                            }
-                            // (For trash-from-trash: already in trash, no move needed.)
-                            *union_zone_slot.lock().unwrap() = Some(chosen_handle);
-                        },
-                    );
-            },
-        );
-    }
 
     // ─── 4. Walk through permutation steps ───────────────────────────────────
     //
@@ -240,17 +220,42 @@ fn permutation_then_opponent_union_zone_tech_flow() {
     }
     r.game.resolve_selection(p0, SEL_REVEAL_START).expect("step 3 resolve");
 
+    // ─── 4b. Install opponent union-zone (separate step after permutation) ────
+    //
+    // `place_remainder_on_deck` only handles placement. The opponent union-zone
+    // is a separate effect that follows the placement in the card-text scenario.
+    // We install it here, after the permutation has fully resolved, using the
+    // same `as_selecting_player(p1).select_union_zone(...)` call from the
+    // original test.
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, p0);
+        ctx.as_selecting_player(p1)
+            .select_union_zone(
+                p0,
+                UnionZoneSet::HAND | UnionZoneSet::TRASH,
+                "Opponent: choose a card from your opponent's hand or trash",
+                false,
+                |_, _| true,
+                move |resolve_ctx, chosen_handle| {
+                    let player_ref = resolve_ctx.game.player(p0);
+                    if let Some(idx) = player_ref.hand.iter().position(|c| c.handle() == chosen_handle) {
+                        resolve_ctx.game.trash_from_hand_by_index(p0, idx);
+                    }
+                    *union_zone_slot.lock().unwrap() = Some(chosen_handle);
+                },
+            );
+    }
+
     // ─── 5. Post-permutation assertions ──────────────────────────────────────
     //
-    // After the final pick the permutation callback fires:
+    // After the final pick the place_remainder_on_deck callback fires:
     //  - ordered_vec = [DECK-C, DECK-B, DECK-A] (order of picks)
-    //  - The callback returns each to deck via StackPosition::Top in reverse
-    //    order, so the deck ends as [DECK-C (top), DECK-B, DECK-A (bottom)]:
+    //  - The callback (StackPosition::Top, rev iteration) places cards:
     //      push DECK-A (rev[0]) → deck = [DECK-A]
     //      push DECK-B (rev[1]) → deck = [DECK-A, DECK-B]
     //      push DECK-C (rev[2]) → deck = [DECK-A, DECK-B, DECK-C]
     //    Pop from Vec end gives DECK-C first — confirming top = DECK-C.
-    //  - Then the union-zone selection is installed (opponent picks from p0's hand/trash).
+    //  - The union-zone selection is now installed (opponent picks from p0's hand/trash).
 
     let deck = &r.game.players[p0 as usize].deck;
     assert_eq!(deck.len(), 3, "all 3 revealed cards must be back on deck");

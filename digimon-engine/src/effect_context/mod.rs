@@ -345,6 +345,88 @@ impl<'a> EffectContext<'a> {
         self.game.return_to_deck_from_reveal(player, card, position)
     }
 
+    /// Place all cards currently in `game.revealed_cards` back onto `player`'s
+    /// deck at `position`, in a player-chosen order.
+    ///
+    /// **Contract**: `ordered_vec[0]` is drawn first among the placed cards.
+    ///
+    /// - **Empty pool** → silent no-op; no `PendingSelection` installed.
+    /// - **1 card** → still installs a 1-choice `OrderedPermutation` so the RL
+    ///   agent sees the (trivial) ordering decision (no-approximations policy).
+    /// - **N cards** → installs `select_ordered_permutation` over the remainder;
+    ///   the callback places cards at `position` using the correct iteration
+    ///   direction so `ordered_vec[0]` ends up drawn first:
+    ///   - `Top`:    iterate `rev()`, push each (`deck.push`) — last pushed lands
+    ///               at Vec-end (= deck top = drawn first).
+    ///   - `Bottom`: iterate forward, insert each at index 0 (`deck.insert(0)`) —
+    ///               each subsequent insert pushes the previous card deeper; final
+    ///               state has `ordered_vec[0]` at the highest index among the
+    ///               placed group (closest to top of the bottom-placed set).
+    ///   - `Random`: iterate forward, call `return_to_deck_from_reveal(Random)`
+    ///               for each — placement order is semantically irrelevant but the
+    ///               permutation selection is still surfaced to the RL agent.
+    pub fn place_remainder_on_deck(
+        &mut self,
+        player: PlayerId,
+        position: crate::enums::StackPosition,
+    ) {
+        use crate::card_source::CardHandle;
+        use crate::enums::StackPosition;
+
+        // Snapshot handles of every card currently in the reveal pool.
+        let remainder: Vec<CardHandle> = self
+            .game
+            .revealed_cards
+            .iter()
+            .map(|cs| cs.handle())
+            .collect();
+
+        debug_assert!(
+            remainder.len() <= 10,
+            "place_remainder_on_deck: reveal pool has {} cards; select_ordered_permutation is capped at 10",
+            remainder.len()
+        );
+
+        // Empty pool → silent no-op.
+        if remainder.is_empty() {
+            return;
+        }
+
+        self.select_ordered_permutation(
+            remainder,
+            "Place remaining cards on deck in any order",
+            move |ctx, ordered_vec| {
+                match position {
+                    StackPosition::Top => {
+                        // Reverse-iterate: last item is pushed first, so ordered_vec[0]
+                        // is pushed last → lands at Vec-end (deck top) → drawn first.
+                        for handle in ordered_vec.iter().rev() {
+                            ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Top);
+                        }
+                    }
+                    StackPosition::Bottom => {
+                        // Forward-iterate with insert(0): ordered_vec[0] is inserted
+                        // first at index 0; each subsequent insert pushes it one step
+                        // further from index 0. Final: ordered_vec[0] is at the highest
+                        // index among the placed group (closest to top within the
+                        // bottom-placed set) → drawn first among them.
+                        for handle in ordered_vec.iter() {
+                            ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
+                        }
+                    }
+                    StackPosition::Random => {
+                        // Each card is placed at a random position. The permutation
+                        // selection is still surfaced — the ordering is strategically
+                        // irrelevant but the RL action space must see it (§17).
+                        for handle in ordered_vec.iter() {
+                            ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Random);
+                        }
+                    }
+                }
+            },
+        );
+    }
+
     /// Shuffle `player`'s deck. Pair with `add_to_hand_from_deck` for
     /// "search and shuffle" effects.
     pub fn shuffle_deck(&mut self, player: PlayerId) {

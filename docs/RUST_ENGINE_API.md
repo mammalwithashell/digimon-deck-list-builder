@@ -1013,26 +1013,68 @@ Each step reuses the `SEL_REVEAL_START` action range; the resolver maps `action 
 ```rust
 // "Return the rest to the bottom of the deck in any order."
 // (called after reveal_top_deck has returned the candidate handles)
+// Prefer `place_remainder_on_deck` for this pattern (see the next section).
 Effect::on_play(card)
     .name("Order deck bottom")
     .process(|ctx| {
-        let revealed = ctx.reveal_top_deck(ctx.player, 4);
-        // Suppose filter kept 1 in hand; rest need ordering:
-        let to_order: Vec<CardHandle> = revealed.iter()
-            .map(|cs| cs.card_handle())
-            .collect();
-        ctx.select_ordered_permutation(
-            to_order,
-            "Place remaining cards on bottom in any order",
-            |ctx, ordered| {
-                for handle in ordered.iter().rev() {
-                    ctx.return_to_deck_from_reveal(ctx.player, *handle, StackPosition::Bottom);
-                }
-            },
-        );
+        ctx.reveal_top_deck(ctx.player, 4);
+        // (select_reveal here to take some cards)
+        // Then place the remainder directly:
+        ctx.place_remainder_on_deck(ctx.player, StackPosition::Bottom);
     })
     .build()
 ```
+
+---
+
+### `place_remainder_on_deck`
+
+```rust
+pub fn place_remainder_on_deck(
+    &mut self,
+    player: PlayerId,
+    position: StackPosition,
+)
+```
+
+**Semantics.** A convenience wrapper for the canonical Digimon TCG "scry-and-return" pattern: reveal N cards, take some matching cards (via `select_reveal`), then place the remainder on top or bottom of the deck in player-chosen order.
+
+`place_remainder_on_deck` snapshots all `CardHandle`s currently in `game.revealed_cards` for `player` and calls `select_ordered_permutation` over them. The permutation callback places each card at `position` with the correct iteration direction so `ordered_vec[0]` is drawn first among the placed cards.
+
+**Iteration direction by position:**
+- `StackPosition::Top` — reverse iteration + `deck.push()`. `ordered_vec[0]` is pushed last → lands at Vec-end (deck top) → drawn first.
+- `StackPosition::Bottom` — forward iteration + `deck.insert(0)`. Each insert at index 0 pushes previous inserts one step higher. Final state: `ordered_vec[0]` occupies the highest index among the placed group (closest to top within the bottom group) → drawn first.
+- `StackPosition::Random` — forward iteration; each card is placed at a random position via the single-card helper. The permutation selection is still surfaced — strategically irrelevant but required by the no-approximations policy (§17).
+
+**Empty pool.** If `game.revealed_cards` is empty, the method is a silent no-op — no `PendingSelection` installed, deck unchanged.
+
+**Singleton.** A 1-card remainder still installs a 1-choice `OrderedPermutation` selection (no auto-selection).
+
+**Canonical search pattern (worked example):**
+
+```rust
+// Card: "Reveal the top 5 cards of your deck. Add 1 Royal Knight Digimon
+//        to your hand. Place the rest on the bottom of your deck in any order."
+ctx.reveal_top_deck(p, 5);
+ctx.select_reveal(
+    "Add 1 Royal Knight to hand",
+    false,
+    |g, idx| {
+        let cs = &g.revealed_cards[idx];
+        let data = &g.card_data[cs.data_index];
+        data.card_kind == CardKind::Digimon && data.traits.iter().any(|t| t == "Royal Knight")
+    },
+    move |ctx, _idx| {
+        // The selected card is moved to hand inside the callback.
+        // (Use add_to_hand_from_reveal for the chosen handle.)
+        // Remaining cards stay in revealed_cards for place_remainder_on_deck.
+    },
+);
+// After select_reveal resolves, revealed_cards holds only the unchosen cards.
+ctx.place_remainder_on_deck(p, StackPosition::Bottom);
+```
+
+**Note on chaining follow-up effects.** `place_remainder_on_deck` installs its own `PendingSelection` callback internally. If the card text requires another selection after the placement (e.g., "…then your opponent chooses a card to trash"), install that selection *after* `place_remainder_on_deck` resolves, in a separate step — not chained inside the same callback. See `digimon-engine/tests/selection/behavioral_end_to_end.rs` for an example of this two-step pattern.
 
 ---
 

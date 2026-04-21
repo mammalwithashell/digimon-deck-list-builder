@@ -10,4 +10,5 @@ mod material;
 mod opponent_permanent;
 mod opponent_selector;
 mod ordered_permutation;
+mod place_remainder;
 mod union_zone;
