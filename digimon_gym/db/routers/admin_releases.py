@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone
 
+from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,8 @@ from digimon_gym.db.database import get_db
 from digimon_gym.db.models import AppRelease, AppReleaseArtifact, User
 from digimon_gym.db.schemas import (
     AppReleaseArtifactUploadSlot,
+    AppReleaseConfirmRequest,
+    AppReleaseConfirmResponse,
     AppReleaseCreateRequest,
     AppReleaseCreateResponse,
 )
@@ -120,4 +123,58 @@ async def create_release(
         version=release.version,
         channel=release.channel,
         artifacts=slots,
+    )
+
+
+@admin_router.post(
+    "/{release_id}/artifacts/{target}/confirm",
+    response_model=AppReleaseConfirmResponse,
+)
+async def confirm_artifact(
+    release_id: str,
+    target: str,
+    request: AppReleaseConfirmRequest,
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+) -> AppReleaseConfirmResponse:
+    """Confirm CI upload: HEAD the object, stream SHA-256, store signature."""
+    artifact = await db.scalar(
+        select(AppReleaseArtifact).where(
+            AppReleaseArtifact.release_id == release_id,
+            AppReleaseArtifact.target == target,
+        )
+    )
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="artifact not found")
+
+    # HEAD first so we 422 cleanly on missing upload rather than crashing
+    # inside the streaming hash.
+    try:
+        await asyncio.to_thread(spaces.head_object, artifact.spaces_key)
+    except ClientError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Spaces object {artifact.spaces_key} not present "
+                f"(CI upload failed?): {e}"
+            ),
+        )
+
+    try:
+        sha256_hex, total_bytes = await asyncio.to_thread(
+            spaces.stream_sha256, artifact.spaces_key
+        )
+    except ClientError as e:
+        raise HTTPException(status_code=422, detail=f"stream_sha256 failed: {e}")
+
+    artifact.file_sha256 = sha256_hex
+    artifact.file_size_bytes = total_bytes
+    artifact.signature_b64 = request.signature_b64
+    await db.commit()
+
+    return AppReleaseConfirmResponse(
+        release_id=release_id,
+        target=target,
+        file_sha256=sha256_hex,
+        file_size_bytes=total_bytes,
     )

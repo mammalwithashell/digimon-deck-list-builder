@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 import boto3
 import pytest
 from botocore.client import Config as BotocoreConfig
@@ -229,3 +231,81 @@ class TestAdminReleasesCreate:
 
         resp = await _create_release(client, plain_token)
         assert resp.status_code == 403
+
+
+class TestAdminReleasesConfirm:
+    """confirm endpoint tests"""
+
+    async def test_confirm_hashes_and_stores_signature(
+        self, client: AsyncClient, session_factory
+    ):
+        token = await _register_and_login(client, "c_confirmer1")
+        await _grant_admin(session_factory, "c_confirmer1")
+
+        create = await _create_release(
+            client,
+            token,
+            version="0.2.0",
+            targets=["windows-x86_64"],
+        )
+        assert create.status_code == 201
+        body = create.json()
+        rid = body["release_id"]
+        win_slot = next(a for a in body["artifacts"] if a["target"] == "windows-x86_64")
+        win_key = win_slot["spaces_key"]
+
+        # Simulate CI uploading the installer bytes via moto
+        payload = b"fake-installer-bytes"
+        _raw_client().put_object(
+            Bucket=_BUCKET,
+            Key=win_key,
+            Body=payload,
+        )
+
+        confirm = await client.post(
+            f"/admin/releases/{rid}/artifacts/windows-x86_64/confirm",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"signature_b64": "c29tZS1zaWduYXR1cmU="},
+        )
+        assert confirm.status_code == 200, confirm.text
+        cbody = confirm.json()
+        assert cbody["release_id"] == rid
+        assert cbody["target"] == "windows-x86_64"
+        assert cbody["file_size_bytes"] == len(payload)
+        assert cbody["file_sha256"] == hashlib.sha256(payload).hexdigest()
+
+        # DB row updated with hash, size, signature
+        async with session_factory() as db:
+            art = (
+                await db.execute(
+                    select(AppReleaseArtifact).where(
+                        AppReleaseArtifact.release_id == rid,
+                        AppReleaseArtifact.target == "windows-x86_64",
+                    )
+                )
+            ).scalar_one()
+            assert art.file_sha256 == hashlib.sha256(payload).hexdigest()
+            assert art.file_size_bytes == len(payload)
+            assert art.signature_b64 == "c29tZS1zaWduYXR1cmU="
+
+    async def test_confirm_unknown_target_returns_404(
+        self, client: AsyncClient, session_factory
+    ):
+        token = await _register_and_login(client, "c_confirmer2")
+        await _grant_admin(session_factory, "c_confirmer2")
+
+        create = await _create_release(
+            client,
+            token,
+            version="0.3.0",
+            targets=["windows-x86_64"],
+        )
+        assert create.status_code == 201
+        rid = create.json()["release_id"]
+
+        resp = await client.post(
+            f"/admin/releases/{rid}/artifacts/linux-x86_64/confirm",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"signature_b64": "xx"},
+        )
+        assert resp.status_code == 404
