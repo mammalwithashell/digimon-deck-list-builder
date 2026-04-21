@@ -1,0 +1,161 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  fast-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m pytest tests -m "not slow" -x -q
+
+  tauri-tests:
+    needs: fast-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  build:
+    needs: fast-tests
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/digimon-api:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/digimon-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      API_IMAGE: ghcr.io/${{ github.repository_owner }}/digimon-api:${{ needs.build.outputs.image_tag }}
+      POSTGRES_USER: digimon
+      POSTGRES_PASSWORD: cipassword
+      POSTGRES_DB: digimon
+      JWT_SECRET: cisecret
+      SPACES_ENDPOINT: https://nyc3.digitaloceanspaces.com
+      SPACES_BUCKET: ci-unused
+      SPACES_REGION: nyc3
+      SPACES_KEY: ci-unused
+      SPACES_SECRET: ci-unused
+      SPACES_CDN_URL: https://ci-unused.example.com
+      TRAINING_WORKER_DISABLED: "1"
+      AI_WORKER_DISABLED: "1"
+      MATCHMAKING_RANKED_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Write .env for compose
+        run: |
+          cat > .env <<EOF
+          POSTGRES_USER=$POSTGRES_USER
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          POSTGRES_DB=$POSTGRES_DB
+          JWT_SECRET=$JWT_SECRET
+          SPACES_ENDPOINT=$SPACES_ENDPOINT
+          SPACES_BUCKET=$SPACES_BUCKET
+          SPACES_REGION=$SPACES_REGION
+          SPACES_KEY=$SPACES_KEY
+          SPACES_SECRET=$SPACES_SECRET
+          SPACES_CDN_URL=$SPACES_CDN_URL
+          TRAINING_WORKER_DISABLED=$TRAINING_WORKER_DISABLED
+          AI_WORKER_DISABLED=$AI_WORKER_DISABLED
+          MATCHMAKING_RANKED_ENABLED=$MATCHMAKING_RANKED_ENABLED
+          EOF
+      - name: Start API + Postgres
+        run: |
+          docker compose -f docker-compose.prod.yml -f docker-compose.override.local.yml up -d postgres api
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8000/health; then exit 0; fi
+            sleep 2
+          done
+          echo "API did not come up"
+          docker compose -f docker-compose.prod.yml logs api
+          exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+      - name: Install Playwright deps + run tests
+        working-directory: frontend
+        env:
+          VITE_API_URL: http://localhost:8000
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run build
+          npx playwright test
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+
+  deploy:
+    needs: [e2e, tauri-tests]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/digimon
+            docker compose -f docker-compose.prod.yml pull api
+            docker compose -f docker-compose.prod.yml up -d api
+            docker image prune -f
+      - name: Post-deploy healthcheck
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf https://inbetweentheatre.duckdns.org/health; then exit 0; fi
+            sleep 3
+          done
+          exit 1
