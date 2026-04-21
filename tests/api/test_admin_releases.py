@@ -440,3 +440,219 @@ class TestAdminReleasesPublish:
         by_id = {r["id"]: r for r in rows}
         assert by_id[first]["published"] is False
         assert by_id[second]["published"] is True
+
+
+class TestAdminReleasesLifecycle:
+
+    @pytest.mark.asyncio
+    async def test_unpublish_rewrites_manifest_to_previous(
+        self, client: AsyncClient, session_factory
+    ):
+        import json
+        token = await _register_and_login(client, "l_lifecycle1")
+        await _grant_admin(session_factory, "l_lifecycle1")
+
+        async def _cut(version):
+            create = await _create_release(
+                client, token,
+                version=version, engine_commit="e", min_version="0.1.0",
+                targets=["windows-x86_64"],
+            )
+            body = create.json() if hasattr(create, "json") else create
+            rid = body["release_id"]
+            for art in body["artifacts"]:
+                _raw_client().put_object(
+                    Bucket=os.environ["SPACES_BUCKET"],
+                    Key=art["spaces_key"], Body=b"x",
+                )
+                await client.post(
+                    f"/admin/releases/{rid}/artifacts/{art['target']}/confirm",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"signature_b64": f"sig-{version}"},
+                )
+            await client.post(
+                f"/admin/releases/{rid}/publish",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            return rid
+
+        first = await _cut("0.2.0")
+        second = await _cut("0.2.1")
+
+        unpub = await client.post(
+            f"/admin/releases/{second}/unpublish",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert unpub.status_code == 200
+        assert unpub.json()["current_version"] == "0.2.0"
+
+        manifest = json.loads(
+            _raw_client().get_object(
+                Bucket=os.environ["SPACES_BUCKET"],
+                Key="updates/alpha/latest.json",
+            )["Body"].read()
+        )
+        assert manifest["version"] == "0.2.0"
+
+    @pytest.mark.asyncio
+    async def test_unpublish_only_release_deletes_manifest(
+        self, client: AsyncClient, session_factory
+    ):
+        import botocore.exceptions
+        token = await _register_and_login(client, "l_lifecycle2")
+        await _grant_admin(session_factory, "l_lifecycle2")
+
+        create = await _create_release(
+            client, token,
+            version="0.2.0", engine_commit="e", min_version="0.1.0",
+            targets=["windows-x86_64"],
+        )
+        body = create.json() if hasattr(create, "json") else create
+        rid = body["release_id"]
+        for art in body["artifacts"]:
+            _raw_client().put_object(
+                Bucket=os.environ["SPACES_BUCKET"],
+                Key=art["spaces_key"], Body=b"x",
+            )
+            await client.post(
+                f"/admin/releases/{rid}/artifacts/{art['target']}/confirm",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"signature_b64": "s"},
+            )
+        await client.post(
+            f"/admin/releases/{rid}/publish",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        unpub = await client.post(
+            f"/admin/releases/{rid}/unpublish",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert unpub.status_code == 200
+        assert unpub.json()["current_version"] is None
+
+        with pytest.raises(botocore.exceptions.ClientError):
+            _raw_client().get_object(
+                Bucket=os.environ["SPACES_BUCKET"],
+                Key="updates/alpha/latest.json",
+            )
+
+    @pytest.mark.asyncio
+    async def test_patch_release_notes_rewrites_manifest_if_published(
+        self, client: AsyncClient, session_factory
+    ):
+        import json
+        token = await _register_and_login(client, "l_lifecycle3")
+        await _grant_admin(session_factory, "l_lifecycle3")
+
+        create = await _create_release(
+            client, token,
+            version="0.2.0", engine_commit="e", min_version="0.1.0",
+            release_notes="typo",
+            targets=["windows-x86_64"],
+        )
+        body = create.json() if hasattr(create, "json") else create
+        rid = body["release_id"]
+        for art in body["artifacts"]:
+            _raw_client().put_object(
+                Bucket=os.environ["SPACES_BUCKET"],
+                Key=art["spaces_key"], Body=b"x",
+            )
+            await client.post(
+                f"/admin/releases/{rid}/artifacts/{art['target']}/confirm",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"signature_b64": "s"},
+            )
+        await client.post(
+            f"/admin/releases/{rid}/publish",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        patch = await client.patch(
+            f"/admin/releases/{rid}",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"release_notes": "fixed typo"},
+        )
+        assert patch.status_code == 200
+
+        manifest = json.loads(
+            _raw_client().get_object(
+                Bucket=os.environ["SPACES_BUCKET"],
+                Key="updates/alpha/latest.json",
+            )["Body"].read()
+        )
+        assert manifest["notes"] == "fixed typo"
+
+    @pytest.mark.asyncio
+    async def test_delete_refuses_published(
+        self, client: AsyncClient, session_factory
+    ):
+        token = await _register_and_login(client, "l_lifecycle4")
+        await _grant_admin(session_factory, "l_lifecycle4")
+
+        create = await _create_release(
+            client, token,
+            version="0.2.0", engine_commit="e", min_version="0.1.0",
+            targets=["windows-x86_64"],
+        )
+        body = create.json() if hasattr(create, "json") else create
+        rid = body["release_id"]
+        for art in body["artifacts"]:
+            _raw_client().put_object(
+                Bucket=os.environ["SPACES_BUCKET"],
+                Key=art["spaces_key"], Body=b"x",
+            )
+            await client.post(
+                f"/admin/releases/{rid}/artifacts/{art['target']}/confirm",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"signature_b64": "s"},
+            )
+        await client.post(
+            f"/admin/releases/{rid}/publish",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        del_resp = await client.delete(
+            f"/admin/releases/{rid}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert del_resp.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_regenerate_manifest_matches_current_published(
+        self, client: AsyncClient, session_factory
+    ):
+        token = await _register_and_login(client, "l_lifecycle5")
+        await _grant_admin(session_factory, "l_lifecycle5")
+
+        create = await _create_release(
+            client, token,
+            version="0.2.0", engine_commit="e", min_version="0.1.0",
+            targets=["windows-x86_64"],
+        )
+        body = create.json() if hasattr(create, "json") else create
+        rid = body["release_id"]
+        for art in body["artifacts"]:
+            _raw_client().put_object(
+                Bucket=os.environ["SPACES_BUCKET"],
+                Key=art["spaces_key"], Body=b"x",
+            )
+            await client.post(
+                f"/admin/releases/{rid}/artifacts/{art['target']}/confirm",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"signature_b64": "s"},
+            )
+        await client.post(
+            f"/admin/releases/{rid}/publish",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        _raw_client().delete_object(
+            Bucket=os.environ["SPACES_BUCKET"],
+            Key="updates/alpha/latest.json",
+        )
+        regen = await client.post(
+            "/admin/releases/regenerate-manifest?channel=alpha",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert regen.status_code == 200
+        assert regen.json()["current_version"] == "0.2.0"

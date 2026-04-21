@@ -25,7 +25,11 @@ from digimon_gym.db.schemas import (
     AppReleaseCreateRequest,
     AppReleaseCreateResponse,
     AppReleaseResponse,
+    AppReleaseUpdateRequest,
     ListAppReleasesResponse,
+    RegenerateManifestResponse,
+    ReleaseManifest,
+    UnpublishResponse,
 )
 from digimon_gym.storage import spaces
 
@@ -308,3 +312,132 @@ async def list_releases(
     return ListAppReleasesResponse(
         releases=[AppReleaseResponse.model_validate(r) for r in rows]
     )
+
+
+# NOTE: regenerate-manifest is declared BEFORE any `/{release_id}` routes so
+# FastAPI's path matcher can never resolve its static segment to a release_id.
+@admin_router.post(
+    "/regenerate-manifest",
+    response_model=RegenerateManifestResponse,
+)
+async def regenerate_manifest(
+    channel: str = Query(...),
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+) -> RegenerateManifestResponse:
+    """Recovery path: rewrite updates/<channel>/latest.json from current DB."""
+    manifest = await _rewrite_channel_manifest(db, channel)
+    await db.commit()
+    return RegenerateManifestResponse(
+        channel=channel,
+        current_version=manifest["version"] if manifest else None,
+        manifest=ReleaseManifest.model_validate(manifest) if manifest else None,
+    )
+
+
+@admin_router.post(
+    "/{release_id}/unpublish",
+    response_model=UnpublishResponse,
+)
+async def unpublish_release(
+    release_id: str,
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+) -> UnpublishResponse:
+    """Mark a release unpublished; rewrite manifest from next-newest previously-
+    published row (rollback), or delete the Spaces manifest if none remain.
+
+    Rollback semantic: the predecessor was silently unpublished at publish-time
+    by `publish_release`, so re-promote the next-most-recent release on the
+    same channel (by `published_at DESC`) that has been confirmed + published
+    before. If none exists, delete the manifest.
+    """
+    release = await db.get(AppRelease, release_id)
+    if release is None:
+        raise HTTPException(status_code=404, detail="release not found")
+    release.published = False
+    await db.flush()
+
+    # Find the next candidate to re-promote: any release on this channel
+    # that was previously published (has published_at) and is not the row
+    # we just unpublished.
+    candidate = await db.scalar(
+        select(AppRelease)
+        .where(
+            AppRelease.channel == release.channel,
+            AppRelease.id != release.id,
+            AppRelease.published_at.is_not(None),
+        )
+        .order_by(AppRelease.published_at.desc())
+        .limit(1)
+    )
+    if candidate is not None:
+        # Re-promote: confirm all artifacts are still present before flipping
+        for art in candidate.artifacts:
+            if art.file_sha256 is None or art.signature_b64 is None:
+                # Can't safely rollback to this one; fall through and delete
+                candidate = None
+                break
+    if candidate is not None:
+        candidate.published = True
+        await db.flush()
+
+    manifest = await _rewrite_channel_manifest(db, release.channel)
+    await db.commit()
+    return UnpublishResponse(
+        channel=release.channel,
+        current_version=manifest["version"] if manifest else None,
+    )
+
+
+@admin_router.patch(
+    "/{release_id}",
+    response_model=AppReleaseResponse,
+)
+async def update_release(
+    release_id: str,
+    request: AppReleaseUpdateRequest,
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+) -> AppReleaseResponse:
+    """Mutate release_notes and/or min_version; rewrite manifest if published."""
+    release = await db.get(AppRelease, release_id)
+    if release is None:
+        raise HTTPException(status_code=404, detail="release not found")
+    if request.release_notes is not None:
+        release.release_notes = request.release_notes
+    if request.min_version is not None:
+        release.min_version = request.min_version
+    await db.flush()
+    if release.published:
+        await _rewrite_channel_manifest(db, release.channel)
+    await db.commit()
+    await db.refresh(release)
+    return AppReleaseResponse.model_validate(release)
+
+
+@admin_router.delete(
+    "/{release_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_release(
+    release_id: str,
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a release; refuse if published. Best-effort Spaces cleanup."""
+    release = await db.get(AppRelease, release_id)
+    if release is None:
+        raise HTTPException(status_code=404, detail="release not found")
+    if release.published:
+        raise HTTPException(
+            status_code=409,
+            detail="release is published; unpublish before delete",
+        )
+    for art in release.artifacts:
+        try:
+            await asyncio.to_thread(spaces.delete_object, art.spaces_key)
+        except ClientError:
+            pass
+    await db.delete(release)
+    await db.commit()
