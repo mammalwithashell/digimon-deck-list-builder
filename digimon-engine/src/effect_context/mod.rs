@@ -116,6 +116,13 @@ impl<'a> EffectReadContext<'a> {
     /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
     /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
     pub fn source_is_tamer(&self) -> bool {
+        // Fast path: if we know the source permanent, check its top card directly.
+        if let Some(h) = self.source_permanent {
+            if let Some(perm) = self.game.player(h.player).battle_area.get(h.index as usize) {
+                return perm.is_tamer(&self.game.card_data);
+            }
+        }
+        // Slow path: source_permanent is None (e.g. effect from hand/trash/security).
         self.game
             .card_kind_for_handle(self.source_card)
             .map(|k| k == crate::enums::CardKind::Tamer)
@@ -223,6 +230,13 @@ impl<'a> EffectContext<'a> {
     /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
     /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
     pub fn source_is_tamer(&self) -> bool {
+        // Fast path: if we know the source permanent, check its top card directly.
+        if let Some(h) = self.source_permanent {
+            if let Some(perm) = self.game.player(h.player).battle_area.get(h.index as usize) {
+                return perm.is_tamer(&self.game.card_data);
+            }
+        }
+        // Slow path: source_permanent is None (e.g. effect from hand/trash/security).
         self.game
             .card_kind_for_handle(self.source_card)
             .map(|k| k == crate::enums::CardKind::Tamer)

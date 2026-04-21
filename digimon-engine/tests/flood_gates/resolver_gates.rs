@@ -17,7 +17,8 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{
-    CardColor, CardKind, CostDelta, Expiry, ModifierType, PlaySource,
+    CardColor, CardKind, CardSourceRef, CostDelta, Expiry, ModifierType, PlaySource,
+    StackPosition,
 };
 use digimon_engine::modifiers::PlayerModifierEntry;
 
@@ -438,4 +439,56 @@ fn cannot_play_digimon_by_effect_blocks_security_trigger_play() {
 
     // Security stack must be empty (card was popped for the check).
     assert_eq!(r.security_count(1), 0);
+}
+
+// ─── CannotAddSecurityByEffect ─────────────────────────────────────────────
+
+/// When CannotAddSecurityByEffect is installed on the acting player,
+/// ctx.place_on_security must return false and leave security count unchanged.
+/// The source card (in hand) must also remain in hand — nothing is moved.
+#[test]
+fn cannot_add_security_by_effect_blocks_place_on_security() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_filler())
+        .hand(0, &["FILL"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL"])
+        .start();
+
+    let tp = r.game.turn_player();
+    let security_before = r.security_count(tp);
+    let hand_before = r.game.player(tp).hand.len();
+
+    // Install CannotAddSecurityByEffect on the acting player.
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry {
+            modifier: ModifierType::CannotAddSecurityByEffect,
+            value: 0,
+            expiry: Expiry::Permanent,
+            source_permanent: None,
+            source_player: 1 - tp,
+        },
+    );
+
+    // Try to place the hand card (index 0) onto security via EffectContext.
+    let result = {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(999), None, tp);
+        ctx.place_on_security(tp, CardSourceRef::Hand(tp, 0), StackPosition::Top, false)
+    };
+
+    assert!(
+        !result,
+        "place_on_security must return false under CannotAddSecurityByEffect"
+    );
+    assert_eq!(
+        r.security_count(tp),
+        security_before,
+        "security count must be unchanged after blocked place_on_security"
+    );
+    assert_eq!(
+        r.game.player(tp).hand.len(),
+        hand_before,
+        "hand must be unchanged — card must NOT have been moved out of hand"
+    );
 }

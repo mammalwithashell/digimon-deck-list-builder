@@ -749,7 +749,7 @@ impl Game {
     ///
     /// Returns `None` if no `CardSource` with the given `card_index` is found
     /// in any zone (this should not occur in practice for a live effect).
-    pub fn card_kind_for_handle(
+    pub(crate) fn card_kind_for_handle(
         &self,
         handle: crate::card_source::CardHandle,
     ) -> Option<crate::enums::CardKind> {
