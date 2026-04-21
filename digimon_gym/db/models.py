@@ -1008,3 +1008,60 @@ class AIModel(Base):
 
     deck = relationship("Deck", foreign_keys=[deck_id])
     uploader = relationship("User", foreign_keys=[uploaded_by])
+
+
+# ── App Releases (Tauri auto-updater) ─────────────────────────────────────
+
+class AppRelease(Base):
+    __tablename__ = "app_releases"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('pending', 'uploaded', 'failed')",
+            name="ck_app_releases_state",
+        ),
+        UniqueConstraint("channel", "version", name="uq_app_releases_channel_version"),
+        Index("idx_app_releases_channel_pub", "channel", "published"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    version = Column(String, nullable=False)          # SemVer, e.g. "0.2.0-alpha.3"
+    channel = Column(String, nullable=False)          # "alpha" for now
+    engine_commit = Column(String, nullable=False)    # short git SHA from CI
+    min_version = Column(String, nullable=False)      # SemVer floor for kill-switch
+    release_notes = Column(Text, nullable=False, default="")
+    published = Column(Boolean, nullable=False, default=False)
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    state = Column(String, nullable=False, default="pending")  # 'pending'|'uploaded'|'failed'
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    artifacts = relationship(
+        "AppReleaseArtifact",
+        back_populates="release",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class AppReleaseArtifact(Base):
+    __tablename__ = "app_release_artifacts"
+    __table_args__ = (
+        CheckConstraint(
+            "target IN ('windows-x86_64', 'linux-x86_64')",
+            name="ck_app_release_artifacts_target",
+        ),
+        UniqueConstraint("release_id", "target", name="uq_app_release_artifacts_release_target"),
+        UniqueConstraint("spaces_key", name="uq_app_release_artifacts_spaces_key"),
+        Index("idx_app_release_artifacts_release", "release_id"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    release_id = Column(String, ForeignKey("app_releases.id", ondelete="CASCADE"), nullable=False)
+    target = Column(String, nullable=False)           # 'windows-x86_64' | 'linux-x86_64'
+    spaces_key = Column(String, nullable=False)       # "releases/<release_id>/<filename>"
+    filename = Column(String, nullable=False)
+    file_sha256 = Column(String, nullable=True)       # set on confirm
+    file_size_bytes = Column(Integer, nullable=True)  # set on confirm
+    signature_b64 = Column(Text, nullable=True)       # base64 Ed25519 signature
+
+    release = relationship("AppRelease", back_populates="artifacts")
