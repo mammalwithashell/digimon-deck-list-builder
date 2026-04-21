@@ -673,6 +673,36 @@ fn install_optional_selection(
     });
 }
 
+/// Panic-safe helper for the `in_replacement_commit` flag around
+/// `commit_deferred_outcome`. Sets the flag, invokes `body`, and restores the
+/// prior value — even if `body` panics. Without this, a panic inside a
+/// replacement commit would leak `in_replacement_commit = true` and every
+/// subsequent top-level `try_replace` would spuriously treat itself as a
+/// callback-commit continuation (failing to clear `replacement_fired`,
+/// blocking legitimate replacement dispatch).
+fn run_commit_with_flag<F>(game: &mut crate::game::Game, body: F)
+where
+    F: FnOnce(&mut crate::game::Game),
+{
+    use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+
+    let prior = game.in_replacement_commit;
+    game.in_replacement_commit = true;
+
+    // `Game` isn't `UnwindSafe` in general (it holds mutable state, interior
+    // mutability via closures, etc.), but for the purposes of restoring this
+    // single boolean on panic, `AssertUnwindSafe` is the documented pattern.
+    // Any further observation of `Game` after a caught panic would be unsound;
+    // we do not observe it — we restore the flag and resume the unwind.
+    let result = catch_unwind(AssertUnwindSafe(|| body(game)));
+
+    game.in_replacement_commit = prior;
+
+    if let Err(payload) = result {
+        resume_unwind(payload);
+    }
+}
+
 /// Build the accept-side callback for an optional replacement. When fired
 /// via `resolve_selection(player, REPLACEMENT_ACCEPT)`, re-looks-up the
 /// effect and runs its `replacement_process`, then commits the resulting
@@ -708,9 +738,11 @@ fn make_accept_callback(
         game.replacement_pending_outcome = Some(outcome);
         // §7.5: mark this as a callback-commit continuation so the fired-set
         // from the original call chain survives the zone-mover re-entry.
-        game.in_replacement_commit = true;
-        commit_deferred_outcome(game, subject, cause, original_destination, outcome);
-        game.in_replacement_commit = false;
+        // `run_commit_with_flag` is panic-safe — if anything in the commit
+        // body panics, the flag is restored before the unwind propagates.
+        run_commit_with_flag(game, |game| {
+            commit_deferred_outcome(game, subject, cause, original_destination, outcome);
+        });
     })
 }
 
@@ -728,15 +760,17 @@ fn make_decline_callback(
         // Decline → outcome stays None → commit the original event.
         // §7.5: mark this as a callback-commit continuation so the fired-set
         // from the original call chain survives the zone-mover re-entry.
-        game.in_replacement_commit = true;
-        commit_deferred_outcome(
-            game,
-            subject,
-            cause,
-            original_destination,
-            ReplacementOutcome::None,
-        );
-        game.in_replacement_commit = false;
+        // `run_commit_with_flag` is panic-safe — if anything in the commit
+        // body panics, the flag is restored before the unwind propagates.
+        run_commit_with_flag(game, |game| {
+            commit_deferred_outcome(
+                game,
+                subject,
+                cause,
+                original_destination,
+                ReplacementOutcome::None,
+            );
+        });
     })
 }
 

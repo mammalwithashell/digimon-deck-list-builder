@@ -1411,20 +1411,6 @@ Per spec §14 — these are not blockers but must be decided before the correspo
 
 ## Status
 
-(Fill in as tasks complete.)
-
-- [x] Task 1 — 2026-04-21 (`2596f307`, `57b4cf01`)
-- [x] Task 2 — 2026-04-21 (`1545c5c4`, `cdbcb7c7`)
-- [x] Task 3 — 2026-04-21 (`b686f728`, `467c8194`)
-- [x] Task 4 — 2026-04-21 (`bf53cc44`, `fd40ccdf`)
-- [x] Task 5 — 2026-04-21 (`71727ff0`, `f68e8209`)
-- [x] Task 6 — 2026-04-21 (`1e38a03f`, `ab67073a`, `b5f53743`)
-- [x] Task 7 — 2026-04-21 (`1c5020b7`)
-
-Full suite green at end of each task is mandatory before proceeding to the next.
-
-## Status
-
 | Task | Date | Commit(s) |
 |------|------|-----------|
 | 1 — Enum + data types | 2026-04-21 | `2596f307`, `57b4cf01` |

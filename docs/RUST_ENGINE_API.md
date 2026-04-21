@@ -819,7 +819,6 @@ Cause-filter semantics: `.opponent_only()` sets `cause_filter = Some(OpponentEff
 
 ```rust
 use crate::effect::{CardEffect, Effect};
-use crate::enums::Zone;
 use crate::replacement::ReplacementSubject;
 
 pub struct MyBarrier;
@@ -835,12 +834,12 @@ impl CardEffect for MyBarrier {
                 let ReplacementSubject::Permanent(subj) = rctx.subject else { return };
                 if Some(subj) != me { return; }
 
-                // Pay the Barrier cost — trash top of owner's deck.
-                let owner = subj.player;
-                let game = &mut *rctx.effect.game;
-                if let Some(top) = game.players[owner as usize].deck.pop() {
-                    game.players[owner as usize].trash.push(top);
-                }
+                // Pay the Barrier cost — trash top of owner's deck via the
+                // curated EffectContext helper. Do NOT reach into
+                // `rctx.effect.game.players[..].deck` directly; stick to the
+                // `EffectContext` surface so observer hooks and future
+                // replacement-layer instrumentation stay consistent.
+                rctx.effect.trash_from_top(subj.player, 1);
 
                 // Suppress the deletion.
                 rctx.handled();
@@ -850,6 +849,12 @@ impl CardEffect for MyBarrier {
 }
 ```
 
+> Note: the canonical `Keyword::Barrier` arm in `cards/keyword_effects.rs`
+> currently uses `game.players[..].deck.pop()` / `.trash.push()` as an
+> inlined equivalent. New scripts should prefer the `EffectContext` helper
+> (`trash_from_top`) shown above; a follow-up pass will migrate the
+> keyword arms to match.
+
 ### Phase 7 v1 constraints
 
 1. **Partition / ArmorPurge / Fragment(N)** parse but don't auto-install — nested `PendingSelection::Source` inside a replacement is not yet supported.
@@ -857,6 +862,7 @@ impl CardEffect for MyBarrier {
 3. **Multi-replacement `TriggerOrder` prompts** are not emitted when both sides have >1 candidates. v1 runs candidates in collection order (own-first, opp-second) and the last non-None outcome wins.
 4. **`ACTION_SPACE_SIZE` unchanged at 2168.** `REPLACEMENT_ACCEPT` reuses the existing `EffectChoice` action range (specifically the HAND_EFFECT slot 59) and `PASS` (62) serves as decline, so no tensor/mask regression.
 5. **Spec §7.5 once-per-event guard** (Task 7): a `(timing, subject)` pair that already fired in the current call chain is skipped on re-entry. During a callback-commit continuation (`in_replacement_commit`) the guard strengthens to "any prior fire for this subject blocks" — preventing a redirect route from re-prompting for a different Would* timing on the same subject (e.g. Decode's deck→hand redirect must not cascade into a second hand-timing prompt).
+6. **Commit-continuation broadening — known v1 limitation.** During the commit-continuation of an optional replacement, the once-per-event guard blocks ANY replacement effect targeting the same subject for the remainder of the call chain, even replacements installed by different cards. This means a passive restriction modifier (e.g. `CannotBeReturnedToDeck`) on a Digimon that is redirected via a `Would*` effect will NOT cancel the subsequent commit-phase zone move. Concrete scenario: P has a `WhenWouldBeDeleted` redirect-to-deck AND a `CannotBeReturnedToDeck` passive; on deletion the redirect fires, accepts, then `return_to_deck` fires `WhenWouldBeReturnedToDeck` — but the passive cancel is suppressed by the broadening and P lands in the deck, violating the passive. Workaround: avoid stacking cancel-passives with redirect-replacements on the same Digimon. A spec-§7.5-narrowing pass in Phase 8 may key the fired-set on `(timing, subject, source_card)` so different source cards' replacements can still fire during commit. Pinning test: `tests/replacements/dispatcher_guard.rs::commit_continuation_broadening_blocks_different_timing_v1_known_limitation` (flip its assertion when Phase 8 narrows).
 
 ### Testing a Would* effect
 
