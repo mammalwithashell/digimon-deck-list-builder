@@ -43,12 +43,7 @@ fn make_digimon(id: &str, color: CardColor, dp: i32) -> CardData {
 fn grant_force_attack(r: &mut DebugRunner, target: digimon_engine::permanent::PermanentHandle, source: u8) {
     r.game.modifiers.add(
         target,
-        ModifierEntry {
-            modifier: ModifierType::ForceAttack,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: source,
-        },
+        ModifierEntry::simple(ModifierType::ForceAttack, 1, Expiry::EndOfTurn, source),
     );
 }
 
@@ -169,12 +164,7 @@ fn force_attack_respects_cannot_attack_target() {
     grant_force_attack(&mut r, forced, tp);
     r.game.modifiers.add(
         defender,
-        ModifierEntry {
-            modifier: ModifierType::CannotAttackTarget,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: opp,
-        },
+        ModifierEntry::simple(ModifierType::CannotAttackTarget, 1, Expiry::EndOfTurn, opp),
     );
     r.game.enter_main_phase();
 

@@ -320,12 +320,7 @@ fn multiple_security_checks_with_sec_attack_plus() {
     // Manually apply Security Attack +1 modifier.
     r.game.modifiers.add(
         atk,
-        digimon_engine::modifiers::ModifierEntry {
-            modifier: digimon_engine::enums::ModifierType::SecurityAttackChange,
-            value: 1,
-            expiry: digimon_engine::enums::Expiry::Permanent,
-            source_player: 0,
-        },
+        digimon_engine::modifiers::ModifierEntry::simple(digimon_engine::enums::ModifierType::SecurityAttackChange, 1, digimon_engine::enums::Expiry::Permanent, 0),
     );
 
     r.attack_player(atk, 1, false);

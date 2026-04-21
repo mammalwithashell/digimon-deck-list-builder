@@ -200,12 +200,7 @@ fn mask_vortex_respects_cannot_attack_target() {
     );
     r.game.modifiers.add(
         defender,
-        ModifierEntry {
-            modifier: ModifierType::CannotAttackTarget,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: opp,
-        },
+        ModifierEntry::simple(ModifierType::CannotAttackTarget, 1, Expiry::EndOfTurn, opp),
     );
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
@@ -282,12 +277,7 @@ fn mask_may_attack_emits_attack_bits_against_digimon_and_security() {
     let defender = r.place_on_field(opp, "DEF", Some(0));
     r.game.modifiers.add(
         attacker,
-        ModifierEntry {
-            modifier: ModifierType::MayAttack,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: tp,
-        },
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
     );
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
@@ -315,21 +305,11 @@ fn mask_may_attack_respects_cannot_attack_target() {
     let defender = r.place_on_field(opp, "DEF", Some(0));
     r.game.modifiers.add(
         attacker,
-        ModifierEntry {
-            modifier: ModifierType::MayAttack,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: tp,
-        },
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
     );
     r.game.modifiers.add(
         defender,
-        ModifierEntry {
-            modifier: ModifierType::CannotAttackTarget,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: opp,
-        },
+        ModifierEntry::simple(ModifierType::CannotAttackTarget, 1, Expiry::EndOfTurn, opp),
     );
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
@@ -355,12 +335,7 @@ fn mask_force_attack_emits_attack_bits_in_eot() {
     let defender = r.place_on_field(opp, "DEF", Some(0));
     r.game.modifiers.add(
         attacker,
-        ModifierEntry {
-            modifier: ModifierType::ForceAttack,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: tp,
-        },
+        ModifierEntry::simple(ModifierType::ForceAttack, 1, Expiry::EndOfTurn, tp),
     );
     r.game.current_phase = GamePhase::EndOfTurnAction;
 

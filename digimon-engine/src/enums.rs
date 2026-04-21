@@ -166,6 +166,22 @@ pub enum EffectTiming {
     OnDnaDigivolve,
     OnDigiXros,
 
+    // ── Phase 7 "Would*" replacement timings ──────────────────────────────
+    // Dispatched via Game::try_replace before the state change commits. See
+    // replacement.rs and docs/superpowers/specs/2026-04-21-would-replacement-timings-design.md.
+    WhenWouldBeDeleted,
+    WhenWouldLeaveBattleArea,
+    WhenWouldBeReturnedToHand,
+    WhenWouldBeReturnedToDeck,
+    WhenWouldBeTrashed,
+    WhenWouldBeDeDigivolved,
+    WhenWouldLoseSecurity,
+    WhenWouldDraw,
+    WhenWouldPlaceInSecurity,
+    // Reserved — Phase 9 wires dispatch.
+    WhenWouldAttack,
+    WhenWouldBeAttackTarget,
+
     // Deletion observers
     /// Fires when any permanent is deleted for either player — covers
     /// battle DP-loss, effect-driven deletion, and security-check deletion.
@@ -232,6 +248,12 @@ pub enum Keyword {
     /// Digimon is treated as having Blocker. Consumed by
     /// `combat::try_enter_block`. Mirrors Python's `_is_collision`.
     Collision,
+
+    // Phase 7 — replacement-backed keywords. Printed parsing lands Task 6.
+    Evade,
+    Fragment(u8),
+    Decode,
+    ArmorPurge,
 }
 
 /// Zone where a card can exist.

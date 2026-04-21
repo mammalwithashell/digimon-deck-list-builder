@@ -136,13 +136,7 @@ fn shamanmon_style_tamer_anchors_opponent_memory_gain() {
     // while it remains in play.
     r.game.modifiers.add_player_modifier(
         1,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotGainMemoryExceptFromTamers,
-            value: 0,
-            expiry: Expiry::UntilLeaveField,
-            source_permanent: Some(anchor_handle),
-            source_player: 0,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryExceptFromTamers, 0, Expiry::UntilLeaveField, Some(anchor_handle), 0),
     );
 
     assert!(

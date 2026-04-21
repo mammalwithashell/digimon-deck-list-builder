@@ -56,6 +56,12 @@ pub struct Effect {
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
     pub cost_reduction: i32,
+
+    /// Replacement-effect process closure — wired for "Would*" timings in
+    /// Phase 7. Receives a `ReplacementContext` so the process can mutate
+    /// game state AND set the replacement outcome (cancel / redirect /
+    /// substitute / handled). Dispatch lands in Task 2.
+    pub replacement_process: Option<crate::replacement::ReplacementProcessFn>,
 }
 
 impl std::fmt::Debug for Effect {
@@ -217,6 +223,39 @@ impl Effect {
     pub fn before_pay_cost(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::BeforePayCost)
     }
+
+    // ── Phase 7 "Would*" replacement-effect constructors ─────────────────
+    // Dispatch via Game::try_replace lands in Task 2. These are pure
+    // builder entry points for now; attach a `.replacement_process(...)`
+    // closure to install the replacement logic.
+
+    pub fn when_would_be_deleted(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldBeDeleted)
+    }
+    pub fn when_would_leave_battle_area(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldLeaveBattleArea)
+    }
+    pub fn when_would_be_returned_to_hand(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldBeReturnedToHand)
+    }
+    pub fn when_would_be_returned_to_deck(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldBeReturnedToDeck)
+    }
+    pub fn when_would_be_trashed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldBeTrashed)
+    }
+    pub fn when_would_be_de_digivolved(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldBeDeDigivolved)
+    }
+    pub fn when_would_lose_security(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldLoseSecurity)
+    }
+    pub fn when_would_draw(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldDraw)
+    }
+    pub fn when_would_place_in_security(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldPlaceInSecurity)
+    }
 }
 
 /// Builder for constructing effects ergonomically.
@@ -248,6 +287,7 @@ impl EffectBuilder {
                 pay_cost_fn: None,
                 dp_modifier: 0,
                 cost_reduction: 0,
+                replacement_process: None,
             },
         }
     }
@@ -376,6 +416,18 @@ impl EffectBuilder {
         F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static,
     {
         self.inner.pay_cost_fn = Some(Box::new(f));
+        self
+    }
+
+    /// Attach a replacement-effect process for "Would*" timings.
+    /// The closure receives a `ReplacementContext` and sets the outcome
+    /// (cancel / redirect / substitute / handled) via its helper methods.
+    /// Dispatch through `Game::try_replace` lands in Task 2.
+    pub fn replacement_process<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&mut crate::replacement::ReplacementContext<'_>) + Send + Sync + 'static,
+    {
+        self.inner.replacement_process = Some(Box::new(f));
         self
     }
 

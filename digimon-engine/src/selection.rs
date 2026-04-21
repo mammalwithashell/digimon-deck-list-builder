@@ -113,6 +113,11 @@ pub enum SelectionKind {
     /// chosen so far. The callback fires on each pick; the effect decides when
     /// to stop (or the player passes once `picked >= 1`). Full decoder in Task 4.
     CountCappedMultiSelect { max: u8, picked: u8 },
+
+    /// Player may accept or decline an optional replacement effect. Backed by
+    /// EffectChoice action range (accept) + PASS (decline). `valid_action_ids`
+    /// holds exactly one ACCEPT entry; `is_optional = true` admits PASS.
+    Replacement,
 }
 
 /// One branch of a `SelectionKind::EffectChoice` prompt.

@@ -110,13 +110,7 @@ fn cannot_play_digimon_by_effect_blocks_effect_initiated_play_but_not_hand_play(
     // Install CannotPlayDigimonByEffect on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotPlayDigimonByEffect,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     // Effect-initiated play: should be blocked → None.
@@ -153,13 +147,7 @@ fn cannot_play_digimon_by_effect_does_not_block_non_digimon() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotPlayDigimonByEffect,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     // Tamer played ByEffect should succeed — only Digimon is blocked.
@@ -187,13 +175,7 @@ fn cannot_gain_memory_by_effect_blocks_ctx_gain_memory() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotGainMemoryByEffect,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryByEffect, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     // Construct a minimal EffectContext with a synthetic source handle.
@@ -227,13 +209,7 @@ fn cannot_draw_by_effect_blocks_ctx_draw() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotDrawByEffect,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotDrawByEffect, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     {
@@ -263,13 +239,7 @@ fn cannot_draw_by_effect_is_player_scoped() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotDrawByEffect,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: opp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotDrawByEffect, 0, Expiry::Permanent, None, opp),
     );
 
     let opp_hand_before = r.game.player(opp).hand.len();
@@ -341,13 +311,7 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
     // Install CannotReducePlayCost.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotReducePlayCost,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotReducePlayCost, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     let memory_before = r.game.memory;
@@ -409,13 +373,7 @@ fn cannot_play_digimon_by_effect_blocks_security_trigger_play() {
     // Install CannotPlayDigimonByEffect on the defender (player 1).
     r.game.modifiers.add_player_modifier(
         1,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotPlayDigimonByEffect,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 0,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 0),
     );
 
     let atk = r.place_on_field(0, "ATK", Some(0));
@@ -462,13 +420,7 @@ fn cannot_add_security_by_effect_blocks_place_on_security() {
     // Install CannotAddSecurityByEffect on the acting player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotAddSecurityByEffect,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotAddSecurityByEffect, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     // Try to place the hand card (index 0) onto security via EffectContext.

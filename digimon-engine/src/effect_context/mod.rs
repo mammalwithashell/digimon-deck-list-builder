@@ -707,12 +707,12 @@ impl<'a> EffectContext<'a> {
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
         self.game.modifiers.add(
             target,
-            ModifierEntry {
-                modifier: ModifierType::ChangeDp,
+            ModifierEntry::simple(
+                ModifierType::ChangeDp,
                 value,
                 expiry,
-                source_player: self.player,
-            },
+                self.player,
+            ),
         );
     }
 
@@ -725,12 +725,12 @@ impl<'a> EffectContext<'a> {
     ) {
         self.game.modifiers.add(
             target,
-            ModifierEntry {
+            ModifierEntry::simple(
                 modifier,
                 value,
                 expiry,
-                source_player: self.player,
-            },
+                self.player,
+            ),
         );
     }
 

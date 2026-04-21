@@ -408,21 +408,21 @@ impl Game {
                 let ally_dp = game.effective_dp(ally).unwrap_or(0);
                 game.modifiers.add(
                     attacker,
-                    ModifierEntry {
-                        modifier: ModifierType::ChangeDp,
-                        value: ally_dp,
-                        expiry: Expiry::EndOfAttack,
-                        source_player: attacker_player,
-                    },
+                    ModifierEntry::simple(
+                        ModifierType::ChangeDp,
+                        ally_dp,
+                        Expiry::EndOfAttack,
+                        attacker_player,
+                    ),
                 );
                 game.modifiers.add(
                     attacker,
-                    ModifierEntry {
-                        modifier: ModifierType::SecurityAttackChange,
-                        value: 1,
-                        expiry: Expiry::EndOfAttack,
-                        source_player: attacker_player,
-                    },
+                    ModifierEntry::simple(
+                        ModifierType::SecurityAttackChange,
+                        1,
+                        Expiry::EndOfAttack,
+                        attacker_player,
+                    ),
                 );
                 // Suspend the ally.
                 if let Some(perm) = game

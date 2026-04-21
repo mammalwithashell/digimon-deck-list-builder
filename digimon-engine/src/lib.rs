@@ -17,6 +17,7 @@ pub mod tensor;
 pub mod modifiers;
 pub mod effect;
 pub mod effect_context;
+pub mod replacement;
 pub mod cards;
 pub mod combat;
 pub mod selection;

@@ -245,13 +245,7 @@ fn cannot_gain_memory_except_from_tamers_allows_tamer_source() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotGainMemoryExceptFromTamers,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryExceptFromTamers, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     {
@@ -286,13 +280,7 @@ fn cannot_gain_memory_except_from_tamers_blocks_digimon_source() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotGainMemoryExceptFromTamers,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryExceptFromTamers, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     {
@@ -329,13 +317,7 @@ fn cannot_gain_memory_except_from_tamers_blocks_option_source() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotGainMemoryExceptFromTamers,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryExceptFromTamers, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     {
@@ -371,13 +353,7 @@ fn cannot_gain_memory_by_effect_blocks_even_tamer_source() {
     // Install the absolute blocker (not the Tamer-exception one).
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotGainMemoryByEffect,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryByEffect, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     {

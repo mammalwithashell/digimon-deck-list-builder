@@ -9,13 +9,46 @@ use crate::enums::{Expiry, Keyword, ModifierType, PlayerId};
 use crate::permanent::PermanentHandle;
 
 /// A single modifier entry.
-#[derive(Debug, Clone)]
+///
+/// Not `Clone` — `replacement_condition` is a `Box<dyn Fn + Send + Sync>`,
+/// which cannot be cloned in general. Consumers should share via reference
+/// or rebuild via `ModifierEntry::simple(...)` / literal construction.
 pub struct ModifierEntry {
     pub modifier: ModifierType,
     pub value: i32,
     pub expiry: Expiry,
     /// Which player owned the source effect (for cleanup at end of their turn).
     pub source_player: u8,
+    /// Cause filter for replacement-backed modifiers. None = cause-agnostic.
+    pub cause_filter: Option<crate::replacement::ReplacementCause>,
+    /// Optional runtime condition for passive replacements. None = always applies.
+    pub replacement_condition: Option<crate::replacement::ReplacementConditionFn>,
+}
+
+impl std::fmt::Debug for ModifierEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModifierEntry")
+            .field("modifier", &self.modifier)
+            .field("value", &self.value)
+            .field("expiry", &self.expiry)
+            .field("source_player", &self.source_player)
+            .field("cause_filter", &self.cause_filter)
+            .finish_non_exhaustive()
+    }
+}
+
+impl ModifierEntry {
+    /// Back-compat constructor: no cause filter, no replacement condition.
+    pub fn simple(modifier: ModifierType, value: i32, expiry: Expiry, source_player: u8) -> Self {
+        Self {
+            modifier,
+            value,
+            expiry,
+            source_player,
+            cause_filter: None,
+            replacement_condition: None,
+        }
+    }
 }
 
 /// A player-scoped modifier entry (Phase 6 flood gates).
@@ -26,7 +59,6 @@ pub struct ModifierEntry {
 /// NOTE: no closure-valued condition in v1. Card scripts gate WHEN they install
 /// the modifier via the Effect's `.condition` closure. Phase 7 may add a
 /// `condition` field.
-#[derive(Debug, Clone)]
 pub struct PlayerModifierEntry {
     pub modifier: ModifierType,
     /// For future parametric variants; ignored for boolean flags.
@@ -37,6 +69,44 @@ pub struct PlayerModifierEntry {
     pub source_permanent: Option<PermanentHandle>,
     /// Who installed it (used for `EndOfOpponentsTurn` expiry).
     pub source_player: PlayerId,
+    /// Cause filter for replacement-backed modifiers. None = cause-agnostic.
+    pub cause_filter: Option<crate::replacement::ReplacementCause>,
+    /// Optional runtime condition for passive replacements. None = always applies.
+    pub replacement_condition: Option<crate::replacement::ReplacementConditionFn>,
+}
+
+impl std::fmt::Debug for PlayerModifierEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PlayerModifierEntry")
+            .field("modifier", &self.modifier)
+            .field("value", &self.value)
+            .field("expiry", &self.expiry)
+            .field("source_permanent", &self.source_permanent)
+            .field("source_player", &self.source_player)
+            .field("cause_filter", &self.cause_filter)
+            .finish_non_exhaustive()
+    }
+}
+
+impl PlayerModifierEntry {
+    /// Back-compat constructor: no cause filter, no replacement condition.
+    pub fn simple(
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        source_permanent: Option<PermanentHandle>,
+        source_player: PlayerId,
+    ) -> Self {
+        Self {
+            modifier,
+            value,
+            expiry,
+            source_permanent,
+            source_player,
+            cause_filter: None,
+            replacement_condition: None,
+        }
+    }
 }
 
 /// Tracks all active modifiers in the game.
@@ -236,12 +306,12 @@ mod tests {
     fn add_and_query() {
         let mut reg = ModifierRegistry::new();
         let target = h(0, 0);
-        reg.add(target, ModifierEntry {
-            modifier: ModifierType::ChangeDp,
-            value: 1000,
-            expiry: Expiry::EndOfTurn,
-            source_player: 0,
-        });
+        reg.add(target, ModifierEntry::simple(
+            ModifierType::ChangeDp,
+            1000,
+            Expiry::EndOfTurn,
+            0,
+        ));
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 1000);
         assert!(reg.has(target, ModifierType::ChangeDp));
     }
@@ -259,18 +329,18 @@ mod tests {
     fn end_of_turn_expiry() {
         let mut reg = ModifierRegistry::new();
         let target = h(0, 0);
-        reg.add(target, ModifierEntry {
-            modifier: ModifierType::ChangeDp,
-            value: 1000,
-            expiry: Expiry::EndOfTurn,
-            source_player: 0,
-        });
-        reg.add(target, ModifierEntry {
-            modifier: ModifierType::ChangeDp,
-            value: 500,
-            expiry: Expiry::Permanent,
-            source_player: 0,
-        });
+        reg.add(target, ModifierEntry::simple(
+            ModifierType::ChangeDp,
+            1000,
+            Expiry::EndOfTurn,
+            0,
+        ));
+        reg.add(target, ModifierEntry::simple(
+            ModifierType::ChangeDp,
+            500,
+            Expiry::Permanent,
+            0,
+        ));
         reg.expire_end_of_turn(0);
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 500);
     }
@@ -279,12 +349,12 @@ mod tests {
     fn clear_on_leave_field() {
         let mut reg = ModifierRegistry::new();
         let target = h(0, 0);
-        reg.add(target, ModifierEntry {
-            modifier: ModifierType::ChangeDp,
-            value: 1000,
-            expiry: Expiry::Permanent,
-            source_player: 0,
-        });
+        reg.add(target, ModifierEntry::simple(
+            ModifierType::ChangeDp,
+            1000,
+            Expiry::Permanent,
+            0,
+        ));
         reg.grant_keyword(target, Keyword::Rush, Expiry::Permanent, 0);
         reg.clear_permanent(target);
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 0);

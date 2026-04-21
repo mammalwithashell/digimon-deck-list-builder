@@ -82,13 +82,7 @@ fn cannot_play_from_hand_player_scoped_zeroes_hand_bits_for_target_player() {
     // Install player-scoped CannotPlayFromHand on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotPlayFromHand,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotPlayFromHand, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     let mask_p0 = build_action_mask(&r.game, tp);
@@ -128,13 +122,7 @@ fn player_scoped_mask_gates_are_symmetric_per_player() {
     // Install CannotPlayFromHand on the OPPONENT (not the turn player).
     r.game.modifiers.add_player_modifier(
         opp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotPlayFromHand,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotPlayFromHand, 0, Expiry::Permanent, None, tp),
     );
 
     // Turn player's hand bit should still be 1.0 (they are unaffected).
@@ -177,13 +165,7 @@ fn cannot_attack_player_scoped_zeroes_attack_bits() {
     // Install player-scoped CannotAttack on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotAttack,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: opp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotAttack, 0, Expiry::Permanent, None, opp),
     );
 
     let mask_blocked = build_action_mask(&r.game, tp);
@@ -216,13 +198,7 @@ fn cannot_attack_only_affects_target_player() {
     // Install CannotAttack on the OPPONENT — turn player should be unaffected.
     r.game.modifiers.add_player_modifier(
         opp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotAttack,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotAttack, 0, Expiry::Permanent, None, tp),
     );
 
     let mask_tp = build_action_mask(&r.game, tp);
@@ -272,13 +248,7 @@ fn cannot_attack_also_gates_end_of_turn_attack_bits() {
     // Install player-scoped CannotAttack on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotAttack,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: opp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotAttack, 0, Expiry::Permanent, None, opp),
     );
 
     // All attack bits must now be zero — CannotAttack overrides Vortex.
@@ -347,13 +317,7 @@ fn cannot_activate_main_effects_zeroes_field_effect_bits() {
     // Step 2: install CannotActivateMainEffects on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry {
-            modifier: ModifierType::CannotActivateMainEffects,
-            value: 0,
-            expiry: Expiry::Permanent,
-            source_permanent: None,
-            source_player: 1 - tp,
-        },
+        PlayerModifierEntry::simple(ModifierType::CannotActivateMainEffects, 0, Expiry::Permanent, None, 1 - tp),
     );
 
     // Step 3: all FIELD_EFFECT bits must now be zero — modifier suppressed the live bit.

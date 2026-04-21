@@ -320,12 +320,7 @@ fn mask_can_attack_unsuspended_modifier_allows_all_unsuspended() {
     r.game.set_memory(3);
     r.game.modifiers.add(
         attacker,
-        digimon_engine::modifiers::ModifierEntry {
-            modifier: ModifierType::CanAttackUnsuspended,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: tp,
-        },
+        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::CanAttackUnsuspended, 1, Expiry::EndOfTurn, tp),
     );
 
     let mask = build_action_mask(&r.game, tp);
@@ -563,12 +558,7 @@ fn mask_cannot_play_from_hand_suppresses_all_hand_bits() {
     // Grant CannotPlayFromHand to the blocker.
     r.game.modifiers.add(
         blocker,
-        digimon_engine::modifiers::ModifierEntry {
-            modifier: ModifierType::CannotPlayFromHand,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: 0,
-        },
+        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::CannotPlayFromHand, 1, Expiry::EndOfTurn, 0),
     );
 
     let mask_blocked = build_action_mask(&r.game, 0);
@@ -612,12 +602,7 @@ fn mask_cannot_digivolve_suppresses_digivolve_bits_on_base() {
     // Grant CannotDigivolve to the base.
     r.game.modifiers.add(
         base,
-        digimon_engine::modifiers::ModifierEntry {
-            modifier: ModifierType::CannotDigivolve,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: 0,
-        },
+        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::CannotDigivolve, 1, Expiry::EndOfTurn, 0),
     );
 
     let blocked = build_action_mask(&r.game, 0);
@@ -657,12 +642,7 @@ fn mask_cannot_attack_target_suppresses_digimon_attack_bit() {
     // Grant CannotAttackTarget to defender.
     r.game.modifiers.add(
         defender,
-        digimon_engine::modifiers::ModifierEntry {
-            modifier: ModifierType::CannotAttackTarget,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: opp,
-        },
+        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::CannotAttackTarget, 1, Expiry::EndOfTurn, opp),
     );
 
     let blocked = build_action_mask(&r.game, tp);

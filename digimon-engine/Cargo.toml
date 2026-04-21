@@ -72,3 +72,7 @@ path = "tests/cost_hooks/main.rs"
 [[test]]
 name = "flood_gates"
 path = "tests/flood_gates/main.rs"
+
+[[test]]
+name = "replacements"
+path = "tests/replacements/main.rs"

@@ -110,12 +110,7 @@ fn end_turn_parks_when_may_attack_granted() {
     let attacker = r.place_on_field(tp, "ATK", Some(0));
     r.game.modifiers.add(
         attacker,
-        ModifierEntry {
-            modifier: ModifierType::MayAttack,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: tp,
-        },
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
     );
 
     r.game.end_turn();
@@ -134,12 +129,7 @@ fn end_turn_does_not_park_when_may_attack_cannot_attack() {
     r.game.players[tp as usize].battle_area[attacker.index as usize].is_suspended = true;
     r.game.modifiers.add(
         attacker,
-        ModifierEntry {
-            modifier: ModifierType::MayAttack,
-            value: 1,
-            expiry: Expiry::EndOfTurn,
-            source_player: tp,
-        },
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
     );
 
     r.game.end_turn();
