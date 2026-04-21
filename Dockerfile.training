@@ -1,0 +1,63 @@
+# Multi-stage training image for Digimon TCG RL
+#
+# Stage 1: Compile the digimon-engine-py PyO3 wheel (Rust + Python headers)
+# Stage 2: Lean Python training runtime — copies the wheel, installs deps
+#
+# Build: docker build -f Dockerfile.training -t digimon-trainer .
+# Run:   docker run --gpus all --rm \
+#          -v $(pwd)/models:/app/models \
+#          -e DIGIMON_BACKEND=rust \
+#          digimon-trainer training_jobs/my_job.json
+
+# ── Stage 1: Rust build ───────────────────────────────────────────────────
+FROM rust:1.82-slim AS rust-builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11-dev python3-pip libssl-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir maturin
+
+# Copy workspace manifests and lock file first for better layer caching
+COPY Cargo.toml Cargo.lock ./
+
+# Copy only the crates needed for the PyO3 wheel
+COPY digimon-engine/ digimon-engine/
+COPY digimon-engine-py/ digimon-engine-py/
+
+# Build the wheel — release mode for maximum speed at training time
+RUN cd digimon-engine-py && maturin build --release --out /wheels
+
+
+# ── Stage 2: Python training runtime ─────────────────────────────────────
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install the compiled PyO3 wheel
+COPY --from=rust-builder /wheels/*.whl /wheels/
+RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
+
+# Install Python training dependencies
+COPY requirements-training.txt .
+RUN pip install --no-cache-dir -r requirements-training.txt
+
+# Copy repo content needed at training time
+# (card data, scripts, training code, tools, job configs, optional decks)
+COPY digimon_gym/ digimon_gym/
+COPY tools/ tools/
+COPY training_jobs/ training_jobs/
+
+# Decks directory is optional — mount it at runtime or copy in during build
+# COPY decks/ decks/
+
+# Use the Rust engine backend by default
+ENV DIGIMON_BACKEND=rust
+
+# Card data path — already inside the image at digimon_gym/engine/data/cards.json
+ENV DIGIMON_CARDS_JSON=/app/digimon_gym/engine/data/cards.json
+
+# Entrypoint: python tools/run_training_job.py <job_config>
+ENTRYPOINT ["python", "tools/run_training_job.py"]

@@ -1,11 +1,13 @@
 // Prevents additional console window on Windows in release.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod deck_commands;
-mod deck_storage;
-mod engine_commands;
-mod inference_state;
-mod models;
+// Re-use the modules defined in lib.rs so integration tests can also
+// reach them without repeating the `mod` declarations here.
+use digimon_tcg::deck_commands;
+use digimon_tcg::deck_storage;
+use digimon_tcg::engine_commands;
+use digimon_tcg::inference_state;
+use digimon_tcg::models;
 
 use std::sync::Arc;
 

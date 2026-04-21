@@ -181,6 +181,12 @@ impl Player {
             return;
         }
         let perm = self.battle_area.remove(field_index);
+        // Token semantic: remove from game. Drop the whole stack on the
+        // floor — no trash entry, no zone ever again. Parity with
+        // Python's `player.py::delete_permanent` is_token branch.
+        if perm.top_card().is_token {
+            return;
+        }
         for card in perm.card_sources {
             self.trash.push(card);
         }

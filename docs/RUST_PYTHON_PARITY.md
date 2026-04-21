@@ -431,9 +431,14 @@ End-of-turn surface is complete for mask parity — Vortex (§4.6a) + Overclock/
 
 **Coverage:** [tests/end_turn_phase_transition.rs](../digimon-engine/tests/end_turn_phase_transition.rs) — 9 cases covering Vortex/Overclock/MayAttack parking, sacrifice-availability gating, suspended-MayAttack no-park, swing-back short-circuit, rotation resumption, and EOT-modifier expiry on resume.
 
-### 4.6b-residual 🟡 Token detection
+### 4.6b-residual 🟢 Token detection — implemented
 
-Rust's `CardKind` has no `Token` variant (tokens are registered as `Digimon`-kind via `token_registry`). Python's Overclock-sacrifice check is `p.is_token or p.is_digimon`; Rust collapses it to `is_digimon` alone. No observable gap today because token registrations produce `CardKind::Digimon` anyway, but promoting Token to a first-class kind will be needed if a card ever introduces Token-specific sacrifice restrictions.
+Rust's `CardKind` now includes `Token` (Phase 10). Tokens are
+registered via `token_registry.rs` with synthetic `CardData` rows
+absorbed into `game.card_data` at `Game::new`. Python's `is_token:
+bool` flag and Rust's `CardKind::Token` are kept in sync at the PyO3
+binding boundary (any helper that returns a token permanent
+translates the flag appropriately).
 
 ### 4.6c 🟢 Overclock / MAY_ATTACK / FORCE_ATTACK mask bits — implemented
 
@@ -709,3 +714,51 @@ across both engines.
 **Historical drift (resolved):** pre-2026-04-18, `tools/export_onnx.py` hardcoded `obs=981 / logits=2120` — the pre-rewrite layout. Any `.onnx` on disk dated before the fix is unusable by either engine. Re-export from the original `.zip` checkpoint is mandatory; if that checkpoint was trained against the old layout, it must be retrained from scratch. The exporter now imports `TENSOR_SIZE` / `ACTION_SPACE_SIZE` from `digimon_gym.engine.game.constants` and raises before writing on any shape mismatch.
 
 **Ongoing hazard:** any future change to [`digimon-engine/src/tensor.rs`](../digimon-engine/src/tensor.rs) (`TENSOR_SIZE`) or [`digimon-engine/src/action/space.rs`](../digimon-engine/src/action/space.rs) (`ACTION_SPACE_SIZE`) invalidates every bundled or cached `.onnx`. The compatibility gate in `models.rs` and the exporter's shape assertion together make this a loud error, not a silent regression — but re-exports of all live checkpoints are required whenever either constant changes.
+
+## 11. Phase 10 — Tokens + De-Digivolve
+
+### 11.1 🟢 Token creation + CardKind::Token — implemented
+
+**Python** — `digimon_gym/engine/data/token_registry.py`: `TOKENS`
+dict mapping token names to metadata; `create_token_card_source`
+factory; `CardSource.is_token: bool` flag; `Permanent.is_token`
+property; Game.effect_play_token for spawning.
+`Player.delete_permanent` branches on `is_token` to skip trash
+(`player.py:506`).
+
+**Rust** — `digimon-engine/src/token_registry.rs` defines
+`TokenDef` + `TokenRegistry` + `build_registry`. `CardKind::Token`
+variant in `enums.rs`. `EffectContext::play_token(controller,
+token_name)` materializes a `CardSource::new_token(...)` +
+`Permanent::new(...)` on the target's battle area.
+`Player::delete_permanent` branches on `top_card().is_token` to
+skip trash append.
+
+**Divergences:** None observable. Rust's `CardKind::Token` is a
+first-class enum variant where Python uses `is_token: bool` on a
+Digimon-kind CardSource — the Rust shape is cleaner and supports
+exhaustive match-based Token-specific branching (e.g. future Overclock
+sacrifice filter). The PyO3 binding layer (`digimon-engine-py`)
+must translate `CardKind::Token` → `is_token=True, card_kind=Digimon`
+when synthesizing Python mirrors (not yet wired — no PvP code
+surfaces tokens today).
+
+**Coverage:** `digimon-engine/tests/cards_behavioral/tokens.rs` +
+`digimon-engine/src/token_registry.rs` unit tests.
+
+### 11.2 🟢 De-Digivolve N — implemented (superset of Python)
+
+**Python** — per-archetype scripts call `card.lose_digivolution(N)` or
+similar helpers.
+
+**Rust** — `EffectContext::de_digivolve(target, stop_at_level: Option<u8>, amount: Option<u8>) -> u8`.
+Pops up to `amount` sources, stops at `stop_at_level`, routes trash
+to owner side. `None` for either arg expresses unbounded. Returns
+actual count popped so callers can gate follow-up effects ("if at
+least one was popped, gain 1 memory").
+
+**Divergences:** Rust's API is a strict superset of the Python
+surface — every Python call site reduces to
+`de_digivolve(target, Some(3), Some(N))` in Rust.
+
+**Coverage:** `digimon-engine/tests/cards_behavioral/de_digivolve.rs`.

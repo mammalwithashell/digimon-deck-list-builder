@@ -15,6 +15,7 @@ use crate::selection::{
     EffectQueue, PendingAttack, PendingSecurity, PendingSelection, SecurityResolutionState,
     SelectionError,
 };
+use crate::token_registry::TokenRegistry;
 
 /// Reasons `Game::activate_overclock` can fail. Exposed so callers
 /// (Tauri commands, tests, Python bindings) can distinguish between
@@ -82,6 +83,13 @@ pub struct Game {
     pub modifiers: ModifierRegistry,
     /// Card effect registry — maps card_id to effect implementations.
     pub effect_registry: CardEffectRegistry,
+    /// Token metadata registry — maps canonical token names (e.g.
+    /// "petrification") to `TokenDef` rows. `Game::new` pre-populates
+    /// this via `token_registry::build_registry` and pushes a synthetic
+    /// `CardData` row into `card_data` for each registered token so
+    /// materialized tokens can reuse the standard `CardSource::data_index`
+    /// machinery. Consumed by `EffectContext::play_token`.
+    pub token_registry: TokenRegistry,
     /// RNG for shuffling and random effects.
     pub rng: StdRng,
     /// Counter for assigning unique card instance indices.
@@ -229,6 +237,18 @@ impl Game {
         let mulligan_pending = turn_order.clone();
         let mulligan_used = vec![false; player_count];
 
+        // Build the token registry and absorb synthetic CardData rows
+        // for each registered token. This extends `card_data_store` with
+        // rows whose `card_id` matches `TokenDef::card_id`
+        // (e.g. "TOKEN_PETRIFICATION") — `EffectContext::play_token`
+        // uses those card_ids to look up the data_index when spawning a
+        // token. Tokens never appear in a player's deck, so pushing here
+        // does not affect the data_index_map used during deck seeding.
+        let token_registry = crate::token_registry::build_registry();
+        for def in token_registry.iter() {
+            card_data_store.push(def.to_card_data());
+        }
+
         let mut game = Self {
             rules,
             players,
@@ -243,6 +263,7 @@ impl Game {
             card_data: card_data_store,
             modifiers: ModifierRegistry::new(),
             effect_registry: build_registry(),
+            token_registry,
             rng,
             next_card_index,
             mulligan_pending,
