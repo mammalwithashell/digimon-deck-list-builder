@@ -539,7 +539,178 @@ Note: `pay_cost_fn` fires before `cost_reduction_fn` is accumulated (gate → pa
 
 ---
 
-## 9. Known gaps (as of Phase 5)
+## Phase 6 — Flood-Gate & Restriction Modifiers
+
+Added in Phase 6 to clamp entire action categories at both the action-mask layer (RL-visible suppression) and the resolver layer (defense-in-depth). Unblocks Dark Masters lockout shells, Medusamon Petrification, TS Olympos Tamer-anchoring, and Rocks Plug-In lockouts (~55 meta-pool cards across all 5 audited archetypes).
+
+Commits: `69464289`..`6b0bd28a` (8 commits). Full suite: **556 passing** (+31 from Phase 5 baseline of 525).
+
+---
+
+### Player-Scoped `ModifierRegistry`
+
+Phase 6 adds a parallel storage tier to `ModifierRegistry`:
+
+```rust
+pub struct ModifierRegistry {
+    permanent_modifiers: HashMap<PermanentHandle, Vec<ModifierEntry>>,
+    // NEW in Phase 6:
+    player_modifiers: HashMap<PlayerId, Vec<PlayerModifierEntry>>,
+}
+```
+
+`PlayerModifierEntry` has five fields:
+
+```rust
+pub struct PlayerModifierEntry {
+    pub modifier:         ModifierType,
+    pub value:            i32,
+    pub expiry:           Expiry,
+    pub source_permanent: Option<PermanentHandle>,  // for UntilLeaveField expiry
+    pub source_player:    PlayerId,                 // who installed the modifier
+}
+```
+
+No closure condition in v1 — card scripts gate installation via `.condition` on the `Effect`, and the modifier itself is a simple flag. Phase 7 may add closure conditions to `PlayerModifierEntry` for the would-replacement framework.
+
+**Six new methods on `ModifierRegistry`:**
+
+```rust
+// Install
+modifiers.add_player_modifier(target_player: PlayerId, entry: PlayerModifierEntry)
+
+// Query
+modifiers.player_has(target_player, modifier: ModifierType) -> bool
+modifiers.player_modifier_value(target_player, modifier: ModifierType) -> i32
+modifiers.player_modifiers_iter(target_player) -> impl Iterator<Item = &PlayerModifierEntry>
+
+// Expiry
+modifiers.expire_player_end_of_turn(ending_player: PlayerId)
+modifiers.expire_player_on_permanent_leave(handle: PermanentHandle)
+```
+
+**Worked example — Shamanmon-style Tamer installing `CannotGainMemoryExceptFromTamers`:**
+
+```rust
+// BT18-009 Shamanmon (TS Olympos archetype)
+// "[Your Turn] [Main] Trash this Tamer. Your opponent cannot gain memory
+//  from sources other than their own Tamer effects until the end of their turn."
+pub struct Bt18009;
+
+impl CardEffect for Bt18009 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![
+            Effect::on_play(card)
+                .name("Trash self; opponent CannotGainMemoryExceptFromTamers")
+                .condition(|ctx| {
+                    // Only fires if this card is on the field (not from hand raw — timing is MainOnField)
+                    ctx.source_permanent.is_some()
+                })
+                .process(|ctx| {
+                    // Trash this Tamer
+                    if let Some(h) = ctx.source_permanent {
+                        ctx.delete_permanent(h);
+                    }
+                    // Install player-scoped flood gate on the opponent
+                    let opp = ctx.opponent_id();
+                    let src_player = ctx.player;
+                    ctx.game.modifiers.add_player_modifier(opp, PlayerModifierEntry {
+                        modifier:         ModifierType::CannotGainMemoryExceptFromTamers,
+                        value:            1,
+                        expiry:           Expiry::EndOfTurn,
+                        source_permanent: None,   // self already deleted
+                        source_player:    src_player,
+                    });
+                })
+                .build(),
+        ]
+    }
+}
+```
+
+`UntilLeaveField` is the dominant expiry for aura-style flood gates (while the emitter is in play). Use `source_permanent: Some(h)` so `expire_player_on_permanent_leave` clears it automatically when the Tamer is deleted or returned.
+
+---
+
+### `PlaySource` Enum
+
+A new typed enum threaded through all five play/digivolve helpers so flood gates like `CannotPlayDigimonByEffect` can discriminate effect-initiated plays from hand-cost plays:
+
+```rust
+pub enum PlaySource {
+    ByHand,      // normal play-from-hand (player paid memory)
+    ByEffect,    // effect-initiated play (e.g. ctx.play_from_hand_with_cost with ByEffect)
+    ByDigivolve, // digivolve path
+}
+```
+
+The five helpers that receive `PlaySource`:
+- `play_from_hand_with_cost`
+- `play_from_trash_with_cost`
+- `digivolve_from_hand`
+- `digivolve_onto_breeding`
+- `effect_initiated_digivolve`
+
+Call sites: 13 updated (mask, action decoder, effect context wrappers, security play-from-security path). `CannotPlayDigimonByEffect` gates only when `source == PlaySource::ByEffect`, matching DCGO's "by an effect" qualifier.
+
+---
+
+### Flood-Gate Catalog
+
+All 13 new `ModifierType` variants added in Phase 6:
+
+| Variant | Semantics | Enforcement | Example card text |
+|---------|-----------|-------------|-------------------|
+| `CannotPlayDigimonByEffect` | Opponent cannot play Digimon cards triggered by a card effect | Resolver (play_from_hand/trash/security with `ByEffect`) | "Your opponent can't play Digimon by effect" |
+| `CannotGainMemoryByEffect` | Opponent cannot gain memory from any effect | Resolver (gain_memory) | "Your opponent can't gain memory by effect" |
+| `CannotGainMemoryExceptFromTamers` | Opponent can only gain memory from Tamer-card effects; all other sources blocked | Resolver (gain_memory, gated by `source_is_tamer`) | "Your opponent can't gain memory except from Tamer effects" |
+| `CannotReducePlayCost` | Opponent's play costs cannot be reduced by any effect | Resolver (scan_before_pay_cost_reduction) | "Your opponent can't reduce play costs" |
+| `CannotActivateMainEffects` | Opponent's Digimon/Tamer [Main] effects cannot be activated | Mask (`MainOnField` bits zeroed) | "Your opponent's Digimon can't activate their [Main] effects" |
+| `CannotActivateWhenDigivolvingEffects` | Opponent's [When Digivolving] effects cannot fire | DORMANT (resolver hook, not yet wired to enforcement site) | "Your opponent's Digimon can't activate their [When Digivolving] effects" |
+| `CannotActivateSecurityEffects` | Opponent's security-revealed effects cannot fire | DORMANT (resolver hook) | "Your opponent's Digimon can't activate their [Security] effects" |
+| `CannotDigivolveDigimonByEffect` | Opponent cannot effect-initiate a digivolve | DORMANT (resolver hook) | "Your opponent can't digivolve Digimon by effect" |
+| `CannotDrawByEffect` | Opponent cannot draw cards via effects | Resolver (draw) | "Your opponent can't draw by effect" |
+| `CannotAddSecurityByEffect` | Opponent cannot add cards to their security via effects | Resolver (place_on_security with ByEffect) | "Your opponent can't add to their security by effect" |
+| `CannotTrashOpponentSecurity` | Prevents opponent from trashing your security via effects | DORMANT (resolver hook) | Dark Masters lock piece |
+| `CannotReduceOpponentSecurity` | Prevents opponent from reducing your security count | DORMANT (resolver hook) | Dark Masters lock piece |
+| `IgnoreColorRequirement` | Player may digivolve ignoring color requirements | DORMANT (mask hook) | "You may digivolve ignoring color requirements" |
+
+**DORMANT variants:** The API surface is wired (enum variants, storage, install/query helpers) but the enforcement site has not yet been connected. As real cards arrive and need those variants, each enforcement site is a one-liner addition. Do not ship stubs that auto-apply — connect the enforcement gate at the real call site when the first card needs it.
+
+**Enforcement sites (active):**
+- **Mask:** `CannotPlayFromHand` upgraded to player-scoped query; `CannotAttack` enforced in both `Main` and `EndOfTurnAction` phases; `CannotActivateMainEffects` zeroes `MainOnField` bits in the main-phase mask.
+- **Resolver:** `CannotDrawByEffect` gates `ctx.draw`; `CannotGainMemoryByEffect` and `CannotGainMemoryExceptFromTamers` gate `ctx.gain_memory`; `CannotAddSecurityByEffect` gates `ctx.place_on_security`; `CannotReducePlayCost` nullifies `scan_before_pay_cost_reduction` for the restricted player; `CannotPlayDigimonByEffect` gates the three effect-play helpers (`play_from_hand_with_cost` + `play_from_trash_with_cost` + `play_from_security`) when `PlaySource::ByEffect`.
+
+---
+
+### `source_is_tamer` Helper
+
+`EffectContext::source_is_tamer()` — returns `true` when the effect currently resolving was installed by a Tamer card. Matches DCGO's `ICardEffect.IsTamerEffect` property.
+
+```rust
+// On EffectContext (mutable):
+pub fn source_is_tamer(&self) -> bool
+
+// On EffectReadContext (read-only, for cost-reduction closures):
+pub fn source_is_tamer(&self) -> bool
+```
+
+**Implementation:** fast path via `source_permanent` + `CardData.card_kind` lookup; slow-path fallback via `Game::card_kind_for_handle` for cases where the effect has a `source_card` but no `source_permanent` (e.g. hand effects). `Game::card_kind_for_handle(CardHandle) -> Option<CardKind>` is `pub(crate)`.
+
+**Usage in `CannotGainMemoryExceptFromTamers`:**
+
+```rust
+// In gain_memory resolver gate:
+if ctx.game.modifiers.player_has(target, ModifierType::CannotGainMemoryExceptFromTamers)
+    && !ctx.source_is_tamer()
+{
+    return; // blocked — not a Tamer source
+}
+```
+
+---
+
+## 9. Known gaps (as of Phase 6)
 
 These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:
 
@@ -548,8 +719,8 @@ These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:
 - **Security effects** — basic SecuritySkill dispatch is wired; re-entrant selections mid-security-resolve are not (blocks most real security cards with selection effects).
 - **BeforePayCost cost reduction scanning** — landed in Phase 5. See §Phase 5 above.
 - **Option cards** have no play flow yet (they hit the field as a permanent like Digimon).
-- **Flood-gate + restriction modifiers** (player-scoped) — not yet implemented. Planned for Phase 6.
-- **"Would" replacement timings** (Barrier, Evade, Partition, Armor Purge) — planned for Phase 7.
+- **Flood-gate + restriction modifiers** (player-scoped) — landed in Phase 6. See §Phase 6 above. Several variants are DORMANT pending enforcement-site wiring.
+- **"Would" replacement timings** (Barrier, Evade, Partition, Armor Purge) — planned for Phase 7. Requires a design spec under `docs/superpowers/specs/` before a plan can be written.
 
 When implementing a card that needs one of these, log the gap and pick a safe fallback.
 

@@ -538,6 +538,20 @@ Rust implementation: `Game::scan_before_pay_cost_reduction` in `digimon-engine/s
 
 ---
 
+### §6.1 Player-scoped flood gates — Rust (Phase 6)
+
+Rust adds a parallel `player_modifiers` tier to `ModifierRegistry` (`HashMap<PlayerId, Vec<PlayerModifierEntry>>`) plus 13 new `ModifierType` variants for action-category flood gates (`CannotPlayDigimonByEffect`, `CannotGainMemoryByEffect`, `CannotGainMemoryExceptFromTamers`, `CannotReducePlayCost`, `CannotActivateMainEffects`, `CannotActivateWhenDigivolvingEffects`, `CannotActivateSecurityEffects`, `CannotAddSecurityByEffect`, `CannotTrashOpponentSecurity`, `CannotReduceOpponentSecurity`, `CannotDrawByEffect`, `CannotDigivolveDigimonByEffect`, `IgnoreColorRequirement`). Gates are enforced at BOTH the action-mask layer (RL-visible suppression) and the resolver layer (defense-in-depth).
+
+Python stores modifiers as a flat `HashMap<ModifierType, Vec<Entry>>` with closure-valued per-entry conditions. Rust v1 uses flag-based entries + card-script `.condition` closures at install-time, following DCGO's separate-class-per-restriction pattern (see `DCGO/Assets/Scripts/CardEffect/BT3/Green/BT3_046.cs` for Tamer-source-discriminated `CannotAddMemoryClass`). Phase 7 may add closure conditions to `ModifierEntry` for the would-replacement framework.
+
+Python's `ctx.get('played_by_effect', False)` context is matched by Rust's typed `PlaySource` enum (`ByHand` / `ByEffect` / `ByDigivolve`), threaded through play/digivolve helpers — strictly cleaner than Python's dict-based context.
+
+The `source_is_tamer` helper matches DCGO's `ICardEffect.IsTamerEffect` property; Rust uses a fast path via `source_permanent` + slow-path `card_kind` lookup. Used by `CannotGainMemoryExceptFromTamers` to pass memory gains originating from Tamer effects through the restriction gate.
+
+Cards unblocked (per audits): ~55 across all 5 audited archetypes (Dark Masters lockout shell, Medusamon Petrification, TS Olympos Tamer-anchoring, Rocks Plug-In lockouts).
+
+---
+
 ### 5.1 🟢 CardRegistry
 
 Fixed in [card_registry.rs](../digimon-engine/src/card_registry.rs). `CardData.index` from cards.json is the source of truth in both engines. Verified by [card_registry_parity.rs](../digimon-engine/tests/card_registry_parity.rs) against the real 4082-card cards.json.
