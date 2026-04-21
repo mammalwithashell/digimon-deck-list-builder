@@ -146,6 +146,16 @@ pub(crate) fn try_replace_impl(
     cause: ReplacementCause,
     original_destination: Option<Zone>,
 ) -> ReplacementOutcome {
+    // TODO(phase-7-followup §7.5): once-per-event guard. Spec §7.5 requires a
+    // `HashSet<(EffectTiming, ReplacementSubject)>` tracked within a single
+    // try_replace call-chain so a replacement that has already fired for a
+    // given (timing, subject) is skipped on re-entry. Task 4 surfaces this:
+    // a Redirected(Deck) outcome on `WhenWouldBeDeleted` routes through
+    // `return_to_deck` which re-fires `WhenWouldLeaveBattleArea` for the
+    // same subject — super-timing double-fire. Today `MAX_REPLACEMENT_DEPTH`
+    // caps recursion at 8 but doesn't prevent double-fire within that depth.
+    // Fix: add a fired-set on Game, cleared on outermost exit.
+
     // Depth guard.
     if game.replacement_depth >= MAX_REPLACEMENT_DEPTH {
         return ReplacementOutcome::None;

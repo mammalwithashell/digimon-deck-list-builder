@@ -1433,8 +1433,19 @@ impl Game {
                     crate::enums::CardSourceRef::Hand(p, i) => {
                         self.player_mut(p).hand.remove(i)
                     }
-                    crate::enums::CardSourceRef::Trash(_, _) => {
-                        // Already in trash — no-op.
+                    crate::enums::CardSourceRef::Trash(source_p, source_i) => {
+                        // Task 4 v1: cross-player trash-to-trash redirects are rare
+                        // in printed cards (a trash-to-security play being redirected
+                        // TO trash is niche). For source_p == player_id this is a
+                        // true no-op. For source_p != player_id, a strict reading
+                        // would move the card from source_p.trash to player_id.trash;
+                        // we preserve source location to avoid a hidden cross-player
+                        // move. TODO(phase-7-followup): verify printed-card need.
+                        debug_assert!(
+                            source_p == player_id,
+                            "redirect-to-Trash from cross-player trash is a v1 no-op; card stayed in source_p={} trash (player_id={}, source_i={})",
+                            source_p, player_id, source_i
+                        );
                         return false;
                     }
                     crate::enums::CardSourceRef::DeckTop(p) => {
