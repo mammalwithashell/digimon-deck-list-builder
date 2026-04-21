@@ -18,7 +18,7 @@ pub use selections::{CountCappedZone, EffectContextSelectorScope};
 
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
-use crate::enums::{Expiry, Keyword, ModifierType, PlayerId};
+use crate::enums::{Expiry, Keyword, ModifierType, PlayerId, StackPosition};
 use crate::game::Game;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
@@ -368,11 +368,8 @@ impl<'a> EffectContext<'a> {
     pub fn place_remainder_on_deck(
         &mut self,
         player: PlayerId,
-        position: crate::enums::StackPosition,
+        position: StackPosition,
     ) {
-        use crate::card_source::CardHandle;
-        use crate::enums::StackPosition;
-
         // Snapshot handles of every card currently in the reveal pool.
         let remainder: Vec<CardHandle> = self
             .game
@@ -381,16 +378,16 @@ impl<'a> EffectContext<'a> {
             .map(|cs| cs.handle())
             .collect();
 
+        // Empty pool → silent no-op.
+        if remainder.is_empty() {
+            return;
+        }
+
         debug_assert!(
             remainder.len() <= 10,
             "place_remainder_on_deck: reveal pool has {} cards; select_ordered_permutation is capped at 10",
             remainder.len()
         );
-
-        // Empty pool → silent no-op.
-        if remainder.is_empty() {
-            return;
-        }
 
         self.select_ordered_permutation(
             remainder,
@@ -401,7 +398,8 @@ impl<'a> EffectContext<'a> {
                         // Reverse-iterate: last item is pushed first, so ordered_vec[0]
                         // is pushed last → lands at Vec-end (deck top) → drawn first.
                         for handle in ordered_vec.iter().rev() {
-                            ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Top);
+                            let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Top);
+                            debug_assert!(placed, "place_remainder_on_deck: handle {:?} not found in revealed_cards at placement time", handle);
                         }
                     }
                     StackPosition::Bottom => {
@@ -411,7 +409,8 @@ impl<'a> EffectContext<'a> {
                         // index among the placed group (closest to top within the
                         // bottom-placed set) → drawn first among them.
                         for handle in ordered_vec.iter() {
-                            ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
+                            let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
+                            debug_assert!(placed, "place_remainder_on_deck: handle {:?} not found in revealed_cards at placement time", handle);
                         }
                     }
                     StackPosition::Random => {
@@ -419,7 +418,8 @@ impl<'a> EffectContext<'a> {
                         // selection is still surfaced — the ordering is strategically
                         // irrelevant but the RL action space must see it (§17).
                         for handle in ordered_vec.iter() {
-                            ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Random);
+                            let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Random);
+                            debug_assert!(placed, "place_remainder_on_deck: handle {:?} not found in revealed_cards at placement time", handle);
                         }
                     }
                 }
