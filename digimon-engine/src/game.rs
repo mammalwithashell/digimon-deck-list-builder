@@ -167,6 +167,16 @@ pub struct Game {
     /// on decline. See `replacement::try_replace_impl`.
     #[doc(hidden)]
     pub replacement_pending_outcome: Option<crate::replacement::ReplacementOutcome>,
+
+    /// Controller of the effect whose `process` is currently running, if
+    /// any. Set by `run_queued_effect` at dispatch time and cleared at the
+    /// end of the call. Consumed by `infer_deletion_cause` (and Task 4's
+    /// sibling route inference helpers) to distinguish Own-effect vs
+    /// Opponent-effect deletions at the fire-site. `None` when no effect is
+    /// currently executing (e.g. direct-from-test call, combat,
+    /// security-check driver between drains).
+    #[doc(hidden)]
+    pub(crate) effect_source_player: Option<PlayerId>,
 }
 
 impl Game {
@@ -295,6 +305,7 @@ impl Game {
             event_seq: 0,
             replacement_depth: 0,
             replacement_pending_outcome: None,
+            effect_source_player: None,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -459,6 +470,36 @@ impl Game {
             cause,
             original_destination,
         )
+    }
+
+    /// Infer the `ReplacementCause` for a deletion of `target_handle` given
+    /// the current game state. Priority:
+    ///   1. `security_resolution.is_some()` → `SecurityCheck`
+    ///   2. `pending_attack.is_some()` → `Battle`
+    ///   3. `effect_source_player.is_some()` — an effect is currently
+    ///      running; `Own` if its controller equals the target's
+    ///      controller, otherwise `Opponent`.
+    ///   4. Fallback → `OwnEffect`.
+    ///
+    /// Consumed by the deletion fire-site in `combat::delete_permanent_with_effects`.
+    pub(crate) fn infer_deletion_cause(
+        &self,
+        target_handle: crate::permanent::PermanentHandle,
+    ) -> crate::replacement::ReplacementCause {
+        use crate::replacement::ReplacementCause;
+        if self.security_resolution.is_some() {
+            return ReplacementCause::SecurityCheck;
+        }
+        if self.pending_attack.is_some() {
+            return ReplacementCause::Battle;
+        }
+        if let Some(acting) = self.effect_source_player {
+            if acting == target_handle.player {
+                return ReplacementCause::OwnEffect;
+            }
+            return ReplacementCause::OpponentEffect;
+        }
+        ReplacementCause::OwnEffect
     }
 
     /// Get the next player clockwise from the given player.

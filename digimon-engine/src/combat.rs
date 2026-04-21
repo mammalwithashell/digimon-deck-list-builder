@@ -1179,11 +1179,17 @@ impl Game {
 
         let outcome = if a_dp > d_dp {
             // Attacker wins — defender is deleted.
-            self.delete_permanent_with_effects(defender);
+            self.delete_permanent_with_cause(
+                defender,
+                crate::replacement::ReplacementCause::Battle,
+            );
             AttackResult::AttackerWins
         } else if a_dp < d_dp {
             // Defender wins — attacker is deleted.
-            self.delete_permanent_with_effects(attacker);
+            self.delete_permanent_with_cause(
+                attacker,
+                crate::replacement::ReplacementCause::Battle,
+            );
             AttackResult::DefenderWins
         } else {
             // Tie — both are deleted. Delete in order: defender first to match
@@ -1191,11 +1197,17 @@ impl Game {
             // Since the second deletion can shift indices, re-resolve via card_index
             // to be safe: we use the handles directly since delete_permanent_with_effects
             // reads the top card's card_index before deletion.
-            self.delete_permanent_with_effects(defender);
+            self.delete_permanent_with_cause(
+                defender,
+                crate::replacement::ReplacementCause::Battle,
+            );
             // After deleting defender, attacker's own handle index is unchanged
             // (different player's battle_area), so the attacker handle is still valid.
             if self.handle_valid(attacker) {
-                self.delete_permanent_with_effects(attacker);
+                self.delete_permanent_with_cause(
+                    attacker,
+                    crate::replacement::ReplacementCause::Battle,
+                );
             }
             AttackResult::MutualDestruction
         };
@@ -1220,7 +1232,109 @@ impl Game {
     /// OnDeletion effects are enqueued + drained before the actual deletion,
     /// so the effect closures can still observe the permanent on the field
     /// (matches the pre-drainer legacy ordering).
+    ///
+    /// Phase 7: this entry point infers the `ReplacementCause` from live game
+    /// state (security-resolution / pending-attack / effect_source_player) and
+    /// delegates to `delete_permanent_with_cause`. Callers that already know
+    /// the cause (e.g. `resolve_battle` → `Battle`) should invoke
+    /// `delete_permanent_with_cause` directly.
     pub fn delete_permanent_with_effects(&mut self, handle: PermanentHandle) {
+        let cause = self.infer_deletion_cause(handle);
+        self.delete_permanent_with_cause(handle, cause);
+    }
+
+    /// Cause-aware deletion entry point. Fires
+    /// `WhenWouldLeaveBattleArea` / `WhenWouldBeDeleted` replacement windows
+    /// before committing the deletion. See design spec §5, §7.3.
+    ///
+    /// Task 3 limitation: if an optional replacement installs a
+    /// `PendingSelection::Replacement`, this method early-returns. The caller
+    /// is then responsible for re-driving the deletion after the selection
+    /// resolves (or for inspecting `replacement_pending_outcome` and applying
+    /// the chosen outcome manually). In practice Task 3 tests exercise
+    /// mandatory replacements only; optional flow is covered end-to-end by
+    /// Task 6's native-keyword scenarios.
+    pub fn delete_permanent_with_cause(
+        &mut self,
+        handle: PermanentHandle,
+        cause: crate::replacement::ReplacementCause,
+    ) {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        let subject = ReplacementSubject::Permanent(handle);
+
+        // Phase 7 Task 3: replacement window — fire the super-timing first,
+        // then the route-specific would.
+        let leave_outcome = self.try_replace(
+            EffectTiming::WhenWouldLeaveBattleArea,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.pending_selection.is_some() {
+            // Optional replacement parked a selection. Task 3 stops here;
+            // caller re-drives. See doc comment above.
+            return;
+        }
+
+        let outcome = match leave_outcome {
+            ReplacementOutcome::None => self.try_replace(
+                EffectTiming::WhenWouldBeDeleted,
+                subject,
+                cause,
+                Some(Zone::Trash),
+            ),
+            other => other,
+        };
+        if self.pending_selection.is_some() {
+            return;
+        }
+
+        match outcome {
+            ReplacementOutcome::None => {
+                self.commit_permanent_deletion(handle);
+            }
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                // Skip deletion — no OnDeletion / OnAnyDeletion fires.
+            }
+            ReplacementOutcome::Redirected(Zone::Deck) => {
+                // Route-specific return_to_deck does not fire
+                // WhenWouldLeaveBattleArea / OnReturn observers at the Task-3
+                // fire-site; Task 4 wires those.
+                self.return_to_deck(handle, crate::enums::StackPosition::Bottom);
+            }
+            ReplacementOutcome::Redirected(Zone::Hand) => {
+                self.return_to_hand(handle);
+            }
+            ReplacementOutcome::Redirected(other) => {
+                debug_assert!(
+                    false,
+                    "unexpected redirect destination for WhenWouldBeDeleted: {:?}",
+                    other
+                );
+                self.commit_permanent_deletion(handle);
+            }
+            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(source_h)) => {
+                // Partition-like: operate on the substituted permanent. The
+                // substituted subject gets its own replacement pass via
+                // recursion; depth guard protects against pathological chains.
+                self.delete_permanent_with_cause(source_h, cause);
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "non-Permanent substitute subject for WhenWouldBeDeleted"
+                );
+                self.commit_permanent_deletion(handle);
+            }
+        }
+    }
+
+    /// Core deletion body (OnDeletion → remove → modifier cleanup →
+    /// OnAnyDeletion) — shared between the direct fallthrough and the
+    /// defensive branches of `delete_permanent_with_cause`.
+    fn commit_permanent_deletion(&mut self, handle: PermanentHandle) {
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDeletion,
             crate::selection::TriggerSource::Permanent(handle),

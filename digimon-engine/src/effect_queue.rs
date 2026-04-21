@@ -260,6 +260,18 @@ impl Game {
     /// effect removed from the registry, etc.) — same tolerance the legacy
     /// `fire_*` loops had.
     fn run_queued_effect(&mut self, qe: QueuedEffect) {
+        // Set the effect-source attribution for replacement-cause inference.
+        // Saved on entry, restored on exit — supports nested drains (an
+        // effect queues another effect that recursively drains before this
+        // one returns).
+        let prev_effect_source = self.effect_source_player;
+        self.effect_source_player = Some(qe.controller);
+        let out = self.run_queued_effect_inner(qe);
+        self.effect_source_player = prev_effect_source;
+        out
+    }
+
+    fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
         // Source permanent may have been deleted by a prior effect in this
         // batch. Skip silently — matches Python behavior.
         if let Some(perm_handle) = qe.source_permanent {
