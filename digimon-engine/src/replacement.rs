@@ -75,9 +75,4 @@ impl<'g> ReplacementContext<'g> {
     pub fn handled(&mut self) {
         self.outcome = ReplacementOutcome::CustomHandled;
     }
-
-    /// Read-only access to the current outcome.
-    pub fn outcome(&self) -> ReplacementOutcome {
-        self.outcome
-    }
 }
