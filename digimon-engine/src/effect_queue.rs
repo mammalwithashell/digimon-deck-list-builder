@@ -306,6 +306,27 @@ impl Game {
                 }
             }
         }
+        // Phase 5 Task 3: pay-cost hook — fires after condition passes, before
+        // process. Mirrors the condition-check pattern above: borrow
+        // `&effect.pay_cost_fn` read-only, construct a fresh `EffectContext`
+        // for the mutable call, then drop both before the process block.
+        //
+        // v1 constraint: pay_cost_fn must be synchronous. Installing a
+        // PendingSelection inside the closure is undefined behavior for v1;
+        // cards needing selection-gated pay-costs should fold the selection
+        // into `process` instead. See Phase 5 non-goals.
+        if let Some(pay_cost) = &effect.pay_cost_fn {
+            let mut ctx = EffectContext::new(
+                self,
+                qe.source_card,
+                qe.source_permanent,
+                qe.controller,
+            );
+            if !pay_cost(&mut ctx) {
+                return; // cost not paid; skip process (silent abort, mirrors failed condition)
+            }
+        }
+
         if let Some(process) = &effect.process {
             let mut ctx = EffectContext::new(
                 self,
