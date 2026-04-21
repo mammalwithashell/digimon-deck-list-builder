@@ -40,7 +40,7 @@ pub use player::Player;
 pub use game::Game;
 pub use tensor::{build_tensor, TENSOR_SIZE};
 pub use action::build_action_mask;
-pub use modifiers::{ModifierEntry, ModifierRegistry};
+pub use modifiers::{ModifierEntry, ModifierRegistry, PlayerModifierEntry};
 pub use effect::{CardEffect, Effect, EffectBuilder};
 pub use effect_context::{CountCappedZone, EffectContext, EffectReadContext};
 pub use cards::{build_registry, CardEffectRegistry};

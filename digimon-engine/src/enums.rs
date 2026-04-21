@@ -325,6 +325,23 @@ pub enum ModifierType {
     DrawBlock,
     MemoryBlock,
     CannotPlayFromHand,
+
+    // ── Phase 6 flood gates (player-scoped) ──────────────────────────────
+    // Enforcement wires up in Tasks 3-4; for now these are pure data.
+    CannotPlayDigimonByEffect,
+    CannotGainMemoryByEffect,
+    CannotGainMemoryExceptFromTamers,
+    CannotReducePlayCost,
+    CannotActivateMainEffects,
+    CannotActivateWhenDigivolvingEffects,
+    CannotActivateSecurityEffects,
+    CannotDigivolveDigimonByEffect,
+    CannotDrawByEffect,
+    CannotAddSecurityByEffect,
+    CannotTrashOpponentSecurity,
+    CannotReduceOpponentSecurity,
+    #[allow(dead_code)]
+    IgnoreColorRequirement,
 }
 
 /// When a modifier expires.

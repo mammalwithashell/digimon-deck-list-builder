@@ -259,6 +259,8 @@ impl<'a> EffectContext<'a> {
         if (target.index as usize) < player.battle_area.len() {
             player.delete_permanent(target.index as usize);
             self.game.modifiers.clear_permanent(target);
+            // Phase 6: expire any player-scoped modifiers sourced from this permanent.
+            self.game.modifiers.expire_player_on_permanent_leave(target);
         }
     }
 

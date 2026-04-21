@@ -126,6 +126,8 @@ impl Game {
 
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
         self.modifiers.expire_end_of_turn(ending_player);
+        // Phase 6: expire player-scoped flood-gate modifiers.
+        self.modifiers.expire_player_end_of_turn(ending_player);
 
         // EndOfOpponentsTurn: every non-ending-player observes the turn ending.
         // Fires after EndOfYourTurn has drained but before memory flip and rotation.

@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use crate::enums::{Expiry, Keyword, ModifierType};
+use crate::enums::{Expiry, Keyword, ModifierType, PlayerId};
 use crate::permanent::PermanentHandle;
 
 /// A single modifier entry.
@@ -18,6 +18,27 @@ pub struct ModifierEntry {
     pub source_player: u8,
 }
 
+/// A player-scoped modifier entry (Phase 6 flood gates).
+///
+/// Unlike `ModifierEntry` (which is keyed to a permanent), this modifier
+/// applies to a whole player — e.g. "opponent cannot gain memory by effect".
+///
+/// NOTE: no closure-valued condition in v1. Card scripts gate WHEN they install
+/// the modifier via the Effect's `.condition` closure. Phase 7 may add a
+/// `condition` field.
+#[derive(Debug, Clone)]
+pub struct PlayerModifierEntry {
+    pub modifier: ModifierType,
+    /// For future parametric variants; ignored for boolean flags.
+    pub value: i32,
+    /// Reuses the existing `Expiry` enum.
+    pub expiry: Expiry,
+    /// Required when `expiry == Expiry::UntilLeaveField`.
+    pub source_permanent: Option<PermanentHandle>,
+    /// Who installed it (used for `EndOfOpponentsTurn` expiry).
+    pub source_player: PlayerId,
+}
+
 /// Tracks all active modifiers in the game.
 #[derive(Debug, Default)]
 pub struct ModifierRegistry {
@@ -25,6 +46,8 @@ pub struct ModifierRegistry {
     permanent_modifiers: HashMap<PermanentHandle, Vec<ModifierEntry>>,
     /// Granted keywords on permanents (separate so duplicates are deduplicated).
     permanent_keywords: HashMap<PermanentHandle, Vec<(Keyword, Expiry, u8)>>,
+    /// Player-scoped modifiers (Phase 6 flood gates).
+    player_modifiers: HashMap<PlayerId, Vec<PlayerModifierEntry>>,
 }
 
 impl ModifierRegistry {
@@ -128,6 +151,74 @@ impl ModifierRegistry {
         for kws in self.permanent_keywords.values_mut() {
             kws.retain(|(_, expiry, _)| {
                 !matches!(expiry, Expiry::EndOfAttack | Expiry::EndOfBattle)
+            });
+        }
+    }
+
+    // ── Player-scoped modifier methods (Phase 6 flood gates) ─────────────
+
+    /// Install a player-scoped modifier.
+    pub fn add_player_modifier(&mut self, target_player: PlayerId, entry: PlayerModifierEntry) {
+        self.player_modifiers
+            .entry(target_player)
+            .or_default()
+            .push(entry);
+    }
+
+    /// Whether `target_player` currently has a modifier of the given type.
+    pub fn player_has(&self, target_player: PlayerId, modifier: ModifierType) -> bool {
+        self.player_modifiers
+            .get(&target_player)
+            .map(|entries| entries.iter().any(|e| e.modifier == modifier))
+            .unwrap_or(false)
+    }
+
+    /// Sum of all `value` fields for a given modifier type on a player.
+    /// Returns 0 if no matching entries exist.
+    pub fn player_modifier_value(&self, target_player: PlayerId, modifier: ModifierType) -> i32 {
+        self.player_modifiers
+            .get(&target_player)
+            .map(|entries| {
+                entries
+                    .iter()
+                    .filter(|e| e.modifier == modifier)
+                    .map(|e| e.value)
+                    .sum()
+            })
+            .unwrap_or(0)
+    }
+
+    /// Iterate over all player-scoped modifier entries for `target_player`.
+    pub fn player_modifiers_iter(&self, target_player: PlayerId) -> impl Iterator<Item = &PlayerModifierEntry> {
+        self.player_modifiers
+            .get(&target_player)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+            .iter()
+    }
+
+    /// Expire player-scoped modifiers at the end of a turn.
+    ///
+    /// - `Expiry::EndOfTurn` — always removed.
+    /// - `Expiry::EndOfOpponentsTurn` — removed when `ending_player != entry.source_player`
+    ///   (i.e. the turn ending is the opponent of whoever installed the modifier).
+    pub fn expire_player_end_of_turn(&mut self, ending_player: PlayerId) {
+        for entries in self.player_modifiers.values_mut() {
+            entries.retain(|e| match e.expiry {
+                Expiry::EndOfTurn => false,
+                Expiry::EndOfOpponentsTurn => e.source_player == ending_player,
+                _ => true,
+            });
+        }
+    }
+
+    /// Expire player-scoped modifiers whose `source_permanent` matches `handle`.
+    /// Called whenever a permanent leaves the battle area.
+    pub fn expire_player_on_permanent_leave(&mut self, handle: PermanentHandle) {
+        for entries in self.player_modifiers.values_mut() {
+            entries.retain(|e| {
+                !(matches!(e.expiry, Expiry::UntilLeaveField)
+                    && e.source_permanent == Some(handle))
             });
         }
     }

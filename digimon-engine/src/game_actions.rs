@@ -610,6 +610,8 @@ impl Game {
         }
 
         self.modifiers.clear_permanent(handle);
+        // Phase 6: expire any player-scoped modifiers sourced from this permanent.
+        self.modifiers.expire_player_on_permanent_leave(handle);
         Some(top_handle)
     }
 
@@ -670,6 +672,8 @@ impl Game {
         }
 
         self.modifiers.clear_permanent(handle);
+        // Phase 6: expire any player-scoped modifiers sourced from this permanent.
+        self.modifiers.expire_player_on_permanent_leave(handle);
         true
     }
 
