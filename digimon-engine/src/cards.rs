@@ -13,6 +13,7 @@ use std::sync::Arc;
 use crate::effect::CardEffect;
 
 pub mod bt17;
+pub mod keyword_effects;
 pub mod test;
 pub mod tokens;
 

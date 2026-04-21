@@ -881,9 +881,41 @@ impl Game {
         card_id: &str,
         handle: crate::card_source::CardHandle,
     ) -> Option<Vec<crate::effect::Effect>> {
-        self.effect_registry
-            .get(card_id)
-            .map(|impl_| impl_.effects(handle))
+        // Registry effects come first — a hand-authored script owns its
+        // slot order. Phase 7 Task 6 appends keyword-derived auto-install
+        // replacements (Barrier / Evade / Fragment(N) / Decode) so cards
+        // with those printed keywords get the matching WhenWouldBe* process
+        // without hand-authoring. Partition / ArmorPurge are intentionally
+        // deferred — see `crate::cards::keyword_effects` docstring.
+        let registry_effects = self.effect_registry.get(card_id).map(|impl_| impl_.effects(handle));
+
+        // Look up CardData for this card_id. The vec scan is O(card_data_len)
+        // but is only hit once per effect query, and `effects_for_card` is
+        // typically called at state-change fire-sites, not in the mask hot
+        // loop — so the cost is acceptable for v1.
+        let auto_effects: Vec<crate::effect::Effect> = self
+            .card_data
+            .iter()
+            .find(|cd| cd.card_id == card_id)
+            .map(|cd| {
+                cd.keywords
+                    .iter()
+                    .filter_map(|kw| {
+                        crate::cards::keyword_effects::keyword_to_auto_effect(*kw, handle)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        match (registry_effects, auto_effects.is_empty()) {
+            (Some(mut es), false) => {
+                es.extend(auto_effects);
+                Some(es)
+            }
+            (Some(es), true) => Some(es),
+            (None, false) => Some(auto_effects),
+            (None, true) => None,
+        }
     }
 
     /// Resolve a `CardHandle` (card_index) to its `CardKind` by scanning all

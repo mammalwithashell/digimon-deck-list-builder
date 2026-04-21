@@ -612,7 +612,7 @@ fn install_optional_selection(
         cause,
         original_destination,
     );
-    let on_decline = make_decline_callback();
+    let on_decline = make_decline_callback(subject, cause, original_destination);
 
     game.pending_selection = Some(PendingSelection {
         kind: SelectionKind::Replacement,
@@ -631,8 +631,14 @@ fn install_optional_selection(
 
 /// Build the accept-side callback for an optional replacement. When fired
 /// via `resolve_selection(player, REPLACEMENT_ACCEPT)`, re-looks-up the
-/// effect and runs its `replacement_process`, writing the outcome to
-/// `game.replacement_pending_outcome`.
+/// effect and runs its `replacement_process`, then commits the resulting
+/// outcome at the appropriate fire-site (since the original fire-site
+/// call has already unwound by the time the selection resolves).
+///
+/// Phase 7 Task 6: previously this only wrote to
+/// `replacement_pending_outcome`; now it also commits the outcome so that
+/// printed optional keywords (Barrier/Evade/Fragment/Decode) behave
+/// end-to-end without additional fire-site plumbing.
 fn make_accept_callback(
     card_id: String,
     source_card: CardHandle,
@@ -656,14 +662,157 @@ fn make_accept_callback(
             original_destination,
         );
         game.replacement_pending_outcome = Some(outcome);
+        commit_deferred_outcome(game, subject, cause, original_destination, outcome);
     })
 }
 
-/// Build the decline-side callback for an optional replacement. Leaves
-/// `game.replacement_pending_outcome` at `None`.
-fn make_decline_callback() -> crate::selection::DeclineCallback {
-    Box::new(move |_game: &mut crate::game::Game| {
-        // No-op — outcome stays None. (Caller already cleared
-        // replacement_pending_outcome in install_optional_selection.)
+/// Build the decline-side callback for an optional replacement. The caller's
+/// fire-site already early-returned when the selection installed, so we must
+/// now commit the ORIGINAL event (what was about to happen before the
+/// replacement was offered) using `original_destination` as a routing hint.
+/// Leaves `replacement_pending_outcome` at `None` per prior behavior.
+fn make_decline_callback(
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> crate::selection::DeclineCallback {
+    Box::new(move |game: &mut crate::game::Game| {
+        // Decline → outcome stays None → commit the original event.
+        commit_deferred_outcome(
+            game,
+            subject,
+            cause,
+            original_destination,
+            ReplacementOutcome::None,
+        );
     })
+}
+
+/// Commit a `ReplacementOutcome` at the appropriate fire-site now that the
+/// optional-selection has resolved and the original fire-site call has
+/// unwound. Dispatches on (`subject`, `original_destination`) to pick the
+/// right commit path; a no-op outcome for the None case routes through the
+/// original event (e.g. actual deletion) so the decline path behaves as if
+/// no replacement was in scope at all.
+///
+/// This bridges the "optional replacement vs synchronous fire-site" gap
+/// introduced in Task 3/4 without modifying those fire-sites directly.
+fn commit_deferred_outcome(
+    game: &mut crate::game::Game,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+    outcome: ReplacementOutcome,
+) {
+    // Only Permanent subjects with a known original_destination have a
+    // known fire-site to re-enter. Other subject kinds (Card-in-zone,
+    // Player) currently cover trash-by-effect / draw — those fire-sites
+    // apply the outcome synchronously and don't use optional replacements
+    // in v1.
+    let perm = match subject {
+        ReplacementSubject::Permanent(h) => h,
+        _ => return,
+    };
+    let Some(dest) = original_destination else {
+        return;
+    };
+
+    match (dest, outcome) {
+        // Deletion path — original_destination == Trash.
+        (Zone::Trash, ReplacementOutcome::None) => {
+            // Decline path for a deletion: actually delete now, bypassing
+            // the replacement window (already offered and declined).
+            commit_permanent_deletion_no_replace(game, perm);
+        }
+        (Zone::Trash, ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled) => {
+            // Already handled by process — nothing to do.
+        }
+        (Zone::Trash, ReplacementOutcome::Redirected(Zone::Deck)) => {
+            game.return_to_deck(perm, crate::enums::StackPosition::Bottom);
+        }
+        (Zone::Trash, ReplacementOutcome::Redirected(Zone::Hand)) => {
+            let _ = game.return_to_hand(perm);
+        }
+        (Zone::Trash, ReplacementOutcome::Redirected(_)) => {}
+        (Zone::Trash, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {
+            game.delete_permanent_with_cause(other, cause);
+        }
+        (Zone::Trash, ReplacementOutcome::Substituted(_)) => {}
+
+        // Return-to-hand path.
+        (Zone::Hand, ReplacementOutcome::None) => {
+            let _ = game.return_to_hand(perm);
+        }
+        (Zone::Hand, ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled) => {}
+        (Zone::Hand, ReplacementOutcome::Redirected(Zone::Deck)) => {
+            game.return_to_deck(perm, crate::enums::StackPosition::Bottom);
+        }
+        (Zone::Hand, ReplacementOutcome::Redirected(Zone::Trash)) => {
+            game.delete_permanent_with_cause(perm, cause);
+        }
+        (Zone::Hand, ReplacementOutcome::Redirected(_)) => {}
+        (Zone::Hand, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {
+            let _ = game.return_to_hand(other);
+        }
+        (Zone::Hand, ReplacementOutcome::Substituted(_)) => {}
+
+        // Return-to-deck path.
+        (Zone::Deck, ReplacementOutcome::None) => {
+            game.return_to_deck(perm, crate::enums::StackPosition::Bottom);
+        }
+        (Zone::Deck, ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled) => {}
+        (Zone::Deck, ReplacementOutcome::Redirected(Zone::Hand)) => {
+            let _ = game.return_to_hand(perm);
+        }
+        (Zone::Deck, ReplacementOutcome::Redirected(Zone::Trash)) => {
+            game.delete_permanent_with_cause(perm, cause);
+        }
+        (Zone::Deck, ReplacementOutcome::Redirected(_)) => {}
+        (Zone::Deck, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {
+            game.return_to_deck(other, crate::enums::StackPosition::Bottom);
+        }
+        (Zone::Deck, ReplacementOutcome::Substituted(_)) => {}
+
+        // Other destinations (BattleArea, Security, …) — not produced by
+        // any current fire-site for Permanent subjects.
+        _ => {}
+    }
+}
+
+/// Commit a permanent's deletion without re-running the replacement window.
+/// Mirrors the post-replacement arm of `Game::delete_permanent_with_cause`
+/// (OnDeletion → remove → OnAnyDeletion) but bypasses try_replace because
+/// the replacement window has already been offered and declined.
+fn commit_permanent_deletion_no_replace(
+    game: &mut crate::game::Game,
+    handle: PermanentHandle,
+) {
+    use crate::enums::EffectTiming;
+    use crate::selection::TriggerSource;
+
+    game.enqueue_triggered(
+        EffectTiming::OnDeletion,
+        TriggerSource::Permanent(handle),
+    );
+    game.drain_effect_queue();
+
+    if game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+        .is_some()
+    {
+        game.player_mut(handle.player)
+            .delete_permanent(handle.index as usize);
+    }
+    game.modifiers.clear_permanent(handle);
+    game.modifiers.expire_player_on_permanent_leave(handle);
+
+    for pid in 0..game.players.len() {
+        game.enqueue_triggered(
+            EffectTiming::OnAnyDeletion,
+            TriggerSource::PlayerBattleArea(pid as PlayerId),
+        );
+    }
+    game.drain_effect_queue();
 }

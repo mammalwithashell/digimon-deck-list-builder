@@ -258,8 +258,9 @@ pub fn parse_printed_keywords(
             let trimmed = inside.trim();
 
             // Try non-parametric keywords first (longest-prefix wins).
-            // Order matters: "Blast Digivolve" before "Blast" etc. —
-            // here we check each prefix and break on the first match.
+            // Order matters: "Blast Digivolve" before "Blast", "Armor Purge"
+            // before "Armor", "Decode" before "Decoy" — we check each prefix
+            // in order and break on the first match.
             let mut matched = false;
             for (prefix, kw) in [
                 ("Blast Digivolve", Keyword::Blast),
@@ -269,6 +270,7 @@ pub fn parse_printed_keywords(
                 ("Piercing", Keyword::Piercing),
                 ("Reboot", Keyword::Reboot),
                 ("Blitz", Keyword::Blitz),
+                ("Armor Purge", Keyword::ArmorPurge),
                 ("Armor", Keyword::Armor),
                 ("Raid", Keyword::Raid),
                 ("Alliance", Keyword::Alliance),
@@ -276,6 +278,8 @@ pub fn parse_printed_keywords(
                 ("Fortitude", Keyword::Fortitude),
                 ("Overclock", Keyword::Overclock),
                 ("Barrier", Keyword::Barrier),
+                ("Evade", Keyword::Evade),
+                ("Decode", Keyword::Decode),
                 ("Decoy", Keyword::Decoy),
                 ("Material", Keyword::Material),
                 ("Partition", Keyword::Partition),
@@ -328,6 +332,27 @@ pub fn parse_printed_keywords(
                 let n_str = rest.trim().split_whitespace().next().unwrap_or("");
                 if let Ok(n) = n_str.parse::<u8>() {
                     push_unique(Keyword::DrawX(n), &mut found);
+                }
+                continue;
+            }
+
+            // Parametric: Fragment (N) — printed form is ＜Fragment (3)＞.
+            // Also accept `Fragment N` as a conservative fallback in case
+            // some printings omit the parens.
+            if let Some(rest) = trimmed.strip_prefix("Fragment") {
+                let rest = rest.trim();
+                // Strip optional surrounding parens/brackets around the number.
+                let inner = rest
+                    .trim_start_matches('(')
+                    .trim_start_matches('[')
+                    .trim_end_matches(')')
+                    .trim_end_matches(']')
+                    .trim();
+                let n_str = inner.split_whitespace().next().unwrap_or("");
+                // Trailing `)` could remain if the token is `3)` — strip it.
+                let n_str = n_str.trim_end_matches(')').trim_end_matches(']');
+                if let Ok(n) = n_str.parse::<u8>() {
+                    push_unique(Keyword::Fragment(n), &mut found);
                 }
                 continue;
             }
