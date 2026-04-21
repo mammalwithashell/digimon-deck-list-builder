@@ -8,6 +8,7 @@ when credentials aren't configured.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from functools import lru_cache
 from typing import Iterator
@@ -68,6 +69,46 @@ def head_object(key: str) -> dict:
 
 def delete_object(key: str) -> None:
     _client().delete_object(Bucket=_bucket(), Key=key)
+
+
+def put_object(
+    key: str,
+    body: bytes,
+    content_type: str = "application/octet-stream",
+    cache_control: str | None = None,
+    acl: str | None = None,
+) -> None:
+    """Upload bytes to a Spaces object. Used for manifest JSON rewrites.
+
+    Unlike presigned PUT, this path runs server-side and sets object-level
+    metadata (Content-Type, Cache-Control, ACL) in one call.
+    """
+    extra: dict = {
+        "Bucket": _bucket(),
+        "Key": key,
+        "Body": body,
+        "ContentType": content_type,
+    }
+    if cache_control is not None:
+        extra["CacheControl"] = cache_control
+    if acl is not None:
+        extra["ACL"] = acl
+    _client().put_object(**extra)
+
+
+def put_json(key: str, data: dict, cache_max_age: int = 60) -> None:
+    """Serialize ``data`` as JSON (sorted keys, UTF-8) and upload with a
+    sensible Cache-Control header. Public-read ACL is applied so Tauri's
+    updater can fetch anonymously.
+    """
+    body = json.dumps(data, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    put_object(
+        key=key,
+        body=body,
+        content_type="application/json",
+        cache_control=f"public, max-age={cache_max_age}",
+        acl="public-read",
+    )
 
 
 def iter_object_chunks(key: str, chunk_size: int = 8 * 1024 * 1024) -> Iterator[bytes]:
