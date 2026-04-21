@@ -7,8 +7,8 @@ use crate::enums::EffectTiming;
 /// Condition closures run during effect evaluation and during tensor-time
 /// inspection (for static DP modifiers / OPT state). They receive a
 /// read-only view of game state; they must not mutate.
-pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync>;
-pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync>;
+pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 'static>;
+pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync + 'static>;
 pub type CostReductionFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
 pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
 
@@ -326,10 +326,17 @@ impl EffectBuilder {
         self
     }
 
+    pub fn dp_modifier(mut self, n: i32) -> Self {
+        self.inner.dp_modifier = n;
+        self
+    }
+
     /// Attach a closure that computes how much to reduce the play/digivolve
     /// cost when this BeforePayCost effect is active. The closure receives a
-    /// read-only context — it must not mutate game state. Phase 5 dispatch
-    /// wires the return value into cost calculation in Tasks 2-4.
+    /// read-only context — it must not mutate game state.
+    ///
+    /// Dispatched in Task 2 at `EffectTiming::BeforePayCost` scan during
+    /// play/digivolve cost calculation.
     pub fn cost_reduction_fn<F>(mut self, f: F) -> Self
     where
         F: Fn(&EffectReadContext) -> i32 + Send + Sync + 'static,
@@ -338,25 +345,37 @@ impl EffectBuilder {
         self
     }
 
-    /// Attach a closure that performs custom cost payment in place of the
-    /// default memory deduction. Returns `true` if payment succeeded, `false`
-    /// to abort the action. Phase 5 dispatch wires this into the pay-cost
-    /// path in Tasks 2-4.
+    pub fn cost_reduction(mut self, n: i32) -> Self {
+        self.inner.cost_reduction = n;
+        self
+    }
+
+    /// Install a pay-cost closure that gates this effect's execution.
+    ///
+    /// Dispatch depends on the effect's timing:
+    /// - For `EffectTiming::BeforePayCost`: fires during play/digivolve cost
+    ///   calculation AFTER reduction accumulation, BEFORE `pay_memory`. Returning
+    ///   `false` skips the reduction contribution (the play itself still
+    ///   proceeds at full cost). Returning `true` means "cost paid; apply
+    ///   reduction".
+    /// - For any other triggered timing: fires in `run_queued_effect` AFTER
+    ///   the condition passes, BEFORE `process` runs. Returning `false` aborts
+    ///   the effect silently (process does not fire). Returning `true` means
+    ///   "cost paid; continue to process".
+    ///
+    /// The closure receives `&mut EffectContext` so it can trash cards,
+    /// suspend permanents, or otherwise mutate game state to pay the cost.
+    ///
+    /// **v1 constraint:** synchronous — the closure must NOT install a
+    /// `PendingSelection`. For selection-gated pay-costs, fold the selection
+    /// into `process` for now. See Phase 5 non-goals.
+    ///
+    /// Phase 5 dispatch wires up in Tasks 3-4.
     pub fn pay_cost_fn<F>(mut self, f: F) -> Self
     where
         F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static,
     {
         self.inner.pay_cost_fn = Some(Box::new(f));
-        self
-    }
-
-    pub fn dp_modifier(mut self, n: i32) -> Self {
-        self.inner.dp_modifier = n;
-        self
-    }
-
-    pub fn cost_reduction(mut self, n: i32) -> Self {
-        self.inner.cost_reduction = n;
         self
     }
 
