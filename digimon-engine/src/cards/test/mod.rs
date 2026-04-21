@@ -34,11 +34,14 @@ mod test_024;
 mod test_025;
 mod test_phase7_cancel;
 mod test_phase7_cancel2;
+pub mod test_phase7_guard_sentinel;
 mod test_phase7_handled;
 mod test_phase7_optional;
 mod test_phase7_recurse;
 mod test_phase7_redirect;
 mod test_phase7_substitute;
+
+pub use test_phase7_guard_sentinel::{GUARD_SENTINEL_WWBD, GUARD_SENTINEL_WWLBA};
 
 /// Register all test cards into the registry.
 pub fn register(registry: &mut CardEffectRegistry) {
@@ -63,6 +66,10 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-025", Arc::new(test_025::Test025));
     registry.insert("TEST-P7-CANCEL", Arc::new(test_phase7_cancel::TestP7Cancel));
     registry.insert("TEST-P7-CANCEL2", Arc::new(test_phase7_cancel2::TestP7Cancel2));
+    registry.insert(
+        "TEST-P7-GUARD-SENTINEL",
+        Arc::new(test_phase7_guard_sentinel::TestP7GuardSentinel),
+    );
     registry.insert("TEST-P7-HANDLED", Arc::new(test_phase7_handled::TestP7Handled));
     registry.insert("TEST-P7-OPTIONAL", Arc::new(test_phase7_optional::TestP7Optional));
     registry.insert("TEST-P7-RECURSE", Arc::new(test_phase7_recurse::TestP7Recurse));

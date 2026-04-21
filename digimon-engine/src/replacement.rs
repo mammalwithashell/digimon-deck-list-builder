@@ -31,7 +31,7 @@ pub enum ReplacementCause {
 
 /// What's about to happen — a permanent leaving the field, a card being
 /// trashed from hand, a player about to draw, etc.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ReplacementSubject {
     Permanent(PermanentHandle),
     Card(CardHandle, Zone),
@@ -163,6 +163,21 @@ struct Candidate {
 
 /// The `Game::try_replace` free-function body. Called via the thin wrapper
 /// on `Game` so the `impl Game` block stays readable.
+///
+/// Implements spec §7.5 — two recursion guards:
+///
+/// 1. **Depth guard** — `replacement_depth < MAX_REPLACEMENT_DEPTH` or the
+///    dispatcher short-circuits. Belt-and-suspenders against pathological
+///    mutual-cancellation loops.
+/// 2. **Once-per-event guard** (§7.5) — a `(timing, subject)` pair that has
+///    already fired within this call chain is skipped. Prevents the
+///    `WhenWouldLeaveBattleArea` super-timing from re-firing when its
+///    redirect routes through another leave-the-field helper that would
+///    dispatch the same timing again (e.g. `delete → Redirected(Deck) →
+///    return_to_deck → would-re-fire-leave-battle-area`).
+///
+/// The fired-set is cleared at the outermost entry (`replacement_depth == 0`)
+/// so back-to-back unrelated replacement events each start with a clean slate.
 pub(crate) fn try_replace_impl(
     game: &mut crate::game::Game,
     timing: EffectTiming,
@@ -170,20 +185,49 @@ pub(crate) fn try_replace_impl(
     cause: ReplacementCause,
     original_destination: Option<Zone>,
 ) -> ReplacementOutcome {
-    // TODO(phase-7-followup §7.5): once-per-event guard. Spec §7.5 requires a
-    // `HashSet<(EffectTiming, ReplacementSubject)>` tracked within a single
-    // try_replace call-chain so a replacement that has already fired for a
-    // given (timing, subject) is skipped on re-entry. Task 4 surfaces this:
-    // a Redirected(Deck) outcome on `WhenWouldBeDeleted` routes through
-    // `return_to_deck` which re-fires `WhenWouldLeaveBattleArea` for the
-    // same subject — super-timing double-fire. Today `MAX_REPLACEMENT_DEPTH`
-    // caps recursion at 8 but doesn't prevent double-fire within that depth.
-    // Fix: add a fired-set on Game, cleared on outermost exit.
-
     // Depth guard.
     if game.replacement_depth >= MAX_REPLACEMENT_DEPTH {
         return ReplacementOutcome::None;
     }
+
+    // §7.5: at the outermost entry, clear the fired-set so a fresh call chain
+    // starts clean. EXCEPT when `in_replacement_commit` is set — that marks a
+    // callback-commit continuation (the original top-level fire-site unwound
+    // when the optional selection installed; the callback is re-entering
+    // `try_replace` via a zone-mover to finish committing the outcome) and
+    // the fired-set must carry through so the super-timing + route-specific
+    // timing already fired in the original chain stay blocked. Nested calls
+    // (depth > 0) inherit the outer chain's set unconditionally.
+    if game.replacement_depth == 0 && !game.in_replacement_commit {
+        game.replacement_fired.clear();
+    }
+
+    // §7.5 once-per-event guard — if this (timing, subject) already fired in
+    // the current call chain, skip re-dispatch. Critical for redirect routes
+    // that funnel through the super-timing `WhenWouldLeaveBattleArea`.
+    //
+    // During a callback-commit continuation (`in_replacement_commit`), we
+    // treat the guard more strictly: ANY prior fire for this subject blocks
+    // new replacements, regardless of timing. Rationale: once the player has
+    // accepted/declined a replacement for this event, the redirect route must
+    // not re-prompt for a *different* Would* timing on the same subject (the
+    // canonical case is Decode's deck→hand redirect, where the `return_to_hand`
+    // commit must NOT install a second PendingSelection for the hand-timing
+    // Decode replacement — that would double-prompt for what is logically a
+    // single event).
+    let key = (timing, subject);
+    let blocked = if game.in_replacement_commit {
+        game.replacement_fired
+            .iter()
+            .any(|(_t, s)| *s == subject)
+    } else {
+        game.replacement_fired.contains(&key)
+    };
+    if blocked {
+        return ReplacementOutcome::None;
+    }
+    game.replacement_fired.insert(key);
+
     game.replacement_depth = game.replacement_depth.saturating_add(1);
 
     let outcome =
@@ -662,7 +706,11 @@ fn make_accept_callback(
             original_destination,
         );
         game.replacement_pending_outcome = Some(outcome);
+        // §7.5: mark this as a callback-commit continuation so the fired-set
+        // from the original call chain survives the zone-mover re-entry.
+        game.in_replacement_commit = true;
         commit_deferred_outcome(game, subject, cause, original_destination, outcome);
+        game.in_replacement_commit = false;
     })
 }
 
@@ -678,6 +726,9 @@ fn make_decline_callback(
 ) -> crate::selection::DeclineCallback {
     Box::new(move |game: &mut crate::game::Game| {
         // Decline → outcome stays None → commit the original event.
+        // §7.5: mark this as a callback-commit continuation so the fired-set
+        // from the original call chain survives the zone-mover re-entry.
+        game.in_replacement_commit = true;
         commit_deferred_outcome(
             game,
             subject,
@@ -685,6 +736,7 @@ fn make_decline_callback(
             original_destination,
             ReplacementOutcome::None,
         );
+        game.in_replacement_commit = false;
     })
 }
 
@@ -775,28 +827,10 @@ fn commit_deferred_outcome(
             // of final destination but we still must commit the move, since
             // the original fire-site unwound on selection-install.
             //
-            // We inline the bare move here rather than recursing into
-            // `game.return_to_hand(perm)`, because that would re-trigger the
-            // just-resolved `WhenWouldBeReturnedToHand` replacement window
-            // and cascade (pending spec §7.5 once-per-event guard — see TODO
-            // in `try_replace_impl`). The replacement has already resolved
-            // with an accept, so committing the move directly is correct.
-            let player = game.player_mut(perm.player);
-            if (perm.index as usize) < player.battle_area.len() {
-                let pdata = player.battle_area.remove(perm.index as usize);
-                let mut sources = pdata.card_sources;
-                if let Some(top) = sources.pop() {
-                    game.player_mut(perm.player).hand.push(top);
-                }
-                for card in sources {
-                    game.player_mut(perm.player).trash.push(card);
-                }
-                for card in pdata.linked_cards {
-                    game.player_mut(perm.player).trash.push(card);
-                }
-                game.modifiers.clear_permanent(perm);
-                game.modifiers.expire_player_on_permanent_leave(perm);
-            }
+            // Post-§7.5 guard: safe to call `return_to_hand` directly — the
+            // once-per-event guard prevents `WhenWouldBeReturnedToHand` from
+            // re-firing for the same subject within this call chain.
+            let _ = game.return_to_hand(perm);
         }
         (Zone::Hand, ReplacementOutcome::Redirected(_)) => {}
         (Zone::Hand, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {

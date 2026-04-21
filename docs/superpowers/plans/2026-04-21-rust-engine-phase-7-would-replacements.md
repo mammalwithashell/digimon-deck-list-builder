@@ -1413,12 +1413,26 @@ Per spec §14 — these are not blockers but must be decided before the correspo
 
 (Fill in as tasks complete.)
 
-- [ ] Task 1 — (date, commit SHA)
-- [ ] Task 2 — (date, commit SHA)
-- [ ] Task 3 — (date, commit SHA)
-- [ ] Task 4 — (date, commit SHA)
-- [ ] Task 5 — (date, commit SHA)
-- [ ] Task 6 — (date, commit SHA)
-- [ ] Task 7 — (date, commit SHA)
+- [x] Task 1 — 2026-04-21 (`2596f307`, `57b4cf01`)
+- [x] Task 2 — 2026-04-21 (`1545c5c4`, `cdbcb7c7`)
+- [x] Task 3 — 2026-04-21 (`b686f728`, `467c8194`)
+- [x] Task 4 — 2026-04-21 (`bf53cc44`, `fd40ccdf`)
+- [x] Task 5 — 2026-04-21 (`71727ff0`, `f68e8209`)
+- [x] Task 6 — 2026-04-21 (`1e38a03f`, `ab67073a`, `b5f53743`)
+- [x] Task 7 — 2026-04-21 (`97d12293`)
 
 Full suite green at end of each task is mandatory before proceeding to the next.
+
+## Status
+
+| Task | Date | Commit(s) |
+|------|------|-----------|
+| 1 — Enum + data types | 2026-04-21 | `2596f307`, `57b4cf01` |
+| 2 — Dispatcher | 2026-04-21 | `1545c5c4`, `cdbcb7c7` |
+| 3 — Deletion fire-site | 2026-04-21 | `b686f728`, `467c8194` |
+| 4 — Route Would* timings | 2026-04-21 | `bf53cc44`, `fd40ccdf` |
+| 5 — Passive migration | 2026-04-21 | `71727ff0`, `f68e8209` |
+| 6 — Keyword parsing | 2026-04-21 | `1e38a03f`, `ab67073a`, `b5f53743` |
+| 7 — §7.5 guard + docs | 2026-04-21 | `97d12293` |
+
+Baseline 566 → final 626 passing, 0 failing, 0 warnings under `RUSTFLAGS="-D warnings"`. Phase 7 complete end-to-end; roadmap flipped to ✅ Landed.

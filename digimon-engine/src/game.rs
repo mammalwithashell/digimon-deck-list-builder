@@ -168,6 +168,35 @@ pub struct Game {
     #[doc(hidden)]
     pub replacement_pending_outcome: Option<crate::replacement::ReplacementOutcome>,
 
+    /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
+    /// have already fired within the current `try_replace` call chain so a
+    /// redirected route does not re-fire the same timing for the same subject
+    /// (e.g. `WhenWouldLeaveBattleArea` super-timing double-fire when a
+    /// `Redirected(Deck)` outcome on `WhenWouldBeDeleted` routes through
+    /// `return_to_deck`, which would otherwise re-invoke
+    /// `WhenWouldLeaveBattleArea` for the same permanent).
+    ///
+    /// Cleared at the outermost entry (when `replacement_depth == 0`) of
+    /// `try_replace_impl` — unless `in_replacement_commit` is set, in which
+    /// case we are continuing the original call chain across a callback
+    /// resolution boundary and the set must be preserved. See
+    /// `replacement::try_replace_impl`.
+    #[doc(hidden)]
+    pub replacement_fired: std::collections::HashSet<(
+        crate::enums::EffectTiming,
+        crate::replacement::ReplacementSubject,
+    )>,
+
+    /// Spec §7.5 continuation marker. Set by the optional-replacement callback
+    /// (accept/decline) just before invoking `commit_deferred_outcome`, cleared
+    /// after the commit returns. While true, `try_replace_impl` treats a
+    /// depth==0 entry as a continuation of the original call chain and does
+    /// NOT clear `replacement_fired` — so the fired-set from the original
+    /// event survives the callback boundary and blocks double-fires during
+    /// the commit's zone-mover calls.
+    #[doc(hidden)]
+    pub(crate) in_replacement_commit: bool,
+
     /// Controller of the effect whose `process` is currently running, if
     /// any. Set by `run_queued_effect` at dispatch time and cleared at the
     /// end of the call. Consumed by `infer_deletion_cause` (and Task 4's
@@ -305,6 +334,8 @@ impl Game {
             event_seq: 0,
             replacement_depth: 0,
             replacement_pending_outcome: None,
+            replacement_fired: std::collections::HashSet::new(),
+            in_replacement_commit: false,
             effect_source_player: None,
         };
 

@@ -762,3 +762,86 @@ surface — every Python call site reduces to
 `de_digivolve(target, Some(3), Some(N))` in Rust.
 
 **Coverage:** `digimon-engine/tests/cards_behavioral/de_digivolve.rs`.
+
+---
+
+## 12. Replacement framework (Phase 7)
+
+### 12.1 🟢 Would* timings + `try_replace` dispatcher — Rust-only
+
+**Python** — no equivalent. Python approximates all "would"
+semantics via post-hoc observer timings (`OnDeletion`, `OnReturn`,
+`OnLeaveField`) which fire *after* the state change commits. For
+mechanics that need to intercept-and-substitute (Barrier, Evade,
+Decode, Partition, ArmorPurge, Fragment, "cannot be returned to
+deck", "cannot be de-digivolved"), Python scripts either
+approximate the effect as a post-hoc reaction (breaking
+faithfulness — e.g. Barrier can't prevent the OnDeletion queue
+from being enqueued) or the card is marked BLOCKED in
+`qa/archetype-qa/engine-gaps.md`. This is a known faithfulness
+gap per CLAUDE.md rule 17 (no-approximations policy) and is
+tracked at cross-archetype scope (~60 cards).
+
+**Rust** — full Phase 7 replacement framework:
+
+- `EffectTiming::Would*` family (9 dispatching variants + 2
+  reserved for Phase 9). Each fires before the corresponding
+  state-change helper commits.
+- `Game::try_replace(timing, subject, cause, original_destination)
+  -> ReplacementOutcome` — canonical fire-site entry point. Walks
+  registered candidates (card effects + passive modifiers),
+  layers by controller, installs `PendingSelection::Replacement`
+  for optional candidates, and composes outcomes (last-non-None
+  wins in v1).
+- `ReplacementContext` — curated mutation API for effect
+  processes: `cancel()`, `redirect_to(zone)`, `substitute(subject)`,
+  `handled()`.
+- `ReplacementCause` — Battle / OwnEffect / OpponentEffect /
+  SecurityCheck / Cost. Derived at fire-site; scripts filter on
+  it but never compute it.
+- Passive-modifier auto-install: `CannotBeReturnedToDeck`,
+  `CannotBeReturnedToHand`, `CannotBeTrashedByEffect`,
+  `CannotBeDeDigivolved`, `CannotBeDestroyed*` all wire as
+  mandatory cancels via the modifier registry's replacement path.
+- Native-keyword auto-install: `<Barrier>`, `<Evade>`, `<Decode>`
+  parsed from `CardData::keywords` produce the right
+  replacement at `effects_for_card` time.
+- Spec §7.5 once-per-event guard: `(timing, subject)` pairs that
+  already fired in the current call chain are skipped;
+  strengthened during callback-commit continuations to "any prior
+  fire for this subject blocks" so redirect routes don't
+  cascade into additional prompts for what is logically a single
+  event.
+
+**Divergences:** Rust has this entire layer; Python does not.
+Every replacement-semantics card in the catalog is a parity gap
+that resolves only by migrating the card to Rust (per CLAUDE.md
+rule 21 — cards are not dual-implemented).
+
+**Phase 7 v1 constraints** (documented in
+`docs/RUST_ENGINE_API.md` § Phase 7):
+
+1. `<Partition>`, `<ArmorPurge>`, `<Fragment(N)>` parse into
+   `Keyword` variants but don't auto-install — each needs a
+   nested `PendingSelection::Source` inside the replacement
+   window, which is uncharted. Hand-authored scripts can install
+   them via `Effect::when_would_be_deleted(card).optional()`.
+2. Optional replacements for `Card` / `Player` subjects silently
+   no-op on commit — `commit_deferred_outcome` is Permanent-only
+   in v1 (debug_assert-guarded; unreachable today).
+3. Multi-replacement `TriggerOrder` prompts not emitted when both
+   sides have >1 candidates — runs in collection order, last
+   non-None outcome wins.
+4. `ACTION_SPACE_SIZE` unchanged at 2168 — `REPLACEMENT_ACCEPT`
+   reuses the existing `EffectChoice` range; `PASS` (62) is
+   decline. No tensor/mask regression.
+
+**Coverage:** `digimon-engine/tests/replacements/` (55 tests across
+`dispatcher_core`, `dispatcher_guard`, `deletion_replacements`,
+`route_replacements`, `native_keywords`, `passive_modifier_migration`,
+`enum_and_context`, `behavioral_end_to_end`).
+
+**When Python retires:** all replacement-semantics cards (~60 from
+the cross-archetype audit) become Rust-only from their first
+implementation; there is no Python port and no dual-engine
+parity to maintain.

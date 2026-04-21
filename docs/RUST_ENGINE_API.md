@@ -710,6 +710,182 @@ if ctx.game.modifiers.player_has(target, ModifierType::CannotGainMemoryExceptFro
 
 ---
 
+## Phase 7 — Would-Replacement Timings
+
+Phase 7 adds a first-class **replacement-effect layer** to the engine. Replacement effects intercept an impending state change (deletion, return-to-hand, return-to-deck, trash-by-effect, de-digivolve, draw, security-placement, security-loss) **before** it commits and either cancel it, redirect it, substitute the affected subject, or fully handle it in-process.
+
+Unlike observer timings (`OnDeletion`, `OnReturn`, …) which fire *after* the event, `Would*` timings fire *before* and can mutate the outcome. This makes printed keywords like `<Barrier>`, `<Evade>`, and `<Decode>` faithful to their printed rules — Barrier is not an auto-selection that trashes the top of deck; it's an *optional* replacement that surfaces as a `PendingSelection::Replacement` with both accept and decline in the mask, so the RL action space can learn the decision (working rule 17).
+
+### `EffectTiming::Would*` variants
+
+Nine variants dispatch today:
+
+| Variant | Fires at | Default destination | Notes |
+|---------|----------|--------------------|-------|
+| `WhenWouldLeaveBattleArea` | Every leave-the-field route (super-timing) | varies | Fires before the route-specific timing; cancel here affects all routes. |
+| `WhenWouldBeDeleted` | `delete_permanent_with_cause` / battle / security-check | `Zone::Trash` | Barrier / Evade / Partition / ArmorPurge / Fragment replace here. |
+| `WhenWouldBeReturnedToHand` | `return_to_hand` | `Zone::Hand` | Decode's hand-timing replaces here. |
+| `WhenWouldBeReturnedToDeck` | `return_to_deck` | `Zone::Deck` | Decode's deck-timing replaces here. |
+| `WhenWouldBeTrashed` | Effect-driven trash from hand (+ future: battle/security) | varies | `CannotBeTrashedByEffect` passive cancels here. |
+| `WhenWouldBeDeDigivolved` | `de_digivolve` | — | `CannotBeDeDigivolved` cancels; `Substituted(other)` re-targets. |
+| `WhenWouldDraw` | `EffectContext::draw` | — | `CannotDrawByEffect` interaction orthogonal (Phase 6 flood gate). |
+| `WhenWouldPlaceInSecurity` | Effect-driven `place_on_security` | `Zone::Security` | Redirect-to-trash or reorder. |
+| `WhenWouldLoseSecurity` | Security-pop during attack | — | Fires before `SecuritySkill` drains. |
+
+Two variants are reserved for Phase 9 (combat-interrupt completion) and do not dispatch yet: `WhenWouldAttack`, `WhenWouldBeAttackTarget`.
+
+### `ReplacementContext` API
+
+Each `Would*` effect process receives a `ReplacementContext` by `&mut`:
+
+```rust
+pub struct ReplacementContext<'g> {
+    pub effect: &'g mut EffectContext<'g>,
+    pub cause: ReplacementCause,
+    pub subject: ReplacementSubject,
+    pub original_destination: Option<Zone>,
+    /* outcome — set via helpers below */
+}
+```
+
+Mutating helpers (mutually exclusive — call exactly one):
+
+| Helper | Outcome | Meaning |
+|--------|---------|---------|
+| `rctx.cancel()` | `Cancelled` | Skip the event entirely. No observers fire. |
+| `rctx.redirect_to(zone)` | `Redirected(zone)` | Route to a different destination (deletion → bottom-of-deck for Evade). |
+| `rctx.substitute(subject)` | `Substituted(subject)` | Apply the original event to a different subject (Partition: delete a source instead). |
+| `rctx.handled()` | `CustomHandled` | The process mutated state directly (Barrier: trashed top of deck); skip the original event AND skip observer dispatch. |
+
+Read-only context fields are always available through `rctx.effect.*` (the underlying `EffectContext`) and `rctx.cause` / `rctx.subject` / `rctx.original_destination`.
+
+### `ReplacementCause`
+
+Five variants, **derived at the fire-site** (not threaded through card scripts):
+
+```rust
+pub enum ReplacementCause {
+    Battle,           // DP battle — only resolve_battle dispatches this
+    OwnEffect,        // Target's controller caused the event
+    OpponentEffect,   // The other player's effect caused it
+    SecurityCheck,    // Security-reveal or SecuritySkill-driven
+    Cost,             // Cost-payment trash/suspend (rare)
+}
+```
+
+The fire-site's inference rules live in `infer_effect_cause` and `infer_deletion_cause`. Card scripts read `rctx.cause` to filter (e.g. "only replace if cause is `OpponentEffect`"); they never compute it themselves.
+
+### `ReplacementSubject`
+
+```rust
+pub enum ReplacementSubject {
+    Permanent(PermanentHandle),   // field events — the common case
+    Card(CardHandle, Zone),        // hand / trash / security events
+    Player(PlayerId),              // draws, security-placement by effect
+}
+```
+
+### Passive-modifier migration (Task 5)
+
+Phase 6 shipped three restriction modifiers as enum variants without enforcement (`CannotBeReturnedToDeck`, `CannotBeReturnedToHand`, `CannotBeDeDigivolved`, `CannotBeTrashedByEffect`). Phase 7 wires these through the replacement framework as **automatic mandatory cancels**. Phase 0's `CannotBeDestroyed` / `CannotBeDestroyedByBattle` / `CannotBeDestroyedByEffect` migrate too.
+
+Builders:
+
+```rust
+// Permanent-scoped: this Digimon can't be returned to deck by opponent's effects.
+ModifierEntry::passive_replacement(ModifierType::CannotBeReturnedToDeck)
+    .opponent_only()
+    .attach(&mut game.modifiers, target_handle, source_player, Expiry::Permanent);
+
+// With a live-state condition (e.g. "…while another X is in play").
+ModifierEntry::passive_replacement(ModifierType::CannotBeDeDigivolved)
+    .with_condition(|ctx, _subj| {
+        ctx.read_game().player(ctx.source_player()).battle_area
+            .iter()
+            .any(|p| p.top_card().contains_name("Bagramon"))
+    })
+    .attach(&mut game.modifiers, target, source_player, Expiry::Permanent);
+```
+
+Cause-filter semantics: `.opponent_only()` sets `cause_filter = Some(OpponentEffect)`. Absent filter = cause-agnostic (fires for any cause).
+
+### Native-keyword auto-install (Task 6)
+
+`<Barrier>`, `<Evade>`, and `<Decode>` ship out-of-the-box via printed-keyword auto-install at `effects_for_card` time — no hand-authored `CardEffect` script required. Put the keyword in `CardData::keywords` and the engine installs the matching replacement.
+
+**Deferred from v1:** `<Partition>`, `<ArmorPurge>`, `<Fragment(N)>` parse into `Keyword` variants but don't auto-install — each needs a nested `PendingSelection::Source` *inside* the replacement window, an uncharted combination. Scripts can still install these manually via `Effect::when_would_be_deleted(card).optional().replacement_process(…)`.
+
+### Worked example — a hand-authored Barrier-flavored effect
+
+```rust
+use crate::effect::{CardEffect, Effect};
+use crate::enums::Zone;
+use crate::replacement::ReplacementSubject;
+
+pub struct MyBarrier;
+
+impl CardEffect for MyBarrier {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_would_be_deleted(card)
+            .name("<Barrier>")
+            .optional()  // offer accept/decline — required for "may" effects
+            .replacement_process(|rctx| {
+                // Only fire for my own permanent.
+                let me = rctx.effect.source_permanent;
+                let ReplacementSubject::Permanent(subj) = rctx.subject else { return };
+                if Some(subj) != me { return; }
+
+                // Pay the Barrier cost — trash top of owner's deck.
+                let owner = subj.player;
+                let game = &mut *rctx.effect.game;
+                if let Some(top) = game.players[owner as usize].deck.pop() {
+                    game.players[owner as usize].trash.push(top);
+                }
+
+                // Suppress the deletion.
+                rctx.handled();
+            })
+            .build()]
+    }
+}
+```
+
+### Phase 7 v1 constraints
+
+1. **Partition / ArmorPurge / Fragment(N)** parse but don't auto-install — nested `PendingSelection::Source` inside a replacement is not yet supported.
+2. **Optional replacements for `Card` / `Player` subjects** silently no-op on the commit path — the `commit_deferred_outcome` helper is Permanent-only in v1, guarded by `debug_assert!`. This is unreachable today; documented to flag it if a future fire-site ships a Card/Player optional replacement.
+3. **Multi-replacement `TriggerOrder` prompts** are not emitted when both sides have >1 candidates. v1 runs candidates in collection order (own-first, opp-second) and the last non-None outcome wins.
+4. **`ACTION_SPACE_SIZE` unchanged at 2168.** `REPLACEMENT_ACCEPT` reuses the existing `EffectChoice` action range (specifically the HAND_EFFECT slot 59) and `PASS` (62) serves as decline, so no tensor/mask regression.
+5. **Spec §7.5 once-per-event guard** (Task 7): a `(timing, subject)` pair that already fired in the current call chain is skipped on re-entry. During a callback-commit continuation (`in_replacement_commit`) the guard strengthens to "any prior fire for this subject blocks" — preventing a redirect route from re-prompting for a different Would* timing on the same subject (e.g. Decode's deck→hand redirect must not cascade into a second hand-timing prompt).
+
+### Testing a Would* effect
+
+TDD per working rule 18 — write behavioral tests against `DebugRunner` under `digimon-engine/tests/replacements/` **before** implementing the effect:
+
+```rust
+#[test]
+fn my_barrier_cancels_battle_deletion() {
+    let mut r = DebugRunner::builder()
+        .add_card(card_with_my_barrier())
+        .add_card(big_attacker())
+        .start();
+    let def = r.place_on_field(0, "MY_BARRIER", Some(0));
+    let atk = r.place_on_field(1, "BIG_ATTACKER", Some(0));
+    let _ = r.attack_digimon(atk, def, false);
+
+    // Barrier installs the optional prompt.
+    assert!(r.game.pending_selection.is_some());
+    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).unwrap();
+
+    assert_eq!(r.battle_area_size(0), 1);          // defender survived
+    assert_eq!(r.game.player(0).deck.len(), initial_deck - 1);
+}
+```
+
+See `tests/replacements/behavioral_end_to_end.rs` for the canonical end-to-end template.
+
+---
+
 ## 9. Known gaps (as of Phase 6)
 
 These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:

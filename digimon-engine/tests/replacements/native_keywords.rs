@@ -118,10 +118,11 @@ fn printed_evade_keyword_redirects_to_deck_bottom() {
 
 /// Printed `<Decode>` auto-installs an optional
 /// `WhenWouldBeReturnedToDeck` replacement that redirects the return to the
-/// owner's hand. After the Task-6 spec fix, Decode also installs a
-/// `WhenWouldBeReturnedToHand` replacement. This test drives the deck
-/// timing and declines the cascading hand-timing offer, keeping the
-/// deck→hand redirect as the active outcome.
+/// owner's hand. Decode also installs a `WhenWouldBeReturnedToHand`
+/// replacement (symmetric route). Pre-§7.5 guard, the deck→hand redirect
+/// cascaded into a second selection for the hand-timing Decode replacement;
+/// post-guard, the once-per-event guard suppresses the second prompt so the
+/// redirect commits cleanly with exactly one accept.
 #[test]
 fn printed_decode_keyword_redirects_return_to_deck_into_hand() {
     let mut r = DebugRunner::builder()
@@ -130,6 +131,7 @@ fn printed_decode_keyword_redirects_return_to_deck_into_hand() {
     let handle = r.place_on_field(0, "DECODE_CARD", Some(0));
 
     let deck_before = r.game.player(0).deck.len();
+    assert_eq!(r.game.player(0).hand.len(), 0);
 
     // Drive a return-to-deck flow; Decode should redirect into hand.
     let ok = r
@@ -144,18 +146,26 @@ fn printed_decode_keyword_redirects_return_to_deck_into_hand() {
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept Decode (deck) replacement");
 
-    // The deck→hand redirect commits via `return_to_hand`, which fires the
-    // hand-timing Decode replacement as a cascading no-op offer. Decline so
-    // the original return-to-hand event (None outcome) is committed via the
-    // commit-decline path.
+    // Post-§7.5 guard: the `return_to_hand` commit path does NOT re-install a
+    // second Decode replacement prompt — the once-per-event guard blocks a
+    // same-subject refire during the commit continuation. The redirect
+    // completes in a single accept.
     assert!(
-        r.game.pending_selection.is_some(),
-        "cascading Decode (hand) replacement should install a second selection"
+        r.game.pending_selection.is_none(),
+        "§7.5 guard must suppress the cascading Decode (hand) prompt during \
+         the deck→hand commit continuation"
     );
-    r.game
-        .resolve_selection(0, PASS)
-        .expect("decline cascading Decode (hand) replacement");
 
+    assert_eq!(
+        r.battle_area_size(0),
+        0,
+        "Decode Digimon left the battle area via the redirect"
+    );
+    assert_eq!(
+        r.game.player(0).hand.len(),
+        1,
+        "permanent ended up in hand via the deck→hand redirect"
+    );
     assert_eq!(
         r.game.player(0).deck.len(),
         deck_before,
@@ -171,12 +181,11 @@ fn printed_decode_keyword_redirects_return_to_deck_into_hand() {
 /// timing, so `return_to_hand` would have completed synchronously with no
 /// pending selection — failing the installation assertion below.
 ///
-/// Note: redirecting to Hand when the original destination is also Hand is a
-/// logical no-op. The accept-side commit in `commit_deferred_outcome`'s
-/// `(Zone::Hand, Redirected(Zone::Hand))` arm is currently a no-op (no
-/// explicit commit arm; see parity TODO in `replacement.rs`) — so this test
-/// intentionally only verifies the installation point the plan calls out,
-/// not the post-accept end state.
+/// Post-§7.5 guard (Task 7): the `(Zone::Hand, Redirected(Zone::Hand))` arm
+/// in `commit_deferred_outcome` now calls `return_to_hand(perm)` directly —
+/// safe because the once-per-event guard blocks the re-entry from re-firing
+/// the just-resolved Decode replacement for the same subject. The end state
+/// is the Digimon moving to hand as expected.
 #[test]
 fn printed_decode_keyword_also_handles_return_to_hand() {
     let mut r = DebugRunner::builder()
