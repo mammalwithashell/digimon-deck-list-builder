@@ -1224,9 +1224,18 @@ fn install_count_capped_step(
         .map(|&i| range_start + i as u16)
         .collect();
 
-    // Wrap final_callback in Arc<Mutex<Option>> so it can be shared between
-    // the `callback` (pick path / auto-commit) and `on_decline` (PASS commit).
-    // Exactly one of the two will fire; the other will see `None` and do nothing.
+    // SAFETY INVARIANT: Exactly one of `callback` or `on_decline` will ever fire
+    // per installed PendingSelection. When `resolve_generic_selection` dispatches
+    // one of them, the PendingSelection is taken and dropped — dropping the other
+    // closure with it. So only one `.take()` ever executes; the Arc ref-count on
+    // the non-firing side drops to zero unused.
+    //
+    // Why Arc<Mutex<Option<_>>> instead of moving `final_callback` into one closure:
+    // `FnOnce` isn't `Clone`, and `Effect` requires `Send + Sync` (rules out `Rc`).
+    // The Mutex is structurally uncontested (engine is single-threaded at this
+    // layer); its only role is to satisfy the `Send + Sync` bound on the shared
+    // storage. See `install_permutation_step` for the simpler `FnOnce`-per-closure
+    // pattern used where there's no PASS-commit alternative.
     let shared_cb: Arc<Mutex<Option<Box<dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync>>>> =
         Arc::new(Mutex::new(Some(final_callback)));
     let shared_cb_decline = Arc::clone(&shared_cb);
@@ -1266,7 +1275,12 @@ fn install_count_capped_step(
 
             // Auto-commit when max reached.
             if new_accum.len() == max as usize {
-                if let Some(cb) = shared_cb.lock().unwrap().take() {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(
+                    cb_opt.is_some(),
+                    "count_capped invariant violated: final_callback already consumed (both paths fired?)"
+                );
+                if let Some(cb) = cb_opt {
                     cb(game, new_accum);
                 }
                 return;
@@ -1280,7 +1294,12 @@ fn install_count_capped_step(
 
             // If no candidates remain, commit early with what we have.
             if new_candidates.is_empty() {
-                if let Some(cb) = shared_cb.lock().unwrap().take() {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(
+                    cb_opt.is_some(),
+                    "count_capped invariant violated: final_callback already consumed (both paths fired?)"
+                );
+                if let Some(cb) = cb_opt {
                     cb(game, new_accum);
                 }
                 return;
@@ -1292,7 +1311,12 @@ fn install_count_capped_step(
             // fired yet).
             let next_cb: Box<dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync> =
                 Box::new(move |game, picks| {
-                    if let Some(cb) = shared_cb.lock().unwrap().take() {
+                    let cb_opt = shared_cb.lock().unwrap().take();
+                    debug_assert!(
+                        cb_opt.is_some(),
+                        "count_capped invariant violated: final_callback already consumed (both paths fired?)"
+                    );
+                    if let Some(cb) = cb_opt {
                         cb(game, picks);
                     }
                 });
@@ -1317,7 +1341,12 @@ fn install_count_capped_step(
         }),
         on_decline: Some(Box::new(move |game: &mut Game| {
             // PASS commit — fire final callback with whatever has been picked.
-            if let Some(cb) = shared_cb_decline.lock().unwrap().take() {
+            let cb_opt = shared_cb_decline.lock().unwrap().take();
+            debug_assert!(
+                cb_opt.is_some(),
+                "count_capped invariant violated: final_callback already consumed (both paths fired?)"
+            );
+            if let Some(cb) = cb_opt {
                 cb(game, accum_for_decline);
             }
         })),
