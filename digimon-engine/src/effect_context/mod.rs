@@ -284,10 +284,48 @@ impl<'a> EffectContext<'a> {
     // ─── Card draw / trash ────────────────────────────────────────────
 
     pub fn draw(&mut self, player: PlayerId, count: u8) -> u8 {
+        use crate::enums::EffectTiming;
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
         // Phase 6: if the drawing player has CannotDrawByEffect, suppress draw.
+        // The flood gate fires FIRST (preserves Phase 6 semantics); if blocked,
+        // no replacement window opens.
         if self.game.modifiers.player_has(player, ModifierType::CannotDrawByEffect) {
             return 0;
         }
+
+        // Phase 7 Task 4: fire WhenWouldDraw once per draw call (not once
+        // per card). Subject is the drawing player; no original_destination.
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Player(player);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldDraw,
+            subject,
+            cause,
+            None,
+        );
+        if self.game.pending_selection.is_some() {
+            return 0;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return 0;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Redirected not meaningful for WhenWouldDraw (player-scoped)"
+                );
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "Substituted not supported for WhenWouldDraw v1"
+                );
+            }
+        }
+
         self.game.player_mut(player).draw_many(count)
     }
 
@@ -308,7 +346,48 @@ impl<'a> EffectContext<'a> {
 
     /// Move the top card of `player`'s security stack to their trash.
     /// No-op if the stack is empty. Returns true if a card was moved.
+    ///
+    /// Phase 7 Task 4: fires `WhenWouldBeTrashed` at entry. Subject carries
+    /// the top security card's handle; cause inferred.
     pub fn trash_top_security(&mut self, player: PlayerId) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Snapshot the top-of-security card handle before any state change.
+        let top_handle = match self.game.player(player).security.last() {
+            Some(c) => c.handle(),
+            None => return false,
+        };
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Card(top_handle, Zone::Security);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeTrashed,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.game.pending_selection.is_some() {
+            return false;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return false;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Redirected not supported for WhenWouldBeTrashed v1"
+                );
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "Substituted not supported for WhenWouldBeTrashed v1"
+                );
+            }
+        }
+
         let p = self.game.player_mut(player);
         if let Some(card) = p.security.pop() {
             p.trash.push(card);
@@ -351,6 +430,48 @@ impl<'a> EffectContext<'a> {
         stop_at_level: Option<u8>,
         amount: Option<u8>,
     ) -> u8 {
+        use crate::enums::EffectTiming;
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Phase 7 Task 4: fire WhenWouldBeDeDigivolved once at entry (not
+        // per iteration of the popping loop). Substitute(Permanent) retargets
+        // the loop at another permanent; v1 does not support "reduce N" via
+        // mutable ctx — scripts that want to reduce N should cancel and
+        // re-call with a lower amount.
+        let cause = self.game.infer_effect_cause(target.player);
+        let subject = ReplacementSubject::Permanent(target);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeDeDigivolved,
+            subject,
+            cause,
+            None,
+        );
+        if self.game.pending_selection.is_some() {
+            return 0;
+        }
+        let effective_target = match outcome {
+            ReplacementOutcome::None => target,
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return 0;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Redirected not meaningful for WhenWouldBeDeDigivolved"
+                );
+                target
+            }
+            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => other,
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "non-Permanent substitute for WhenWouldBeDeDigivolved"
+                );
+                target
+            }
+        };
+        let target = effective_target;
+
         let max = amount.unwrap_or(u8::MAX);
         let mut popped: u8 = 0;
 
@@ -490,11 +611,56 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Trash a specific hand card by index.
+    ///
+    /// Phase 7 Task 4: fires `WhenWouldBeTrashed` at entry. Subject is the
+    /// hand card handle; cause inferred.
     pub fn trash_from_hand_by_index(
         &mut self,
         player: PlayerId,
         hand_index: usize,
     ) -> Option<crate::card_source::CardHandle> {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Snapshot the card handle before any mutation. Return early if
+        // the index is invalid.
+        let card_handle = {
+            let p = self.game.player(player);
+            if hand_index >= p.hand.len() {
+                return None;
+            }
+            p.hand[hand_index].handle()
+        };
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Card(card_handle, Zone::Hand);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeTrashed,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.game.pending_selection.is_some() {
+            return None;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return None;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Redirected not supported for WhenWouldBeTrashed v1"
+                );
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "Substituted not supported for WhenWouldBeTrashed v1"
+                );
+            }
+        }
+
         self.game.trash_from_hand_by_index(player, hand_index)
     }
 

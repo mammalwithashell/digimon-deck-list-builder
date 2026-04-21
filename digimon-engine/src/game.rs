@@ -502,6 +502,38 @@ impl Game {
         ReplacementCause::OwnEffect
     }
 
+    /// Generalized cause inference for non-deletion Would-replacement fire-sites
+    /// (return-to-hand/deck, trash-by-effect, draw, place-in-security,
+    /// de-digivolve, etc.).
+    ///
+    /// Differs from `infer_deletion_cause` in that `Battle` is NOT a candidate:
+    /// non-deletion routes are never reached via `resolve_battle`, so the only
+    /// live signals are security-resolution and the effect-source player.
+    ///
+    /// Priority:
+    ///   1. `security_resolution.is_some()` → `SecurityCheck`
+    ///   2. `effect_source_player.is_some()` — compare against `target_player`;
+    ///      equal → `OwnEffect`, else `OpponentEffect`.
+    ///   3. Fallback → `OwnEffect`.
+    ///
+    /// Consumed by Task 4 fire-sites in `game_actions` / `effect_context`.
+    pub(crate) fn infer_effect_cause(
+        &self,
+        target_player: PlayerId,
+    ) -> crate::replacement::ReplacementCause {
+        use crate::replacement::ReplacementCause;
+        if self.security_resolution.is_some() {
+            return ReplacementCause::SecurityCheck;
+        }
+        if let Some(acting) = self.effect_source_player {
+            if acting == target_player {
+                return ReplacementCause::OwnEffect;
+            }
+            return ReplacementCause::OpponentEffect;
+        }
+        ReplacementCause::OwnEffect
+    }
+
     /// Get the next player clockwise from the given player.
     pub fn next_clockwise(&self, id: PlayerId) -> PlayerId {
         let pos = self

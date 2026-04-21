@@ -607,16 +607,82 @@ impl Game {
     ///
     /// Does not fire OnLeaveField observers — that's Phase 1 timing-dispatch
     /// infrastructure. Modifiers targeting the returned permanent are cleared.
+    ///
+    /// Phase 7 Task 4: fires `WhenWouldLeaveBattleArea` + `WhenWouldBeReturnedToHand`
+    /// replacement windows before committing. See spec §4.1, §7.
     pub fn return_to_hand(
         &mut self,
         handle: PermanentHandle,
     ) -> Option<crate::card_source::CardHandle> {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
         {
             let player = self.player_mut(handle.player);
             if (handle.index as usize) >= player.battle_area.len() {
                 return None;
             }
         }
+
+        let cause = self.infer_effect_cause(handle.player);
+        let subject = ReplacementSubject::Permanent(handle);
+
+        // Super-timing first, then route-specific would.
+        let leave_outcome = self.try_replace(
+            EffectTiming::WhenWouldLeaveBattleArea,
+            subject,
+            cause,
+            Some(Zone::Hand),
+        );
+        if self.pending_selection.is_some() {
+            return None;
+        }
+        let outcome = match leave_outcome {
+            ReplacementOutcome::None => self.try_replace(
+                EffectTiming::WhenWouldBeReturnedToHand,
+                subject,
+                cause,
+                Some(Zone::Hand),
+            ),
+            other => other,
+        };
+        if self.pending_selection.is_some() {
+            return None;
+        }
+
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return None;
+            }
+            ReplacementOutcome::Redirected(Zone::Deck) => {
+                self.return_to_deck(handle, crate::enums::StackPosition::Bottom);
+                return None;
+            }
+            ReplacementOutcome::Redirected(Zone::Trash) => {
+                self.delete_permanent_with_cause(handle, cause);
+                return None;
+            }
+            ReplacementOutcome::Redirected(other) => {
+                debug_assert!(
+                    false,
+                    "unexpected redirect destination for WhenWouldBeReturnedToHand: {:?}",
+                    other
+                );
+                // Fall through and commit the original return-to-hand.
+            }
+            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => {
+                return self.return_to_hand(other);
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "non-Permanent substitute subject for WhenWouldBeReturnedToHand"
+                );
+                // Fall through and commit the original.
+            }
+        }
+
         let perm = self.player_mut(handle.player).battle_area.remove(handle.index as usize);
 
         let mut sources = perm.card_sources;
@@ -655,11 +721,17 @@ impl Game {
     /// success, false if the handle is invalid or the stack is empty.
     ///
     /// Does not fire OnLeaveField observers.
+    ///
+    /// Phase 7 Task 4: fires `WhenWouldLeaveBattleArea` +
+    /// `WhenWouldBeReturnedToDeck` replacement windows before committing.
     pub fn return_to_deck(
         &mut self,
         handle: PermanentHandle,
         position: crate::enums::StackPosition,
     ) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
         let player_id = handle.player;
         {
             let player = self.player_mut(player_id);
@@ -667,6 +739,62 @@ impl Game {
                 return false;
             }
         }
+
+        let cause = self.infer_effect_cause(player_id);
+        let subject = ReplacementSubject::Permanent(handle);
+
+        let leave_outcome = self.try_replace(
+            EffectTiming::WhenWouldLeaveBattleArea,
+            subject,
+            cause,
+            Some(Zone::Deck),
+        );
+        if self.pending_selection.is_some() {
+            return false;
+        }
+        let outcome = match leave_outcome {
+            ReplacementOutcome::None => self.try_replace(
+                EffectTiming::WhenWouldBeReturnedToDeck,
+                subject,
+                cause,
+                Some(Zone::Deck),
+            ),
+            other => other,
+        };
+        if self.pending_selection.is_some() {
+            return false;
+        }
+
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return false;
+            }
+            ReplacementOutcome::Redirected(Zone::Hand) => {
+                return self.return_to_hand(handle).is_some();
+            }
+            ReplacementOutcome::Redirected(Zone::Trash) => {
+                self.delete_permanent_with_cause(handle, cause);
+                return false;
+            }
+            ReplacementOutcome::Redirected(other) => {
+                debug_assert!(
+                    false,
+                    "unexpected redirect destination for WhenWouldBeReturnedToDeck: {:?}",
+                    other
+                );
+            }
+            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => {
+                return self.return_to_deck(other, position);
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "non-Permanent substitute subject for WhenWouldBeReturnedToDeck"
+                );
+            }
+        }
+
         let mut perm = self.player_mut(player_id).battle_area.remove(handle.index as usize);
 
         let Some(top) = perm.card_sources.pop() else {
@@ -1226,6 +1354,12 @@ impl Game {
     /// know it was placed face-up. Returns false if the source index is invalid.
     ///
     /// Does not fire `OnLoseSecurity` or any security-related observers.
+    ///
+    /// Phase 7 Task 4: fires `WhenWouldPlaceInSecurity` at entry. Subject
+    /// carries the card handle via the source zone; cause is inferred.
+    /// v1 redirect accepts `Zone::Trash` only (card goes to trash instead of
+    /// the security stack); other redirect destinations are a `debug_assert!`
+    /// + fallthrough.
     pub fn place_on_security(
         &mut self,
         player_id: PlayerId,
@@ -1233,6 +1367,111 @@ impl Game {
         position: crate::enums::StackPosition,
         face_up: bool,
     ) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Snapshot the source card's handle before the take so we can build
+        // a meaningful ReplacementSubject. Return false early if the source
+        // is invalid (matches the existing pre-flight behavior of the take).
+        let source_card: crate::card_source::CardHandle = match source {
+            crate::enums::CardSourceRef::Hand(p, i) => {
+                let player = self.player(p);
+                if i >= player.hand.len() {
+                    return false;
+                }
+                player.hand[i].handle()
+            }
+            crate::enums::CardSourceRef::Trash(p, i) => {
+                let player = self.player(p);
+                if i >= player.trash.len() {
+                    return false;
+                }
+                player.trash[i].handle()
+            }
+            crate::enums::CardSourceRef::DeckTop(p) => {
+                let player = self.player(p);
+                let Some(top) = player.deck.last() else {
+                    return false;
+                };
+                top.handle()
+            }
+            crate::enums::CardSourceRef::Reveal(h) => {
+                if !self.revealed_cards.iter().any(|c| c.handle() == h) {
+                    return false;
+                }
+                h
+            }
+        };
+        let source_zone = match source {
+            crate::enums::CardSourceRef::Hand(_, _) => Zone::Hand,
+            crate::enums::CardSourceRef::Trash(_, _) => Zone::Trash,
+            crate::enums::CardSourceRef::DeckTop(_) => Zone::Deck,
+            crate::enums::CardSourceRef::Reveal(_) => Zone::Reveal,
+        };
+
+        let cause = self.infer_effect_cause(player_id);
+        let subject = ReplacementSubject::Card(source_card, source_zone);
+
+        let outcome = self.try_replace(
+            EffectTiming::WhenWouldPlaceInSecurity,
+            subject,
+            cause,
+            Some(Zone::Security),
+        );
+        if self.pending_selection.is_some() {
+            return false;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return false;
+            }
+            ReplacementOutcome::Redirected(Zone::Trash) => {
+                // Redirect: card goes to its owner's trash instead of
+                // security. Take the source and route it.
+                let taken = match source {
+                    crate::enums::CardSourceRef::Hand(p, i) => {
+                        self.player_mut(p).hand.remove(i)
+                    }
+                    crate::enums::CardSourceRef::Trash(_, _) => {
+                        // Already in trash — no-op.
+                        return false;
+                    }
+                    crate::enums::CardSourceRef::DeckTop(p) => {
+                        let Some(c) = self.player_mut(p).deck.pop() else {
+                            return false;
+                        };
+                        c
+                    }
+                    crate::enums::CardSourceRef::Reveal(h) => {
+                        let Some(idx) =
+                            self.revealed_cards.iter().position(|c| c.handle() == h)
+                        else {
+                            return false;
+                        };
+                        self.revealed_cards.remove(idx)
+                    }
+                };
+                self.player_mut(player_id).trash.push(taken);
+                return false;
+            }
+            ReplacementOutcome::Redirected(other) => {
+                debug_assert!(
+                    false,
+                    "unexpected redirect destination for WhenWouldPlaceInSecurity: {:?}",
+                    other
+                );
+                // Fallthrough and commit the original place.
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "substitute subject not supported for WhenWouldPlaceInSecurity v1"
+                );
+                // Fallthrough.
+            }
+        }
+
         // Take the card out of its source zone. Mirror the pattern from
         // place_as_bottom_source.
         let taken = match source {

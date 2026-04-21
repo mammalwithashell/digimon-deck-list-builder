@@ -987,6 +987,14 @@ impl Game {
                     self.set_security_phase(SecurityPhase::Dispose);
                 }
                 SecurityPhase::Dispose => {
+                    // TODO(phase-7-task-6): fire `WhenWouldLoseSecurity` here
+                    // (subject: Card(revealed_card, Zone::Security), cause:
+                    // SecurityCheck, original_destination: Some(Zone::Trash))
+                    // before the `pending_security` trash below. Deferred in
+                    // Task 4 because cancelling the security-loss requires
+                    // re-inserting the revealed card back into
+                    // `player.security` — non-trivial plumbing that's best
+                    // addressed alongside native keyword wiring (Task 6).
                     // Extract info before clearing state.
                     let state = self
                         .security_resolution
