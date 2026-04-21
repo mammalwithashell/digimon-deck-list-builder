@@ -3,3 +3,4 @@ mod cost_reduction_fn;
 mod before_pay_cost_scan_hygiene;
 mod pay_cost_triggered;
 mod pay_cost_before_pay;
+mod behavioral_end_to_end;
