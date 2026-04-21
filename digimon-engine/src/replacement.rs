@@ -704,6 +704,12 @@ fn commit_deferred_outcome(
     original_destination: Option<Zone>,
     outcome: ReplacementOutcome,
 ) {
+    // TODO(phase-7-followup): parallel commit logic. The outcome-commit arms
+    // here MUST stay in sync with the synchronous commit arms in each fire-site
+    // (combat.rs::delete_permanent_with_cause,
+    // game_actions.rs::{return_to_hand, return_to_deck, place_on_security},
+    // effect_context::{draw, de_digivolve, trash_*}). If a fire-site adds a
+    // new outcome variant or new destination Zone, update here too.
     // Only Permanent subjects with a known original_destination have a
     // known fire-site to re-enter. Other subject kinds (Card-in-zone,
     // Player) currently cover trash-by-effect / draw — those fire-sites

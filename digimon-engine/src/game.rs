@@ -900,7 +900,7 @@ impl Game {
             .map(|cd| {
                 cd.keywords
                     .iter()
-                    .filter_map(|kw| {
+                    .flat_map(|kw| {
                         crate::cards::keyword_effects::keyword_to_auto_effect(*kw, handle)
                     })
                     .collect()

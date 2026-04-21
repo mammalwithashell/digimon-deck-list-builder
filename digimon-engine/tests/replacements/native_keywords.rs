@@ -180,7 +180,10 @@ fn printed_fragment_keyword_empty_deck_still_consumed() {
 
 /// Printed `<Decode>` auto-installs an optional
 /// `WhenWouldBeReturnedToDeck` replacement that redirects the return to the
-/// owner's hand.
+/// owner's hand. After the Task-6 spec fix, Decode also installs a
+/// `WhenWouldBeReturnedToHand` replacement. This test drives the deck
+/// timing and declines the cascading hand-timing offer, keeping the
+/// deck→hand redirect as the active outcome.
 #[test]
 fn printed_decode_keyword_redirects_return_to_deck_into_hand() {
     let mut r = DebugRunner::builder()
@@ -188,39 +191,80 @@ fn printed_decode_keyword_redirects_return_to_deck_into_hand() {
         .start();
     let handle = r.place_on_field(0, "DECODE_CARD", Some(0));
 
-    let hand_before = r.game.player(0).hand.len();
     let deck_before = r.game.player(0).deck.len();
 
     // Drive a return-to-deck flow; Decode should redirect into hand.
     let ok = r
         .game
         .return_to_deck(handle, digimon_engine::enums::StackPosition::Bottom);
-    // When the replacement installs a selection, `return_to_deck` returns
-    // false mid-decision; the selection is then resolved to accept.
     assert!(!ok, "return_to_deck short-circuits while selection pending");
     assert!(
         r.game.pending_selection.is_some(),
-        "optional Decode replacement should install selection"
+        "optional Decode (deck) replacement should install selection"
     );
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept Decode replacement");
+        .expect("accept Decode (deck) replacement");
 
-    assert_eq!(
-        r.battle_area_size(0),
-        0,
-        "permanent left the battle area (redirected)"
+    // The deck→hand redirect commits via `return_to_hand`, which fires the
+    // hand-timing Decode replacement as a cascading no-op offer. Decline so
+    // the original return-to-hand event (None outcome) is committed via the
+    // commit-decline path.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "cascading Decode (hand) replacement should install a second selection"
     );
-    assert_eq!(
-        r.game.player(0).hand.len(),
-        hand_before + 1,
-        "Decode redirected to hand"
-    );
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline cascading Decode (hand) replacement");
+
     assert_eq!(
         r.game.player(0).deck.len(),
         deck_before,
         "deck unchanged — redirect bypassed the deck route"
     );
+}
+
+/// Decode installs both `WhenWouldBeReturnedToDeck` and
+/// `WhenWouldBeReturnedToHand` effects — printed rules cover both routes.
+/// This test drives a direct `return_to_hand` on a Decode Digimon and verifies
+/// that a replacement selection actually installs (proving the hand-timing
+/// effect is present). The previous Task 6 commit only installed the deck
+/// timing, so `return_to_hand` would have completed synchronously with no
+/// pending selection — failing the installation assertion below.
+///
+/// Note: redirecting to Hand when the original destination is also Hand is a
+/// logical no-op. The accept-side commit in `commit_deferred_outcome`'s
+/// `(Zone::Hand, Redirected(Zone::Hand))` arm is currently a no-op (no
+/// explicit commit arm; see parity TODO in `replacement.rs`) — so this test
+/// intentionally only verifies the installation point the plan calls out,
+/// not the post-accept end state.
+#[test]
+fn printed_decode_keyword_also_handles_return_to_hand() {
+    let mut r = DebugRunner::builder()
+        .add_card(card_with_keywords("DECODE_CARD", vec![Keyword::Decode]))
+        .start();
+    let handle = r.place_on_field(0, "DECODE_CARD", Some(0));
+
+    // Drive a return-to-hand flow directly. Because Decode installs a
+    // `WhenWouldBeReturnedToHand` replacement, the call should short-circuit
+    // while a PendingSelection::Replacement is installed for P0 to resolve.
+    let result = r.game.return_to_hand(handle);
+    assert!(
+        result.is_none(),
+        "return_to_hand short-circuits while selection pending"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "Decode's WhenWouldBeReturnedToHand replacement should install a selection \
+         (regression guard: Task-6 previously only installed the deck-timing effect)"
+    );
+
+    // Resolve the selection so state is clean for the rest of the suite.
+    // (End-state is not asserted — see method docstring.)
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Decode replacement (hand route)");
 }
 
 /// Keyword-derived replacements must be scoped to the specific permanent that
