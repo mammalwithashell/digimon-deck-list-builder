@@ -152,6 +152,21 @@ pub struct Game {
     /// Monotonic counter for `GameEvent::seq`. Never decreases across the
     /// lifetime of a `Game`.
     pub event_seq: u64,
+
+    /// Current nesting depth of `Game::try_replace`. Incremented on entry,
+    /// decremented on exit. At `>= MAX_REPLACEMENT_DEPTH`, the dispatcher
+    /// short-circuits to `ReplacementOutcome::None` — safety rail against
+    /// self-referential replacement chains (e.g. two permanents each
+    /// replacing the other's deletion with "cancel").
+    #[doc(hidden)]
+    pub replacement_depth: u8,
+
+    /// Outcome slot written by a replacement-selection callback (optional
+    /// replacement accept path) and read by the `try_replace` caller after
+    /// the selection resolves. `None` outside a replacement window; `None`
+    /// on decline. See `replacement::try_replace_impl`.
+    #[doc(hidden)]
+    pub replacement_pending_outcome: Option<crate::replacement::ReplacementOutcome>,
 }
 
 impl Game {
@@ -278,6 +293,8 @@ impl Game {
             logger: Box::new(SilentLogger),
             events: Vec::new(),
             event_seq: 0,
+            replacement_depth: 0,
+            replacement_pending_outcome: None,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -407,6 +424,41 @@ impl Game {
             return Err(SelectionError::NoPendingSelection);
         }
         self.resolve_generic_selection(player, action_id)
+    }
+
+    /// Fire all applicable replacement effects for the given would-event.
+    /// Returns the final `ReplacementOutcome` the caller must honor.
+    ///
+    /// **Invariant:** if this returns `ReplacementOutcome::None`, no side
+    /// effects have been applied to `Game` state. If it returns any other
+    /// variant, side effects from the chosen replacements have already
+    /// committed and the caller must NOT re-apply the original event.
+    ///
+    /// **Optional replacements:** if an optional replacement is in scope,
+    /// this function installs a `PendingSelection::Replacement` and returns
+    /// `ReplacementOutcome::None`. The caller is expected to re-enter
+    /// `try_replace` — or inspect `game.replacement_pending_outcome` —
+    /// once `resolve_selection` has fired.
+    ///
+    /// Visibility note: `#[doc(hidden)] pub` rather than `pub(crate)` so the
+    /// Phase 7 integration tests under `digimon-engine/tests/replacements/`
+    /// can drive the dispatcher directly. Fire-sites inside the crate (Task
+    /// 3+) will call this via normal crate-local dispatch.
+    #[doc(hidden)]
+    pub fn try_replace(
+        &mut self,
+        timing: crate::enums::EffectTiming,
+        subject: crate::replacement::ReplacementSubject,
+        cause: crate::replacement::ReplacementCause,
+        original_destination: Option<crate::enums::Zone>,
+    ) -> crate::replacement::ReplacementOutcome {
+        crate::replacement::try_replace_impl(
+            self,
+            timing,
+            subject,
+            cause,
+            original_destination,
+        )
     }
 
     /// Get the next player clockwise from the given player.

@@ -32,6 +32,13 @@ mod test_022;
 mod test_023;
 mod test_024;
 mod test_025;
+mod test_phase7_cancel;
+mod test_phase7_cancel2;
+mod test_phase7_handled;
+mod test_phase7_optional;
+mod test_phase7_recurse;
+mod test_phase7_redirect;
+mod test_phase7_substitute;
 
 /// Register all test cards into the registry.
 pub fn register(registry: &mut CardEffectRegistry) {
@@ -54,6 +61,13 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-023", Arc::new(test_023::Test023));
     registry.insert("TEST-024", Arc::new(test_024::Test024));
     registry.insert("TEST-025", Arc::new(test_025::Test025));
+    registry.insert("TEST-P7-CANCEL", Arc::new(test_phase7_cancel::TestP7Cancel));
+    registry.insert("TEST-P7-CANCEL2", Arc::new(test_phase7_cancel2::TestP7Cancel2));
+    registry.insert("TEST-P7-HANDLED", Arc::new(test_phase7_handled::TestP7Handled));
+    registry.insert("TEST-P7-OPTIONAL", Arc::new(test_phase7_optional::TestP7Optional));
+    registry.insert("TEST-P7-RECURSE", Arc::new(test_phase7_recurse::TestP7Recurse));
+    registry.insert("TEST-P7-REDIRECT", Arc::new(test_phase7_redirect::TestP7Redirect));
+    registry.insert("TEST-P7-SUBSTITUTE", Arc::new(test_phase7_substitute::TestP7Substitute));
 
     // Suppress unused warning on ModifierType (referenced via add_dp_modifier helper).
     let _ = ModifierType::ChangeDp;

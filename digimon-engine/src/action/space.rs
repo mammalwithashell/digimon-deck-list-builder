@@ -22,6 +22,13 @@ pub const SEL_OPP_SECURITY_START: u16 = 50;
 pub const SEL_OPP_SECURITY_END: u16 = 60;
 pub const MAX_SECURITY: usize = 10;
 pub const MAX_REVEALED: usize = 10;
+/// Accept action for a `SelectionKind::Replacement` prompt. Raw ID 59 is
+/// shared with the top end of the `HAND_EFFECT` / `SEL_OPP_SECURITY` ranges
+/// but phase-disambiguated: in `GamePhase::EffectChoice` during a Replacement
+/// selection it decodes as "accept this replacement". `PASS` (62) declines.
+/// See `replacement.rs::try_replace_impl` for the installer.
+pub const REPLACEMENT_ACCEPT: u16 = 59;
+
 pub const HATCH: u16 = 60;
 pub const MOVE_FROM_BREEDING: u16 = 61;
 pub const PASS: u16 = 62;
