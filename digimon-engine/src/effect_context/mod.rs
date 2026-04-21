@@ -244,6 +244,18 @@ impl<'a> EffectContext<'a> {
         trashed
     }
 
+    /// Move the top card of `player`'s security stack to their trash.
+    /// No-op if the stack is empty. Returns true if a card was moved.
+    pub fn trash_top_security(&mut self, player: PlayerId) -> bool {
+        let p = self.game.player_mut(player);
+        if let Some(card) = p.security.pop() {
+            p.trash.push(card);
+            true
+        } else {
+            false
+        }
+    }
+
     // ─── Field mutations ──────────────────────────────────────────────
 
     pub fn delete_permanent(&mut self, target: PermanentHandle) {

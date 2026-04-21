@@ -1,13 +1,13 @@
 //! Petrification Token — Medusamon archetype (Purple).
 //!
-//! Printed text: "[Your Turn] This Digimon can't suspend.
-//! [On Deletion] Trash the top card of this Digimon's owner's
-//! security stack."
+//! Printed text:
+//!   [Your Turn] This Digimon can't suspend.
+//!   [On Deletion] Trash the top card of this Digimon's owner's security stack.
 //!
-//! Task 3 wires the OnDeletion trash-top-security via
-//! `ctx.trash_top_security(...)`. The CannotSuspend [Your Turn] rider
-//! depends on a modifier framework piece scheduled for a later phase
-//! (see parity §4.6b-residual).
+//! Phase 10 ships the OnDeletion clause. The CannotSuspend [Your Turn]
+//! rider depends on a condition-gated modifier primitive tracked in
+//! `RUST_ENGINE_GAPS.md` §"Condition-gated modifier entries"; when that
+//! lands, append a second `Effect` for the CannotSuspend clause.
 
 use crate::card_source::CardHandle;
 use crate::effect::{CardEffect, Effect};
@@ -15,8 +15,16 @@ use crate::effect::{CardEffect, Effect};
 pub struct PetrificationToken;
 
 impl CardEffect for PetrificationToken {
-    fn effects(&self, _card: CardHandle) -> Vec<Effect> {
-        // OnDeletion effect wired in Task 3.
-        Vec::new()
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_deletion(card)
+            .name("[On Deletion] Trash top of owner's security")
+            .process(|ctx| {
+                // The token's owner = the player who controls the token
+                // permanent = `ctx.player` (EffectContext is always
+                // scoped to the source's controller).
+                let owner = ctx.player;
+                ctx.trash_top_security(owner);
+            })
+            .build()]
     }
 }

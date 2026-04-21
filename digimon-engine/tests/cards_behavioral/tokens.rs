@@ -57,3 +57,38 @@ fn token_delete_removes_from_game_not_trash() {
     assert_eq!(r.battle_area_size(0), 1, "only the TEST-023 remains");
     assert_eq!(r.trash_size(0), 0, "token removed from game, not trashed");
 }
+
+/// Petrification Token OnDeletion: when the token is deleted via the
+/// full effect-firing path, the top card of the token-owner's security
+/// stack goes to trash.
+#[test]
+fn petrification_on_deletion_trashes_top_security() {
+    use digimon_engine::permanent::PermanentHandle;
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-023", "PlayPetrificationToken"))
+        .add_card(make_test_card("SEC-A", "SecA"))
+        .add_card(make_test_card("SEC-B", "SecB"))
+        .add_card(make_test_card("SEC-C", "SecC"))
+        .hand(0, &["TEST-023"])
+        .security(0, &["SEC-A", "SEC-B", "SEC-C"])
+        .memory(5)
+        .start();
+    r.play(0, 0);
+    let sec_before = r.security_count(0);
+    let trash_before = r.trash_size(0);
+
+    // Locate the token on P0's field.
+    let token_idx = r.game.player(0).battle_area.iter().position(|p| {
+        p.top_card().card_kind(&r.game.card_data) == CardKind::Token
+    }).expect("token missing");
+
+    // Use the full deletion path so OnDeletion observers fire.
+    let handle = PermanentHandle { player: 0, index: token_idx as u8 };
+    r.game.delete_permanent_with_effects(handle);
+
+    assert_eq!(r.security_count(0), sec_before - 1,
+        "Petrification OnDeletion trashed top of security");
+    assert_eq!(r.trash_size(0), trash_before + 1,
+        "the trashed security card landed in trash (token itself removed from game)");
+}
