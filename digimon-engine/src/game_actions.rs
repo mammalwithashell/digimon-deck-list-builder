@@ -933,72 +933,133 @@ impl Game {
     /// other timing (OnPlay, etc.) are never scanned here.
     ///
     /// For each qualifying effect:
-    /// - If `effect.cost_reduction_fn` is Some: invoke closure, clamp the
-    ///   returned i32 to `>= 0`, add to total.
-    /// - Else if `effect.cost_reduction != 0`: add `max(0, cost_reduction)`
-    ///   to total.
+    /// 1. Check condition (immutable read context — dropped immediately).
+    /// 2. Check inherited/top-card filter.
+    /// 3. Compute reduction amount from `cost_reduction_fn` or static
+    ///    `cost_reduction` (immutable read context — dropped immediately).
+    /// 4. **Phase 5 Task 4 — pay_cost_fn gate:** if `effect.pay_cost_fn` is
+    ///    Some, invoke the closure with a mutable context. Returning `false`
+    ///    skips this effect's reduction contribution (the play proceeds at
+    ///    higher cost but does NOT fail). Returning `true` means the cost was
+    ///    paid and the reduction applies.
+    /// 5. Accumulate the reduction into the running total.
     ///
     /// Returns the total as `i32`. The caller is responsible for the final
     /// `effective_cost = max(0, base_cost - total_reduction)` computation.
-    fn scan_before_pay_cost_reduction(&self) -> i32 {
-        let mut total: i32 = 0;
-        for pid in 0..self.players.len() {
-            let player_id = pid as crate::enums::PlayerId;
-            let perm_count = self.player(player_id).battle_area.len();
-            for perm_idx in 0..perm_count {
-                let perm_handle = crate::permanent::PermanentHandle {
-                    player: player_id,
-                    index: perm_idx as u8,
-                };
-                let perm = &self.player(player_id).battle_area[perm_idx];
-                // Walk the whole digivolution stack (top card only acts as
-                // the permanent identity; inherited sources may also carry
-                // BeforePayCost effects from the stack).
-                let stack_size = perm.card_sources.len();
-                for source_idx in 0..stack_size {
-                    let source = &perm.card_sources[source_idx];
-                    let card_id = source.card_id(&self.card_data).to_string();
-                    let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
-                        continue;
+    ///
+    /// **Signature change (Phase 5 Task 4):** takes `&mut self` so that
+    /// `pay_cost_fn` closures can mutate game state (e.g., trash cards).
+    /// All callers already hold `&mut self`, so this is a pure signature
+    /// refinement with no behavioral impact on the call sites.
+    fn scan_before_pay_cost_reduction(&mut self) -> i32 {
+        // Pre-snapshot all source identities to avoid holding any borrow on
+        // `self` across the `EffectContext::new(&mut self, ...)` calls below.
+        // (perm_handle, source_card_handle, card_id_string, is_under_flag, player_id)
+        type SourceInfo = (
+            crate::permanent::PermanentHandle,
+            crate::card_source::CardHandle,
+            String,
+            bool,
+            crate::enums::PlayerId,
+        );
+        let source_infos: Vec<SourceInfo> = {
+            let mut infos = Vec::new();
+            for pid in 0..self.players.len() {
+                let player_id = pid as crate::enums::PlayerId;
+                let perm_count = self.player(player_id).battle_area.len();
+                for perm_idx in 0..perm_count {
+                    let perm_handle = crate::permanent::PermanentHandle {
+                        player: player_id,
+                        index: perm_idx as u8,
                     };
-                    // Mirror the activate_field_main inherited/top filter:
-                    // `is_under` is true for every source except the top card.
-                    // A non-inherited effect must be on the top card (is_under == false);
-                    // an inherited effect must be in an under position (is_under == true).
-                    let is_under = source_idx + 1 < stack_size;
-                    for effect in &effects {
-                        if effect.timing != EffectTiming::BeforePayCost {
-                            continue;
-                        }
-                        // Apply the inherited/top-card filter. Mirrors the guard in
-                        // activate_field_main (line ~393): skip if the position
-                        // (under vs top) doesn't match the effect's inherited flag.
-                        if is_under != effect.inherited {
-                            continue;
-                        }
-                        // Construct the read context once and reuse for both the
-                        // condition check and the cost_reduction_fn closure.
-                        let ctx = EffectReadContext::new(
-                            self,
-                            source.handle(),
-                            Some(perm_handle),
-                            player_id,
-                        );
-                        // Evaluate condition — if it fails, skip this effect.
-                        if let Some(cond) = &effect.condition {
-                            if !cond(&ctx) {
-                                continue;
-                            }
-                        }
-                        // Accumulate reduction (closure takes precedence).
-                        if let Some(reduction_fn) = &effect.cost_reduction_fn {
-                            let val = reduction_fn(&ctx);
-                            total += val.max(0);
-                        } else if effect.cost_reduction != 0 {
-                            total += effect.cost_reduction.max(0);
-                        }
+                    let stack_size =
+                        self.player(player_id).battle_area[perm_idx].card_sources.len();
+                    for source_idx in 0..stack_size {
+                        let source =
+                            &self.player(player_id).battle_area[perm_idx].card_sources[source_idx];
+                        let card_id = source.card_id(&self.card_data).to_string();
+                        let src_handle = source.handle();
+                        let is_under = source_idx + 1 < stack_size;
+                        infos.push((perm_handle, src_handle, card_id, is_under, player_id));
                     }
                 }
+            }
+            infos
+        };
+        // All borrows on self from the snapshot block above are now dropped.
+
+        let mut total: i32 = 0;
+        for (perm_handle, src_handle, card_id, is_under, player_id) in source_infos {
+            let Some(effects) = self.effects_for_card(&card_id, src_handle) else {
+                continue;
+            };
+            // `effects` is an owned Vec<Effect> returned by the registry; it is
+            // NOT a borrow from `self`. This makes it safe to hold `&effect`
+            // while later taking `&mut self` for the pay_cost_fn step.
+            for effect in &effects {
+                if effect.timing != EffectTiming::BeforePayCost {
+                    continue;
+                }
+                // Mirror the activate_field_main inherited/top-card filter:
+                // skip if the position (under vs top) doesn't match the
+                // effect's inherited flag.
+                if is_under != effect.inherited {
+                    continue;
+                }
+
+                // Step 1: evaluate condition — construct and drop the read
+                // context immediately so no immutable borrow lingers.
+                let cond_ok = if let Some(cond) = &effect.condition {
+                    let ctx = EffectReadContext::new(
+                        self,
+                        src_handle,
+                        Some(perm_handle),
+                        player_id,
+                    );
+                    cond(&ctx) // ctx dropped at end of this block
+                } else {
+                    true
+                };
+                if !cond_ok {
+                    continue;
+                }
+
+                // Step 2: compute the reduction amount — construct and drop
+                // the read context immediately.
+                let reduction = if let Some(reduction_fn) = &effect.cost_reduction_fn {
+                    let ctx = EffectReadContext::new(
+                        self,
+                        src_handle,
+                        Some(perm_handle),
+                        player_id,
+                    );
+                    reduction_fn(&ctx).max(0) // ctx dropped at end of this block
+                } else {
+                    effect.cost_reduction.max(0)
+                };
+
+                // Step 3 (Phase 5 Task 4): pay_cost_fn gates this effect's
+                // reduction contribution. `pay_cost_fn` is borrowed from
+                // `effects` (a local owned Vec), NOT from `self`, so this
+                // mutable context construction does not conflict with the
+                // `effect` reference above.
+                if let Some(pay_cost_fn) = &effect.pay_cost_fn {
+                    let mut ctx = EffectContext::new(
+                        self,
+                        src_handle,
+                        Some(perm_handle),
+                        player_id,
+                    );
+                    let paid = pay_cost_fn(&mut ctx);
+                    if !paid {
+                        // Cost not paid → skip this effect's reduction.
+                        // The play itself proceeds at full(er) cost — it does
+                        // NOT fail here.
+                        continue;
+                    }
+                }
+
+                total += reduction;
             }
         }
         total
