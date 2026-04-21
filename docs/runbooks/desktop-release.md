@@ -1,6 +1,187 @@
 # Desktop Release Runbook
 
-How to cut, publish, and roll back a Tauri v2 desktop alpha release. The auto-updater design spec lives at [`docs/superpowers/specs/2026-04-21-tauri-auto-updater.md`](../superpowers/specs/2026-04-21-tauri-auto-updater.md).
+How to cut, publish, and roll back a Tauri v2 desktop alpha release. The auto-updater design spec lives at [`docs/superpowers/specs/2026-04-21-tauri-auto-updater.md`](../superpowers/specs/2026-04-21-tauri-auto-updater.md); the implementation plan is at [`docs/superpowers/plans/2026-04-21-tauri-auto-updater.md`](../superpowers/plans/2026-04-21-tauri-auto-updater.md).
+
+---
+
+## Design reference
+
+Consolidated inventory of everything the release flow touches. Each row is a stable contract — changing any of these is a migration, not a config tweak.
+
+### Git tag convention
+
+| Tag prefix | Triggers | Workflow |
+|---|---|---|
+| `desktop-vX.Y.Z[-suffix]` | `.github/workflows/desktop-release.yml` | Build Windows + Linux installers, sign, upload to Spaces, publish manifest |
+| `api-vX.Y.Z` | _(reserved; not yet wired)_ | API server deploys |
+| `engine-vX.Y.Z` | _(reserved; not yet wired)_ | Engine-only releases |
+
+Suffixes follow SemVer prerelease rules (`-alpha.N`, `-beta.N`). The updater's "is this newer?" check uses the `semver` crate, which correctly orders `0.2.0-alpha.2 < 0.2.0-alpha.3 < 0.2.0`.
+
+Tag body = release notes. Testers see it verbatim in the update modal — keep it plain text, one fact per line, no markdown (Tauri v2 doesn't render markdown in update notes).
+
+### Release channels
+
+| Channel | Manifest URL path | Used by | Status |
+|---|---|---|---|
+| `alpha` | `updates/alpha/latest.json` | Current alpha testers | Active |
+| `beta` | `updates/beta/latest.json` | Reserved | Not yet used |
+| `stable` | `updates/stable/latest.json` | Reserved | Not yet used |
+
+Only `alpha` is active. Path shape is future-proof — adding a channel is a static-file operation, not a schema change. Channel identifier is compile-baked into the desktop build via `src-tauri/src/updater.rs:MANIFEST_URL` and `tauri.conf.json:plugins.updater.endpoints`. Switching channels means building a different binary; you can't flip a tester mid-install.
+
+### URL shapes
+
+| Concern | URL pattern | Set by |
+|---|---|---|
+| Manifest (Tauri reads this) | `https://<spaces-cdn-host>/updates/<channel>/latest.json` | `digimon_gym/db/routers/admin_releases.py:_manifest_key` + `spaces.public_url` |
+| Installer artifact | `https://<spaces-cdn-host>/releases/<release_id>/<filename>` | `admin_releases.py:_artifact_spaces_key` |
+| Filename (Windows) | `digimon-tcg-<version>-x86_64-setup.exe` | `admin_releases.py:_artifact_filename` |
+| Filename (Linux) | `digimon-tcg-<version>-x86_64.AppImage` | same |
+| Hosted API — create | `POST {HOSTED_API_URL}/admin/releases` | |
+| Hosted API — confirm | `POST {HOSTED_API_URL}/admin/releases/{id}/artifacts/{target}/confirm` | |
+| Hosted API — publish | `POST {HOSTED_API_URL}/admin/releases/{id}/publish` | |
+| Hosted API — unpublish | `POST {HOSTED_API_URL}/admin/releases/{id}/unpublish` | |
+| Hosted API — patch | `PATCH {HOSTED_API_URL}/admin/releases/{id}` | |
+| Hosted API — delete | `DELETE {HOSTED_API_URL}/admin/releases/{id}` | |
+| Hosted API — list | `GET {HOSTED_API_URL}/admin/releases?channel=&published=` | |
+| Hosted API — regenerate manifest | `POST {HOSTED_API_URL}/admin/releases/regenerate-manifest?channel=` | |
+
+All `/admin/releases/*` endpoints require `ROLE_ADMIN` via `Bearer` JWT. The manifest URL is public-read (no auth).
+
+The `<spaces-cdn-host>` resolves via `digimon_gym/storage/spaces.py:public_url()`:
+- If `SPACES_CDN_URL` env var is set: `{SPACES_CDN_URL}/<key>` (DO Spaces CDN, preferred for throughput)
+- Else: `{SPACES_ENDPOINT}/{SPACES_BUCKET}/<key>` (direct origin)
+
+The desktop client's `tauri.conf.json` `plugins.updater.endpoints[0]` **must** exactly match the server's computed URL. If you ever change `SPACES_CDN_URL` or the bucket, you must rebuild the desktop or it will 404 fetching the manifest.
+
+### Environment variables
+
+#### Hosted API server (production droplet)
+
+| Variable | Purpose | Example |
+|---|---|---|
+| `DATABASE_URL` | Postgres connection string | `postgresql+asyncpg://user:pass@host/digimon` |
+| `SECRET_KEY` | JWT signing key | random 64-byte hex |
+| `SPACES_ENDPOINT` | DO Spaces origin | `https://nyc3.digitaloceanspaces.com` |
+| `SPACES_REGION` | DO region | `nyc3` |
+| `SPACES_BUCKET` | Bucket name | `digimon-tcg-models` |
+| `SPACES_KEY` | DO Spaces access key | secret |
+| `SPACES_SECRET` | DO Spaces secret key | secret |
+| `SPACES_CDN_URL` | Preferred public host (optional) | `https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com` |
+
+Server reads these lazily — missing env vars raise `RuntimeError` at first Spaces call (see `spaces.py:_require_env`). The release admin API calls Spaces on every create/confirm/publish/unpublish, so any missing var will surface on the first operation after server start.
+
+#### Desktop client (compile-time + runtime)
+
+| Variable | Purpose | Set where |
+|---|---|---|
+| `VITE_BUILD_TARGET` | `desktop` vs `web` — tree-shakes admin/training UI | CI, local dev (`npm run dev:desktop`) |
+| Tauri `env!("CARGO_PKG_VERSION")` | Runtime self-version for min-version comparison | `Cargo.toml:[package].version` |
+
+No runtime env vars consumed by the updater itself — the manifest URL + pubkey are compile-baked into the binary (`src-tauri/tauri.conf.json`, `src-tauri/src/updater.rs:MANIFEST_URL`). This is intentional: a tester can't be tricked into pointing at an attacker's manifest via env-var injection.
+
+#### GitHub Actions secrets
+
+| Secret | Consumed by | Set via |
+|---|---|---|
+| `TAURI_UPDATER_PRIVATE_KEY` | `cargo tauri build` (bundle signing) | `Get-Content -Raw $HOME\.tauri\digimon-updater.key \| gh secret set TAURI_UPDATER_PRIVATE_KEY` |
+| `TAURI_UPDATER_KEY_PASSWORD` | `cargo tauri build` (decrypts the key) | `gh secret set TAURI_UPDATER_KEY_PASSWORD` (interactive paste) |
+| `HOSTED_API_URL` | `.github/workflows/desktop-release.yml` publish job | `gh secret set HOSTED_API_URL --body "https://..."` |
+| `CI_ADMIN_TOKEN` | same | `python tools/provision_ci_release_user.py --password "$P" \| gh secret set CI_ADMIN_TOKEN` |
+| `GITHUB_TOKEN` | `gh release create` at workflow end | Auto-provisioned by GitHub Actions |
+
+**Secrets explicitly NOT in CI** (by design — least-privilege):
+- `SPACES_KEY`, `SPACES_SECRET` — CI uploads via presigned PUTs obtained from the hosted API.
+- `SECRET_KEY`, `DATABASE_URL` — CI never touches the DB directly.
+
+### Secret inventory by location
+
+| Location | Holds | Rotation trigger |
+|---|---|---|
+| `$HOME\.tauri\digimon-updater.key` (maintainer machine) | Ed25519 private key (password-encrypted) | Key leak; pre-production launch |
+| 1Password "Digimon TCG" → "Tauri Updater Key" | Private key password | With the key |
+| GitHub Actions `TAURI_UPDATER_PRIVATE_KEY` + `TAURI_UPDATER_KEY_PASSWORD` | Signing key for CI builds | With the key |
+| `src-tauri/tauri.conf.json:plugins.updater.pubkey` | Public key (committed) | With the key, major version bump |
+| DB `users` row `ci-desktop-release` | CI user's bcrypt password hash | Annually or on leak |
+| GitHub Actions `CI_ADMIN_TOKEN` | CI user's long-lived JWT (365d) | Annually or on leak; re-provision via the tool |
+
+### Database schema
+
+Two tables, cascade-linked. See `alembic/versions/20260421_0015_app_releases.py` for the authoritative migration.
+
+| Table | PK | Notable columns | Purpose |
+|---|---|---|---|
+| `app_releases` | `id` (uuid) | `version`, `channel`, `engine_commit`, `min_version`, `release_notes`, `published`, `published_at`, `state` | One row per release per channel |
+| `app_release_artifacts` | `id` (uuid) | `release_id` (FK, CASCADE), `target`, `spaces_key`, `filename`, `file_sha256`, `file_size_bytes`, `signature_b64` | One row per platform-specific installer |
+
+Invariants:
+- `UNIQUE(channel, version)` — can't re-publish the same version string.
+- `UNIQUE(release_id, target)` — one installer per platform per release.
+- `UNIQUE(spaces_key)` — no two artifact rows point at the same Spaces object.
+- `state IN ('pending', 'uploaded', 'failed')` — enforced by CHECK.
+- `target IN ('windows-x86_64', 'linux-x86_64')` — enforced by CHECK; adding macOS is a migration.
+- `file_sha256`, `file_size_bytes`, `signature_b64` nullable by construction (populated on `/confirm`). There's no CHECK enforcing "if state='uploaded' then these must be NOT NULL" — the router layer owns that invariant.
+
+### Manifest contract (what Tauri reads from Spaces)
+
+Canonical shape at `https://<spaces-cdn-host>/updates/<channel>/latest.json`. Served public-read with `Cache-Control: public, max-age=60`.
+
+```json
+{
+  "version": "0.2.0-alpha.3",
+  "pub_date": "2026-04-21T18:40:00Z",
+  "notes": "Fix: deckbuilder crash.",
+  "platforms": {
+    "windows-x86_64": { "signature": "<base64>", "url": "https://.../releases/<uuid>/digimon-tcg-0.2.0-alpha.3-x86_64-setup.exe" },
+    "linux-x86_64":   { "signature": "<base64>", "url": "https://.../releases/<uuid>/digimon-tcg-0.2.0-alpha.3-x86_64.AppImage" }
+  },
+  "min_version": "0.1.0",
+  "engine_commit": "fbf8288",
+  "channel": "alpha",
+  "release_id": "<uuid>"
+}
+```
+
+| Field | Consumed by | Notes |
+|---|---|---|
+| `version` | Tauri plugin (compared to running) | SemVer; must be strictly greater for update to propose |
+| `pub_date` | Display only | ISO 8601 UTC, `Z` suffix |
+| `notes` | Update modal body | Plain text, newline-separated |
+| `platforms.<target>.signature` | Tauri plugin (Ed25519 verify) | Base64 output of `cargo tauri signer sign` |
+| `platforms.<target>.url` | Tauri plugin (download) | Public-read Spaces URL |
+| `min_version` | `src-tauri/src/updater.rs` (startup guard) | SemVer floor; running below triggers force-update modal |
+| `engine_commit` | Display + future gating | 7-char git SHA at CI build time |
+| `channel` | Logging + admin UI | Redundant with URL path |
+| `release_id` | Telemetry, logging | UUID of the DB row |
+
+### Update UX state machine
+
+```
+app launch
+   │
+   ├─ min-version guard (Rust, 3s timeout)
+   │   ├─ manifest.min_version > running: emit "updater:force-update" ──→ blocking modal ──→ downloadAndInstall ──→ relaunch
+   │   └─ ok: no event
+   │
+   └─ background check (JS, on App mount)
+       ├─ plugin.check() returns update: setState, show corner toast ──→ user clicks ──→ modal with notes ──→ install ──→ relaunch
+       └─ no update: no UI
+```
+
+Two independent paths; force-update takes precedence over the normal toast/modal. Both go through the same `downloadAndInstall()` → `relaunch()` sequence (which Ed25519-verifies the installer before applying).
+
+### Spec / plan / code map
+
+| Concern | Spec § | Plan Task | Primary code |
+|---|---|---|---|
+| Decisions + rationale | `Decisions` | _(n/a)_ | _(n/a)_ |
+| Manifest JSON shape | `Manifest contract` | Task 7 | `admin_releases.py:_build_manifest` |
+| Admin API surface | `Server surface` | Tasks 5–8 | `digimon_gym/db/routers/admin_releases.py` |
+| DB tables | `Server surface → DB schema` | Tasks 1–2 | `alembic/.../20260421_0015_app_releases.py`, `digimon_gym/db/models.py` |
+| Tauri wiring | `Tauri integration` | Tasks 10–12 | `src-tauri/tauri.conf.json`, `src-tauri/src/updater.rs`, `frontend/src/updater/` |
+| CI pipeline | `Release pipeline` | Tasks 13–14 | `.github/workflows/desktop-release.yml`, `tools/provision_ci_release_user.py` |
+| Rollback + kill-switch | `Rollback + kill-switch` | Task 8 (unpublish) + Task 11 (min_version) | `admin_releases.py:unpublish_release`, `src-tauri/src/updater.rs:check_min_version` |
 
 ---
 
