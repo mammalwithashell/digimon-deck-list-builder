@@ -526,6 +526,18 @@ Python's `has_modifier(target, type, context)` can refine the match via the modi
 
 ## 5. Registry parity
 
+### §5.1 Cost-reduction closures + pay_cost_fn hook — Rust-only (Phase 5)
+
+**Status (2026-04-21):** Rust exclusively supports closure-valued cost reduction at `EffectTiming::BeforePayCost` and a synchronous `pay_cost_fn` hook on triggered effects (and at BeforePayCost dispatch). Python uses a `_temp_play_cost_reduction` instance variable that leaks across effects (Issue 24 per project memory). Rust **intentionally does not replicate** this pattern; scripts requiring dynamic reduction must use `.cost_reduction_fn`.
+
+No Python parity — this is a strict improvement in Rust. Python will not catch up; migration targets Rust as the source of truth for these mechanics.
+
+Cards unblocked (per audits): ~50 across Rocks (primary), some Dark Masters and TS Olympos cost-gating effects. See `.claude/plans/rust-engine-gaps-rocks.md` for the Rocks-specific list.
+
+Rust implementation: `Game::scan_before_pay_cost_reduction` in `digimon-engine/src/game_actions.rs` + `pay_cost_fn` hook in `digimon-engine/src/effect_queue.rs::run_queued_effect`.
+
+---
+
 ### 5.1 🟢 CardRegistry
 
 Fixed in [card_registry.rs](../digimon-engine/src/card_registry.rs). `CardData.index` from cards.json is the source of truth in both engines. Verified by [card_registry_parity.rs](../digimon-engine/tests/card_registry_parity.rs) against the real 4082-card cards.json.

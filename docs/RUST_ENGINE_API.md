@@ -417,16 +417,139 @@ Runner methods:
 
 ---
 
-## 9. Known gaps (as of Phase 4)
+## Phase 5 — Cost-Reduction Builder Hooks
+
+Added in Phase 5 to support closure-valued dynamic cost reduction and a synchronous pay-cost gate on triggered effects. These unblock ~50 cards across Rocks, Dark Masters, and TS Olympos whose cost-reduction predicates read live game state (trash count, trait presence, field state) and cannot be expressed as static `.cost_reduction(n)` values.
+
+Commits: `795c6529`..`6a349787` (8 commits). Full suite: **525 passing** (+26 from Phase 4 baseline of 499).
+
+---
+
+### `Effect::before_pay_cost(card)` constructor
+
+```rust
+Effect::before_pay_cost(card)
+    .name("…")
+    .condition(|ctx| bool)
+    .cost_reduction_fn(|ctx| i32)
+    .pay_cost_fn(|ctx| bool)   // optional gate
+    .build()
+```
+
+A dedicated constructor that sets `EffectTiming::BeforePayCost`. Use it for any effect whose card text reads "reduce the play cost of …" when triggered by a live-state predicate. The constructor is a thin wrapper over `.timing(EffectTiming::BeforePayCost)` — all other builder methods apply normally.
+
+---
+
+### `.cost_reduction_fn(|ctx| i32)`
+
+```rust
+pub fn cost_reduction_fn<F>(self, f: F) -> EffectBuilder
+where
+    F: Fn(&EffectReadContext) -> i32 + Send + Sync + 'static
+```
+
+**Semantics.** Attaches a closure that computes a dynamic cost reduction amount at the moment the cost is about to be paid. The closure receives a read-only `EffectReadContext` — it can inspect hand, trash, field state, modifiers, and memory, but cannot mutate game state. The return value is clamped to `>= 0` per effect before accumulation; a closure that returns a negative value contributes 0 (never increases cost). Multiple reductions across the field are summed.
+
+**Dispatch site.** The engine calls `Game::scan_before_pay_cost_reduction` in all five pay_memory call sites: play from hand, play from trash, digivolve from hand, digivolve onto breeding, and effect-initiated digivolve. The scan visits every field permanent in stable order, evaluates condition and pay_cost_fn filters (see below), and accumulates the total reduction before `pay_memory` is invoked.
+
+**Clamping.** The per-effect return value is clamped to `max(0, returned_i32)` before accumulation. The final total is then clamped to `max(0, printed_cost - total_reduction)` — cost is never driven below zero.
+
+**Worked example.** A Rocks-archetype Tamer whose text reads "Your Machine Digimon cost 1 less to play for each [Destroy Bomber] in your trash":
+
+```rust
+// Hypothetical Rocks card
+pub struct RocksTamer;
+
+impl CardEffect for RocksTamer {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![
+            Effect::before_pay_cost(card)
+                .name("Machine Digimon cost 1 less per Destroy Bomber in trash")
+                .condition(|ctx| {
+                    // Only applies to Machine Digimon being played
+                    // (card-being-played context is read from ctx.game.pending_play_card)
+                    ctx.game.pending_play_card
+                        .map(|h| {
+                            let data = &ctx.card_data()[h.data_index];
+                            data.card_kind == CardKind::Digimon
+                                && data.traits.iter().any(|t| t == "Machine")
+                        })
+                        .unwrap_or(false)
+                })
+                .cost_reduction_fn(|ctx| {
+                    let me = ctx.player;
+                    ctx.trash(me)
+                        .iter()
+                        .filter(|cs| cs.contains_card_name("Destroy Bomber"))
+                        .count() as i32
+                })
+                .build(),
+        ]
+    }
+}
+```
+
+The closure returns the count of matching cards in trash; the engine clamps each effect's contribution and sums across all field permanents before paying.
+
+---
+
+### `.pay_cost_fn(|ctx| bool)`
+
+```rust
+pub fn pay_cost_fn<F>(self, f: F) -> EffectBuilder
+where
+    F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static
+```
+
+**Semantics.** Attaches a synchronous gate closure that fires between condition and process. The closure receives a mutable `EffectContext` so it can perform side effects (e.g. trash cards, suspend a Tamer) as the cost payment. Returning `true` continues to process; returning `false` suppresses process and signals the failure mode described below.
+
+**Two dispatch sites with different failure semantics:**
+
+1. **BeforePayCost timing (play/digivolve path)** — `pay_cost_fn` fires after `cost_reduction_fn` is accumulated but before `pay_memory`. Returning `false` skips this effect's reduction contribution (the effect's reduction is excluded from the total), but play continues at the reduced-by-other-effects cost. This covers cases like "trash 2 cards from the top of your deck to reduce cost by 2 — only if you have 2 cards to trash".
+
+2. **Any other triggered timing (run_queued_effect)** — `pay_cost_fn` fires after condition but before process. Returning `false` aborts the entire effect: process is skipped, no state changes happen beyond what the pay_cost_fn itself may have done. This is the correct semantic for "suspend 1 of your Tamers as cost — if you can't, the effect doesn't fire".
+
+**v1 constraint.** The closure is synchronous and must NOT install a `PendingSelection` inside it. Effects whose cost payment itself requires a player choice (e.g. "choose and suspend one of your Tamers") must model the selection in the `process` body, not in `pay_cost_fn`. A future version may lift this constraint.
+
+**Worked example.** "When you play a Digimon, you may trash 2 cards from the top of your deck to reduce its cost by 2":
+
+```rust
+Effect::before_pay_cost(card)
+    .name("Trash 2 from top to reduce play cost by 2")
+    .pay_cost_fn(|ctx| {
+        // Gate: only apply if deck has >= 2 cards to trash as cost
+        let me = ctx.player;
+        if ctx.my_player().deck.len() < 2 {
+            return false; // cannot pay — skip this reduction
+        }
+        ctx.trash_from_top(me, 2);
+        true  // cost paid — accumulate the reduction
+    })
+    .cost_reduction_fn(|_ctx| 2)
+    .build()
+```
+
+Note: `pay_cost_fn` fires before `cost_reduction_fn` is accumulated (gate → pay → then contribute the reduction if true). The deck-size check prevents paying a cost the player cannot afford; returning `false` leaves deck and memory untouched.
+
+---
+
+### Scan ordering
+
+`Game::scan_before_pay_cost_reduction` visits effects in stable field-index order: player 0's permanents before player 1's, ascending permanent index within each player, and bottom-source-first within each permanent's digivolution stack (inherited effects). If effect A's `pay_cost_fn` mutates state (e.g. mills cards) that effect B's `cost_reduction_fn` reads (e.g. counts trash), the ordering is deterministic — the mill happens before B's count. Card scripts that interact across effects should document this dependency.
+
+---
+
+## 9. Known gaps (as of Phase 5)
 
 These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:
 
-- **Block / Counter / Alliance interrupt phases** not yet wired — combat is atomic.
-- **OnSecurityCheck** / **OnStartBattle** / **OnEndBattle** / **OnEndAttack** timings are not yet fired by the combat module.
-- **Rush** from a card's innate keyword list — only modifier-granted Rush currently exempts summoning sickness. Native Rush needs the effect-listing query.
-- **Security effects** don't have a fully wired timing that exposes the attacker to the script.
-- **BeforePayCost** for cost reduction scanning the entire battle area is not implemented.
+- **Block / Counter / Alliance interrupt phases** are wired through the state machine; trait-gated Alliance is incomplete.
+- **OnSecurityCheck** / **OnStartBattle** / **OnEndBattle** / **OnEndAttack** timings — OnSecurityCheck is wired in the attack path; OnStartBattle/OnEndBattle are not yet fired.
+- **Security effects** — basic SecuritySkill dispatch is wired; re-entrant selections mid-security-resolve are not (blocks most real security cards with selection effects).
+- **BeforePayCost cost reduction scanning** — landed in Phase 5. See §Phase 5 above.
 - **Option cards** have no play flow yet (they hit the field as a permanent like Digimon).
+- **Flood-gate + restriction modifiers** (player-scoped) — not yet implemented. Planned for Phase 6.
+- **"Would" replacement timings** (Barrier, Evade, Partition, Armor Purge) — planned for Phase 7.
 
 When implementing a card that needs one of these, log the gap and pick a safe fallback.
 
