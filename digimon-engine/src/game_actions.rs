@@ -82,7 +82,11 @@ impl Game {
             player.hand[hand_index].play_cost(&self.card_data)
         };
 
-        let effective_cost = cost_delta.resolve(printed_cost);
+        // Phase 5 Task 2: scan BeforePayCost effects in battle area of both
+        // players and accumulate cost reductions before paying memory.
+        let total_reduction = self.scan_before_pay_cost_reduction();
+        let base_cost = cost_delta.resolve(printed_cost) as i32;
+        let effective_cost = (base_cost - total_reduction).max(0) as u16;
 
         // Pay the cost up-front. If unaffordable, do not remove the card.
         if !self.pay_memory(effective_cost) {
@@ -164,7 +168,11 @@ impl Game {
             player.trash[trash_index].play_cost(&self.card_data)
         };
 
-        let effective_cost = cost_delta.resolve(printed_cost);
+        // Phase 5 Task 2: scan BeforePayCost effects in battle area of both
+        // players and accumulate cost reductions before paying memory.
+        let total_reduction = self.scan_before_pay_cost_reduction();
+        let base_cost = cost_delta.resolve(printed_cost) as i32;
+        let effective_cost = (base_cost - total_reduction).max(0) as u16;
 
         if !self.pay_memory(effective_cost) {
             return None;
@@ -907,6 +915,80 @@ impl Game {
         }
         target_player.battle_area[target.index as usize].push_under(taken);
         true
+    }
+
+    /// Scan all battle-area permanents of both players for
+    /// `EffectTiming::BeforePayCost` effects whose condition passes, and
+    /// accumulate the total cost reduction.
+    ///
+    /// **Critical invariant (Python Issue 24 avoidance):** only effects from
+    /// permanents currently in `battle_area` with timing exactly
+    /// `BeforePayCost` are included. Effects in trash, hand, or from any
+    /// other timing (OnPlay, etc.) are never scanned here.
+    ///
+    /// For each qualifying effect:
+    /// - If `effect.cost_reduction_fn` is Some: invoke closure, clamp the
+    ///   returned i32 to `>= 0`, add to total.
+    /// - Else if `effect.cost_reduction != 0`: add `max(0, cost_reduction)`
+    ///   to total.
+    ///
+    /// Returns the total as `i32`. The caller is responsible for the final
+    /// `effective_cost = max(0, base_cost - total_reduction)` computation.
+    fn scan_before_pay_cost_reduction(&self) -> i32 {
+        let mut total: i32 = 0;
+        for pid in 0..self.players.len() {
+            let player_id = pid as crate::enums::PlayerId;
+            let perm_count = self.player(player_id).battle_area.len();
+            for perm_idx in 0..perm_count {
+                let perm_handle = crate::permanent::PermanentHandle {
+                    player: player_id,
+                    index: perm_idx as u8,
+                };
+                let perm = &self.player(player_id).battle_area[perm_idx];
+                // Walk the whole digivolution stack (top card only acts as
+                // the permanent identity; inherited sources may also carry
+                // BeforePayCost effects from the stack).
+                let stack_size = perm.card_sources.len();
+                for source_idx in 0..stack_size {
+                    let source = &perm.card_sources[source_idx];
+                    let card_id = source.card_id(&self.card_data).to_string();
+                    let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
+                        continue;
+                    };
+                    for effect in &effects {
+                        if effect.timing != EffectTiming::BeforePayCost {
+                            continue;
+                        }
+                        // Evaluate condition — if it fails, skip this effect.
+                        if let Some(cond) = &effect.condition {
+                            let ctx = EffectReadContext::new(
+                                self,
+                                source.handle(),
+                                Some(perm_handle),
+                                player_id,
+                            );
+                            if !cond(&ctx) {
+                                continue;
+                            }
+                        }
+                        // Accumulate reduction (closure takes precedence).
+                        if let Some(reduction_fn) = &effect.cost_reduction_fn {
+                            let ctx = EffectReadContext::new(
+                                self,
+                                source.handle(),
+                                Some(perm_handle),
+                                player_id,
+                            );
+                            let val = reduction_fn(&ctx);
+                            total += val.max(0);
+                        } else if effect.cost_reduction != 0 {
+                            total += effect.cost_reduction.max(0);
+                        }
+                    }
+                }
+            }
+        }
+        total
     }
 
     /// Install a `SelectMaterial` pending selection for DNA digivolve.
