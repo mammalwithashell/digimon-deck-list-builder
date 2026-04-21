@@ -12,7 +12,8 @@ use std::sync::Arc;
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::combat::AttackResult;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{
@@ -361,4 +362,80 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
         "cost must equal printed cost (4) when CannotReducePlayCost is installed; got {}",
         cost_paid
     );
+}
+
+// ─── CannotPlayDigimonByEffect: security trigger path ─────────────────────
+
+fn make_attacker() -> CardData {
+    CardData {
+        card_id: "ATK".to_string(),
+        card_name: "Attacker".to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(5),
+        dp: Some(8000),
+        play_cost: 6,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        effect_class_name: "ATK".to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+/// When CannotPlayDigimonByEffect is installed on the defender, a security
+/// Digimon trigger that calls play_from_security must NOT enter the field.
+/// The revealed card must go to the defender's trash instead (standard
+/// "didn't stick" outcome), and no OnPlay effect fires.
+#[test]
+fn cannot_play_digimon_by_effect_blocks_security_trigger_play() {
+    // TEST-021 is a Digimon with "[Security] Play this card without paying its
+    // cost." — its SecuritySkill calls ctx.play_from_security().
+    let mut test021 = make_test_card("TEST-021", "Test021");
+    test021.play_cost = 5; // deliberately expensive — free play must be gated
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_attacker())
+        .add_card(test021)
+        .security(1, &["TEST-021"])
+        .start();
+
+    // Install CannotPlayDigimonByEffect on the defender (player 1).
+    r.game.modifiers.add_player_modifier(
+        1,
+        PlayerModifierEntry {
+            modifier: ModifierType::CannotPlayDigimonByEffect,
+            value: 0,
+            expiry: Expiry::Permanent,
+            source_permanent: None,
+            source_player: 0,
+        },
+    );
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let result = r.attack_player(atk, 1, false);
+
+    assert_eq!(result, AttackResult::SecurityCheckSurvived);
+
+    // Card must NOT have entered the battle area.
+    assert_eq!(
+        r.battle_area_size(1),
+        0,
+        "play_from_security must be blocked by CannotPlayDigimonByEffect"
+    );
+
+    // The revealed card must have gone to trash (standard "didn't stick" path).
+    assert_eq!(
+        r.trash_size(1),
+        1,
+        "blocked security Digimon play must trash the card"
+    );
+
+    // Security stack must be empty (card was popped for the check).
+    assert_eq!(r.security_count(1), 0);
 }

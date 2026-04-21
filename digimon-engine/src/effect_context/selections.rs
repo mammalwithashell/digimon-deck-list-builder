@@ -23,7 +23,7 @@
 
 use crate::card_source::CardSource;
 use crate::effect_context::EffectContext;
-use crate::enums::{GamePhase, PlayerId};
+use crate::enums::{CardKind, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
@@ -782,6 +782,12 @@ impl<'a> EffectContext<'a> {
     ///
     /// Silently no-ops if the field is full or no security check is in
     /// progress. Mirrors Python's `Game.effect_play_from_security`.
+    ///
+    /// Phase 6 flood-gate: if the revealed card is a Digimon and the
+    /// defender has `CannotPlayDigimonByEffect` installed, the play is
+    /// blocked — this method returns without raising `pending.played`.
+    /// The security-resolution loop in `combat.rs` sees `played == false`
+    /// and trashes the card via its normal "didn't stick" path.
     pub fn play_from_security(&mut self) {
         let turn = self.game.turn_count;
         let field_slots = self.game.rules.field_slots as usize;
@@ -796,6 +802,24 @@ impl<'a> EffectContext<'a> {
         let card = pending.card.clone();
 
         if self.game.player(defender).battle_area.len() >= field_slots {
+            return;
+        }
+
+        // Phase 6: CannotPlayDigimonByEffect gates effect-initiated plays,
+        // including security triggers. If the revealed card is a Digimon
+        // and the defending player has the modifier installed, block the
+        // play by returning early without raising `pending.played`.
+        // The security-resolution loop (combat.rs) will see `played == false`
+        // and trash the card via the normal "didn't stick" path — no double
+        // push needed here.
+        // Tamer security triggers are NOT gated — only Digimon.
+        let is_digimon = card.card_kind(&self.game.card_data) == CardKind::Digimon;
+        if is_digimon
+            && self
+                .game
+                .modifiers
+                .player_has(defender, ModifierType::CannotPlayDigimonByEffect)
+        {
             return;
         }
 
