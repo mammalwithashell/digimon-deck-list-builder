@@ -8,6 +8,7 @@
 //! companion tests covering the positive and negative branch of any
 //! conditional effect).
 
+mod de_digivolve;
 mod test_cards;
 mod tokens;
 

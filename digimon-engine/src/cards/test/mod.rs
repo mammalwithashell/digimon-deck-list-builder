@@ -30,6 +30,8 @@ mod test_020;
 mod test_021;
 mod test_022;
 mod test_023;
+mod test_024;
+mod test_025;
 
 /// Register all test cards into the registry.
 pub fn register(registry: &mut CardEffectRegistry) {
@@ -50,6 +52,8 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-021", Arc::new(test_021::Test021));
     registry.insert("TEST-022", Arc::new(test_022::Test022));
     registry.insert("TEST-023", Arc::new(test_023::Test023));
+    registry.insert("TEST-024", Arc::new(test_024::Test024));
+    registry.insert("TEST-025", Arc::new(test_025::Test025));
 
     // Suppress unused warning on ModifierType (referenced via add_dp_modifier helper).
     let _ = ModifierType::ChangeDp;
