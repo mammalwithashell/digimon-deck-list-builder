@@ -95,6 +95,43 @@ fn parses_blast_digivolve_not_confused_with_blast() {
     assert_eq!(kw, vec![Keyword::Blast]);
 }
 
+#[test]
+fn parser_armor_purge_before_armor() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("[When Digivolving] ＜Armor Purge＞ effect text", "", "");
+    assert!(kws.contains(&Keyword::ArmorPurge));
+    assert!(!kws.contains(&Keyword::Armor));
+}
+
+#[test]
+fn parser_decode_before_decoy() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("＜Decode＞", "", "");
+    assert!(kws.contains(&Keyword::Decode));
+    assert!(!kws.contains(&Keyword::Decoy));
+}
+
+#[test]
+fn parser_evade_basic() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("＜Evade＞", "", "");
+    assert_eq!(kws, vec![Keyword::Evade]);
+}
+
+#[test]
+fn parser_fragment_paren_notation() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("＜Fragment (3)＞", "", "");
+    assert_eq!(kws, vec![Keyword::Fragment(3)]);
+}
+
+#[test]
+fn parser_fragment_bare_digit() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("＜Fragment 2＞", "", "");
+    assert_eq!(kws, vec![Keyword::Fragment(2)]);
+}
+
 // ─── Game::has_keyword integration tests ───────────────────────────────────
 
 use digimon_engine::debug_runner::DebugRunner;

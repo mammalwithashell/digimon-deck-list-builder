@@ -88,36 +88,8 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
-        // Printed Fragment(N): "When this Digimon would be deleted, you may
-        // trash any N of its digivolution cards. If you do, it isn't deleted."
-        //
-        // v1 simplification: trash from the top of the owner's deck instead
-        // of prompting for digivolution-card selection. This preserves the
-        // spirit of "pay a cost to survive" while deferring the source-pick
-        // UI plumbing to the Partition/ArmorPurge follow-up.
-        // TODO(phase-7-followup): prompt for N sources from the permanent's
-        // digivolution stack and trash those, matching printed rules exactly.
-        Keyword::Fragment(n) => vec![Effect::when_would_be_deleted(card)
-            .name("<Fragment>")
-            .optional()
-            .replacement_process(move |rctx| {
-                let me = rctx.effect.source_permanent;
-                if let ReplacementSubject::Permanent(subject) = rctx.subject {
-                    if Some(subject) != me {
-                        return;
-                    }
-                    let owner = subject.player;
-                    let game = &mut *rctx.effect.game;
-                    for _ in 0..n {
-                        let Some(top) = game.players[owner as usize].deck.pop() else {
-                            break;
-                        };
-                        game.players[owner as usize].trash.push(top);
-                    }
-                    rctx.handled();
-                }
-            })
-            .build()],
+        // TODO(phase-7-followup): Fragment(N) needs nested PendingSelection::Source for source-pick; deferred alongside Partition/ArmorPurge until the nested-selection-inside-replacement infrastructure lands. Per CLAUDE.md rule 17 no-approximations, parse-only is preferred over auto-trash-top-of-deck.
+        Keyword::Fragment(_) => Vec::new(),
 
         // Printed Decode: "When this Digimon would be returned to your
         // opponent's deck/hand, you may return it to your hand instead."

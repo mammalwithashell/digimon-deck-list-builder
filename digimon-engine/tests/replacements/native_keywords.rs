@@ -116,68 +116,6 @@ fn printed_evade_keyword_redirects_to_deck_bottom() {
     );
 }
 
-/// Printed `<Fragment (3)>` auto-installs an optional `WhenWouldBeDeleted`
-/// replacement that, on accept, trashes 3 from the top of the owner's deck
-/// and cancels the deletion.
-#[test]
-fn printed_fragment_3_keyword_trashes_three_on_accept() {
-    let mut r = DebugRunner::builder()
-        .add_card(card_with_keywords(
-            "FRAGMENT_CARD",
-            vec![Keyword::Fragment(3)],
-        ))
-        .add_card(make_test_card("FILLER", "FILLER"))
-        .deck(0, &["FILLER"; 10])
-        .start();
-    let handle = r.place_on_field(0, "FRAGMENT_CARD", Some(0));
-
-    assert_eq!(r.game.player(0).deck.len(), 10);
-    assert_eq!(r.game.player(0).trash.len(), 0);
-
-    r.game.delete_permanent_with_effects(handle);
-    assert!(r.game.pending_selection.is_some());
-    r.game
-        .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept Fragment replacement");
-
-    assert_eq!(
-        r.battle_area_size(0),
-        1,
-        "Fragment should prevent the deletion"
-    );
-    assert_eq!(r.game.player(0).deck.len(), 7, "3 cards trashed from deck");
-    assert_eq!(r.game.player(0).trash.len(), 3);
-}
-
-/// Per spec §14 Q2: if the deck is empty when a trash-deck-based replacement
-/// accepts, the trash is a no-op but the replacement still fires — accept
-/// doesn't retroactively fail.
-#[test]
-fn printed_fragment_keyword_empty_deck_still_consumed() {
-    let mut r = DebugRunner::builder()
-        .add_card(card_with_keywords("BARRIER_CARD", vec![Keyword::Barrier]))
-        .deck(0, &[])
-        .start();
-    let handle = r.place_on_field(0, "BARRIER_CARD", Some(0));
-
-    assert_eq!(r.game.player(0).deck.len(), 0);
-
-    r.game.delete_permanent_with_effects(handle);
-    assert!(r.game.pending_selection.is_some());
-    r.game
-        .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept Barrier replacement (empty deck)");
-
-    // Replacement still cancels the deletion, even though the trash was a no-op.
-    assert_eq!(
-        r.battle_area_size(0),
-        1,
-        "Barrier accepted → permanent survives, even with empty deck"
-    );
-    assert_eq!(r.game.player(0).deck.len(), 0);
-    assert_eq!(r.game.player(0).trash.len(), 0);
-}
-
 /// Printed `<Decode>` auto-installs an optional
 /// `WhenWouldBeReturnedToDeck` replacement that redirects the return to the
 /// owner's hand. After the Task-6 spec fix, Decode also installs a
@@ -260,11 +198,13 @@ fn printed_decode_keyword_also_handles_return_to_hand() {
          (regression guard: Task-6 previously only installed the deck-timing effect)"
     );
 
-    // Resolve the selection so state is clean for the rest of the suite.
-    // (End-state is not asserted — see method docstring.)
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept Decode replacement (hand route)");
+
+    // After resolving accept, the permanent should be in P0's hand.
+    assert_eq!(r.battle_area_size(0), 0, "Decode Digimon left battle area");
+    assert_eq!(r.game.player(0).hand.len(), 1, "ended up in hand");
 }
 
 /// Keyword-derived replacements must be scoped to the specific permanent that

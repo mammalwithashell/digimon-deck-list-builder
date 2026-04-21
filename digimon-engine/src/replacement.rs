@@ -717,7 +717,21 @@ fn commit_deferred_outcome(
     // in v1.
     let perm = match subject {
         ReplacementSubject::Permanent(h) => h,
-        _ => return,
+        other => {
+            // v1 commit_deferred_outcome only handles Permanent subjects.
+            // Card/Player optional replacements would need fire-site-specific
+            // commit arms (e.g. trash-from-hand by card handle, place-in-security
+            // by CardSourceRef, draw count). Until one of those ships with an
+            // optional replacement pathway, this arm is unreachable — but if it
+            // fires, we silently drop the outcome, which is a correctness bug.
+            // debug_assert forces the regression to surface in tests.
+            debug_assert!(
+                false,
+                "commit_deferred_outcome called with non-Permanent subject ({other:?}); \
+                 fire-site must implement its own deferred commit path"
+            );
+            return;
+        }
     };
     let Some(dest) = original_destination else {
         return;
@@ -755,6 +769,34 @@ fn commit_deferred_outcome(
         }
         (Zone::Hand, ReplacementOutcome::Redirected(Zone::Trash)) => {
             game.delete_permanent_with_cause(perm, cause);
+        }
+        (Zone::Hand, ReplacementOutcome::Redirected(Zone::Hand)) => {
+            // Redirect-to-Hand when already going to Hand: redundant in terms
+            // of final destination but we still must commit the move, since
+            // the original fire-site unwound on selection-install.
+            //
+            // We inline the bare move here rather than recursing into
+            // `game.return_to_hand(perm)`, because that would re-trigger the
+            // just-resolved `WhenWouldBeReturnedToHand` replacement window
+            // and cascade (pending spec §7.5 once-per-event guard — see TODO
+            // in `try_replace_impl`). The replacement has already resolved
+            // with an accept, so committing the move directly is correct.
+            let player = game.player_mut(perm.player);
+            if (perm.index as usize) < player.battle_area.len() {
+                let pdata = player.battle_area.remove(perm.index as usize);
+                let mut sources = pdata.card_sources;
+                if let Some(top) = sources.pop() {
+                    game.player_mut(perm.player).hand.push(top);
+                }
+                for card in sources {
+                    game.player_mut(perm.player).trash.push(card);
+                }
+                for card in pdata.linked_cards {
+                    game.player_mut(perm.player).trash.push(card);
+                }
+                game.modifiers.clear_permanent(perm);
+                game.modifiers.expire_player_on_permanent_leave(perm);
+            }
         }
         (Zone::Hand, ReplacementOutcome::Redirected(_)) => {}
         (Zone::Hand, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {
