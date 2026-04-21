@@ -9,6 +9,8 @@ use crate::enums::EffectTiming;
 /// read-only view of game state; they must not mutate.
 pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync>;
 pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync>;
+pub type CostReductionFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
+pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
 
 /// A single card effect with timing and behavior.
 pub struct Effect {
@@ -39,6 +41,17 @@ pub struct Effect {
     // Behavior
     pub condition: Option<ConditionFn>,
     pub process: Option<ProcessFn>,
+
+    // Phase 5 closure-valued cost hooks (dispatch wired in Tasks 2-4).
+    /// Returns the amount by which to reduce the play/digivolve cost when this
+    /// effect is active. Takes a read-only context because the reduction
+    /// calculation must be pure (called during cost inspection and masking).
+    pub cost_reduction_fn: Option<CostReductionFn>,
+    /// Custom cost-payment logic — invoked in place of the default memory
+    /// deduction when this effect fires. Returns `true` if the cost was
+    /// successfully paid, `false` to abort the action. Takes a mutable context
+    /// because paying costs may trash cards, suspend permanents, etc.
+    pub pay_cost_fn: Option<PayCostFn>,
 
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
@@ -196,6 +209,14 @@ impl Effect {
     pub fn on_digivolution_card_trashed(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnDigivolutionCardTrashed)
     }
+
+    /// Builder constructor for a BeforePayCost effect — fires during cost
+    /// calculation before memory is deducted. Use with `.cost_reduction_fn`
+    /// for dynamic cost reduction or `.pay_cost_fn` for custom payment logic.
+    /// Phase 5 dispatch wires up in Tasks 2-4.
+    pub fn before_pay_cost(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::BeforePayCost)
+    }
 }
 
 /// Builder for constructing effects ergonomically.
@@ -223,6 +244,8 @@ impl EffectBuilder {
                 max_per_turn: 0,
                 condition: None,
                 process: None,
+                cost_reduction_fn: None,
+                pay_cost_fn: None,
                 dp_modifier: 0,
                 cost_reduction: 0,
             },
@@ -300,6 +323,30 @@ impl EffectBuilder {
         f: impl Fn(&mut EffectContext) + Send + Sync + 'static,
     ) -> Self {
         self.inner.process = Some(Box::new(f));
+        self
+    }
+
+    /// Attach a closure that computes how much to reduce the play/digivolve
+    /// cost when this BeforePayCost effect is active. The closure receives a
+    /// read-only context — it must not mutate game state. Phase 5 dispatch
+    /// wires the return value into cost calculation in Tasks 2-4.
+    pub fn cost_reduction_fn<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> i32 + Send + Sync + 'static,
+    {
+        self.inner.cost_reduction_fn = Some(Box::new(f));
+        self
+    }
+
+    /// Attach a closure that performs custom cost payment in place of the
+    /// default memory deduction. Returns `true` if payment succeeded, `false`
+    /// to abort the action. Phase 5 dispatch wires this into the pay-cost
+    /// path in Tasks 2-4.
+    pub fn pay_cost_fn<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static,
+    {
+        self.inner.pay_cost_fn = Some(Box::new(f));
         self
     }
 
