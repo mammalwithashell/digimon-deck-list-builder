@@ -740,7 +740,7 @@ impl Game {
         let base_level = perm.top_card().level(&self.card_data).unwrap();
         let base_colors = perm.top_card().colors(&self.card_data);
         let evo_costs = &self.card_data[card.data_index].evo_costs;
-        let cost = evo_costs
+        let printed_cost = evo_costs
             .iter()
             .filter(|ec| {
                 ec.level == base_level
@@ -752,10 +752,13 @@ impl Game {
             .min()
             .expect("can_digivolve guarantees at least one matching evo_cost");
 
-        if !self.pay_memory(cost) {
+        let total_reduction = self.scan_before_pay_cost_reduction();
+        let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
+
+        if !self.pay_memory(effective_cost) {
             self.logger.log(&format!(
                 "[Rejected] digivolve_from_hand: cannot pay memory cost {} (current memory={})",
-                cost, self.memory
+                effective_cost, self.memory
             ));
             return false;
         }
@@ -830,7 +833,7 @@ impl Game {
         let base_level = breeding.top_card().level(&self.card_data).unwrap();
         let base_colors = breeding.top_card().colors(&self.card_data);
         let evo_costs = &self.card_data[card.data_index].evo_costs;
-        let cost = evo_costs
+        let printed_cost = evo_costs
             .iter()
             .filter(|ec| {
                 ec.level == base_level
@@ -842,10 +845,13 @@ impl Game {
             .min()
             .expect("can_digivolve guarantees at least one matching evo_cost");
 
-        if !self.pay_memory(cost) {
+        let total_reduction = self.scan_before_pay_cost_reduction();
+        let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
+
+        if !self.pay_memory(effective_cost) {
             self.logger.log(&format!(
                 "[Rejected] digivolve_breeding: cannot pay memory cost {} (current memory={})",
-                cost, self.memory
+                effective_cost, self.memory
             ));
             return false;
         }
@@ -955,30 +961,37 @@ impl Game {
                     let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
                         continue;
                     };
+                    // Mirror the activate_field_main inherited/top filter:
+                    // `is_under` is true for every source except the top card.
+                    // A non-inherited effect must be on the top card (is_under == false);
+                    // an inherited effect must be in an under position (is_under == true).
+                    let is_under = source_idx + 1 < stack_size;
                     for effect in &effects {
                         if effect.timing != EffectTiming::BeforePayCost {
                             continue;
                         }
+                        // Apply the inherited/top-card filter. Mirrors the guard in
+                        // activate_field_main (line ~393): skip if the position
+                        // (under vs top) doesn't match the effect's inherited flag.
+                        if is_under != effect.inherited {
+                            continue;
+                        }
+                        // Construct the read context once and reuse for both the
+                        // condition check and the cost_reduction_fn closure.
+                        let ctx = EffectReadContext::new(
+                            self,
+                            source.handle(),
+                            Some(perm_handle),
+                            player_id,
+                        );
                         // Evaluate condition — if it fails, skip this effect.
                         if let Some(cond) = &effect.condition {
-                            let ctx = EffectReadContext::new(
-                                self,
-                                source.handle(),
-                                Some(perm_handle),
-                                player_id,
-                            );
                             if !cond(&ctx) {
                                 continue;
                             }
                         }
                         // Accumulate reduction (closure takes precedence).
                         if let Some(reduction_fn) = &effect.cost_reduction_fn {
-                            let ctx = EffectReadContext::new(
-                                self,
-                                source.handle(),
-                                Some(perm_handle),
-                                player_id,
-                            );
                             let val = reduction_fn(&ctx);
                             total += val.max(0);
                         } else if effect.cost_reduction != 0 {
@@ -1241,7 +1254,9 @@ impl Game {
             ));
             return false;
         };
-        let effective_cost = cost_delta.resolve(matching.memory_cost);
+        let base_cost = cost_delta.resolve(matching.memory_cost);
+        let total_reduction = self.scan_before_pay_cost_reduction();
+        let effective_cost = (base_cost as i32 - total_reduction).max(0) as u16;
 
         // 3. Pay memory.
         if !self.pay_memory(effective_cost) {

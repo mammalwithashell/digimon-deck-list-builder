@@ -179,7 +179,11 @@ fn scan_applies_to_both_players_battle_areas() {
     // Both players have a permanent with BeforePayCost effect reducing cost by 1.
     // Player 0 plays a Digimon with printed_cost = 4.
     // Expected: effective cost = 4 - 2 = 2.
-    // (This tests that the scan is symmetric across all players.)
+    //
+    // This test validates scan symmetry (both players' battle areas are inspected).
+    // Real card text always uses the condition closure to scope to the controller's
+    // own Digimon; this test explicitly does NOT use such scoping to exercise the
+    // infrastructure.
     let target = plain_digimon("TARGET", 4);
     let perm_p0 = make_test_card("PERM-P0", "PermP0");
     let perm_p1 = make_test_card("PERM-P1", "PermP1");
