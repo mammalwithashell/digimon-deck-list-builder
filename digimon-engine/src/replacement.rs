@@ -121,9 +121,24 @@ pub(crate) fn subject_controller_id(
     }
 }
 
+/// What kind of candidate this is, for dispatch at run time.
+///
+/// - `EffectClosure { card_id, effect_slot }` — a card effect with a
+///   `replacement_process` closure. The dispatcher re-looks-up the effect
+///   by `(card_id, effect_slot)` and runs its process closure.
+/// - `PassiveCancel` — a passive restriction modifier (e.g.
+///   `CannotBeReturnedToDeck`). Passives always cancel mandatorily; the
+///   dispatcher synthesizes a `rctx.cancel()` directly.
+#[derive(Debug, Clone)]
+enum CandidateKind {
+    EffectClosure { card_id: String, effect_slot: u8 },
+    PassiveCancel,
+}
+
 /// One replacement candidate — effect-face or passive-modifier. Stored as
-/// `(card_id, effect_slot)` indices so we can re-look-up the `Effect` in
-/// `run_candidate` without holding a borrow across `&mut Game` calls.
+/// `(card_id, effect_slot)` indices for the `EffectClosure` variant so we
+/// can re-look-up the `Effect` in `run_candidate` without holding a borrow
+/// across `&mut Game` calls.
 ///
 /// Mirrors the `QueuedEffect` pattern in `selection.rs`.
 #[derive(Debug, Clone)]
@@ -133,8 +148,7 @@ struct Candidate {
     source_controller: PlayerId,
     is_mandatory: bool,
     effect_name: String,
-    card_id: String,
-    effect_slot: u8,
+    kind: CandidateKind,
 }
 
 /// The `Game::try_replace` free-function body. Called via the thin wrapper
@@ -283,15 +297,17 @@ fn collect_candidates(
                     continue;
                 }
             }
-            let _ = cause; // cause_filter migrates in Task 5 (passive modifiers)
+            let _ = cause; // cause_filter on card effects is Task 6 scope
             out.push(Candidate {
                 source_card,
                 source_permanent: Some(h),
                 source_controller: h.player,
                 is_mandatory: !effect.optional,
                 effect_name: effect.name.clone(),
-                card_id: card_id.clone(),
-                effect_slot: slot as u8,
+                kind: CandidateKind::EffectClosure {
+                    card_id: card_id.clone(),
+                    effect_slot: slot as u8,
+                },
             });
         }
     };
@@ -323,22 +339,146 @@ fn collect_candidates(
     out
 }
 
-/// Passive-modifier replacement collector. Task 5 lands the full
-/// mapping from `ModifierType` (e.g. `CannotBeDeleted`,
-/// `CannotBeReturnedToHand`, `Security*` flood-gates) into synthetic
-/// `Candidate` entries. v1 stub.
-fn passive_modifier_candidates(
-    _game: &crate::game::Game,
-    _timing: EffectTiming,
-    _subject: ReplacementSubject,
-    _cause: ReplacementCause,
-) -> Vec<Candidate> {
-    Vec::new()
+/// Map a passive restriction `ModifierType` to the `EffectTiming` at which
+/// it should fire as a cancel-replacement. Returns `None` for modifier
+/// variants that are not passive replacements (e.g. DP changes, granted
+/// keywords, etc.).
+///
+/// This is the single source of truth for the Task 5 migration of Phase 6
+/// (`CannotBeReturnedToDeck` / `…Hand` / `CannotBeTrashedByEffect` /
+/// `CannotBeDeDigivolved`) + Phase 0 (`CannotBeDestroyed` /
+/// `CannotBeDestroyedByBattle` / `CannotBeDestroyedByEffect`) modifiers
+/// onto the would-replacement framework.
+pub(crate) fn passive_modifier_to_would(
+    modifier: crate::enums::ModifierType,
+) -> Option<EffectTiming> {
+    use crate::enums::ModifierType;
+    match modifier {
+        ModifierType::CannotBeReturnedToDeck => Some(EffectTiming::WhenWouldBeReturnedToDeck),
+        ModifierType::CannotBeReturnedToHand => Some(EffectTiming::WhenWouldBeReturnedToHand),
+        ModifierType::CannotBeTrashedByEffect => Some(EffectTiming::WhenWouldBeTrashed),
+        ModifierType::CannotBeDeDigivolved => Some(EffectTiming::WhenWouldBeDeDigivolved),
+        // Phase 0 destruction-protection: all fire at WhenWouldBeDeleted.
+        // The cause_filter distinguishes them:
+        //   - CannotBeDestroyed         → None (cause-agnostic)
+        //   - CannotBeDestroyedByBattle → Some(Battle)
+        //   - CannotBeDestroyedByEffect → None (both own + opp effects)
+        ModifierType::CannotBeDestroyed => Some(EffectTiming::WhenWouldBeDeleted),
+        ModifierType::CannotBeDestroyedByBattle => Some(EffectTiming::WhenWouldBeDeleted),
+        ModifierType::CannotBeDestroyedByEffect => Some(EffectTiming::WhenWouldBeDeleted),
+        _ => None,
+    }
 }
 
-/// Run a mandatory candidate by re-looking-up the effect via
-/// `(card_id, effect_slot)`, building a `ReplacementContext`, and invoking
-/// the `replacement_process` closure.
+/// Passive-modifier replacement collector (Phase 7 Task 5).
+///
+/// Scans `ModifierRegistry` for entries whose `ModifierType` maps to the
+/// current `timing` via `passive_modifier_to_would` and whose `cause_filter`
+/// and `replacement_condition` pass. Each match emits a mandatory
+/// `PassiveCancel` candidate.
+fn passive_modifier_candidates(
+    game: &crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+) -> Vec<Candidate> {
+    let mut out: Vec<Candidate> = Vec::new();
+
+    // For `Card(_, Zone)` subjects the v1 model does not scope passive
+    // modifiers (no per-card-in-hand modifier store). Skip.
+    let target_player: PlayerId = match subject {
+        ReplacementSubject::Permanent(h) => h.player,
+        ReplacementSubject::Player(p) => p,
+        ReplacementSubject::Card(_, _) => return out,
+    };
+
+    // (a) Permanent-scoped modifiers — only for Permanent subjects.
+    if let ReplacementSubject::Permanent(handle) = subject {
+        for entry in game.modifiers.permanent_modifiers_iter(handle) {
+            let Some(entry_timing) = passive_modifier_to_would(entry.modifier) else {
+                continue;
+            };
+            if entry_timing != timing {
+                continue;
+            }
+            if let Some(cf) = entry.cause_filter {
+                if cf != cause {
+                    continue;
+                }
+            }
+            if let Some(cond) = &entry.replacement_condition {
+                let read_ctx = EffectReadContext::new(
+                    game,
+                    CardHandle(0),
+                    Some(handle),
+                    handle.player,
+                );
+                if !cond(&read_ctx, &subject) {
+                    continue;
+                }
+            }
+            out.push(Candidate {
+                source_card: CardHandle(0),
+                source_permanent: Some(handle),
+                source_controller: entry.source_player,
+                is_mandatory: true,
+                effect_name: format!("Passive {:?}", entry.modifier),
+                kind: CandidateKind::PassiveCancel,
+            });
+        }
+    }
+
+    // (b) Player-scoped modifiers — applicable to all subject kinds where
+    // `target_player` is resolved. A player-scoped "cannot be returned to
+    // hand" modifier on P1 means P1's permanents cannot be returned.
+    for entry in game.modifiers.player_modifiers_iter(target_player) {
+        let Some(entry_timing) = passive_modifier_to_would(entry.modifier) else {
+            continue;
+        };
+        if entry_timing != timing {
+            continue;
+        }
+        if let Some(cf) = entry.cause_filter {
+            if cf != cause {
+                continue;
+            }
+        }
+        if let Some(cond) = &entry.replacement_condition {
+            // Use the subject's permanent as source_permanent when available.
+            let source_perm = match subject {
+                ReplacementSubject::Permanent(h) => Some(h),
+                _ => entry.source_permanent,
+            };
+            let read_ctx = EffectReadContext::new(
+                game,
+                CardHandle(0),
+                source_perm,
+                target_player,
+            );
+            if !cond(&read_ctx, &subject) {
+                continue;
+            }
+        }
+        out.push(Candidate {
+            source_card: CardHandle(0),
+            source_permanent: entry.source_permanent,
+            source_controller: entry.source_player,
+            is_mandatory: true,
+            effect_name: format!("Passive {:?} (player-scoped)", entry.modifier),
+            kind: CandidateKind::PassiveCancel,
+        });
+    }
+
+    out
+}
+
+/// Run a mandatory candidate by dispatching on its kind.
+///
+/// - `EffectClosure` — re-looks-up the effect via `(card_id, effect_slot)`,
+///   builds a `ReplacementContext`, and invokes the `replacement_process`
+///   closure.
+/// - `PassiveCancel` — synthesizes a `ctx.cancel()` directly (passive
+///   restriction modifiers always cancel).
 fn run_mandatory_candidate(
     game: &mut crate::game::Game,
     cand: &Candidate,
@@ -346,17 +486,25 @@ fn run_mandatory_candidate(
     cause: ReplacementCause,
     original_destination: Option<Zone>,
 ) -> ReplacementOutcome {
-    run_candidate_inner(
-        game,
-        &cand.card_id,
-        cand.source_card,
-        cand.source_permanent,
-        cand.source_controller,
-        cand.effect_slot,
-        subject,
-        cause,
-        original_destination,
-    )
+    match &cand.kind {
+        CandidateKind::EffectClosure { card_id, effect_slot } => run_candidate_inner(
+            game,
+            card_id,
+            cand.source_card,
+            cand.source_permanent,
+            cand.source_controller,
+            *effect_slot,
+            subject,
+            cause,
+            original_destination,
+        ),
+        CandidateKind::PassiveCancel => {
+            // Passive restriction modifiers always cancel. No effect closure
+            // to run; just return Cancelled.
+            let _ = (game, subject, cause, original_destination);
+            ReplacementOutcome::Cancelled
+        }
+    }
 }
 
 /// Shared run-a-replacement-process body. Used by `run_mandatory_candidate`
@@ -419,10 +567,23 @@ fn install_optional_selection(
     game.current_phase = GamePhase::EffectChoice;
     game.replacement_pending_outcome = None;
 
-    let card_id = cand.card_id.clone();
+    // Passive modifiers are always mandatory — install_optional_selection
+    // should never be reached for a PassiveCancel candidate.
+    let (card_id, effect_slot) = match &cand.kind {
+        CandidateKind::EffectClosure { card_id, effect_slot } => {
+            (card_id.clone(), *effect_slot)
+        }
+        CandidateKind::PassiveCancel => {
+            debug_assert!(
+                false,
+                "install_optional_selection called with PassiveCancel candidate — \
+                 passive modifiers must always be mandatory"
+            );
+            return;
+        }
+    };
     let source_card = cand.source_card;
     let source_permanent = cand.source_permanent;
-    let effect_slot = cand.effect_slot;
     let controller = cand.source_controller;
 
     let callback = make_accept_callback(

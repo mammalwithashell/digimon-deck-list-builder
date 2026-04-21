@@ -49,6 +49,44 @@ impl ModifierEntry {
             replacement_condition: None,
         }
     }
+
+    /// Constructor for a passive replacement-backed modifier (Phase 7 Task 5).
+    ///
+    /// Uses `default_passive_cause_filter` to pick a sensible default
+    /// `cause_filter` for the `modifier` variant. E.g. `CannotBeReturnedToDeck`
+    /// defaults to `OpponentEffect` (printed text is "cannot be returned to
+    /// the deck by your opponent's effects"), while `CannotBeDestroyed`
+    /// defaults to `None` (cause-agnostic).
+    pub fn passive_replacement(
+        modifier: ModifierType,
+        expiry: Expiry,
+        source_player: u8,
+    ) -> Self {
+        Self {
+            modifier,
+            value: 0,
+            expiry,
+            source_player,
+            cause_filter: default_passive_cause_filter(modifier),
+            replacement_condition: None,
+        }
+    }
+
+    /// Builder variant: force `cause_filter = Some(OpponentEffect)` for
+    /// scripts that want "cannot be X'd by opponent's effects".
+    pub fn opponent_only(mut self) -> Self {
+        self.cause_filter = Some(crate::replacement::ReplacementCause::OpponentEffect);
+        self
+    }
+
+    /// Builder variant: attach a runtime `replacement_condition` closure.
+    pub fn with_condition(
+        mut self,
+        cond: crate::replacement::ReplacementConditionFn,
+    ) -> Self {
+        self.replacement_condition = Some(cond);
+        self
+    }
 }
 
 /// A player-scoped modifier entry (Phase 6 flood gates).
@@ -107,6 +145,65 @@ impl PlayerModifierEntry {
             replacement_condition: None,
         }
     }
+
+    /// Constructor for a passive replacement-backed player-scoped modifier
+    /// (Phase 7 Task 5). Uses `default_passive_cause_filter` for the
+    /// `cause_filter` default.
+    pub fn passive_replacement(
+        modifier: ModifierType,
+        expiry: Expiry,
+        source_permanent: Option<PermanentHandle>,
+        source_player: PlayerId,
+    ) -> Self {
+        Self {
+            modifier,
+            value: 0,
+            expiry,
+            source_permanent,
+            source_player,
+            cause_filter: default_passive_cause_filter(modifier),
+            replacement_condition: None,
+        }
+    }
+
+    /// Builder variant: force `cause_filter = Some(OpponentEffect)`.
+    pub fn opponent_only(mut self) -> Self {
+        self.cause_filter = Some(crate::replacement::ReplacementCause::OpponentEffect);
+        self
+    }
+
+    /// Builder variant: attach a runtime `replacement_condition` closure.
+    pub fn with_condition(
+        mut self,
+        cond: crate::replacement::ReplacementConditionFn,
+    ) -> Self {
+        self.replacement_condition = Some(cond);
+        self
+    }
+}
+
+/// Default `cause_filter` for a passive replacement-backed modifier.
+///
+/// - "Cannot be X'd by opponent's effects" family → `Some(OpponentEffect)`
+///   (matches printed text on most protection cards).
+/// - `CannotBeDestroyedByBattle` → `Some(Battle)`.
+/// - `CannotBeDestroyed` / `CannotBeDestroyedByEffect` → `None`
+///   (cause-agnostic: applies to all causes / all effect causes).
+/// - Everything else → `None`.
+pub(crate) fn default_passive_cause_filter(
+    modifier: ModifierType,
+) -> Option<crate::replacement::ReplacementCause> {
+    use crate::replacement::ReplacementCause;
+    match modifier {
+        ModifierType::CannotBeReturnedToDeck
+        | ModifierType::CannotBeReturnedToHand
+        | ModifierType::CannotBeTrashedByEffect
+        | ModifierType::CannotBeDeDigivolved => Some(ReplacementCause::OpponentEffect),
+        ModifierType::CannotBeDestroyedByBattle => Some(ReplacementCause::Battle),
+        // CannotBeDestroyed / CannotBeDestroyedByEffect are cause-agnostic in
+        // printed text (the latter covers both own and opponent effects).
+        _ => None,
+    }
 }
 
 /// Tracks all active modifiers in the game.
@@ -163,6 +260,21 @@ impl ModifierRegistry {
     /// Whether the permanent has any modifier of the given type.
     pub fn has(&self, target: PermanentHandle, modifier: ModifierType) -> bool {
         !self.get(target, modifier).is_empty()
+    }
+
+    /// Iterate over ALL `ModifierEntry` values attached to `target`
+    /// (regardless of `ModifierType`). Used by the Phase 7 replacement
+    /// dispatcher to scan for `CannotBe*` entries across all modifier types
+    /// without issuing one `get(target, ...)` call per variant.
+    pub fn permanent_modifiers_iter(
+        &self,
+        target: PermanentHandle,
+    ) -> impl Iterator<Item = &ModifierEntry> {
+        self.permanent_modifiers
+            .get(&target)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+            .iter()
     }
 
     /// Whether ANY permanent in the registry has a modifier of the given

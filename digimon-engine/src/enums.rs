@@ -290,6 +290,12 @@ pub enum ModifierType {
     CannotBeDestroyedByEffect,
     CannotBeRemoved,
 
+    // Movement protection (Phase 7 Task 5 — auto-install as replacements)
+    CannotBeReturnedToDeck,
+    CannotBeReturnedToHand,
+    CannotBeTrashedByEffect,
+    CannotBeDeDigivolved,
+
     // Attack
     CannotAttack,
     CannotAttackPlayer,
