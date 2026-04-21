@@ -7,7 +7,7 @@
 
 use crate::card_source::CardSource;
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::{EffectTiming, GamePhase, ModifierType, PlaySource, PlayerId};
+use crate::enums::{CardKind, EffectTiming, GamePhase, ModifierType, PlaySource, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind, TriggerSource};
@@ -71,14 +71,14 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
         cost_delta: crate::enums::CostDelta,
-        _source: PlaySource,
+        source: PlaySource,
     ) -> Option<usize> {
         let turn = self.turn_count;
         let field_slots = self.rules.field_slots;
 
         // Borrow-check-friendly pre-checks: gather everything we need from
         // immutable borrows before taking a mutable borrow.
-        let printed_cost = {
+        let (printed_cost, card_kind) = {
             let player = self.player(player_id);
             if hand_index >= player.hand.len() {
                 return None;
@@ -86,12 +86,22 @@ impl Game {
             if player.battle_area.len() >= field_slots as usize {
                 return None;
             }
-            player.hand[hand_index].play_cost(&self.card_data)
+            let card = &player.hand[hand_index];
+            (card.play_cost(&self.card_data), card.card_kind(&self.card_data))
         };
+
+        // Phase 6: CannotPlayDigimonByEffect — when source is ByEffect and the
+        // card is a Digimon, gate on the player-scoped modifier.
+        if source == PlaySource::ByEffect
+            && card_kind == CardKind::Digimon
+            && self.modifiers.player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
+        {
+            return None;
+        }
 
         // Phase 5 Task 2: scan BeforePayCost effects in battle area of both
         // players and accumulate cost reductions before paying memory.
-        let total_reduction = self.scan_before_pay_cost_reduction();
+        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
         let base_cost = cost_delta.resolve(printed_cost) as i32;
         let effective_cost = (base_cost - total_reduction).max(0) as u16;
 
@@ -166,12 +176,12 @@ impl Game {
         player_id: PlayerId,
         trash_index: usize,
         cost_delta: crate::enums::CostDelta,
-        _source: PlaySource,
+        source: PlaySource,
     ) -> Option<usize> {
         let turn = self.turn_count;
         let field_slots = self.rules.field_slots;
 
-        let printed_cost = {
+        let (printed_cost, card_kind) = {
             let player = self.player(player_id);
             if trash_index >= player.trash.len() {
                 return None;
@@ -179,12 +189,22 @@ impl Game {
             if player.battle_area.len() >= field_slots as usize {
                 return None;
             }
-            player.trash[trash_index].play_cost(&self.card_data)
+            let card = &player.trash[trash_index];
+            (card.play_cost(&self.card_data), card.card_kind(&self.card_data))
         };
+
+        // Phase 6: CannotPlayDigimonByEffect — when source is ByEffect and the
+        // card is a Digimon, gate on the player-scoped modifier.
+        if source == PlaySource::ByEffect
+            && card_kind == CardKind::Digimon
+            && self.modifiers.player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
+        {
+            return None;
+        }
 
         // Phase 5 Task 2: scan BeforePayCost effects in battle area of both
         // players and accumulate cost reductions before paying memory.
-        let total_reduction = self.scan_before_pay_cost_reduction();
+        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
         let base_cost = cost_delta.resolve(printed_cost) as i32;
         let effective_cost = (base_cost - total_reduction).max(0) as u16;
 
@@ -771,7 +791,7 @@ impl Game {
             .min()
             .expect("can_digivolve guarantees at least one matching evo_cost");
 
-        let total_reduction = self.scan_before_pay_cost_reduction();
+        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
         let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
 
         if !self.pay_memory(effective_cost) {
@@ -865,7 +885,7 @@ impl Game {
             .min()
             .expect("can_digivolve guarantees at least one matching evo_cost");
 
-        let total_reduction = self.scan_before_pay_cost_reduction();
+        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
         let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
 
         if !self.pay_memory(effective_cost) {
@@ -971,7 +991,16 @@ impl Game {
     /// `pay_cost_fn` closures can mutate game state (e.g., trash cards).
     /// All callers already hold `&mut self`, so this is a pure signature
     /// refinement with no behavioral impact on the call sites.
-    fn scan_before_pay_cost_reduction(&mut self) -> i32 {
+    ///
+    /// **Signature change (Phase 6 Task 4):** takes `acting_player` so that
+    /// the `CannotReducePlayCost` flood-gate can suppress all reductions for
+    /// the acting player. Callers pass their `player_id` argument.
+    fn scan_before_pay_cost_reduction(&mut self, acting_player: crate::enums::PlayerId) -> i32 {
+        // Phase 6: if the acting player has CannotReducePlayCost, suppress all
+        // cost reductions entirely. Mirrors DCGO's per-player flood-gate.
+        if self.modifiers.player_has(acting_player, ModifierType::CannotReducePlayCost) {
+            return 0;
+        }
         // Pre-snapshot all source identities to avoid holding any borrow on
         // `self` across the `EffectContext::new(&mut self, ...)` calls below.
         // (perm_handle, source_card_handle, card_id_string, is_under_flag, player_id)
@@ -1337,7 +1366,7 @@ impl Game {
             return false;
         };
         let base_cost = cost_delta.resolve(matching.memory_cost);
-        let total_reduction = self.scan_before_pay_cost_reduction();
+        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
         let effective_cost = (base_cost as i32 - total_reduction).max(0) as u16;
 
         // 3. Pay memory.

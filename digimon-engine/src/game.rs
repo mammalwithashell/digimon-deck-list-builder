@@ -740,6 +740,61 @@ impl Game {
             .map(|impl_| impl_.effects(handle))
     }
 
+    /// Resolve a `CardHandle` (card_index) to its `CardKind` by scanning all
+    /// player zones.
+    ///
+    /// Used by `source_is_tamer` flood-gate helpers on `EffectContext` /
+    /// `EffectReadContext` to discriminate Tamer-sourced effects from
+    /// Digimon/Option-sourced ones (matches DCGO `ICardEffect.IsTamerEffect`).
+    ///
+    /// Returns `None` if no `CardSource` with the given `card_index` is found
+    /// in any zone (this should not occur in practice for a live effect).
+    pub fn card_kind_for_handle(
+        &self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<crate::enums::CardKind> {
+        let target_index = handle.0;
+        for player in &self.players {
+            // Hand
+            if let Some(cs) = player.hand.iter().find(|c| c.card_index == target_index) {
+                return Some(self.card_data[cs.data_index].card_kind);
+            }
+            // Trash
+            if let Some(cs) = player.trash.iter().find(|c| c.card_index == target_index) {
+                return Some(self.card_data[cs.data_index].card_kind);
+            }
+            // Battle area (card_sources stacks)
+            for perm in &player.battle_area {
+                if let Some(cs) = perm.card_sources.iter().find(|c| c.card_index == target_index) {
+                    return Some(self.card_data[cs.data_index].card_kind);
+                }
+                // Linked cards (Tamer equipment)
+                if let Some(cs) = perm.linked_cards.iter().find(|c| c.card_index == target_index) {
+                    return Some(self.card_data[cs.data_index].card_kind);
+                }
+            }
+            // Breeding area
+            if let Some(breeding) = &player.breeding_area {
+                if let Some(cs) = breeding.card_sources.iter().find(|c| c.card_index == target_index) {
+                    return Some(self.card_data[cs.data_index].card_kind);
+                }
+            }
+            // Security (e.g. when effect fires from security card)
+            if let Some(cs) = player.security.iter().find(|c| c.card_index == target_index) {
+                return Some(self.card_data[cs.data_index].card_kind);
+            }
+            // Deck (rare, but possible for mid-search effects)
+            if let Some(cs) = player.deck.iter().find(|c| c.card_index == target_index) {
+                return Some(self.card_data[cs.data_index].card_kind);
+            }
+        }
+        // Also check revealed_cards pool
+        if let Some(cs) = self.revealed_cards.iter().find(|c| c.card_index == target_index) {
+            return Some(self.card_data[cs.data_index].card_kind);
+        }
+        None
+    }
+
     // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───
 
     /// Sum of static `dp_modifier` values from a single source's effects

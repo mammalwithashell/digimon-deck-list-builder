@@ -109,6 +109,18 @@ impl<'a> EffectReadContext<'a> {
         let player = self.game.player(h.player);
         player.battle_area.get(h.index as usize)
     }
+
+    /// Returns `true` if this effect's source card is a Tamer.
+    ///
+    /// Used by flood-gate discriminators like `CannotGainMemoryExceptFromTamers`
+    /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
+    /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
+    pub fn source_is_tamer(&self) -> bool {
+        self.game
+            .card_kind_for_handle(self.source_card)
+            .map(|k| k == crate::enums::CardKind::Tamer)
+            .unwrap_or(false)
+    }
 }
 
 /// The context passed to every effect's `process` closure.
@@ -205,6 +217,18 @@ impl<'a> EffectContext<'a> {
         player.battle_area.get(h.index as usize)
     }
 
+    /// Returns `true` if this effect's source card is a Tamer.
+    ///
+    /// Used by flood-gate discriminators like `CannotGainMemoryExceptFromTamers`
+    /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
+    /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
+    pub fn source_is_tamer(&self) -> bool {
+        self.game
+            .card_kind_for_handle(self.source_card)
+            .map(|k| k == crate::enums::CardKind::Tamer)
+            .unwrap_or(false)
+    }
+
     /// Reborrow this mut context as a read-only context — for condition
     /// closures, which take `&EffectReadContext`.
     pub fn as_read(&self) -> EffectReadContext<'_> {
@@ -219,6 +243,18 @@ impl<'a> EffectContext<'a> {
     // ─── Memory mutations ─────────────────────────────────────────────
 
     pub fn gain_memory(&mut self, amount: i16) {
+        let target = self.player;
+        // Phase 6: CannotGainMemoryByEffect — suppress all memory gains by effect.
+        if self.game.modifiers.player_has(target, ModifierType::CannotGainMemoryByEffect) {
+            return;
+        }
+        // Phase 6: CannotGainMemoryExceptFromTamers — only Tamer-sourced gains are
+        // allowed; block Digimon/Option-sourced gains.
+        if self.game.modifiers.player_has(target, ModifierType::CannotGainMemoryExceptFromTamers)
+            && !self.source_is_tamer()
+        {
+            return;
+        }
         self.game.gain_memory(amount);
     }
 
@@ -234,6 +270,10 @@ impl<'a> EffectContext<'a> {
     // ─── Card draw / trash ────────────────────────────────────────────
 
     pub fn draw(&mut self, player: PlayerId, count: u8) -> u8 {
+        // Phase 6: if the drawing player has CannotDrawByEffect, suppress draw.
+        if self.game.modifiers.player_has(player, ModifierType::CannotDrawByEffect) {
+            return 0;
+        }
         self.game.player_mut(player).draw_many(count)
     }
 
@@ -570,6 +610,10 @@ impl<'a> EffectContext<'a> {
 
     /// Move a card from `source` to `player`'s security stack. Does not
     /// fire `OnLoseSecurity` observers. See `Game::place_on_security`.
+    ///
+    /// Phase 6: gated by `CannotAddSecurityByEffect`. The gate checks the
+    /// ACTING player (the effect owner, `self.player`), not the target —
+    /// consistent with DCGO's per-player restriction semantics.
     pub fn place_on_security(
         &mut self,
         player: PlayerId,
@@ -577,6 +621,10 @@ impl<'a> EffectContext<'a> {
         position: crate::enums::StackPosition,
         face_up: bool,
     ) -> bool {
+        // Phase 6: if the acting player has CannotAddSecurityByEffect, suppress.
+        if self.game.modifiers.player_has(self.player, ModifierType::CannotAddSecurityByEffect) {
+            return false;
+        }
         self.game.place_on_security(player, source, position, face_up)
     }
 
