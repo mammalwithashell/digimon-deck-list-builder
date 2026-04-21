@@ -1419,7 +1419,7 @@ Per spec §14 — these are not blockers but must be decided before the correspo
 - [x] Task 4 — 2026-04-21 (`bf53cc44`, `fd40ccdf`)
 - [x] Task 5 — 2026-04-21 (`71727ff0`, `f68e8209`)
 - [x] Task 6 — 2026-04-21 (`1e38a03f`, `ab67073a`, `b5f53743`)
-- [x] Task 7 — 2026-04-21 (`97d12293`)
+- [x] Task 7 — 2026-04-21 (`1c5020b7`)
 
 Full suite green at end of each task is mandatory before proceeding to the next.
 
@@ -1433,6 +1433,6 @@ Full suite green at end of each task is mandatory before proceeding to the next.
 | 4 — Route Would* timings | 2026-04-21 | `bf53cc44`, `fd40ccdf` |
 | 5 — Passive migration | 2026-04-21 | `71727ff0`, `f68e8209` |
 | 6 — Keyword parsing | 2026-04-21 | `1e38a03f`, `ab67073a`, `b5f53743` |
-| 7 — §7.5 guard + docs | 2026-04-21 | `97d12293` |
+| 7 — §7.5 guard + docs | 2026-04-21 | `1c5020b7` |
 
 Baseline 566 → final 626 passing, 0 failing, 0 warnings under `RUSTFLAGS="-D warnings"`. Phase 7 complete end-to-end; roadmap flipped to ✅ Landed.
