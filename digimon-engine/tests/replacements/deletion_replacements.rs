@@ -212,6 +212,11 @@ fn barrier_trashes_top_of_deck_and_skips_deletion() {
 
 /// Test 2: Mandatory redirect-to-deck → permanent removed from field, card
 /// placed on bottom of owner's deck, `OnDeletion` suppressed.
+///
+/// TODO(phase-7-task-4): once `return_to_deck` is Would*-wired, extend this
+/// test to assert that `OnLeaveField` + `OnReturn` observers DO fire on the
+/// redirect path (per spec §7.4 — redirected events fire the post-replacement
+/// route's observers, not the original event's).
 #[test]
 fn evade_redirects_to_bottom_of_deck() {
     let on_deletion_fired = Arc::new(Mutex::new(false));
@@ -473,6 +478,11 @@ fn deletion_cancelled_suppresses_on_any_deletion() {
 
 /// Test 10: A deletion redirected to `Hand` does not fire `OnDeletion` on
 /// the target.
+///
+/// TODO(phase-7-task-4): once `return_to_hand` is Would*-wired, extend this
+/// test to assert that `OnLeaveField` + `OnReturn` observers DO fire on the
+/// redirect path (per spec §7.4 — redirected events fire the post-replacement
+/// route's observers, not the original event's).
 #[test]
 fn deletion_redirected_to_hand_does_not_fire_on_deletion() {
     let on_deletion_fired = Arc::new(Mutex::new(false));
