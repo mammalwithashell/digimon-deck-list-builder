@@ -1,68 +1,203 @@
-name: Desktop Release
+name: desktop-release
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'desktop-v*'
+
+permissions:
+  contents: write
 
 jobs:
-  build-desktop:
-    permissions:
-      contents: write
+  build:
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
-          - platform: macos-latest
-            args: '--target aarch64-apple-darwin'
-          - platform: macos-latest
-            args: '--target x86_64-apple-darwin'
-          - platform: ubuntu-22.04
-            args: ''
-          - platform: windows-latest
-            args: ''
-
-    runs-on: ${{ matrix.platform }}
+          - runner: windows-latest
+            target: windows-x86_64
+            bundle_glob: 'src-tauri/target/release/bundle/nsis/*-setup.exe'
+          - runner: ubuntu-latest
+            target: linux-x86_64
+            bundle_glob: 'src-tauri/target/release/bundle/appimage/*.AppImage'
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install system dependencies (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          submodules: recursive
 
-      - name: Install Rust stable
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Install frontend dependencies
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Linux system deps
+        if: matrix.runner == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev libssl-dev patchelf
+
+      - name: Install frontend deps
         working-directory: frontend
         run: npm ci
 
-      - name: Build frontend (desktop mode)
+      - name: Build desktop frontend
         working-directory: frontend
-        run: npm run build -- --mode desktop
-
-      - uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_BUILD_TARGET: desktop
+        run: npm run build
+
+      - name: Install tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build + sign Tauri bundle
+        working-directory: src-tauri
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_KEY_PASSWORD }}
+        run: cargo tauri build
+
+      - name: Collect artifact paths
+        id: collect
+        shell: bash
+        run: |
+          INSTALLER=$(ls ${{ matrix.bundle_glob }} | head -n1)
+          echo "installer=$INSTALLER" >> "$GITHUB_OUTPUT"
+          echo "signature=${INSTALLER}.sig" >> "$GITHUB_OUTPUT"
+          echo "Installer: $INSTALLER"
+          ls -lh "$INSTALLER" "${INSTALLER}.sig"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
         with:
-          tagName: v__VERSION__
-          releaseName: 'Digimon TCG v__VERSION__'
-          releaseBody: 'Desktop release. See assets for platform installers.'
-          releaseDraft: true
-          prerelease: false
-          projectPath: src-tauri
-          args: ${{ matrix.args }}
+          name: desktop-${{ matrix.target }}
+          path: |
+            ${{ steps.collect.outputs.installer }}
+            ${{ steps.collect.outputs.signature }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Resolve version + engine_commit + notes
+        id: meta
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#desktop-v}"
+          ENGINE_COMMIT=$(git rev-parse --short HEAD)
+          NOTES=$(git tag -l --format='%(contents)' "$TAG")
+          if [ -z "$NOTES" ]; then NOTES="Release $VERSION"; fi
+          # Default min_version to X.Y.0 for an X.Y.Z[-suffix] tag.
+          # Bump via PATCH /admin/releases/{id} {"min_version": "..."} afterward
+          # when you need the kill-switch semantics.
+          MAJ_MIN=$(echo "$VERSION" | sed -E 's/([0-9]+\.[0-9]+)\..*/\1.0/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "engine_commit=$ENGINE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "min_version=$MAJ_MIN" >> "$GITHUB_OUTPUT"
+          {
+            echo "notes<<NOTES_EOF"
+            echo "$NOTES"
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create release on hosted API
+        id: create
+        env:
+          HOSTED_API_URL: ${{ secrets.HOSTED_API_URL }}
+          CI_ADMIN_TOKEN: ${{ secrets.CI_ADMIN_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BODY=$(jq -n \
+            --arg version "${{ steps.meta.outputs.version }}" \
+            --arg engine_commit "${{ steps.meta.outputs.engine_commit }}" \
+            --arg min_version "${{ steps.meta.outputs.min_version }}" \
+            --arg notes "${{ steps.meta.outputs.notes }}" \
+            '{
+               version: $version,
+               channel: "alpha",
+               engine_commit: $engine_commit,
+               min_version: $min_version,
+               release_notes: $notes,
+               targets: ["windows-x86_64", "linux-x86_64"]
+             }')
+          curl -fsS -X POST "$HOSTED_API_URL/admin/releases" \
+            -H "Authorization: Bearer $CI_ADMIN_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" > /tmp/create.json
+          RELEASE_ID=$(jq -r '.release_id' /tmp/create.json)
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+          echo "Created release $RELEASE_ID"
+
+      - name: Upload artifacts and confirm
+        env:
+          HOSTED_API_URL: ${{ secrets.HOSTED_API_URL }}
+          CI_ADMIN_TOKEN: ${{ secrets.CI_ADMIN_TOKEN }}
+          RELEASE_ID: ${{ steps.create.outputs.release_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for row in $(jq -c '.artifacts[]' /tmp/create.json); do
+            TARGET=$(echo "$row" | jq -r '.target')
+            URL=$(echo "$row" | jq -r '.upload_url')
+            FILENAME=$(echo "$row" | jq -r '.filename')
+            ART_DIR="artifacts/desktop-$TARGET"
+            case "$TARGET" in
+              windows-x86_64) LOCAL=$(ls "$ART_DIR"/*-setup.exe | head -n1) ;;
+              linux-x86_64)   LOCAL=$(ls "$ART_DIR"/*.AppImage  | head -n1) ;;
+              *) echo "unknown target $TARGET" >&2; exit 1 ;;
+            esac
+            SIG_FILE="${LOCAL}.sig"
+            echo "Uploading $LOCAL -> Spaces"
+            curl -fsS -X PUT --data-binary "@${LOCAL}" \
+              -H "Content-Type: application/octet-stream" \
+              -H "x-amz-acl: public-read" \
+              "$URL"
+            SIG_B64=$(cat "$SIG_FILE" | tr -d '\n')
+            echo "Confirming $TARGET"
+            curl -fsS -X POST \
+              "$HOSTED_API_URL/admin/releases/$RELEASE_ID/artifacts/$TARGET/confirm" \
+              -H "Authorization: Bearer $CI_ADMIN_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg sig "$SIG_B64" '{signature_b64: $sig}')"
+          done
+
+      - name: Publish release
+        env:
+          HOSTED_API_URL: ${{ secrets.HOSTED_API_URL }}
+          CI_ADMIN_TOKEN: ${{ secrets.CI_ADMIN_TOKEN }}
+          RELEASE_ID: ${{ steps.create.outputs.release_id }}
+        run: |
+          curl -fsS -X POST \
+            "$HOSTED_API_URL/admin/releases/$RELEASE_ID/publish" \
+            -H "Authorization: Bearer $CI_ADMIN_TOKEN"
+
+      - name: Create GitHub release entry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Desktop ${{ steps.meta.outputs.version }}" \
+            --notes "${{ steps.meta.outputs.notes }}" \
+            artifacts/desktop-windows-x86_64/* \
+            artifacts/desktop-linux-x86_64/*
