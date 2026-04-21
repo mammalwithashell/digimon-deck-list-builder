@@ -8,7 +8,7 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming, PlaySource};
 use std::sync::Arc;
 
 fn dummy() -> CardHandle {
@@ -783,6 +783,7 @@ fn on_digivolve_fires_globally_when_any_digimon_digivolves() {
         base_h,
         CostDelta::Free,
         false,
+        PlaySource::ByEffect,
     );
     assert!(ok, "effect_initiated_digivolve should succeed");
 

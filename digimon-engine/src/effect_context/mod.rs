@@ -18,7 +18,7 @@ pub use selections::{CountCappedZone, EffectContextSelectorScope};
 
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
-use crate::enums::{Expiry, Keyword, ModifierType, PlayerId, StackPosition};
+use crate::enums::{Expiry, Keyword, ModifierType, PlayerId, PlaySource, StackPosition};
 use crate::game::Game;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
@@ -447,7 +447,9 @@ impl<'a> EffectContext<'a> {
         hand_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
-        let field_index = self.game.play_from_hand_with_cost(player, hand_index, cost_delta)?;
+        let field_index =
+            self.game
+                .play_from_hand_with_cost(player, hand_index, cost_delta, PlaySource::ByEffect)?;
         Some(PermanentHandle {
             player,
             index: field_index as u8,
@@ -464,7 +466,7 @@ impl<'a> EffectContext<'a> {
     ) -> Option<PermanentHandle> {
         let field_index = self
             .game
-            .play_from_trash_with_cost(player, trash_index, cost_delta)?;
+            .play_from_trash_with_cost(player, trash_index, cost_delta, PlaySource::ByEffect)?;
         Some(PermanentHandle {
             player,
             index: field_index as u8,
@@ -511,8 +513,14 @@ impl<'a> EffectContext<'a> {
         cost_delta: crate::enums::CostDelta,
         ignore_color: bool,
     ) -> bool {
-        self.game
-            .effect_initiated_digivolve(player, hand_index, target, cost_delta, ignore_color)
+        self.game.effect_initiated_digivolve(
+            player,
+            hand_index,
+            target,
+            cost_delta,
+            ignore_color,
+            PlaySource::ByEffect,
+        )
     }
 
     // ─── Modifier registration ────────────────────────────────────────

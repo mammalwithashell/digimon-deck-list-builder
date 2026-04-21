@@ -7,7 +7,7 @@
 
 use crate::card_source::CardSource;
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::{EffectTiming, GamePhase, ModifierType, PlayerId};
+use crate::enums::{EffectTiming, GamePhase, ModifierType, PlaySource, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind, TriggerSource};
@@ -32,13 +32,19 @@ impl Game {
     /// Play a card from hand to field for a player, paying the printed cost.
     ///
     /// Delegates to [`Self::play_from_hand_with_cost`] with
-    /// `CostDelta::Reduce(0)` (pay the printed cost verbatim).
+    /// `CostDelta::Reduce(0)` (pay the printed cost verbatim) and
+    /// `PlaySource::ByHand` (standard player-action play).
     ///
     /// Does NOT call `check_turn_end`. Callers that want to end the turn when
     /// memory goes negative after OnPlay effects resolve should invoke
     /// `check_turn_end` explicitly.
     pub fn play_from_hand(&mut self, player_id: PlayerId, hand_index: usize) -> Option<usize> {
-        self.play_from_hand_with_cost(player_id, hand_index, crate::enums::CostDelta::Reduce(0))
+        self.play_from_hand_with_cost(
+            player_id,
+            hand_index,
+            crate::enums::CostDelta::Reduce(0),
+            PlaySource::ByHand,
+        )
     }
 
     /// Generalization of `play_from_hand` — computes memory cost via the given
@@ -65,6 +71,7 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
         cost_delta: crate::enums::CostDelta,
+        _source: PlaySource,
     ) -> Option<usize> {
         let turn = self.turn_count;
         let field_slots = self.rules.field_slots;
@@ -131,13 +138,19 @@ impl Game {
     /// Play a card from `player`'s trash to field, paying the printed cost.
     ///
     /// Delegates to [`Self::play_from_trash_with_cost`] with
-    /// `CostDelta::Reduce(0)` (pay the printed cost verbatim).
+    /// `CostDelta::Reduce(0)` (pay the printed cost verbatim) and
+    /// `PlaySource::ByEffect` (trash plays are always effect-driven).
     ///
     /// Does NOT call `check_turn_end`. Callers that want to end the turn when
     /// memory goes negative after OnPlay effects resolve should invoke
     /// `check_turn_end` explicitly.
     pub fn play_from_trash(&mut self, player_id: PlayerId, trash_index: usize) -> Option<usize> {
-        self.play_from_trash_with_cost(player_id, trash_index, crate::enums::CostDelta::Reduce(0))
+        self.play_from_trash_with_cost(
+            player_id,
+            trash_index,
+            crate::enums::CostDelta::Reduce(0),
+            PlaySource::ByEffect,
+        )
     }
 
     /// Play a card from `player`'s trash. Like `play_from_hand_with_cost` but
@@ -153,6 +166,7 @@ impl Game {
         player_id: PlayerId,
         trash_index: usize,
         cost_delta: crate::enums::CostDelta,
+        _source: PlaySource,
     ) -> Option<usize> {
         let turn = self.turn_count;
         let field_slots = self.rules.field_slots;
@@ -693,6 +707,7 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
         field_index: usize,
+        _source: PlaySource,
     ) -> bool {
         if self.current_phase != GamePhase::Main {
             self.logger.log(&format!(
@@ -802,6 +817,7 @@ impl Game {
         &mut self,
         player_id: PlayerId,
         hand_index: usize,
+        _source: PlaySource,
     ) -> bool {
         if self.current_phase != GamePhase::Main {
             self.logger.log(&format!(
@@ -1263,6 +1279,7 @@ impl Game {
         target: PermanentHandle,
         cost_delta: crate::enums::CostDelta,
         ignore_color: bool,
+        _source: PlaySource,
     ) -> bool {
         // 1. Validate hand index and target index.
         {

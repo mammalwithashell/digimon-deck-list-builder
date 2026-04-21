@@ -386,6 +386,22 @@ pub enum TitanRole {
     Team,
 }
 
+/// Why a card is being played — distinguishes player-driven hand plays from
+/// effect-initiated plays. Threaded through play and digivolve helpers so
+/// flood-gate modifiers (e.g. `CannotPlayDigimonByEffect`) can inspect the
+/// source at enforcement time (Task 4).
+///
+/// - `ByHand` — the turn player spent memory for the printed cost.
+/// - `ByEffect` — another effect triggered this play (free or effect-paid).
+/// - `ByDigivolve` — digivolving onto a pre-digi (not strictly "play", but
+///   relevant for some flood gates).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PlaySource {
+    ByHand,
+    ByEffect,
+    ByDigivolve,
+}
+
 /// How a play-from-zone helper should compute the memory cost deducted.
 ///
 /// - `Free` — pay 0 memory regardless of printed cost. Used by "play without

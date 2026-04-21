@@ -8,7 +8,7 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{DebugRunner, make_test_card};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming, PlaySource};
 use digimon_engine::permanent::Permanent;
 use std::sync::Arc;
 
@@ -333,7 +333,7 @@ fn digivolve_from_hand_applies_before_pay_cost_reduction() {
 
     let memory_before = r.memory(); // 10
     // Digivolve hand[0] (DIGI) onto field[0] (BASE); REDUCER is at field[1].
-    let ok = r.game_mut().digivolve_from_hand(0, 0, 0);
+    let ok = r.game_mut().digivolve_from_hand(0, 0, 0, PlaySource::ByDigivolve);
     assert!(ok, "digivolve should succeed");
 
     // Effective cost = 3 - 2 = 1.
@@ -403,7 +403,7 @@ fn digivolve_onto_breeding_applies_before_pay_cost_reduction() {
     r.game_mut().enter_main_phase();
 
     let memory_before = r.memory(); // 10
-    let ok = r.game_mut().digivolve_from_hand_onto_breeding(0, 0);
+    let ok = r.game_mut().digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByDigivolve);
     assert!(ok, "digivolve onto breeding should succeed");
 
     // Effective cost = 3 - 1 = 2.
@@ -458,6 +458,7 @@ fn effect_initiated_digivolve_stacks_cost_delta_with_reduction() {
         target_handle,
         CostDelta::Reduce(1),
         false, // do not ignore color
+        PlaySource::ByEffect,
     );
     assert!(ok, "effect_initiated_digivolve should succeed");
 

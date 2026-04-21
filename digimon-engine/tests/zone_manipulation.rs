@@ -6,7 +6,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, CostDelta};
+use digimon_engine::enums::{CardColor, CardKind, CostDelta, PlaySource};
 use std::sync::Arc;
 
 /// Helper: a Lv.3 Red Digimon with configurable play_cost and no effects.
@@ -43,7 +43,7 @@ fn play_from_hand_free_ignores_printed_cost() {
     assert_eq!(r.memory(), 0);
     assert_eq!(r.hand_size(0), 1);
 
-    let result = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Free);
+    let result = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Free, PlaySource::ByHand);
 
     assert_eq!(result, Some(0), "play should succeed at free cost");
     assert_eq!(r.hand_size(0), 0, "card leaves hand");
@@ -60,7 +60,7 @@ fn play_from_hand_reduce_subtracts_from_cost() {
         .start();
 
     let before = r.memory();
-    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Reduce(4));
+    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Reduce(4), PlaySource::ByHand);
     assert_eq!(res, Some(0));
     assert_eq!(r.memory(), before - 2, "6 - 4 = 2 memory paid");
 }
@@ -74,7 +74,7 @@ fn play_from_hand_reduce_clamps_at_zero() {
         .start();
 
     let before = r.memory();
-    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Reduce(10));
+    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Reduce(10), PlaySource::ByHand);
     assert_eq!(res, Some(0));
     assert_eq!(r.memory(), before, "reducing below 0 pays 0, not negative");
 }
@@ -88,7 +88,7 @@ fn play_from_hand_fixed_pays_exactly() {
         .start();
 
     let before = r.memory();
-    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Fixed(5));
+    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Fixed(5), PlaySource::ByHand);
     assert_eq!(res, Some(0), "fixed cost 5 at memory 0 is affordable (goes to -5)");
     assert_eq!(r.memory(), before - 5, "exactly 5 memory paid");
 }
@@ -160,7 +160,7 @@ fn play_from_trash_free_moves_card_to_field() {
     assert_eq!(r.trash_size(0), 1);
     let res = r
         .game_mut()
-        .play_from_trash_with_cost(0, 0, CostDelta::Free);
+        .play_from_trash_with_cost(0, 0, CostDelta::Free, PlaySource::ByEffect);
     assert_eq!(res, Some(0));
     assert_eq!(r.trash_size(0), 0, "card left trash");
     assert_eq!(r.battle_area_size(0), 1, "card entered battle area");
@@ -700,6 +700,7 @@ fn effect_initiated_digivolve_places_card_on_target_for_free() {
         target,
         CostDelta::Free,
         false,
+        PlaySource::ByEffect,
     );
     assert!(ok, "digivolve should succeed");
     assert_eq!(r.hand_size(0), 0, "EVO4 left hand");
@@ -748,14 +749,14 @@ fn effect_initiated_digivolve_ignore_color_bypasses_color_check() {
 
     // With ignore_color = false, should fail (Red base vs Blue evo cost).
     let ok_strict = r.game_mut().effect_initiated_digivolve(
-        0, 0, target, CostDelta::Free, false,
+        0, 0, target, CostDelta::Free, false, PlaySource::ByEffect,
     );
     assert!(!ok_strict, "color mismatch should block without ignore_color");
     assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
 
     // With ignore_color = true, should succeed.
     let ok_loose = r.game_mut().effect_initiated_digivolve(
-        0, 0, target, CostDelta::Free, true,
+        0, 0, target, CostDelta::Free, true, PlaySource::ByEffect,
     );
     assert!(ok_loose, "ignore_color bypasses color check");
     assert_eq!(r.hand_size(0), 0, "EVO moved to stack");
@@ -794,7 +795,7 @@ fn effect_initiated_digivolve_bad_level_returns_false() {
     };
 
     let ok = r.game_mut().effect_initiated_digivolve(
-        0, 0, target, CostDelta::Free, true,
+        0, 0, target, CostDelta::Free, true, PlaySource::ByEffect,
     );
     assert!(!ok, "level mismatch should return false even with ignore_color=true");
     assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
