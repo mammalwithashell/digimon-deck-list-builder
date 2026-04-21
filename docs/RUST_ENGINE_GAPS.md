@@ -43,7 +43,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Zone-manipulation: return-to-hand / return-to-deck (top/bottom) / bounce self](#zone-manipulation-return-to-hand--return-to-deck-topbottom--bounce-self) | 🔴 | 7 | `effect_context.rs`, `permanent.rs` |
 | [Zone-manipulation: reveal-top-N deck + add-to-hand + hatch](#zone-manipulation-reveal-top-n-deck--add-to-hand--hatch) | 🔴 | 10 | `effect_context.rs`, `game.rs` |
 | [Zone-manipulation: security stack operations (trash top, place bottom, trash N)](#zone-manipulation-security-stack-operations-trash-top-place-bottom-trash-n) | 🔴 | 6 | `effect_context.rs`, `combat.rs` |
-| [Token creation + `CardKind::Token` + Petrification Token definition](#token-creation--cardkindtoken--petrification-token-definition) | 🔴 | 3 | `card_data.rs`, `cards.rs`, `effect_context.rs` |
+| [Token creation + `CardKind::Token` + Petrification Token definition](#token-creation--cardkindtoken--petrification-token-definition) | 🟢 | 3 | `card_data.rs`, `cards.rs`, `effect_context.rs` |
 | [Place card at a specific stack position (bottom-source / under another permanent) + alt-digivolve](#place-card-at-a-specific-stack-position-bottom-source--under-another-permanent--alt-digivolve) | 🔴 | 2 | `effect_context.rs`, `permanent.rs`, `game.rs` |
 | [Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N)](#native-printed-keyword-parsing-rush-raid-piercing-blocker-reboot-jamming-blitz-vortex-alliance-security-a%C2%B1n) | 🔴 | 17+ | `card_data.rs`, `cards.rs`, `card_registry.rs` |
 | [`<Progress>` keyword + `ImmunityToOpponentEffects` modifier](#progress-keyword--immunitytoopponenteffects-modifier) | 🔴 | 6 | `enums.rs`, `modifiers.rs`, `combat.rs`, `effect_context.rs` |
@@ -51,7 +51,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [`<Training>` keyword](#training-keyword) | 🔴 | 1 | `enums.rs`, `card_source.rs`, `effect_context.rs`, `action/` |
 | [`<Delay>` keyword + placement-turn gating for Option cards](#delay-keyword--placement-turn-gating-for-option-cards) | 🔴 | 6 | `enums.rs`, `effect.rs`, `action/` (builds on Option flow) |
 | [Raid target-switch interrupt (scripting-surface, not mask-only)](#raid-target-switch-interrupt-scripting-surface-not-mask-only) | 🔴 | 5+ | `combat.rs`, `enums.rs` |
-| [De-Digivolve N primitive (single + mass)](#de-digivolve-n-primitive-single--mass) | 🔴 | 2 | `effect_context.rs`, `permanent.rs` |
+| [De-Digivolve N primitive (single + mass)](#de-digivolve-n-primitive-single--mass) | 🟢 | 2 | `effect_context.rs`, `permanent.rs` |
 | [Ace Overflow: inherited memory penalty on zone-change from field / under-card](#ace-overflow-inherited-memory-penalty-on-zone-change-from-field--under-card) | 🔴 | 4 | `card_data.rs`, `game.rs`, `effect.rs` |
 | [Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated)](#dynamic-cost-reduction-at-beforepaycost-closure-valued--selection-gated) | 🔴 | 4 | `effect.rs`, `game.rs` |
 | [Dynamic DP scaling modifier (per-stack-depth / per-opponent-board)](#dynamic-dp-scaling-modifier-per-stack-depth--per-opponent-board) | 🔴 | 2 | `effect.rs`, `tensor.rs` |
@@ -206,7 +206,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Related:** Parity §2.5k (face_up_security stale entries), §2.5m (security_reveal event).
 
 ### Token creation + `CardKind::Token` + Petrification Token definition
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟢 CLOSED
 - **Discovered in:** Medusamon (2026-04-17)
 - **Card(s):** BT24-017 Medusamon, BT21-029 Medusamon, EX11-012 Medusamon
 - **Effect text:** "they play 1 [Petrification] Token. (Digimon/White/3000 DP/[Your Turn] This Digimon can't suspend. [On Deletion] Trash your top security card.)"
@@ -214,6 +214,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** Introduce `CardKind::Token` + `TokenRegistry`. `ctx.play_token(controller, token_id) -> Option<PermanentHandle>` creates a synthetic `CardSource`, places a `Permanent`, fires `OnPlay`. Ship Petrification Token data + `CardEffect` (CannotSuspend [Your Turn] + OnDeletion → `trash_top_security`).
 - **Workaround:** None — BLOCKED.
 - **Related:** Parity §4.6b-residual.
+- **Closed in:** Phase 10 (2026-04-21, plan [`docs/superpowers/plans/2026-04-21-rust-engine-phase-10-tokens-and-dedigivolve.md`](../superpowers/plans/2026-04-21-rust-engine-phase-10-tokens-and-dedigivolve.md)). Familiar Token's [On Deletion] clause still requires the opponent-permanent selection primitive — deferred.
 
 ### Place card at a specific stack position (bottom-source / under another permanent) + alt-digivolve + stack reorder
 - **Severity:** 🔴 BLOCKING
@@ -286,7 +287,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Related:** Parity §4.4 (Raid mask), §2.3 (combat interrupts).
 
 ### De-Digivolve N primitive (single + mass)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟢 CLOSED
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
 - **Card(s):** EX9-013 BlitzGreymon ("De-Digivolve 3" single target), BT9-112 DeathXmon ("De-Digivolve 1" all opponent Digimon) — DNA Omnimon adds: EX4-073 Omnimon Alter-B (De-Digivolve 3 single), BT23-096 Comet Hammer (De-Digivolve 4), EX9-019 WereGarurumon: Sagittarius Mode (inherited [When Attacking][Once Per Turn] De-Digivolve 1) — Rocks adds: EX10-032 Proganomon (inherited De-Digivolve 1), P-167 Landramon (inherited De-Digivolve 1), EX8-051 Proganomon (inherited De-Digivolve 1), BT20-055 Invisimon (De-Digivolve 2), EX7-049 Metallicdramon (De-Digivolve 4), ST22-11 Defense Plug-In F (De-Digivolve 2 via [Security]) — Dark Masters adds: EX10-035 Machinedramon (`<De-Digivolve 2>` 2 of opp Digimon — multi-target sequenced application), LM-043 Darkdramon (`<De-Digivolve 1>`), BT9-112 DeathXmon already listed (`<De-Digivolve 1>` mass), BT16-026 Vikemon (`<De-Digivolve 2>`), EX8-026 MetalSeadramon (`<De-Digivolve 1>`), EX10-074 Beelzemon (`<De-Digivolve 2>`), BT21-051 Puppetmon (`<De-Digivolve 2>`), BT15-066 Machinedramon (`<De-Digivolve 2>`), EX4-051 BlitzGreymon (`<De-Digivolve 1>` 3 of opp), EX7-049 Metallicdramon (`<De-Digivolve 4>`)
 - **Effect text:** "`<De-Digivolve N>` 1 of your opponent's Digimon. (Trash up to N cards from the top. You can't trash past level 3 cards.)"
@@ -294,6 +295,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.de_digivolve(target: PermanentHandle, amount: u8) -> u8` — pops while `popped < amount && next_top.level > 3`, moves each popped source to owner's trash, fires `OnTrash` / `OnLoseField` as appropriate. `ctx.de_digivolve_all_opponent(amount)` sugar for the mass case.
 - **Workaround:** None — BLOCKED. Level-3 floor rule and trash routing need centralized handling.
 - **Related:** None.
+- **Closed in:** Phase 10 (2026-04-21, same plan). Generalized signature: `ctx.de_digivolve(target, stop_at_level: Option<u8>, amount: Option<u8>) -> u8`. TS Olympos Ikkakumon-style unbounded pop expressible as `(None, None)`.
 
 ### Ace Overflow: inherited memory penalty on zone-change from field / under-card
 - **Severity:** 🔴 BLOCKING
