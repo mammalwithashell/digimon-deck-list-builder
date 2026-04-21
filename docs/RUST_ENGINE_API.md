@@ -755,3 +755,84 @@ Before claiming IMPLEMENTED, re-read the card text against the implementation an
 6. Inherited effects use `Effect::inherited(card)`, not `Effect::on_play(card)` with a manual under-the-stack check.
 7. Trait / name matching uses `CardSource::contains_card_name` / trait accessors (case-insensitive), not raw string equality.
 8. Every closure is `Send + Sync + 'static` — if you have lifetime errors, you're capturing a borrow; use handles (`Copy`) instead.
+
+---
+
+## Phase 10 — Tokens & De-Digivolve N
+
+Phase 10 ships two additive `EffectContext` primitives plus a new
+`CardKind::Token` variant and its companion `TokenRegistry`.
+
+### `ctx.play_token(controller, token_name) -> Option<PermanentHandle>`
+
+Materializes a token directly on `controller`'s battle area, bypassing
+hand / deck / play-cost. Looks up `token_name` in
+`game.token_registry`; no-op `None` on unknown name or full field.
+
+**Registered tokens (Phase 10):**
+
+| `token_name`   | `card_id`              | Colors  | DP   | Printed effects                                               |
+|----------------|------------------------|---------|------|---------------------------------------------------------------|
+| `petrification`| `TOKEN_PETRIFICATION`  | White   | 3000 | [On Deletion] Trash the top card of this Digimon's owner's security stack. <br>(Printed [Your Turn] CannotSuspend rider deferred — depends on condition-gated modifier entries, tracked in `RUST_ENGINE_GAPS.md` §"Condition-gated modifier entries") |
+| `familiar`     | `TOKEN_FAMILIAR`       | Yellow  | 3000 | Stats only — [On Deletion] -3000 DP opponent Digimon is deferred behind the "Selection: opponent-as-selecting-player" gap |
+
+**Worked example** (TEST-023):
+
+```rust
+impl CardEffect for PlayPetrificationToken {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Play a Petrification Token")
+            .process(|ctx| {
+                let me = ctx.player;
+                ctx.play_token(me, "petrification");
+            })
+            .build()]
+    }
+}
+```
+
+**Removal-from-game semantics.** When a token leaves the battle area
+via `player::delete_permanent`, its `card_sources` and `linked_cards`
+are dropped (removed from the game) rather than appended to the
+owner's trash. OnDeletion effects still fire from the
+`effect_queue` observer path before the card leaves the game. No
+equivalent hook yet exists for return-to-hand or return-to-deck —
+those zone-manipulation primitives are deferred to a later phase
+(see `RUST_ENGINE_GAPS.md` §"Zone-manipulation: return-to-hand /
+return-to-deck").
+
+### `ctx.de_digivolve(target, stop_at_level, amount) -> u8`
+
+Pops up to `amount` sources off `target`'s digivolution stack,
+trashing each into the target owner's trash. Respects a level floor
+when `stop_at_level = Some(L)`. Returns the actual count popped.
+
+**Arguments:**
+- `target: PermanentHandle` — the opponent (or self) permanent to
+  de-digivolve.
+- `stop_at_level: Option<u8>` — stop early if popping would leave a
+  top whose level is strictly below this value. `Some(3)` for
+  standard "you can't trash past level 3 cards" wording. `None`
+  for TS Olympos Ikkakumon-style unbounded pop.
+- `amount: Option<u8>` — cap on number of pops. `None` = unbounded
+  (bounded only by stack depth and the level floor).
+
+**Worked examples:**
+
+```rust
+// Standard "De-Digivolve 2" — pop up to 2, stop at Lv3.
+ctx.de_digivolve(target, Some(3), Some(2));
+
+// "De-Digivolve 4" — pop up to 4, stop at Lv3.
+ctx.de_digivolve(target, Some(3), Some(4));
+
+// TS Olympos Ikkakumon: pop until base.
+ctx.de_digivolve(target, None, None);
+```
+
+**Invariants:**
+- The base card (`card_sources[0]`) is never popped —
+  `Permanent::stack_size() >= 1` is preserved.
+- Popped sources always go to the **target owner**'s trash, not the
+  caller's. This matters for Dark Masters' cross-side effects.

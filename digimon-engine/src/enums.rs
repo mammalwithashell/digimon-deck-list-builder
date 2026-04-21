@@ -10,6 +10,7 @@ pub enum CardKind {
     Tamer,
     Option,
     DigiEgg,
+    Token,
 }
 
 /// Card color.

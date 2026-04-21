@@ -244,6 +244,18 @@ impl<'a> EffectContext<'a> {
         trashed
     }
 
+    /// Move the top card of `player`'s security stack to their trash.
+    /// No-op if the stack is empty. Returns true if a card was moved.
+    pub fn trash_top_security(&mut self, player: PlayerId) -> bool {
+        let p = self.game.player_mut(player);
+        if let Some(card) = p.security.pop() {
+            p.trash.push(card);
+            true
+        } else {
+            false
+        }
+    }
+
     // ─── Field mutations ──────────────────────────────────────────────
 
     pub fn delete_permanent(&mut self, target: PermanentHandle) {
@@ -252,6 +264,119 @@ impl<'a> EffectContext<'a> {
             player.delete_permanent(target.index as usize);
             self.game.modifiers.clear_permanent(target);
         }
+    }
+
+    /// Pop up to `amount` cards off `target`'s digivolution stack,
+    /// trashing each popped source into the target owner's trash.
+    ///
+    /// Rules:
+    ///   * Never pops the base card — `Permanent` must always retain at
+    ///     least one `CardSource`.
+    ///   * `stop_at_level = Some(L)` — stop early if popping would leave
+    ///     a top whose level is strictly less than `L`. For standard
+    ///     De-Digivolve N use `Some(3)` (card text: "You can't trash
+    ///     past level 3 cards").
+    ///   * `stop_at_level = None` — no level floor; pop until the base.
+    ///   * `amount = Some(N)` — cap pops at N.
+    ///   * `amount = None` — unbounded (equivalent to `Some(u8::MAX)`).
+    ///
+    /// Returns the actual number of cards popped.
+    pub fn de_digivolve(
+        &mut self,
+        target: PermanentHandle,
+        stop_at_level: Option<u8>,
+        amount: Option<u8>,
+    ) -> u8 {
+        let max = amount.unwrap_or(u8::MAX);
+        let mut popped: u8 = 0;
+
+        while popped < max {
+            let perm = match self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+            {
+                Some(p) => p,
+                None => break,
+            };
+
+            if perm.stack_size() <= 1 {
+                break;
+            }
+
+            let next_top_level = {
+                let stack = perm.digivolution_cards();
+                let next_top = &stack[stack.len() - 2];
+                next_top.level(&self.game.card_data)
+            };
+
+            if let (Some(floor), Some(nt_level)) = (stop_at_level, next_top_level) {
+                if nt_level < floor {
+                    break;
+                }
+            }
+
+            let owner = target.player;
+            let p = self.game.player_mut(owner);
+            let stack = &mut p.battle_area[target.index as usize].card_sources;
+            debug_assert!(stack.len() >= 2, "stack_size-guard failed");
+            let popped_card = stack.pop().expect("stack_size-guarded pop");
+            p.trash.push(popped_card);
+            popped += 1;
+        }
+
+        popped
+    }
+
+    /// Materialize a token on `controller`'s battle area.
+    ///
+    /// Looks up `token_name` in `game.token_registry`, synthesizes a
+    /// `CardSource` with `is_token = true`, wraps it in a `Permanent`, and
+    /// pushes onto `controller.battle_area`. No play cost, no OnPlay
+    /// observer fan-out (tokens enter via effect, not via `play_from_hand`).
+    ///
+    /// Returns the spawned permanent's handle, or `None` if the token name
+    /// is unknown or the field is full.
+    pub fn play_token(
+        &mut self,
+        controller: crate::enums::PlayerId,
+        token_name: &str,
+    ) -> Option<crate::permanent::PermanentHandle> {
+        use crate::card_source::CardSource;
+        use crate::permanent::{Permanent, PermanentHandle};
+
+        let def = self.game.token_registry.get(token_name)?;
+        let target_card_id = def.card_id.clone();
+        let data_index = self
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == target_card_id)?;
+        debug_assert_eq!(
+            self.game.card_data[data_index].card_kind,
+            crate::enums::CardKind::Token,
+            "token_registry entry must map to a CardKind::Token CardData row"
+        );
+
+        let slots = self.game.rules.field_slots as usize;
+        if self.game.player(controller).battle_area.len() >= slots {
+            return None;
+        }
+
+        let card_index = self.game.next_card_index();
+        let mut card = CardSource::new_token(data_index, controller, card_index);
+        card.card_index = card_index;
+        let turn = self.game.turn_count;
+        let perm = Permanent::new(card, turn);
+
+        let player = self.game.player_mut(controller);
+        player.battle_area.push(perm);
+        let idx = player.battle_area.len() - 1;
+        Some(PermanentHandle {
+            player: controller,
+            index: idx as u8,
+        })
     }
 
     pub fn suspend(&mut self, target: PermanentHandle) {
@@ -344,5 +469,14 @@ mod tests {
         assert_eq!(ctx.memory(), 3);
         ctx.lose_memory(2);
         assert_eq!(ctx.memory(), 1);
+    }
+
+    #[test]
+    fn play_token_unknown_name_returns_none() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+        assert!(ctx.play_token(0, "no-such-token-lol").is_none());
     }
 }
