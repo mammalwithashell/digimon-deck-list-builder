@@ -13,10 +13,28 @@ import {
   type ManifestModel,
 } from '@/api/desktopModelsApi';
 import * as deckStore from '@/storage/deckStore';
+import * as deckApi from '@/api/deckApi';
+import client from '@/api/client';
 import { createVsAiGame } from '@/api/gameApi';
+
+// Desktop builds resolve manifest/local-cache/contract through the embedded
+// Rust engine via Tauri; web builds have no local cache or engine of their
+// own — the hosted API is the sole authority, so we fetch the manifest
+// straight over HTTP and skip local-cache and compat-check concepts.
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
 const MANIFEST_URL =
   (import.meta.env.VITE_MODELS_MANIFEST_URL as string | undefined) ?? '';
+
+interface ManifestResponse {
+  generated_at: string;
+  models: ManifestModel[];
+}
+
+async function fetchManifestWeb(): Promise<ManifestModel[]> {
+  const { data } = await client.get<ManifestResponse>('/models/manifest.json');
+  return data.models ?? [];
+}
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -44,17 +62,31 @@ export function ModelsPage() {
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const [c, m, l, d] = await Promise.all([
-        engineContract(),
-        MANIFEST_URL ? fetchManifest(MANIFEST_URL) : Promise.resolve([] as ManifestModel[]),
-        listLocal(),
-        deckStore.listDecks(),
-      ]);
-      setContract(c);
-      setManifest(m);
-      setLocal(l);
-      setDecks(d);
-      if (d.length > 0 && !playDeckId && d[0]) setPlayDeckId(d[0].id);
+      if (IS_DESKTOP) {
+        const [c, m, l, d] = await Promise.all([
+          engineContract(),
+          MANIFEST_URL ? fetchManifest(MANIFEST_URL) : Promise.resolve([] as ManifestModel[]),
+          listLocal(),
+          deckStore.listDecks(),
+        ]);
+        setContract(c);
+        setManifest(m);
+        setLocal(l);
+        setDecks(d);
+        if (d.length > 0 && !playDeckId && d[0]) setPlayDeckId(d[0].id);
+      } else {
+        // Web: no local cache, no client-side engine. Pull manifest straight
+        // from the hosted API and list decks over HTTP.
+        const [m, d] = await Promise.all([
+          fetchManifestWeb(),
+          deckApi.listDecks(),
+        ]);
+        setContract(null);
+        setManifest(m);
+        setLocal([]);
+        setDecks(d);
+        if (d.length > 0 && !playDeckId && d[0]) setPlayDeckId(d[0].id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -119,7 +151,9 @@ export function ModelsPage() {
       return;
     }
     await withBusy(row.id, async () => {
-      const deck = await deckStore.getDeck(playDeckId);
+      const deck = IS_DESKTOP
+        ? await deckStore.getDeck(playDeckId)
+        : await deckApi.getDeck(playDeckId);
       // TODO(alpha+1): use `row.manifest?.deck_id` (see ManifestModel schema) to
       // pick the AI's intended deck. For alpha we mirror the user's deck so a
       // balanced matchup is at least possible.
