@@ -7,7 +7,6 @@
 use crate::card_source::CardHandle;
 use crate::effect::{CardEffect, Effect};
 use crate::enums::EffectTiming;
-use crate::permanent::PermanentHandle;
 use crate::replacement::{ReplacementCause, ReplacementSubject};
 
 pub struct TestP7Recurse;
@@ -30,7 +29,6 @@ impl CardEffect for TestP7Recurse {
                     );
                     // After inner returns, still call cancel() on this level
                     // so the outer dispatcher sees a concrete outcome.
-                    let _ = PermanentHandle { player: h.player, index: h.index };
                 }
                 rctx.cancel();
             })

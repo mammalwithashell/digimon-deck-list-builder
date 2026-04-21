@@ -22,10 +22,14 @@ pub const SEL_OPP_SECURITY_START: u16 = 50;
 pub const SEL_OPP_SECURITY_END: u16 = 60;
 pub const MAX_SECURITY: usize = 10;
 pub const MAX_REVEALED: usize = 10;
-/// Accept action for a `SelectionKind::Replacement` prompt. Raw ID 59 is
-/// shared with the top end of the `HAND_EFFECT` / `SEL_OPP_SECURITY` ranges
-/// but phase-disambiguated: in `GamePhase::EffectChoice` during a Replacement
-/// selection it decodes as "accept this replacement". `PASS` (62) declines.
+/// Action ID for `SelectionKind::Replacement` "accept this replacement" path.
+/// Decline uses the standard `PASS` (62).
+///
+/// Raw ID 59 is the last valid ID inside the `HAND_EFFECT` (`30..60`) and
+/// `SEL_OPP_SECURITY` (`50..60`) ranges. Phase-disambiguated: only legal
+/// when `current_phase == GamePhase::EffectChoice` with a
+/// `SelectionKind::Replacement` prompt installed; the mask builder renders
+/// only `valid_action_ids` in that phase, so no collision at runtime.
 /// See `replacement.rs::try_replace_impl` for the installer.
 pub const REPLACEMENT_ACCEPT: u16 = 59;
 

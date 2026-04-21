@@ -399,6 +399,12 @@ fn install_optional_selection(
     cause: ReplacementCause,
     original_destination: Option<Zone>,
 ) {
+    debug_assert!(
+        game.pending_selection.is_none(),
+        "install_optional_selection must not overwrite a live pending selection; \
+         Task 3+ fire-sites should only call try_replace at decision points \
+         where no selection is already in flight"
+    );
     let previous_phase = game.current_phase;
     game.current_phase = GamePhase::EffectChoice;
     game.replacement_pending_outcome = None;
