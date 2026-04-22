@@ -1,3 +1,4 @@
+mod behavioral_end_to_end;
 mod delay_flow;
 mod enum_and_state_shape;
 mod link_flow;
