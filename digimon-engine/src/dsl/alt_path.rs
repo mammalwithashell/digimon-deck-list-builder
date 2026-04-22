@@ -81,6 +81,12 @@ pub struct FormulaCost {
 /// Two YAML forms are supported:
 /// - **Inline**: predicate fields directly on the map, e.g. `{ level_eq: 6, name_contains: Greymon }`
 /// - **Wrapped**: a `filter:` key holding a `PredicateSpec`, e.g. `{ filter: { any_of: [...] }, repeat: unbounded }`
+// NOTE: MaterialSpec deliberately omits `#[serde(deny_unknown_fields)]` because
+// serde does not permit combining it with `#[serde(flatten)]`. As a consequence,
+// typos in inline-predicate fields (e.g. `levle_eq: 6`) are silently dropped
+// rather than raising a parse error. The semantic validator (Task 12) will need
+// a pass over inline-material predicate fields to catch this — tracked as part
+// of Task 7 when `PredicateSpec` is fleshed out.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MaterialSpec {
     /// Explicit filter wrapper — used when the predicate is complex (e.g. `any_of`).

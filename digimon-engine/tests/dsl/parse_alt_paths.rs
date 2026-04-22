@@ -1,6 +1,4 @@
-use digimon_engine::dsl::alt_path::{
-    AltPathKind, AltPathSpec, CostSpec, MaterialSpec, RepeatSpec,
-};
+use digimon_engine::dsl::alt_path::{AltPathKind, CostSpec, RepeatSpec};
 use digimon_engine::dsl::spec::CardSpec;
 
 #[test]
@@ -114,4 +112,38 @@ alt_paths:
     assert!(matches!(ap.kind, AltPathKind::BurstDigivolve));
     assert_eq!(ap.extra_cost.as_ref().map(|v| v.len()), Some(2));
     assert_eq!(ap.on_burst_turn_end.as_ref().map(|v| v.len()), Some(1));
+    let from = ap.from.as_ref().expect("from should be set");
+    assert_eq!(from.level_eq, Some(6));
+    assert_eq!(from.name_is.as_deref(), Some("Rosemon"));
+}
+
+#[test]
+fn material_inline_predicate_typo_is_silently_accepted() {
+    // Documents a known serde limitation: MaterialSpec cannot use
+    // `#[serde(deny_unknown_fields)]` because it combines with `#[serde(flatten)]`
+    // of the inline PredicateSpec. Typos in inline predicate fields are silently
+    // dropped at parse time. Semantic validator (Task 12) must re-check.
+    let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+alt_paths:
+  - kind: digivolve
+    from: { name_is: Koromon }
+    cost: 0
+    materials:
+      - levle_eq: 6     # typo — silently dropped
+        name_contains: Greymon
+"#;
+    let spec: digimon_engine::dsl::spec::CardSpec = serde_yml::from_str(yaml)
+        .expect("must parse despite typo (documents blindspot)");
+    // Material parsed with only the valid field populated; the typo is gone.
+    let m = &spec.alt_paths[0].materials[0];
+    assert_eq!(m.inline_filter.name_contains.as_deref(), Some("Greymon"));
+    // level_eq stays None because `levle_eq` was dropped.
+    assert_eq!(m.inline_filter.level_eq, None);
 }
