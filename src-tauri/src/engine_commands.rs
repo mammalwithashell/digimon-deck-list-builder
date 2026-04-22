@@ -124,6 +124,7 @@ fn card_kind_str(k: CardKind) -> &'static str {
         CardKind::Tamer => "Tamer",
         CardKind::Option => "Option",
         CardKind::DigiEgg => "DigiEgg",
+        CardKind::Token => "Token",
     }
 }
 
