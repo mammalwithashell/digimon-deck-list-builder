@@ -12,6 +12,7 @@ effects:
     target: { of: you, zone: [battle_area] }
 
   - kind: cost_reduction
+    reduction_timing: before_pay_cost
     once_per_turn: true
     when_any_ally_played: { trait_has: "Royal Knight" }
     amount_fn: { raw_rust: bt13_007_royal_knight_cost_reduction }

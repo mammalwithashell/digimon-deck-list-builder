@@ -161,3 +161,31 @@ effects:
         _ => panic!("expected RawRust"),
     }
 }
+
+#[test]
+fn cost_reduction_reduction_timing_is_populated_independently_of_clause_scope() {
+    let yaml = r#"
+card: BT17-015
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 12000
+effects:
+  - kind: cost_reduction
+    scope: inherited
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 3
+"#;
+    let spec = parse(yaml);
+    let d = spec.effects[0].as_declarative().unwrap();
+    assert_eq!(d.scope, digimon_engine::dsl::clause::ClauseScope::Inherited);
+    match typed_body(&spec, 0) {
+        TypedDeclarativeBody::CostReduction(c) => {
+            assert_eq!(c.reduction_timing.as_deref(), Some("before_pay_cost"));
+        }
+        _ => panic!("expected CostReduction"),
+    }
+}

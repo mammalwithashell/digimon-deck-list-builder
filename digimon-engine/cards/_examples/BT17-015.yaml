@@ -13,6 +13,7 @@ alt_paths:
 
 effects:
   - kind: cost_reduction
+    reduction_timing: before_pay_cost
     when_playing_this: true
     condition:
       any_permanent:

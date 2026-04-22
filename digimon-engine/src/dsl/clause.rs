@@ -276,10 +276,11 @@ pub struct GrantKeywordValue {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CostReductionBody {
-    /// Scope discriminator string (e.g. `"face_up"`, `"before_pay_cost"`).
-    /// Task 12 validator verifies it is a known value.
-    #[serde(default)]
-    pub scope: String,
+    /// Cost-timing discriminator (e.g., `before_pay_cost`). NOT the
+    /// clause's zone scope — that lives on `DeclarativeClause.scope`.
+    /// Optional because most cards don't need it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reduction_timing: Option<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub when_playing_this: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
