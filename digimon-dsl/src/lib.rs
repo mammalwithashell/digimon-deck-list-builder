@@ -14,6 +14,7 @@
 //!   tests; the real registry lands in Phase 4.
 
 pub mod alt_path;
+pub mod compiled;
 pub mod clause;
 pub mod common;
 pub mod errors;
