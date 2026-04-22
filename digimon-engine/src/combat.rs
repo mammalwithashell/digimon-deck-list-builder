@@ -384,9 +384,12 @@ impl Game {
     /// - `Cancelled` — a mandatory cancel fired (or an optional cancel
     ///   installed a selection and its accept path committed cancel).
     ///   Caller routes through `cleanup_attack(Cancelled)`.
-    /// - `Pending` — an optional replacement parked a `PendingSelection`.
-    ///   Caller returns `InProgress`; the selection's callback re-enters the
-    ///   attack flow via `resume_after_would_replacement_selection`.
+    /// - `Pending` — an optional replacement parked a
+    ///   `PendingSelection::Replacement`. The caller returns
+    ///   `AttackResult::InProgress`. When the selection resolves via the
+    ///   generic replacement-accept commit path in `replacement.rs`,
+    ///   `pa.cancelled` is set (or `effective_target` is substituted) and
+    ///   the next `advance_pending_attack` tick picks up the mutated state.
     ///
     /// Subject mapping:
     /// - `WhenWouldAttack` → `ReplacementSubject::Permanent(attacker)`.
@@ -1311,6 +1314,19 @@ impl Game {
     /// caller. Called from both `begin_attack` (early-exit paths) and
     /// `advance_pending_attack` (normal terminal paths).
     fn cleanup_attack(&mut self, outcome: AttackResult) -> AttackResult {
+        // Invariant: a cancelled attack never reached battle resolution.
+        // `battle_occurred` is set only by `resolve_battle`, which is
+        // unreachable once a WhenWouldAttack / WhenWouldBeAttackTarget
+        // replacement commits `pa.cancelled = true`.
+        debug_assert!(
+            !(outcome == AttackResult::Cancelled
+                && self
+                    .pending_attack
+                    .as_ref()
+                    .map(|pa| pa.battle_occurred)
+                    .unwrap_or(false)),
+            "cancelled attack should not have battle_occurred=true"
+        );
         if let Some(pa) = self.pending_attack.as_ref() {
             let h = pa.attacker;
             if let Some(perm) = self
