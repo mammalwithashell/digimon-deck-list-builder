@@ -13,3 +13,4 @@ mod i18n_scaffolding;
 mod loader;
 mod cross_check;
 mod validator;
+mod raw_rust_registry;
