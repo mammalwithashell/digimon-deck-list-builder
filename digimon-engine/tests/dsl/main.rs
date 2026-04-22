@@ -4,3 +4,4 @@
 mod parse_minimal;
 mod parse_alt_paths;
 mod parse_identity;
+mod parse_clauses;
