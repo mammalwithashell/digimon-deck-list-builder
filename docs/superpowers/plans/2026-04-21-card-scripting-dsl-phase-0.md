@@ -4464,7 +4464,287 @@ git commit -m "dsl(phase0): integration test + README; Phase 0 exit criteria gre
 
 ---
 
+---
+
+## Task 19: `dsl-lint` CLI — agent-facing and VS Code-facing linter
+
+Ship a CLI binary that runs loader + validator on a file or directory and
+emits diagnostics in one of two formats: human-readable (VS Code
+problem-matcher friendly) or JSON (for agent consumption by the future
+`/batch-implement-cards-rust-dsl` skill). This closes the loop between
+the DSL's validation machinery and card-authoring workflows, human and
+agent alike.
+
+**Files:**
+- Create: `tools/dsl-lint/Cargo.toml`
+- Create: `tools/dsl-lint/src/main.rs`
+- Modify: root `Cargo.toml` workspace members (add `tools/dsl-lint`)
+
+**Scope discipline:**
+- Parse + semantic validation only. **No** `cards.json` cross-check yet — needs
+  the real `CardData` adapter which is Phase 1 work. `dsl-lint` gets a stub
+  DB or skips cross-check entirely for Phase 0.
+- No LSP, no file watching, no daemon. Invoke-and-exit.
+- No new validation rules beyond what `validator::validate()` already does.
+
+### Step 1: Scaffold the crate
+
+Create `tools/dsl-lint/Cargo.toml`:
+
+```toml
+[package]
+name = "dsl-lint"
+version = "0.1.0"
+edition = "2021"
+description = "CLI linter for digimon-engine DSL YAML files"
+
+[dependencies]
+digimon-engine = { path = "../../digimon-engine", features = ["dsl-yaml-loader"] }
+serde_json = "1"
+
+[[bin]]
+name = "dsl-lint"
+path = "src/main.rs"
+```
+
+Register `tools/dsl-lint` in the root workspace `Cargo.toml`'s
+`[workspace] members = [...]` list (alongside `tools/dsl-schema-export`).
+
+### Step 2: Implement the CLI
+
+Create `tools/dsl-lint/src/main.rs`:
+
+```rust
+//! DSL linter CLI.
+//!
+//! Usage:
+//!   dsl-lint <path> [--format human|json] [--strict]
+//!
+//! Exit codes:
+//!   0 — no diagnostics
+//!   1 — errors found (or warnings, if --strict)
+//!   2 — warnings only (non-strict)
+//!   3 — usage error
+
+use digimon_engine::dsl::loader;
+use digimon_engine::dsl::raw_rust_registry::StubRegistry;
+use digimon_engine::dsl::validator::{validate, ValidationContext};
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Format {
+    Human,
+    Json,
+}
+
+#[derive(Debug)]
+struct Args {
+    path: PathBuf,
+    format: Format,
+    strict: bool,
+}
+
+fn parse_args() -> Result<Args, String> {
+    let mut path: Option<PathBuf> = None;
+    let mut format = Format::Human;
+    let mut strict = false;
+    let mut iter = std::env::args().skip(1);
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--format" => {
+                let v = iter.next().ok_or("--format requires a value")?;
+                format = match v.as_str() {
+                    "human" => Format::Human,
+                    "json" => Format::Json,
+                    other => return Err(format!("unknown format: {other}")),
+                };
+            }
+            "--strict" => strict = true,
+            "-h" | "--help" => {
+                println!("Usage: dsl-lint <path> [--format human|json] [--strict]");
+                std::process::exit(0);
+            }
+            s if s.starts_with("--") => return Err(format!("unknown flag: {s}")),
+            _ => {
+                if path.is_some() {
+                    return Err("multiple path arguments".into());
+                }
+                path = Some(PathBuf::from(arg));
+            }
+        }
+    }
+    let path = path.ok_or("missing <path> argument")?;
+    Ok(Args { path, format, strict })
+}
+
+#[derive(serde::Serialize, Debug)]
+struct Diagnostic {
+    file: String,
+    severity: Severity,
+    path: String,
+    message: String,
+}
+
+#[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum Severity {
+    Error,
+    Warning,
+}
+
+fn lint_file(path: &Path, diags: &mut Vec<Diagnostic>) {
+    let file = path.display().to_string();
+    let spec = match loader::load_file(path) {
+        Ok(s) => s,
+        Err(e) => {
+            diags.push(Diagnostic {
+                file: file.clone(),
+                severity: Severity::Error,
+                path: String::new(),
+                message: format!("{e}"),
+            });
+            return;
+        }
+    };
+
+    let registry = StubRegistry::with([
+        // Phase 0 known fns — Phase 1 replaces with a real registry.
+        "bt13_007_royal_knight_cost_reduction",
+        "bt10_111_arm_digixros_wildcard_for_turn",
+        "ad1_025_on_play_process",
+    ]);
+    let ctx = ValidationContext { raw_rust: &registry };
+    if let Err(errs) = validate(&spec, &ctx) {
+        for e in errs {
+            diags.push(Diagnostic {
+                file: file.clone(),
+                severity: Severity::Error,
+                path: e.path,
+                message: e.message,
+            });
+        }
+    }
+}
+
+fn walk_yaml(path: &Path) -> Vec<PathBuf> {
+    if path.is_file() {
+        return vec![path.to_path_buf()];
+    }
+    if !path.is_dir() {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    let mut stack = vec![path.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        let Ok(iter) = std::fs::read_dir(&d) else { continue };
+        for entry in iter.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                stack.push(p);
+            } else if p.extension().map_or(false, |e| e == "yaml" || e == "yml") {
+                out.push(p);
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+fn main() -> ExitCode {
+    let args = match parse_args() {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("dsl-lint: {e}");
+            eprintln!("try --help");
+            return ExitCode::from(3);
+        }
+    };
+
+    let mut diags = Vec::new();
+    for file in walk_yaml(&args.path) {
+        lint_file(&file, &mut diags);
+    }
+
+    match args.format {
+        Format::Human => {
+            for d in &diags {
+                // VS Code default problem-matcher friendly shape.
+                // Line/col are always 1:1 here because serde_yml doesn't
+                // expose position info through our wrappers. Agents can
+                // still grep by file + path.
+                println!(
+                    "{}:1:1: {}: [{}] {}",
+                    d.file,
+                    match d.severity { Severity::Error => "error", Severity::Warning => "warning" },
+                    d.path, d.message
+                );
+            }
+        }
+        Format::Json => {
+            println!("{}", serde_json::to_string_pretty(&diags).unwrap());
+        }
+    }
+
+    let has_errors = diags.iter().any(|d| d.severity == Severity::Error);
+    let has_warnings = diags.iter().any(|d| d.severity == Severity::Warning);
+    if has_errors || (args.strict && has_warnings) {
+        ExitCode::from(1)
+    } else if has_warnings {
+        ExitCode::from(2)
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+```
+
+### Step 3: Smoke test — manual verification
+
+Run against a known-good fixture:
+```bash
+cargo run -p dsl-lint -- digimon-engine/cards/_examples/ST2-13.yaml
+```
+Expected: empty output, exit 0.
+
+Run against a known-bad fixture (create inline):
+```bash
+cat > /tmp/bad-card.yaml <<'EOF'
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: grant_keyword
+    keyword: Flyers
+EOF
+cargo run -p dsl-lint -- /tmp/bad-card.yaml
+```
+Expected: one diagnostic mentioning `unknown keyword: Flyers`, exit 1.
+
+Also run JSON format:
+```bash
+cargo run -p dsl-lint -- /tmp/bad-card.yaml --format json
+```
+Expected: valid JSON array with one object having `severity: "error"` and `message: "unknown keyword: Flyers"`.
+
+Run against the whole examples directory:
+```bash
+cargo run -p dsl-lint -- digimon-engine/cards/_examples
+```
+Expected: empty output, exit 0 (all 15 fixtures are validator-clean per Task 18).
+
+### Step 4: Commit
+
+```bash
+git add tools/dsl-lint/ Cargo.toml
+git commit -m "dsl(phase0): dsl-lint CLI (human + JSON output for agents and VS Code)"
+```
+
 ## Phase 0 done
 
-All 18 tasks shipped. Phase 1 plan (AOT compiler for the declarative subset,
-`build.rs` → rkyv blob, `CardRegistry::from_embedded()`) is the next write.
+All 19 tasks shipped. Phase 1 plan (AOT compiler for the declarative subset,
+`build.rs` → rkyv blob, `CardRegistry::from_embedded()`, real `cards.json`
+adapter for `dsl-lint` cross-check) is the next write.
