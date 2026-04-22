@@ -1,1 +1,13 @@
 //! TODO: populated by Task 8 of the Phase 0 plan (`docs/superpowers/plans/2026-04-21-card-scripting-dsl-phase-0.md`).
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FormulaSpec {
+    pub base: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub per: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta: Option<i32>,
+}
