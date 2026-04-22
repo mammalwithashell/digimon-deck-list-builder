@@ -17,7 +17,7 @@ use crate::action::space::{
     PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, TARGETS_PER_ATTACKER, TRASH_EFFECT_END,
     TRASH_EFFECT_START,
 };
-use crate::enums::{GamePhase, PlayerId, PlaySource};
+use crate::enums::{CardKind, GamePhase, PlayerId, PlaySource};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
@@ -82,10 +82,27 @@ impl Game {
     fn decode_main(&mut self, action_id: u16) {
         let tp = self.turn_player();
 
-        // [0..30) — Play from hand
+        // [0..30) — Play from hand. Fork on CardKind: Digimon / Tamer go
+        // through the field-play path; Options go through the Phase 8
+        // Option pipeline (pay cost → OnUseOption + OptionMain → dispose).
         if (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id) {
             let hand_idx = action_id as usize;
-            let _ = self.play_from_hand(tp, hand_idx);
+            let card_kind = self
+                .player(tp)
+                .hand
+                .get(hand_idx)
+                .map(|c| c.card_kind(&self.card_data));
+            match card_kind {
+                Some(CardKind::Option) => {
+                    let _ = self.play_option_from_hand(tp, hand_idx);
+                }
+                Some(CardKind::Digimon) | Some(CardKind::Tamer) => {
+                    let _ = self.play_from_hand(tp, hand_idx);
+                }
+                // DigiEgg / Token / missing — not playable via Main-phase
+                // hand-play. Silent no-op matches Python's decoder.
+                _ => {}
+            }
             return;
         }
 

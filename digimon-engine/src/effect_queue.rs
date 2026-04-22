@@ -515,7 +515,37 @@ impl Game {
         if self.pending_selection.is_none() {
             self.advance_security_resolution();
         }
+        // Phase 8 Task 2: re-enter Option dispose if the resolved selection
+        // was parked inside an OptionMain body. Standard Options trash after
+        // the body finishes; Delay/Link/Training hook here in Tasks 3-5.
+        if self.pending_selection.is_none() {
+            self.advance_pending_option();
+        }
         Ok(())
+    }
+
+    /// If an Option card is mid-resolution (`pending_option.is_some()`) and
+    /// its body has finished (queue drained, no selection), dispose the
+    /// Option per its resolution phase. For Task 2 this is Standard only —
+    /// trash the card. Delay/Link/Training lands in Tasks 3-5 by branching
+    /// on `OptionResolutionPhase`.
+    fn advance_pending_option(&mut self) {
+        let Some(pending) = self.pending_option.as_ref() else { return };
+        if !self.effect_queue.is_empty() {
+            return;
+        }
+        match pending.resolution_phase {
+            crate::selection::OptionResolutionPhase::MainEffectDrain => {
+                // Standard path: trash the card, clear pending_option, check
+                // turn end. Delay/Link/Training dispatch on sentinel flags
+                // inside the effect arrives in Tasks 3-5.
+                self.dispose_option_standard();
+                self.check_turn_end();
+            }
+            // Other phases land in later tasks; leave pending_option in
+            // place until their dispatch is wired.
+            _ => {}
+        }
     }
 }
 

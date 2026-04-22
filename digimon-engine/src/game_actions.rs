@@ -10,8 +10,19 @@ use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{CardKind, EffectTiming, GamePhase, ModifierType, PlaySource, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
-use crate::selection::{PendingSelection, SelectionKind, TriggerSource};
+use crate::selection::{
+    OptionPlayResult, OptionResolutionPhase, PendingOption, PendingSelection, QueuedEffect,
+    SelectionKind, TriggerSource,
+};
 use rand::seq::SliceRandom;
+
+/// Source zone for `play_option_core`. Private to this module — the public
+/// API is the pair of `play_option_from_hand` / `play_option_from_trash`
+/// entry points.
+enum OptionSource {
+    Hand(usize),
+    Trash(usize),
+}
 
 impl Game {
     /// Move from breeding to battle area for a player.
@@ -243,6 +254,169 @@ impl Game {
         self.drain_effect_queue();
 
         Some(field_index)
+    }
+
+    /// Play an Option card from `player`'s hand.
+    ///
+    /// Phase 8 Task 2 — Standard Option pipeline:
+    /// 1. Validate phase / hand index / card kind / color match.
+    /// 2. Compute + pay cost (honors BeforePayCost reductions).
+    /// 3. Move card out of hand into `pending_option`.
+    /// 4. Fire `OnUseOption` global observer (every battle area) + this
+    ///    card's `OptionMain` body, drain the queue.
+    /// 5. If a `PendingSelection` parked inside the body, return `Pending`
+    ///    — caller drives the selection; `dispose_option_standard` re-enters
+    ///    via the post-resolution path once the selection resolves.
+    /// 6. Otherwise dispose (Standard → trash) and `check_turn_end`.
+    ///
+    /// Delay / Link / Training dispatch lands in Tasks 3/4/5. For Task 2
+    /// every Option is treated as Standard — the specialized dispatch
+    /// looks at the fired effect's flags in the `option_main` body and
+    /// parks a different `OptionResolutionPhase`.
+    pub fn play_option_from_hand(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> OptionPlayResult {
+        self.play_option_core(player_id, OptionSource::Hand(hand_index))
+    }
+
+    /// Play an Option card from `player`'s trash (effect-driven).
+    ///
+    /// Same pipeline as `play_option_from_hand`, sourced from the trash zone.
+    /// No `PlaySource`-gated flood gates apply to Options in v1 (Phase 6
+    /// `CannotPlayDigimonByEffect` is Digimon-only).
+    pub fn play_option_from_trash(
+        &mut self,
+        player_id: PlayerId,
+        trash_index: usize,
+    ) -> OptionPlayResult {
+        self.play_option_core(player_id, OptionSource::Trash(trash_index))
+    }
+
+    /// Shared Option-play pipeline. Forks only on source zone — every other
+    /// step (cost, OnUseOption + OptionMain, dispose) is identical between
+    /// hand- and trash-sourced plays.
+    fn play_option_core(
+        &mut self,
+        player_id: PlayerId,
+        source: OptionSource,
+    ) -> OptionPlayResult {
+        // 1. Phase gate.
+        if self.current_phase != GamePhase::Main {
+            return OptionPlayResult::Invalid;
+        }
+
+        // 2. Source validation + Option kind + color match.
+        let (card_handle, printed_cost, card_id) = {
+            let player = self.player(player_id);
+            let card = match source {
+                OptionSource::Hand(i) => {
+                    if i >= player.hand.len() {
+                        return OptionPlayResult::Invalid;
+                    }
+                    &player.hand[i]
+                }
+                OptionSource::Trash(i) => {
+                    if i >= player.trash.len() {
+                        return OptionPlayResult::Invalid;
+                    }
+                    &player.trash[i]
+                }
+            };
+            if card.card_kind(&self.card_data) != CardKind::Option {
+                return OptionPlayResult::Invalid;
+            }
+            if !crate::action::mask::option_color_match_available(card, player, &self.card_data) {
+                return OptionPlayResult::Invalid;
+            }
+            (card.handle(), card.play_cost(&self.card_data), card.card_id(&self.card_data).to_string())
+        };
+
+        // 3. Compute + pay cost (Phase 5 BeforePayCost hooks).
+        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
+        let base_cost = printed_cost as i32;
+        let effective_cost = (base_cost - total_reduction).max(0) as u16;
+        if !self.pay_memory(effective_cost) {
+            return OptionPlayResult::Invalid;
+        }
+
+        // 4. Remove from source zone, install PendingOption.
+        let card = match source {
+            OptionSource::Hand(i) => self.player_mut(player_id).hand.remove(i),
+            OptionSource::Trash(i) => self.player_mut(player_id).trash.remove(i),
+        };
+        self.pending_option = Some(PendingOption {
+            owner: player_id,
+            card,
+            resolution_phase: OptionResolutionPhase::MainEffectDrain,
+        });
+
+        // 5. Fire OnUseOption (global observer across every battle area) +
+        // OptionMain (this card's body). Drain between — OnUseOption fires
+        // first per spec §4 (global observer fires before body).
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnUseOption,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.enqueue_option_main_from_pending(&card_id, card_handle, player_id);
+        self.drain_effect_queue();
+
+        // 6. If an effect parked a selection, suspend and let the caller drive.
+        if self.pending_selection.is_some() {
+            return OptionPlayResult::Pending;
+        }
+
+        // 7. Standard Option — dispose (trash) + check_turn_end.
+        self.dispose_option_standard();
+        self.check_turn_end();
+        OptionPlayResult::Trashed
+    }
+
+    /// Enqueue every `OptionMain` effect declared by `card_id` directly
+    /// against the in-flight `pending_option` card. Options aren't on the
+    /// battle area, so `TriggerSource::PlayerBattleArea` / `Permanent` can't
+    /// find them — we push directly into `effect_queue` with the card handle
+    /// and a `None` source permanent.
+    fn enqueue_option_main_from_pending(
+        &mut self,
+        card_id: &str,
+        card_handle: crate::card_source::CardHandle,
+        owner: PlayerId,
+    ) {
+        let Some(effects) = self.effects_for_card(card_id, card_handle) else {
+            return;
+        };
+        let tp = self.turn_player();
+        let is_turn_player = owner == tp;
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.timing != EffectTiming::OptionMain {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: card_handle,
+                source_permanent: None,
+                controller: owner,
+                timing: EffectTiming::OptionMain,
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.to_string(),
+            });
+        }
+    }
+
+    /// Dispose a Standard Option that has finished resolving its
+    /// `OptionMain` body — route it to the owner's trash and clear
+    /// `pending_option`.
+    ///
+    /// Phase 7 `WhenWouldBeTrashed` replacement window is wired in Task 6.
+    /// Task 2 commits the trash unconditionally.
+    pub(crate) fn dispose_option_standard(&mut self) {
+        let Some(pending) = self.pending_option.take() else { return };
+        self.player_mut(pending.owner).trash.push(pending.card);
     }
 
     /// Move a specific card from `player`'s deck to their hand. Returns false

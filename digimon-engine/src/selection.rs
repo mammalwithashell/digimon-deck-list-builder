@@ -311,6 +311,25 @@ pub struct PendingOption {
     pub resolution_phase: OptionResolutionPhase,
 }
 
+/// Outcome of a `play_option_from_hand` / `play_option_from_trash` call.
+///
+/// `Trashed` — Standard Option fully resolved and went to owner's trash.
+/// `Pending` — an `OptionMain` effect installed a `PendingSelection`;
+///   caller must drive the selection to completion (dispose re-enters via
+///   the post-resolution path).
+/// `Invalid` — validation failed; no state was mutated.
+/// `Delayed` / `Linked` / `Training` — populated in Tasks 3/4/5.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
+pub enum OptionPlayResult {
+    Trashed,
+    Delayed(PermanentHandle),
+    Linked { source: PermanentHandle },
+    Training(PermanentHandle),
+    Pending,
+    Invalid,
+}
+
 /// Where we are in the resolve-and-dispose sequence for an Option card.
 ///
 /// Variants appear in typical execution order: Link Options begin with

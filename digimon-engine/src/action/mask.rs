@@ -560,7 +560,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 /// Mirror of Python's `action_mask.py` lines 77-99. Script-level
 /// `match_color_requirement=False` and the `IGNORE_COLOR_REQUIREMENT` aura
 /// modifier are residual §4.2b work; both are absent here.
-fn option_color_match_available(
+pub(crate) fn option_color_match_available(
     card: &crate::card_source::CardSource,
     me: &crate::player::Player,
     card_data: &[crate::card_data::CardData],
