@@ -55,6 +55,18 @@ fn classify_option_subtype(effects: &[crate::effect::Effect]) -> OptionSubtype {
 
 impl Game {
     /// Move from breeding to battle area for a player.
+    ///
+    /// Phase 8 Task 5: after the egg is promoted to `battle_area`, every
+    /// `OptionState::Training` permanent the player controls fires
+    /// `OnTrainingTrash` and is then trashed via
+    /// `delete_permanent_with_cause(Cost)`. The sideways-inheritance scan in
+    /// `enqueue_from_permanent` pulls in Training cards' `inherited` effects
+    /// for the hatched permanent's timings BEFORE these trash sweeps run,
+    /// because the caller's triggered-effect dispatch (e.g. `OnHatch`) has
+    /// already drained above the hatch hook in callers that fire it.
+    ///
+    /// Process the Training trash list in reverse index order so earlier
+    /// deletes don't shift later indices out from under us.
     pub fn move_from_breeding(&mut self, player_id: PlayerId) -> bool {
         let field_slots = self.rules.field_slots;
         let player = self.player_mut(player_id);
@@ -63,6 +75,40 @@ impl Game {
         }
         if let Some(perm) = player.breeding_area.take() {
             player.battle_area.push(perm);
+
+            // Phase 8 Task 5: trash every Training permanent the owner
+            // controls. Collect handles, then process in reverse so each
+            // delete doesn't invalidate the indices of later ones.
+            let training_handles: Vec<PermanentHandle> = self
+                .player(player_id)
+                .battle_area
+                .iter()
+                .enumerate()
+                .filter_map(|(i, perm)| {
+                    if let crate::permanent::OptionState::Training { owner } = perm.option_state {
+                        if owner == player_id {
+                            return Some(PermanentHandle {
+                                player: player_id,
+                                index: i as u8,
+                            });
+                        }
+                    }
+                    None
+                })
+                .collect();
+
+            for handle in training_handles.into_iter().rev() {
+                self.enqueue_triggered(
+                    EffectTiming::OnTrainingTrash,
+                    TriggerSource::Permanent(handle),
+                );
+                self.drain_effect_queue();
+                self.delete_permanent_with_cause(
+                    handle,
+                    crate::replacement::ReplacementCause::Cost,
+                );
+            }
+
             true
         } else {
             false
@@ -550,9 +596,18 @@ impl Game {
                 self.install_link_host_selection(owner, source_card, candidates);
             }
             OptionSubtype::Training => {
-                // Task 5. Fall back to Standard trash so tests that accidentally
-                // set this flag without the full pipeline don't silently leak.
-                self.player_mut(pending.owner).trash.push(pending.card);
+                // Phase 8 Task 5: park as an `OptionState::Training` permanent on
+                // the owner's battle_area. Stays there until the owner hatches
+                // an egg via `move_from_breeding`, at which point every Training
+                // permanent the owner controls fires `OnTrainingTrash` and is
+                // trashed (see `Game::move_from_breeding`). Training sideways-
+                // inheritance is dispatched in `enqueue_from_permanent`.
+                let turn = self.turn_count;
+                let mut perm = crate::permanent::Permanent::new(pending.card, turn);
+                perm.option_state = crate::permanent::OptionState::Training {
+                    owner: pending.owner,
+                };
+                self.player_mut(pending.owner).battle_area.push(perm);
             }
         }
     }

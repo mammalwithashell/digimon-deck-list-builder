@@ -222,9 +222,24 @@ impl Game {
         let tp = self.turn_player();
         let is_turn_player = handle.player == tp;
 
+        // Phase 8 Task 5: when the scanning perm is a Training permanent,
+        // its `inherited` effects fire only via the sideways scan below,
+        // not from its own top-card scan. This prevents double-enqueue when
+        // a same-owner perm scan also pulls the Training card's inherited
+        // effect in via the sideways pass.
+        let skip_inherited = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|p| matches!(p.option_state, crate::permanent::OptionState::Training { .. }))
+            .unwrap_or(false);
+
         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
             for (slot, effect) in effects.iter().enumerate() {
                 if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                if skip_inherited && effect.inherited {
                     continue;
                 }
                 self.effect_queue.push_back(QueuedEffect {
@@ -280,6 +295,72 @@ impl Game {
                 });
             }
         }
+
+        // Phase 8 Task 5: sideways inheritance from Training permanents.
+        // When any permanent the owner controls fires a timing, also scan
+        // the owner's battle_area for `OptionState::Training` permanents
+        // and include their `inherited` effects at the same timing. The
+        // training-card's permanent is never the source_permanent here —
+        // source_permanent stays as the scanning perm (e.g. the hatched
+        // digimon) so effect scripts can read the target via the normal
+        // `ctx.source_permanent` path. Skip when the scanning perm is
+        // itself a Training permanent to avoid self-attribution loops.
+        //
+        // Skipping the scan when `self_is_training` keeps Training's own
+        // OnTrainingTrash firing single-shot from `move_from_breeding`'s
+        // direct `TriggerSource::Permanent(training_handle)` dispatch.
+        let self_is_training = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|p| matches!(p.option_state, crate::permanent::OptionState::Training { .. }))
+            .unwrap_or(false);
+        if !self_is_training {
+            let training_sources: Vec<(String, crate::card_source::CardHandle)> = {
+                let p = match self.players.get(handle.player as usize) {
+                    Some(p) => p,
+                    None => return,
+                };
+                p.battle_area
+                    .iter()
+                    .filter_map(|perm| {
+                        if matches!(
+                            perm.option_state,
+                            crate::permanent::OptionState::Training { .. }
+                        ) {
+                            let top = perm.top_card();
+                            Some((top.card_id(&self.card_data).to_string(), top.handle()))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            };
+            for (training_card_id, training_source) in training_sources {
+                let Some(effects) = self.effects_for_card(&training_card_id, training_source)
+                else {
+                    continue;
+                };
+                for (slot, effect) in effects.iter().enumerate() {
+                    if !effect.inherited {
+                        continue;
+                    }
+                    if !timing_flag_matches(effect, timing) {
+                        continue;
+                    }
+                    self.effect_queue.push_back(QueuedEffect {
+                        source_card: training_source,
+                        source_permanent: Some(handle),
+                        controller: handle.player,
+                        timing,
+                        effect_slot: slot as u8,
+                        is_optional: effect.optional,
+                        is_turn_player,
+                        card_id: training_card_id.clone(),
+                    });
+                }
+            }
+        }
     }
 
     /// Who gets to choose the next effect to resolve. Turn player first,
@@ -332,12 +413,27 @@ impl Game {
             // of the top-card slot (e.g. permanent digivolved mid-batch).
             // Phase 8 Task 4: a sideways-inherited effect's source_card is a
             // card in `linked_cards`, not the top card — accept either.
+            // Phase 8 Task 5: a Training-sideways effect's source_card lives
+            // on a different `OptionState::Training` permanent the same
+            // owner controls; scan the owner's battle_area for it.
             let top_matches = perm.top_card().card_index == qe.source_card.0;
             let linked_matches = perm
                 .linked_cards
                 .iter()
                 .any(|c| c.card_index == qe.source_card.0);
-            if !top_matches && !linked_matches {
+            let training_matches = self
+                .players
+                .get(perm_handle.player as usize)
+                .map(|p| {
+                    p.battle_area.iter().any(|pp| {
+                        matches!(
+                            pp.option_state,
+                            crate::permanent::OptionState::Training { .. }
+                        ) && pp.top_card().card_index == qe.source_card.0
+                    })
+                })
+                .unwrap_or(false);
+            if !top_matches && !linked_matches && !training_matches {
                 return;
             }
         }

@@ -526,6 +526,18 @@ impl EffectBuilder {
         self
     }
 
+    /// Chainable `inherited` flag — raises the `inherited` marker without
+    /// clobbering timing. Use when a non-digivolution-stack effect needs
+    /// the sideways-inheritance flag (Phase 8 Task 5: Training Option
+    /// sideways scan matches `effect.inherited` on the Training card).
+    ///
+    /// Distinct from the `Effect::inherited(card)` constructor, which
+    /// forces `timing = None` for declarative digivolution-stack effects.
+    pub fn inherited(mut self) -> Self {
+        self.inner.inherited = true;
+        self
+    }
+
     pub fn build(self) -> Effect {
         debug_assert!(
             !(self.inner.linked && self.inner.inherited),
