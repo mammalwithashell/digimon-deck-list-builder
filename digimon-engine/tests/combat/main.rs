@@ -9,3 +9,4 @@ mod overclock;
 mod rush_exemption;
 mod scenarios;
 mod security_effects;
+mod would_attack_replacements;

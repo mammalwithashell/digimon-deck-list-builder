@@ -35,6 +35,21 @@ use crate::selection::{
     TriggerSource,
 };
 
+/// Phase 9 internal dispatcher result for the pair of attack-declaration
+/// replacements (`WhenWouldAttack` + `WhenWouldBeAttackTarget`). Kept
+/// crate-private; callers route back into the public `AttackResult` enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WouldAttackOutcome {
+    /// No replacement cancelled or parked; caller continues normally.
+    Proceed,
+    /// A mandatory cancel fired, or an optional replacement resolved to
+    /// cancel. Caller must route through `cleanup_attack(Cancelled)`.
+    Cancelled,
+    /// An optional replacement installed a `PendingSelection`; caller must
+    /// return `InProgress`. Re-entry lands via the selection callback.
+    Pending,
+}
+
 /// Result of an attack resolution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttackResult {
@@ -52,6 +67,11 @@ pub enum AttackResult {
     AttackerDeletedBySecurity,
     /// Attack connected on a defenseless player — game over.
     GameWon,
+    /// Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget` replacement
+    /// cancelled the attack before any battle state was observable. No
+    /// memory swing, no battle, no security check — but `EndOfAttack` still
+    /// fires for symmetry with interrupt-aborted attacks.
+    Cancelled,
     /// The attack has paused on an interrupt (Alliance / Counter / Block).
     /// `game.pending_attack` is set with the in-flight state, and a
     /// `pending_selection` is installed for the player who owes a decision.
@@ -194,9 +214,30 @@ impl Game {
             blocker: None,
             is_vortex: vortex,
             is_overclock,
+            cancelled: false,
+            battle_occurred: false,
             return_phase,
             state: AttackState::Declared,
         });
+
+        // Phase 9: WhenWouldAttack fires on the attacker BEFORE any
+        // observable state transitions (suspend / OnAttack / memory). A
+        // mandatory cancel at this point rolls the attack back cleanly —
+        // attacker not suspended, no Rush turn-count bump, no OnAttack
+        // triggers.
+        //
+        // Optional replacements install a `PendingSelection::Replacement`
+        // and we return `InProgress` — the selection callback re-enters by
+        // resolving directly to the committed outcome. Spec §4.1 + §6.1.
+        match self.fire_would_attack_dispatch(attacker, target) {
+            WouldAttackOutcome::Proceed => {}
+            WouldAttackOutcome::Cancelled => {
+                return self.cleanup_attack(AttackResult::Cancelled);
+            }
+            WouldAttackOutcome::Pending => {
+                return AttackResult::InProgress;
+            }
+        }
 
         // Mark attacker as attacking (§2.2 parity).
         if let Some(perm) = self
@@ -260,6 +301,17 @@ impl Game {
             };
             let state = pa.state;
             let attacker = pa.attacker;
+            let cancelled = pa.cancelled;
+
+            // Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
+            // replacement (or a `ctx.cancel_attack()` from a later phase)
+            // may have flagged the attack as cancelled while an optional
+            // replacement selection was resolving. Short-circuit straight
+            // to cleanup — EndOfAttack still fires for symmetry; EndOfBattle
+            // does NOT (no DP comparison ran).
+            if cancelled && state != AttackState::Cleanup {
+                return self.cleanup_attack(AttackResult::Cancelled);
+            }
 
             // Attacker validity check: OnAttack / interrupt effects may
             // have deleted it. Any state past Declared requires a live
@@ -320,6 +372,163 @@ impl Game {
         if let Some(pa) = self.pending_attack.as_mut() {
             pa.state = new_state;
         }
+    }
+
+    /// Phase 9 helper. Drives the two attack-declaration replacement
+    /// dispatches back-to-back: first `WhenWouldAttack` on the attacker,
+    /// then `WhenWouldBeAttackTarget` on the declared target.
+    ///
+    /// Returns one of:
+    /// - `Proceed` — no cancel, no substitution parked. Caller continues
+    ///   into suspend → OnAttack → state machine.
+    /// - `Cancelled` — a mandatory cancel fired (or an optional cancel
+    ///   installed a selection and its accept path committed cancel).
+    ///   Caller routes through `cleanup_attack(Cancelled)`.
+    /// - `Pending` — an optional replacement parked a `PendingSelection`.
+    ///   Caller returns `InProgress`; the selection's callback re-enters the
+    ///   attack flow via `resume_after_would_replacement_selection`.
+    ///
+    /// Subject mapping:
+    /// - `WhenWouldAttack` → `ReplacementSubject::Permanent(attacker)`.
+    /// - `WhenWouldBeAttackTarget` → `Permanent(h)` for Digimon targets,
+    ///   `Player(pid)` for direct player attacks.
+    ///
+    /// `Substituted` outcomes:
+    /// - On `WhenWouldAttack`: attacker-side substitution is v1-unsupported
+    ///   (debug_assert). Spec §4.1 — no meaningful shape for "a different
+    ///   attacker takes over"; reserved for future cards.
+    /// - On `WhenWouldBeAttackTarget`: rewrites `pending_attack.effective_target`
+    ///   and fires the global `OnAttackTargetChange` observer.
+    fn fire_would_attack_dispatch(
+        &mut self,
+        attacker: PermanentHandle,
+        target: AttackTarget,
+    ) -> WouldAttackOutcome {
+        use crate::replacement::{ReplacementCause, ReplacementOutcome, ReplacementSubject};
+
+        // 1. WhenWouldAttack on attacker.
+        let outcome = self.try_replace(
+            EffectTiming::WhenWouldAttack,
+            ReplacementSubject::Permanent(attacker),
+            ReplacementCause::Battle,
+            None,
+        );
+        match outcome {
+            ReplacementOutcome::Cancelled => {
+                return WouldAttackOutcome::Cancelled;
+            }
+            ReplacementOutcome::Substituted(_) => {
+                // Attacker-side substitution isn't supported in v1.
+                debug_assert!(
+                    false,
+                    "WhenWouldAttack Substituted outcome not supported in v1 — \
+                     attacker-side replacement only supports Cancelled / None / \
+                     CustomHandled. Use WhenWouldBeAttackTarget for redirects."
+                );
+            }
+            ReplacementOutcome::Redirected(_) => {
+                // Redirected is not meaningful for attack-shape (no zone move).
+                debug_assert!(
+                    false,
+                    "WhenWouldAttack Redirected outcome not meaningful — \
+                     attack replacements do not produce zone moves."
+                );
+            }
+            ReplacementOutcome::None | ReplacementOutcome::CustomHandled => {}
+        }
+
+        // Optional replacement may have parked a selection. Yield to the
+        // callback to drive re-entry.
+        if self.pending_selection.is_some() {
+            return WouldAttackOutcome::Pending;
+        }
+        // The optional-accept path may have committed `cancel()` already —
+        // pick that up here before firing the target-side replacement.
+        if self
+            .pending_attack
+            .as_ref()
+            .is_some_and(|pa| pa.cancelled)
+        {
+            return WouldAttackOutcome::Cancelled;
+        }
+
+        // 2. WhenWouldBeAttackTarget on declared target.
+        let target_subject = match target {
+            AttackTarget::Digimon(h) => ReplacementSubject::Permanent(h),
+            AttackTarget::Player(pid) => ReplacementSubject::Player(pid),
+        };
+        let outcome = self.try_replace(
+            EffectTiming::WhenWouldBeAttackTarget,
+            target_subject,
+            ReplacementCause::Battle,
+            None,
+        );
+        match outcome {
+            ReplacementOutcome::Cancelled => {
+                return WouldAttackOutcome::Cancelled;
+            }
+            ReplacementOutcome::Substituted(new_subject) => {
+                self.apply_attack_target_substitution(new_subject);
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "WhenWouldBeAttackTarget Redirected outcome not meaningful — \
+                     use Substituted for target rewrites."
+                );
+            }
+            ReplacementOutcome::None | ReplacementOutcome::CustomHandled => {}
+        }
+
+        if self.pending_selection.is_some() {
+            return WouldAttackOutcome::Pending;
+        }
+        if self
+            .pending_attack
+            .as_ref()
+            .is_some_and(|pa| pa.cancelled)
+        {
+            return WouldAttackOutcome::Cancelled;
+        }
+
+        WouldAttackOutcome::Proceed
+    }
+
+    /// Apply a `Substituted` outcome from `WhenWouldBeAttackTarget`:
+    /// rewrite `pending_attack.effective_target` and fire the global
+    /// `OnAttackTargetChange` observer. Mirrors the block-redirect
+    /// fan-out at `try_enter_block`.
+    fn apply_attack_target_substitution(
+        &mut self,
+        new_subject: crate::replacement::ReplacementSubject,
+    ) {
+        use crate::replacement::ReplacementSubject;
+
+        let new_target = match new_subject {
+            ReplacementSubject::Permanent(h) => AttackTarget::Digimon(h),
+            ReplacementSubject::Player(pid) => AttackTarget::Player(pid),
+            ReplacementSubject::Card(_, _) => {
+                debug_assert!(
+                    false,
+                    "Attack target substitution does not accept Card subjects"
+                );
+                return;
+            }
+        };
+
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.effective_target = new_target;
+        }
+
+        // OnAttackTargetChange: global observer fan-out across both players'
+        // battle areas. Matches the Block-redirect fire site.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnAttackTargetChange,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
     }
 
     /// Scan the attacker's side for unsuspended allies with the Alliance
@@ -1193,6 +1402,9 @@ impl Game {
         attacker: PermanentHandle,
         defender: PermanentHandle,
     ) -> AttackResult {
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.battle_occurred = true;
+        }
         let a_dp = self.effective_dp(attacker).unwrap_or(0);
         let d_dp = self.effective_dp(defender).unwrap_or(0);
 

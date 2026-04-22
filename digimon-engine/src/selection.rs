@@ -456,6 +456,18 @@ pub struct PendingAttack {
     /// suspend-on-declare step is suppressed. Matches Python
     /// `resolve_attack(..., without_suspend=True)`.
     pub is_overclock: bool,
+    /// Phase 9: set by a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
+    /// replacement whose process calls `rctx.cancel()`. `advance_pending_attack`
+    /// detects this and short-circuits directly to `Cleanup`. EndOfAttack
+    /// still fires in cleanup; EndOfBattle does NOT (no battle occurred).
+    pub cancelled: bool,
+    /// Phase 9: set to `true` by `resolve_battle` once a Digimon-vs-Digimon
+    /// DP comparison has run. Used by cleanup to decide whether EndOfBattle
+    /// should fire — Phase 1 fires it unconditionally inside `resolve_battle`,
+    /// so this flag is currently informational / test-visible only. Player
+    /// security attacks leave this `false`, matching the Python semantics
+    /// where EndOfBattle only fires for Digimon-vs-Digimon battles.
+    pub battle_occurred: bool,
     /// Phase to return to once the attack finishes (`Main` for normal
     /// attacks, `EndOfTurnAction` for end-of-turn vortex attacks, etc.).
     pub return_phase: GamePhase,

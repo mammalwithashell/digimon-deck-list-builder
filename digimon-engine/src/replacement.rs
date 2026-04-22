@@ -426,6 +426,14 @@ pub(crate) fn passive_modifier_to_would(
         ModifierType::CannotBeDestroyed => Some(EffectTiming::WhenWouldBeDeleted),
         ModifierType::CannotBeDestroyedByBattle => Some(EffectTiming::WhenWouldBeDeleted),
         ModifierType::CannotBeDestroyedByEffect => Some(EffectTiming::WhenWouldBeDeleted),
+        // Phase 9 combat restrictions — map Phase 6 attack-restriction
+        // modifiers onto Phase 7/9 replacement timings so the attack
+        // declaration fire site can dispatch them without a parallel scan.
+        // `CannotAttack` on a permanent cancels when that permanent is the
+        // ATTACKER subject of `WhenWouldAttack`; `CannotAttackTarget` cancels
+        // when the permanent is the TARGET subject of `WhenWouldBeAttackTarget`.
+        ModifierType::CannotAttack => Some(EffectTiming::WhenWouldAttack),
+        ModifierType::CannotAttackTarget => Some(EffectTiming::WhenWouldBeAttackTarget),
         _ => None,
     }
 }
