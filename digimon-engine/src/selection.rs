@@ -301,6 +301,25 @@ pub struct PendingSecurity {
     pub played: bool,
 }
 
+/// Transient state for an Option card mid-resolution. Mirrors
+/// PendingSecurity / PendingAttack. Carries the card between pay-cost
+/// and dispose so effect scripts can reference it via ctx.source_card.
+#[derive(Debug, Clone)]
+pub struct PendingOption {
+    pub owner: PlayerId,
+    pub card: CardSource,
+    pub resolution_phase: OptionResolutionPhase,
+}
+
+/// Where we are in the resolve-and-dispose sequence for an Option card.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionResolutionPhase {
+    MainEffectDrain,
+    Disposing,
+    LinkSelectHost,
+    Done,
+}
+
 /// Phase of an in-flight security-card resolution. Drives the
 /// `drive_security_resolution` state machine in `combat.rs` so that a
 /// `pending_selection` installed inside a `SecuritySkill` process can pause

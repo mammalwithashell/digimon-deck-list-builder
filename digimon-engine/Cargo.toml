@@ -76,3 +76,7 @@ path = "tests/flood_gates/main.rs"
 [[test]]
 name = "replacements"
 path = "tests/replacements/main.rs"
+
+[[test]]
+name = "option_flow"
+path = "tests/option_flow/main.rs"

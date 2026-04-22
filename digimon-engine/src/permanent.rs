@@ -11,6 +11,22 @@ pub struct PermanentHandle {
     pub index: u8,
 }
 
+/// Additional state a Permanent carries when its top card is an Option.
+/// For Digimon/Tamer/DigiEgg permanents this is always `Standard`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionState {
+    Standard,
+    Delayed { owner: PlayerId, trash_at_end_of_turn: u16 },
+    Linked { host: PermanentHandle },
+    Training { owner: PlayerId },
+}
+
+impl Default for OptionState {
+    fn default() -> Self {
+        OptionState::Standard
+    }
+}
+
 /// A card (or digivolution stack) on the field.
 #[derive(Debug, Clone)]
 pub struct Permanent {
@@ -38,6 +54,9 @@ pub struct Permanent {
     /// Reset in `new_turn`. Used to compute OPT (once-per-turn) state for
     /// the observation tensor and to gate future effect firing.
     pub effect_activations: HashMap<(CardHandle, u8), u8>,
+    /// Phase 8: additional state when the top card is an Option.
+    /// For Digimon/Tamer/DigiEgg permanents this is always `Standard`.
+    pub option_state: OptionState,
 }
 
 impl Permanent {
@@ -52,6 +71,7 @@ impl Permanent {
             attacks_this_turn: 0,
             is_attacking: false,
             effect_activations: HashMap::new(),
+            option_state: OptionState::Standard,
         }
     }
 

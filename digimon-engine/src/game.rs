@@ -12,8 +12,8 @@ use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
 use crate::selection::{
-    EffectQueue, PendingAttack, PendingSecurity, PendingSelection, SecurityResolutionState,
-    SelectionError,
+    EffectQueue, PendingAttack, PendingOption, PendingSecurity, PendingSelection,
+    SecurityResolutionState, SelectionError,
 };
 use crate::token_registry::TokenRegistry;
 
@@ -125,6 +125,9 @@ pub struct Game {
     /// cleared afterward. `EffectContext::play_from_security` inspects and
     /// mutates this slot to keep the revealed card from being trashed.
     pub pending_security: Option<PendingSecurity>,
+    /// Phase 8: in-flight Option card resolution. Set when an Option is
+    /// played and cleared after dispose. Dispatch lands in Tasks 2-6.
+    pub pending_option: Option<PendingOption>,
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
@@ -327,6 +330,7 @@ impl Game {
             effect_queue: EffectQueue::new(),
             pending_attack: None,
             pending_security: None,
+            pending_option: None,
             security_resolution: None,
             effect_chain_depth: 0,
             logger: Box::new(SilentLogger),

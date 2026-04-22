@@ -196,6 +196,32 @@ pub enum EffectTiming {
     OptionMain,
     OptionSecurity,
 
+    // Phase 8 Option timings
+    /// Global observer: fires when any Option card is played by any player.
+    OnUseOption,
+
+    /// Fires when an Option's delayed body resolves. Most printed Delays
+    /// fire at end of owner's next turn; see DelayTrigger for triggers.
+    DelayEffect,
+
+    /// Global observer: fires AFTER a card is linked to a host Digimon.
+    /// Mirrors DCGO `WhenLinked` (ICardEffect.cs:992). Required by
+    /// Appmon-trait cards — BT21-053 (Syakomon), BT21-054, BT21-059,
+    /// BT21-073, AD1-005 all listen on this timing for "when this Digimon
+    /// gains a linked card" effects. The `OptionMain` body of the link
+    /// card fires BEFORE `OnLink`; the observer runs after attach.
+    OnLink,
+
+    /// Observer: fires when a linked card is trashed from its host.
+    /// Mirrors DCGO `OnLinkCardDiscarded` (ICardEffect.cs:996).
+    OnTrashLinkedCard,
+
+    /// Observer: fires when a linked card is cleanly unlinked.
+    OnUnlink,
+
+    /// Observer: fires when a Training card is trashed.
+    OnTrainingTrash,
+
     // [Main] activated effects — zone-scoped variants. DCGO gates these via
     // `EffectTiming.OnDeclaration` + `CanUseCondition` zone checks; Python
     // reduces that to `_is_{hand,field,trash}_main` bool flags on the effect.
@@ -217,6 +243,14 @@ pub enum EffectTiming {
 
     // Special
     None,
+}
+
+/// When a Delay Option's body fires relative to the play. Most printed
+/// cards use `EndOfYourNextTurn`; `EndOfThisTurn` is rare but present.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum DelayTrigger {
+    EndOfYourNextTurn,
+    EndOfThisTurn,
 }
 
 /// Keywords that can be granted or checked on permanents.

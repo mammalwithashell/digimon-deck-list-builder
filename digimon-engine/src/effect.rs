@@ -2,7 +2,8 @@
 
 use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::EffectTiming;
+use crate::enums::{DelayTrigger, EffectTiming};
+use crate::permanent::PermanentHandle;
 
 /// Condition closures run during effect evaluation and during tensor-time
 /// inspection (for static DP modifiers / OPT state). They receive a
@@ -11,6 +12,11 @@ pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 's
 pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync + 'static>;
 pub type CostReductionFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
 pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
+/// Closure that accepts a read-only context and a candidate host handle,
+/// returning `true` iff the host is a legal target for a Link Option.
+/// Phase 8: consumed by Link dispatch to mask host-selection prompts.
+pub type LinkFilterFn =
+    Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 
 /// A single card effect with timing and behavior.
 pub struct Effect {
@@ -62,6 +68,22 @@ pub struct Effect {
     /// game state AND set the replacement outcome (cancel / redirect /
     /// substitute / handled). Dispatch lands in Task 2.
     pub replacement_process: Option<crate::replacement::ReplacementProcessFn>,
+
+    // ── Phase 8 Option flags ─────────────────────────────────────────────
+    /// True for an Option's [Main] body effect. Set by `.option_main()` /
+    /// `.link()` / `.training()`. Dispatch wires in Tasks 2-6.
+    pub option_main: bool,
+    /// Delay trigger for a Delay Option's body. Set by `.delay(trigger)`.
+    pub delay_trigger: Option<DelayTrigger>,
+    /// Memory cost paid to link this card to a host Digimon. Set by
+    /// `.link(cost, filter)`. `None` for non-link Options.
+    pub link_cost: Option<u16>,
+    /// Filter closure selecting legal host Digimon for a Link Option.
+    /// Set by `.link(cost, filter)`.
+    pub link_filter: Option<LinkFilterFn>,
+    /// True for a Training card — placed into the Breeding Area with the
+    /// Training state. Set by `.training()`.
+    pub training: bool,
 }
 
 impl std::fmt::Debug for Effect {
@@ -264,7 +286,7 @@ pub struct EffectBuilder {
 }
 
 impl EffectBuilder {
-    fn new(card: CardHandle, timing: EffectTiming) -> Self {
+    pub fn new(card: CardHandle, timing: EffectTiming) -> Self {
         Self {
             inner: Effect {
                 timing,
@@ -288,6 +310,11 @@ impl EffectBuilder {
                 dp_modifier: 0,
                 cost_reduction: 0,
                 replacement_process: None,
+                option_main: false,
+                delay_trigger: None,
+                link_cost: None,
+                link_filter: None,
+                training: false,
             },
         }
     }
@@ -428,6 +455,46 @@ impl EffectBuilder {
         F: Fn(&mut crate::replacement::ReplacementContext<'_>) + Send + Sync + 'static,
     {
         self.inner.replacement_process = Some(Box::new(f));
+        self
+    }
+
+    // ── Phase 8 Option builder methods ───────────────────────────────────
+
+    /// Mark this effect as an Option's [Main] body. Sets timing to
+    /// `OptionMain` and raises `option_main`. Dispatch lands in Task 2.
+    pub fn option_main(mut self) -> Self {
+        self.inner.timing = EffectTiming::OptionMain;
+        self.inner.option_main = true;
+        self
+    }
+
+    /// Mark this effect as a Delay Option's body. Sets timing to
+    /// `DelayEffect` and records the trigger. Dispatch lands in Task 3.
+    pub fn delay(mut self, trigger: DelayTrigger) -> Self {
+        self.inner.timing = EffectTiming::DelayEffect;
+        self.inner.delay_trigger = Some(trigger);
+        self
+    }
+
+    /// Mark this effect as a Link Option — attaches to a host Digimon for
+    /// `cost` memory. `digimon_filter` selects legal hosts at mask time.
+    /// Sets timing to `OptionMain` so the effect fires as the Option's
+    /// body. Dispatch lands in Task 4.
+    pub fn link<F>(mut self, cost: u16, digimon_filter: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,
+    {
+        self.inner.timing = EffectTiming::OptionMain;
+        self.inner.link_cost = Some(cost);
+        self.inner.link_filter = Some(Box::new(digimon_filter));
+        self
+    }
+
+    /// Mark this effect as a Training Option body. Sets timing to
+    /// `OptionMain` and raises `training`. Dispatch lands in Task 5.
+    pub fn training(mut self) -> Self {
+        self.inner.timing = EffectTiming::OptionMain;
+        self.inner.training = true;
         self
     }
 
