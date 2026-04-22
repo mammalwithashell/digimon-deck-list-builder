@@ -1,0 +1,14 @@
+[package]
+name = "dsl-lint"
+version = "0.1.0"
+edition = "2021"
+description = "CLI linter for digimon-engine DSL YAML files"
+
+[dependencies]
+digimon-engine = { path = "../../digimon-engine", features = ["dsl-yaml-loader"] }
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+
+[[bin]]
+name = "dsl-lint"
+path = "src/main.rs"

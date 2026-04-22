@@ -754,6 +754,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dsl-lint"
+version = "0.1.0"
+dependencies = [
+ "digimon-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dsl-schema-export"
 version = "0.1.0"
 dependencies = [
