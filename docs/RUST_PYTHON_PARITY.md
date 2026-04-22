@@ -966,9 +966,9 @@ retirement-track — tracked as a parity follow-up.
 ### 15.4 🟡 Raid retarget — Rust leads
 
 Rust Phase 9 adds `AttackState::PostBlock` with a Raid retarget rider:
-if the attacker has `<Raid>` (modifier-granted — see §15.9) AND the
-effective target has invalidated AND any legal retarget exists, the
-engine installs a `PendingSelection::AttackRetarget`. Retarget candidate
+if the attacker has `<Raid>` (native-printed OR modifier-granted — see
+§15.9) AND the effective target has invalidated AND any legal retarget
+exists, the engine installs a `PendingSelection::AttackRetarget`. Retarget candidate
 set prefers unsuspended Digimon; suspended fallback only when no
 unsuspended exist. Python does not have an equivalent retarget
 interrupt. Rust leads.
@@ -1017,11 +1017,10 @@ permanents. Python `combat.py:58-74` fires `OnAllyAttack`. `OnBlock` and
 on those two. Flagged for parity follow-up if Python is not retired
 before cards depending on these observers migrate.
 
-### 15.9 🟡 Native `<Raid>` keyword parsing — pre-existing parity gap, not Phase 9
+### 15.9 🟢 Native `<Raid>` keyword parsing
 
-Rust has mask-layer `<Raid>` retarget (Phase 9) but printed `<Raid>` on
-the card face is still not `has_keyword`-queryable — it must be granted
-via a modifier emission. Phase 3 covered `<Collision>`, `<Piercing>`,
-`<Reboot>` but `<Raid>` was out of scope. Same gap as before Phase 9; not
-introduced by this phase. Tracked as a cross-engine parity item for a
-future Phase 3 follow-up.
+Printed `<Raid>` on the card face IS queryable via `has_keyword` (parsed
+by Phase 3 into `CardData.keywords`; verified by
+`tests/keyword_parsing.rs`). Phase 9's Raid retarget rider uses
+`Game::has_keyword(pa.attacker, Keyword::Raid)` which honors both
+native-printed AND modifier-granted Raid. No parity gap.

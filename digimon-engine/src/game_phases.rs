@@ -40,6 +40,12 @@ impl Game {
         // modifier gates the scan — Reboot is effect-driven unsuspension
         // and respects the suspend-lock.
         //
+        // Note: like the standard turn-start bulk unsuspend
+        // (`unsuspend_all`), Reboot-driven unsuspension directly mutates
+        // `is_suspended` without firing `OnUnsuspend` observers.
+        // Phase-start unsuspension is not a trigger-carrying event per
+        // the Digimon TCG rules.
+        //
         // Collect handles first to avoid a borrow conflict with
         // `has_keyword` / modifier reads, then mutate in a second pass.
         // Non-Digimon permanents (Option states) are filtered out via
