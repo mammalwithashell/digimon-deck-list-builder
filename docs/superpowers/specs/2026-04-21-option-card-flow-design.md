@@ -35,7 +35,7 @@ Phase 6 flood gates (`CannotPlayOptionByEffect` adjacent) and Phase 7 replacemen
 1. A new `OptionPlay` fire-site (`game_actions::play_option_from_hand` + `play_option_from_trash`) that pays cost, emits `OnUseOption` / `OptionMain` triggers, and disposes the card per its type (default: trash; Delay: park on field; Link: attach to target Digimon; Training: park alongside breeding).
 2. An `OptionState` enum on `Game` distinguishing `Delayed { owner, effect_slot, trash_at_end_of_turn: u8 }`, `Linked { host: PermanentHandle }`, `Training { owner }` from the default "trash after resolve".
 3. Extension of `Permanent` with `pub linked_cards: Vec<CardSource>` (mirrors Python) so Plug-Ins can attach sideways to a Digimon without polluting the digivolution stack.
-4. New `EffectTiming::OnUseOption` (fires when any Option card is played), and `EffectTiming::OnTrashLinkedCard` / `EffectTiming::OnUnlink` observer timings so existing cards can respond.
+4. New `EffectTiming::OnUseOption` (fires when any Option card is played), `EffectTiming::OnLink` (observer; fires when a card is linked to a Digimon — mirrors DCGO `WhenLinked`, load-bearing for Appmon-trait cards like BT21-053/054/059/073), and `EffectTiming::OnTrashLinkedCard` / `EffectTiming::OnUnlink` observer timings so existing cards can respond.
 5. New `EffectBuilder` flags: `.option_main()`, `.delay()`, `.link(cost, digimon_filter)`, `.training()` — one per Option subtype.
 6. `EffectContext::play_option(card_id)` / `trash_option(perm)` / `link_card(source, host)` helpers so effect scripts can instantiate Options at effect-init time (rare; mostly useful for "play an Option from trash" effects).
 7. Mask integration — Main-phase Option plays already render in `HAND_EFFECT` range per Phase 3, but the Option-specific mask gates (color requirement already present; add: Delay activation mask bit, Link target-selection mask bit) must land here.
@@ -108,7 +108,7 @@ Engine path:
 3. Pay link cost (may differ from the card's printed cost — Link cards carry two costs: play-cost and link-cost; printed convention is "play this card, then link with X memory"). For v1, treat link cost as the sole cost (most printed Link cards don't have a separate play phase — they're played AS linking).
 4. Install `PendingSelection::OppField` or `OwnField` for the host — with the card's `digimon_filter` closure.
 5. On resolve: the selection callback moves the CardSource into the chosen host's `linked_cards: Vec<CardSource>`. The card does NOT become a standalone Permanent.
-6. Emit `OnLink` observer timing. Main effect (if any) fires as part of the link sequence.
+6. Emit `OnLink` observer timing (global — either-controller observer; mirrors DCGO `WhenLinked`). This is what Appmon-trait cards like BT21-053 ("Syakomon") / BT21-054 / BT21-059 / BT21-073 listen on to fire their "when this Digimon gains a linked card" effects. Main effect of the Link card (`OptionMain` — if declared) fires BEFORE `OnLink`.
 7. Sideways-inherited effects on the Link card now contribute to the host's effect scan per `inherited=true` (already in `Effect` struct) with a new flag `linked=true` indicating sideways inheritance.
 
 **Cleanup:**
@@ -214,8 +214,16 @@ OptionMain,
 /// `EffectBuilder`.
 DelayEffect,
 
+/// Observer: fires when a linked card is attached to a host Digimon.
+/// Global — either controller's cards can observe. Mirrors DCGO's
+/// `WhenLinked` timing (ICardEffect.cs:992). Load-bearing for Appmon-
+/// trait "when this Digimon gains a linked card" effects — e.g.
+/// BT21-053 (Syakomon), BT21-054, BT21-059, BT21-073, AD1-005.
+OnLink,
+
 /// Observer: fires when a linked card is trashed from its host
-/// (opponent effect, host deletion cascade, etc.).
+/// (opponent effect, host deletion cascade, etc.). Mirrors DCGO's
+/// `OnLinkCardDiscarded` (ICardEffect.cs:996).
 OnTrashLinkedCard,
 
 /// Observer: fires when a linked card is cleanly unlinked (returned to
@@ -361,7 +369,7 @@ Fires from `end_of_turn` dispatch. Iterates `active_player.battle_area` looking 
 Called from the Link selection's callback after host is picked:
 1. Validate host handle is still valid (the selection may have parked for a long time; the host may have left play — in which case the Link action aborts and the card goes to trash per printed rules).
 2. Move CardSource into `host_permanent.linked_cards`.
-3. Fire `OnLink` observer (new) + the card's `OptionMain` body (which is the "on link" effect per printed convention).
+3. Fire the card's `OptionMain` body (which is the "on play/link" effect per printed convention) + emit `OnLink` observer globally (both players' battle areas scan for `OnLink`-timed effects; Appmon-trait cards on either side can react).
 4. Clear `pending_option`.
 
 ### 6.5 Linked-card cleanup — deletion / return cascade
@@ -473,7 +481,7 @@ Full test enumeration deferred to the plan file. High-level coverage required:
 
 | Task | Scope | Files |
 |------|-------|-------|
-| 8.1 | Enum + data types: `OptionState` on `Permanent`, `PendingOption` on `Game`, `EffectTiming::OnUseOption/OptionMain/DelayEffect/OnTrashLinkedCard/OnUnlink/OnTrainingTrash`, `DelayTrigger`, `.option_main() / .delay() / .link() / .training()` builders. Pure data; no dispatch. | `enums.rs`, `permanent.rs`, `game.rs` (field), `selection.rs`, `effect.rs`. |
+| 8.1 | Enum + data types: `OptionState` on `Permanent`, `PendingOption` on `Game`, `EffectTiming::OnUseOption/OptionMain/DelayEffect/OnLink/OnTrashLinkedCard/OnUnlink/OnTrainingTrash`, `DelayTrigger`, `.option_main() / .delay() / .link() / .training()` builders. Pure data; no dispatch. | `enums.rs`, `permanent.rs`, `game.rs` (field), `selection.rs`, `effect.rs`. |
 | 8.2 | `play_option_from_hand` + `play_option_from_trash` + dispatch in decoder. Standard Option flow only (trash after resolve); no Delay/Link/Training. | `game_actions.rs`, `action/decode.rs`. |
 | 8.3 | Delay flow. `EndOfYourTurn` dispatch scans `OptionState::Delayed` and fires `DelayEffect`. | `game_actions.rs`, `game_phases.rs`. |
 | 8.4 | Link flow. `.link()` builder wires host selection; `attach_linked_card` on resolve. Extends Permanent with `linked_cards` Vec. Cleanup hooks on deletion / return. | `game_actions.rs`, `combat.rs`, `permanent.rs`, `effect_context/selections.rs`. |
@@ -490,6 +498,7 @@ Full test enumeration deferred to the plan file. High-level coverage required:
 - No Counter-timed Option activation (Phase 9).
 - No nested `PendingSelection::Source` inside Option-main processes (same limitation as Phase 7 — cards that want "pick which source of your Digimon to trash as an Option cost" are blocked by the same infrastructure gap).
 - No multi-turn Delay beyond "next turn end" (1 turn lookahead). Multi-turn cards (if they exist in printed pool) are flagged BLOCKED until a follow-up.
+- No `WhenWouldLink` replacement timing. DCGO has it (ICardEffect.cs:991) — a pre-link replacement window that could cancel or redirect a link. No printed card in the audited pool uses it; deferred as a Phase 7-style follow-up if a real use surfaces. (`OnLink` post-attach observer IS in scope — mirrors DCGO `WhenLinked` and is required by Appmon-trait cards.)
 
 ## 13. Verification
 

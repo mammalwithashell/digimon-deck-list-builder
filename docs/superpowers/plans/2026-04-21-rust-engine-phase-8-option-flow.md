@@ -9,7 +9,7 @@
 - New `linked_cards: Vec<CardSource>` field on `Permanent` — sideways attachment slot for Plug-In cards (mirrors Python).
 - New `PendingOption` transient state on `Game` (mirrors `PendingSecurity` / `PendingAttack`) so mid-resolution selection-unwinds can re-enter cleanly.
 - New `play_option_from_hand` / `play_option_from_trash` fire-sites — dedicated Option pipeline. Decoder dispatches `HAND_EFFECT` actions by `CardKind` so Digimon stays unchanged.
-- 6 `EffectTiming` variants + 4 `EffectBuilder` helpers (`.option_main()`, `.delay(trigger)`, `.link(cost, filter)`, `.training()`).
+- 7 `EffectTiming` variants (OnUseOption, DelayEffect, OnLink, OnTrashLinkedCard, OnUnlink, OnTrainingTrash; OptionMain pre-exists) + 4 `EffectBuilder` helpers (`.option_main()`, `.delay(trigger)`, `.link(cost, filter)`, `.training()`).
 - Zero new action IDs; `ACTION_SPACE_SIZE` stays 2168.
 - Phase 7 replacement framework composes — Option self-trash fires `WhenWouldBeTrashed` with cause=Cost.
 
@@ -63,7 +63,7 @@ Phase 8 closes Cluster E from [`.claude/plans/recursive-coalescing-candle.md`](.
 ## File Structure
 
 **Modified:**
-- `digimon-engine/src/enums.rs` — add 6 `EffectTiming` variants (`OnUseOption`, `DelayEffect`, `OnTrashLinkedCard`, `OnUnlink`, `OnTrainingTrash`; `OptionMain` already exists), add `DelayTrigger` enum.
+- `digimon-engine/src/enums.rs` — add 6 new `EffectTiming` variants (`OnUseOption`, `DelayEffect`, `OnLink`, `OnTrashLinkedCard`, `OnUnlink`, `OnTrainingTrash`; `OptionMain` already exists), add `DelayTrigger` enum.
 - `digimon-engine/src/permanent.rs` — add `option_state: OptionState` field + `linked_cards: Vec<CardSource>` field. Extend `Default` / constructors.
 - `digimon-engine/src/game.rs` — add `pending_option: Option<PendingOption>` field + initialize in `Game::new`.
 - `digimon-engine/src/selection.rs` — define `PendingOption` + `OptionResolutionPhase` structs.
@@ -107,7 +107,7 @@ Phase 8 closes Cluster E from [`.claude/plans/recursive-coalescing-candle.md`](.
 ### Task 1: Enum + data types — no dispatch
 
 **Files:**
-- Modify: `digimon-engine/src/enums.rs` — add 5 new `EffectTiming` variants (`OptionMain` already exists; add `OnUseOption`, `DelayEffect`, `OnTrashLinkedCard`, `OnUnlink`, `OnTrainingTrash`), add `DelayTrigger` enum.
+- Modify: `digimon-engine/src/enums.rs` — add 6 new `EffectTiming` variants (`OptionMain` already exists; add `OnUseOption`, `DelayEffect`, `OnLink`, `OnTrashLinkedCard`, `OnUnlink`, `OnTrainingTrash`), add `DelayTrigger` enum.
 - Modify: `digimon-engine/src/permanent.rs` — add `option_state` + `linked_cards` fields on `Permanent`; update `Permanent::new` to default-initialize them.
 - Modify: `digimon-engine/src/selection.rs` — add `PendingOption` + `OptionResolutionPhase` data types.
 - Modify: `digimon-engine/src/game.rs` — add `pending_option` field on `Game`; init in `Game::new`.
@@ -128,7 +128,16 @@ OnUseOption,
 /// fire at end of owner's next turn; see DelayTrigger for triggers.
 DelayEffect,
 
+/// Global observer: fires AFTER a card is linked to a host Digimon.
+/// Mirrors DCGO `WhenLinked` (ICardEffect.cs:992). Required by
+/// Appmon-trait cards — BT21-053 (Syakomon), BT21-054, BT21-059,
+/// BT21-073, AD1-005 all listen on this timing for "when this Digimon
+/// gains a linked card" effects. The `OptionMain` body of the link
+/// card fires BEFORE `OnLink`; the observer runs after attach.
+OnLink,
+
 /// Observer: fires when a linked card is trashed from its host.
+/// Mirrors DCGO `OnLinkCardDiscarded` (ICardEffect.cs:996).
 OnTrashLinkedCard,
 
 /// Observer: fires when a linked card is cleanly unlinked.
@@ -284,6 +293,7 @@ fn option_timings_exist() {
     let _ = EffectTiming::OnUseOption;
     let _ = EffectTiming::OptionMain;       // already existed — smoke
     let _ = EffectTiming::DelayEffect;
+    let _ = EffectTiming::OnLink;
     let _ = EffectTiming::OnTrashLinkedCard;
     let _ = EffectTiming::OnUnlink;
     let _ = EffectTiming::OnTrainingTrash;
@@ -406,7 +416,7 @@ Expected: FAIL — unknown `EffectTiming::OnUseOption`, etc.
 - [ ] **Step 3: Implement**
 
 Apply the type definitions above in this order:
-1. `enums.rs` — add the 5 new `EffectTiming` variants + `DelayTrigger` enum.
+1. `enums.rs` — add the 6 new `EffectTiming` variants (including `OnLink`) + `DelayTrigger` enum.
 2. `permanent.rs` — add `OptionState` enum + fields on `Permanent` + update constructors. Audit all `Permanent {` literal constructions via `grep -rn "Permanent {" digimon-engine/src` and update each.
 3. `selection.rs` — add `PendingOption` + `OptionResolutionPhase` structs.
 4. `game.rs` — add `pending_option` field + initialize in constructor. Audit via `grep -rn "fn new\|fn with_rules\|fn from_scenario" digimon-engine/src/game.rs`.
@@ -904,12 +914,21 @@ pub(crate) fn attach_linked_card(&mut self, host: PermanentHandle) {
     let host_perm = &mut self.player_mut(host.player).battle_area[host.index as usize];
     host_perm.linked_cards.push(pending.card);
 
-    // Fire OnLink observer (new — consider: do we need OnLink as its own
-    // EffectTiming? The spec §5 lists OnUnlink / OnTrashLinkedCard but
-    // not OnLink. Match printed rules — DCGO has OnLink. If audits show
-    // no printed cards use OnLink, defer as Phase-8-v2).
-    // For Task 4 v1: skip OnLink. Link's main-effect already fired
-    // during OptionMain drain; no additional observer needed.
+    // Fire OnLink observer — global (both players' battle areas).
+    // Required by Appmon-trait cards (BT21-053 Syakomon, BT21-054,
+    // BT21-059, BT21-073, AD1-005) that listen for "when this Digimon
+    // gains a linked card". Mirrors DCGO WhenLinked (ICardEffect.cs:992).
+    //
+    // OptionMain already fired during the main drain BEFORE host-select;
+    // OnLink fires AFTER attach so observers see the linked card present
+    // in `host.linked_cards`.
+    for pid in 0..self.players.len() {
+        self.enqueue_triggered(
+            EffectTiming::OnLink,
+            TriggerSource::PlayerBattleArea(pid as PlayerId),
+        );
+    }
+    self.drain_effect_queue();
 }
 ```
 
@@ -996,6 +1015,31 @@ fn linked_card_not_targetable_by_attack_or_delete() {
     // Link a card. Attempt to attack / delete the linked card directly.
     // Assert: selection masks / target validation rejects.
 }
+
+#[test]
+fn on_link_observer_fires_on_both_sides_after_attach() {
+    // Appmon-trait test: place two witness Digimon on the field — one
+    // on P0 (the linking player) and one on P1 (opponent) — each with
+    // an OnLink-timed effect bumping an Arc<Mutex<u32>> counter.
+    // P0 plays a Link Option, resolves host-select to attach to their
+    // own Digimon C (a third card).
+    // Assert:
+    //   - Both witness counters incremented by 1 (global observer).
+    //   - host.linked_cards contains the Option card (observer saw
+    //     the attached state, not a pre-attach snapshot).
+    // Parity reference: DCGO BT21-053/054/059/073 fire their WhenLinked
+    // effect regardless of which player's Digimon gains the link.
+}
+
+#[test]
+fn on_link_observer_sees_option_main_already_resolved() {
+    // Order-of-operations test: Link Option has an OptionMain that
+    // writes "main" to a Vec<String>; a witness on the host has an
+    // OnLink effect that writes "on_link". Resolve the play.
+    // Assert: vec == ["main", "on_link"] — OptionMain fires BEFORE
+    //   OnLink. This matches DCGO ICardEffect.cs flow: activate
+    //   Link main → attach → OnLink stack.
+}
 ```
 
 Add `mod link_flow;` to `main.rs`.
@@ -1011,12 +1055,13 @@ Add `mod link_flow;` to `main.rs`.
 5. Wire sideways-inheritance in `effect_queue.rs`: when scanning a host permanent's effects for timing T, also scan each linked_card for effects with `linked == true && timing == T`.
 6. Ensure linked cards aren't standalone targets — the mask shouldn't emit target action IDs for them. Since linked cards aren't in `battle_area` as standalone permanents, this should be automatic.
 7. Gotcha: `CardHandle` uniqueness — linked cards retain their `card_index` (from the CardSource). Handle consumption flows (e.g. `card_kind_for_handle` scanning) need to also look inside `linked_cards`. Audit via `grep -rn "linked_cards\|battle_area.iter" digimon-engine/src`.
+8. Wire `OnLink` observer emission in `attach_linked_card` per the pseudocode — fires globally across both players' battle_areas after attach, with linked_card already present. Ensures Appmon-trait cards (BT21-053 etc.) can observe.
 
 - [ ] **Step 4: Run — link_flow tests pass**
 
 - [ ] **Step 5: Full suite green**
 
-Expected: **648 + 7 = 655 passing, 0 failing, 0 warnings.**
+Expected: **648 + 9 = 657 passing, 0 failing, 0 warnings.** (7 original tests + 2 new OnLink observer tests.)
 
 - [ ] **Step 6: Commit**
 
@@ -1137,7 +1182,7 @@ Add `mod training_flow;` to `main.rs`.
 
 - [ ] **Step 5: Full suite green**
 
-Expected: **655 + 5 = 660 passing, 0 failing, 0 warnings.**
+Expected: **657 + 5 = 662 passing, 0 failing, 0 warnings.**
 
 - [ ] **Step 6: Commit**
 
@@ -1268,7 +1313,7 @@ Add `mod replacement_integration;` to `main.rs`.
 
 - [ ] **Step 5: Full suite green**
 
-Expected: **660 + 5 = 665 passing, 0 failing, 0 warnings.**
+Expected: **662 + 5 = 667 passing, 0 failing, 0 warnings.**
 
 - [ ] **Step 6: Commit**
 
@@ -1286,7 +1331,7 @@ git commit -m "rust-engine(phase-8): Phase 7 replacement integration — Option 
   - Intro: Options are ephemeral cards — pay cost, resolve, dispose.
   - `OptionState` enum + `linked_cards` field on Permanent.
   - `PendingOption` transient state — when to consult, how selection-unwind works.
-  - 6 new `EffectTiming` variants (OnUseOption, OptionMain, DelayEffect, OnTrashLinkedCard, OnUnlink, OnTrainingTrash).
+  - 7 `EffectTiming` variants (OnUseOption, OptionMain, DelayEffect, OnLink, OnTrashLinkedCard, OnUnlink, OnTrainingTrash).
   - 4 `EffectBuilder` helpers with usage examples (`.option_main()`, `.delay(trigger)`, `.link(cost, filter)`, `.training()`).
   - Worked example: a simple Standard Option script (~15 lines), a Delay script, a Link script.
   - Dispatch table: OptionPlayResult variants.
@@ -1374,7 +1419,7 @@ Add minimal test fixtures for: Standard Option (memory effect), Delay Option (DP
 
 - [ ] **Step 5: Full suite green**
 
-Expected: **665 + 2 = 667 passing, 0 failing, 0 warnings.**
+Expected: **667 + 2 = 669 passing, 0 failing, 0 warnings.**
 
 - [ ] **Step 6: Commit**
 
@@ -1439,4 +1484,4 @@ Per spec §10:
 | 8 — Behavioral end-to-end | — | — |
 
 Full suite green at end of each task is mandatory before proceeding to the next.
-Baseline 624 → final 667 (+43 net new tests).
+Baseline 624 → final 669 (+45 net new tests).
