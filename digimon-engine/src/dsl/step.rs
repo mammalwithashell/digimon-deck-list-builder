@@ -46,6 +46,7 @@
 use std::fmt;
 
 use serde::de::{self, MapAccess, Visitor};
+use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
 
 use crate::dsl::predicate::{PredicateSpec, Zone};
@@ -53,8 +54,13 @@ use crate::dsl::predicate::{PredicateSpec, Zone};
 /// A single step. Parsed from a one-key YAML map via a custom `Deserialize`
 /// that calls `deserialize_map` to bypass serde_yml's `deserialize_enum`
 /// limitation (see module-level docs).
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
+///
+/// Serialization uses a custom `Serialize` that emits a one-key map
+/// `{verb: value}` (e.g. `gain_memory: 1`) so that `serde_yml::to_string`
+/// round-trips correctly through the custom `Deserialize`.  The derive-
+/// generated serializer would emit YAML tag syntax (`!gain_memory 1`) which
+/// the custom deserializer cannot read back.
+#[derive(Debug, Clone, PartialEq)]
 pub enum StepSpec {
     // Memory / turn
     GainMemory(i32),
@@ -129,6 +135,93 @@ pub enum StepSpec {
 
     // Escape hatch (step-level)
     RawRust(RawRustStep),
+}
+
+// ── Custom Serialize for StepSpec ──────────────────────────────────────
+//
+// We emit a one-key map `{verb: value}` instead of the YAML tag form
+// `!verb value` that serde's derive-generated Serialize would produce.
+// This matches the format the custom Deserialize expects, enabling
+// round-trip: `format_spec(parse(format_spec(spec))) == format_spec(spec)`.
+
+impl Serialize for StepSpec {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        // Helper macro: serialize as a one-key map {verb: inner}
+        macro_rules! kv {
+            ($map:expr, $key:literal, $val:expr) => {{
+                let mut m = $map.serialize_map(Some(1))?;
+                m.serialize_entry($key, $val)?;
+                m.end()
+            }};
+        }
+        match self {
+            // Memory / turn
+            StepSpec::GainMemory(v) => kv!(s, "gain_memory", v),
+            StepSpec::LoseMemory(v) => kv!(s, "lose_memory", v),
+            StepSpec::SetMemory(v) => kv!(s, "set_memory", v),
+            // Draw / deck / hand / trash
+            StepSpec::Draw(v) => kv!(s, "draw", v),
+            StepSpec::TrashFromTop(v) => kv!(s, "trash_from_top", v),
+            StepSpec::AddToHandFromDeck(v) => kv!(s, "add_to_hand_from_deck", v),
+            StepSpec::AddToHandFromTrash(v) => kv!(s, "add_to_hand_from_trash", v),
+            StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
+            StepSpec::TrashFromHandByIndex(v) => kv!(s, "trash_from_hand_by_index", v),
+            StepSpec::TrashFromReveal(v) => kv!(s, "trash_from_reveal", v),
+            StepSpec::ReturnToDeckFromReveal(v) => kv!(s, "return_to_deck_from_reveal", v),
+            StepSpec::ShuffleDeck(v) => kv!(s, "shuffle_deck", v),
+            StepSpec::RevealTopDeck(v) => kv!(s, "reveal_top_deck", v),
+            StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
+            // Field / permanent
+            StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
+            StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
+            StepSpec::ReturnToDeck(v) => kv!(s, "return_to_deck", v),
+            StepSpec::Suspend(v) => kv!(s, "suspend", v),
+            StepSpec::Unsuspend(v) => kv!(s, "unsuspend", v),
+            StepSpec::DeDigivolve(v) => kv!(s, "de_digivolve", v),
+            StepSpec::PlaceOnSecurity(v) => kv!(s, "place_on_security", v),
+            StepSpec::PlayToken(v) => kv!(s, "play_token", v),
+            StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
+            StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
+            StepSpec::Hatch(v) => kv!(s, "hatch", v),
+            // Play / digivolve
+            StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
+            StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
+            StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
+            StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
+            StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
+            StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
+            StepSpec::EffectInitiatedDigivolve(v) => kv!(s, "effect_initiated_digivolve", v),
+            StepSpec::EffectInitiatedDnaDigivolve(v) => kv!(s, "effect_initiated_dna_digivolve", v),
+            // Security
+            StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
+            StepSpec::MarkSecurityFaceUp(v) => kv!(s, "mark_security_face_up", v),
+            // Modifiers
+            StepSpec::AddDpModifier(v) => kv!(s, "add_dp_modifier", v),
+            StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
+            StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
+            // Selection
+            StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
+            StepSpec::SelectOpponentPermanent(v) => kv!(s, "select_opponent_permanent", v),
+            StepSpec::SelectHand(v) => kv!(s, "select_hand", v),
+            StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
+            StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
+            StepSpec::SelectReveal(v) => kv!(s, "select_reveal", v),
+            StepSpec::SelectSecurity(v) => kv!(s, "select_security", v),
+            StepSpec::SelectUnionZone(v) => kv!(s, "select_union_zone", v),
+            StepSpec::SelectOrderedPermutation(v) => kv!(s, "select_ordered_permutation", v),
+            StepSpec::SelectCountCappedMulti(v) => kv!(s, "select_count_capped_multi", v),
+            StepSpec::SelectEffectChoice(v) => kv!(s, "select_effect_choice", v),
+            StepSpec::AsSelectingPlayer(v) => kv!(s, "as_selecting_player", v),
+            // Control flow
+            StepSpec::If(v) => kv!(s, "if", v),
+            StepSpec::ForEach(v) => kv!(s, "for_each", v),
+            StepSpec::PerSelected(v) => kv!(s, "per_selected", v),
+            StepSpec::ScheduleDelayed(v) => kv!(s, "schedule_delayed", v),
+            StepSpec::Optional(v) => kv!(s, "optional", v),
+            // Escape hatch
+            StepSpec::RawRust(v) => kv!(s, "raw_rust", v),
+        }
+    }
 }
 
 // ── Custom Deserialize for StepSpec ────────────────────────────────────
