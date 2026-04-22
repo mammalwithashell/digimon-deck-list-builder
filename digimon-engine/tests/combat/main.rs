@@ -10,6 +10,7 @@ mod force_attack_mask;
 mod on_ally_opponent_attack;
 mod on_block_observer;
 mod overclock;
+mod phase9_end_to_end;
 mod piercing_security;
 mod raid_retarget;
 mod reboot_unsuspend;
