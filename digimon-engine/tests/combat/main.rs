@@ -7,6 +7,8 @@ mod collision_mandatory;
 mod counter_hand_play;
 mod counter_interrupt;
 mod force_attack_mask;
+mod on_ally_opponent_attack;
+mod on_block_observer;
 mod overclock;
 mod piercing_security;
 mod raid_retarget;

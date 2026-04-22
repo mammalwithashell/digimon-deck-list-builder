@@ -228,6 +228,25 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnAttackTargetChange)
     }
 
+    /// Fires when a blocker is declared. Global observer timing — both
+    /// players' battle areas are scanned. Spec §7 / Phase 9 Task 8.
+    pub fn on_block(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnBlock)
+    }
+
+    /// Fires when an allied Digimon (same controller, excluding the attacker
+    /// itself) attacks. Observer timing — scans the attacker-controller's
+    /// battle area. Spec §7 / Phase 9 Task 8.
+    pub fn on_ally_attack(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnAllyAttack)
+    }
+
+    /// Fires when an opposing Digimon attacks. Observer timing — scans the
+    /// non-attacker controller's battle area. Spec §7 / Phase 9 Task 8.
+    pub fn on_opponent_attack(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnOpponentAttack)
+    }
+
     /// Fires when a Digimon hatches from the breeding area into the battle area.
     pub fn on_hatch(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnHatch)

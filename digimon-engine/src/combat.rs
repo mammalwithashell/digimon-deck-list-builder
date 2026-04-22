@@ -1307,6 +1307,20 @@ impl Game {
                     );
                 }
                 game.drain_effect_queue();
+
+                // Phase 9 Task 8 — OnBlock fires globally after the blocker
+                // is declared. Both players' battle areas are scanned;
+                // observers can read `game.pending_attack.{attacker,
+                // effective_target}` (effective_target now points at the
+                // blocker) from within their process closures.
+                for pid in 0..game.players.len() {
+                    game.enqueue_triggered(
+                        crate::enums::EffectTiming::OnBlock,
+                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                    );
+                }
+                game.drain_effect_queue();
+
                 game.advance_pending_attack();
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
@@ -2008,6 +2022,38 @@ impl Game {
             crate::selection::TriggerSource::PlayerBattleArea(handle.player),
         );
         self.drain_effect_queue();
+
+        // Phase 9 Task 8 — OnAllyAttack fan-out. Observer timing firing on
+        // every permanent in the attacker-controller's battle area EXCEPT
+        // the attacker itself. We piggyback on the PlayerBattleArea scan
+        // and filter the attacker's own slot from the queue after enqueue.
+        let attacker_queue_start = self.effect_queue.len();
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAllyAttack,
+            crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+        );
+        // Drop any entries whose source_permanent is the attacker itself
+        // — the attacker does not fire its own OnAllyAttack observer.
+        let mut i = attacker_queue_start;
+        while i < self.effect_queue.len() {
+            if self.effect_queue[i].source_permanent == Some(handle) {
+                self.effect_queue.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        self.drain_effect_queue();
+
+        // Phase 9 Task 8 — OnOpponentAttack fan-out. Observer timing on
+        // every permanent in the non-attacker controller's battle area.
+        let opp = 1 - handle.player;
+        if (opp as usize) < self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnOpponentAttack,
+                crate::selection::TriggerSource::PlayerBattleArea(opp),
+            );
+            self.drain_effect_queue();
+        }
     }
 
     /// Resolve battle between two permanents by DP comparison.
