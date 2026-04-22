@@ -1,6 +1,9 @@
 pub mod serialization;
 #[cfg(feature = "dsl-yaml-loader")]
-pub mod dsl;
+pub use digimon_dsl as dsl;
+
+#[cfg(feature = "dsl-yaml-loader")]
+pub mod dsl_bridge;
 pub mod enums;
 pub mod events;
 pub mod rules;

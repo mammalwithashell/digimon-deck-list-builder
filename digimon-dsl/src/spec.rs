@@ -38,13 +38,13 @@ pub struct CardSpec {
     pub ace_overflow: Option<i32>,
     /// Identity section (§3.4) — name aliases, mostly X-Antibody.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub identity: Option<crate::dsl::identity::IdentitySpec>,
+    pub identity: Option<crate::identity::IdentitySpec>,
     /// Alternate entry paths — digivolve / DNA / DigiXros / etc.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub alt_paths: Vec<crate::dsl::alt_path::AltPathSpec>,
+    pub alt_paths: Vec<crate::alt_path::AltPathSpec>,
     /// Triggered + declarative clauses.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub effects: Vec<crate::dsl::clause::ClauseSpec>,
+    pub effects: Vec<crate::clause::ClauseSpec>,
     /// DSL file-format version; reserved for §9 open question #7.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spec_version: Option<u32>,

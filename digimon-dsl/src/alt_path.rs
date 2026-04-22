@@ -3,9 +3,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::dsl::formula::FormulaSpec;
-use crate::dsl::predicate::PredicateSpec;
-use crate::dsl::step::StepSpec;
+use crate::formula::FormulaSpec;
+use crate::predicate::PredicateSpec;
+use crate::step::StepSpec;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -106,7 +106,7 @@ pub struct MaterialSpec {
 
     /// Zones the material may come from (digixros cross-zone).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub zones: Vec<crate::dsl::predicate::Zone>,
+    pub zones: Vec<crate::predicate::Zone>,
 
     /// Assembly: materials go under the evolved card.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

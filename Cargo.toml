@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "digimon-dsl",
     "digimon-engine",
     "digimon-engine-py",
     "src-tauri",

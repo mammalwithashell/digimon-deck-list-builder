@@ -1,4 +1,5 @@
-use digimon_engine::dsl::loader::{cross_check, CardDataDb, RealCardDataAdapter};
+use digimon_engine::dsl::loader::{cross_check, CardDataDb};
+use digimon_engine::dsl_bridge::RealCardDataAdapter;
 use digimon_engine::dsl::spec::CardSpec;
 use std::path::PathBuf;
 

@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-digimon-engine = { path = "../../digimon-engine", features = ["dsl-yaml-loader"] }
+digimon-dsl = { path = "../../digimon-dsl" }
+serde_json = "1"

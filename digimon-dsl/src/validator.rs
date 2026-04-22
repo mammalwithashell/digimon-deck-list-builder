@@ -5,11 +5,11 @@
 //! - declarative-clause body schemas deserialize per-kind via `typed_body`
 //! - `raw_rust:` references resolve in the registry
 
-use crate::dsl::clause::{ClauseSpec, DeclarativeKind, TriggeredClause};
-use crate::dsl::errors::ValidationError;
-use crate::dsl::raw_rust_registry::RawRustRegistry;
-use crate::dsl::spec::CardSpec;
-use crate::dsl::step::StepSpec;
+use crate::clause::{ClauseSpec, DeclarativeKind, TriggeredClause};
+use crate::errors::ValidationError;
+use crate::raw_rust_registry::RawRustRegistry;
+use crate::spec::CardSpec;
+use crate::step::StepSpec;
 
 pub struct ValidationContext<'a> {
     pub raw_rust: &'a dyn RawRustRegistry,
@@ -35,7 +35,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                     Ok(body) => {
                         match d.kind {
                             DeclarativeKind::RawRust => {
-                                if let crate::dsl::clause::TypedDeclarativeBody::RawRust(b) = body {
+                                if let crate::clause::TypedDeclarativeBody::RawRust(b) = body {
                                     if !ctx.raw_rust.contains_fn(&b.fn_name) {
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),
@@ -46,7 +46,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                 }
                             }
                             DeclarativeKind::FloodGate => {
-                                if let crate::dsl::clause::TypedDeclarativeBody::FloodGate(b) = body {
+                                if let crate::clause::TypedDeclarativeBody::FloodGate(b) = body {
                                     if !is_known_modifier(&b.modifier) {
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),
@@ -58,7 +58,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                 }
                             }
                             DeclarativeKind::Aura => {
-                                if let crate::dsl::clause::TypedDeclarativeBody::Aura(b) = &body {
+                                if let crate::clause::TypedDeclarativeBody::Aura(b) = &body {
                                     if let Some(gk) = &b.grant_keyword {
                                         if !is_known_keyword(&gk.keyword) {
                                             errors.push(ValidationError {
@@ -72,7 +72,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                 }
                             }
                             DeclarativeKind::GrantKeyword => {
-                                if let crate::dsl::clause::TypedDeclarativeBody::GrantKeyword(b) = body {
+                                if let crate::clause::TypedDeclarativeBody::GrantKeyword(b) = body {
                                     if !is_known_keyword(&b.keyword) {
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),
@@ -113,7 +113,7 @@ fn validate_triggered(
 }
 
 fn validate_predicate(
-    pred: &crate::dsl::predicate::PredicateSpec,
+    pred: &crate::predicate::PredicateSpec,
     prefix: &str,
     card_id: &str,
     errors: &mut Vec<ValidationError>,

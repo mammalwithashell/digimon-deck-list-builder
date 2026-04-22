@@ -26,7 +26,7 @@ fn phase_0_exit_criteria() {
     let cards_json = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("digimon_gym/engine/data/cards.json");
-    let db = digimon_engine::dsl::loader::RealCardDataAdapter::from_path(&cards_json)
+    let db = digimon_engine::dsl_bridge::RealCardDataAdapter::from_path(&cards_json)
         .expect("real cards.json adapter must load");
 
     for spec in &specs {

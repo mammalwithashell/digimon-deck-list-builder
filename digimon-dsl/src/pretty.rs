@@ -5,7 +5,7 @@
 //! for canonical output. `#[serde(skip_serializing_if = "...")]` on
 //! optional fields keeps output minimal.
 
-use crate::dsl::spec::CardSpec;
+use crate::spec::CardSpec;
 
 pub fn format_spec(spec: &CardSpec) -> String {
     serde_yml::to_string(spec).expect("CardSpec serialization must not fail")

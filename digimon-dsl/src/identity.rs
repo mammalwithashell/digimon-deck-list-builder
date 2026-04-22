@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::dsl::predicate::Zone;
+use crate::predicate::Zone;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]

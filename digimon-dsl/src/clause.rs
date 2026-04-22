@@ -4,8 +4,8 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::dsl::predicate::PredicateSpec;
-use crate::dsl::step::StepSpec;
+use crate::predicate::PredicateSpec;
+use crate::step::StepSpec;
 
 /// A clause is either triggered or declarative. Untagged serde enum —
 /// presence of `when:` ⇒ triggered; presence of `kind:` ⇒ declarative.
@@ -292,7 +292,7 @@ pub struct CostReductionBody {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub amount: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount_fn: Option<crate::dsl::formula::FormulaSpec>,
+    pub amount_fn: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pay_cost: Option<Vec<StepSpec>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

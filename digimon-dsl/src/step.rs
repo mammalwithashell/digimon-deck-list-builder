@@ -49,8 +49,8 @@ use serde::de::{self, MapAccess, Visitor};
 use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
 
-use crate::dsl::common::PlayerRef;
-use crate::dsl::predicate::{PredicateSpec, Zone};
+use crate::common::PlayerRef;
+use crate::predicate::{PredicateSpec, Zone};
 
 /// A single step. Parsed from a one-key YAML map via a custom `Deserialize`
 /// that calls `deserialize_map` to bypass serde_yml's `deserialize_enum`
@@ -407,7 +407,7 @@ pub enum BindingRef {
 #[serde(untagged)]
 pub enum ModifierTarget {
     Binding(BindingRef),
-    Filter(crate::dsl::predicate::PredicateSpec),
+    Filter(crate::predicate::PredicateSpec),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -725,7 +725,7 @@ pub struct SelectCountCappedArgs {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional_zero: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub distinct_by: Option<crate::dsl::alt_path::DistinctBy>,
+    pub distinct_by: Option<crate::alt_path::DistinctBy>,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]

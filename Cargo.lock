@@ -596,18 +596,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "digimon-engine"
+name = "digimon-dsl"
 version = "0.1.0"
 dependencies = [
  "indexmap 2.14.0",
- "ndarray 0.17.2",
- "ort",
- "rand 0.8.5",
  "schemars 0.8.22",
  "serde",
  "serde_json",
  "serde_yml",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "digimon-engine"
+version = "0.1.0"
+dependencies = [
+ "digimon-dsl",
+ "ndarray 0.17.2",
+ "ort",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "serde_yml",
 ]
 
 [[package]]
@@ -766,7 +776,8 @@ dependencies = [
 name = "dsl-schema-export"
 version = "0.1.0"
 dependencies = [
- "digimon-engine",
+ "digimon-dsl",
+ "serde_json",
 ]
 
 [[package]]

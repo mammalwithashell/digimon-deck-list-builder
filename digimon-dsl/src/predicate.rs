@@ -13,9 +13,9 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::dsl::common::PlayerRef;
-use crate::dsl::formula::FormulaSpec;
-use crate::dsl::spec::{CardKind, ColorSpec};
+use crate::common::PlayerRef;
+use crate::formula::FormulaSpec;
+use crate::spec::{CardKind, ColorSpec};
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(default)]

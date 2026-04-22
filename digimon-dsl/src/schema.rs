@@ -3,7 +3,7 @@
 
 use schemars::schema_for;
 
-use crate::dsl::spec::CardSpec;
+use crate::spec::CardSpec;
 
 pub fn export_json_schema() -> String {
     let schema = schema_for!(CardSpec);

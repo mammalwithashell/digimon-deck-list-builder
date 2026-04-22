@@ -11,18 +11,16 @@ rand = "0.8"
 ort = { version = "2.0.0-rc.10", default-features = false, features = ["ndarray", "std", "download-binaries", "tls-rustls"] }
 ndarray = "0.17"
 
-# DSL (Phase 0) — behind dsl-yaml-loader feature; ungated on desktop via the
-# default feature set but disable-able by the Tauri crate per spec §7a.1.
-serde_yml = { version = "0.0.12", optional = true }
-schemars = { version = "0.8", features = ["indexmap2"], optional = true }
-thiserror = { version = "1", optional = true }
-indexmap = { version = "2", features = ["serde"], optional = true }
+# DSL lives in a separate leaf crate so build.rs can depend on it.
+digimon-dsl = { path = "../digimon-dsl", optional = true }
 
 [features]
 default = ["dsl-yaml-loader"]
-dsl-yaml-loader = ["dep:serde_yml", "dep:schemars", "dep:thiserror", "dep:indexmap"]
+dsl-yaml-loader = ["dep:digimon-dsl"]
 
 [dev-dependencies]
+# serde_yml is used directly in DSL test files (e.g. serde_yml::from_str).
+serde_yml = "0.0.12"
 
 # Tests are grouped by domain into 7 binaries. Each binary's entry point is
 # `tests/<domain>/main.rs`; sibling files are `mod`-imported and supply the

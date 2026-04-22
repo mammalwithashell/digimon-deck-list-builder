@@ -166,7 +166,7 @@ fn main() -> ExitCode {
 
     let adapter_opt = match &args.cross_check_path {
         Some(p) => Some(
-            digimon_engine::dsl::loader::RealCardDataAdapter::from_path(p).unwrap_or_else(|e| {
+            digimon_engine::dsl_bridge::RealCardDataAdapter::from_path(p).unwrap_or_else(|e| {
                 eprintln!("dsl-lint: failed to load cards.json from {}: {e}", p.display());
                 std::process::exit(3);
             }),
