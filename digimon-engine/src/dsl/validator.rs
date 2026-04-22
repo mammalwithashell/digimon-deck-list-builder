@@ -54,6 +54,21 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                             message: format!("unknown modifier: {}", b.modifier),
                                         });
                                     }
+                                    validate_predicate(&b.target, &format!("{prefix}.target"), &spec.card, &mut errors);
+                                }
+                            }
+                            DeclarativeKind::Aura => {
+                                if let crate::dsl::clause::TypedDeclarativeBody::Aura(b) = &body {
+                                    if let Some(gk) = &b.grant_keyword {
+                                        if !is_known_keyword(&gk.keyword) {
+                                            errors.push(ValidationError {
+                                                card_id: spec.card.clone(),
+                                                path: format!("{prefix}.grant_keyword.keyword"),
+                                                message: format!("unknown keyword: {}", gk.keyword),
+                                            });
+                                        }
+                                    }
+                                    validate_predicate(&b.target, &format!("{prefix}.target"), &spec.card, &mut errors);
                                 }
                             }
                             DeclarativeKind::GrantKeyword => {
@@ -85,9 +100,62 @@ fn validate_triggered(
     ctx: &ValidationContext<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
+    if let Some(cond) = &t.condition {
+        validate_predicate(cond, &format!("{prefix}.condition"), card_id, errors);
+    }
+    if let Some(aw) = &t.active_when {
+        validate_predicate(aw, &format!("{prefix}.active_when"), card_id, errors);
+    }
     for (i, step) in t.process.iter().enumerate() {
         let sp = format!("{prefix}.process[{i}]");
         validate_step(step, &sp, card_id, ctx, errors);
+    }
+}
+
+fn validate_predicate(
+    pred: &crate::dsl::predicate::PredicateSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let Some(kw) = &pred.has_keyword {
+        if !is_known_keyword(kw) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.has_keyword"),
+                message: format!("unknown keyword: {kw}"),
+            });
+        }
+    }
+    for (i, sub) in pred.all_of.iter().enumerate() {
+        validate_predicate(sub, &format!("{prefix}.all_of[{i}]"), card_id, errors);
+    }
+    for (i, sub) in pred.any_of.iter().enumerate() {
+        validate_predicate(sub, &format!("{prefix}.any_of[{i}]"), card_id, errors);
+    }
+    for (i, sub) in pred.none_of.iter().enumerate() {
+        validate_predicate(sub, &format!("{prefix}.none_of[{i}]"), card_id, errors);
+    }
+    if let Some(sub) = &pred.not {
+        validate_predicate(sub, &format!("{prefix}.not"), card_id, errors);
+    }
+    if let Some(ex) = &pred.any_permanent {
+        validate_predicate(&ex.predicate, &format!("{prefix}.any_permanent"), card_id, errors);
+    }
+    if let Some(ex) = &pred.no_permanent {
+        validate_predicate(&ex.predicate, &format!("{prefix}.no_permanent"), card_id, errors);
+    }
+    if let Some(ex) = &pred.all_permanents {
+        validate_predicate(&ex.predicate, &format!("{prefix}.all_permanents"), card_id, errors);
+    }
+    if let Some(agg) = &pred.count_lte {
+        validate_predicate(&agg.filter, &format!("{prefix}.count_lte.filter"), card_id, errors);
+    }
+    if let Some(agg) = &pred.count_gte {
+        validate_predicate(&agg.filter, &format!("{prefix}.count_gte.filter"), card_id, errors);
+    }
+    if let Some(inh) = &pred.has_inherited {
+        validate_predicate(inh, &format!("{prefix}.has_inherited"), card_id, errors);
     }
 }
 

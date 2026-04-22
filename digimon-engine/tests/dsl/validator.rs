@@ -107,3 +107,48 @@ effects:
     let errs = validate(&spec, &ctx(&reg)).unwrap_err();
     assert!(errs.iter().any(|e| e.path.contains("effects[0]")));
 }
+
+#[test]
+fn validate_unknown_has_keyword_in_predicate_fails() {
+    let spec = parse(r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - when: on_play
+    condition:
+      has_keyword: NotARealKeyword
+    process:
+      - gain_memory: 1
+"#);
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(errs.iter().any(|e| e.message.contains("NotARealKeyword")),
+        "expected keyword typo to be reported, got: {errs:?}");
+}
+
+#[test]
+fn validate_unknown_aura_grant_keyword_fails() {
+    let spec = parse(r#"
+card: X-1
+name: Test
+kind: tamer
+color: [red]
+cost: 4
+effects:
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+    grant_keyword: { keyword: AlsoNotRealKwrd, value: 1 }
+"#);
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(errs.iter().any(|e| e.message.contains("AlsoNotRealKwrd")),
+        "expected aura grant_keyword typo to be reported, got: {errs:?}");
+}
