@@ -10,6 +10,7 @@ mod force_attack_mask;
 mod overclock;
 mod piercing_security;
 mod raid_retarget;
+mod reboot_unsuspend;
 mod redirect_and_cancel;
 mod rush_exemption;
 mod scenarios;

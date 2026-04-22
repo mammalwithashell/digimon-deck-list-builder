@@ -33,6 +33,53 @@ impl Game {
         self.current_phase = GamePhase::Unsuspend;
         self.player_mut(tp).unsuspend_all();
 
+        // Phase 9 Task 7: <Reboot> consumer. "At the start of your
+        // opponent's unsuspend phase, unsuspend this Digimon." Scan every
+        // opponent's battle area for Digimon with the Reboot keyword
+        // (printed or granted) and unsuspend them. The `CannotUnsuspend`
+        // modifier gates the scan — Reboot is effect-driven unsuspension
+        // and respects the suspend-lock.
+        //
+        // Collect handles first to avoid a borrow conflict with
+        // `has_keyword` / modifier reads, then mutate in a second pass.
+        // Non-Digimon permanents (Option states) are filtered out via
+        // `Permanent::is_digimon` — Options don't attack and don't
+        // legally carry Reboot, but the printed-keyword parser doesn't
+        // know the card kind, so we gate here.
+        let n_players = self.players.len();
+        let mut reboot_handles: Vec<PermanentHandle> = Vec::new();
+        for pid in 0..n_players {
+            let pid = pid as PlayerId;
+            if pid == tp {
+                continue;
+            }
+            for i in 0..self.player(pid).battle_area.len() {
+                let h = PermanentHandle {
+                    player: pid,
+                    index: i as u8,
+                };
+                if !self.player(pid).battle_area[i].is_digimon(&self.card_data) {
+                    continue;
+                }
+                if !self.has_keyword(h, Keyword::Reboot) {
+                    continue;
+                }
+                if self.modifiers.has(h, ModifierType::CannotUnsuspend) {
+                    continue;
+                }
+                reboot_handles.push(h);
+            }
+        }
+        for h in reboot_handles {
+            if let Some(perm) = self
+                .players
+                .get_mut(h.player as usize)
+                .and_then(|p| p.battle_area.get_mut(h.index as usize))
+            {
+                perm.is_suspended = false;
+            }
+        }
+
         // Draw phase
         self.current_phase = GamePhase::Draw;
         let should_skip_draw = match self.rules.skip_first_draw {
