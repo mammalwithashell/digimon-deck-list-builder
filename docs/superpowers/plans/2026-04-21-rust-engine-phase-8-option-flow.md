@@ -1470,7 +1470,7 @@ Per spec §10:
 
 ## Status
 
-Phase 8 Option Flow — **✅ Landed 2026-04-21**. 669 tests passing post-task-6 (baseline 624 + 45 new — 12 shape + 7 standard + 7 delay + 9 link + 5 training + 5 replacement), 0 warnings under `-D warnings`.
+Phase 8 Option Flow — **✅ Landed 2026-04-21**. **671 tests passing**, 0 failing, 0 warnings under `-D warnings`. Baseline 624 → final 671 (+47 net new tests: 12 shape + 7 standard + 7 delay + 9 link + 5 training + 5 replacement + 2 e2e).
 
 | Task | Commit | Landing | Quality fix |
 |------|--------|---------|-------------|
@@ -1480,17 +1480,22 @@ Phase 8 Option Flow — **✅ Landed 2026-04-21**. 669 tests passing post-task-6
 | 4 Link flow | `3e93e1d0` | 2026-04-21 | `da16f4aa` |
 | 5 Training flow | `ce044584` | 2026-04-21 | `4ec7e5be` |
 | 6 Replacement integration | `8f38095b` | 2026-04-21 | — |
-| 7 Docs | TBD | 2026-04-21 | — |
-| 8 Behavioral e2e | TBD | 2026-04-21 | — |
+| 7 Docs | `975d004c` | 2026-04-21 | — |
+| 8 Behavioral e2e | `0da9d54c` | 2026-04-21 | — |
 
-Full suite green at end of each task is mandatory before proceeding to the next.
-Baseline 624 → final 669 (+45 net new tests).
+Full suite green at end of each task was mandatory before proceeding to the next; honored.
 
 ## Deferred follow-ups
 
 - Linked-card host-deletion cascade WhenWouldBeTrashed firing (`TODO(phase-8-followup)` in `combat.rs` §linked cascade).
 - Training sideways-scope tightening once `TriggerSource::BreedingArea` exists (parity §13).
 - Cancel-semantics spec note: clarify intended behavior for Card-subject trash replacements mid-resolution.
-- Zone-mover helper use for Redirected(Deck)/Redirected(Hand) outcomes.
+- Zone-mover helper use for Redirected(Deck)/Redirected(Hand) outcomes in `commit_option_trash_outcome` — currently direct `deck.insert(0, _)` / `hand.push(_)`.
 - Counter-timed Options — Phase 9.
 - Nested `PendingSelection::Source` in OptionMain — shared Phase 7 Partition/ArmorPurge limitation.
+- **Post-merge code-quality items** (from final review `a5e88ee6`):
+  - `OptionPlayResult::{Delayed, Linked, Training}` variants never constructed — all paths return `Trashed`/`Pending`/`Invalid`. Either wire these at subtype commit sites or remove.
+  - `OptionResolutionPhase::LinkSelectHost` doc comment is stale (wrongly describes initial phase, actually reached via `MainEffectDrain → LinkSelectHost` re-install).
+  - `EffectContext::delete_permanent` bypasses `delete_permanent_with_cause` — linked cards silently disappear if a card effect deletes a host via this path. Pre-Phase-8 divergence, now observable. Cross-cutting audit with Phase 7.
+  - `classify_option_subtype` has no debug_assert for mutually-exclusive Delay/Link/Training flags (silent first-match-wins).
+  - `compute_delay_trash_turn` 2-player hard-coding — generalize when multi-player becomes a target.
