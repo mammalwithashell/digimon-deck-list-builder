@@ -28,4 +28,4 @@ pub mod step;
 pub mod validator;
 
 pub use errors::{DslError, ValidationError};
-// pub use spec::CardSpec; — uncommented when spec.rs is populated (Task 2+)
+pub use spec::CardSpec;
