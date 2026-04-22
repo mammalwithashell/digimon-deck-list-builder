@@ -200,6 +200,13 @@ impl Game {
     /// Collect effects for a single permanent. Applies the same timing +
     /// flag filter as the legacy `fire_*` loops so enqueue is a drop-in
     /// replacement.
+    ///
+    /// Phase 8 Task 4: after the top card's own effects are collected, the
+    /// host's `linked_cards` are scanned for `.linked()` effects at the same
+    /// timing. A sideways-inherited effect fires attributed to the host's
+    /// controller and source-permanent, but with `source_card` pointing at
+    /// the linked card so the re-lookup in `run_queued_effect_inner` finds
+    /// the right script.
     fn enqueue_from_permanent(&mut self, timing: EffectTiming, handle: PermanentHandle) {
         let Some(perm) = self
             .players
@@ -212,27 +219,66 @@ impl Game {
         let card_id = top.card_id(&self.card_data).to_string();
         let source_card = top.handle();
 
-        let Some(effects) = self.effects_for_card(&card_id, source_card) else {
-            return;
-        };
-
         let tp = self.turn_player();
         let is_turn_player = handle.player == tp;
 
-        for (slot, effect) in effects.iter().enumerate() {
-            if !timing_flag_matches(effect, timing) {
-                continue;
+        if let Some(effects) = self.effects_for_card(&card_id, source_card) {
+            for (slot, effect) in effects.iter().enumerate() {
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card,
+                    source_permanent: Some(handle),
+                    controller: handle.player,
+                    timing,
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: card_id.clone(),
+                });
             }
-            self.effect_queue.push_back(QueuedEffect {
-                source_card,
-                source_permanent: Some(handle),
-                controller: handle.player,
-                timing,
-                effect_slot: slot as u8,
-                is_optional: effect.optional,
-                is_turn_player,
-                card_id: card_id.clone(),
-            });
+        }
+
+        // Phase 8 Task 4: sideways inheritance from linked cards. Snapshot
+        // linked-card identity first to drop the `perm` borrow before
+        // iterating (effects_for_card borrows &self).
+        let linked_sources: Vec<(String, crate::card_source::CardHandle)> = {
+            let perm = self
+                .players
+                .get(handle.player as usize)
+                .and_then(|p| p.battle_area.get(handle.index as usize));
+            match perm {
+                Some(p) => p
+                    .linked_cards
+                    .iter()
+                    .map(|c| (c.card_id(&self.card_data).to_string(), c.handle()))
+                    .collect(),
+                None => Vec::new(),
+            }
+        };
+        for (linked_card_id, linked_source) in linked_sources {
+            let Some(effects) = self.effects_for_card(&linked_card_id, linked_source) else {
+                continue;
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if !effect.linked {
+                    continue;
+                }
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card: linked_source,
+                    source_permanent: Some(handle),
+                    controller: handle.player,
+                    timing,
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: linked_card_id.clone(),
+                });
+            }
         }
     }
 
@@ -284,8 +330,14 @@ impl Game {
             };
             // Also skip if the specific source card has been shuffled out
             // of the top-card slot (e.g. permanent digivolved mid-batch).
-            // The card_index on the top card must match what we queued.
-            if perm.top_card().card_index != qe.source_card.0 {
+            // Phase 8 Task 4: a sideways-inherited effect's source_card is a
+            // card in `linked_cards`, not the top card — accept either.
+            let top_matches = perm.top_card().card_index == qe.source_card.0;
+            let linked_matches = perm
+                .linked_cards
+                .iter()
+                .any(|c| c.card_index == qe.source_card.0);
+            if !top_matches && !linked_matches {
                 return;
             }
         }

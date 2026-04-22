@@ -1371,6 +1371,42 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        // Phase 8 Task 4: drain any linked cards BEFORE removing the
+        // permanent so the OnLinkedCardTrashed observer sees the host still
+        // in place (as required by the Appmon-trait card text). Each linked
+        // card trashes to the host owner's trash; fire OnLinkedCardTrashed
+        // globally if anything was linked.
+        let had_linked = {
+            let linked = self
+                .player(handle.player)
+                .battle_area
+                .get(handle.index as usize)
+                .map(|p| !p.linked_cards.is_empty())
+                .unwrap_or(false);
+            if linked {
+                let taken = std::mem::take(
+                    &mut self.player_mut(handle.player).battle_area
+                        [handle.index as usize]
+                        .linked_cards,
+                );
+                for card in taken {
+                    self.player_mut(handle.player).trash.push(card);
+                }
+                true
+            } else {
+                false
+            }
+        };
+        if had_linked {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnLinkedCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+                );
+            }
+            self.drain_effect_queue();
+        }
+
         // Permanent may already have been removed by an OnDeletion effect
         // (self-sacrifice patterns). Check before deleting.
         if self

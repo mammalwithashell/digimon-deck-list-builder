@@ -84,6 +84,13 @@ pub struct Effect {
     /// True for a Training card — placed into the Breeding Area with the
     /// Training state. Set by `.training()`.
     pub training: bool,
+    /// True for an effect that sideways-inherits from a linked card onto its
+    /// host. When a host Digimon's timing `T` fires, the host's own
+    /// `timing == T` effects fire; if `linked == true`, effects on any card
+    /// in `host.linked_cards` also fire at timing `T`, attributed to the
+    /// host's controller. Set by `.linked()`. Phase 8 Task 4. Mirrors DCGO's
+    /// "Plug-In gives the host this effect" semantics for Appmon-trait cards.
+    pub linked: bool,
 }
 
 impl std::fmt::Debug for Effect {
@@ -321,6 +328,7 @@ impl EffectBuilder {
                 link_cost: None,
                 link_filter: None,
                 training: false,
+                linked: false,
             },
         }
     }
@@ -501,6 +509,17 @@ impl EffectBuilder {
     pub fn training(mut self) -> Self {
         self.inner.timing = EffectTiming::OptionMain;
         self.inner.training = true;
+        self
+    }
+
+    /// Mark this effect as sideways-inherited from a linked card onto its
+    /// host. The effect's timing is preserved (e.g. `.start_of_your_turn()`
+    /// + `.linked()` fires at the host's StartOfYourTurn, not at OnPlay).
+    /// Phase 8 Task 4 — dispatched in `enqueue_from_permanent` which scans
+    /// the host's `linked_cards` for `.linked` effects at every triggered
+    /// timing dispatch.
+    pub fn linked(mut self) -> Self {
+        self.inner.linked = true;
         self
     }
 

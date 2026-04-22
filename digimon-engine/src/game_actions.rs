@@ -404,9 +404,14 @@ impl Game {
             return OptionPlayResult::Pending;
         }
 
-        // 7. Dispose per subtype (Standard → trash; Delay → park on field)
-        // + check_turn_end.
+        // 7. Dispose per subtype (Standard → trash; Delay → park on field;
+        // Link → install host-selection). `dispose_option` may install a
+        // PendingSelection (Link flow); if so, return Pending and defer
+        // check_turn_end until `attach_linked_card` finishes the attach.
         self.dispose_option();
+        if self.pending_selection.is_some() {
+            return OptionPlayResult::Pending;
+        }
         self.check_turn_end();
         OptionPlayResult::Trashed
     }
@@ -479,13 +484,173 @@ impl Game {
                 };
                 self.player_mut(pending.owner).battle_area.push(perm);
             }
-            OptionSubtype::Link | OptionSubtype::Training => {
-                // Task 4 (Link) / Task 5 (Training). Fall back to Standard
-                // trash so tests that accidentally set these flags without
-                // the full pipeline don't silently leak the card.
+            OptionSubtype::Link => {
+                // Phase 8 Task 4: evaluate link_filter against every
+                // Standard-state Digimon on the owner's battle_area. If no
+                // candidate passes, trash the card silently (mirrors "no
+                // legal target" for other effect selections). Otherwise
+                // install a PendingSelection routed to `attach_linked_card`
+                // and park `pending_option` in `LinkSelectHost`.
+                let owner = pending.owner;
+                let source_card = pending.card.handle();
+                let candidates = {
+                    let owner_player = self.player(owner);
+                    let mut out: Vec<PermanentHandle> = Vec::new();
+                    for (i, perm) in owner_player.battle_area.iter().enumerate() {
+                        if !perm.is_digimon(&self.card_data) {
+                            continue;
+                        }
+                        if !matches!(
+                            perm.option_state,
+                            crate::permanent::OptionState::Standard
+                        ) {
+                            continue;
+                        }
+                        let handle = PermanentHandle {
+                            player: owner,
+                            index: i as u8,
+                        };
+                        // Find a link effect; evaluate its filter.
+                        let filter_ok = effects.iter().find(|e| e.link_cost.is_some()).map_or(
+                            true,
+                            |link_effect| {
+                                if let Some(f) = &link_effect.link_filter {
+                                    let read_ctx = EffectReadContext::new(
+                                        self,
+                                        source_card,
+                                        None,
+                                        owner,
+                                    );
+                                    f(&read_ctx, handle)
+                                } else {
+                                    true
+                                }
+                            },
+                        );
+                        if filter_ok {
+                            out.push(handle);
+                        }
+                    }
+                    out
+                };
+
+                if candidates.is_empty() {
+                    self.player_mut(owner).trash.push(pending.card);
+                    return;
+                }
+
+                // Re-install pending_option in LinkSelectHost and park a
+                // field-selection prompt. The selection callback threads
+                // straight into `attach_linked_card`.
+                self.pending_option = Some(PendingOption {
+                    owner,
+                    card: pending.card,
+                    resolution_phase: OptionResolutionPhase::LinkSelectHost,
+                });
+                self.install_link_host_selection(owner, source_card, candidates);
+            }
+            OptionSubtype::Training => {
+                // Task 5. Fall back to Standard trash so tests that accidentally
+                // set this flag without the full pipeline don't silently leak.
                 self.player_mut(pending.owner).trash.push(pending.card);
             }
         }
+    }
+
+    /// Install a field-selection prompt listing `candidates` as legal host
+    /// Digimon for a Link Option. On resolve, the callback invokes
+    /// `attach_linked_card(host)` which attaches the card + fires OnLink.
+    fn install_link_host_selection(
+        &mut self,
+        owner: PlayerId,
+        source_card: crate::card_source::CardHandle,
+        candidates: Vec<PermanentHandle>,
+    ) {
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+        use crate::selection::SelectionKind;
+
+        // Encode via attack-id space — same convention as
+        // `select_own_permanent` / `install_field_selection`. The candidates
+        // list restricts which indices are valid; no need for a reserved
+        // action-ID namespace.
+        let valid_action_ids: Vec<u16> = candidates
+            .iter()
+            .map(|h| encode_attack(0, h.index as u16))
+            .collect();
+
+        // Keep the candidate set in a closure-owned snapshot so the callback
+        // decodes the picked index correctly even if new permanents are added
+        // mid-selection (queue is paused, but this is the defensive choice).
+        let candidate_snapshot = candidates.clone();
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectTarget;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::OwnField,
+            selecting_player: owner,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Choose a Digimon to link this Option to".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: None,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                let picked = candidate_snapshot
+                    .iter()
+                    .copied()
+                    .find(|h| h.index == target_index)
+                    .unwrap_or(PermanentHandle {
+                        player: owner,
+                        index: target_index,
+                    });
+                game.attach_linked_card(picked);
+            }),
+            on_decline: None,
+        });
+    }
+
+    /// Complete a Link Option's attach: push the pending card into the
+    /// host's `linked_cards`, fire `OnLink` globally, and clear
+    /// `pending_option`. The caller has already validated that `host` was
+    /// in the candidate list at selection install-time, but we re-check the
+    /// handle is still live in case an intervening effect moved things.
+    pub(crate) fn attach_linked_card(&mut self, host: PermanentHandle) {
+        let Some(pending) = self.pending_option.take() else { return };
+
+        // If the host vanished (e.g. deleted mid-selection by an interposing
+        // effect), fall back to trashing the Option — mirrors other
+        // "target vanished" paths elsewhere in the engine.
+        let host_live = self
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+            .map(|p| {
+                p.is_digimon(&self.card_data)
+                    && matches!(p.option_state, crate::permanent::OptionState::Standard)
+            })
+            .unwrap_or(false);
+        if !host_live {
+            self.player_mut(pending.owner).trash.push(pending.card);
+            return;
+        }
+
+        // Attach.
+        self.player_mut(host.player).battle_area[host.index as usize]
+            .linked_cards
+            .push(pending.card);
+
+        // Fire OnLink globally — every player's battle area scans for
+        // OnLink-timed effects. Load-bearing for Appmon-trait cards.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnLink,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
     }
 
     /// Compute the absolute `turn_count` at which a delayed Option should
@@ -979,8 +1144,20 @@ impl Game {
             }
             self.drain_effect_queue();
         }
+        let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
             self.player_mut(handle.player).trash.push(card);
+        }
+        // Phase 8 Task 4: fire OnLinkedCardTrashed if the returning host was
+        // carrying any linked cards (they cannot ride the host back to hand).
+        if had_linked {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnLinkedCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.drain_effect_queue();
         }
 
         self.modifiers.clear_permanent(handle);
@@ -1103,8 +1280,20 @@ impl Game {
             }
             self.drain_effect_queue();
         }
+        let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
             self.player_mut(player_id).trash.push(card);
+        }
+        // Phase 8 Task 4: fire OnLinkedCardTrashed if the returning host was
+        // carrying any linked cards.
+        if had_linked {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnLinkedCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.drain_effect_queue();
         }
 
         self.modifiers.clear_permanent(handle);
