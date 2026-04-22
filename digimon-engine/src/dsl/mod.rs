@@ -15,6 +15,7 @@
 
 pub mod alt_path;
 pub mod clause;
+pub mod common;
 pub mod errors;
 pub mod formula;
 pub mod identity;
@@ -27,5 +28,6 @@ pub mod spec;
 pub mod step;
 pub mod validator;
 
+pub use common::PlayerRef;
 pub use errors::{DslError, ValidationError};
 pub use spec::CardSpec;

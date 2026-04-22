@@ -1,4 +1,4 @@
-use digimon_engine::dsl::predicate::{Owner, PredicateSpec, Zone};
+use digimon_engine::dsl::{predicate::{PredicateSpec, Zone}, PlayerRef};
 
 fn parse(yaml: &str) -> PredicateSpec {
     serde_yml::from_str(yaml).unwrap()
@@ -22,7 +22,7 @@ fn parse_leaf_predicates() {
     assert_eq!(p.zone, vec![Zone::BattleArea, Zone::Trash]);
 
     let p = parse("owner: you");
-    assert_eq!(p.owner, Some(Owner::You));
+    assert_eq!(p.owner, Some(PlayerRef::You));
 }
 
 #[test]
@@ -61,7 +61,7 @@ any_permanent:
   name_contains: "Tai Kamiya""#;
     let p = parse(yaml);
     let ex = p.any_permanent.as_ref().unwrap();
-    assert_eq!(ex.of, Owner::You);
+    assert_eq!(ex.of, PlayerRef::You);
     assert_eq!(ex.predicate.zone, vec![Zone::BattleArea]);
 }
 

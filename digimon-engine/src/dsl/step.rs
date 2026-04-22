@@ -49,6 +49,7 @@ use serde::de::{self, MapAccess, Visitor};
 use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
 
+use crate::dsl::common::PlayerRef;
 use crate::dsl::predicate::{PredicateSpec, Zone};
 
 /// A single step. Parsed from a one-key YAML map via a custom `Deserialize`
@@ -405,21 +406,12 @@ pub struct StructuredBindingRef {
     pub of_permanent: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Player {
-    You,
-    Opponent,
-    Any,
-    Active,
-}
-
 // ── Argument structs (one per verb family) ──────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayerArg {
-    pub of: Player,
+    pub of: PlayerRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -431,28 +423,28 @@ pub struct TargetArg {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DrawArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub count: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct HandleMoveArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub card: BindingRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IndexedMoveArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub hand_index: BindingRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReturnToDeckArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub card: BindingRef,
     pub position: StackPosition,
 }
@@ -477,7 +469,7 @@ pub enum StackPosition {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RevealArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub count: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub zone: Option<Zone>,
@@ -488,7 +480,7 @@ pub struct RevealArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceRemainderArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub position: StackPosition,
 }
 
@@ -505,7 +497,7 @@ pub struct DeDigivolveArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceOnSecurityArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub source: BindingRef,
     pub position: StackPosition,
     #[serde(default)]
@@ -515,7 +507,7 @@ pub struct PlaceOnSecurityArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayTokenArgs {
-    pub controller: Player,
+    pub controller: PlayerRef,
     pub token_name: String,
 }
 
@@ -529,7 +521,7 @@ pub struct PlaceAsBottomSourceArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayFromHandArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub hand_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
@@ -566,7 +558,7 @@ pub struct PlayFromMaterialsArgs {
 #[serde(deny_unknown_fields)]
 pub struct PlayFromSecurityArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub of: Option<Player>,
+    pub of: Option<PlayerRef>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -593,7 +585,7 @@ pub struct EffectDnaDigivolveArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct MarkSecurityArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub card: BindingRef,
 }
 
@@ -643,7 +635,7 @@ pub struct SelectFieldArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectZoneArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
@@ -675,7 +667,7 @@ pub struct SelectMaterialArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectUnionArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub zones: Vec<Zone>,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -705,7 +697,7 @@ pub struct SelectPermutationArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectCountCappedArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub zone: Zone,
     pub max: u8,
     pub filter: PredicateSpec,
@@ -739,7 +731,7 @@ pub struct SelectEffectChoiceArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AsSelectingPlayerArgs {
-    pub of: Player,
+    pub of: PlayerRef,
     pub body: Vec<StepSpec>,
 }
 

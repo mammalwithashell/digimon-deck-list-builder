@@ -13,6 +13,7 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+use crate::dsl::common::PlayerRef;
 use crate::dsl::formula::FormulaSpec;
 use crate::dsl::spec::{CardKind, ColorSpec};
 
@@ -75,7 +76,7 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub zone: Vec<Zone>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub owner: Option<Owner>,
+    pub owner: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -177,7 +178,7 @@ pub struct CountAggregate {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct ExistentialPredicate {
-    pub of: Owner,
+    pub of: PlayerRef,
     #[serde(flatten)]
     pub predicate: PredicateSpec,
 }
@@ -185,19 +186,10 @@ pub struct ExistentialPredicate {
 impl Default for ExistentialPredicate {
     fn default() -> Self {
         Self {
-            of: Owner::You,
+            of: PlayerRef::You,
             predicate: PredicateSpec::default(),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Owner {
-    You,
-    Opponent,
-    Any,
-    Active,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
