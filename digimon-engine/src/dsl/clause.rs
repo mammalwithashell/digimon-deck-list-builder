@@ -152,3 +152,196 @@ pub enum DeclarativeKind {
     AltPathRegistration,
     RawRust,
 }
+
+// ---------------------------------------------------------------------------
+// Task 9 — typed per-kind declarative-clause bodies
+// ---------------------------------------------------------------------------
+
+/// The typed body variant for a [`DeclarativeClause`], obtained via
+/// [`DeclarativeClause::typed_body`]. One enum arm per [`DeclarativeKind`].
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypedDeclarativeBody {
+    Aura(AuraBody),
+    CostReduction(CostReductionBody),
+    Replacement(ReplacementBody),
+    Partition(PartitionBody),
+    AceOverflow(AceOverflowBody),
+    GrantKeyword(GrantKeywordBody),
+    Delay(DelayBody),
+    FloodGate(FloodGateBody),
+    AltPathRegistration(AltPathRegistrationBody),
+    RawRust(RawRustClauseBody),
+}
+
+impl DeclarativeClause {
+    /// Deserialize the free-form `body` map into the typed variant matching
+    /// `self.kind`. Returns `Err` if the body does not match the kind's schema.
+    pub fn typed_body(&self) -> Result<TypedDeclarativeBody, serde_yml::Error> {
+        use serde_yml::Value;
+
+        let value = Value::Mapping(
+            self.body
+                .iter()
+                .map(|(k, v)| (Value::String(k.clone()), v.clone()))
+                .collect(),
+        );
+
+        Ok(match self.kind {
+            DeclarativeKind::Aura => {
+                TypedDeclarativeBody::Aura(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::CostReduction => {
+                TypedDeclarativeBody::CostReduction(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::Replacement => {
+                TypedDeclarativeBody::Replacement(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::Partition => {
+                TypedDeclarativeBody::Partition(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::AceOverflow => {
+                TypedDeclarativeBody::AceOverflow(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::GrantKeyword => {
+                TypedDeclarativeBody::GrantKeyword(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::Delay => {
+                TypedDeclarativeBody::Delay(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::FloodGate => {
+                TypedDeclarativeBody::FloodGate(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::AltPathRegistration => {
+                TypedDeclarativeBody::AltPathRegistration(serde_yml::from_value(value)?)
+            }
+            DeclarativeKind::RawRust => {
+                TypedDeclarativeBody::RawRust(serde_yml::from_value(value)?)
+            }
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Per-kind body structs
+// ---------------------------------------------------------------------------
+
+/// Body for `kind: aura` — static continuous effect applied to matching
+/// permanents while the source is on field.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuraBody {
+    pub target: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dp_modifier: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grant_keyword: Option<GrantKeywordValue>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier: Option<String>,
+}
+
+/// Inline keyword grant used inside [`AuraBody`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrantKeywordValue {
+    pub keyword: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<i32>,
+}
+
+/// Body for `kind: cost_reduction`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CostReductionBody {
+    /// Scope discriminator string (e.g. `"face_up"`, `"before_pay_cost"`).
+    /// Task 12 validator verifies it is a known value.
+    #[serde(default)]
+    pub scope: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub when_playing_this: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when_any_ally_played: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub condition: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub once_per_turn: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount_fn: Option<crate::dsl::formula::FormulaSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pay_cost: Option<Vec<StepSpec>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unlocks: Vec<IndexMap<String, serde_yml::Value>>,
+}
+
+/// Body for `kind: replacement`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReplacementBody {
+    pub trigger: String,
+    pub process: Vec<StepSpec>,
+}
+
+/// Body for `kind: partition` — declares which digivolution-source cards form
+/// this permanent's digivolution stack partition.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PartitionBody {
+    pub sources: Vec<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub exclude_cause: Vec<String>,
+}
+
+/// Body for `kind: ace_overflow`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AceOverflowBody {
+    pub value: i32,
+}
+
+/// Body for `kind: grant_keyword` — statically grants a keyword to this card.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrantKeywordBody {
+    pub keyword: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<i32>,
+}
+
+/// Body for `kind: delay`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DelayBody {
+    pub trigger: Timing,
+    pub process: Vec<StepSpec>,
+}
+
+/// Body for `kind: flood_gate` — applies a blanket modifier to matching
+/// permanents (e.g. `CannotDigivolve`, `CannotAttack`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FloodGateBody {
+    pub modifier: String,
+    pub target: PredicateSpec,
+}
+
+/// Body for `kind: alt_path_registration`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AltPathRegistrationBody {
+    pub trigger: Timing,
+    pub registers: IndexMap<String, serde_yml::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applies_to: Option<PredicateSpec>,
+}
+
+/// Body for `kind: raw_rust` — escape hatch pointing at a hand-written Rust
+/// function for effects that cannot be expressed declaratively yet.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RawRustClauseBody {
+    #[serde(rename = "fn")]
+    pub fn_name: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub triggers: Vec<Timing>,
+}
