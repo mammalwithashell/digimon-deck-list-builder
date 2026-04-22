@@ -29,6 +29,7 @@ fn dgmn(card_id: &str, dp: i32) -> digimon_engine::card_data::CardData {
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        keywords: Vec::new(),
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

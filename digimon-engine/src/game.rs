@@ -8,11 +8,12 @@ use crate::cards::{build_registry, CardEffectRegistry};
 use crate::enums::{GamePhase, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
+use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
 use crate::selection::{
-    EffectQueue, PendingAttack, PendingSecurity, PendingSelection, SecurityResolutionState,
-    SelectionError,
+    EffectQueue, PendingAttack, PendingOption, PendingSecurity, PendingSelection,
+    SecurityResolutionState, SelectionError,
 };
 use crate::token_registry::TokenRegistry;
 
@@ -124,6 +125,9 @@ pub struct Game {
     /// cleared afterward. `EffectContext::play_from_security` inspects and
     /// mutates this slot to keep the revealed card from being trashed.
     pub pending_security: Option<PendingSecurity>,
+    /// Phase 8: in-flight Option card resolution. Set when an Option is
+    /// played and cleared after dispose. Dispatch lands in Tasks 2-6.
+    pub pending_option: Option<PendingOption>,
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
@@ -151,6 +155,68 @@ pub struct Game {
     /// Monotonic counter for `GameEvent::seq`. Never decreases across the
     /// lifetime of a `Game`.
     pub event_seq: u64,
+
+    /// Current nesting depth of `Game::try_replace`. Incremented on entry,
+    /// decremented on exit. At `>= MAX_REPLACEMENT_DEPTH`, the dispatcher
+    /// short-circuits to `ReplacementOutcome::None` — safety rail against
+    /// self-referential replacement chains (e.g. two permanents each
+    /// replacing the other's deletion with "cancel").
+    #[doc(hidden)]
+    pub replacement_depth: u8,
+
+    /// Outcome slot written by a replacement-selection callback (optional
+    /// replacement accept path) and read by the `try_replace` caller after
+    /// the selection resolves. `None` outside a replacement window; `None`
+    /// on decline. See `replacement::try_replace_impl`.
+    #[doc(hidden)]
+    pub replacement_pending_outcome: Option<crate::replacement::ReplacementOutcome>,
+
+    /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
+    /// have already fired within the current `try_replace` call chain so a
+    /// redirected route does not re-fire the same timing for the same subject
+    /// (e.g. `WhenWouldLeaveBattleArea` super-timing double-fire when a
+    /// `Redirected(Deck)` outcome on `WhenWouldBeDeleted` routes through
+    /// `return_to_deck`, which would otherwise re-invoke
+    /// `WhenWouldLeaveBattleArea` for the same permanent).
+    ///
+    /// Cleared at the outermost entry (when `replacement_depth == 0`) of
+    /// `try_replace_impl` — unless `in_replacement_commit` is set, in which
+    /// case we are continuing the original call chain across a callback
+    /// resolution boundary and the set must be preserved. See
+    /// `replacement::try_replace_impl`.
+    #[doc(hidden)]
+    pub replacement_fired: std::collections::HashSet<(
+        crate::enums::EffectTiming,
+        crate::replacement::ReplacementSubject,
+    )>,
+
+    /// Spec §7.5 continuation marker. Set by the optional-replacement callback
+    /// (accept/decline) just before invoking `commit_deferred_outcome`, cleared
+    /// after the commit returns. While true, `try_replace_impl` treats a
+    /// depth==0 entry as a continuation of the original call chain and does
+    /// NOT clear `replacement_fired` — so the fired-set from the original
+    /// event survives the callback boundary and blocks double-fires during
+    /// the commit's zone-mover calls.
+    #[doc(hidden)]
+    pub(crate) in_replacement_commit: bool,
+
+    /// Controller of the effect whose `process` is currently running, if
+    /// any. Set by `run_queued_effect` at dispatch time and cleared at the
+    /// end of the call. Consumed by `infer_deletion_cause` (and Task 4's
+    /// sibling route inference helpers) to distinguish Own-effect vs
+    /// Opponent-effect deletions at the fire-site. `None` when no effect is
+    /// currently executing (e.g. direct-from-test call, combat,
+    /// security-check driver between drains).
+    #[doc(hidden)]
+    pub(crate) effect_source_player: Option<PlayerId>,
+
+    /// Phase 9 Task 3 — set to `true` while a hand Counter Option is
+    /// resolving through `play_option_from_hand`. Consumed by
+    /// `play_option_core` to fire CounterEffect timing on the played
+    /// card's effects BEFORE `OptionMain`. Cleared when the Counter
+    /// resolver finishes the Option play. Spec §5.2.
+    #[doc(hidden)]
+    pub(crate) in_counter_window: bool,
 }
 
 impl Game {
@@ -272,11 +338,18 @@ impl Game {
             effect_queue: EffectQueue::new(),
             pending_attack: None,
             pending_security: None,
+            pending_option: None,
             security_resolution: None,
             effect_chain_depth: 0,
             logger: Box::new(SilentLogger),
             events: Vec::new(),
             event_seq: 0,
+            replacement_depth: 0,
+            replacement_pending_outcome: None,
+            replacement_fired: std::collections::HashSet::new(),
+            in_replacement_commit: false,
+            effect_source_player: None,
+            in_counter_window: false,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -406,6 +479,103 @@ impl Game {
             return Err(SelectionError::NoPendingSelection);
         }
         self.resolve_generic_selection(player, action_id)
+    }
+
+    /// Fire all applicable replacement effects for the given would-event.
+    /// Returns the final `ReplacementOutcome` the caller must honor.
+    ///
+    /// **Invariant:** if this returns `ReplacementOutcome::None`, no side
+    /// effects have been applied to `Game` state. If it returns any other
+    /// variant, side effects from the chosen replacements have already
+    /// committed and the caller must NOT re-apply the original event.
+    ///
+    /// **Optional replacements:** if an optional replacement is in scope,
+    /// this function installs a `PendingSelection::Replacement` and returns
+    /// `ReplacementOutcome::None`. The caller is expected to re-enter
+    /// `try_replace` — or inspect `game.replacement_pending_outcome` —
+    /// once `resolve_selection` has fired.
+    ///
+    /// Visibility note: `#[doc(hidden)] pub` rather than `pub(crate)` so the
+    /// Phase 7 integration tests under `digimon-engine/tests/replacements/`
+    /// can drive the dispatcher directly. Fire-sites inside the crate (Task
+    /// 3+) will call this via normal crate-local dispatch.
+    #[doc(hidden)]
+    pub fn try_replace(
+        &mut self,
+        timing: crate::enums::EffectTiming,
+        subject: crate::replacement::ReplacementSubject,
+        cause: crate::replacement::ReplacementCause,
+        original_destination: Option<crate::enums::Zone>,
+    ) -> crate::replacement::ReplacementOutcome {
+        crate::replacement::try_replace_impl(
+            self,
+            timing,
+            subject,
+            cause,
+            original_destination,
+        )
+    }
+
+    /// Infer the `ReplacementCause` for a deletion of `target_handle` given
+    /// the current game state. Priority:
+    ///   1. `security_resolution.is_some()` → `SecurityCheck`
+    ///   2. `pending_attack.is_some()` → `Battle`
+    ///   3. `effect_source_player.is_some()` — an effect is currently
+    ///      running; `Own` if its controller equals the target's
+    ///      controller, otherwise `Opponent`.
+    ///   4. Fallback → `OwnEffect`.
+    ///
+    /// Consumed by the deletion fire-site in `combat::delete_permanent_with_effects`.
+    pub(crate) fn infer_deletion_cause(
+        &self,
+        target_handle: crate::permanent::PermanentHandle,
+    ) -> crate::replacement::ReplacementCause {
+        use crate::replacement::ReplacementCause;
+        if self.security_resolution.is_some() {
+            return ReplacementCause::SecurityCheck;
+        }
+        if self.pending_attack.is_some() {
+            return ReplacementCause::Battle;
+        }
+        if let Some(acting) = self.effect_source_player {
+            if acting == target_handle.player {
+                return ReplacementCause::OwnEffect;
+            }
+            return ReplacementCause::OpponentEffect;
+        }
+        ReplacementCause::OwnEffect
+    }
+
+    /// Generalized cause inference for non-deletion Would-replacement fire-sites
+    /// (return-to-hand/deck, trash-by-effect, draw, place-in-security,
+    /// de-digivolve, etc.).
+    ///
+    /// Differs from `infer_deletion_cause` in that `Battle` is NOT a candidate:
+    /// non-deletion routes are never reached via `resolve_battle`, so the only
+    /// live signals are security-resolution and the effect-source player.
+    ///
+    /// Priority:
+    ///   1. `security_resolution.is_some()` → `SecurityCheck`
+    ///   2. `effect_source_player.is_some()` — compare against `target_player`;
+    ///      equal → `OwnEffect`, else `OpponentEffect`.
+    ///   3. Fallback → `OwnEffect`.
+    ///
+    /// Consumed by Task 4 fire-sites in `game_actions` / `effect_context`.
+    pub(crate) fn infer_effect_cause(
+        &self,
+        target_player: PlayerId,
+    ) -> crate::replacement::ReplacementCause {
+        use crate::replacement::ReplacementCause;
+        if self.security_resolution.is_some() {
+            return ReplacementCause::SecurityCheck;
+        }
+        if let Some(acting) = self.effect_source_player {
+            if acting == target_player {
+                return ReplacementCause::OwnEffect;
+            }
+            return ReplacementCause::OpponentEffect;
+        }
+        ReplacementCause::OwnEffect
     }
 
     /// Get the next player clockwise from the given player.
@@ -587,10 +757,90 @@ impl Game {
 
     // --- Convenience methods that avoid borrow conflicts ---
 
+    /// Suspend a single permanent. Fires `OnSuspend` observers in every
+    /// player's battle area if the permanent was not already suspended.
+    ///
+    /// This is the canonical chokepoint for single-target suspension.
+    /// `Player::unsuspend_all` (bulk turn-begin unsuspend) intentionally
+    /// bypasses this path — `StartOfYourTurn` is the canonical timing for
+    /// turn-start effects.
+    pub fn suspend(&mut self, handle: PermanentHandle) {
+        let already = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.is_suspended)
+            .unwrap_or(true); // treat out-of-range as "already suspended" to no-op
+        if already {
+            return;
+        }
+        if let Some(perm) = self
+            .players
+            .get_mut(handle.player as usize)
+            .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+        {
+            perm.is_suspended = true;
+        }
+        let n = self.players.len();
+        for pid in 0..n {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnSuspend,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+    }
+
+    /// Unsuspend a single permanent. Fires `OnUnsuspend` observers in every
+    /// player's battle area if the permanent was suspended.
+    ///
+    /// See `suspend` for the bulk-unsuspend caveat.
+    pub fn unsuspend(&mut self, handle: PermanentHandle) {
+        let was_suspended = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.is_suspended)
+            .unwrap_or(false); // treat out-of-range as "not suspended" to no-op
+        if !was_suspended {
+            return;
+        }
+        if let Some(perm) = self
+            .players
+            .get_mut(handle.player as usize)
+            .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+        {
+            perm.is_suspended = false;
+        }
+        let n = self.players.len();
+        for pid in 0..n {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnUnsuspend,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+    }
+
     /// Hatch for a player (copies turn_count to avoid borrow conflict).
+    /// Fires `OnHatch` observers in every player's battle area after the egg
+    /// moves into the breeding area.
     pub fn hatch(&mut self, player_id: PlayerId) -> bool {
         let turn = self.turn_count;
-        self.player_mut(player_id).hatch(turn)
+        let ok = self.player_mut(player_id).hatch(turn);
+        if ok {
+            let n = self.players.len();
+            for pid in 0..n {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnHatch,
+                    crate::selection::TriggerSource::PlayerBattleArea(
+                        pid as crate::enums::PlayerId,
+                    ),
+                );
+            }
+            self.drain_effect_queue();
+        }
+        ok
     }
 
     /// Returns `true` when `card` may digivolve onto `perm` per standard
@@ -620,6 +870,40 @@ impl Game {
         })
     }
 
+    // ─── Unified keyword query (Phase 3 Task 2) ──────────────────────
+
+    /// Unified keyword query — returns `true` if the permanent's top card
+    /// has `keyword` either printed natively on its face (from
+    /// `CardData.keywords`) OR granted by an active modifier.
+    ///
+    /// This is the canonical engine-wide keyword lookup. Engine code MUST
+    /// NOT call `self.modifiers.has_keyword(...)` directly — that only
+    /// sees granted keywords and would miss native printed keywords.
+    ///
+    /// Returns `false` for out-of-range handles (e.g. player index or
+    /// battle-area index doesn't exist) so callers don't need a guard.
+    pub fn has_keyword(
+        &self,
+        handle: PermanentHandle,
+        keyword: crate::enums::Keyword,
+    ) -> bool {
+        // Modifier-granted (end-of-turn grants, Ally buffs, etc.)
+        if self.modifiers.has_keyword(handle, keyword) {
+            return true;
+        }
+        // Native printed on the top card's face.
+        let Some(player) = self.players.get(handle.player as usize) else {
+            return false;
+        };
+        let Some(perm) = player.battle_area.get(handle.index as usize) else {
+            return false;
+        };
+        let top = perm.top_card();
+        // `data_index` is a direct Vec index — O(1), no iteration needed.
+        let card_data = &self.card_data[top.data_index];
+        card_data.keywords.contains(&keyword)
+    }
+
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
 
     /// Enumerate a card's effects by asking the registry for its impl.
@@ -641,9 +925,96 @@ impl Game {
         card_id: &str,
         handle: crate::card_source::CardHandle,
     ) -> Option<Vec<crate::effect::Effect>> {
-        self.effect_registry
-            .get(card_id)
-            .map(|impl_| impl_.effects(handle))
+        // Registry effects come first — a hand-authored script owns its
+        // slot order. Phase 7 Task 6 appends keyword-derived auto-install
+        // replacements (Barrier / Evade / Fragment(N) / Decode) so cards
+        // with those printed keywords get the matching WhenWouldBe* process
+        // without hand-authoring. Partition / ArmorPurge are intentionally
+        // deferred — see `crate::cards::keyword_effects` docstring.
+        let registry_effects = self.effect_registry.get(card_id).map(|impl_| impl_.effects(handle));
+
+        // Look up CardData for this card_id. The vec scan is O(card_data_len)
+        // but is only hit once per effect query, and `effects_for_card` is
+        // typically called at state-change fire-sites, not in the mask hot
+        // loop — so the cost is acceptable for v1.
+        let auto_effects: Vec<crate::effect::Effect> = self
+            .card_data
+            .iter()
+            .find(|cd| cd.card_id == card_id)
+            .map(|cd| {
+                cd.keywords
+                    .iter()
+                    .flat_map(|kw| {
+                        crate::cards::keyword_effects::keyword_to_auto_effect(*kw, handle)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        match (registry_effects, auto_effects.is_empty()) {
+            (Some(mut es), false) => {
+                es.extend(auto_effects);
+                Some(es)
+            }
+            (Some(es), true) => Some(es),
+            (None, false) => Some(auto_effects),
+            (None, true) => None,
+        }
+    }
+
+    /// Resolve a `CardHandle` (card_index) to its `CardKind` by scanning all
+    /// player zones.
+    ///
+    /// Used by `source_is_tamer` flood-gate helpers on `EffectContext` /
+    /// `EffectReadContext` to discriminate Tamer-sourced effects from
+    /// Digimon/Option-sourced ones (matches DCGO `ICardEffect.IsTamerEffect`).
+    ///
+    /// Returns `None` if no `CardSource` with the given `card_index` is found
+    /// in any zone (this should not occur in practice for a live effect).
+    pub(crate) fn card_kind_for_handle(
+        &self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<crate::enums::CardKind> {
+        let target_index = handle.0;
+        for player in &self.players {
+            // Hand
+            if let Some(cs) = player.hand.iter().find(|c| c.card_index == target_index) {
+                return Some(self.card_data[cs.data_index].card_kind);
+            }
+            // Trash
+            if let Some(cs) = player.trash.iter().find(|c| c.card_index == target_index) {
+                return Some(self.card_data[cs.data_index].card_kind);
+            }
+            // Battle area (card_sources stacks)
+            for perm in &player.battle_area {
+                if let Some(cs) = perm.card_sources.iter().find(|c| c.card_index == target_index) {
+                    return Some(self.card_data[cs.data_index].card_kind);
+                }
+                // Linked cards (Tamer equipment)
+                if let Some(cs) = perm.linked_cards.iter().find(|c| c.card_index == target_index) {
+                    return Some(self.card_data[cs.data_index].card_kind);
+                }
+            }
+            // Breeding area
+            if let Some(breeding) = &player.breeding_area {
+                if let Some(cs) = breeding.card_sources.iter().find(|c| c.card_index == target_index) {
+                    return Some(self.card_data[cs.data_index].card_kind);
+                }
+            }
+            // Security (e.g. when effect fires from security card)
+            if let Some(cs) = player.security.iter().find(|c| c.card_index == target_index) {
+                return Some(self.card_data[cs.data_index].card_kind);
+            }
+            // Deck (rare, but possible for mid-search effects)
+            if let Some(cs) = player.deck.iter().find(|c| c.card_index == target_index) {
+                return Some(self.card_data[cs.data_index].card_kind);
+            }
+        }
+        // Also check revealed_cards pool
+        if let Some(cs) = self.revealed_cards.iter().find(|c| c.card_index == target_index) {
+            return Some(self.card_data[cs.data_index].card_kind);
+        }
+        None
     }
 
     // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───

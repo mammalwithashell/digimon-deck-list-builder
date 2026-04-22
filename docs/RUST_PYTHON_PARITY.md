@@ -19,47 +19,41 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 ## 1. Core game flow
 
-### 1.1 🔴 Play cost not deducted from memory
-
-**Rust** — [game.rs:357-391](../digimon-engine/src/game.rs#L357) `play_from_hand` removes the card, creates a `Permanent`, fires `OnPlay`. It never calls `pay_memory`, so cards play for free.
+### 1.1 🟢 Play cost deducted from memory — implemented
 
 **Python** — [player.py](../digimon_gym/engine/core/player.py) + game flow: `calculate_play_cost` resolves the effective cost (including reductions), the player's play path deducts it from memory before placement, and any OnPlay effects resolve after the card is on the field.
 
-**Fix outline:** Before `player.hand.remove(hand_index)`, compute effective cost (base `play_cost` minus any applicable `BeforePayCost` reductions), call `pay_memory(cost)`. If `pay_memory` fails, return `None`. Move `fire_on_play` to run *after* memory is charged but *after* the permanent is on the field.
+**Rust** — [game_actions.rs:63-91](../digimon-engine/src/game_actions.rs#L63) `play_from_hand_with_cost` computes the effective cost via `cost_delta.resolve(printed_cost)`, then calls `self.pay_memory(effective_cost)` at line 88 before removing the card from hand. If `pay_memory` returns `false`, the function aborts with `None`. The old `play_from_hand` is now a thin wrapper that delegates to `play_from_hand_with_cost` with `CostDelta::Reduce(0)`. `OnPlay` fires through the standard effect queue after the permanent is placed.
 
-### 1.2 🔴 Memory reset on turn switch
+**Coverage:** confirmed by Phase 2 engine tests and `test_cards_behavioral.rs` pilots.
 
-**Rust** — [game.rs:236-246](../digimon-engine/src/game.rs#L236): both branches of the `if memory >= 0 / if memory <= 0` ladder clamp to 3. Overflow from over-cost plays is lost.
+### 1.2 🟢 Memory pure-negation on turn switch — implemented
 
 **Python** — [game/__init__.py:322](../digimon_gym/engine/game/__init__.py#L322) `self.memory = -self.memory`. No clamp. The seesaw is simply flipped from the next player's perspective.
 
-**Consequence:** P0 ends their turn at −5 (spent beyond 0). Python gives P1 +5. Rust gives P1 +3. Tempo math off by 2 whenever a turn over-commits.
+**Rust** — [game_phases.rs:129](../digimon-engine/src/game_phases.rs#L129) `rotate_turn_player` executes `self.memory = -self.memory;` with an explicit comment that no clamping is applied. Over-cost plays that push memory deep negative carry their full magnitude across the switch as positive memory for the next player — the intended tempo consequence.
 
-**Fix outline:** Replace the reset block with `self.memory = -self.memory;`. Remove the "at least 3" clamp entirely — that's not Digimon's rule.
+**Coverage:** confirmed by the first-turn draw and turn-rotation tests; no regression introduced by Phase 2.
 
-### 1.3 🔴 `pass_turn` clobbers overflow
-
-**Rust** — [game.rs:263-268](../digimon-engine/src/game.rs#L263): `self.memory = -3` unconditionally, then `end_turn()`.
+### 1.3 🟢 `pass_turn` preserves overflow — implemented
 
 **Python** — [game/__init__.py:329-334](../digimon_gym/engine/game/__init__.py#L329): `if self.memory >= 0: self.memory = -3`. Only forces the seesaw if the player still has memory to give. Over-cost plays that already put memory negative are preserved through the switch.
 
-**Fix outline:** Gate the assignment: `if self.memory >= 0 { self.memory = -3; }`.
+**Rust** — [game_phases.rs:333-335](../digimon-engine/src/game_phases.rs#L333) `pass_turn` gates the assignment: `if self.memory >= 0 { self.memory = -3; }`. If memory is already negative because an over-cost play pushed it there, the overflow is preserved and carried through via the subsequent `end_turn()` call. Matches Python exactly.
 
-### 1.4 🔴 `pay_memory` auto-ends turn on crossing zero
+### 1.4 🟢 `pay_memory` is a pure memory mutator — implemented
 
-**Rust** — [game.rs:279-282](../digimon-engine/src/game.rs#L279): if memory goes negative after paying, `end_turn()` fires inside `pay_memory`.
+**Python** — turn end is checked in `check_turn_end` ([__init__.py:336](../digimon_gym/engine/game/__init__.py#L336)) after effect resolution, not synchronously with payment. This lets OnPlay, WhenDigivolving, etc. resolve on the same turn even if their cost already pushed memory negative.
 
-**Python** — never: turn end is checked in `check_turn_end` ([__init__.py:336](../digimon_gym/engine/game/__init__.py#L336)) after effect resolution, not synchronously with payment. This lets OnPlay, WhenDigivolving, etc. resolve on the same turn even if their cost already pushed memory negative.
+**Rust** — [game.rs:445](../digimon-engine/src/game.rs#L445) `pay_memory` is a pure mutator: it updates `self.memory`, emits a `MemoryChange` event, and returns `true`/`false` — it never calls `end_turn()`. A separate [game.rs:466](../digimon-engine/src/game.rs#L466) `check_turn_end` method is provided for callers to invoke at the natural resolution boundary after all effects of a play/action have resolved. This matches the Python contract exactly.
 
-**Fix outline:** Delete the `if self.memory < 0 { self.end_turn(); }` in `pay_memory`. Add a distinct `check_turn_end()` method that callers run after effect resolution completes.
-
-### 1.5 🔴 Memory swing-back
+### 1.5 🟢 Memory swing-back on OnEndTurn — implemented
 
 **Python** — [game/__init__.py:276-280](../digimon_gym/engine/game/__init__.py#L276): if `OnEndTurn` effects restore memory from `< 0` back to `>= 0`, the turn continues and returns to Main. Real DCGO rule, used by some cards.
 
-**Rust** — absent.
+**Rust** — [game_phases.rs:78-85](../digimon-engine/src/game_phases.rs#L78) `end_turn` captures `memory_before = self.memory` before firing `fire_end_of_your_turn(ending_player)`. After the drain, it checks `if memory_before < 0 && self.memory >= 0 && !self.game_over`: if the sign flipped back, the function sets `self.current_phase = GamePhase::Main` and returns immediately, short-circuiting the turn switch. This matches the Python swing-back rule exactly.
 
-**Fix outline:** After firing `OnEndTurn` effects in `end_turn`, compare `memory_before` vs `memory` and short-circuit the turn switch if the sign flipped back. Gate behind `self.game_over == false`.
+**Coverage:** [tests/end_turn_phase_transition.rs](../digimon-engine/tests/end_turn_phase_transition.rs) `swing_back_short_circuit` case.
 
 ### 1.6 🟢 Mulligan phase — implemented
 
@@ -95,9 +89,11 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 **Coverage:** [tests/rush_exemption.rs](../digimon-engine/tests/rush_exemption.rs) — `freshly_played_without_rush_cannot_attack`, `freshly_played_with_rush_can_attack`, `rush_does_not_override_suspended_state`, `freshly_played_with_vortex_can_attack`, `vortex_does_not_override_suspended_state`, `mask_allows_rush_granted_attack_on_turn_played`.
 
-### 2.1b 🟡 Native (card-text) Rush not parsed
+### 2.1b 🟢 Native (card-text) Rush parsed — implemented
 
-Rust's [CardData](../digimon-engine/src/card_data.rs#L18) has no `keywords: Vec<Keyword>` field — static card keywords live inside `effect_text: String`. Cards that print Rush on their face don't trigger the exemption in `can_attack` because there's nothing to inspect. Fix requires either a keyword-parsing pass over `effect_text` or an explicit `keywords` field on `CardData` + a migration of cards.json. Track with §4.5 effect-listing work.
+Phase 3 added `CardData::keywords` field populated at load time by `parse_printed_keywords` (card_data.rs). The unified `Game::has_keyword` query (game.rs) checks both modifier-granted AND native printed keywords. All 14 call sites migrated; cards printing ＜Rush＞ now exempt the permanent from summoning sickness in `can_attack` without needing a granting modifier. See docs/RUST_ENGINE_API.md §Phase 3.
+
+**Coverage:** `tests/keyword_parsing.rs` — `native_printed_rush_allows_same_turn_attack`.
 
 ### 2.2 🟢 `is_attacking` flag — implemented
 
@@ -159,13 +155,15 @@ New `EffectContext` helpers landed alongside: `play_from_security`, `select_secu
 
 Enqueue + drain of the revealed card's `SecuritySkill` effects; `play_from_security` + `pending_security.played` flag; `OnLoseSecurity` fires unconditionally. Covered by the three pilots above. Any security effect that (a) is unconditional, (b) needs no context beyond `self.player`/`game`, and (c) installs no pending selection, now behaves identically in both engines.
 
-### 2.5b 🔴 `OnSecurityCheck` observer timing not fired
+### 2.5b 🟢 `OnSecurityCheck` observer timing fired — implemented
 
-**Python** — [combat.py:206-214](../digimon_gym/engine/game/combat.py#L206) `_execute_security_checks` calls `execute_effects(EffectTiming.OnSecurityCheck, sec_check_ctx)` after each reveal-and-resolve pass. Field / trash / hand effects that watch for security checks globally (e.g. "When your security is checked, gain 1 memory") rely on this timing.
+**Python** — [combat.py:206-214](../digimon_gym/engine/game/combat.py#L206) `_execute_security_checks` calls `execute_effects(EffectTiming.OnSecurityCheck, sec_check_ctx)` after each reveal-and-resolve pass. Field effects that watch for security checks globally (e.g. "When your security is checked, gain 1 memory") rely on this timing.
 
-**Rust** — [combat.rs:944-952](../digimon-engine/src/combat.rs#L944) enqueues `EffectTiming::OnLoseSecurity` on the revealed card itself but **never** enqueues `OnSecurityCheck` over other zones. The enum variant and builder exist (`Effect::on_security_check`), but no trigger source fires it.
+**Rust** — [combat.rs:949-955](../digimon-engine/src/combat.rs#L949) the `OnSecurityCheckDrain` security phase builds a `TriggerSource::OnSecurityCheck { attacker, defender, revealed_card, was_face_up }` and calls `self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger)`. [effect_queue.rs:65](../digimon-engine/src/effect_queue.rs#L65) dispatches `TriggerSource::OnSecurityCheck` by iterating the defender's entire `battle_area` and calling `enqueue_from_permanent` for each permanent — matching the Python fan-out. After draining, the state machine advances past `OnSecurityCheckDrain`.
 
-**Fix outline:** Add a `TriggerSource::Global` variant (or reuse `PlayerBattleArea` iterated over every player) for `OnSecurityCheck` enqueue after the `SecuritySkill` drain. Also expose `security_card` / `security_was_face_up` in the effect context — see §2.5g.
+**Note:** Non-combat security removal (effect-driven security trashing) does not yet emit this timing — that path is tracked in the engine-gaps doc under "Global `OnOpponentSecurityRemoved` observer timing". The attack-path dispatch (§2.5b) is confirmed equivalent.
+
+**Coverage:** [tests/security_effects.rs](../digimon-engine/tests/security_effects.rs) security-observer pilot cases.
 
 ### 2.5c 🔴 Progress / immunity-to-opponent-effects gate not wired
 
@@ -191,13 +189,11 @@ Enqueue + drain of the revealed card's `SecuritySkill` effects; `play_from_secur
 
 **Fix outline:** Introduce an `Effect` flag `applies_to_opponent_security_dp` and an `attacker_security_dp_adjustment(attacker)` helper on `Game` that iterates the attacker's `card_sources[..last]` inherited effects.
 
-### 2.5f 🟡 Native Jamming not honored — only modifier-granted
+### 2.5f 🟢 Native Jamming honored — implemented
 
-**Python** — [player.py:670](../digimon_gym/engine/core/player.py#L670) `attacker.has_keyword('_is_jamming')` — Permanent.has_keyword scans granted modifiers AND native printed keywords on the top card.
+Phase 3 landed unified keyword lookup (see §2.1b). The security DP battle in `combat.rs` now checks `self.has_keyword(attacker, Keyword::Jamming)` which includes native printed Jamming. Cards with ＜Jamming＞ printed on their face survive losing security battles without needing a granting modifier.
 
-**Rust** — [combat.rs:936](../digimon-engine/src/combat.rs#L936) `self.modifiers.has_keyword(attacker, Keyword::Jamming)` — only checks modifier-granted keywords. Cards with Jamming printed on them (not granted by a modifier) will be deleted incorrectly against a winning security Digimon.
-
-Same class of gap as §2.1b (native static Rush). Blocked on native-keyword effect-listing, which is itself blocked on the broader card-text-to-Keyword parse pipeline.
+**Coverage:** `tests/keyword_parsing.rs` — `native_printed_jamming_survives_losing_security_battle`.
 
 ### 2.5g 🔴 EffectContext missing security-specific context
 
@@ -535,6 +531,32 @@ Python's `has_modifier(target, type, context)` can refine the match via the modi
 
 ## 5. Registry parity
 
+### §5.1 Cost-reduction closures + pay_cost_fn hook — Rust-only (Phase 5)
+
+**Status (2026-04-21):** Rust exclusively supports closure-valued cost reduction at `EffectTiming::BeforePayCost` and a synchronous `pay_cost_fn` hook on triggered effects (and at BeforePayCost dispatch). Python uses a `_temp_play_cost_reduction` instance variable that leaks across effects (Issue 24 per project memory). Rust **intentionally does not replicate** this pattern; scripts requiring dynamic reduction must use `.cost_reduction_fn`.
+
+No Python parity — this is a strict improvement in Rust. Python will not catch up; migration targets Rust as the source of truth for these mechanics.
+
+Cards unblocked (per audits): ~50 across Rocks (primary), some Dark Masters and TS Olympos cost-gating effects. See `.claude/plans/rust-engine-gaps-rocks.md` for the Rocks-specific list.
+
+Rust implementation: `Game::scan_before_pay_cost_reduction` in `digimon-engine/src/game_actions.rs` + `pay_cost_fn` hook in `digimon-engine/src/effect_queue.rs::run_queued_effect`.
+
+---
+
+### §6.1 Player-scoped flood gates — Rust (Phase 6)
+
+Rust adds a parallel `player_modifiers` tier to `ModifierRegistry` (`HashMap<PlayerId, Vec<PlayerModifierEntry>>`) plus 13 new `ModifierType` variants for action-category flood gates (`CannotPlayDigimonByEffect`, `CannotGainMemoryByEffect`, `CannotGainMemoryExceptFromTamers`, `CannotReducePlayCost`, `CannotActivateMainEffects`, `CannotActivateWhenDigivolvingEffects`, `CannotActivateSecurityEffects`, `CannotAddSecurityByEffect`, `CannotTrashOpponentSecurity`, `CannotReduceOpponentSecurity`, `CannotDrawByEffect`, `CannotDigivolveDigimonByEffect`, `IgnoreColorRequirement`). Gates are enforced at BOTH the action-mask layer (RL-visible suppression) and the resolver layer (defense-in-depth).
+
+Python stores modifiers as a flat `HashMap<ModifierType, Vec<Entry>>` with closure-valued per-entry conditions. Rust v1 uses flag-based entries + card-script `.condition` closures at install-time, following DCGO's separate-class-per-restriction pattern (see `DCGO/Assets/Scripts/CardEffect/BT3/Green/BT3_046.cs` for Tamer-source-discriminated `CannotAddMemoryClass`). Phase 7 may add closure conditions to `ModifierEntry` for the would-replacement framework.
+
+Python's `ctx.get('played_by_effect', False)` context is matched by Rust's typed `PlaySource` enum (`ByHand` / `ByEffect` / `ByDigivolve`), threaded through play/digivolve helpers — strictly cleaner than Python's dict-based context.
+
+The `source_is_tamer` helper matches DCGO's `ICardEffect.IsTamerEffect` property; Rust uses a fast path via `source_permanent` + slow-path `card_kind` lookup. Used by `CannotGainMemoryExceptFromTamers` to pass memory gains originating from Tamer effects through the restriction gate.
+
+Cards unblocked (per audits): ~55 across all 5 audited archetypes (Dark Masters lockout shell, Medusamon Petrification, TS Olympos Tamer-anchoring, Rocks Plug-In lockouts).
+
+---
+
 ### 5.1 🟢 CardRegistry
 
 Fixed in [card_registry.rs](../digimon-engine/src/card_registry.rs). `CardData.index` from cards.json is the source of truth in both engines. Verified by [card_registry_parity.rs](../digimon-engine/tests/card_registry_parity.rs) against the real 4082-card cards.json.
@@ -576,7 +598,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 11. ~~**§3.5 — Selection tensor slots**~~ ✅ done — `valid_count / ACTION_SPACE_SIZE` and `selecting_player` written at slots 1371/1372 whenever `pending_selection.is_some()`.
 12. ~~**§2.3 Counter + blast digivolve**~~ ✅ done — `Effect::blast_digivolve` flag, `Game::can_digivolve` validator, `combat::try_enter_counter` + `execute_blast_digivolve`. Defender-only, Digimon-target only (Python parity). Attacker-deletion cascade routes to Cleanup without re-running Block/Battle.
 
-13. **§2.5 — Security effect execution** — partial. ✅ §2.5a basic `SecuritySkill` dispatch (trigger → process → trash + `play_from_security` bypass + `OnLoseSecurity`); ✅ `face_up_security` tensor parity (§3.3); ✅ `SelectSecurity` / `SelectReveal` helpers (§4.6d). Outstanding, in rough order of load-bearing-ness: **§2.5j re-entrant selections mid-security-resolve** (blocks every real card with a selection-using `[Security]` effect), §2.5g EffectContext extras (attacker / security_digimon / turn_player), §2.5b `OnSecurityCheck` observer firing, §2.5c Progress immunity gate, §2.5d DontBattleSecurityDigimon modifier, §2.5e inherited-effect DP adjustments to security Digimon, §2.5f native Jamming (blocked on §2.1b), §2.5h condition-check divergence, §2.5i TriggerOrder-for-multi-security-effect, §2.5k `face_up_security` cleanup on reveal, §2.5l `_last_security_card` snapshot, §2.5m `security_reveal` event emission, §2.5-harness cross-engine YAML harness.
+13. **§2.5 — Security effect execution** — partial. ✅ §2.5a basic `SecuritySkill` dispatch (trigger → process → trash + `play_from_security` bypass + `OnLoseSecurity`); ✅ §2.5b `OnSecurityCheck` observer timing fired (attack path — `OnSecurityCheckDrain` phase + `effect_queue.rs:65` defender-battle-area fan-out); ✅ `face_up_security` tensor parity (§3.3); ✅ `SelectSecurity` / `SelectReveal` helpers (§4.6d). Outstanding, in rough order of load-bearing-ness: **§2.5j re-entrant selections mid-security-resolve** (blocks every real card with a selection-using `[Security]` effect), §2.5g EffectContext extras (attacker / security_digimon / turn_player), §2.5c Progress immunity gate, §2.5d DontBattleSecurityDigimon modifier, §2.5e inherited-effect DP adjustments to security Digimon, §2.5f native Jamming (blocked on §2.1b), §2.5h condition-check divergence, §2.5i TriggerOrder-for-multi-security-effect, §2.5k `face_up_security` cleanup on reveal, §2.5l `_last_security_card` snapshot, §2.5m `security_reveal` event emission, §2.5-harness cross-engine YAML harness.
 
 The rest (face-down security §3.3, remaining selection kinds §4.6d-residual `SelectSource`, etc.) can follow as cards that need them get implemented.
 
@@ -740,3 +762,265 @@ surface — every Python call site reduces to
 `de_digivolve(target, Some(3), Some(N))` in Rust.
 
 **Coverage:** `digimon-engine/tests/cards_behavioral/de_digivolve.rs`.
+
+---
+
+## 12. Replacement framework (Phase 7)
+
+### 12.1 🟢 Would* timings + `try_replace` dispatcher — Rust-only
+
+**Python** — no equivalent. Python approximates all "would"
+semantics via post-hoc observer timings (`OnDeletion`, `OnReturn`,
+`OnLeaveField`) which fire *after* the state change commits. For
+mechanics that need to intercept-and-substitute (Barrier, Evade,
+Decode, Partition, ArmorPurge, Fragment, "cannot be returned to
+deck", "cannot be de-digivolved"), Python scripts either
+approximate the effect as a post-hoc reaction (breaking
+faithfulness — e.g. Barrier can't prevent the OnDeletion queue
+from being enqueued) or the card is marked BLOCKED in
+`qa/archetype-qa/engine-gaps.md`. This is a known faithfulness
+gap per CLAUDE.md rule 17 (no-approximations policy) and is
+tracked at cross-archetype scope (~60 cards).
+
+**Rust** — full Phase 7 replacement framework:
+
+- `EffectTiming::Would*` family (9 dispatching variants + 2
+  reserved for Phase 9). Each fires before the corresponding
+  state-change helper commits.
+- `Game::try_replace(timing, subject, cause, original_destination)
+  -> ReplacementOutcome` — canonical fire-site entry point. Walks
+  registered candidates (card effects + passive modifiers),
+  layers by controller, installs `PendingSelection::Replacement`
+  for optional candidates, and composes outcomes (last-non-None
+  wins in v1).
+- `ReplacementContext` — curated mutation API for effect
+  processes: `cancel()`, `redirect_to(zone)`, `substitute(subject)`,
+  `handled()`.
+- `ReplacementCause` — Battle / OwnEffect / OpponentEffect /
+  SecurityCheck / Cost. Derived at fire-site; scripts filter on
+  it but never compute it.
+- Passive-modifier auto-install: `CannotBeReturnedToDeck`,
+  `CannotBeReturnedToHand`, `CannotBeTrashedByEffect`,
+  `CannotBeDeDigivolved`, `CannotBeDestroyed*` all wire as
+  mandatory cancels via the modifier registry's replacement path.
+- Native-keyword auto-install: `<Barrier>`, `<Evade>`, `<Decode>`
+  parsed from `CardData::keywords` produce the right
+  replacement at `effects_for_card` time.
+- Spec §7.5 once-per-event guard: `(timing, subject)` pairs that
+  already fired in the current call chain are skipped;
+  strengthened during callback-commit continuations to "any prior
+  fire for this subject blocks" so redirect routes don't
+  cascade into additional prompts for what is logically a single
+  event.
+
+**Divergences:** Rust has this entire layer; Python does not.
+Every replacement-semantics card in the catalog is a parity gap
+that resolves only by migrating the card to Rust (per CLAUDE.md
+rule 21 — cards are not dual-implemented).
+
+**Phase 7 v1 constraints** (documented in
+`docs/RUST_ENGINE_API.md` § Phase 7):
+
+1. `<Partition>`, `<ArmorPurge>`, `<Fragment(N)>` parse into
+   `Keyword` variants but don't auto-install — each needs a
+   nested `PendingSelection::Source` inside the replacement
+   window, which is uncharted. Hand-authored scripts can install
+   them via `Effect::when_would_be_deleted(card).optional()`.
+2. Optional replacements for `Card` / `Player` subjects silently
+   no-op on commit — `commit_deferred_outcome` is Permanent-only
+   in v1 (debug_assert-guarded; unreachable today).
+3. Multi-replacement `TriggerOrder` prompts not emitted when both
+   sides have >1 candidates — runs in collection order, last
+   non-None outcome wins.
+4. `ACTION_SPACE_SIZE` unchanged at 2168 — `REPLACEMENT_ACCEPT`
+   reuses the existing `EffectChoice` range; `PASS` (62) is
+   decline. No tensor/mask regression.
+
+**Coverage:** `digimon-engine/tests/replacements/` (55 tests across
+`dispatcher_core`, `dispatcher_guard`, `deletion_replacements`,
+`route_replacements`, `native_keywords`, `passive_modifier_migration`,
+`enum_and_context`, `behavioral_end_to_end`).
+
+**When Python retires:** all replacement-semantics cards (~60 from
+the cross-archetype audit) become Rust-only from their first
+implementation; there is no Python port and no dual-engine
+parity to maintain.
+
+---
+
+## 13. Phase 8 Training sideways inheritance — scope looseness
+
+### 13.1 🟡 Training `.inherited()` sideways scan — broader scope than spec
+
+Rust Task 5 (2026-04-21) implemented Training `.inherited()` sideways scan
+with broader scope than spec: fires on any same-owner permanent's timing
+dispatch, not just breeding permanent's. This is due to the engine
+currently not exposing a `TriggerSource::BreedingArea`. No printed Training
+card ships in the v1 card pool today, so the deviation is latent.
+
+Refinement required: once breeding-area timing dispatch is added, tighten
+the scan at `digimon-engine/src/effect_queue.rs` (Phase 8 Task 5 sideways
+scan) to gate on source-is-breeding-perm. Python side: Python implements
+Training with targeted inheritance (breeding-specific); Rust is wider.
+
+---
+
+## 14. Option flow (Phase 8)
+
+Phase 8 Option-card play flow landed 2026-04-21. See `docs/RUST_ENGINE_API.md` §Phase 8 for the full scripting surface.
+
+### 14.1 🟢 Option subtype dispatch is now native
+
+Rust now implements Option cards as a first-class play pipeline with
+dedicated `OptionState` (Standard / Delayed / Linked / Training),
+`PendingOption` single-slot pending state, and `OptionPlayResult` outcome
+enum. `EffectTiming` gained `OnUseOption`, `OptionMain` (dispatched),
+`DelayEffect`, `OnLink`, `OnLinkedCardTrashed`, `OnUnlink` (reserved), and
+`OnTrainingTrash`. `EffectBuilder` gained `.option_main()`, `.delay(trigger)`,
+`.link(cost, filter)`, `.training()`, `.linked()`.
+
+Python's flag-based workarounds (`_option_stays_on_field`,
+`_trash_option_after_resolution`, `_is_delay`, `_is_training`) are subsumed.
+Python retains them for its own scripts, but new Option cards in the Rust
+engine use the typed builder surface.
+
+### 14.2 🟢 Linked cards / Plug-Ins faithful
+
+Rust `Permanent.linked_cards: Vec<CardSource>` preserves Python's
+`Permanent.linked_cards: List[CardSource]` semantics. Attach happens after
+body drain via an explicit `LinkSelectHost` phase; detach-on-host-deletion
+cascade routes each linked card to owner's trash (subject to constraint
+§14.5). Sideways inheritance — `.linked()`-flagged effects on the attached
+card fire off the host's timings — matches DCGO `OnLinkCardDiscarded`
+ordering (`ICardEffect.cs:996`).
+
+### 14.3 🟡 Cancel-semantics for non-Permanent trash-replacement subjects
+
+Rust v1: when `WhenWouldBeTrashed` on a `Card` subject (hand-origin,
+mid-Option-resolution) produces `Cancelled`, the card returns to owner's
+hand. Cost was paid and `OptionMain` already fired, so the net effect is
+"Option body resolved for free, card went back to hand". Python uses the
+same hand-return convention (`hand_back_if_cancelled`). No engine
+divergence, but the printed-rules outcome is spec-unclarified — flagged for
+refinement if a real card triggers it. Tracked in API doc §Phase 8
+constraint 1.
+
+### 14.4 🟡 `Redirected(Deck)` / `Redirected(Hand)` use direct vec manipulation
+
+Rust v1 uses `deck.insert(0, …)` / `hand.push(…)` directly on the
+Card-subject commit path for `Redirected` outcomes. Spec §7.3 calls for
+zone-mover helpers that fire nested observers. Python uses
+`_return_card_to_hand` / `_place_at_bottom` helpers which do fire
+observers. Latent divergence — no printed card today has a nested observer
+on these paths, but a `WhenWouldBeReturnedToHand` installed by a card
+observing its own redirected-to-hand disposal would see the miss. Tracked
+in API doc §Phase 8 constraint 2; follow-up pass will migrate to helpers.
+
+### 14.5 🟢 `OnLink` observer wired
+
+Rust fires `OnLink` globally across both players after a Plug-In attaches
+to its host. Required by Appmon-trait cards (BT21-053, BT21-054, BT21-059,
+BT21-073, AD1-005) that observe "when a card is linked to a Digimon".
+Python's `WhenLinked` behavior is preserved — body fires before observer,
+matching DCGO ordering.
+
+Linked-card host-deletion cascade does **not** fire `WhenWouldBeTrashed`
+(too recursive during host deletion); v1 unconditionally trashes each
+linked card. Python behaves identically today. Marked
+`TODO(phase-8-followup)` in `combat.rs`; no printed card audited requires
+the replacement window to fire on this path.
+
+## 15. Combat interrupt completion (Phase 9)
+
+Phase 9 combat-interrupt completion landed 2026-04-21. See
+`docs/RUST_ENGINE_API.md` §Phase 9 for the full scripting surface.
+
+### 15.1 🟢 `WhenWouldAttack` / `WhenWouldBeAttackTarget` dispatch
+
+Both replacement timings were parsed and built in Phase 7 but reserved —
+no fire-sites. Phase 9 wires dispatch at the top of `begin_attack_impl`:
+`WhenWouldAttack` on the attacker, then `WhenWouldBeAttackTarget` on the
+target, before `AllianceOpen`. Python fires the equivalent entry at
+`combat.py:127-147` (`_emit_when_would_attack`). Parity reached.
+
+### 15.2 🟢 `ctx.redirect_attack` + `ctx.cancel_attack`
+
+Rust-side script helpers landed on `EffectContext` (§6.1 of spec). Both
+validate `pending_attack` and return `AttackError::NoActiveAttack` /
+`InvalidTarget`. `redirect_attack` fires `OnAttackTargetChange`;
+`cancel_attack` short-circuits advance to `Cleanup`. Python's
+`combat.py:102-125` exposes `redirect_attack` and a conceptually
+equivalent cancellation path. Parity reached.
+
+### 15.3 🟡 Counter hand-play — Rust leads
+
+Rust Phase 9 supports three Counter-window shapes: Blast Digivolve
+(pre-existing), Hand Counter Option (`.counter().option_main()` — NEW,
+Phase 8 play_option_from_hand with a `CounterEffect` overlay), and Field
+Counter Ability (`.counter().timing(CounterEffect)` on a permanent —
+NEW). Python `combat.py:173-186` only dispatches blast-digivolve
+candidates during the Counter window. Rust leads; a Python port is
+required for full parity but is out of scope for the Rust pivot and
+retirement-track — tracked as a parity follow-up.
+
+### 15.4 🟡 Raid retarget — Rust leads
+
+Rust Phase 9 adds `AttackState::PostBlock` with a Raid retarget rider:
+if the attacker has `<Raid>` (native-printed OR modifier-granted — see
+§15.9) AND the effective target has invalidated AND any legal retarget
+exists, the engine installs a `PendingSelection::AttackRetarget`. Retarget candidate
+set prefers unsuspended Digimon; suspended fallback only when no
+unsuspended exist. Python does not have an equivalent retarget
+interrupt. Rust leads.
+
+Known v1 looseness: retarget candidate ordering (unsuspended-priority)
+is stricter than declaration-time mask ordering. Logged in API doc
+§Phase 9 constraint 4.
+
+### 15.5 🟡 Collision MUST-block — Rust leads
+
+Rust Phase 9 implements `<Collision>` as a mask-layer mandate: the
+`AttackState::BlockOpen` mask builder flips `is_optional = false` on the
+block selection and drops the PASS/no-block action bit. `CannotBlock`
+still gates individual defenders before Collision elevates the choice
+to mandatory (a CannotBlock defender is simply not a candidate). Python
+`permanent.py:502` expands the Blocker-eligible set for `<Collision>`
+but does not convert the opt-in block window into a mandatory one. Rust
+leads.
+
+### 15.6 🟢 Piercing post-battle security check
+
+Rust Phase 9 adds `AttackState::PostBattle`: if the attacker survives,
+the defender was a Digimon, the defender was wiped, and the attacker
+has `<Piercing>`, enter a security check against the defending player
+(standard `OnSecurityCheck` dispatch; one card). Piercing on
+direct-player-attack does NOT fire — this is a post-Digimon-battle rule
+only. Python has the equivalent post-battle check in
+`combat.py:_resolve_piercing`. Parity reached.
+
+### 15.7 🟢 Reboot unsuspend consumer
+
+Rust Phase 9 wires `<Reboot>` into the opponent's unsuspend phase: at
+the start of the opponent's unsuspend step, every Reboot permanent on
+either battle area unsuspends, gated by `CannotUnsuspend` /
+`CannotBeUnsuspendedByEffect`. Python has the equivalent consumer. Parity
+reached.
+
+### 15.8 🟡 `OnBlock` / `OnAllyAttack` / `OnOpponentAttack` dispatch
+
+Rust Phase 9 fires all three: `OnBlock` via `TriggerSource::PlayerBattleArea`
+fan-out after block declaration (both players' battle areas scanned);
+`OnAllyAttack` on attacker-controller's OTHER permanents (attacker itself
+filtered out structurally); `OnOpponentAttack` on opposing-controller
+permanents. Python `combat.py:58-74` fires `OnAllyAttack`. `OnBlock` and
+`OnOpponentAttack` do not have comparable Python fire-sites — Rust leads
+on those two. Flagged for parity follow-up if Python is not retired
+before cards depending on these observers migrate.
+
+### 15.9 🟢 Native `<Raid>` keyword parsing
+
+Printed `<Raid>` on the card face IS queryable via `has_keyword` (parsed
+by Phase 3 into `CardData.keywords`; verified by
+`tests/keyword_parsing.rs`). Phase 9's Raid retarget rider uses
+`Game::has_keyword(pa.attacker, Keyword::Raid)` which honors both
+native-printed AND modifier-granted Raid. No parity gap.

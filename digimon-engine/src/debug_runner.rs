@@ -171,6 +171,22 @@ impl DebugRunner {
         self.game.memory
     }
 
+    /// Mutable access to the underlying `Game` — for tests that drive new
+    /// APIs before the higher-level `DebugRunner` helpers exist.
+    pub fn game_mut(&mut self) -> &mut Game {
+        &mut self.game
+    }
+
+    /// Install a `CardEffect` into the registry under a card id. Tests can
+    /// declare one-off effects inline without a frozen `cards/` entry.
+    pub fn register_effect(
+        &mut self,
+        card_id: &str,
+        effect: std::sync::Arc<dyn crate::effect::CardEffect>,
+    ) {
+        self.game.effect_registry.insert(card_id, effect);
+    }
+
     pub fn turn_count(&self) -> u16 {
         self.game.turn_count
     }
@@ -474,6 +490,7 @@ pub fn make_test_card(card_id: &str, card_name: &str) -> CardData {
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        keywords: Vec::new(),
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -496,6 +513,7 @@ pub fn make_test_egg(card_id: &str, card_name: &str) -> CardData {
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        keywords: Vec::new(),
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

@@ -17,12 +17,74 @@ impl Game {
     pub(crate) fn begin_turn(&mut self) {
         let tp = self.turn_player();
 
+        // StartOfYourTurn fires BEFORE Unsuspend — matches Python's OnStartTurn.
+        // Scripts that care about turn beginning (e.g. "at the start of your turn,
+        // +1 memory") observe this timing.
+        self.enqueue_triggered(
+            EffectTiming::StartOfYourTurn,
+            crate::selection::TriggerSource::PlayerBattleArea(tp),
+        );
+        self.drain_effect_queue();
+
         // Reset per-turn state
         self.player_mut(tp).new_turn();
 
         // Unsuspend phase
         self.current_phase = GamePhase::Unsuspend;
         self.player_mut(tp).unsuspend_all();
+
+        // Phase 9 Task 7: <Reboot> consumer. "At the start of your
+        // opponent's unsuspend phase, unsuspend this Digimon." Scan every
+        // opponent's battle area for Digimon with the Reboot keyword
+        // (printed or granted) and unsuspend them. The `CannotUnsuspend`
+        // modifier gates the scan — Reboot is effect-driven unsuspension
+        // and respects the suspend-lock.
+        //
+        // Note: like the standard turn-start bulk unsuspend
+        // (`unsuspend_all`), Reboot-driven unsuspension directly mutates
+        // `is_suspended` without firing `OnUnsuspend` observers.
+        // Phase-start unsuspension is not a trigger-carrying event per
+        // the Digimon TCG rules.
+        //
+        // Collect handles first to avoid a borrow conflict with
+        // `has_keyword` / modifier reads, then mutate in a second pass.
+        // Non-Digimon permanents (Option states) are filtered out via
+        // `Permanent::is_digimon` — Options don't attack and don't
+        // legally carry Reboot, but the printed-keyword parser doesn't
+        // know the card kind, so we gate here.
+        let n_players = self.players.len();
+        let mut reboot_handles: Vec<PermanentHandle> = Vec::new();
+        for pid in 0..n_players {
+            let pid = pid as PlayerId;
+            if pid == tp {
+                continue;
+            }
+            for i in 0..self.player(pid).battle_area.len() {
+                let h = PermanentHandle {
+                    player: pid,
+                    index: i as u8,
+                };
+                if !self.player(pid).battle_area[i].is_digimon(&self.card_data) {
+                    continue;
+                }
+                if !self.has_keyword(h, Keyword::Reboot) {
+                    continue;
+                }
+                if self.modifiers.has(h, ModifierType::CannotUnsuspend) {
+                    continue;
+                }
+                reboot_handles.push(h);
+            }
+        }
+        for h in reboot_handles {
+            if let Some(perm) = self
+                .players
+                .get_mut(h.player as usize)
+                .and_then(|p| p.battle_area.get_mut(h.index as usize))
+            {
+                perm.is_suspended = false;
+            }
+        }
 
         // Draw phase
         self.current_phase = GamePhase::Draw;
@@ -52,6 +114,15 @@ impl Game {
 
     /// Advance from breeding to main phase.
     pub fn enter_main_phase(&mut self) {
+        let tp = self.turn_player();
+        // StartOfYourMainPhase fires after Draw/Breeding, before the turn player
+        // takes their main-phase actions. Matches Python's OnStartMainPhase.
+        self.enqueue_triggered(
+            EffectTiming::StartOfYourMainPhase,
+            crate::selection::TriggerSource::PlayerBattleArea(tp),
+        );
+        self.drain_effect_queue();
+
         self.current_phase = GamePhase::Main;
     }
 
@@ -73,10 +144,23 @@ impl Game {
 
         self.current_phase = GamePhase::EndTurn;
 
+        let ending_player = self.turn_player();
+
+        // Phase 8 Task 3: resolve Delayed Options scheduled for this turn's
+        // end BEFORE firing `EndOfYourTurn` observers — delayed effects are
+        // part of the ending turn's resolution (see design spec §8 and the
+        // plan doc, §Task 3). `DelayEffect` fires, then the permanent is
+        // trashed via the Phase 7 replacement framework (cause = Cost).
+        //
+        // The scan is indexed on `turn_count`, not on `ending_player`: a Delay
+        // played by P0 during P1's turn (via a Counter window) parks on P0's
+        // battle_area with `trash_on_turn == P1's current turn`, and must fire
+        // regardless of who's ending their turn.
+        self.resolve_delayed_options(self.turn_count);
+
         // Memory swing-back: capture memory before firing OnEndTurn effects,
         // fire them, then see if an effect restored memory from negative.
         let memory_before = self.memory;
-        let ending_player = self.turn_player();
         self.fire_end_of_your_turn(ending_player);
 
         if memory_before < 0 && self.memory >= 0 && !self.game_over {
@@ -108,6 +192,18 @@ impl Game {
 
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
         self.modifiers.expire_end_of_turn(ending_player);
+        // Phase 6: expire player-scoped flood-gate modifiers.
+        self.modifiers.expire_player_end_of_turn(ending_player);
+
+        // EndOfOpponentsTurn: every non-ending-player observes the turn ending.
+        // Fires after EndOfYourTurn has drained but before memory flip and rotation.
+        for opp in self.opponents(ending_player) {
+            self.enqueue_triggered(
+                EffectTiming::EndOfOpponentsTurn,
+                crate::selection::TriggerSource::PlayerBattleArea(opp),
+            );
+        }
+        self.drain_effect_queue();
 
         // Advance turn
         self.turn_player_idx = (self.turn_player_idx + 1) % self.turn_order.len();
@@ -169,13 +265,13 @@ impl Game {
                 index: i as u8,
             };
             // Vortex — matches Python `perm.can_attack(is_vortex=True)`.
-            if self.modifiers.has_keyword(handle, Keyword::Vortex)
+            if self.has_keyword(handle, Keyword::Vortex)
                 && self.can_attack(handle, /* vortex = */ true)
             {
                 return true;
             }
             // Overclock — needs at least one other sacrificeable permanent.
-            if self.modifiers.has_keyword(handle, Keyword::Overclock)
+            if self.has_keyword(handle, Keyword::Overclock)
                 && self.has_overclock_sacrifice(player, i)
             {
                 return true;
@@ -248,7 +344,7 @@ impl Game {
             .get(overclock_index)
             .ok_or(OverclockError::InvalidIndex)?;
 
-        if !self.modifiers.has_keyword(overclock_handle, Keyword::Overclock) {
+        if !self.has_keyword(overclock_handle, Keyword::Overclock) {
             return Err(OverclockError::NotOverclock);
         }
         if !overclock_perm.top_card().is_digimon(&self.card_data) {
@@ -347,5 +443,146 @@ impl Game {
             crate::selection::TriggerSource::PlayerBattleArea(player),
         );
         self.drain_effect_queue();
+    }
+
+    /// Phase 8 Task 3: fire and trash every Delayed Option (across all
+    /// players' battle_areas) whose scheduled `trash_on_turn` matches
+    /// `ending_turn`. Called at the top of `end_turn` before the regular
+    /// `EndOfYourTurn` fan-out.
+    ///
+    /// The scan is NOT filtered by owner: a Delay played by P0 during P1's
+    /// turn (via a Counter window, once Task 9 lands) parks on P0's
+    /// battle_area but is scheduled to fire at P1's turn end. The only
+    /// property that matters is `trash_on_turn == ending_turn`.
+    ///
+    /// For each delayed permanent we enqueue `DelayEffect`, drain, then
+    /// route the trash through `delete_permanent_with_cause` with
+    /// `ReplacementCause::Cost` so the Phase 7 `WhenWouldLeaveBattleArea` /
+    /// `WhenWouldBeDeleted` replacement windows get a chance to intercept.
+    ///
+    /// Handles shift: after each delete, we re-scan from scratch. A
+    /// `cancelled_keys` skip-set keyed on the stable `(owner, turn_played)`
+    /// pair ensures a cancel-always replacement doesn't infinite-loop on
+    /// the same permanent, and — crucially — doesn't prevent sibling
+    /// delayed permanents from firing their `DelayEffect` bodies.
+    ///
+    /// v1 constraint: if a `DelayEffect` body installs a `PendingSelection`,
+    /// the scan returns early with the selection parked on the Game. This
+    /// matches the existing convention for triggered-effect dispatch during
+    /// `end_turn` (see `fire_end_of_your_turn`). Cards that want to query
+    /// the opponent from their `DelayEffect` body are currently
+    /// unsupported; file a gap in `docs/RUST_ENGINE_GAPS.md` if a printed
+    /// card needs this shape.
+    pub(crate) fn resolve_delayed_options(&mut self, ending_turn: u16) {
+        use crate::permanent::OptionState;
+        use std::collections::HashSet;
+
+        // Stable key: `(owner, bottom_card_index)`. The bottom card of a
+        // Delayed permanent is the Option itself (no digivolution stack on
+        // an Option), and `CardSource::card_index` is a per-game unique id
+        // that survives permanent-index shifts and sibling deletes. We
+        // can't key on `(owner, turn_played)` alone — two Delay Options
+        // played on the same turn share `turn_played`.
+        let mut cancelled_keys: HashSet<(PlayerId, u16)> = HashSet::new();
+
+        loop {
+            // Find the next matching Delayed permanent across ALL players'
+            // battle_areas that isn't in the skip-set.
+            let next: Option<PermanentHandle> = (0..self.players.len()).find_map(|pid| {
+                let pid = pid as PlayerId;
+                self.player(pid)
+                    .battle_area
+                    .iter()
+                    .enumerate()
+                    .find_map(|(i, perm)| {
+                        if let OptionState::Delayed {
+                            owner: _,
+                            trash_on_turn: t,
+                        } = perm.option_state
+                        {
+                            if t == ending_turn {
+                                let bottom = perm.card_sources.first()?;
+                                let key = (pid, bottom.card_index);
+                                if !cancelled_keys.contains(&key) {
+                                    return Some(PermanentHandle {
+                                        player: pid,
+                                        index: i as u8,
+                                    });
+                                }
+                            }
+                        }
+                        None
+                    })
+            });
+
+            let Some(handle) = next else { break };
+
+            // Capture the stable key before the permanent potentially moves.
+            let key = {
+                let perm = &self.player(handle.player).battle_area[handle.index as usize];
+                (handle.player, perm.card_sources[0].card_index)
+            };
+
+            self.enqueue_triggered(
+                EffectTiming::DelayEffect,
+                crate::selection::TriggerSource::Permanent(handle),
+            );
+            self.drain_effect_queue();
+
+            // Re-find the permanent by stable key — the DelayEffect body
+            // may have deleted it, shifted indices via other mutations, or
+            // (rarely) moved it. If it's gone, nothing to trash.
+            if let Some(current_handle) = self.find_delayed_permanent_by_key(key, ending_turn) {
+                self.delete_permanent_with_cause(
+                    current_handle,
+                    crate::replacement::ReplacementCause::Cost,
+                );
+            }
+
+            // If a replacement window cancelled the delete, the permanent
+            // is still on the field with the same key — add it to the
+            // skip-set so we move on to siblings instead of looping on it
+            // forever. A cancel-always replacement naturally re-fires at
+            // subsequent turn ends when this scan runs again.
+            if self.find_delayed_permanent_by_key(key, ending_turn).is_some() {
+                cancelled_keys.insert(key);
+            }
+        }
+    }
+
+    /// Scan all players' battle_areas for a Delayed permanent matching the
+    /// given `(owner, bottom_card_index)` key and `trash_on_turn`. Returns
+    /// the current `PermanentHandle` (indices may have shifted since the
+    /// key was captured). Phase 8 Task 3 helper for
+    /// `resolve_delayed_options`.
+    fn find_delayed_permanent_by_key(
+        &self,
+        key: (PlayerId, u16),
+        ending_turn: u16,
+    ) -> Option<PermanentHandle> {
+        use crate::permanent::OptionState;
+
+        let (owner, card_index) = key;
+        let me = self.players.get(owner as usize)?;
+        for (i, perm) in me.battle_area.iter().enumerate() {
+            let Some(bottom) = perm.card_sources.first() else {
+                continue;
+            };
+            if bottom.card_index != card_index {
+                continue;
+            }
+            if let OptionState::Delayed {
+                trash_on_turn: t, ..
+            } = perm.option_state
+            {
+                if t == ending_turn {
+                    return Some(PermanentHandle {
+                        player: owner,
+                        index: i as u8,
+                    });
+                }
+            }
+        }
+        None
     }
 }

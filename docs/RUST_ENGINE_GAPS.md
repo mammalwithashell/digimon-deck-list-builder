@@ -81,6 +81,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None — BLOCKED. Without it, 15+ cards' main recurring payoff never fires.
 - **Related:** RUST_PYTHON_PARITY.md §2.5b (OnSecurityCheck not fired), §2.5g, §2.5m
 
+**Closed by Phase 1 (2026-04-19):** Fire sites wired in `digimon-engine` — see `fire_on_opponent_security_removed()` in `digimon-engine/src/combat.rs` and `Effect::on_opponent_security_removed(card)` builder in `digimon-engine/src/effect.rs`. Fires at `SecurityPhase::Dispose` against the attacking player's battle area. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatch and observer timing documentation.
+
 ### Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -90,6 +92,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** Enqueue `OnEnterFieldAnyone` from every play / digivolve entry site with `{player, card_id, kind}` trigger context. Add `EffectTiming::OnAnyDeletion` (or promote `OnDeletion` fan-out via `TriggerSource::GlobalDeletion`).
 - **Workaround:** None — BLOCKED.
 - **Related:** None (both enum variants declared, neither fired).
+
+**Closed by Phase 1 (2026-04-19):** Both fire sites wired in `digimon-engine` — see `fire_on_enter_field_anyone()` in `digimon-engine/src/game_actions.rs` (called after OnPlay from `play_from_hand_with_cost` and `play_from_trash_with_cost`) and `fire_on_any_deletion()` in `digimon-engine/src/combat.rs` (called from `delete_permanent_with_effects`). Builders: `Effect::on_enter_field_anyone(card)` and `Effect::on_any_deletion(card)` in `digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher and observer timing documentation.
 
 ### Phase-granular turn timings (`StartOfYourTurn`, `StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`)
 - **Severity:** 🔴 BLOCKING
@@ -101,6 +105,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** Collapse into nearest existing timing — violates no-approximations policy (order-sensitive with Block / Alliance / OnLoseSecurity).
 - **Related:** RUST_ENGINE_API.md §9 ("OnEndBattle / OnEndAttack timings are not yet fired").
 
+**Closed by Phase 1 (2026-04-19):** All five timings wired in `digimon-engine` — see `fire_start_of_your_turn()` in `begin_turn` (before unsuspend), `fire_start_of_your_main_phase()` in `enter_main_phase`, `fire_on_attack()` and `fire_when_attacking()` in `combat::fire_on_attack`, `fire_end_of_attack()` in `cleanup_attack`, and `fire_end_of_battle()` in `resolve_battle` (Digimon-vs-Digimon only). Builders: `Effect::start_of_your_turn/start_of_your_main_phase/when_attacking/end_of_attack/end_of_battle(card)` in `digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
+
 ### Observer timings tied to specific events (`OnDigivolve` trait-filter, `OnSuspend`, `OnAttackTargetChange`, `[When Moving]`, `OnHatch`, `OnAllyAttack`/`OnOpponentAttack`)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -109,6 +115,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **What's missing:** `OnDigivolve` and `OnSuspend` enum variants exist but no trigger sources fire them. `OnAttackTargetChange` enum variant doesn't exist at all — no `combat.rs` emission from Block / Raid / Alliance redirect paths. `[When Moving]` has no variant (`OnEnterField` exists but is not observably fired from `Game::move_from_breeding` and doesn't broadcast to global observers).
 - **Suggested API shape:** Wire `OnDigivolve` from `digivolve_from_hand` with `{digivolver, target}` context. Fire `OnSuspend` from `Permanent::set_suspended(true)`. Add `EffectTiming::OnAttackTargetChange` + emit from block-accept / raid-redirect / collision-redirect paths. Add `EffectTiming::WhenMoving` + fire from `Game::move_from_breeding` alongside a broadcast `OnEnterFieldAnyone`.
 - **Workaround:** None — BLOCKED. Approximating with `OnEnterField` or periodic condition checks misses the causal link to the originating event.
+
+**Closed by Phase 1 (2026-04-19):** Five of the six variants wired in `digimon-engine` — see `fire_on_digivolve()` in both digivolve paths (after WhenDigivolving drains), `fire_on_suspend()`/`fire_on_unsuspend()` in `Game::suspend`/`Game::unsuspend`, `fire_on_hatch()` in `Game::hatch`, and `fire_on_attack_target_change()` in Block interrupt (after effective_target rewrite). Builders: `Effect::on_digivolve/on_suspend/on_unsuspend/on_hatch/on_attack_target_change(card)` in `digimon-engine/src/effect.rs`. `[When Moving]` / `OnEnterFieldAnyone` global observer wired in Phase 1 as part of OnEnterFieldAnyone (see Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings closure). See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
 - **Related:** None.
 
 ### `WhenWouldBeDeleted` / leave-field replacement-effect framework
@@ -131,6 +139,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None — BLOCKED. Simplifying to "single highest-DP ≤ threshold" violates no-approximations.
 - **Related:** Parity §4.6d-residual (selection-kind coverage).
 
+_Status (2026-04-20): **Partially closed by Phase 4.** The count-capped sibling (`select_count_capped_multi`) is implemented in `digimon-engine/src/effect_context/selections.rs`, surfacing as `SelectionKind::CountCappedMultiSelect` and `GamePhase::SelectBudgeted`. See `docs/RUST_ENGINE_API.md` §Phase 4. The aggregate-sum-constrained variant (DP-total cap across opponent permanents, `SelectionKind::MultiField`) remains **open** — no Phase 4 card exercises that shape._
+
 ### Selection: ordered permutation (place N cards in any order)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -140,6 +150,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.select_ordering(prompt, candidate_count, callback: Fn(Vec<usize>))` — modeled either as a chain of single-select prompts with a running exclusion set, or as an action-space encoding of a permutation over ≤8 items.
 - **Workaround:** Chained `select_reveal` with exclusion state in captured `Arc<Mutex<Vec<usize>>>` — functional but ergonomically expensive. Fidelity-preserving.
 - **Related:** None.
+
+_Status (2026-04-20): **Closed by Phase 4** — helper `select_ordered_permutation` in `digimon-engine/src/effect_context/selections.rs`, surfaces as `SelectionKind::OrderedPermutation` / `GamePhase::SelectPermutation`. Sequential pick-by-pick with accumulator; empty items call fires immediately; singleton still installs a 1-choice selection. See `docs/RUST_ENGINE_API.md` §Phase 4._
 
 ### Selection: opponent-as-selecting-player, cross-side target, union-zone (hand OR trash), DNA-pair, multi-pick from reveal
 - **Severity:** 🔴 BLOCKING
@@ -155,6 +167,11 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** Two-step `select_effect_choice` decomposition gives the player two prompts where the card describes one — degrades RL action-tree shape.
 - **Related:** Parity §4.6d-residual.
 
+_Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps are closed:_
+- _**Opponent-as-selecting-player** — `ctx.as_selecting_player(player)` builder in `digimon-engine/src/effect_context/selections.rs` overrides `PendingSelection.selecting_player`, routing the action mask to the opponent. The 8 forwarded helpers are: `select_own_permanent`, `select_opponent_permanent`, `select_effect_choice`, `select_hand`, `select_trash`, `select_union_zone`, `select_count_capped_multi`, `select_ordered_permutation`. Python has no analog — net-new Rust capability._
+- _**Union-zone (hand OR trash)** — `select_union_zone` in `digimon-engine/src/effect_context/selections.rs`, surfaces as `SelectionKind::UnionZone` / `GamePhase::SelectUnion`. Reuses `PLAY_HAND_START` + `TRASH_EFFECT_START` ranges (Python-parity). See `docs/RUST_ENGINE_API.md` §Phase 4._
+- _**Still open:** `select_any_permanent` (cross-side target across both players' battle areas) and `select_dna_pair` (DNA digivolve pair selection). No Phase 4 card forced these shapes._
+
 ### Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -164,6 +181,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.play_from_hand_free(player, hand_index) -> Option<PermanentHandle>`; `ctx.play_from_trash_free(player, trash_index) -> Option<PermanentHandle>`; `ctx.play_from_hand_with_cost_delta(player, hand_index, delta: i16)`. Each must fire `OnPlay` through the standard queue.
 - **Workaround:** None — BLOCKED. Raw `player.hand.remove(i)` + `battle_area.push(Permanent::new(…))` skips OnPlay observers.
 - **Related:** RUST_PYTHON_PARITY §1.1 (play cost deduction — this gap is upstream of the free-play variant but distinct), §2.5a (play_from_security landed).
+
+**Closed by Phase 2 (2026-04-19):** Implemented in `digimon-engine` — see `EffectContext::play_from_hand_with_cost` and `EffectContext::play_from_trash_with_cost` (digimon-engine/src/effect_context/mod.rs) and `Game::play_from_hand_with_cost` / `Game::play_from_trash_with_cost` (digimon-engine/src/game_actions.rs). The free-play and cost-delta variants are expressed via `CostDelta::Reduce(printed_cost)` and `CostDelta::Reduce(delta)` respectively. `OnPlay` is fired through the standard effect queue in both paths.
 
 ### Zone-manipulation: effect-initiated digivolve (free / reduced / with trait filter / ignore requirements / DNA / Blast / detect-DNA-origin)
 - **Severity:** 🔴 BLOCKING
@@ -175,6 +194,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None faithful. The whole archetype's recurring digivolve-from-hand payoff (7+ cards) routes through this primitive.
 - **Related:** RUST_ENGINE_API §9 ("BeforePayCost for cost reduction … not implemented").
 
+**Closed by Phase 2 (2026-04-19):** Implemented in `digimon-engine` — see `EffectContext::effect_initiated_digivolve` (digimon-engine/src/effect_context/mod.rs) and `Game::effect_initiated_digivolve` (digimon-engine/src/game_actions.rs). The primitive supports free and reduced-cost effect-initiated digivolves through the standard `WhenDigivolving` queue; trait filtering is applied at the selection prompt level. DNA and Blast digivolve variants, passive cost-reduction hooks (`BeforePayCost`), and ignore-requirements flags remain open sub-items.
+
 ### Zone-manipulation: return-to-hand / return-to-deck (top/bottom) / bounce self / trash-from-hand
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -184,6 +205,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.return_permanent_to_hand(handle)`; `ctx.return_permanent_to_deck(handle, end: DeckEnd)`; `ctx.return_trash_to_deck(player, trash_index, end)`; `ctx.return_revealed_to_deck(reveal_index, end)`. Each must correctly route digivolution materials per the rules (top card → destination, others → trash) and fire appropriate triggers.
 - **Workaround:** None — BLOCKED.
 - **Related:** None.
+
+**Closed by Phase 2 (2026-04-19):** Core primitives implemented in `digimon-engine` — see `EffectContext::return_to_hand`, `EffectContext::return_to_deck`, `EffectContext::add_to_hand_from_trash`, and `EffectContext::trash_from_hand_by_index` (digimon-engine/src/effect_context/mod.rs) and corresponding `Game::*` methods (digimon-engine/src/game_actions.rs). Material routing (top card → destination, others → trash) and appropriate trigger dispatch are handled in each path. Extended variants (cross-permanent return-to-deck-top, return-from-trash-to-deck-top, self-return-as-cost builder hook) remain open sub-items not yet surfaced by a landing card script.
 
 ### Zone-manipulation: reveal-top-N deck + add-to-hand + hatch
 - **Severity:** 🔴 BLOCKING
@@ -195,6 +218,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** Direct `ctx.game.player_mut(...)` mutation works but violates curated-API contract and bypasses `OnAddToHand` + hand-size-limit checks.
 - **Related:** Parity §3.4 (revealed_cards scaffold landed).
 
+**Closed by Phase 2 (2026-04-19):** Core primitives implemented in `digimon-engine` — see `EffectContext::reveal_top_deck`, `EffectContext::add_to_hand_from_deck`, `EffectContext::add_to_hand_from_trash`, and `EffectContext::hatch` (digimon-engine/src/effect_context/mod.rs) and `Game::reveal_top_deck` / `Game::add_to_hand_from_deck` / `Game::add_to_hand_from_trash` / `Game::hatch` (digimon-engine/src/game_actions.rs). `reveal_top_deck` populates `Game.revealed_cards`; `hatch` is now surfaced through `EffectContext` (not action-decoder-only). Multi-pick from reveal, ordered-deck-bottom return, and `play_from_revealed_free` remain open sub-items.
+
 ### Zone-manipulation: security stack operations (trash top, place top/bottom, trash N, Recovery +N, shuffle security)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -204,6 +229,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** `ctx.trash_top_security(of_player: PlayerId, count: u8) -> u8`; `ctx.place_security_bottom(player, CardSource)`; `ctx.place_security_top(player, CardSource)`; `ctx.move_top_security_to_hand(player)`. All must fire `OnLoseSecurity` / `OnAddToHand` and update `face_up_security` bookkeeping.
 - **Workaround:** Raw `player.security` manipulation skips observer triggers — correctness class same as the global-security-observer gap.
 - **Related:** Parity §2.5k (face_up_security stale entries), §2.5m (security_reveal event).
+
+**Closed by Phase 2 (2026-04-19):** Core placement primitive implemented in `digimon-engine` — see `EffectContext::place_on_security` (digimon-engine/src/effect_context/mod.rs) and `Game::place_on_security` (digimon-engine/src/game_actions.rs). The method accepts a `StackPosition` enum (`Top` / `Bottom`) so both `place_security_top` and `place_security_bottom` shapes are covered by a single primitive. `OnLoseSecurity` firing and `face_up_security` bookkeeping are handled inside the method. Remaining open sub-items: `trash_top_security(player, N)`, `move_top_security_to_hand`, face-up flip, Recovery +N deck-top variant, and security-stack extraction with face-up filter.
 
 ### Token creation + `CardKind::Token` + Petrification Token definition
 - **Severity:** 🟢 CLOSED
@@ -226,6 +253,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None — BLOCKED. Raw `battle_area[i].card_sources.insert(0, ...)` skips OnEnterField / inherited-stack recomputation.
 - **Related:** None.
 
+**Closed by Phase 2 (2026-04-19):** Core `place_as_bottom_source` primitive implemented in `digimon-engine` — see `EffectContext::place_as_bottom_source` (digimon-engine/src/effect_context/mod.rs) and `Game::place_as_bottom_source` (digimon-engine/src/game_actions.rs). The unified `CardSourceRef` form accepts a card from hand, trash, or revealed pool and appends it to the bottom of the target permanent's `card_sources`, triggering inherited-stack recomputation. Open sub-items: `place_as_top_source`, alt-digivolve with override-cost + ignore-requirements flag, stack reorder / `move_source_to_bottom`, face-down placement, and cross-permanent-source (from-permanent) variants.
+
 ### Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N, Fragment, Save, Collision)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -235,6 +264,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Suggested API shape:** Add `keywords: Vec<Keyword>` to `CardData` + ingest parse pass from `effect_text`, **or** auto-emit `Effect::declarative(card).grants_keyword(kw)` at `CardEffectRegistry` build time. Combat / mask helpers then OR modifier-granted with native. Native parsing must capture parametric variants (`SecurityAttackPlus(N)`, `DeDigivolve(N)`).
 - **Workaround:** Per-card `Effect::on_play(card).process(|ctx| ctx.grant_keyword(self, Keyword::X, Expiry::Permanent))` — medium fidelity, but brittle for cards placed via Blast Digivolve / Training / material-reveal and doesn't populate face-keyword tensor slots.
 - **Related:** RUST_PYTHON_PARITY §2.1b, §4.3b, §2.5f.
+
+**Closed by Phase 3 (2026-04-19):** Native keyword parsing landed — see `CardData::keywords` (digimon-engine/src/card_data.rs) and `Game::has_keyword` unified query (digimon-engine/src/game.rs). All 14 keyword check sites migrated. See docs/RUST_ENGINE_API.md §Phase 3.
 
 ### `<Progress>` keyword + `ImmunityToOpponentEffects` modifier
 - **Severity:** 🔴 BLOCKING
@@ -776,6 +807,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** "None — BLOCKED."
 - **Related:** "Phase-granular turn timings"; RUST_PYTHON_PARITY.md §1.4 (end_turn flow).
 
+**Closed by Phase 1 (2026-04-19):** Fire site wired in `digimon-engine` — see `fire_end_of_opponents_turn()` called in `rotate_turn_player()` (between EndOfYourTurn drain and turn advance). Dispatches to the non-ending player's battle area. Builder: `Effect::end_of_opponents_turn(card)` in `digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
+
 ### Forced opponent hand reduction primitive (`ctx.trash_opponent_hand_to_count`)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Dark Masters (2026-04-18)
@@ -823,6 +856,8 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Suggested API shape:** Add `EffectTiming::OnDigivolutionCardTrashed` + `TriggerSource::SourceTrashedFromStack { host: PermanentHandle, trashed_sources: Vec<CardHandle>, cause: TrashCause }` with `TrashCause = { Effect, Combat, DigivolveOverflow, ReturnToDeck }`. Fire per-batch from every source-trashing path: `de_digivolve`, `Permanent::trash_specific_digivolution_cards`, Fragment / Armor Purge cancel-delete costs, Digi-Burst cost, Decode material-play, future `ctx.trash_sources(target, indices)`, return-to-hand/deck material-disposition. Fan-out (a) walks each trashed `CardSource`'s inherited effects via `CardEffectRegistry::get(card_id).effects(...)` filtered on `.inherited == true` BEFORE the card lands in trash (so the effect's `ctx.source_permanent` can still resolve to the host), (b) enqueues against all battle-area / hand-resident observer effects with the context `{host, trashed_sources, cause}`. Extend `EffectContext` with `ctx.event_trashed_sources()` and `ctx.event_host_permanent()` accessors. Builder sugar: `Effect::inherited(card).when_source_trashed(trait_filter, cause_filter)` and `Effect::on_digivolution_card_trashed(card)` global observer.
 - **Workaround:** None — BLOCKED. This timing is **the Rocks archetype's central engine**: ~15 unique cards (≈25 if duplicates by name) pivot on it. Firing `OnTrash` after the card is in trash loses the host attribution and trait condition. Approximating as `OnDeletion` of the host misfires because the host survives when Pyramidimon pays its own cost to fuel its cost-reduction clause (host isn't deleted but sources are trashed — EX10-063 and EX11-044 must still fire).
 - **Related:** Existing "Observer timings tied to specific events" (sibling — same observer-timing architectural class); "De-Digivolve N primitive" (primary producer of this event); "Zone-manipulation: return-to-hand / return-to-deck / bounce self" (another producer); "Decode keyword" (producer); new "`<Fragment (N)>` keyword" (producer — fires per-source on cost payment); new "`<Digi-Burst N>` keyword" (producer); RUST_PYTHON_PARITY.md §2.5b (architectural parallel — global fan-out for security observer).
+
+**Closed by Phase 1 (2026-04-19):** Observer timing wired in `digimon-engine` — see `fire_on_digivolution_card_trashed()` in `digimon-engine/src/game_actions.rs` (called per-batch from `return_to_hand`/`return_to_deck` with `TrashCause::Effect`). Builder: `Effect::on_digivolution_card_trashed(card)` in `digimon-engine/src/effect.rs`. Fires in each player's battle area to notify Tamer observers (e.g., P-169 Close, EX10-063 Close). See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
 
 ### `<Fragment (N)>` keyword — leave-field replacement via N-source self-trash
 - **Severity:** 🔴 BLOCKING

@@ -13,7 +13,6 @@ use crate::card_data::CardData;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
-use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::tensor::FIELD_SLOTS;
 
@@ -62,7 +61,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // argument) isn't carried in Rust — tracked as §4.7x.
             let play_blocked = game
                 .modifiers
-                .any_with_type(ModifierType::CannotPlayFromHand);
+                .player_has(player_id, ModifierType::CannotPlayFromHand)
+                || game
+                    .modifiers
+                    .any_with_type(ModifierType::CannotPlayFromHand);
             for i in 0..max_hand as usize {
                 if play_blocked {
                     continue;
@@ -85,11 +87,19 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             }
 
             // --- Attack (100-399) ---
+            // §4.7e CannotAttack (player-scoped) — zero ALL attack bits for
+            // this player. Check before entering the per-attacker loop.
             // Memory gate is per-attacker: baseline requires memory >= 0,
             // but §4.3 Blitz carves out "Blitz + digivolved this turn" even
             // when memory < 0. Native/static Blitz parsing remains §4.3b.
+            let attack_blocked = game
+                .modifiers
+                .player_has(player_id, ModifierType::CannotAttack);
             let max_field = me.battle_area.len().min(FIELD_SLOTS);
             for i in 0..max_field {
+                if attack_blocked {
+                    continue;
+                }
                 let attacker = &me.battle_area[i];
                 let handle = PermanentHandle { player: player_id, index: i as u8 };
                 if !can_basic_attack(
@@ -97,7 +107,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     handle,
                     game.turn_count,
                     &game.card_data,
-                    &game.modifiers,
+                    game,
                 ) {
                     continue;
                 }
@@ -105,7 +115,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     let digivolved_this_turn =
                         attacker.turn_digivolved == game.turn_count;
                     digivolved_this_turn
-                        && game.modifiers.has_keyword(handle, Keyword::Blitz)
+                        && game.has_keyword(handle, Keyword::Blitz)
                 };
                 if !memory_ok {
                     continue;
@@ -124,7 +134,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let can_attack_unsuspended = game
                     .modifiers
                     .has(handle, ModifierType::CanAttackUnsuspended);
-                let has_raid = game.modifiers.has_keyword(handle, Keyword::Raid);
+                let has_raid = game.has_keyword(handle, Keyword::Raid);
                 let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
 
                 // Precompute max effective DP among unsuspended enemy Digimon
@@ -293,8 +303,17 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // permanent at sub-slot `+2` (FIELD_EFFECT_SLOT_FOR_MAIN),
             // first-match-wins across the entire digivolution stack.
             // Inherited-vs-top filter matches `source_dp_contribution`.
+            //
+            // §4.7f CannotActivateMainEffects (player-scoped) — zero ALL
+            // FIELD_EFFECT bits for this player when the modifier is active.
+            let main_effects_blocked = game
+                .modifiers
+                .player_has(player_id, ModifierType::CannotActivateMainEffects);
             let field_limit = me.battle_area.len().min(FIELD_SLOTS);
             for i in 0..field_limit {
+                if main_effects_blocked {
+                    continue;
+                }
                 let perm = &me.battle_area[i];
                 let perm_handle = PermanentHandle {
                     player: player_id,
@@ -409,6 +428,14 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // enforcement; the mask doesn't hide PASS).
             mask[PASS as usize] = 1.0;
 
+            // §4.7e CannotAttack (player-scoped) — zero ALL attack bits for
+            // this player, including the end-of-turn Vortex / MayAttack /
+            // ForceAttack window. Rules judgment: CannotAttack overrides
+            // ForceAttack; a "cannot attack" effect always wins.
+            let attack_blocked = game
+                .modifiers
+                .player_has(player_id, ModifierType::CannotAttack);
+
             let max_field = me.battle_area.len().min(FIELD_SLOTS);
             let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
 
@@ -422,7 +449,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 // effect range). Mirrors Python action_mask.py:354-361:
                 // emits when the Digimon has Overclock AND at least one
                 // other sacrificeable permanent exists on the battle area.
-                if game.modifiers.has_keyword(handle, Keyword::Overclock)
+                if game.has_keyword(handle, Keyword::Overclock)
                     && game.has_overclock_sacrifice(player_id, i)
                 {
                     let bit = FIELD_EFFECT_START
@@ -431,12 +458,18 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     mask[bit as usize] = 1.0;
                 }
 
+                // §4.7e CannotAttack gate — skip all attack-bit emission
+                // for this permanent when the player-scoped modifier is set.
+                if attack_blocked {
+                    continue;
+                }
+
                 // §4.6 attack bits: Vortex / MayAttack / ForceAttack all
                 // share the 100-399 attack range and the same target loop
                 // (any enemy Digimon + security, subject to
                 // CannotAttackTarget). Vortex uses the summoning-sickness
                 // exemption; the other two use normal `can_attack`.
-                let vortex = game.modifiers.has_keyword(handle, Keyword::Vortex);
+                let vortex = game.has_keyword(handle, Keyword::Vortex);
                 let may_attack = game.modifiers.has(handle, ModifierType::MayAttack);
                 let force_attack = game.modifiers.has(handle, ModifierType::ForceAttack);
                 if !vortex && !may_attack && !force_attack {
@@ -527,7 +560,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 /// Mirror of Python's `action_mask.py` lines 77-99. Script-level
 /// `match_color_requirement=False` and the `IGNORE_COLOR_REQUIREMENT` aura
 /// modifier are residual §4.2b work; both are absent here.
-fn option_color_match_available(
+pub(crate) fn option_color_match_available(
     card: &crate::card_source::CardSource,
     me: &crate::player::Player,
     card_data: &[crate::card_data::CardData],
@@ -559,7 +592,7 @@ fn option_color_match_available(
 }
 
 /// Basic attack eligibility: unsuspended Digimon not played this turn,
-/// unless modifier-granted Rush exempts summoning sickness.
+/// unless Rush (native printed OR modifier-granted) exempts summoning sickness.
 ///
 /// Vortex is not checked here — Vortex attacks belong to `EndOfTurnAction`
 /// phase mask generation (§4.6), not the Main-phase attack range.
@@ -568,7 +601,7 @@ fn can_basic_attack(
     handle: PermanentHandle,
     turn: u16,
     card_data: &[CardData],
-    modifiers: &ModifierRegistry,
+    game: &Game,
 ) -> bool {
     if perm.is_suspended {
         return false;
@@ -577,10 +610,9 @@ fn can_basic_attack(
         return false;
     }
     // Summoning sickness: can't attack the turn it was played unless Rush
-    // has been granted (modifier-granted only; native/static Rush pending
-    // §2.1b).
+    // is present (native printed OR modifier-granted) — §2.1b.
     let is_fresh = perm.turn_played == turn && perm.turn_digivolved != turn;
-    if is_fresh && !modifiers.has_keyword(handle, Keyword::Rush) {
+    if is_fresh && !game.has_keyword(handle, Keyword::Rush) {
         return false;
     }
     true
@@ -679,7 +711,7 @@ fn apply_force_attack_mask_replacement(
             handle,
             game.turn_count,
             &game.card_data,
-            &game.modifiers,
+            game,
         ) {
             continue;
         }
@@ -693,7 +725,7 @@ fn apply_force_attack_mask_replacement(
         let can_attack_unsuspended = game
             .modifiers
             .has(handle, ModifierType::CanAttackUnsuspended);
-        let has_raid = game.modifiers.has_keyword(handle, Keyword::Raid);
+        let has_raid = game.has_keyword(handle, Keyword::Raid);
         let raid_max_dp = if has_raid && !can_attack_unsuspended {
             let mut best: Option<i32> = None;
             for j in 0..max_opp {
