@@ -17,3 +17,4 @@ mod raw_rust_registry;
 mod pretty;
 mod roundtrip;
 mod schema_export;
+mod phase0_exit;
