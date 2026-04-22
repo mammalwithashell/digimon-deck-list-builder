@@ -506,6 +506,7 @@ impl Game {
         trigger: crate::enums::DelayTrigger,
     ) -> u16 {
         use crate::enums::DelayTrigger;
+        // TODO(multi-player): generalize turn-rotation to >2 players.
         match trigger {
             DelayTrigger::EndOfThisTurn => self.turn_count,
             DelayTrigger::EndOfYourNextTurn => {

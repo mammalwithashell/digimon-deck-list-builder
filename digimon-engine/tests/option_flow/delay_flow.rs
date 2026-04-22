@@ -13,6 +13,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger};
 use digimon_engine::permanent::OptionState;
+use digimon_engine::replacement::ReplacementSubject;
 use digimon_engine::selection::OptionPlayResult;
 
 // ─── Inline test-effect helpers ──────────────────────────────────────
@@ -79,6 +80,43 @@ impl CardEffect for DelayPlusCancel {
                 .name("Cancel delayed trash")
                 .replacement_process(|rctx| {
                     rctx.cancel();
+                })
+                .build(),
+        ]
+    }
+}
+
+/// Same as `DelayPlusCancel` but scheduled for `EndOfThisTurn` — fires at
+/// the end of the turn it was played. The `WhenWouldBeDeleted` replacement
+/// is **self-scoped**: it only cancels when the subject permanent is the
+/// one hosting this effect, so the cancel doesn't leak out and block
+/// sibling permanents' deletes. Used by the sibling-cancel test so both
+/// delays resolve in the same `resolve_delayed_options` scan.
+struct DelayThisPlusCancel(Arc<Mutex<u32>>);
+impl CardEffect for DelayThisPlusCancel {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let slot = self.0.clone();
+        vec![
+            Effect::on_play(card)
+                .name("Delay this + cancel")
+                .delay(DelayTrigger::EndOfThisTurn)
+                .process(move |_ctx| {
+                    *slot.lock().unwrap() += 1;
+                })
+                .build(),
+            Effect::when_would_be_deleted(card)
+                .name("Cancel delayed trash (self only)")
+                .replacement_process(|rctx| {
+                    // Only cancel if the subject is this permanent — don't
+                    // leak the cancel to sibling deletions.
+                    let installer = rctx.effect.source_permanent;
+                    if let (Some(self_h), ReplacementSubject::Permanent(subj_h)) =
+                        (installer, rctx.subject)
+                    {
+                        if self_h == subj_h {
+                            rctx.cancel();
+                        }
+                    }
                 })
                 .build(),
         ]
@@ -350,7 +388,7 @@ fn delayed_permanent_counts_against_field_slots() {
 /// runs BEFORE the trash), but the permanent remains on the field after
 /// the delete path is replaced.
 #[test]
-fn delay_fires_observer_wwbt_at_end_of_turn_trash() {
+fn delay_fires_observer_wwbd_at_end_of_turn_trash() {
     let witness = Arc::new(Mutex::new(0u32));
 
     let mut r = DebugRunner::builder()
@@ -392,4 +430,83 @@ fn delay_fires_observer_wwbt_at_end_of_turn_trash() {
         "WhenWouldBeDeleted cancel kept the delayed permanent on the field"
     );
     assert_eq!(r.trash_size(0), 0, "not trashed — delete replaced");
+}
+
+/// Test 7 (C1 + C2 regression): with two Delay Options both scheduled to
+/// fire at the end of the same turn — one with a `WhenWouldBeDeleted`
+/// cancel replacement attached, one without — both `DelayEffect` bodies
+/// must fire. The cancelled one stays on the field, the other trashes.
+///
+/// This catches the pre-fix bug where the resolver hard-broke on the first
+/// cancel, starving sibling Delayed permanents of their observer fire.
+#[test]
+fn two_simultaneous_delays_one_cancelled_other_still_fires() {
+    let witness_a = Arc::new(Mutex::new(0u32));
+    let witness_b = Arc::new(Mutex::new(0u32));
+
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("DELAY-A", 0, CardColor::Red)) // cancel variant
+        .add_card(option_card("DELAY-B", 0, CardColor::Red)) // plain variant
+        .add_card(digimon_card("RED-MATCH", CardColor::Red))
+        .hand(0, &["DELAY-A", "DELAY-B"])
+        .memory(5)
+        .start();
+    r.register_effect(
+        "DELAY-A",
+        Arc::new(DelayThisPlusCancel(witness_a.clone())),
+    );
+    r.register_effect(
+        "DELAY-B",
+        Arc::new(DelayThisTurnWitness(witness_b.clone())),
+    );
+    r.place_on_field(0, "RED-MATCH", Some(0));
+    advance_to_main(&mut r);
+
+    // Play DELAY-A (hand[0]) — parks as Delayed, cancel replacement lives
+    // on the permanent.
+    let res_a = r.game.play_option_from_hand(0, 0);
+    assert_eq!(res_a, OptionPlayResult::Trashed);
+    // Now hand[0] == DELAY-B.
+    let res_b = r.game.play_option_from_hand(0, 0);
+    assert_eq!(res_b, OptionPlayResult::Trashed);
+
+    // Both should now be parked: RED-MATCH + DELAY-A + DELAY-B = 3.
+    assert_eq!(r.battle_area_size(0), 3, "both delays parked on field");
+    assert_eq!(*witness_a.lock().unwrap(), 0);
+    assert_eq!(*witness_b.lock().unwrap(), 0);
+
+    r.end_turn();
+
+    // Both DelayEffect bodies must have fired — the pre-fix bug was that
+    // whichever one the scan touched first, if it was the cancelled one,
+    // the hard-break starved its sibling of the observer fire.
+    assert_eq!(
+        *witness_a.lock().unwrap(),
+        1,
+        "DELAY-A body fired before replacement kicked in"
+    );
+    assert_eq!(
+        *witness_b.lock().unwrap(),
+        1,
+        "DELAY-B body fired despite the sibling cancel"
+    );
+
+    // DELAY-A stayed on field (delete replaced); DELAY-B was trashed.
+    let delayed_remaining: Vec<_> = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .filter(|p| matches!(p.option_state, OptionState::Delayed { .. }))
+        .collect();
+    assert_eq!(
+        delayed_remaining.len(),
+        1,
+        "exactly one delayed permanent remains (the cancelled one)"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        1,
+        "the non-cancelled delay was trashed"
+    );
 }

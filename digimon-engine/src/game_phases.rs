@@ -98,7 +98,12 @@ impl Game {
         // part of the ending turn's resolution (see design spec §8 and the
         // plan doc, §Task 3). `DelayEffect` fires, then the permanent is
         // trashed via the Phase 7 replacement framework (cause = Cost).
-        self.resolve_delayed_options(ending_player);
+        //
+        // The scan is indexed on `turn_count`, not on `ending_player`: a Delay
+        // played by P0 during P1's turn (via a Counter window) parks on P0's
+        // battle_area with `trash_on_turn == P1's current turn`, and must fire
+        // regardless of who's ending their turn.
+        self.resolve_delayed_options(self.turn_count);
 
         // Memory swing-back: capture memory before firing OnEndTurn effects,
         // fire them, then see if an effect restored memory from negative.
@@ -387,42 +392,83 @@ impl Game {
         self.drain_effect_queue();
     }
 
-    /// Phase 8 Task 3: fire and trash every Delayed Option owned by
-    /// `owner` whose scheduled `trash_on_turn` matches the current
-    /// `turn_count`. Called at the top of `end_turn` before the regular
+    /// Phase 8 Task 3: fire and trash every Delayed Option (across all
+    /// players' battle_areas) whose scheduled `trash_on_turn` matches
+    /// `ending_turn`. Called at the top of `end_turn` before the regular
     /// `EndOfYourTurn` fan-out.
+    ///
+    /// The scan is NOT filtered by owner: a Delay played by P0 during P1's
+    /// turn (via a Counter window, once Task 9 lands) parks on P0's
+    /// battle_area but is scheduled to fire at P1's turn end. The only
+    /// property that matters is `trash_on_turn == ending_turn`.
     ///
     /// For each delayed permanent we enqueue `DelayEffect`, drain, then
     /// route the trash through `delete_permanent_with_cause` with
     /// `ReplacementCause::Cost` so the Phase 7 `WhenWouldLeaveBattleArea` /
     /// `WhenWouldBeDeleted` replacement windows get a chance to intercept.
     ///
-    /// Handles shift: after each delete, the remaining delayed handles are
-    /// recomputed. Matches elsewhere in the codebase that resolve
-    /// permanent-level effects in a shrink-to-fit loop.
-    pub(crate) fn resolve_delayed_options(&mut self, owner: PlayerId) {
+    /// Handles shift: after each delete, we re-scan from scratch. A
+    /// `cancelled_keys` skip-set keyed on the stable `(owner, turn_played)`
+    /// pair ensures a cancel-always replacement doesn't infinite-loop on
+    /// the same permanent, and — crucially — doesn't prevent sibling
+    /// delayed permanents from firing their `DelayEffect` bodies.
+    ///
+    /// v1 constraint: if a `DelayEffect` body installs a `PendingSelection`,
+    /// the scan returns early with the selection parked on the Game. This
+    /// matches the existing convention for triggered-effect dispatch during
+    /// `end_turn` (see `fire_end_of_your_turn`). Cards that want to query
+    /// the opponent from their `DelayEffect` body are currently
+    /// unsupported; file a gap in `docs/RUST_ENGINE_GAPS.md` if a printed
+    /// card needs this shape.
+    pub(crate) fn resolve_delayed_options(&mut self, ending_turn: u16) {
         use crate::permanent::OptionState;
+        use std::collections::HashSet;
 
-        let ending_turn = self.turn_count;
+        // Stable key: `(owner, bottom_card_index)`. The bottom card of a
+        // Delayed permanent is the Option itself (no digivolution stack on
+        // an Option), and `CardSource::card_index` is a per-game unique id
+        // that survives permanent-index shifts and sibling deletes. We
+        // can't key on `(owner, turn_played)` alone — two Delay Options
+        // played on the same turn share `turn_played`.
+        let mut cancelled_keys: HashSet<(PlayerId, u16)> = HashSet::new();
 
         loop {
-            // Recompute the first matching delayed handle each iteration —
-            // earlier deletions can shift indices.
-            let target = {
-                let me = self.player(owner);
-                me.battle_area.iter().enumerate().find_map(|(i, perm)| {
-                    if let OptionState::Delayed { owner: o, trash_on_turn } = perm.option_state {
-                        if o == owner && trash_on_turn == ending_turn {
-                            return Some(PermanentHandle {
-                                player: owner,
-                                index: i as u8,
-                            });
+            // Find the next matching Delayed permanent across ALL players'
+            // battle_areas that isn't in the skip-set.
+            let next: Option<PermanentHandle> = (0..self.players.len()).find_map(|pid| {
+                let pid = pid as PlayerId;
+                self.player(pid)
+                    .battle_area
+                    .iter()
+                    .enumerate()
+                    .find_map(|(i, perm)| {
+                        if let OptionState::Delayed {
+                            owner: _,
+                            trash_on_turn: t,
+                        } = perm.option_state
+                        {
+                            if t == ending_turn {
+                                let bottom = perm.card_sources.first()?;
+                                let key = (pid, bottom.card_index);
+                                if !cancelled_keys.contains(&key) {
+                                    return Some(PermanentHandle {
+                                        player: pid,
+                                        index: i as u8,
+                                    });
+                                }
+                            }
                         }
-                    }
-                    None
-                })
+                        None
+                    })
+            });
+
+            let Some(handle) = next else { break };
+
+            // Capture the stable key before the permanent potentially moves.
+            let key = {
+                let perm = &self.player(handle.player).battle_area[handle.index as usize];
+                (handle.player, perm.card_sources[0].card_index)
             };
-            let Some(handle) = target else { break };
 
             self.enqueue_triggered(
                 EffectTiming::DelayEffect,
@@ -430,45 +476,60 @@ impl Game {
             );
             self.drain_effect_queue();
 
-            // Re-resolve the handle by matching card_index — the body may
-            // have mutated the battle_area. Then trash via Phase 7 so a
-            // replacement window can cancel/redirect the delete.
-            let still_valid = self
-                .player(owner)
-                .battle_area
-                .get(handle.index as usize)
-                .map(|p| matches!(p.option_state, OptionState::Delayed { .. }))
-                .unwrap_or(false);
-            if !still_valid {
-                // Handle became stale (effect body deleted it, or shifted
-                // indices). Next loop iteration scans from scratch.
-                continue;
+            // Re-find the permanent by stable key — the DelayEffect body
+            // may have deleted it, shifted indices via other mutations, or
+            // (rarely) moved it. If it's gone, nothing to trash.
+            if let Some(current_handle) = self.find_delayed_permanent_by_key(key, ending_turn) {
+                self.delete_permanent_with_cause(
+                    current_handle,
+                    crate::replacement::ReplacementCause::Cost,
+                );
             }
-            self.delete_permanent_with_cause(
-                handle,
-                crate::replacement::ReplacementCause::Cost,
-            );
 
-            // If the replacement window cancelled (permanent still on field
-            // as Delayed at the original slot with the same trash_on_turn),
-            // do NOT keep iterating on the same handle forever — break out.
-            // Within a single `end_turn` the loop resolves each matching
-            // permanent at most once; a cancel-always replacement naturally
-            // re-fires at subsequent turn ends when the scan runs again.
-            let cancelled = match self
-                .player(owner)
-                .battle_area
-                .get(handle.index as usize)
-                .map(|p| p.option_state)
-            {
-                Some(OptionState::Delayed { owner: o, trash_on_turn: t }) => {
-                    o == owner && t == ending_turn
-                }
-                _ => false,
-            };
-            if cancelled {
-                break;
+            // If a replacement window cancelled the delete, the permanent
+            // is still on the field with the same key — add it to the
+            // skip-set so we move on to siblings instead of looping on it
+            // forever. A cancel-always replacement naturally re-fires at
+            // subsequent turn ends when this scan runs again.
+            if self.find_delayed_permanent_by_key(key, ending_turn).is_some() {
+                cancelled_keys.insert(key);
             }
         }
+    }
+
+    /// Scan all players' battle_areas for a Delayed permanent matching the
+    /// given `(owner, bottom_card_index)` key and `trash_on_turn`. Returns
+    /// the current `PermanentHandle` (indices may have shifted since the
+    /// key was captured). Phase 8 Task 3 helper for
+    /// `resolve_delayed_options`.
+    fn find_delayed_permanent_by_key(
+        &self,
+        key: (PlayerId, u16),
+        ending_turn: u16,
+    ) -> Option<PermanentHandle> {
+        use crate::permanent::OptionState;
+
+        let (owner, card_index) = key;
+        let me = self.players.get(owner as usize)?;
+        for (i, perm) in me.battle_area.iter().enumerate() {
+            let Some(bottom) = perm.card_sources.first() else {
+                continue;
+            };
+            if bottom.card_index != card_index {
+                continue;
+            }
+            if let OptionState::Delayed {
+                trash_on_turn: t, ..
+            } = perm.option_state
+            {
+                if t == ending_turn {
+                    return Some(PermanentHandle {
+                        player: owner,
+                        index: i as u8,
+                    });
+                }
+            }
+        }
+        None
     }
 }
