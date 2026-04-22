@@ -38,4 +38,25 @@ cost: 0
     assert_eq!(spec.kind, CardKind::Option);
     assert_eq!(spec.level, None);
     assert_eq!(spec.dp, None);
+    assert_eq!(spec.card, "ST2-13");
+    assert_eq!(spec.name, "Hammer Spark");
+    assert_eq!(spec.color, vec![ColorSpec::Red]);
+    assert_eq!(spec.cost, Some(0));
+}
+
+#[test]
+fn rejects_unknown_top_level_field() {
+    let yaml = r#"
+card: X-1
+name: Test
+kind: option
+color: [red]
+cost: 0
+bogus_field: true
+"#;
+    let result: Result<digimon_engine::dsl::spec::CardSpec, _> = serde_yml::from_str(yaml);
+    assert!(result.is_err(), "CardSpec must reject unknown top-level fields");
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("bogus_field") || err_msg.contains("unknown field"),
+            "error should mention the unknown field, got: {err_msg}");
 }

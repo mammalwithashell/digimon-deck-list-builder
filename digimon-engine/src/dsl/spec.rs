@@ -16,6 +16,7 @@ pub struct CardSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub level: Option<u8>,
     /// Printed colors (may contain >1 for multi-color cards).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub color: Vec<ColorSpec>,
     /// Printed play cost. Absent for digi_egg / token.
     #[serde(default, skip_serializing_if = "Option::is_none")]
