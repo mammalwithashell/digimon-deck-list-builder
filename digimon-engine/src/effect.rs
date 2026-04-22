@@ -286,6 +286,12 @@ pub struct EffectBuilder {
 }
 
 impl EffectBuilder {
+    /// Low-level constructor. Prefer the typed entry points on `Effect`
+    /// (`Effect::on_play`, `Effect::on_attack`, `Effect::option_main`, etc.)
+    /// which pre-set the relevant flags and timing — reach for
+    /// `EffectBuilder::new` only when you need a timing that does not yet
+    /// have a sugar constructor, or when building a test double that needs
+    /// to start from `EffectTiming::None`.
     pub fn new(card: CardHandle, timing: EffectTiming) -> Self {
         Self {
             inner: Effect {

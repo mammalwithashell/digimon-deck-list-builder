@@ -8,7 +8,7 @@ fn option_timings_exist() {
     let _ = EffectTiming::OptionMain;       // already existed — smoke
     let _ = EffectTiming::DelayEffect;
     let _ = EffectTiming::OnLink;
-    let _ = EffectTiming::OnTrashLinkedCard;
+    let _ = EffectTiming::OnLinkedCardTrashed;
     let _ = EffectTiming::OnUnlink;
     let _ = EffectTiming::OnTrainingTrash;
 }
@@ -28,7 +28,7 @@ fn option_state_default_is_standard() {
 fn option_state_variants_exist() {
     let h = PermanentHandle { player: 0, index: 0 };
     let _ = OptionState::Standard;
-    let _ = OptionState::Delayed { owner: 0, trash_at_end_of_turn: 5 };
+    let _ = OptionState::Delayed { owner: 0, trash_on_turn: 5 };
     let _ = OptionState::Linked { host: h };
     let _ = OptionState::Training { owner: 0 };
 }

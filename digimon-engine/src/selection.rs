@@ -312,11 +312,16 @@ pub struct PendingOption {
 }
 
 /// Where we are in the resolve-and-dispose sequence for an Option card.
+///
+/// Variants appear in typical execution order: Link Options begin with
+/// `LinkSelectHost` (pay cost → select host → fire `OptionMain` → attach →
+/// fire `OnLink` → `Done`); Standard / Delay / Training Options begin with
+/// `MainEffectDrain`; all Options terminate at `Done`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionResolutionPhase {
+    LinkSelectHost,
     MainEffectDrain,
     Disposing,
-    LinkSelectHost,
     Done,
 }
 

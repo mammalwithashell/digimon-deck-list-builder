@@ -214,12 +214,19 @@ pub enum EffectTiming {
 
     /// Observer: fires when a linked card is trashed from its host.
     /// Mirrors DCGO `OnLinkCardDiscarded` (ICardEffect.cs:996).
-    OnTrashLinkedCard,
+    OnLinkedCardTrashed,
 
-    /// Observer: fires when a linked card is cleanly unlinked.
+    /// Observer: fires when a linked card is cleanly unlinked (removed from
+    /// its host without being trashed — e.g. an effect that returns the
+    /// linked card to hand or deck). Rust-engine-specific counterpart to
+    /// `OnLinkedCardTrashed`; DCGO folds both paths into
+    /// `OnLinkCardDiscarded` + explicit zone checks.
     OnUnlink,
 
-    /// Observer: fires when a Training card is trashed.
+    /// Observer: fires when a Training Option is trashed from the field.
+    /// Rust-engine-specific timing — DCGO expresses the same hook via a
+    /// generic on-trash predicate gated on `Training` state rather than a
+    /// dedicated `EffectTiming` variant.
     OnTrainingTrash,
 
     // [Main] activated effects — zone-scoped variants. DCGO gates these via

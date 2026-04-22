@@ -16,7 +16,13 @@ pub struct PermanentHandle {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionState {
     Standard,
-    Delayed { owner: PlayerId, trash_at_end_of_turn: u16 },
+    /// Delay Option placed on the field, awaiting its scheduled trigger.
+    /// `trash_on_turn` is the **absolute turn number** (matching
+    /// `Game.turn_count`) at which this Option self-trashes and fires its
+    /// `DelayEffect`. The value is computed at delay-installation time from
+    /// the `DelayTrigger` + the current turn (Task 3 installs; Task 3 drives
+    /// the end-of-turn scan).
+    Delayed { owner: PlayerId, trash_on_turn: u16 },
     Linked { host: PermanentHandle },
     Training { owner: PlayerId },
 }
