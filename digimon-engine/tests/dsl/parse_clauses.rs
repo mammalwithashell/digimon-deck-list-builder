@@ -1,4 +1,5 @@
 use digimon_engine::dsl::clause::{ClauseScope, DeclarativeKind, Timing, TimingSet};
+use digimon_engine::dsl::pretty::format_spec;
 use digimon_engine::dsl::spec::CardSpec;
 
 #[test]
@@ -88,4 +89,49 @@ effects:
     let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
     let d = spec.effects[0].as_declarative().unwrap();
     assert_eq!(d.kind, DeclarativeKind::GrantKeyword);
+}
+
+#[test]
+fn face_up_scope_is_omitted_from_output() {
+    let yaml = r#"
+card: ST2-13
+name: Hammer Spark
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - gain_memory: 1
+"#;
+    let spec: digimon_engine::dsl::spec::CardSpec = serde_yml::from_str(yaml).unwrap();
+    let formatted = format_spec(&spec);
+    assert!(
+        !formatted.contains("scope:"),
+        "face_up is the default scope and must not serialize; got:\n{formatted}"
+    );
+}
+
+#[test]
+fn inherited_scope_is_preserved_in_output() {
+    let yaml = r#"
+card: BT17-015
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 12000
+effects:
+  - scope: inherited
+    when: when_attacking
+    process:
+      - trash_top_security: { of: opponent }
+"#;
+    let spec: digimon_engine::dsl::spec::CardSpec = serde_yml::from_str(yaml).unwrap();
+    let formatted = format_spec(&spec);
+    assert!(
+        formatted.contains("scope: inherited"),
+        "non-default scope must serialize; got:\n{formatted}"
+    );
 }

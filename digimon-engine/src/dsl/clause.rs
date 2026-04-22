@@ -36,7 +36,7 @@ impl ClauseSpec {
 pub struct TriggeredClause {
     pub when: TimingSet,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "ClauseScope::is_face_up")]
     pub scope: ClauseScope,
 
     /// Optional short effect summary displayed when the clause activates.
@@ -128,6 +128,12 @@ pub enum ClauseScope {
     Both,
 }
 
+impl ClauseScope {
+    pub(crate) fn is_face_up(&self) -> bool {
+        matches!(self, ClauseScope::FaceUp)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 // NOTE: DeclarativeClause deliberately omits `deny_unknown_fields` because the
 // free-form `body` IndexMap (via `#[serde(flatten)]`) absorbs per-kind fields
@@ -136,7 +142,7 @@ pub enum ClauseScope {
 pub struct DeclarativeClause {
     pub kind: DeclarativeKind,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "ClauseScope::is_face_up")]
     pub scope: ClauseScope,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
