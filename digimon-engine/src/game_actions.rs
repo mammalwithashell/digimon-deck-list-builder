@@ -634,6 +634,7 @@ impl Game {
             .unwrap_or(false);
         if !host_live {
             self.player_mut(pending.owner).trash.push(pending.card);
+            self.check_turn_end();
             return;
         }
 
@@ -651,6 +652,12 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+
+        // Link lifecycle complete — check if memory state demands turn transition.
+        // The Standard Option path hits this via `advance_pending_option`; the
+        // Link path bypasses that dispatcher (host-select callback calls this
+        // directly), so we must invoke `check_turn_end` ourselves.
+        self.check_turn_end();
     }
 
     /// Compute the absolute `turn_count` at which a delayed Option should

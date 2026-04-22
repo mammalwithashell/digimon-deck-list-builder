@@ -518,12 +518,19 @@ impl EffectBuilder {
     /// Phase 8 Task 4 — dispatched in `enqueue_from_permanent` which scans
     /// the host's `linked_cards` for `.linked` effects at every triggered
     /// timing dispatch.
+    ///
+    /// Mutually exclusive with `.inherited()` — linked cards grant their
+    /// effect to the host, not to stack-above levels.
     pub fn linked(mut self) -> Self {
         self.inner.linked = true;
         self
     }
 
     pub fn build(self) -> Effect {
+        debug_assert!(
+            !(self.inner.linked && self.inner.inherited),
+            ".linked() and .inherited() are mutually exclusive — a linked card's effects apply to its host, not to stack-above levels"
+        );
         self.inner
     }
 }

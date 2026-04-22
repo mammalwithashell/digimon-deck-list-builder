@@ -576,11 +576,22 @@ impl Game {
         Ok(())
     }
 
-    /// If an Option card is mid-resolution (`pending_option.is_some()`) and
-    /// its body has finished (queue drained, no selection), dispose the
-    /// Option per its resolution phase. For Task 2 this is Standard only —
-    /// trash the card. Delay/Link/Training lands in Tasks 3-5 by branching
-    /// on `OptionResolutionPhase`.
+    /// Post-drain Option resolution hook, invoked from
+    /// `resolve_generic_selection` after the effect queue is fully drained.
+    ///
+    /// Only the `MainEffectDrain` phase dispatches through this hook: when an
+    /// OptionMain body parks a selection, this function is re-entered after
+    /// selection resolution to commit the Option's disposal (trash, or subtype
+    /// branch via `dispose_option`).
+    ///
+    /// Other phases are pass-through:
+    /// - `LinkSelectHost`: host-select unwind happens in the
+    ///   `install_link_host_selection` callback directly (calls
+    ///   `attach_linked_card`). The arm here exists only to prevent silent
+    ///   drops if a future path accidentally routes through advance.
+    /// - `Disposing`: populated by Task 6 (WhenWouldBeTrashed replacement
+    ///   window for Option self-trash).
+    /// - `Done`: terminal.
     fn advance_pending_option(&mut self) {
         let Some(pending) = self.pending_option.as_ref() else { return };
         if !self.effect_queue.is_empty() {
@@ -595,7 +606,10 @@ impl Game {
                 self.check_turn_end();
             }
             crate::selection::OptionResolutionPhase::LinkSelectHost => {
-                // Task 4 populates — Plug-In host selection unwind.
+                // Unwind happens in install_link_host_selection's callback
+                // (calls attach_linked_card directly). This arm exists to
+                // prevent silent drops if routing drifts; the normal flow
+                // doesn't reach here.
             }
             crate::selection::OptionResolutionPhase::Disposing => {
                 // Task 6 populates — WhenWouldBeTrashed replacement window.
