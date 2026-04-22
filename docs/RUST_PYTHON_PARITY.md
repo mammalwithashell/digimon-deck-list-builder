@@ -845,3 +845,20 @@ rule 21 — cards are not dual-implemented).
 the cross-archetype audit) become Rust-only from their first
 implementation; there is no Python port and no dual-engine
 parity to maintain.
+
+---
+
+## 13. Phase 8 Training sideways inheritance — scope looseness
+
+### 13.1 🟡 Training `.inherited()` sideways scan — broader scope than spec
+
+Rust Task 5 (2026-04-21) implemented Training `.inherited()` sideways scan
+with broader scope than spec: fires on any same-owner permanent's timing
+dispatch, not just breeding permanent's. This is due to the engine
+currently not exposing a `TriggerSource::BreedingArea`. No printed Training
+card ships in the v1 card pool today, so the deviation is latent.
+
+Refinement required: once breeding-area timing dispatch is added, tighten
+the scan at `digimon-engine/src/effect_queue.rs` (Phase 8 Task 5 sideways
+scan) to gate on source-is-breeding-perm. Python side: Python implements
+Training with targeted inheritance (breeding-specific); Rust is wider.

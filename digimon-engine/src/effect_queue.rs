@@ -222,11 +222,10 @@ impl Game {
         let tp = self.turn_player();
         let is_turn_player = handle.player == tp;
 
-        // Phase 8 Task 5: when the scanning perm is a Training permanent,
-        // its `inherited` effects fire only via the sideways scan below,
-        // not from its own top-card scan. This prevents double-enqueue when
-        // a same-owner perm scan also pulls the Training card's inherited
-        // effect in via the sideways pass.
+        // Defensive guard — not reachable through current dispatch paths but
+        // prevents future double-enqueue if a caller fires a timing directly on
+        // a Training permanent with an effect authored .inherited(). Today no
+        // such card pattern exists; see Phase 8 Task 5 design for rationale.
         let skip_inherited = self
             .players
             .get(handle.player as usize)
@@ -296,7 +295,22 @@ impl Game {
             }
         }
 
-        // Phase 8 Task 5: sideways inheritance from Training permanents.
+        // Phase 8 Task 5 — Training sideways inheritance.
+        //
+        // Scope note (v1): this scan fires on every same-owner permanent's timing
+        // dispatch. The spec-intended scope is narrower — Training effects should
+        // inherit ONLY to the breeding-area permanent, firing on breeding's own
+        // timings. But the engine currently has no TriggerSource::BreedingArea
+        // (breeding permanents don't dispatch timings), so the broad scope is a
+        // pragmatic interim.
+        //
+        // TODO(phase-8-refinement): once breeding-area timing dispatch exists,
+        // tighten this scan to gate on the source permanent being in the breeding
+        // area (or use a new TriggerSource::BreedingArea). Current broad scope
+        // will cause Training .inherited() effects to apply to all of owner's
+        // field, which is incorrect for printed Training cards. File as engine
+        // gap if a Training card ships before the refinement.
+        //
         // When any permanent the owner controls fires a timing, also scan
         // the owner's battle_area for `OptionState::Training` permanents
         // and include their `inherited` effects at the same timing. The
