@@ -15,3 +15,4 @@ mod cross_check;
 mod validator;
 mod raw_rust_registry;
 mod pretty;
+mod roundtrip;
