@@ -391,6 +391,25 @@ pub enum BindingRef {
     Named(String),
 }
 
+/// Target of an `add_modifier:` step — either a named binding (from a
+/// prior `bind_as:`) or a predicate filter that matches many permanents.
+///
+/// Untagged: serde tries `Binding(BindingRef)` first (scalar string or
+/// structured-ref map with binding-specific keys), then falls back to
+/// `Filter(PredicateSpec)`. Predicate fields like `kind` / `zone` / `of` /
+/// `any_of` have no overlap with `StructuredBindingRef` fields (`binding`,
+/// `permanent`, `source_permanent`, `of_permanent`), so disambiguation is
+/// unambiguous. Note also that `StructuredBindingRef.zone` is `Option<Zone>`
+/// (a scalar) while `PredicateSpec.zone` is `Vec<Zone>` (a sequence), so a
+/// YAML sequence for `zone` will fail `StructuredBindingRef` and fall through
+/// to `PredicateSpec` correctly.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(untagged)]
+pub enum ModifierTarget {
+    Binding(BindingRef),
+    Filter(crate::dsl::predicate::PredicateSpec),
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StructuredBindingRef {
@@ -600,8 +619,7 @@ pub struct AddDpModifierArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AddModifierArgs {
-    #[schemars(with = "serde_json::Value")]
-    pub target: serde_yml::Value, // filter or BindingRef — type-checked in Task 12
+    pub target: ModifierTarget,
     pub modifier: String,
     pub value: i32,
     pub expiry: String,

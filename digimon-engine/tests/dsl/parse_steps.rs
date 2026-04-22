@@ -1,5 +1,5 @@
 use digimon_engine::dsl::spec::CardSpec;
-use digimon_engine::dsl::step::{BindingRef, RawRustStep, StepSpec};
+use digimon_engine::dsl::step::{BindingRef, ModifierTarget, RawRustStep, StepSpec};
 
 fn parse_single_step(yaml_body: &str) -> StepSpec {
     let yaml = format!(
@@ -111,5 +111,39 @@ fn parse_delete_permanent_with_binding_ref() {
             assert_eq!(d.target, BindingRef::Named("tgt".to_string()));
         }
         _ => panic!("expected DeletePermanent"),
+    }
+}
+
+#[test]
+fn add_modifier_target_as_binding_ref() {
+    let step = parse_single_step(
+        r#"add_modifier: { target: my_target, modifier: CannotAttack, value: 1, expiry: end_of_your_turn }"#,
+    );
+    match step {
+        StepSpec::AddModifier(args) => {
+            match args.target {
+                ModifierTarget::Binding(BindingRef::Named(n)) => assert_eq!(n, "my_target"),
+                other => panic!("expected binding, got {other:?}"),
+            }
+        }
+        _ => panic!("expected AddModifier"),
+    }
+}
+
+#[test]
+fn add_modifier_target_as_predicate_filter() {
+    let step = parse_single_step(
+        r#"add_modifier: { target: { of: opponent, zone: [battle_area], kind: digimon }, modifier: CannotUnsuspend, value: 1, expiry: end_of_opponents_turn }"#,
+    );
+    match step {
+        StepSpec::AddModifier(args) => {
+            match args.target {
+                ModifierTarget::Filter(p) => {
+                    assert_eq!(p.zone, vec![digimon_engine::dsl::predicate::Zone::BattleArea]);
+                }
+                other => panic!("expected filter, got {other:?}"),
+            }
+        }
+        _ => panic!("expected AddModifier"),
     }
 }
