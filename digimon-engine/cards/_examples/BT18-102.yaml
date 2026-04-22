@@ -1,0 +1,60 @@
+card: BT18-102
+name: Susanoomon
+kind: digimon
+level: 7
+color: [red, blue, yellow, green, black, purple]
+cost: 9
+dp: 15000
+traits: [Shaman]
+ace_overflow: -5
+alt_paths:
+  - kind: assembly
+    from:
+      any_of:
+        - { name_is: "Takuya Kanbara", level_eq: 6 }
+        - { name_is: "Koji Minamoto", level_eq: 6 }
+    materials:
+      - filter: { trait_has: "Hybrid" }
+        repeat: { min: 10, max: 10 }
+        stack_under: true
+    cost: 6
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
+effects:
+  - when: [when_digivolving, when_attacking]
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            dp_lte:
+              base: 10000
+              per: digivolution_color_count
+              delta: 2000
+          prompt: "Delete"
+      - delete_permanent: { target: tgt }
+
+  - when: when_attacking
+    optional: true
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: material
+          max: 5
+          bind_as: placed
+          filter:
+            all_of:
+              - of_permanent: self
+              - kind: tamer
+          prompt: "Place Tamer materials as bottom security"
+      - for_each:
+          over: { binding: placed }
+          bind_as: m
+          body:
+            - place_on_security:
+                of: you
+                source: { binding: m }
+                position: bottom
+                face_up: false
+            - trash_top_security: { of: opponent }

@@ -1,0 +1,60 @@
+card: BT20-083
+name: Omekamon
+kind: digimon
+level: 4
+color: [red, blue]
+cost: 5
+dp: 4000
+traits: [Puppet, X Antibody, LIBERATOR]
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: on_play
+    optional: true
+    condition: { security_count_lte: 1 }
+    process:
+      - select_hand:
+          of: you
+          bind_as: omni_x
+          filter: { name_is: "Omnimon (X Antibody)" }
+          prompt: "Digivolve into Omnimon (X Antibody) free"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: omni_x
+          cost: 0
+          ignore_requirements: true
+
+  - when: on_deletion
+    optional: true
+    process:
+      - select_own_permanent:
+          bind_as: kd
+          filter:
+            all_of:
+              - name_is: "King Drasil_7D6"
+              - zone: [breeding]
+          prompt: "Place as King Drasil bottom source"
+      - place_as_bottom_source:
+          source: { permanent: self }
+          target: kd
+
+  - scope: inherited
+    when: on_opponent_security_removed
+    active_when:
+      all_of:
+        - in_breeding: true
+        - opponents_turn: true
+    optional: true
+    process:
+      - suspend: { target: carrier }
+      - select_material:
+          of_permanent: carrier
+          bind_as: slot
+          filter: { name_is: "Omekamon" }
+          prompt: "Play Omekamon from materials"
+      - play_from_materials:
+          target: carrier
+          source_index: slot
+          cost_delta: free

@@ -1,0 +1,28 @@
+card: BT5-093
+name: Tai Kamiya & Matt Ishida
+kind: tamer
+color: [red, blue]
+cost: 4
+effects:
+  - when: start_of_your_turn
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        level_gte: 6
+    process:
+      - gain_memory: 2
+
+  - kind: aura
+    summary: "+1 Security Attack on Omnimon"
+    active_when: { your_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+      name_contains: "Omnimon"
+    grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
+
+  - when: on_security
+    process:
+      - play_from_security: {}
