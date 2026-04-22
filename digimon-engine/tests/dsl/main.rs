@@ -12,3 +12,4 @@ mod parse_declarative;
 mod i18n_scaffolding;
 mod loader;
 mod cross_check;
+mod validator;
