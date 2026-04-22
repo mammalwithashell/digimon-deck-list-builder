@@ -1,13 +1,45 @@
-//! TODO: populated by Task 8 of the Phase 0 plan (`docs/superpowers/plans/2026-04-21-card-scripting-dsl-phase-0.md`).
+//! Formula primitives for scalar computations in predicates and clauses.
+//! Spec §3.10.
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct FormulaSpec {
-    pub base: i32,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub per: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub delta: Option<i32>,
+#[serde(untagged)]
+pub enum FormulaSpec {
+    Literal(i32),
+    BasePerDelta {
+        base: i32,
+        per: PerSelector,
+        delta: i32,
+    },
+    Compound(CompoundFormula),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CompoundFormula {
+    FloorDiv(Vec<FormulaSpec>),
+    Max(Vec<FormulaSpec>),
+    Min(Vec<FormulaSpec>),
+    Aggregate(AggregateSelector),
+    RawRust(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PerSelector {
+    MaterialCount,
+    StackSize,
+    AllyCount,
+    DigivolutionColorCount,
+    CardCountInZone,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AggregateSelector {
+    LowestDp,
+    HighestDp,
+    LowestLevel,
+    HighestLevel,
 }

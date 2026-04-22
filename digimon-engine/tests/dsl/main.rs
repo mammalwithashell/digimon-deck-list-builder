@@ -7,3 +7,4 @@ mod parse_identity;
 mod parse_clauses;
 mod parse_steps;
 mod parse_predicates;
+mod parse_formulas;
