@@ -3,6 +3,7 @@
 
 mod alliance_interrupt;
 mod block_interrupt;
+mod collision_mandatory;
 mod counter_hand_play;
 mod counter_interrupt;
 mod force_attack_mask;

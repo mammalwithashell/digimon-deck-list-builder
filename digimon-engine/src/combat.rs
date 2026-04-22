@@ -1173,6 +1173,13 @@ impl Game {
             if !perm.is_digimon(&self.card_data) {
                 continue;
             }
+            // `CannotBlock` (Phase 6 restriction) short-circuits
+            // candidacy regardless of Collision — Collision promotes
+            // every opponent Digimon to "has Blocker" but does NOT
+            // override a printed/modifier `CannotBlock` gate.
+            if self.modifiers.has(h, ModifierType::CannotBlock) {
+                continue;
+            }
             // Blocker required UNLESS the attacker has Collision, which
             // grants Blocker to every opponent Digimon for this attack.
             if !attacker_has_collision
@@ -1186,6 +1193,13 @@ impl Game {
         if candidates.is_empty() {
             return false;
         }
+
+        // §8: when the attacker has `<Collision>` AND the candidate list
+        // is non-empty, the Block selection is MANDATORY — the defender
+        // MUST declare a blocker. Without Collision (or with an empty
+        // pool — handled by the early-return above) the selection
+        // remains optional.
+        let is_optional = !attacker_has_collision;
 
         let valid_action_ids: Vec<u16> = candidates
             .iter()
@@ -1209,7 +1223,7 @@ impl Game {
             selecting_player: defender_player,
             previous_phase,
             valid_action_ids,
-            is_optional: true, // Block is always a "may" — PASS means decline.
+            is_optional,
             prompt: "Declare a blocker".to_string(),
             effect_choices: None,
             source_card,
