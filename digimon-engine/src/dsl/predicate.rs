@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::dsl::formula::FormulaSpec;
 use crate::dsl::spec::{CardKind, ColorSpec};
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct PredicateSpec {
     // Leaf — card/permanent identity
@@ -119,8 +119,10 @@ pub struct PredicateSpec {
 
     // Binding comparisons
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<Vec<serde_json::Value>>")]
     pub equals: Option<Vec<serde_yml::Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<Vec<serde_json::Value>>")]
     pub not_equals: Option<Vec<serde_yml::Value>>,
 
     // Count aggregates
@@ -154,24 +156,25 @@ pub struct PredicateSpec {
     /// Captures unrecognized fields for controlled extension. Validator
     /// (Task 12) checks this for typos in inline predicate positions.
     #[serde(flatten)]
+    #[schemars(skip)]
     pub extra: IndexMap<String, serde_yml::Value>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum DpConstraint {
     Literal(i32),
     Formula(FormulaSpec),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CountAggregate {
     pub filter: Box<PredicateSpec>,
     pub n: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(default)]
 pub struct ExistentialPredicate {
     pub of: Owner,
@@ -188,7 +191,7 @@ impl Default for ExistentialPredicate {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Owner {
     You,
@@ -197,7 +200,7 @@ pub enum Owner {
     Active,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Zone {
     Hand,

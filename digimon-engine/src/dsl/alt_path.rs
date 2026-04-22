@@ -7,7 +7,7 @@ use crate::dsl::formula::FormulaSpec;
 use crate::dsl::predicate::PredicateSpec;
 use crate::dsl::step::StepSpec;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AltPathSpec {
     pub kind: AltPathKind,
@@ -49,7 +49,7 @@ pub struct AltPathSpec {
     pub marker: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AltPathKind {
     Digivolve,
@@ -62,7 +62,7 @@ pub enum AltPathKind {
     ActivatedDigivolve,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum CostSpec {
     Literal(i32),
@@ -71,7 +71,7 @@ pub enum CostSpec {
 }
 
 /// Wraps `FormulaSpec` under the `formula:` YAML key.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct FormulaCost {
     pub formula: FormulaSpec,
 }
@@ -87,7 +87,7 @@ pub struct FormulaCost {
 // rather than raising a parse error. The semantic validator (Task 12) will need
 // a pass over inline-material predicate fields to catch this — tracked as part
 // of Task 7 when `PredicateSpec` is fleshed out.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MaterialSpec {
     /// Explicit filter wrapper — used when the predicate is complex (e.g. `any_of`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -113,20 +113,20 @@ pub struct MaterialSpec {
     pub stack_under: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum RepeatSpec {
     Keyword(RepeatKeyword),
     Range { min: u8, max: u8 },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RepeatKeyword {
     Unbounded,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DistinctBy {
     CardNumber,

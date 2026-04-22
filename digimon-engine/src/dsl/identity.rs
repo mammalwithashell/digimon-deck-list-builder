@@ -5,21 +5,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::dsl::predicate::Zone;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IdentitySpec {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub name_aliases: Vec<NameAliasSpec>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct NameAliasSpec {
     pub treat_as: String,
     pub when: AliasCondition,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AliasCondition {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -28,7 +28,7 @@ pub struct AliasCondition {
     pub has_inherited: Option<InheritedFilter>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct InheritedFilter {
     #[serde(default, skip_serializing_if = "Option::is_none")]

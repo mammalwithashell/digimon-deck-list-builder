@@ -60,7 +60,7 @@ use crate::dsl::predicate::{PredicateSpec, Zone};
 /// round-trips correctly through the custom `Deserialize`.  The derive-
 /// generated serializer would emit YAML tag syntax (`!gain_memory 1`) which
 /// the custom deserializer cannot read back.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, schemars::JsonSchema)]
 pub enum StepSpec {
     // Memory / turn
     GainMemory(i32),
@@ -383,14 +383,14 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 /// NOTE: `#[serde(untagged)]` means the more-specific variant
 /// (`Structured`) is tried first so that a map `{ binding: "..." }` doesn't
 /// accidentally match `Named`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum BindingRef {
     Structured(StructuredBindingRef),
     Named(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StructuredBindingRef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -405,7 +405,7 @@ pub struct StructuredBindingRef {
     pub of_permanent: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Player {
     You,
@@ -416,40 +416,40 @@ pub enum Player {
 
 // ── Argument structs (one per verb family) ──────────────────────────
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayerArg {
     pub of: Player,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DrawArgs {
     pub of: Player,
     pub count: u8,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct HandleMoveArgs {
     pub of: Player,
     pub card: BindingRef,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IndexedMoveArgs {
     pub of: Player,
     pub hand_index: BindingRef,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReturnToDeckArgs {
     pub of: Player,
@@ -457,7 +457,7 @@ pub struct ReturnToDeckArgs {
     pub position: StackPosition,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReturnPermanentArgs {
     pub target: BindingRef,
@@ -466,7 +466,7 @@ pub struct ReturnPermanentArgs {
     pub include_sources: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum StackPosition {
     Top,
@@ -474,7 +474,7 @@ pub enum StackPosition {
     Random,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RevealArgs {
     pub of: Player,
@@ -485,14 +485,14 @@ pub struct RevealArgs {
     pub bind_as: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceRemainderArgs {
     pub of: Player,
     pub position: StackPosition,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DeDigivolveArgs {
     pub target: BindingRef,
@@ -502,7 +502,7 @@ pub struct DeDigivolveArgs {
     pub stop_at_level: Option<u8>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceOnSecurityArgs {
     pub of: Player,
@@ -512,21 +512,21 @@ pub struct PlaceOnSecurityArgs {
     pub face_up: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayTokenArgs {
     pub controller: Player,
     pub token_name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceAsBottomSourceArgs {
     pub source: BindingRef,
     pub target: BindingRef,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayFromHandArgs {
     pub of: Player,
@@ -535,21 +535,21 @@ pub struct PlayFromHandArgs {
     pub cost_delta: Option<CostDelta>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum CostDelta {
     Keyword(CostDeltaKeyword),
     Literal(i32),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum CostDeltaKeyword {
     Free,
     Printed,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayFromMaterialsArgs {
     pub target: BindingRef,
@@ -562,14 +562,14 @@ pub struct PlayFromMaterialsArgs {
 /// parameters (the security card to play is implicit from the trigger context).
 /// Using a dedicated struct rather than `serde_yml::Value` lets the external-
 /// tag enum deserialize correctly with `serde_yml`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayFromSecurityArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub of: Option<Player>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EffectDigivolveArgs {
     pub target: BindingRef,
@@ -579,7 +579,7 @@ pub struct EffectDigivolveArgs {
     pub ignore_requirements: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EffectDnaDigivolveArgs {
     pub target_a: BindingRef,
@@ -590,14 +590,14 @@ pub struct EffectDnaDigivolveArgs {
     pub ignore_requirements: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct MarkSecurityArgs {
     pub of: Player,
     pub card: BindingRef,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AddDpModifierArgs {
     pub target: BindingRef,
@@ -605,16 +605,17 @@ pub struct AddDpModifierArgs {
     pub expiry: String, // parsed as enum in Task 12 validation
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AddModifierArgs {
+    #[schemars(with = "serde_json::Value")]
     pub target: serde_yml::Value, // filter or BindingRef — type-checked in Task 12
     pub modifier: String,
     pub value: i32,
     pub expiry: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantKeywordArgs {
     pub target: BindingRef,
@@ -624,7 +625,7 @@ pub struct GrantKeywordArgs {
     pub value: Option<i32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectFieldArgs {
     pub filter: PredicateSpec,
@@ -639,7 +640,7 @@ pub struct SelectFieldArgs {
     pub prompt_key: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectZoneArgs {
     pub of: Player,
@@ -655,7 +656,7 @@ pub struct SelectZoneArgs {
     pub prompt_key: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectMaterialArgs {
     pub of_permanent: BindingRef,
@@ -671,7 +672,7 @@ pub struct SelectMaterialArgs {
     pub prompt_key: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectUnionArgs {
     pub of: Player,
@@ -688,7 +689,7 @@ pub struct SelectUnionArgs {
     pub prompt_key: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectPermutationArgs {
     pub items: BindingRef,
@@ -701,7 +702,7 @@ pub struct SelectPermutationArgs {
     pub prompt_key: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectCountCappedArgs {
     pub of: Player,
@@ -721,7 +722,7 @@ pub struct SelectCountCappedArgs {
     pub prompt_key: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectEffectChoiceArgs {
     pub labels: Vec<String>,
@@ -735,7 +736,7 @@ pub struct SelectEffectChoiceArgs {
     pub prompt_key: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AsSelectingPlayerArgs {
     pub of: Player,
@@ -759,16 +760,17 @@ pub struct AsSelectingPlayerArgs {
 /// forms not yet modelled in `PredicateSpec` (e.g. `equals:`, `count_ge:`)
 /// can be used in authored YAML today; Task 7 will tighten this to a typed
 /// enum once all predicate forms are enumerated.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IfStep {
+    #[schemars(with = "serde_json::Value")]
     pub condition: serde_yml::Value,
     pub then: Vec<StepSpec>,
     #[serde(default, rename = "else", skip_serializing_if = "Option::is_none")]
     pub else_: Option<Vec<StepSpec>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForEachStep {
     pub over: PredicateSpec,
@@ -776,7 +778,7 @@ pub struct ForEachStep {
     pub body: Vec<StepSpec>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PerSelectedStep {
     pub selection: String,
@@ -784,17 +786,17 @@ pub struct PerSelectedStep {
     pub body: Vec<StepSpec>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ScheduleDelayedStep {
     pub when: super::clause::Timing,
     pub body: Vec<StepSpec>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct OptionalStep(pub Vec<StepSpec>);
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RawRustStep {
     #[serde(rename = "fn")]

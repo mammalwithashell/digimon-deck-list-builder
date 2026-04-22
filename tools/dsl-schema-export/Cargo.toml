@@ -1,0 +1,7 @@
+[package]
+name = "dsl-schema-export"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+digimon-engine = { path = "../../digimon-engine", features = ["dsl-yaml-loader"] }

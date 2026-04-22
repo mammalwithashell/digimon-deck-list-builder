@@ -1,1 +1,11 @@
-//! TODO: populated by Task 17 of the Phase 0 plan (`docs/superpowers/plans/2026-04-21-card-scripting-dsl-phase-0.md`).
+//! JSON Schema export — consumed by the VS Code YAML extension for
+//! auto-complete + inline validation.
+
+use schemars::schema_for;
+
+use crate::dsl::spec::CardSpec;
+
+pub fn export_json_schema() -> String {
+    let schema = schema_for!(CardSpec);
+    serde_json::to_string_pretty(&schema).expect("schema serialization must not fail")
+}

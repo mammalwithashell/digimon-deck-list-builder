@@ -9,7 +9,7 @@ use crate::dsl::step::StepSpec;
 
 /// A clause is either triggered or declarative. Untagged serde enum —
 /// presence of `when:` ⇒ triggered; presence of `kind:` ⇒ declarative.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum ClauseSpec {
     Triggered(TriggeredClause),
@@ -31,7 +31,7 @@ impl ClauseSpec {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TriggeredClause {
     pub when: TimingSet,
@@ -69,7 +69,7 @@ pub struct TriggeredClause {
     pub process: Vec<StepSpec>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum TimingSet {
     Single(Timing),
@@ -78,7 +78,7 @@ pub enum TimingSet {
 
 /// Every value allowed in `when:`. Maps 1:1 to a variant of
 /// `crate::enums::EffectTiming` at lowering time (Phase 2). Spec §3.6.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Timing {
     OnPlay,
@@ -119,7 +119,7 @@ pub enum Timing {
     Delayed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ClauseScope {
     #[default]
@@ -128,7 +128,7 @@ pub enum ClauseScope {
     Both,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 // NOTE: DeclarativeClause deliberately omits `deny_unknown_fields` because the
 // free-form `body` IndexMap (via `#[serde(flatten)]`) absorbs per-kind fields
 // whose schema is enforced by Task 9's `typed_body()`. Serde does not allow
@@ -152,10 +152,11 @@ pub struct DeclarativeClause {
     /// Storing as `IndexMap<String, serde_yml::Value>` preserves key order
     /// for the pretty-printer.
     #[serde(flatten)]
+    #[schemars(skip)]
     pub body: IndexMap<String, serde_yml::Value>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DeclarativeKind {
     Aura,
@@ -244,7 +245,7 @@ impl DeclarativeClause {
 
 /// Body for `kind: aura` — static continuous effect applied to matching
 /// permanents while the source is on field.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AuraBody {
     pub target: PredicateSpec,
@@ -257,7 +258,7 @@ pub struct AuraBody {
 }
 
 /// Inline keyword grant used inside [`AuraBody`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantKeywordValue {
     pub keyword: String,
@@ -266,7 +267,7 @@ pub struct GrantKeywordValue {
 }
 
 /// Body for `kind: cost_reduction`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CostReductionBody {
     /// Scope discriminator string (e.g. `"face_up"`, `"before_pay_cost"`).
@@ -288,11 +289,12 @@ pub struct CostReductionBody {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pay_cost: Option<Vec<StepSpec>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schemars(skip)]
     pub unlocks: Vec<IndexMap<String, serde_yml::Value>>,
 }
 
 /// Body for `kind: replacement`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReplacementBody {
     pub trigger: String,
@@ -301,7 +303,7 @@ pub struct ReplacementBody {
 
 /// Body for `kind: partition` — declares which digivolution-source cards form
 /// this permanent's digivolution stack partition.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PartitionBody {
     pub sources: Vec<PredicateSpec>,
@@ -310,14 +312,14 @@ pub struct PartitionBody {
 }
 
 /// Body for `kind: ace_overflow`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AceOverflowBody {
     pub value: i32,
 }
 
 /// Body for `kind: grant_keyword` — statically grants a keyword to this card.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GrantKeywordBody {
     pub keyword: String,
@@ -326,7 +328,7 @@ pub struct GrantKeywordBody {
 }
 
 /// Body for `kind: delay`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DelayBody {
     pub trigger: Timing,
@@ -335,7 +337,7 @@ pub struct DelayBody {
 
 /// Body for `kind: flood_gate` — applies a blanket modifier to matching
 /// permanents (e.g. `CannotDigivolve`, `CannotAttack`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FloodGateBody {
     pub modifier: String,
@@ -343,10 +345,11 @@ pub struct FloodGateBody {
 }
 
 /// Body for `kind: alt_path_registration`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AltPathRegistrationBody {
     pub trigger: Timing,
+    #[schemars(skip)]
     pub registers: IndexMap<String, serde_yml::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applies_to: Option<PredicateSpec>,
@@ -354,7 +357,7 @@ pub struct AltPathRegistrationBody {
 
 /// Body for `kind: raw_rust` — escape hatch pointing at a hand-written Rust
 /// function for effects that cannot be expressed declaratively yet.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RawRustClauseBody {
     #[serde(rename = "fn")]

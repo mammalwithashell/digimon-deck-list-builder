@@ -3,5 +3,6 @@ members = [
     "digimon-engine",
     "digimon-engine-py",
     "src-tauri",
+    "tools/dsl-schema-export",
 ]
 resolver = "2"
