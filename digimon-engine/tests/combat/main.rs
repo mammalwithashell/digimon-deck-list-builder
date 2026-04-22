@@ -6,6 +6,7 @@ mod block_interrupt;
 mod counter_interrupt;
 mod force_attack_mask;
 mod overclock;
+mod redirect_and_cancel;
 mod rush_exemption;
 mod scenarios;
 mod security_effects;

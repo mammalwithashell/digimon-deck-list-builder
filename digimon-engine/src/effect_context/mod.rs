@@ -933,6 +933,61 @@ impl<'a> EffectContext<'a> {
         self.game.place_on_security(player, source, position, face_up)
     }
 
+    // ─── Combat mutations (Phase 9 Task 2) ────────────────────────────
+
+    /// Redirect the active attack to a new target. Fires
+    /// `OnAttackTargetChange` globally. Spec §6.1.
+    ///
+    /// Callable from any effect closure running during an active attack —
+    /// `OnAttack`, `WhenAttacking`, a replacement process (equivalent to
+    /// `rctx.substitute(...)` via the replacement committer), or a
+    /// selection callback.
+    ///
+    /// Errors:
+    /// - `AttackError::NoActiveAttack` — `pending_attack` is `None`.
+    /// - `AttackError::InvalidTarget` — target is not a legal attack target
+    ///   (own attacker, non-Digimon, Delayed/Training Option, or wrong
+    ///   player for a direct-player attack).
+    ///
+    /// No-op + `Ok(())` if `new_target` equals the current effective
+    /// target (suppress redundant `OnAttackTargetChange` fan-out).
+    pub fn redirect_attack(
+        &mut self,
+        new_target: crate::selection::AttackTarget,
+    ) -> Result<(), crate::combat::AttackError> {
+        use crate::combat::AttackError;
+        let Some(pa) = self.game.pending_attack.as_ref() else {
+            return Err(AttackError::NoActiveAttack);
+        };
+        let attacker = pa.attacker;
+        self.game.validate_attack_target(attacker, new_target)?;
+        self.game.apply_attack_target_substitution(new_target);
+        Ok(())
+    }
+
+    /// Cancel the active attack. Sets `pending_attack.cancelled = true`;
+    /// `advance_pending_attack` detects the flag and short-circuits to
+    /// `Cleanup`. `EndOfAttack` still fires (cleanup symmetry);
+    /// `EndOfBattle` does NOT (no DP comparison ran). Spec §6.2.
+    ///
+    /// Errors: `AttackError::NoActiveAttack` if `pending_attack` is `None`.
+    ///
+    /// **Late-cancel semantics.** If called after a `ctx.redirect_attack`
+    /// in the same attack, the redirect's mutation to
+    /// `effective_target` survives — `cancelled` short-circuits
+    /// `advance_pending_attack` regardless. Cancel wins over redirect
+    /// in the sense that no battle occurs; the redirected target is
+    /// observable only via the `OnAttackTargetChange` observer that
+    /// already fired.
+    pub fn cancel_attack(&mut self) -> Result<(), crate::combat::AttackError> {
+        use crate::combat::AttackError;
+        let Some(pa) = self.game.pending_attack.as_mut() else {
+            return Err(AttackError::NoActiveAttack);
+        };
+        pa.cancelled = true;
+        Ok(())
+    }
+
     /// Move the top of `player`'s digitama deck into the breeding area.
     ///
     /// Returns `true` if a hatch occurred — i.e. the breeding slot was

@@ -50,6 +50,21 @@ enum WouldAttackOutcome {
     Pending,
 }
 
+/// Error returned by script-facing combat helpers
+/// (`ctx.redirect_attack`, `ctx.cancel_attack`) when the precondition
+/// is not met. Spec §6.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttackError {
+    /// No `pending_attack` is installed — the helper was called outside
+    /// an active attack (e.g. from an `OnPlay` observer).
+    NoActiveAttack,
+    /// The proposed redirect target is not a legal attack target —
+    /// wrong controller, not a Digimon (`option_state != Standard`, or
+    /// a Tamer/Option/DigiEgg), or an out-of-range handle. For Player
+    /// targets: rejecting the attacker's own controller.
+    InvalidTarget,
+}
+
 /// Result of an attack resolution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttackResult {
@@ -471,7 +486,19 @@ impl Game {
                 return WouldAttackOutcome::Cancelled;
             }
             ReplacementOutcome::Substituted(new_subject) => {
-                self.apply_attack_target_substitution(new_subject);
+                use crate::replacement::ReplacementSubject;
+                let new_target = match new_subject {
+                    ReplacementSubject::Permanent(h) => AttackTarget::Digimon(h),
+                    ReplacementSubject::Player(pid) => AttackTarget::Player(pid),
+                    ReplacementSubject::Card(_, _) => {
+                        debug_assert!(
+                            false,
+                            "Attack target substitution does not accept Card subjects"
+                        );
+                        return WouldAttackOutcome::Proceed;
+                    }
+                };
+                self.apply_attack_target_substitution(new_target);
             }
             ReplacementOutcome::Redirected(_) => {
                 debug_assert!(
@@ -501,27 +528,30 @@ impl Game {
     /// rewrite `pending_attack.effective_target` and fire the global
     /// `OnAttackTargetChange` observer. Mirrors the block-redirect
     /// fan-out at `try_enter_block`.
-    fn apply_attack_target_substitution(
+    ///
+    /// Shared entry point used by both:
+    /// - the dispatcher path (`fire_would_attack_dispatch`) — converts a
+    ///   `ReplacementSubject` from an `rctx.substitute(...)` call; and
+    /// - the script-facing `EffectContext::redirect_attack` helper (§6.1).
+    ///
+    /// Callers must have already validated the target; this method does
+    /// not re-check target legality. No-op if `pending_attack` is `None`
+    /// or `new_target` equals the current `effective_target` (suppress
+    /// redundant `OnAttackTargetChange` fan-out).
+    pub(crate) fn apply_attack_target_substitution(
         &mut self,
-        new_subject: crate::replacement::ReplacementSubject,
+        new_target: AttackTarget,
     ) {
-        use crate::replacement::ReplacementSubject;
-
-        let new_target = match new_subject {
-            ReplacementSubject::Permanent(h) => AttackTarget::Digimon(h),
-            ReplacementSubject::Player(pid) => AttackTarget::Player(pid),
-            ReplacementSubject::Card(_, _) => {
-                debug_assert!(
-                    false,
-                    "Attack target substitution does not accept Card subjects"
-                );
-                return;
-            }
+        // No active attack — silent no-op (callers should have checked).
+        let Some(pa) = self.pending_attack.as_mut() else {
+            return;
         };
-
-        if let Some(pa) = self.pending_attack.as_mut() {
-            pa.effective_target = new_target;
+        // Firing-guard: a redirect to the current effective target is a
+        // no-op — don't re-fire OnAttackTargetChange.
+        if pa.effective_target == new_target {
+            return;
         }
+        pa.effective_target = new_target;
 
         // OnAttackTargetChange: global observer fan-out across both players'
         // battle areas. Matches the Block-redirect fire site.
@@ -532,6 +562,49 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+    }
+
+    /// Validate whether `target` is a legal attack target for `attacker`.
+    ///
+    /// Rules:
+    /// - `AttackTarget::Digimon(h)`: handle must resolve to an on-field
+    ///   permanent that is a Digimon with `OptionState::Standard`, and
+    ///   must not be the attacker itself (self-attack is never legal).
+    ///   Controller is NOT restricted here — redirect_attack on the
+    ///   attacker's own side is conceivable for future cards; the existing
+    ///   `can_attack` / mask layer handles the "opponent-only" rule for
+    ///   attack DECLARATION. Replacement-driven redirects honor whatever
+    ///   the replacement author encodes.
+    /// - `AttackTarget::Player(pid)`: legal only if `pid != attacker.player`.
+    ///
+    /// Delayed / Training option permanents are rejected by the
+    /// `handle_valid` inner check (`OptionState::Standard`), matching the
+    /// existing target-legality guard in `begin_attack_impl`.
+    pub(crate) fn validate_attack_target(
+        &self,
+        attacker: PermanentHandle,
+        target: AttackTarget,
+    ) -> Result<(), AttackError> {
+        match target {
+            AttackTarget::Digimon(h) => {
+                if h == attacker {
+                    return Err(AttackError::InvalidTarget);
+                }
+                if !self.handle_valid(h) {
+                    return Err(AttackError::InvalidTarget);
+                }
+                Ok(())
+            }
+            AttackTarget::Player(pid) => {
+                if pid == attacker.player {
+                    return Err(AttackError::InvalidTarget);
+                }
+                if (pid as usize) >= self.players.len() {
+                    return Err(AttackError::InvalidTarget);
+                }
+                Ok(())
+            }
+        }
     }
 
     /// Scan the attacker's side for unsuspended allies with the Alliance
