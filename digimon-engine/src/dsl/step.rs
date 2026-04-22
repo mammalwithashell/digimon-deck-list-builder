@@ -1,9 +1,685 @@
-//! TODO: populated by Task 6 of the Phase 0 plan (`docs/superpowers/plans/2026-04-21-card-scripting-dsl-phase-0.md`).
+//! Mutation verbs and control-flow forms for `process:` / `extra_cost:` /
+//! `on_burst_turn_end:` step lists. Spec §3.7.
+//!
+//! The step model is a tagged enum with one variant per verb. The serde
+//! representation uses a single-key map per step — e.g.
+//! `gain_memory: 1`, `select_trash: { of: you, ... }` — so authors can
+//! write natural YAML while the compiler sees a strict sum type.
+//!
+//! ## `If` step YAML shape
+//!
+//! Because serde's external-tag representation requires exactly one key as the
+//! discriminant, the `if` step nests `condition`, `then`, and `else` **inside**
+//! the `if:` map:
+//!
+//! ```yaml
+//! - if:
+//!     condition: { name_contains: Greymon }
+//!     then:
+//!       - gain_memory: 1
+//!     else:
+//!       - gain_memory: 2
+//! ```
+//!
+//! A flat form (`if: <pred>\nthen: [...]`) would require an adjacent-tag or
+//! untagged representation that conflicts with the single-discriminant pattern
+//! used by every other variant, so we keep the nested form.
+//!
+//! ## serde_yml compatibility note
+//!
+//! `serde_yml` 0.0.12 does not support the standard serde external-tag
+//! `{key: value}` map form when its `deserialize_enum` method is called
+//! directly from the YAML event stream — it expects YAML `!tag` syntax.
+//! The `Content`-buffering that serde uses for `#[serde(untagged)]` outer
+//! enums happens to paper over this, which is why `process: Vec<StepSpec>`
+//! inside `ClauseSpec` (which IS untagged) works fine.
+//!
+//! To make `StepSpec` work in ALL contexts (including `extra_cost:` inside
+//! `AltPathSpec`, which is a plain struct), we implement `Deserialize`
+//! manually.  The custom impl calls `d.deserialize_map(...)` — which serde_yml
+//! handles for `MappingStart` events — and uses serde's
+//! `MapAccessDeserializer` to feed the resulting map into the derive-generated
+//! `__StepSpecHelper::deserialize`, which internally calls `deserialize_enum`
+//! on a `MapAccessDeserializer` that properly handles the external-tag
+//! one-key-map format.
 
+use std::fmt;
+
+use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Serialize};
 
-/// Step in a `process:` or `extra_cost:` list. Expanded in Task 6 to the
-/// full mutation-verb set (§3.7); for now a free-form map so Task 3's
-/// burst-digivolve YAML parses.
+use crate::dsl::predicate::{PredicateSpec, Zone};
+
+/// A single step. Parsed from a one-key YAML map via a custom `Deserialize`
+/// that calls `deserialize_map` to bypass serde_yml's `deserialize_enum`
+/// limitation (see module-level docs).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StepSpec {
+    // Memory / turn
+    GainMemory(i32),
+    LoseMemory(i32),
+    SetMemory(i32),
+
+    // Draw / deck / hand / trash
+    Draw(DrawArgs),
+    TrashFromTop(DrawArgs),
+    AddToHandFromDeck(HandleMoveArgs),
+    AddToHandFromTrash(HandleMoveArgs),
+    AddToHandFromReveal(HandleMoveArgs),
+    TrashFromHandByIndex(IndexedMoveArgs),
+    TrashFromReveal(HandleMoveArgs),
+    ReturnToDeckFromReveal(ReturnToDeckArgs),
+    ShuffleDeck(PlayerArg),
+    RevealTopDeck(RevealArgs),
+    PlaceRemainderOnDeck(PlaceRemainderArgs),
+
+    // Field / permanent
+    DeletePermanent(TargetArg),
+    ReturnToHand(TargetArg),
+    ReturnToDeck(ReturnPermanentArgs),
+    Suspend(TargetArg),
+    Unsuspend(TargetArg),
+    DeDigivolve(DeDigivolveArgs),
+    PlaceOnSecurity(PlaceOnSecurityArgs),
+    PlayToken(PlayTokenArgs),
+    PlaceAsBottomSource(PlaceAsBottomSourceArgs),
+    TrashTopSource(TargetArg),
+    Hatch(PlayerArg),
+
+    // Play / digivolve
+    PlayFromHand(PlayFromHandArgs),
+    PlayFromHandFree(PlayFromHandArgs),
+    PlayFromTrash(PlayFromHandArgs),
+    PlayFromTrashFree(PlayFromHandArgs),
+    PlayFromSecurity(PlayFromSecurityArgs),
+    PlayFromMaterials(PlayFromMaterialsArgs),
+    EffectInitiatedDigivolve(EffectDigivolveArgs),
+    EffectInitiatedDnaDigivolve(EffectDnaDigivolveArgs),
+
+    // Security
+    TrashTopSecurity(PlayerArg),
+    MarkSecurityFaceUp(MarkSecurityArgs),
+
+    // Modifiers
+    AddDpModifier(AddDpModifierArgs),
+    AddModifier(AddModifierArgs),
+    GrantKeyword(GrantKeywordArgs),
+
+    // Selection
+    SelectOwnPermanent(SelectFieldArgs),
+    SelectOpponentPermanent(SelectFieldArgs),
+    SelectHand(SelectZoneArgs),
+    SelectTrash(SelectZoneArgs),
+    SelectMaterial(SelectMaterialArgs),
+    SelectReveal(SelectZoneArgs),
+    SelectSecurity(SelectZoneArgs),
+    SelectUnionZone(SelectUnionArgs),
+    SelectOrderedPermutation(SelectPermutationArgs),
+    SelectCountCappedMulti(SelectCountCappedArgs),
+    SelectEffectChoice(SelectEffectChoiceArgs),
+    AsSelectingPlayer(AsSelectingPlayerArgs),
+
+    // Control flow
+    If(IfStep),
+    ForEach(ForEachStep),
+    PerSelected(PerSelectedStep),
+    ScheduleDelayed(ScheduleDelayedStep),
+    Optional(OptionalStep),
+
+    // Escape hatch (step-level)
+    RawRust(RawRustStep),
+}
+
+// ── Custom Deserialize for StepSpec ────────────────────────────────────
+//
+// We call `d.deserialize_map(StepSpecVisitor)` so serde_yml dispatches to
+// `deserialize_map` (which works for MappingStart) rather than
+// `deserialize_enum` (which requires a YAML `!tag`).
+//
+// The visitor reads the one-key map and dispatches based on the key name.
+// Each arm calls `map.next_value::<ArgType>()` which uses `deserialize_struct`
+// (or a scalar deserializer for the i32 arms) — both work fine from the YAML
+// stream.
+//
+// Nested `Vec<StepSpec>` fields (in IfStep, ForEachStep, etc.) recurse
+// through this same custom impl transparently.
+
+impl<'de> Deserialize<'de> for StepSpec {
+    fn deserialize<D: de::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_map(StepSpecVisitor)
+    }
+}
+
+struct StepSpecVisitor;
+
+impl<'de> Visitor<'de> for StepSpecVisitor {
+    type Value = StepSpec;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "a one-key map identifying a step verb")
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<StepSpec, A::Error> {
+        let key: String = map
+            .next_key()?
+            .ok_or_else(|| de::Error::custom("expected a step verb key, found empty map"))?;
+
+        let step = match key.as_str() {
+            // Memory / turn
+            "gain_memory" => StepSpec::GainMemory(map.next_value()?),
+            "lose_memory" => StepSpec::LoseMemory(map.next_value()?),
+            "set_memory" => StepSpec::SetMemory(map.next_value()?),
+
+            // Draw / deck / hand / trash
+            "draw" => StepSpec::Draw(map.next_value()?),
+            "trash_from_top" => StepSpec::TrashFromTop(map.next_value()?),
+            "add_to_hand_from_deck" => StepSpec::AddToHandFromDeck(map.next_value()?),
+            "add_to_hand_from_trash" => StepSpec::AddToHandFromTrash(map.next_value()?),
+            "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
+            "trash_from_hand_by_index" => StepSpec::TrashFromHandByIndex(map.next_value()?),
+            "trash_from_reveal" => StepSpec::TrashFromReveal(map.next_value()?),
+            "return_to_deck_from_reveal" => StepSpec::ReturnToDeckFromReveal(map.next_value()?),
+            "shuffle_deck" => StepSpec::ShuffleDeck(map.next_value()?),
+            "reveal_top_deck" => StepSpec::RevealTopDeck(map.next_value()?),
+            "place_remainder_on_deck" => StepSpec::PlaceRemainderOnDeck(map.next_value()?),
+
+            // Field / permanent
+            "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
+            "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
+            "return_to_deck" => StepSpec::ReturnToDeck(map.next_value()?),
+            "suspend" => StepSpec::Suspend(map.next_value()?),
+            "unsuspend" => StepSpec::Unsuspend(map.next_value()?),
+            "de_digivolve" => StepSpec::DeDigivolve(map.next_value()?),
+            "place_on_security" => StepSpec::PlaceOnSecurity(map.next_value()?),
+            "play_token" => StepSpec::PlayToken(map.next_value()?),
+            "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
+            "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
+            "hatch" => StepSpec::Hatch(map.next_value()?),
+
+            // Play / digivolve
+            "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
+            "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
+            "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
+            "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
+            "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
+            "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
+            "effect_initiated_digivolve" => {
+                StepSpec::EffectInitiatedDigivolve(map.next_value()?)
+            }
+            "effect_initiated_dna_digivolve" => {
+                StepSpec::EffectInitiatedDnaDigivolve(map.next_value()?)
+            }
+
+            // Security
+            "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
+            "mark_security_face_up" => StepSpec::MarkSecurityFaceUp(map.next_value()?),
+
+            // Modifiers
+            "add_dp_modifier" => StepSpec::AddDpModifier(map.next_value()?),
+            "add_modifier" => StepSpec::AddModifier(map.next_value()?),
+            "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
+
+            // Selection
+            "select_own_permanent" => StepSpec::SelectOwnPermanent(map.next_value()?),
+            "select_opponent_permanent" => StepSpec::SelectOpponentPermanent(map.next_value()?),
+            "select_hand" => StepSpec::SelectHand(map.next_value()?),
+            "select_trash" => StepSpec::SelectTrash(map.next_value()?),
+            "select_material" => StepSpec::SelectMaterial(map.next_value()?),
+            "select_reveal" => StepSpec::SelectReveal(map.next_value()?),
+            "select_security" => StepSpec::SelectSecurity(map.next_value()?),
+            "select_union_zone" => StepSpec::SelectUnionZone(map.next_value()?),
+            "select_ordered_permutation" => StepSpec::SelectOrderedPermutation(map.next_value()?),
+            "select_count_capped_multi" => StepSpec::SelectCountCappedMulti(map.next_value()?),
+            "select_effect_choice" => StepSpec::SelectEffectChoice(map.next_value()?),
+            "as_selecting_player" => StepSpec::AsSelectingPlayer(map.next_value()?),
+
+            // Control flow
+            "if" => StepSpec::If(map.next_value()?),
+            "for_each" => StepSpec::ForEach(map.next_value()?),
+            "per_selected" => StepSpec::PerSelected(map.next_value()?),
+            "schedule_delayed" => StepSpec::ScheduleDelayed(map.next_value()?),
+            "optional" => StepSpec::Optional(map.next_value()?),
+
+            // Escape hatch
+            "raw_rust" => StepSpec::RawRust(map.next_value()?),
+
+            other => {
+                return Err(de::Error::unknown_variant(
+                    other,
+                    &[
+                        "gain_memory", "lose_memory", "set_memory",
+                        "draw", "trash_from_top", "add_to_hand_from_deck",
+                        "add_to_hand_from_trash", "add_to_hand_from_reveal",
+                        "trash_from_hand_by_index", "trash_from_reveal",
+                        "return_to_deck_from_reveal", "shuffle_deck",
+                        "reveal_top_deck", "place_remainder_on_deck",
+                        "delete_permanent", "return_to_hand", "return_to_deck",
+                        "suspend", "unsuspend", "de_digivolve",
+                        "place_on_security", "play_token",
+                        "place_as_bottom_source", "trash_top_source", "hatch",
+                        "play_from_hand", "play_from_hand_free",
+                        "play_from_trash", "play_from_trash_free",
+                        "play_from_security", "play_from_materials",
+                        "effect_initiated_digivolve",
+                        "effect_initiated_dna_digivolve",
+                        "trash_top_security", "mark_security_face_up",
+                        "add_dp_modifier", "add_modifier", "grant_keyword",
+                        "select_own_permanent", "select_opponent_permanent",
+                        "select_hand", "select_trash", "select_material",
+                        "select_reveal", "select_security",
+                        "select_union_zone", "select_ordered_permutation",
+                        "select_count_capped_multi", "select_effect_choice",
+                        "as_selecting_player",
+                        "if", "for_each", "per_selected",
+                        "schedule_delayed", "optional",
+                        "raw_rust",
+                    ],
+                ));
+            }
+        };
+        Ok(step)
+    }
+}
+
+// ── Binding references ──────────────────────────────────────────────
+
+/// Used everywhere a step needs to identify a handle: a named binding (from
+/// `bind_as:`), or a structured reference with explicit fields.
+///
+/// NOTE: `#[serde(untagged)]` means the more-specific variant
+/// (`Structured`) is tried first so that a map `{ binding: "..." }` doesn't
+/// accidentally match `Named`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct StepSpec(pub serde_yml::Value);
+#[serde(untagged)]
+pub enum BindingRef {
+    Structured(StructuredBindingRef),
+    Named(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StructuredBindingRef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub binding: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub permanent: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_permanent: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone: Option<Zone>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub of_permanent: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Player {
+    You,
+    Opponent,
+    Any,
+    Active,
+}
+
+// ── Argument structs (one per verb family) ──────────────────────────
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlayerArg {
+    pub of: Player,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TargetArg {
+    pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DrawArgs {
+    pub of: Player,
+    pub count: u8,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HandleMoveArgs {
+    pub of: Player,
+    pub card: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IndexedMoveArgs {
+    pub of: Player,
+    pub hand_index: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnToDeckArgs {
+    pub of: Player,
+    pub card: BindingRef,
+    pub position: StackPosition,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnPermanentArgs {
+    pub target: BindingRef,
+    pub position: StackPosition,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub include_sources: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StackPosition {
+    Top,
+    Bottom,
+    Random,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RevealArgs {
+    pub of: Player,
+    pub count: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone: Option<Zone>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceRemainderArgs {
+    pub of: Player,
+    pub position: StackPosition,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeDigivolveArgs {
+    pub target: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop_at_level: Option<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceOnSecurityArgs {
+    pub of: Player,
+    pub source: BindingRef,
+    pub position: StackPosition,
+    #[serde(default)]
+    pub face_up: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlayTokenArgs {
+    pub controller: Player,
+    pub token_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceAsBottomSourceArgs {
+    pub source: BindingRef,
+    pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlayFromHandArgs {
+    pub of: Player,
+    pub hand_index: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum CostDelta {
+    Keyword(CostDeltaKeyword),
+    Literal(i32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CostDeltaKeyword {
+    Free,
+    Printed,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlayFromMaterialsArgs {
+    pub target: BindingRef,
+    pub source_index: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
+}
+
+/// Empty args struct for `play_from_security:` — the step carries no
+/// parameters (the security card to play is implicit from the trigger context).
+/// Using a dedicated struct rather than `serde_yml::Value` lets the external-
+/// tag enum deserialize correctly with `serde_yml`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlayFromSecurityArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub of: Option<Player>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EffectDigivolveArgs {
+    pub target: BindingRef,
+    pub from_hand: BindingRef,
+    pub cost: i32,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_requirements: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EffectDnaDigivolveArgs {
+    pub target_a: BindingRef,
+    pub target_b: BindingRef,
+    pub from_hand: BindingRef,
+    pub cost: i32,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_requirements: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MarkSecurityArgs {
+    pub of: Player,
+    pub card: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AddDpModifierArgs {
+    pub target: BindingRef,
+    pub value: i32,
+    pub expiry: String, // parsed as enum in Task 12 validation
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AddModifierArgs {
+    pub target: serde_yml::Value, // filter or BindingRef — type-checked in Task 12
+    pub modifier: String,
+    pub value: i32,
+    pub expiry: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrantKeywordArgs {
+    pub target: BindingRef,
+    pub keyword: String,
+    pub expiry: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<i32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SelectFieldArgs {
+    pub filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SelectZoneArgs {
+    pub of: Player,
+    pub filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SelectMaterialArgs {
+    pub of_permanent: BindingRef,
+    pub filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SelectUnionArgs {
+    pub of: Player,
+    pub zones: Vec<Zone>,
+    pub filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SelectPermutationArgs {
+    pub items: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SelectCountCappedArgs {
+    pub of: Player,
+    pub zone: Zone,
+    pub max: u8,
+    pub filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional_zero: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub distinct_by: Option<crate::dsl::alt_path::DistinctBy>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SelectEffectChoiceArgs {
+    pub labels: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    #[serde(default)]
+    pub prompt: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AsSelectingPlayerArgs {
+    pub of: Player,
+    pub body: Vec<StepSpec>,
+}
+
+/// Control-flow: conditional branch.
+///
+/// YAML shape (external-tag requires single discriminant key `if:`):
+///
+/// ```yaml
+/// - if:
+///     condition: { name_contains: Greymon }
+///     then:
+///       - gain_memory: 1
+///     else:
+///       - gain_memory: 2
+/// ```
+///
+/// `condition` is typed as `serde_yml::Value` so that predicate expression
+/// forms not yet modelled in `PredicateSpec` (e.g. `equals:`, `count_ge:`)
+/// can be used in authored YAML today; Task 7 will tighten this to a typed
+/// enum once all predicate forms are enumerated.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IfStep {
+    pub condition: serde_yml::Value,
+    pub then: Vec<StepSpec>,
+    #[serde(default, rename = "else", skip_serializing_if = "Option::is_none")]
+    pub else_: Option<Vec<StepSpec>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ForEachStep {
+    pub over: PredicateSpec,
+    pub bind_as: String,
+    pub body: Vec<StepSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PerSelectedStep {
+    pub selection: String,
+    pub bind_as: String,
+    pub body: Vec<StepSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScheduleDelayedStep {
+    pub when: super::clause::Timing,
+    pub body: Vec<StepSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OptionalStep(pub Vec<StepSpec>);
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RawRustStep {
+    #[serde(rename = "fn")]
+    pub fn_name: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub consumes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub binds: Vec<String>,
+}
