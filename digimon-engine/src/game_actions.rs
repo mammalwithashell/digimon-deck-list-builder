@@ -24,6 +24,35 @@ enum OptionSource {
     Trash(usize),
 }
 
+/// Phase 8 Option subtype, inferred from effect flags. First-match-wins
+/// inside `classify_option_subtype` — printed cards carry at most one
+/// subtype per Option, so the ordering (Delay → Training → Link →
+/// Standard) is rule-consistent but doesn't affect conforming data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OptionSubtype {
+    Standard,
+    Delay(crate::enums::DelayTrigger),
+    Link,
+    Training,
+}
+
+/// Inspect an Option's effect list to decide its play-path subtype.
+/// Iterates effects; the first one carrying a subtype flag wins.
+fn classify_option_subtype(effects: &[crate::effect::Effect]) -> OptionSubtype {
+    for eff in effects {
+        if let Some(trigger) = eff.delay_trigger {
+            return OptionSubtype::Delay(trigger);
+        }
+        if eff.training {
+            return OptionSubtype::Training;
+        }
+        if eff.link_cost.is_some() {
+            return OptionSubtype::Link;
+        }
+    }
+    OptionSubtype::Standard
+}
+
 impl Game {
     /// Move from breeding to battle area for a player.
     pub fn move_from_breeding(&mut self, player_id: PlayerId) -> bool {
@@ -265,9 +294,10 @@ impl Game {
     /// 4. Fire `OnUseOption` global observer (every battle area) + this
     ///    card's `OptionMain` body, drain the queue.
     /// 5. If a `PendingSelection` parked inside the body, return `Pending`
-    ///    — caller drives the selection; `dispose_option_standard` re-enters
+    ///    — caller drives the selection; `dispose_option` re-enters
     ///    via the post-resolution path once the selection resolves.
-    /// 6. Otherwise dispose (Standard → trash) and `check_turn_end`.
+    /// 6. Otherwise dispose (Standard → trash; Delay → park on field) and
+    ///    `check_turn_end`.
     ///
     /// Delay / Link / Training dispatch lands in Tasks 3/4/5. For Task 2
     /// every Option is treated as Standard — the specialized dispatch
@@ -374,8 +404,9 @@ impl Game {
             return OptionPlayResult::Pending;
         }
 
-        // 7. Standard Option — dispose (trash) + check_turn_end.
-        self.dispose_option_standard();
+        // 7. Dispose per subtype (Standard → trash; Delay → park on field)
+        // + check_turn_end.
+        self.dispose_option();
         self.check_turn_end();
         OptionPlayResult::Trashed
     }
@@ -413,15 +444,78 @@ impl Game {
         }
     }
 
-    /// Dispose a Standard Option that has finished resolving its
-    /// `OptionMain` body — route it to the owner's trash and clear
-    /// `pending_option`.
+    /// Dispose an Option that has finished resolving its `OptionMain`
+    /// body. Branches on the card's subtype:
     ///
-    /// Phase 7 `WhenWouldBeTrashed` replacement window is wired in Task 6.
-    /// Task 2 commits the trash unconditionally.
-    pub(crate) fn dispose_option_standard(&mut self) {
+    /// - **Standard** — route to the owner's trash. Phase 7
+    ///   `WhenWouldBeTrashed` replacement window is wired in Task 6; Task 2
+    ///   commits the trash unconditionally.
+    /// - **Delay** — park on the owner's battle_area as a Permanent with
+    ///   `OptionState::Delayed`. The end-of-turn scan in
+    ///   [`Game::scan_delayed_options_at_end_of_turn`] fires `DelayEffect`
+    ///   and trashes via `delete_permanent_with_cause(Cost)` when
+    ///   `turn_count == trash_on_turn`.
+    /// - **Link / Training** — Task 4/5; Standard fallback for now.
+    pub(crate) fn dispose_option(&mut self) {
         let Some(pending) = self.pending_option.take() else { return };
-        self.player_mut(pending.owner).trash.push(pending.card);
+
+        let card_id = pending.card.card_id(&self.card_data).to_string();
+        let effects = self
+            .effects_for_card(&card_id, pending.card.handle())
+            .unwrap_or_default();
+        let subtype = classify_option_subtype(&effects);
+
+        match subtype {
+            OptionSubtype::Standard => {
+                self.player_mut(pending.owner).trash.push(pending.card);
+            }
+            OptionSubtype::Delay(trigger) => {
+                let trash_turn = self.compute_delay_trash_turn(pending.owner, trigger);
+                let turn = self.turn_count;
+                let mut perm = crate::permanent::Permanent::new(pending.card, turn);
+                perm.option_state = crate::permanent::OptionState::Delayed {
+                    owner: pending.owner,
+                    trash_on_turn: trash_turn,
+                };
+                self.player_mut(pending.owner).battle_area.push(perm);
+            }
+            OptionSubtype::Link | OptionSubtype::Training => {
+                // Task 4 (Link) / Task 5 (Training). Fall back to Standard
+                // trash so tests that accidentally set these flags without
+                // the full pipeline don't silently leak the card.
+                self.player_mut(pending.owner).trash.push(pending.card);
+            }
+        }
+    }
+
+    /// Compute the absolute `turn_count` at which a delayed Option should
+    /// self-trash. The rule is "end of the **owner**'s next turn" for
+    /// `EndOfYourNextTurn`, and the current turn for `EndOfThisTurn`.
+    ///
+    /// In a 2-player round-robin:
+    /// - If `owner == turn_player` (the common case — played on own turn),
+    ///   "next own turn" lands `turn_count + 2` (skip the opponent's turn).
+    /// - If `owner != turn_player` (played during opponent's turn, e.g. via
+    ///   a Counter window), "next own turn" lands `turn_count + 1`.
+    ///
+    /// Multi-player extension is deferred — the plan locks 2-player
+    /// semantics for v1.
+    fn compute_delay_trash_turn(
+        &self,
+        owner: PlayerId,
+        trigger: crate::enums::DelayTrigger,
+    ) -> u16 {
+        use crate::enums::DelayTrigger;
+        match trigger {
+            DelayTrigger::EndOfThisTurn => self.turn_count,
+            DelayTrigger::EndOfYourNextTurn => {
+                if self.turn_player() == owner {
+                    self.turn_count + 2
+                } else {
+                    self.turn_count + 1
+                }
+            }
+        }
     }
 
     /// Move a specific card from `player`'s deck to their hand. Returns false

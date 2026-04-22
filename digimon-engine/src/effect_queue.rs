@@ -536,10 +536,10 @@ impl Game {
         }
         match pending.resolution_phase {
             crate::selection::OptionResolutionPhase::MainEffectDrain => {
-                // Standard path: trash the card, clear pending_option, check
-                // turn end. Delay/Link/Training dispatch on sentinel flags
-                // inside the effect arrives in Tasks 3-5.
-                self.dispose_option_standard();
+                // Dispatch on the card's subtype flags. Standard → trash;
+                // Delay → park on field (Task 3). Link / Training land in
+                // Tasks 4-5 via the same dispatcher.
+                self.dispose_option();
                 self.check_turn_end();
             }
             crate::selection::OptionResolutionPhase::LinkSelectHost => {

@@ -91,10 +91,18 @@ impl Game {
 
         self.current_phase = GamePhase::EndTurn;
 
+        let ending_player = self.turn_player();
+
+        // Phase 8 Task 3: resolve Delayed Options scheduled for this turn's
+        // end BEFORE firing `EndOfYourTurn` observers — delayed effects are
+        // part of the ending turn's resolution (see design spec §8 and the
+        // plan doc, §Task 3). `DelayEffect` fires, then the permanent is
+        // trashed via the Phase 7 replacement framework (cause = Cost).
+        self.resolve_delayed_options(ending_player);
+
         // Memory swing-back: capture memory before firing OnEndTurn effects,
         // fire them, then see if an effect restored memory from negative.
         let memory_before = self.memory;
-        let ending_player = self.turn_player();
         self.fire_end_of_your_turn(ending_player);
 
         if memory_before < 0 && self.memory >= 0 && !self.game_over {
@@ -377,5 +385,90 @@ impl Game {
             crate::selection::TriggerSource::PlayerBattleArea(player),
         );
         self.drain_effect_queue();
+    }
+
+    /// Phase 8 Task 3: fire and trash every Delayed Option owned by
+    /// `owner` whose scheduled `trash_on_turn` matches the current
+    /// `turn_count`. Called at the top of `end_turn` before the regular
+    /// `EndOfYourTurn` fan-out.
+    ///
+    /// For each delayed permanent we enqueue `DelayEffect`, drain, then
+    /// route the trash through `delete_permanent_with_cause` with
+    /// `ReplacementCause::Cost` so the Phase 7 `WhenWouldLeaveBattleArea` /
+    /// `WhenWouldBeDeleted` replacement windows get a chance to intercept.
+    ///
+    /// Handles shift: after each delete, the remaining delayed handles are
+    /// recomputed. Matches elsewhere in the codebase that resolve
+    /// permanent-level effects in a shrink-to-fit loop.
+    pub(crate) fn resolve_delayed_options(&mut self, owner: PlayerId) {
+        use crate::permanent::OptionState;
+
+        let ending_turn = self.turn_count;
+
+        loop {
+            // Recompute the first matching delayed handle each iteration —
+            // earlier deletions can shift indices.
+            let target = {
+                let me = self.player(owner);
+                me.battle_area.iter().enumerate().find_map(|(i, perm)| {
+                    if let OptionState::Delayed { owner: o, trash_on_turn } = perm.option_state {
+                        if o == owner && trash_on_turn == ending_turn {
+                            return Some(PermanentHandle {
+                                player: owner,
+                                index: i as u8,
+                            });
+                        }
+                    }
+                    None
+                })
+            };
+            let Some(handle) = target else { break };
+
+            self.enqueue_triggered(
+                EffectTiming::DelayEffect,
+                crate::selection::TriggerSource::Permanent(handle),
+            );
+            self.drain_effect_queue();
+
+            // Re-resolve the handle by matching card_index — the body may
+            // have mutated the battle_area. Then trash via Phase 7 so a
+            // replacement window can cancel/redirect the delete.
+            let still_valid = self
+                .player(owner)
+                .battle_area
+                .get(handle.index as usize)
+                .map(|p| matches!(p.option_state, OptionState::Delayed { .. }))
+                .unwrap_or(false);
+            if !still_valid {
+                // Handle became stale (effect body deleted it, or shifted
+                // indices). Next loop iteration scans from scratch.
+                continue;
+            }
+            self.delete_permanent_with_cause(
+                handle,
+                crate::replacement::ReplacementCause::Cost,
+            );
+
+            // If the replacement window cancelled (permanent still on field
+            // as Delayed at the original slot with the same trash_on_turn),
+            // do NOT keep iterating on the same handle forever — break out.
+            // Within a single `end_turn` the loop resolves each matching
+            // permanent at most once; a cancel-always replacement naturally
+            // re-fires at subsequent turn ends when the scan runs again.
+            let cancelled = match self
+                .player(owner)
+                .battle_area
+                .get(handle.index as usize)
+                .map(|p| p.option_state)
+            {
+                Some(OptionState::Delayed { owner: o, trash_on_turn: t }) => {
+                    o == owner && t == ending_turn
+                }
+                _ => false,
+            };
+            if cancelled {
+                break;
+            }
+        }
     }
 }

@@ -1143,7 +1143,18 @@ impl Game {
         self.player(handle.player)
             .battle_area
             .get(handle.index as usize)
-            .map(|p| p.is_digimon(&self.card_data))
+            .map(|p| {
+                // Must be a Digimon (Tamers, DigiEggs, Options aren't attack
+                // targets). Phase 8 Task 3 reinforces this for Delayed /
+                // Training Options: they live on battle_area but are not
+                // attackable. Linked (Task 4) is attached sideways to its
+                // host and doesn't occupy a standalone permanent slot.
+                p.is_digimon(&self.card_data)
+                    && matches!(
+                        p.option_state,
+                        crate::permanent::OptionState::Standard
+                    )
+            })
             .unwrap_or(false)
     }
 
