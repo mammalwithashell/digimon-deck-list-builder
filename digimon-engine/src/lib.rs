@@ -1,4 +1,6 @@
 pub mod serialization;
+#[cfg(feature = "dsl-yaml-loader")]
+pub mod dsl;
 pub mod enums;
 pub mod events;
 pub mod rules;

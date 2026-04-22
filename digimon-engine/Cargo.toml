@@ -11,6 +11,17 @@ rand = "0.8"
 ort = { version = "2.0.0-rc.10", default-features = false, features = ["ndarray", "std", "download-binaries", "tls-rustls"] }
 ndarray = "0.17"
 
+# DSL (Phase 0) — behind dsl-yaml-loader feature; ungated on desktop via the
+# default feature set but disable-able by the Tauri crate per spec §7a.1.
+serde_yml = { version = "0.0.12", optional = true }
+schemars = { version = "0.8", features = ["indexmap2"], optional = true }
+thiserror = { version = "1", optional = true }
+indexmap = { version = "2", features = ["serde"], optional = true }
+
+[features]
+default = ["dsl-yaml-loader"]
+dsl-yaml-loader = ["dep:serde_yml", "dep:schemars", "dep:thiserror", "dep:indexmap"]
+
 [dev-dependencies]
 
 # Tests are grouped by domain into 7 binaries. Each binary's entry point is
@@ -64,3 +75,8 @@ path = "tests/ffi_parity/main.rs"
 [[test]]
 name = "policies"
 path = "tests/policies/main.rs"
+
+[[test]]
+name = "dsl"
+path = "tests/dsl/main.rs"
+required-features = ["dsl-yaml-loader"]
