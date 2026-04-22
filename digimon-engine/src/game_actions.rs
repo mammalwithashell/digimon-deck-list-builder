@@ -302,6 +302,11 @@ impl Game {
         player_id: PlayerId,
         source: OptionSource,
     ) -> OptionPlayResult {
+        debug_assert!(
+            self.pending_option.is_none(),
+            "reentrant Option play while another is mid-resolution"
+        );
+
         // 1. Phase gate.
         if self.current_phase != GamePhase::Main {
             return OptionPlayResult::Invalid;

@@ -542,9 +542,15 @@ impl Game {
                 self.dispose_option_standard();
                 self.check_turn_end();
             }
-            // Other phases land in later tasks; leave pending_option in
-            // place until their dispatch is wired.
-            _ => {}
+            crate::selection::OptionResolutionPhase::LinkSelectHost => {
+                // Task 4 populates — Plug-In host selection unwind.
+            }
+            crate::selection::OptionResolutionPhase::Disposing => {
+                // Task 6 populates — WhenWouldBeTrashed replacement window.
+            }
+            crate::selection::OptionResolutionPhase::Done => {
+                // Terminal; no-op.
+            }
         }
     }
 }
