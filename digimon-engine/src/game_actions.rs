@@ -498,15 +498,25 @@ impl Game {
     /// Dispose an Option that has finished resolving its `OptionMain`
     /// body. Branches on the card's subtype:
     ///
-    /// - **Standard** — route to the owner's trash. Phase 7
-    ///   `WhenWouldBeTrashed` replacement window is wired in Task 6; Task 2
-    ///   commits the trash unconditionally.
+    /// - **Standard** — route to the owner's trash through Phase 7's
+    ///   `WhenWouldBeTrashed` replacement window (cause=Cost). A mandatory
+    ///   cancel keeps the card in the owner's hand; a redirect routes to
+    ///   Deck (bottom) or Hand. An optional replacement installs a
+    ///   `PendingSelection` and re-parks `pending_option` in `Disposing`
+    ///   so `advance_pending_option` can commit once the selection
+    ///   resolves.
     /// - **Delay** — park on the owner's battle_area as a Permanent with
     ///   `OptionState::Delayed`. The end-of-turn scan in
     ///   [`Game::scan_delayed_options_at_end_of_turn`] fires `DelayEffect`
     ///   and trashes via `delete_permanent_with_cause(Cost)` when
-    ///   `turn_count == trash_on_turn`.
-    /// - **Link / Training** — Task 4/5; Standard fallback for now.
+    ///   `turn_count == trash_on_turn`. That delete path fires
+    ///   `WhenWouldLeaveBattleArea` + `WhenWouldBeDeleted` (Phase 7
+    ///   integration for Delay flows through the Permanent fire-site, not
+    ///   `WhenWouldBeTrashed`).
+    /// - **Link** — install host-select prompt; the selection callback
+    ///   calls `attach_linked_card` directly.
+    /// - **Training** — park as `OptionState::Training` on the owner's
+    ///   battle_area.
     pub(crate) fn dispose_option(&mut self) {
         let Some(pending) = self.pending_option.take() else { return };
 
@@ -518,7 +528,37 @@ impl Game {
 
         match subtype {
             OptionSubtype::Standard => {
-                self.player_mut(pending.owner).trash.push(pending.card);
+                use crate::replacement::{ReplacementCause, ReplacementSubject};
+
+                // Phase 8 Task 6: route the dispose-trash through
+                // `try_replace(WhenWouldBeTrashed, ...)`. Cause is Cost
+                // (the Option was played from hand/trash and is being
+                // disposed as part of the play cost/resolution). Source
+                // zone is Hand — reflects where the Option came from.
+                let card_handle = pending.card.handle();
+                let subject =
+                    ReplacementSubject::Card(card_handle, crate::enums::Zone::Hand);
+                let outcome = self.try_replace(
+                    EffectTiming::WhenWouldBeTrashed,
+                    subject,
+                    ReplacementCause::Cost,
+                    Some(crate::enums::Zone::Trash),
+                );
+
+                if self.pending_selection.is_some() {
+                    // Optional replacement installed a selection. Re-park
+                    // `pending_option` in `Disposing` so
+                    // `advance_pending_option` can commit the trash
+                    // outcome once the selection resolves.
+                    self.pending_option = Some(PendingOption {
+                        owner: pending.owner,
+                        card: pending.card,
+                        resolution_phase: OptionResolutionPhase::Disposing,
+                    });
+                    return;
+                }
+
+                self.commit_option_trash_outcome(pending, outcome);
             }
             OptionSubtype::Delay(trigger) => {
                 let trash_turn = self.compute_delay_trash_turn(pending.owner, trigger);
@@ -608,6 +648,58 @@ impl Game {
                     owner: pending.owner,
                 };
                 self.player_mut(pending.owner).battle_area.push(perm);
+            }
+        }
+    }
+
+    /// Commit a Standard Option's dispose-trash given the
+    /// `WhenWouldBeTrashed` outcome produced by `try_replace`. Shared by
+    /// the synchronous path in `dispose_option` and the deferred path in
+    /// `advance_pending_option::Disposing` (where an optional replacement
+    /// installed a selection that has since resolved).
+    ///
+    /// Outcome routing (per Phase 7 spec §7.6):
+    /// - `None` — commit the original event: trash the card.
+    /// - `Cancelled` / `CustomHandled` — return the Option to the owner's
+    ///   hand (cancel restores the original zone for Card subjects).
+    /// - `Redirected(Deck)` — insert at the bottom of the owner's deck.
+    /// - `Redirected(Hand)` — push to the owner's hand.
+    /// - Other variants (`Redirected(other)`, `Substituted(_)`) are not
+    ///   meaningful for Option trash in v1; debug_assert catches the
+    ///   regression and falls back to trash.
+    pub(crate) fn commit_option_trash_outcome(
+        &mut self,
+        pending: PendingOption,
+        outcome: crate::replacement::ReplacementOutcome,
+    ) {
+        use crate::replacement::ReplacementOutcome;
+        match outcome {
+            ReplacementOutcome::None => {
+                self.player_mut(pending.owner).trash.push(pending.card);
+            }
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                self.player_mut(pending.owner).hand.push(pending.card);
+            }
+            ReplacementOutcome::Redirected(crate::enums::Zone::Deck) => {
+                self.player_mut(pending.owner).deck.insert(0, pending.card);
+            }
+            ReplacementOutcome::Redirected(crate::enums::Zone::Hand) => {
+                self.player_mut(pending.owner).hand.push(pending.card);
+            }
+            ReplacementOutcome::Redirected(other) => {
+                debug_assert!(
+                    false,
+                    "unexpected Redirected({:?}) for Option trash — only Deck/Hand supported in v1",
+                    other
+                );
+                self.player_mut(pending.owner).trash.push(pending.card);
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "Substituted not supported for Option WhenWouldBeTrashed v1"
+                );
+                self.player_mut(pending.owner).trash.push(pending.card);
             }
         }
     }

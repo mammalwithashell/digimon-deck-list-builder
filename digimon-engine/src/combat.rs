@@ -1376,6 +1376,15 @@ impl Game {
         // in place (as required by the Appmon-trait card text). Each linked
         // card trashes to the host owner's trash; fire OnLinkedCardTrashed
         // globally if anything was linked.
+        //
+        // TODO(phase-8-followup): this host-cascade trashes linked cards
+        // via a direct `trash.push` — it does NOT route through Phase 7's
+        // `WhenWouldBeTrashed` replacement window. v1 constraint (spec
+        // §8.2): firing WWBT here while the host is being deleted risks
+        // recursive dispatch (a linked-card replacement could redirect or
+        // substitute into another leave-the-field event on the same host,
+        // spiralling through the deletion chain). Revisit once the
+        // replacement recursion model is proven out on simpler fire-sites.
         let had_linked = {
             let linked = self
                 .player(handle.player)

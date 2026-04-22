@@ -805,17 +805,21 @@ fn commit_deferred_outcome(
         ReplacementSubject::Permanent(h) => h,
         other => {
             // v1 commit_deferred_outcome only handles Permanent subjects.
-            // Card/Player optional replacements would need fire-site-specific
-            // commit arms (e.g. trash-from-hand by card handle, place-in-security
-            // by CardSourceRef, draw count). Until one of those ships with an
-            // optional replacement pathway, this arm is unreachable — but if it
-            // fires, we silently drop the outcome, which is a correctness bug.
-            // debug_assert forces the regression to surface in tests.
+            // Card/Player optional replacements either (a) have a fire-site
+            // that re-enters via a parked state machine (Phase 8 Task 6's
+            // Option-dispose flow parks `pending_option` in `Disposing`
+            // and re-dispatches from `advance_pending_option`), or (b)
+            // have no optional-replacement pathway in v1 (draw, trash-by-
+            // effect are mandatory-only today). If neither applies, the
+            // outcome is silently dropped — that would be a correctness
+            // bug. The debug_assert catches unexpected callers in dev.
             debug_assert!(
-                false,
+                game.pending_option.is_some(),
                 "commit_deferred_outcome called with non-Permanent subject ({other:?}); \
-                 fire-site must implement its own deferred commit path"
+                 fire-site must implement its own deferred commit path (or \
+                 park a pending_* slot that re-dispatches)"
             );
+            let _ = other;
             return;
         }
     };

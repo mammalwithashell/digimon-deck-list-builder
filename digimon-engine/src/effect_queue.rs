@@ -722,7 +722,21 @@ impl Game {
                 // doesn't reach here.
             }
             crate::selection::OptionResolutionPhase::Disposing => {
-                // Task 6 populates — WhenWouldBeTrashed replacement window.
+                // Task 6: an optional `WhenWouldBeTrashed` replacement
+                // installed a PendingSelection during `dispose_option`'s
+                // Standard arm. Now that the selection has resolved, the
+                // accept-side callback wrote the outcome into
+                // `replacement_pending_outcome` (None if declined — meaning
+                // the original trash should proceed). Take the parked
+                // pending_option back and commit the outcome via the
+                // shared helper, then cleanup and advance the turn state.
+                let pending = self.pending_option.take().expect("parked by dispose_option");
+                let outcome = self
+                    .replacement_pending_outcome
+                    .take()
+                    .unwrap_or(crate::replacement::ReplacementOutcome::None);
+                self.commit_option_trash_outcome(pending, outcome);
+                self.check_turn_end();
             }
             crate::selection::OptionResolutionPhase::Done => {
                 // Terminal; no-op.
