@@ -445,7 +445,61 @@ impl Game {
                         // (§2.5j).
                         return AttackResult::InProgress;
                     }
+
+                    // Phase 9 Task 6 — `<Piercing>` post-battle security
+                    // check. Fires iff the just-resolved battle was a
+                    // Digimon-vs-Digimon match in which the attacker
+                    // survived, the defender was wiped, AND the attacker
+                    // has `<Piercing>`. We re-check survival here because
+                    // OnDeletion / EndOfBattle triggers that ran inside
+                    // `resolve_battle` may have deleted the attacker.
+                    //
+                    // The security pipeline may park on a
+                    // `PendingSelection`; in that case we return
+                    // `InProgress` and `advance_security_resolution`
+                    // finalizes via `cleanup_attack` when the chain clears.
+                    if outcome == AttackResult::AttackerWins {
+                        if let Some(pa) = self.pending_attack.as_ref() {
+                            let attacker_h = pa.attacker;
+                            let defender_handle = match pa.effective_target {
+                                AttackTarget::Digimon(h) => Some(h),
+                                AttackTarget::Player(_) => None,
+                            };
+                            if let Some(defender_h) = defender_handle {
+                                let defender_wiped = !self.handle_valid(defender_h);
+                                let attacker_alive = self.handle_valid(attacker_h);
+                                if defender_wiped
+                                    && attacker_alive
+                                    && self.has_keyword(attacker_h, Keyword::Piercing)
+                                {
+                                    self.transition_attack_state(AttackState::PostBattle);
+                                    let piercing_outcome =
+                                        self.enter_piercing_security_check(attacker_h);
+                                    match piercing_outcome {
+                                        AttackResult::InProgress => {
+                                            return AttackResult::InProgress;
+                                        }
+                                        terminal => {
+                                            return self.cleanup_attack(terminal);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     return self.cleanup_attack(outcome);
+                }
+                AttackState::PostBattle => {
+                    // Defensive: the Battle arm handles PostBattle inline
+                    // (transition + fire + return). If we land here it's
+                    // because a selection callback re-entered
+                    // `advance_pending_attack` while the security pipeline
+                    // is still in flight — but in that case
+                    // `advance_security_resolution` is responsible for
+                    // finalizing via `cleanup_attack`. Just yield so the
+                    // in-flight security resolution can continue.
+                    return AttackResult::InProgress;
                 }
                 AttackState::Cleanup => {
                     // Shouldn't normally reach here — cleanup_attack is
@@ -1499,6 +1553,29 @@ impl Game {
                 self.resolve_player_security_loop(attacker, defender_player)
             }
         }
+    }
+
+    /// Phase 9 Task 6 — fire the `<Piercing>` follow-up security check.
+    /// Reuses the standard security-resolution pipeline: counts +
+    /// `SecurityAttackChange` modifier sum, honors `Jamming` on the
+    /// attacker during the Digimon-battle phase, and drains
+    /// `SecuritySkill` / `OnSecurityCheck` / `OnLoseSecurity` normally.
+    /// The defending player is inferred from the attack's effective
+    /// target, which has just been wiped — we read `attacker.player`'s
+    /// opponent for the defender id.
+    ///
+    /// Returns `AttackResult::InProgress` if the security pipeline
+    /// installed a `PendingSelection`; in that case the caller returns
+    /// `InProgress` and `advance_security_resolution` finalizes via
+    /// `cleanup_attack` when the chain clears. Otherwise returns a
+    /// terminal outcome that the caller routes through
+    /// `cleanup_attack`.
+    fn enter_piercing_security_check(
+        &mut self,
+        attacker: PermanentHandle,
+    ) -> AttackResult {
+        let defender_player: PlayerId = 1 - attacker.player;
+        self.resolve_player_security_loop(attacker, defender_player)
     }
 
     /// Security-check loop for a `Player` attack. Installs the first

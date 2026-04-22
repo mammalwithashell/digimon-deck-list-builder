@@ -435,6 +435,17 @@ pub enum AttackState {
     PostBlock,
     /// No further interrupts pending. `resolve_pending_battle` will fire.
     Battle,
+    /// Phase 9 Task 6 — post-Battle checkpoint. The Battle arm transitions
+    /// the attack here immediately before firing a `<Piercing>`-driven
+    /// follow-up security check against the defending player. The state
+    /// is primarily a provenance marker: `resolve_pending_battle` has
+    /// already run (DP compared + defender wiped), and the security
+    /// pipeline takes over via `enter_piercing_security_check`. If that
+    /// pipeline parks on a `PendingSelection` (e.g. a `WhenWouldLoseSecurity`
+    /// optional replacement), `advance_security_resolution` finalizes the
+    /// attack via `cleanup_attack` when the selection chain clears.
+    /// Spec §4.3.
+    PostBattle,
     /// Post-battle: clear EndOfAttack modifiers, fire EndOfAttack triggers.
     Cleanup,
 }
