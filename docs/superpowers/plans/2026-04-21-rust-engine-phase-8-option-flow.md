@@ -1470,18 +1470,27 @@ Per spec §10:
 
 ## Status
 
-(Fill in as tasks complete.)
+Phase 8 Option Flow — **✅ Landed 2026-04-21**. 669 tests passing post-task-6 (baseline 624 + 45 new — 12 shape + 7 standard + 7 delay + 9 link + 5 training + 5 replacement), 0 warnings under `-D warnings`.
 
-| Task | Date | Commit(s) |
-|------|------|-----------|
-| 1 — Enum + data types | — | — |
-| 2 — Standard Option flow | — | — |
-| 3 — Delay flow | — | — |
-| 4 — Plug-In / Link flow | — | — |
-| 5 — Training flow | — | — |
-| 6 — Phase 7 replacement integration | — | — |
-| 7 — Docs | — | — |
-| 8 — Behavioral end-to-end | — | — |
+| Task | Commit | Landing | Quality fix |
+|------|--------|---------|-------------|
+| 1 Enums + types | `00fe953f` | 2026-04-21 | `8b27c6c6` |
+| 2 Standard flow | `1955fec5` | 2026-04-21 | `1fdb6ce1` |
+| 3 Delay flow | `30bef6f2` | 2026-04-21 | `2c2ae7a1` (critical: multi-player scan + cancel skip-set) |
+| 4 Link flow | `3e93e1d0` | 2026-04-21 | `da16f4aa` |
+| 5 Training flow | `ce044584` | 2026-04-21 | `4ec7e5be` |
+| 6 Replacement integration | `8f38095b` | 2026-04-21 | — |
+| 7 Docs | TBD | 2026-04-21 | — |
+| 8 Behavioral e2e | TBD | 2026-04-21 | — |
 
 Full suite green at end of each task is mandatory before proceeding to the next.
 Baseline 624 → final 669 (+45 net new tests).
+
+## Deferred follow-ups
+
+- Linked-card host-deletion cascade WhenWouldBeTrashed firing (`TODO(phase-8-followup)` in `combat.rs` §linked cascade).
+- Training sideways-scope tightening once `TriggerSource::BreedingArea` exists (parity §13).
+- Cancel-semantics spec note: clarify intended behavior for Card-subject trash replacements mid-resolution.
+- Zone-mover helper use for Redirected(Deck)/Redirected(Hand) outcomes.
+- Counter-timed Options — Phase 9.
+- Nested `PendingSelection::Source` in OptionMain — shared Phase 7 Partition/ArmorPurge limitation.

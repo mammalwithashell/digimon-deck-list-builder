@@ -862,3 +862,70 @@ Refinement required: once breeding-area timing dispatch is added, tighten
 the scan at `digimon-engine/src/effect_queue.rs` (Phase 8 Task 5 sideways
 scan) to gate on source-is-breeding-perm. Python side: Python implements
 Training with targeted inheritance (breeding-specific); Rust is wider.
+
+---
+
+## 14. Option flow (Phase 8)
+
+Phase 8 Option-card play flow landed 2026-04-21. See `docs/RUST_ENGINE_API.md` §Phase 8 for the full scripting surface.
+
+### 14.1 🟢 Option subtype dispatch is now native
+
+Rust now implements Option cards as a first-class play pipeline with
+dedicated `OptionState` (Standard / Delayed / Linked / Training),
+`PendingOption` single-slot pending state, and `OptionPlayResult` outcome
+enum. `EffectTiming` gained `OnUseOption`, `OptionMain` (dispatched),
+`DelayEffect`, `OnLink`, `OnLinkedCardTrashed`, `OnUnlink` (reserved), and
+`OnTrainingTrash`. `EffectBuilder` gained `.option_main()`, `.delay(trigger)`,
+`.link(cost, filter)`, `.training()`, `.linked()`.
+
+Python's flag-based workarounds (`_option_stays_on_field`,
+`_trash_option_after_resolution`, `_is_delay`, `_is_training`) are subsumed.
+Python retains them for its own scripts, but new Option cards in the Rust
+engine use the typed builder surface.
+
+### 14.2 🟢 Linked cards / Plug-Ins faithful
+
+Rust `Permanent.linked_cards: Vec<CardSource>` preserves Python's
+`Permanent.linked_cards: List[CardSource]` semantics. Attach happens after
+body drain via an explicit `LinkSelectHost` phase; detach-on-host-deletion
+cascade routes each linked card to owner's trash (subject to constraint
+§14.5). Sideways inheritance — `.linked()`-flagged effects on the attached
+card fire off the host's timings — matches DCGO `OnLinkCardDiscarded`
+ordering (`ICardEffect.cs:996`).
+
+### 14.3 🟡 Cancel-semantics for non-Permanent trash-replacement subjects
+
+Rust v1: when `WhenWouldBeTrashed` on a `Card` subject (hand-origin,
+mid-Option-resolution) produces `Cancelled`, the card returns to owner's
+hand. Cost was paid and `OptionMain` already fired, so the net effect is
+"Option body resolved for free, card went back to hand". Python uses the
+same hand-return convention (`hand_back_if_cancelled`). No engine
+divergence, but the printed-rules outcome is spec-unclarified — flagged for
+refinement if a real card triggers it. Tracked in API doc §Phase 8
+constraint 1.
+
+### 14.4 🟡 `Redirected(Deck)` / `Redirected(Hand)` use direct vec manipulation
+
+Rust v1 uses `deck.insert(0, …)` / `hand.push(…)` directly on the
+Card-subject commit path for `Redirected` outcomes. Spec §7.3 calls for
+zone-mover helpers that fire nested observers. Python uses
+`_return_card_to_hand` / `_place_at_bottom` helpers which do fire
+observers. Latent divergence — no printed card today has a nested observer
+on these paths, but a `WhenWouldBeReturnedToHand` installed by a card
+observing its own redirected-to-hand disposal would see the miss. Tracked
+in API doc §Phase 8 constraint 2; follow-up pass will migrate to helpers.
+
+### 14.5 🟢 `OnLink` observer wired
+
+Rust fires `OnLink` globally across both players after a Plug-In attaches
+to its host. Required by Appmon-trait cards (BT21-053, BT21-054, BT21-059,
+BT21-073, AD1-005) that observe "when a card is linked to a Digimon".
+Python's `WhenLinked` behavior is preserved — body fires before observer,
+matching DCGO ordering.
+
+Linked-card host-deletion cascade does **not** fire `WhenWouldBeTrashed`
+(too recursive during host deletion); v1 unconditionally trashes each
+linked card. Python behaves identically today. Marked
+`TODO(phase-8-followup)` in `combat.rs`; no printed card audited requires
+the replacement window to fire on this path.

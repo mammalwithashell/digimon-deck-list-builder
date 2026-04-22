@@ -892,6 +892,214 @@ See `tests/replacements/behavioral_end_to_end.rs` for the canonical end-to-end t
 
 ---
 
+## Phase 8 — Option Card Play Flow
+
+Phase 8 teaches the Rust engine how Option cards actually work. Prior to Phase 8, Option cards either fell through to the generic `play_from_hand` permanent path (wrong: they'd land on the field as vanilla Digimon) or produced no observable effect. Phase 8 adds a dedicated play pipeline: **play → pay cost → fire `OnUseOption` (global observer) + `OptionMain` (this card's body) → dispose per subtype**.
+
+Options are *ephemeral*: they do not normally live on the field. The exceptions are **Delay** and **Training**, which park on the battle area until a scheduled trigger trashes them. **Plug-In** Options attach sideways to a host Digimon via `Permanent.linked_cards` and live as long as the host does. **Standard** Options drain their body and immediately self-trash via a `WhenWouldBeTrashed` replacement window (spec §Phase 7) with `ReplacementCause::Cost`.
+
+### Four Option subtypes
+
+| Subtype | Disposition | Timing(s) fired |
+|---------|-------------|-----------------|
+| **Standard** | Body drains, then self-trashes via `WhenWouldBeTrashed` (cause `Cost`). | `OnUseOption` (global) → `OptionMain` (this card) → cleanup. |
+| **Delay** | Body drains, card parks on field as `OptionState::Delayed`. At the scheduled turn end, a `DelayEffect` fires and the card trashes via `WhenWouldLeaveBattleArea` + `WhenWouldBeDeleted`. | `OnUseOption` → `OptionMain` (install delay) → later: `DelayEffect` → leave/deleted replacement windows → trash. |
+| **Plug-In (Link)** | Body drains, player selects a legal host, card attaches sideways into `host.linked_cards`. `OnLink` fires globally after attach. Effects on the attached card flagged `.linked()` fire off the host's timings. | `OnUseOption` → `OptionMain` (runs `.link(cost, filter)` mask + prompt + attach) → `OnLink` (global). |
+| **Training** | Body drains, card parks on field as `OptionState::Training`. At the owner's next breeding-hatch, an `OnTrainingTrash` observer fires on the specific Training permanent being trashed, then `delete_permanent_with_cause(Cost)` routes it to the trash. | `OnUseOption` → `OptionMain` → later: `OnTrainingTrash` → deletion. |
+
+### Shape types added in Task 1
+
+```rust
+// permanent.rs
+pub enum OptionState {
+    Standard,
+    Delayed { owner: PlayerId, trash_on_turn: u16 },  // absolute turn_count
+    Linked { host: PermanentHandle },
+    Training { owner: PlayerId },
+}
+
+pub struct Permanent {
+    // …
+    pub option_state: OptionState,
+    pub linked_cards: Vec<CardSource>,   // Plug-Ins attached to this host
+}
+
+// selection.rs
+pub struct PendingOption {
+    pub owner: PlayerId,
+    pub card: CardSource,
+    pub resolution_phase: OptionResolutionPhase,
+}
+
+pub enum OptionResolutionPhase {
+    LinkSelectHost,     // waiting on a host-pick for a Plug-In
+    MainEffectDrain,    // body running
+    Disposing,          // cleanup window
+    Done,               // terminal — cleared next tick
+}
+
+pub enum OptionPlayResult {
+    Trashed,                           // Standard Option fully resolved
+    Delayed(PermanentHandle),          // parked as Delayed
+    Linked { source: PermanentHandle },// attached to host
+    Training(PermanentHandle),         // parked as Training
+    Pending,                           // selection owed (e.g. LinkSelectHost)
+    Invalid,                           // cost/mask failure
+}
+
+// game.rs — single-slot pending state
+pub pending_option: Option<PendingOption>;
+```
+
+### `EffectTiming` variants (seven wired)
+
+| Variant | Scope | Fires when |
+|---------|-------|-----------|
+| `OnUseOption` | Global observer | Any Option card is played (both players' listeners hear it). |
+| `OptionMain` | This Option | The played Option's own body — pre-existing variant, now dispatched. |
+| `DelayEffect` | This Option | Scheduled turn-end landing for a `Delayed` Option. |
+| `OnLink` | Global observer | After a Plug-In attaches to its host. |
+| `OnLinkedCardTrashed` | Global observer | A linked card leaves its host via trash (host death, return-to-hand, return-to-deck). Mirrors DCGO `OnLinkCardDiscarded`. |
+| `OnUnlink` | Global observer | **Reserved** for clean unlink paths. Rust-engine-specific; DCGO folds unlinks into `OnLinkCardDiscarded` + zone checks. Not yet fired. |
+| `OnTrainingTrash` | This Training Option | Fires on the specific `Training` permanent being trashed at the owner's breeding-hatch. |
+
+### `EffectBuilder` methods
+
+```rust
+// Standard Option body.
+Effect::new(card, EffectTiming::None)
+    .option_main()
+    .process(|ctx| { ctx.gain_memory(2); })
+    .build();
+
+// Delay Option body — trigger is EndOfThisTurn | EndOfYourNextTurn.
+Effect::new(card, EffectTiming::None)
+    .delay(DelayTrigger::EndOfYourNextTurn)
+    .process(|ctx| { ctx.draw(2); })
+    .build();
+
+// Plug-In host filter. `cost` is the memory paid to attach.
+// `filter(ctx, host_handle) -> bool` gates legal hosts at mask time.
+Effect::on_play(card)
+    .link(2, |ctx, host| ctx.permanent(host).has_trait("Rocks"))
+    .process(|_| {})
+    .build();
+
+// Training subtype marker on the body.
+Effect::new(card, EffectTiming::None)
+    .training()
+    .process(|ctx| { /* body */ })
+    .build();
+
+// `.linked()` — mark an effect that sideways-inherits onto the host
+// while the card is attached. Fires off the host's timing dispatches,
+// not the linked card's own. Mutually exclusive with `.inherited()`.
+Effect::start_of_your_turn(card)
+    .linked()
+    .process(|ctx| { ctx.draw(1); })  // "at start of host's turn, draw 1"
+    .build();
+```
+
+### Worked examples
+
+**1. Standard Option — memory swing**
+
+```rust
+use crate::effect::{CardEffect, Effect};
+
+pub struct GainTwoMemory;
+impl CardEffect for GainTwoMemory {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .option_main()
+            .process(|ctx| { ctx.gain_memory(2); })
+            .build()]
+    }
+}
+```
+
+**2. Delay Option — end-of-your-next-turn draw**
+
+```rust
+use crate::enums::DelayTrigger;
+
+vec![Effect::on_play(card)
+    .delay(DelayTrigger::EndOfYourNextTurn)
+    .process(|ctx| { ctx.draw(2); })
+    .build()]
+```
+
+**3. Plug-In — +2000 DP to a host with the "Rocks" trait**
+
+```rust
+vec![
+    // The link declaration that attaches this card for 2 memory.
+    Effect::on_play(card)
+        .link(2, |ctx, host| ctx.permanent(host).has_trait("Rocks"))
+        .process(|_| {})                  // no extra body beyond the attach
+        .build(),
+
+    // Sideways-inherited DP buff, active while attached.
+    Effect::on_play(card)
+        .linked()
+        .dp_modifier(2000)
+        .build(),
+]
+```
+
+**4. Training Option — body + sideways-inherited effect**
+
+```rust
+vec![
+    Effect::on_play(card)
+        .training()
+        .process(|ctx| { ctx.gain_memory(1); })
+        .build(),
+]
+```
+
+### Integration with Phase 7 replacements
+
+- **Standard disposal** fires `WhenWouldBeTrashed` with `ReplacementCause::Cost`. Optional replacements (e.g. a `CannotBeTrashedByEffect` passive on the Option itself — unlikely, but possible) fire normally.
+- **Delay expiration** fires `WhenWouldLeaveBattleArea` (super-timing) + `WhenWouldBeDeleted` just like a Digimon's battle death.
+- **Plug-In detach on host deletion** — when the host leaves the field, each linked card trashes. V1 does **not** fire `WhenWouldBeTrashed` in the cascade (too recursive during host deletion). This is a known limitation; see constraints below.
+- **Training expiration** fires `OnTrainingTrash` as the specific observer, then routes through `delete_permanent_with_cause(Cost)` which dispatches the standard `WhenWouldLeaveBattleArea` / `WhenWouldBeDeleted` replacement windows.
+
+### Phase 8 v1 constraints
+
+1. **Cancel-semantics for non-Permanent trash-replacement subjects.** When a `WhenWouldBeTrashed` replacement with outcome `Cancelled` fires on a `Card` subject (hand-origin) mid-resolution — e.g. a Standard Option's disposal gets cancelled after cost was paid and `OptionMain` already fired — the card returns to owner's hand. The printed-rules outcome is unspecified for this shape (cost was spent, body resolved, but the card rebounds). V1 documents this as hand-return; flagged for spec refinement if a real printed card triggers it.
+2. **`Redirected(Deck)` / `Redirected(Hand)` use direct vec manipulation.** Spec §7.3 calls for zone-mover helpers; Phase 8 v1 uses `deck.insert(0, …)` and `hand.push(…)` directly on the Card-subject commit path. This skips any future deck-manipulation observers nested inside the redirect. Acceptable until a printed card surfaces a nested observer; follow-up pass will migrate to the helper surface.
+3. **Multi-turn Delays** are not supported. Only `DelayTrigger::EndOfThisTurn` and `DelayTrigger::EndOfYourNextTurn` land in v1. "At the start of each of your next 3 turns" would need an extended trigger model.
+4. **Linked-card host-deletion cascade does NOT fire `WhenWouldBeTrashed`.** Too recursive during host deletion; v1 unconditionally trashes each linked card. Marked `TODO(phase-8-followup)` in `combat.rs`. Follow-up if a printed card requires it (none audited today).
+5. **Counter-timed Options** (Blast Digivolve Options played during opponent's attack) are deferred to **Phase 9 (Combat Interrupt Completion)**. Phase 2's `.blast_digivolve()` builder plumbing is already in place; Phase 9 wires the activation window.
+6. **Nested `PendingSelection::Source` in `OptionMain`** is not supported — shared limitation with Phase 7 Partition/ArmorPurge auto-install. A Standard/Delay/Training Option whose body selects a source off a stacked Digimon needs a `PendingSelection::Source` during `OptionMain` execution; the infrastructure gap is the same one Phase 7 flagged.
+7. **Training sideways-inheritance scope is broader than printed rules.** v1 scans any same-owner permanent's timing dispatch for `.linked()` + `.inherited()`-flagged effects on Training cards, rather than restricting to the breeding permanent. Pragmatic interim until `TriggerSource::BreedingArea` exists. Tracked in parity §13.
+8. **`ACTION_SPACE_SIZE` unchanged at 2168.** Option plays reuse the existing `PLAY_HAND` action range via a `CardKind`-forked decoder: the action bit is the same as playing a Digimon from hand; the decoder inspects `CardData::card_type` and routes to the Option play pipeline. No tensor or mask regression.
+
+### Testing an Option effect
+
+Per working rule 18, write behavioral tests against `DebugRunner` under `digimon-engine/tests/option_flow/` before implementing:
+
+```rust
+#[test]
+fn gain_two_memory_option_drains_and_trashes() {
+    let mut r = DebugRunner::builder()
+        .add_card(card_with_gain_two_memory_option())
+        .start();
+    let start_memory = r.game.memory;
+    r.play_option_from_hand(0, "GAIN2MEM").unwrap();
+
+    assert_eq!(r.game.memory, start_memory + 2);
+    assert!(r.game.pending_option.is_none());           // resolved
+    assert_eq!(r.game.player(0).trash.last().map(|c| c.card_id()),
+               Some("GAIN2MEM"));                        // card self-trashed
+}
+```
+
+See `tests/option_flow/behavioral_end_to_end.rs` for the canonical end-to-end template covering multi-turn Delay + Link + Training across a full game.
+
+---
+
 ## 9. Known gaps (as of Phase 6)
 
 These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:
@@ -900,9 +1108,9 @@ These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:
 - **OnSecurityCheck** / **OnStartBattle** / **OnEndBattle** / **OnEndAttack** timings — OnSecurityCheck is wired in the attack path; OnStartBattle/OnEndBattle are not yet fired.
 - **Security effects** — basic SecuritySkill dispatch is wired; re-entrant selections mid-security-resolve are not (blocks most real security cards with selection effects).
 - **BeforePayCost cost reduction scanning** — landed in Phase 5. See §Phase 5 above.
-- **Option cards** have no play flow yet (they hit the field as a permanent like Digimon).
+- **Option cards** — full play-flow landed in Phase 8. See §Phase 8 above.
 - **Flood-gate + restriction modifiers** (player-scoped) — landed in Phase 6. See §Phase 6 above. Several variants are DORMANT pending enforcement-site wiring.
-- **"Would" replacement timings** (Barrier, Evade, Partition, Armor Purge) — planned for Phase 7. Requires a design spec under `docs/superpowers/specs/` before a plan can be written.
+- **"Would" replacement timings** (Barrier, Evade, Partition, Armor Purge) — landed in Phase 7. See §Phase 7 above.
 
 When implementing a card that needs one of these, log the gap and pick a safe fallback.
 
