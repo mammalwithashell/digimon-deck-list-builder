@@ -383,8 +383,10 @@ impl Game {
             "reentrant Option play while another is mid-resolution"
         );
 
-        // 1. Phase gate.
-        if self.current_phase != GamePhase::Main {
+        // 1. Phase gate. Counter-window Option plays bypass the Main-phase
+        // gate — they fire during the defender's Counter window, which
+        // can be any phase the turn player attacked from. Spec §5.2.
+        if !self.in_counter_window && self.current_phase != GamePhase::Main {
             return OptionPlayResult::Invalid;
         }
 
@@ -442,6 +444,25 @@ impl Game {
                 TriggerSource::PlayerBattleArea(pid as PlayerId),
             );
         }
+
+        // Phase 9 Task 3 — Counter-window overlay: when this Option is
+        // being played as a defender's counter, the `.counter()` +
+        // CounterEffect-timing body fires BEFORE OptionMain. Drain each
+        // bundle separately so the two fire in order (Counter then Main)
+        // without prompting the defender with a synthetic TriggerOrder
+        // choice. Spec §5.2.
+        if self.in_counter_window {
+            self.enqueue_counter_effect_from_pending(&card_id, card_handle, player_id);
+            self.drain_effect_queue();
+            // If the counter body parked a selection, yield — the
+            // resumption path re-enters via `advance_pending_option`
+            // which will fire OptionMain after the body's selection
+            // resolves.
+            if self.pending_selection.is_some() {
+                return OptionPlayResult::Pending;
+            }
+        }
+
         self.enqueue_option_main_from_pending(&card_id, card_handle, player_id);
         self.drain_effect_queue();
 
@@ -487,6 +508,42 @@ impl Game {
                 source_permanent: None,
                 controller: owner,
                 timing: EffectTiming::OptionMain,
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.to_string(),
+            });
+        }
+    }
+
+    /// Phase 9 Task 3 — enqueue every `CounterEffect`-timing effect on the
+    /// in-flight `pending_option` card. Mirrors
+    /// `enqueue_option_main_from_pending` but filters on `CounterEffect`
+    /// so a hand Counter Option's body fires BEFORE its `OptionMain` body.
+    /// Called only when `in_counter_window` is set.
+    fn enqueue_counter_effect_from_pending(
+        &mut self,
+        card_id: &str,
+        card_handle: crate::card_source::CardHandle,
+        owner: PlayerId,
+    ) {
+        let Some(effects) = self.effects_for_card(card_id, card_handle) else {
+            return;
+        };
+        let tp = self.turn_player();
+        let is_turn_player = owner == tp;
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.timing != EffectTiming::CounterEffect {
+                continue;
+            }
+            if !effect.counter {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: card_handle,
+                source_permanent: None,
+                controller: owner,
+                timing: EffectTiming::CounterEffect,
                 effect_slot: slot as u8,
                 is_optional: effect.optional,
                 is_turn_player,

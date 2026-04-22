@@ -376,6 +376,29 @@ impl EffectBuilder {
         self
     }
 
+    /// Mark this effect as a Counter candidate. Used by Phase 9 Task 3 to
+    /// broaden the CounterTiming window beyond blast-digivolve:
+    ///
+    /// - Applied to an Option card's effect (via `.counter()` +
+    ///   `.timing(EffectTiming::CounterEffect)`) → the card becomes a hand
+    ///   Counter Option candidate during the defender's Counter window,
+    ///   routed through Phase 8's `play_option_from_hand` pipeline with
+    ///   CounterEffect firing BEFORE OptionMain.
+    /// - Applied to a battle-area Digimon's triggered ability (via
+    ///   `.counter()` + `.timing(EffectTiming::CounterEffect)`) → the
+    ///   permanent becomes a field Counter ability candidate; selection
+    ///   fires the body directly at zero cost.
+    ///
+    /// Distinct from `.blast_digivolve()`, which sets BOTH
+    /// `blast_digivolve = true` AND `counter = true`. `.counter()` alone
+    /// does NOT imply blast. See spec
+    /// `docs/superpowers/specs/2026-04-21-combat-interrupt-completion-design.md`
+    /// §5 for the full window broadening semantics.
+    pub fn counter(mut self) -> Self {
+        self.inner.counter = true;
+        self
+    }
+
     pub fn optional(mut self) -> Self {
         self.inner.optional = true;
         self

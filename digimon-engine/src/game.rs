@@ -209,6 +209,14 @@ pub struct Game {
     /// security-check driver between drains).
     #[doc(hidden)]
     pub(crate) effect_source_player: Option<PlayerId>,
+
+    /// Phase 9 Task 3 — set to `true` while a hand Counter Option is
+    /// resolving through `play_option_from_hand`. Consumed by
+    /// `play_option_core` to fire CounterEffect timing on the played
+    /// card's effects BEFORE `OptionMain`. Cleared when the Counter
+    /// resolver finishes the Option play. Spec §5.2.
+    #[doc(hidden)]
+    pub(crate) in_counter_window: bool,
 }
 
 impl Game {
@@ -341,6 +349,7 @@ impl Game {
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,
+            in_counter_window: false,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it

@@ -35,6 +35,40 @@ use crate::selection::{
     TriggerSource,
 };
 
+/// Phase 9 Task 3 — taxonomy of Counter-window candidates. The broadened
+/// window unifies three distinct resolution paths behind a single
+/// selection:
+///
+/// - `Blast` — existing blast-digivolve path (hand card + field target).
+/// - `HandOption` — an Option card in the defender's hand with a
+///   `.counter()` + `EffectTiming::CounterEffect` effect. Routed through
+///   Phase 8's `play_option_from_hand` pipeline with an overlay that
+///   fires CounterEffect BEFORE OptionMain.
+/// - `FieldAbility` — a defender's battle-area permanent whose top card
+///   exposes a `.counter()` + `EffectTiming::CounterEffect` ability.
+///   Fired directly via `fire_counter_ability` — no card play, no cost.
+///
+/// Stored inside the Counter selection callback closure so the chosen
+/// action ID resolves to the correct path. See spec
+/// `docs/superpowers/specs/2026-04-21-combat-interrupt-completion-design.md`
+/// §5 and the plan file for the design rationale.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CounterCandidate {
+    /// Blast-digivolve from `hand_index` onto `field_index`.
+    Blast { hand_index: u8, field_index: u8 },
+    /// Play the Option at `hand_index` as a Counter Option (normal cost).
+    HandOption { hand_index: u8 },
+    /// Activate the Counter ability on battle-area permanent at
+    /// `perm_index`.
+    FieldAbility { perm_index: u8 },
+}
+
+/// Maximum Counter-window depth per attack. DCGO (and the Digimon TCG
+/// rules) do not allow nested Counter windows — a counter effect that
+/// itself triggers another attack does not open a fresh Counter window
+/// for the secondary attack. Spec §5.4.
+const MAX_COUNTER_DEPTH: u8 = 1;
+
 /// Phase 9 internal dispatcher result for the pair of attack-declaration
 /// replacements (`WhenWouldAttack` + `WhenWouldBeAttackTarget`). Kept
 /// crate-private; callers route back into the public `AttackResult` enum.
@@ -233,6 +267,7 @@ impl Game {
             battle_occurred: false,
             return_phase,
             state: AttackState::Declared,
+            counter_depth: 0,
         });
 
         // Phase 9: WhenWouldAttack fires on the attacker BEFORE any
@@ -734,24 +769,29 @@ impl Game {
         true
     }
 
-    /// Scan the defender's hand for blast-digivolve candidates paired
-    /// against valid field targets; install a `PendingSelection` in
-    /// `CounterTiming` if any pair exists. Returns `true` on install,
-    /// `false` if the defender has no viable counter and the caller should
-    /// auto-advance to BlockOpen.
+    /// Scan the defender's hand + battle area for Counter-window
+    /// candidates; install a `PendingSelection` in `CounterTiming` if
+    /// any candidate exists. Returns `true` on install, `false` if the
+    /// defender has no viable counter and the caller should auto-advance
+    /// to BlockOpen.
     ///
-    /// PR6 scope: **Digimon-target attacks only**. Player-target attacks
-    /// skip Counter to match Python (`combat.py:139` scopes Counter to
-    /// Digimon targets). Memory cost is not deducted — blast digivolve is
-    /// always free during Counter per Python `_decode_counter` and DCGO
-    /// `BlastDigivolution.cs:109`.
+    /// Phase 9 Task 3 broadens the scan from blast-digivolve-only to a
+    /// union over three candidate shapes (see `CounterCandidate`):
+    ///   - Blast digivolve candidates (hand card + field target).
+    ///   - Hand Counter Options — Option cards in the defender's hand
+    ///     with a `.counter()` + `CounterEffect`-timing effect, routed
+    ///     through Phase 8's `play_option_from_hand` pipeline.
+    ///   - Field Counter abilities — defender's battle-area Digimon with
+    ///     a `.counter()` + `CounterEffect`-timing triggered ability.
     ///
-    /// A blast candidate is any hand card whose `CardEffect::effects`
-    /// include one or more entries with `blast_digivolve = true`. Valid
-    /// pairings are those where `Game::can_digivolve(card, perm)` passes
-    /// for a field Digimon on the defender's side.
+    /// Scope: **Digimon-target attacks only**. Player-target attacks
+    /// skip Counter to match Python (`combat.py:139`).
+    ///
+    /// Depth guard: if `pa.counter_depth >= MAX_COUNTER_DEPTH`, the scan
+    /// returns `false` immediately — a counter body that launches a
+    /// nested attack does NOT open a fresh Counter window (spec §5.4).
     fn try_enter_counter(&mut self) -> bool {
-        use crate::action::space::encode_digivolve;
+        use crate::action::space::{encode_attack, encode_digivolve, PLAY_HAND_START};
 
         let Some(pa) = self.pending_attack.as_ref() else {
             return false;
@@ -763,38 +803,140 @@ impl Game {
         };
         let attacker = pa.attacker;
 
+        // Depth guard (spec §5.4): nested Counter windows are not allowed.
+        // The guard triggers on either signal:
+        //   - `pa.counter_depth >= MAX_COUNTER_DEPTH` — the *current*
+        //     attack has already opened a Counter window once.
+        //   - `self.in_counter_window` — we are inside a counter body
+        //     that launched this attack (the pending_attack was just
+        //     replaced by the nested begin_attack; its counter_depth is
+        //     a fresh 0, but `in_counter_window` carries the context).
+        if pa.counter_depth >= MAX_COUNTER_DEPTH || self.in_counter_window {
+            return false;
+        }
+
+        let mut candidates: Vec<CounterCandidate> = Vec::new();
+
+        // 1. Scan the defender's hand.
         let hand_len = self.player(defender_player).hand.len();
         let field_len = self.player(defender_player).battle_area.len();
-        let mut valid_action_ids: Vec<u16> = Vec::new();
-
         for h_idx in 0..hand_len {
             let card = &self.player(defender_player).hand[h_idx];
             let card_id = card.card_id(&self.card_data).to_string();
             let card_handle = card.handle();
+            let card_kind = card.card_kind(&self.card_data);
             let Some(effects) = self.effects_for_card(&card_id, card_handle) else {
                 continue;
             };
-            if !effects.iter().any(|e| e.blast_digivolve) {
-                continue;
+
+            // Blast digivolve (existing path).
+            let has_blast = effects.iter().any(|e| e.blast_digivolve);
+            if has_blast {
+                // Re-borrow hand with fresh index; effects_for_card only
+                // saw a local view.
+                let card = &self.player(defender_player).hand[h_idx];
+                for f_idx in 0..field_len {
+                    let perm = &self.player(defender_player).battle_area[f_idx];
+                    if !perm.is_digimon(&self.card_data) {
+                        continue;
+                    }
+                    if !self.can_digivolve(card, perm) {
+                        continue;
+                    }
+                    candidates.push(CounterCandidate::Blast {
+                        hand_index: h_idx as u8,
+                        field_index: f_idx as u8,
+                    });
+                }
             }
 
-            // Re-borrow with a fresh index into hand since effects_for_card
-            // took only a local view.
-            let card = &self.player(defender_player).hand[h_idx];
-            for f_idx in 0..field_len {
-                let perm = &self.player(defender_player).battle_area[f_idx];
-                if !perm.is_digimon(&self.card_data) {
-                    continue;
+            // Hand Counter Option (new): Option card with a `.counter()` +
+            // CounterEffect-timing effect, and NOT a blast card (blast
+            // overlaps both flags; it's scored as a Blast candidate
+            // above and must not double-emit as a HandOption).
+            if card_kind == CardKind::Option {
+                let has_counter_option = effects.iter().any(|e| {
+                    e.counter
+                        && !e.blast_digivolve
+                        && e.timing == EffectTiming::CounterEffect
+                });
+                if has_counter_option {
+                    // Color-match gate parity with Phase 8 Option play
+                    // (if the Option's color cannot be satisfied, the
+                    // play would fail anyway — don't offer the candidate).
+                    let player_ref = self.player(defender_player);
+                    let card = &player_ref.hand[h_idx];
+                    if crate::action::mask::option_color_match_available(
+                        card,
+                        player_ref,
+                        &self.card_data,
+                    ) {
+                        candidates.push(CounterCandidate::HandOption {
+                            hand_index: h_idx as u8,
+                        });
+                    }
                 }
-                if !self.can_digivolve(card, perm) {
-                    continue;
-                }
-                valid_action_ids.push(encode_digivolve(h_idx as u16, f_idx as u16));
             }
         }
 
-        if valid_action_ids.is_empty() {
+        // 2. Scan the defender's battle area for field Counter abilities.
+        for f_idx in 0..field_len {
+            let perm = &self.player(defender_player).battle_area[f_idx];
+            // Only Standard-state permanents offer triggered abilities
+            // (Delayed / Training / Linked are structural).
+            if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
+                continue;
+            }
+            if !perm.is_digimon(&self.card_data) {
+                continue;
+            }
+            let top = perm.top_card();
+            let card_id = top.card_id(&self.card_data).to_string();
+            let source_card = top.handle();
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            let has_field_counter = effects.iter().any(|e| {
+                e.counter && e.timing == EffectTiming::CounterEffect
+            });
+            if has_field_counter {
+                candidates.push(CounterCandidate::FieldAbility {
+                    perm_index: f_idx as u8,
+                });
+            }
+        }
+
+        if candidates.is_empty() {
             return false;
+        }
+
+        // Encode each candidate as a distinct action ID. The mapping is
+        // phase-gated (`GamePhase::CounterTiming`) so collisions with
+        // other phase's action-ID ranges are not possible at the mask or
+        // decoder layer.
+        let valid_action_ids: Vec<u16> = candidates
+            .iter()
+            .map(|c| match c {
+                CounterCandidate::Blast { hand_index, field_index } => {
+                    encode_digivolve(*hand_index as u16, *field_index as u16)
+                }
+                CounterCandidate::HandOption { hand_index } => {
+                    PLAY_HAND_START + *hand_index as u16
+                }
+                CounterCandidate::FieldAbility { perm_index } => {
+                    encode_attack(0, *perm_index as u16)
+                }
+            })
+            .collect();
+
+        // Snapshot the candidate list into the closure for decoding.
+        let candidate_snapshot = candidates.clone();
+
+        // Increment the counter-depth guard — subsequent nested attacks
+        // launched by the counter body will see `counter_depth >= 1` and
+        // skip their own Counter windows.
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.counter_depth = pa.counter_depth.saturating_add(1);
         }
 
         let source_card = self.player(attacker.player).battle_area[attacker.index as usize]
@@ -804,30 +946,32 @@ impl Game {
         self.current_phase = GamePhase::CounterTiming;
 
         self.pending_selection = Some(PendingSelection {
-            // Hand kind is the primary resource (the hand card); the action
-            // ID encodes (hand_idx, field_idx) via encode_digivolve.
+            // SelectionKind::Hand is a defensible umbrella — the primary
+            // resource is the defender's hand, and the mask renderer is
+            // phase-gated (`CounterTiming`) and reads `valid_action_ids`
+            // directly, so the kind is not load-bearing for dispatch.
             kind: SelectionKind::Hand,
             selecting_player: defender_player,
             previous_phase,
-            valid_action_ids,
+            valid_action_ids: valid_action_ids.clone(),
             is_optional: true,
-            prompt: "Blast digivolve (counter)".to_string(),
+            prompt: "Counter (blast / option / field ability)".to_string(),
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                use crate::action::space::decode_digivolve;
-                let (h_idx, f_idx) = decode_digivolve(action_id);
-                game.execute_blast_digivolve(
-                    defender_player,
-                    h_idx as usize,
-                    f_idx as usize,
-                );
+                // Match the resolved action_id back to a candidate.
+                let picked = valid_action_ids
+                    .iter()
+                    .position(|&a| a == action_id)
+                    .and_then(|pos| candidate_snapshot.get(pos).copied());
+                if let Some(cand) = picked {
+                    game.resolve_counter_selection(defender_player, cand);
+                }
 
-                // WhenDigivolving / OnDeletion cascades during the blast may
-                // have deleted the attacker. If so, skip BlockOpen and
-                // Battle — jump straight to Cleanup, matching DCGO
-                // AttackProcess.cs:301's "attacker gone" branch.
+                // WhenDigivolving / field-counter bodies may have deleted
+                // the attacker. If so skip Block + Battle; jump to
+                // Cleanup (mirrors DCGO AttackProcess.cs:301).
                 let next_state = match game.pending_attack.as_ref() {
                     Some(pa) if game.handle_valid(pa.attacker) => AttackState::BlockOpen,
                     Some(_) => AttackState::Cleanup,
@@ -845,6 +989,58 @@ impl Game {
         });
 
         true
+    }
+
+    /// Route a resolved Counter candidate to its execution path. Called
+    /// from the Counter-selection callback after decoding the action ID
+    /// back into a `CounterCandidate`.
+    pub(crate) fn resolve_counter_selection(
+        &mut self,
+        defender: PlayerId,
+        candidate: CounterCandidate,
+    ) {
+        match candidate {
+            CounterCandidate::Blast {
+                hand_index,
+                field_index,
+            } => {
+                self.execute_blast_digivolve(
+                    defender,
+                    hand_index as usize,
+                    field_index as usize,
+                );
+            }
+            CounterCandidate::HandOption { hand_index } => {
+                // Route through Phase 8's Option pipeline with the
+                // CounterEffect overlay active. `play_option_core` reads
+                // `in_counter_window` to fire CounterEffect BEFORE
+                // OptionMain. Clear the flag afterward even if the pipeline
+                // pauses (an OptionMain-side selection); a nested re-entry
+                // during that pause would still see `in_counter_window =
+                // false`, preserving correct CounterEffect scoping.
+                self.in_counter_window = true;
+                let _result = self.play_option_from_hand(defender, hand_index as usize);
+                self.in_counter_window = false;
+            }
+            CounterCandidate::FieldAbility { perm_index } => {
+                let handle = PermanentHandle {
+                    player: defender,
+                    index: perm_index,
+                };
+                self.fire_counter_ability(handle);
+            }
+        }
+    }
+
+    /// Fire a field Counter ability: enqueue the permanent's
+    /// `CounterEffect`-timing effect(s) and drain. No card play, no cost.
+    /// Phase 9 Task 3.
+    fn fire_counter_ability(&mut self, handle: PermanentHandle) {
+        self.enqueue_triggered(
+            EffectTiming::CounterEffect,
+            TriggerSource::Permanent(handle),
+        );
+        self.drain_effect_queue();
     }
 
     /// Perform the blast-digivolve card movement and fire the

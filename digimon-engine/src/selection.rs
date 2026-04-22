@@ -472,6 +472,12 @@ pub struct PendingAttack {
     /// attacks, `EndOfTurnAction` for end-of-turn vortex attacks, etc.).
     pub return_phase: GamePhase,
     pub state: AttackState,
+    /// Phase 9 Task 3 — how many Counter windows this attack has already
+    /// entered. Incremented when `try_enter_counter` installs a Counter
+    /// selection; compared against `MAX_COUNTER_DEPTH` (= 1) on
+    /// subsequent entries to suppress nested Counter windows that would
+    /// otherwise recurse from a counter body's side-effects. Spec §5.4.
+    pub counter_depth: u8,
 }
 
 /// Helper type alias so callers can spell `Game.effect_queue` without
