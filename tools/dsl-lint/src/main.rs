@@ -1,7 +1,7 @@
 //! DSL linter CLI.
 //!
 //! Usage:
-//!   dsl-lint <path> [--format human|json] [--strict]
+//!   dsl-lint <path> [--format human|json] [--strict] [--cross-check <cards.json>]
 //!
 //! Exit codes:
 //!   0 — no diagnostics
@@ -26,12 +26,14 @@ struct Args {
     path: PathBuf,
     format: Format,
     strict: bool,
+    cross_check_path: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args, String> {
     let mut path: Option<PathBuf> = None;
     let mut format = Format::Human;
     let mut strict = false;
+    let mut cross_check_path: Option<PathBuf> = None;
     let mut iter = std::env::args().skip(1);
     while let Some(arg) = iter.next() {
         match arg.as_str() {
@@ -44,8 +46,12 @@ fn parse_args() -> Result<Args, String> {
                 };
             }
             "--strict" => strict = true,
+            "--cross-check" => {
+                let v = iter.next().ok_or("--cross-check requires a path")?;
+                cross_check_path = Some(PathBuf::from(v));
+            }
             "-h" | "--help" => {
-                println!("Usage: dsl-lint <path> [--format human|json] [--strict]");
+                println!("Usage: dsl-lint <path> [--format human|json] [--strict] [--cross-check <cards.json>]");
                 std::process::exit(0);
             }
             s if s.starts_with("--") => return Err(format!("unknown flag: {s}")),
@@ -58,7 +64,7 @@ fn parse_args() -> Result<Args, String> {
         }
     }
     let path = path.ok_or("missing <path> argument")?;
-    Ok(Args { path, format, strict })
+    Ok(Args { path, format, strict, cross_check_path })
 }
 
 #[derive(serde::Serialize, Debug)]
@@ -76,7 +82,11 @@ enum Severity {
     Warning,
 }
 
-fn lint_file(path: &Path, diags: &mut Vec<Diagnostic>) {
+fn lint_file(
+    path: &Path,
+    adapter: Option<&dyn digimon_engine::dsl::loader::CardDataDb>,
+    diags: &mut Vec<Diagnostic>,
+) {
     let file = path.display().to_string();
     let spec = match loader::load_file(path) {
         Ok(s) => s,
@@ -99,6 +109,17 @@ fn lint_file(path: &Path, diags: &mut Vec<Diagnostic>) {
     let ctx = ValidationContext { raw_rust: &registry };
     if let Err(errs) = validate(&spec, &ctx) {
         for e in errs {
+            diags.push(Diagnostic {
+                file: file.clone(),
+                severity: Severity::Error,
+                path: e.path,
+                message: e.message,
+            });
+        }
+    }
+
+    if let Some(db) = adapter {
+        if let Err(e) = digimon_engine::dsl::loader::cross_check(&spec, db) {
             diags.push(Diagnostic {
                 file: file.clone(),
                 severity: Severity::Error,
@@ -143,9 +164,21 @@ fn main() -> ExitCode {
         }
     };
 
+    let adapter_opt = match &args.cross_check_path {
+        Some(p) => Some(
+            digimon_engine::dsl::loader::RealCardDataAdapter::from_path(p).unwrap_or_else(|e| {
+                eprintln!("dsl-lint: failed to load cards.json from {}: {e}", p.display());
+                std::process::exit(3);
+            }),
+        ),
+        None => None,
+    };
+    let adapter_dyn: Option<&dyn digimon_engine::dsl::loader::CardDataDb> =
+        adapter_opt.as_ref().map(|a| a as &dyn digimon_engine::dsl::loader::CardDataDb);
+
     let mut diags = Vec::new();
     for file in walk_yaml(&args.path) {
-        lint_file(&file, &mut diags);
+        lint_file(&file, adapter_dyn, &mut diags);
     }
 
     match args.format {
