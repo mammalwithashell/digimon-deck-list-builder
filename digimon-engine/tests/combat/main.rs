@@ -7,6 +7,7 @@ mod counter_hand_play;
 mod counter_interrupt;
 mod force_attack_mask;
 mod overclock;
+mod raid_retarget;
 mod redirect_and_cancel;
 mod rush_exemption;
 mod scenarios;

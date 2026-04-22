@@ -426,6 +426,13 @@ pub enum AttackState {
     CounterOpen,
     /// Waiting for the defender to declare a blocker (or decline).
     BlockOpen,
+    /// Phase 9 Task 4 — post-Block / pre-Battle checkpoint. The state
+    /// machine lands here unconditionally once the Block window closes
+    /// (whether a block was declared, declined, or no candidate existed).
+    /// The PostBlock arm tests whether `effective_target` is still valid;
+    /// if not, it considers Raid-driven retarget before either transitioning
+    /// to Battle or fizzling to Cleanup. Spec §4.2.
+    PostBlock,
     /// No further interrupts pending. `resolve_pending_battle` will fire.
     Battle,
     /// Post-battle: clear EndOfAttack modifiers, fire EndOfAttack triggers.

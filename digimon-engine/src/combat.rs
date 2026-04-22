@@ -69,6 +69,22 @@ pub(crate) enum CounterCandidate {
 /// for the secondary attack. Spec §5.4.
 const MAX_COUNTER_DEPTH: u8 = 1;
 
+/// Phase 9 Task 4 — result of the PostBlock Raid retarget rider.
+/// Crate-private; the state machine arm routes on this.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RaidRetargetOutcome {
+    /// Rider didn't apply (target still valid, no Raid, or Player target).
+    /// Caller transitions to `Battle`.
+    Proceed,
+    /// A retarget `PendingSelection` was installed. Caller yields —
+    /// `advance_pending_attack` exits on `pending_selection.is_some()`.
+    SelectionInstalled,
+    /// Rider applied (Raid attacker + invalid target) but no legal
+    /// retarget candidate exists. `cleanup_attack` has already run;
+    /// caller returns the terminal result directly.
+    Fizzled,
+}
+
 /// Phase 9 internal dispatcher result for the pair of attack-declaration
 /// replacements (`WhenWouldAttack` + `WhenWouldBeAttackTarget`). Kept
 /// crate-private; callers route back into the public `AttackResult` enum.
@@ -391,7 +407,31 @@ impl Game {
                     // If one installs, next loop iteration sees
                     // pending_selection and yields.
                     if !self.try_enter_block() {
-                        self.transition_attack_state(AttackState::Battle);
+                        self.transition_attack_state(AttackState::PostBlock);
+                    }
+                }
+                AttackState::PostBlock => {
+                    // Phase 9 Task 4 — post-Block Raid retarget rider. If
+                    // `effective_target` became invalid during the Block
+                    // window (OnAttack side-effects, Counter bodies, block
+                    // redirects, etc.) AND the attacker has `<Raid>` AND at
+                    // least one legal retarget exists, install a retarget
+                    // selection. Otherwise fall through to Battle (which
+                    // handles its own trivial-connect for invalid targets).
+                    match self.try_enter_raid_retarget() {
+                        RaidRetargetOutcome::Proceed => {
+                            self.transition_attack_state(AttackState::Battle);
+                        }
+                        RaidRetargetOutcome::SelectionInstalled => {
+                            // Selection parked — next loop iteration yields
+                            // on `pending_selection.is_some()`.
+                        }
+                        RaidRetargetOutcome::Fizzled => {
+                            // Raid applies, no retarget candidates —
+                            // cleanup_attack already ran; exit the state
+                            // machine with a terminal Cancelled result.
+                            return AttackResult::Cancelled;
+                        }
                     }
                 }
                 AttackState::Battle => {
@@ -1187,7 +1227,7 @@ impl Game {
                     pa.is_blocked = true;
                     pa.blocker = Some(blocker);
                     pa.effective_target = AttackTarget::Digimon(blocker);
-                    pa.state = AttackState::Battle;
+                    pa.state = AttackState::PostBlock;
                 }
                 // OnAttackTargetChange: fires in all players' battle areas
                 // when Block rewrites effective_target. Observer timing for
@@ -1202,16 +1242,219 @@ impl Game {
                 game.advance_pending_attack();
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
-                // Block declined — advance to Battle. Attack proceeds
-                // against its original target.
+                // Block declined — advance to PostBlock (Raid retarget
+                // rider, then Battle). Attack proceeds against its
+                // original target unless the target became invalid
+                // during the Block window.
                 if let Some(pa) = game.pending_attack.as_mut() {
-                    pa.state = AttackState::Battle;
+                    pa.state = AttackState::PostBlock;
                 }
                 game.advance_pending_attack();
             })),
         });
 
         true
+    }
+
+    /// Phase 9 Task 4 — Raid target-switch rider. Evaluates the
+    /// post-Block checkpoint:
+    ///
+    /// 1. Only fires for Digimon-shaped targets. Direct player attacks
+    ///    do not retarget via Raid (spec §4.2 — the attack was already
+    ///    aimed at a player, Raid's "pick a new Digimon" semantics
+    ///    don't apply).
+    /// 2. Only fires when `effective_target` is INVALID — i.e. the
+    ///    handle no longer resolves to a legal attack target.
+    /// 3. Only fires when the attacker has `<Raid>` (modifier-granted
+    ///    or native). Mirrors the mask-layer Raid check (see
+    ///    `action/mask.rs:137`).
+    /// 4. Candidate list uses the Raid-mask prioritization:
+    ///    unsuspended opposing Digimon first (tied on max DP),
+    ///    falling back to any legal opposing Digimon if no unsuspended
+    ///    candidates exist. Legality excludes `CannotAttackTarget`
+    ///    (Phase 6 restriction) and requires `OptionState::Standard`.
+    ///
+    /// Returns `true` iff a selection was installed (and the state
+    /// machine must yield). Returns `false` when the rider doesn't
+    /// apply OR when no candidates exist; the `false` path leaves the
+    /// state machine to transition to Battle, whose existing
+    /// "invalid defender → AttackerWins" fallback preserves Phase 4
+    /// semantics for the no-Raid / no-Raid-candidate case.
+    ///
+    /// When Raid candidates exist but the legal set is empty (all
+    /// opposing Digimon carry `CannotAttackTarget`, for instance), this
+    /// helper runs `cleanup_attack` directly and returns `Fizzled` —
+    /// the attack terminates with no battle resolution.
+    fn try_enter_raid_retarget(&mut self) -> RaidRetargetOutcome {
+        let Some(pa) = self.pending_attack.as_ref() else {
+            return RaidRetargetOutcome::Proceed;
+        };
+        // Raid retarget only applies to Digimon targets. Player attacks
+        // don't gain a new target via Raid.
+        let target_handle = match pa.effective_target {
+            AttackTarget::Digimon(h) => h,
+            AttackTarget::Player(_) => return RaidRetargetOutcome::Proceed,
+        };
+        // If the target is still valid, fall through to Battle — no
+        // retarget needed.
+        if self.handle_valid(target_handle) {
+            return RaidRetargetOutcome::Proceed;
+        }
+        let attacker = pa.attacker;
+        if !self.has_keyword(attacker, Keyword::Raid) {
+            return RaidRetargetOutcome::Proceed;
+        }
+
+        let candidates = self.raid_retarget_candidates(attacker);
+        if candidates.is_empty() {
+            // Raid applies but no legal retarget — fizzle the attack.
+            self.cleanup_attack(AttackResult::Cancelled);
+            return RaidRetargetOutcome::Fizzled;
+        }
+
+        self.install_raid_retarget_selection(attacker, candidates);
+        RaidRetargetOutcome::SelectionInstalled
+    }
+
+    /// Enumerate legal Raid retarget candidates on the opposing side.
+    /// Priority mirrors the mask-layer Raid selection (see
+    /// `action/mask.rs:137`): unsuspended Digimon tied at max effective
+    /// DP, falling back to any legal opposing Digimon when no
+    /// unsuspended candidate exists.
+    ///
+    /// Legality filters:
+    /// - Must be a Digimon (not Tamer/Option/DigiEgg).
+    /// - Must be in `OptionState::Standard` (excludes Delayed/Training/
+    ///   Linked option permanents).
+    /// - Must NOT carry `ModifierType::CannotAttackTarget` (Phase 6).
+    ///
+    /// Returns permanent indices on the opposing side (same ordering
+    /// as battle_area).
+    fn raid_retarget_candidates(&self, attacker: PermanentHandle) -> Vec<u8> {
+        let opp_id = 1 - attacker.player;
+        if (opp_id as usize) >= self.players.len() {
+            return Vec::new();
+        }
+        let opp = self.player(opp_id);
+        let max_opp = opp.battle_area.len();
+
+        // First pass: unsuspended candidates + track max DP.
+        let mut unsuspended: Vec<(u8, i32)> = Vec::new();
+        for j in 0..max_opp {
+            let t = &opp.battle_area[j];
+            if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
+                continue;
+            }
+            if !t.is_digimon(&self.card_data) {
+                continue;
+            }
+            let t_handle = PermanentHandle {
+                player: opp_id,
+                index: j as u8,
+            };
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotAttackTarget)
+            {
+                continue;
+            }
+            if t.is_suspended {
+                continue;
+            }
+            let dp = self.effective_dp(t_handle).unwrap_or(0);
+            unsuspended.push((j as u8, dp));
+        }
+
+        if !unsuspended.is_empty() {
+            let max_dp = unsuspended.iter().map(|&(_, dp)| dp).max().unwrap_or(0);
+            return unsuspended
+                .into_iter()
+                .filter(|&(_, dp)| dp == max_dp)
+                .map(|(j, _)| j)
+                .collect();
+        }
+
+        // Fallback: any legal opposing Digimon (suspended or otherwise)
+        // when no unsuspended candidates exist. Raid rules permit this
+        // — "highest DP if no unsuspended available".
+        let mut fallback: Vec<u8> = Vec::new();
+        for j in 0..max_opp {
+            let t = &opp.battle_area[j];
+            if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
+                continue;
+            }
+            if !t.is_digimon(&self.card_data) {
+                continue;
+            }
+            let t_handle = PermanentHandle {
+                player: opp_id,
+                index: j as u8,
+            };
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotAttackTarget)
+            {
+                continue;
+            }
+            fallback.push(j as u8);
+        }
+        fallback
+    }
+
+    /// Install the Raid retarget `PendingSelection`. The selecting
+    /// player is the attacker's controller. On resolution the selection
+    /// routes through `apply_attack_target_substitution` — reusing the
+    /// Task 2 entry point that fires `OnAttackTargetChange` globally —
+    /// then transitions to `AttackState::Battle` and re-enters the state
+    /// machine.
+    fn install_raid_retarget_selection(
+        &mut self,
+        attacker: PermanentHandle,
+        candidates: Vec<u8>,
+    ) {
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+
+        let attacker_player = attacker.player;
+        let opp_id = 1 - attacker_player;
+        let valid_action_ids: Vec<u16> = candidates
+            .iter()
+            .map(|&j| encode_attack(0, j as u16))
+            .collect();
+
+        let source_card = self.player(attacker_player).battle_area[attacker.index as usize]
+            .top_card()
+            .handle();
+        let previous_phase = self.current_phase;
+
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::OppField,
+            selecting_player: attacker_player,
+            previous_phase,
+            valid_action_ids,
+            // Raid retarget is mandatory: once a legal retarget exists,
+            // the attacker must pick one (the alternative — fizzling —
+            // is reserved for the no-candidates path, which never
+            // installs a selection).
+            is_optional: false,
+            prompt: "Raid — pick a new target".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: Some(attacker),
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let new_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                let new_target = PermanentHandle {
+                    player: opp_id,
+                    index: new_index,
+                };
+                // Reuse the shared entry point — rewrites
+                // `effective_target` and fires OnAttackTargetChange.
+                game.apply_attack_target_substitution(AttackTarget::Digimon(new_target));
+                game.transition_attack_state(AttackState::Battle);
+                game.advance_pending_attack();
+            }),
+            on_decline: None,
+        });
     }
 
     /// Resolve the battle once all interrupt windows have cleared.
