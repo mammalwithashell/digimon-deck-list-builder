@@ -18,3 +18,4 @@ mod pretty;
 mod roundtrip;
 mod schema_export;
 mod phase0_exit;
+mod real_cards_json;

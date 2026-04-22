@@ -2,9 +2,9 @@ card: AD1-025
 name: Omnimon
 kind: digimon
 level: 7
-color: [red, blue]
+color: [red, black]
 cost: 15
-dp: 13000
+dp: 15000
 traits: [Holy Warrior, Royal Knight, ADVENTURE, Hero]
 alt_paths:
   - kind: dna_digivolve

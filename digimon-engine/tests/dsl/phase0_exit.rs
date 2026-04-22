@@ -13,23 +13,23 @@ fn examples_dir() -> PathBuf {
 fn build_stub_db() -> CardDataDbStub {
     // Phase 0 ships a hand-crafted stub per card; Phase 1 replaces with a
     // real loader over `digimon_gym/engine/data/cards.json`.
+    // Values corrected to match real cards.json (Phase 1a Task 6).
     CardDataDbStub::new()
-        .with_card("ST2-13", "Hammer Spark", CardKind::Option, None, None, Some(0), vec![ColorSpec::Red])
-        .with_card("BT17-007", "Agumon", CardKind::Digimon, Some(3), Some(2000), Some(3), vec![ColorSpec::Red])
+        .with_card("ST2-13", "Hammer Spark", CardKind::Option, None, None, Some(0), vec![ColorSpec::Blue])
+        .with_card("BT17-007", "Agumon", CardKind::Digimon, Some(3), Some(1000), Some(3), vec![ColorSpec::Red])
         .with_card("BT22-084", "Nokia Shiramine", CardKind::Tamer, None, None, Some(5), vec![ColorSpec::Red, ColorSpec::Blue])
-        .with_card("BT5-093", "Tai Kamiya & Matt Ishida", CardKind::Tamer, None, None, Some(4), vec![ColorSpec::Red, ColorSpec::Blue])
-        .with_card("BT17-015", "WarGreymon", CardKind::Digimon, Some(6), Some(12000), Some(11), vec![ColorSpec::Red])
-        .with_card("AD1-025", "Omnimon", CardKind::Digimon, Some(7), Some(13000), Some(15), vec![ColorSpec::Red, ColorSpec::Blue])
+        .with_card("BT5-093", "Tai Kamiya & Matt Ishida", CardKind::Tamer, None, None, Some(4), vec![ColorSpec::Black])
+        .with_card("BT17-015", "WarGreymon", CardKind::Digimon, Some(6), Some(11000), Some(11), vec![ColorSpec::Red])
+        .with_card("AD1-025", "Omnimon", CardKind::Digimon, Some(7), Some(15000), Some(15), vec![ColorSpec::Red, ColorSpec::Black])
         .with_card("BT24-016", "Lamiamon", CardKind::Digimon, Some(5), Some(7000), Some(7), vec![ColorSpec::Red])
-        .with_card("BT18-019", "Millenniummon", CardKind::Digimon, Some(7), Some(13000), Some(14), vec![ColorSpec::Black])
-        .with_card("BT20-083", "Omekamon", CardKind::Digimon, Some(4), Some(4000), Some(5), vec![ColorSpec::Red, ColorSpec::Blue])
-        .with_card("BT18-102", "Susanoomon", CardKind::Digimon, Some(7), Some(15000), Some(9),
-            vec![ColorSpec::Red, ColorSpec::Blue, ColorSpec::Yellow, ColorSpec::Green, ColorSpec::Black, ColorSpec::Purple])
+        .with_card("BT18-019", "Millenniummon", CardKind::Digimon, Some(7), Some(14000), Some(14), vec![ColorSpec::Red, ColorSpec::Purple])
+        .with_card("BT20-083", "Omekamon", CardKind::Digimon, Some(4), Some(5000), Some(5), vec![ColorSpec::Black])
+        .with_card("BT18-102", "Susanoomon", CardKind::Digimon, Some(7), Some(16000), Some(9), vec![ColorSpec::Black])
         .with_card("BT13-060", "Rosemon: Burst Mode", CardKind::Digimon, Some(7), Some(15000), Some(15), vec![ColorSpec::Green])
-        .with_card("BT13-007", "King Drasil_7D6", CardKind::DigiEgg, None, None, Some(0), vec![ColorSpec::Yellow])
-        .with_card("BT12-112", "Shoutmon X7: Superior Mode", CardKind::Digimon, Some(7), Some(17000), Some(15), vec![ColorSpec::Red])
+        .with_card("BT13-007", "King Drasil_7D6", CardKind::DigiEgg, None, None, Some(0), vec![ColorSpec::Black])
+        .with_card("BT12-112", "Shoutmon X7: Superior Mode", CardKind::Digimon, Some(7), Some(17000), Some(15), vec![ColorSpec::Black, ColorSpec::Red])
         .with_card("BT10-111", "Shoutmon (King Version)", CardKind::Digimon, Some(4), Some(4000), Some(5), vec![ColorSpec::Red])
-        .with_card("EX11-012", "Medusamon", CardKind::Digimon, Some(6), Some(11000), Some(11), vec![ColorSpec::Purple])
+        .with_card("EX11-012", "Medusamon", CardKind::Digimon, Some(6), Some(12000), Some(11), vec![ColorSpec::Red])
 }
 
 #[test]

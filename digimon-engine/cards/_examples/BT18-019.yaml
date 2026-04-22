@@ -2,9 +2,9 @@ card: BT18-019
 name: Millenniummon
 kind: digimon
 level: 7
-color: [black]
+color: [red, purple]
 cost: 14
-dp: 13000
+dp: 14000
 traits: [Composite]
 alt_paths:
   - kind: dna_digivolve

@@ -4,7 +4,7 @@ kind: digimon
 level: 6
 color: [red]
 cost: 11
-dp: 12000
+dp: 11000
 traits: [Dragonkin]
 alt_paths:
   - kind: digivolve

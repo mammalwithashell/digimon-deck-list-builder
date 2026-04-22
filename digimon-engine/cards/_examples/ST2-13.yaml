@@ -1,7 +1,7 @@
 card: ST2-13
 name: Hammer Spark
 kind: option
-color: [red]
+color: [blue]
 cost: 0
 effects:
   - when: main_from_hand

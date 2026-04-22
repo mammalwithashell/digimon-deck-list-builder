@@ -2,9 +2,9 @@ card: BT18-102
 name: Susanoomon
 kind: digimon
 level: 7
-color: [red, blue, yellow, green, black, purple]
+color: [black]
 cost: 9
-dp: 15000
+dp: 16000
 traits: [Shaman]
 ace_overflow: -5
 alt_paths:

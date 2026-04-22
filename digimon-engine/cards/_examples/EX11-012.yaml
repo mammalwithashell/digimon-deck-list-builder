@@ -2,9 +2,9 @@ card: EX11-012
 name: Medusamon
 kind: digimon
 level: 6
-color: [purple]
+color: [red]
 cost: 11
-dp: 11000
+dp: 12000
 traits: [Dragonkin, LIBERATOR]
 
 effects:

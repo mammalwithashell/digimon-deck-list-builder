@@ -4,7 +4,7 @@ kind: digimon
 level: 3
 color: [red]
 cost: 3
-dp: 2000
+dp: 1000
 traits: [Reptile]
 alt_paths:
   - kind: digivolve
