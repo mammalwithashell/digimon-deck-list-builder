@@ -1100,6 +1100,201 @@ See `tests/option_flow/behavioral_end_to_end.rs` for the canonical end-to-end te
 
 ---
 
+## Phase 9 — Combat Interrupt Completion
+
+Phase 9 completes the combat state machine. Prior to Phase 9, the Counter window only accepted Blast Digivolve Options, the two `Would*`-attack replacement timings were reserved but unfired, `<Raid>` retarget existed as a mask-layer concept only, `<Collision>` printed as a keyword with no enforcement, `<Piercing>` never performed a post-battle security check, `<Reboot>` never unsuspended, and the `OnBlock` / `OnAllyAttack` / `OnOpponentAttack` global observers were declared but not dispatched. Phase 9 wires all of it.
+
+Every interrupt window now exposes its decision node through `pending_selection` (working rule 17). ~30 cards across the five audited archetypes unblock — the entire Dark Masters Ace Counter line, TS Olympos Raid retarget riders, and the Collision-mandate cards across the meta pool.
+
+### Updated attack state machine
+
+```
+Declared
+  → [WhenWouldAttack]              (replacement: cancel / let attack proceed)
+  → [WhenWouldBeAttackTarget]      (replacement: cancel / substitute target)
+  → AllianceOpen
+  → CounterOpen                    (3 candidate shapes — see §Counter broadening)
+  → BlockOpen                      (CannotBlock gates defenders; Collision flips optional → mandatory)
+  → PostBlock                      (Raid retarget rider if attacker has <Raid> and target invalidated)
+  → Battle
+  → PostBattle                     (Piercing post-battle security check if Digimon defender wiped)
+  → Cleanup
+```
+
+`AttackState::PostBlock` and `AttackState::PostBattle` are net-new states added in Phase 9.
+
+### New replacement timings (Phase 7 variants, dispatched in Phase 9)
+
+Both variants were parsed and built in Phase 7 but never fired. Phase 9 wires the fire-sites at the top of `begin_attack_impl` (attack declaration).
+
+| Timing | Subject | Outcome semantics |
+|--------|---------|-------------------|
+| `WhenWouldAttack` | `Permanent(attacker)` | `Cancelled` aborts the attack cleanly (no Counter window, no Battle). `Substituted` on attacker-side is a `debug_assert` — no printed card moves the attacker slot; kept for symmetry only. |
+| `WhenWouldBeAttackTarget` | `Permanent(target)` or `Player(pid)` | `Cancelled` aborts. `Substituted(new_target)` rewrites `effective_target` and fires `OnAttackTargetChange` before advancing to `AllianceOpen`. |
+
+Both fire before the Alliance window opens, in order. Scripts use them via `Effect::new(card, EffectTiming::WhenWouldAttack)` / `WhenWouldBeAttackTarget` with a `ReplacementContext` body.
+
+### New `EffectBuilder` method
+
+```rust
+/// Mark this effect as eligible for the Counter window.
+///
+/// Distinct from `.blast_digivolve()`: Blast Digivolve implies both Counter-timing
+/// AND a digivolve-cost payment path. A plain `.counter()` effect is a Counter-timed
+/// body with no digivolve step — used for hand-Option Counter plays and field-ability
+/// Counter fires.
+pub fn counter(self) -> Self;
+```
+
+Three candidate shapes feed into the Counter window:
+
+| Shape | Composition | Dispatch order |
+|-------|-------------|----------------|
+| **Blast Digivolve** (pre-existing) | `.blast_digivolve()` on a digivolve target | Fires `WhenDigivolving` on the digivolved permanent. |
+| **Hand Counter Option** (NEW) | `.counter().option_main()` on an Option card body | `CounterEffect` fires **before** the `OptionMain` body, then the Option resolves through the standard Phase 8 dispose path. |
+| **Field Counter Ability** (NEW) | `.counter().timing(CounterEffect)` on a permanent | Fires directly from the permanent's triggered-effect queue during the Counter window. |
+
+**Depth guard**: at most one Counter fires per attack in v1 (`pending_attack.counter_fired` flag set on first Counter commit). See constraints below.
+
+### New `EffectContext` helpers
+
+```rust
+/// Redirect the current attack's effective target.
+///
+/// Only callable during an active attack (otherwise `AttackError::NoActiveAttack`).
+/// Validates `new_target` against the current board state (otherwise
+/// `AttackError::InvalidTarget` — e.g. a Permanent handle no longer on the field,
+/// or a target class disallowed by a modifier).
+///
+/// Side effect: fires `OnAttackTargetChange` after commit.
+pub fn redirect_attack(&mut self, new_target: AttackTarget) -> Result<(), AttackError>;
+
+/// Cancel the current attack. Sets `pending_attack.cancelled = true`; the attack
+/// state advance loop short-circuits to `Cleanup` on its next tick.
+///
+/// Only callable during an active attack (`AttackError::NoActiveAttack` otherwise).
+/// Safe to call from `WhenWouldAttack`, `WhenWouldBeAttackTarget`, `CounterEffect`,
+/// and any observer that runs during an open attack.
+pub fn cancel_attack(&mut self) -> Result<(), AttackError>;
+```
+
+```rust
+pub enum AttackError {
+    NoActiveAttack,   // pending_attack is None
+    InvalidTarget,    // target handle stale, destroyed, or class-gated
+}
+```
+
+### New state machine transitions
+
+**`AttackState::PostBlock`** — after the Block window resolves. The engine checks whether the attacker has `<Raid>` (printed or modifier-granted) AND the effective target has been invalidated since declaration (e.g. destroyed by a Block-window effect, returned to hand, unsuspended such that it's no longer a legal target). If so, the engine scans for a legal retarget; if any exist, it installs a `PendingSelection::AttackRetarget` and pauses advance. The controller picks a new target (or declines, ending the attack). If none exist, advance falls through to `Battle`.
+
+**`AttackState::PostBattle`** — after the Battle state resolves. If the attacker survives, the defender was a Digimon (not a player), the defender was wiped, and the attacker has `<Piercing>`, the engine enters a security check against the defending player (standard `OnSecurityCheck` dispatch; one card). Piercing on direct-player-attack does **not** fire — this is a Piercing-after-Digimon-battle rule only.
+
+### Keyword consumers wired
+
+| Keyword | Consumer site | Behavior |
+|---------|---------------|----------|
+| `<Piercing>` | `AttackState::PostBattle` | Post-Digimon-battle security check against defending player (§4.3 of spec). |
+| `<Collision>` | `AttackState::BlockOpen` mask builder | Flips `is_optional = false` on the block window; the PASS/no-block action bit drops from the mask. `CannotBlock` modifier still gates individual defenders before Collision elevates the choice to mandatory. |
+| `<Reboot>` | Opponent's unsuspend phase | Unsuspends the Reboot permanent during the opponent's unsuspend step. Gated by `CannotUnsuspend` / `CannotBeUnsuspendedByEffect` modifiers. |
+| `<Raid>` | `AttackState::PostBlock` | Retarget rider as described above. |
+
+### New observer dispatch
+
+| Timing | Scope | Fires when |
+|--------|-------|-----------|
+| `OnBlock` | Global observer | Fan-out via `TriggerSource::PlayerBattleArea` after block declaration; both players' battle areas scanned. Observers read the post-declare attack state (`effective_target` is the blocker). |
+| `OnAllyAttack` | Observer on attacker-controller's OTHER permanents | Fires on every same-controller permanent except the attacker itself. Attacker-filter is structural, not opt-in. |
+| `OnOpponentAttack` | Observer on opposing-controller permanents | Fires on every permanent of the opposing controller. |
+
+All three fire after `OnAttack` + `WhenAttacking` resolve, via the standard `drain_effect_queue` path.
+
+### Worked examples
+
+**1. Redirect via `WhenWouldBeAttackTarget`** — "this Digimon redirects any attack declared against it to itself" (trivial tautology form, but shows the surface):
+
+```rust
+Effect::new(card, EffectTiming::WhenWouldBeAttackTarget)
+    .process(|ctx| {
+        // Substitute the attack target back to an ally (example).
+        let new_target = AttackTarget::Permanent(ctx.source());
+        ctx.redirect_attack(new_target).ok();
+    })
+    .build()
+```
+
+**2. Hand Counter Option body** — play an Option from hand during opponent's attack and gain 2 memory:
+
+```rust
+Effect::new(card, EffectTiming::None)
+    .counter()
+    .option_main()
+    .process(|ctx| { ctx.gain_memory(2); })
+    .build()
+```
+
+`CounterEffect` fires first (the `.counter()` overlay), then `OptionMain` (the Phase 8 body). The Option card disposes through the standard Phase 8 Standard-Option path.
+
+**3. Field Counter Ability** — a permanent that fires a Counter body during the Counter window:
+
+```rust
+Effect::new(card, EffectTiming::CounterEffect)
+    .counter()
+    .process(|ctx| {
+        // Cancel the opposing attack.
+        ctx.cancel_attack().ok();
+    })
+    .build()
+```
+
+**4. Observing `OnAllyAttack` to buff the attacker**:
+
+```rust
+Effect::new(card, EffectTiming::OnAllyAttack)
+    .process(|ctx| {
+        if let Some(attacker) = ctx.attacker() {
+            ctx.add_dp_modifier(attacker, 2000, Expiry::EndOfTurn);
+        }
+    })
+    .build()
+```
+
+### Phase 9 v1 constraints
+
+1. **Counter-chain depth > 1 is not supported.** `pending_attack.counter_fired` is a boolean, not a counter. Printed rules today do not require recursive Counter-chains; if a future card requires Counter-in-response-to-Counter, this becomes a multi-level fired-set.
+2. **Attacker-side substitution (`WhenWouldAttack` with `Substituted`) is a `debug_assert`**, not a printed mechanic. No card moves the attacker slot via a replacement; the variant is kept for shape symmetry with `WhenWouldBeAttackTarget`.
+3. **Single Raid retarget per attack.** `AttackState::PostBlock` fires the retarget check once. If the retargeted target also invalidates before `Battle`, the state machine falls through to `Battle`, which handles zero-target cleanup trivially (no damage, no security check).
+4. **Raid retarget candidate set is stricter than declaration-time mask.** v1 prefers unsuspended Digimon; suspended fallback only fires when no unsuspended target exists. Declaration-time mask has no such ordering. This is a parity gap between the two selection flows — tracked in `RUST_PYTHON_PARITY.md` §15.4.
+5. **Native `<Raid>` parsing is still modifier-only.** Phase 3 parsed `<Collision>`, `<Piercing>`, `<Reboot>` off the card face; `<Raid>` is still mask-layer-only (same pre-existing gap, not introduced by Phase 9). Printed Raid cards require a modifier emission to honor the retarget rider in v1.
+6. **Piercing on direct-player-attack does NOT fire.** Piercing is a post-Digimon-battle rule only. An attack declared against the opposing player (not a Digimon) that lands zero damage is not a Piercing trigger.
+7. **`ACTION_SPACE_SIZE` unchanged at 2168.** All Phase 9 interrupts reuse existing action ranges: Counter window Option plays route through the Phase 8 `PLAY_HAND` range, Raid retargets reuse the target-selection range, Counter passes reuse the `SEL_REPLACEMENT_PASS` bit. No tensor or mask growth.
+
+### Testing a combat interrupt
+
+Per working rule 18, write behavioral tests against `DebugRunner` under `digimon-engine/tests/combat/` before implementing:
+
+```rust
+#[test]
+fn counter_option_from_hand_cancels_attack() {
+    let mut r = DebugRunner::builder()
+        .p0_battle_area([attacker])
+        .p1_battle_area([defender])
+        .p1_hand([counter_cancel_option])
+        .start();
+    r.declare_attack(AttackTarget::Permanent(defender_handle)).unwrap();
+    // Counter window is open — P1 plays the Option.
+    r.play_counter_option_from_hand(1, "CNTR-001").unwrap();
+    // Attack should have short-circuited to Cleanup.
+    assert!(r.game.pending_attack.is_none());
+    assert!(r.game.player(1).battle_area.contains_handle(defender_handle));
+}
+```
+
+See `tests/combat/phase9_end_to_end.rs` for the canonical Counter + Raid + Collision integrated scenario (Task 10).
+
+---
+
 ## 9. Known gaps (as of Phase 6)
 
 These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:

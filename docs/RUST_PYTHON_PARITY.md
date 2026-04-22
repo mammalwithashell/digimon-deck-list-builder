@@ -929,3 +929,99 @@ Linked-card host-deletion cascade does **not** fire `WhenWouldBeTrashed`
 linked card. Python behaves identically today. Marked
 `TODO(phase-8-followup)` in `combat.rs`; no printed card audited requires
 the replacement window to fire on this path.
+
+## 15. Combat interrupt completion (Phase 9)
+
+Phase 9 combat-interrupt completion landed 2026-04-21. See
+`docs/RUST_ENGINE_API.md` §Phase 9 for the full scripting surface.
+
+### 15.1 🟢 `WhenWouldAttack` / `WhenWouldBeAttackTarget` dispatch
+
+Both replacement timings were parsed and built in Phase 7 but reserved —
+no fire-sites. Phase 9 wires dispatch at the top of `begin_attack_impl`:
+`WhenWouldAttack` on the attacker, then `WhenWouldBeAttackTarget` on the
+target, before `AllianceOpen`. Python fires the equivalent entry at
+`combat.py:127-147` (`_emit_when_would_attack`). Parity reached.
+
+### 15.2 🟢 `ctx.redirect_attack` + `ctx.cancel_attack`
+
+Rust-side script helpers landed on `EffectContext` (§6.1 of spec). Both
+validate `pending_attack` and return `AttackError::NoActiveAttack` /
+`InvalidTarget`. `redirect_attack` fires `OnAttackTargetChange`;
+`cancel_attack` short-circuits advance to `Cleanup`. Python's
+`combat.py:102-125` exposes `redirect_attack` and a conceptually
+equivalent cancellation path. Parity reached.
+
+### 15.3 🟡 Counter hand-play — Rust leads
+
+Rust Phase 9 supports three Counter-window shapes: Blast Digivolve
+(pre-existing), Hand Counter Option (`.counter().option_main()` — NEW,
+Phase 8 play_option_from_hand with a `CounterEffect` overlay), and Field
+Counter Ability (`.counter().timing(CounterEffect)` on a permanent —
+NEW). Python `combat.py:173-186` only dispatches blast-digivolve
+candidates during the Counter window. Rust leads; a Python port is
+required for full parity but is out of scope for the Rust pivot and
+retirement-track — tracked as a parity follow-up.
+
+### 15.4 🟡 Raid retarget — Rust leads
+
+Rust Phase 9 adds `AttackState::PostBlock` with a Raid retarget rider:
+if the attacker has `<Raid>` (modifier-granted — see §15.9) AND the
+effective target has invalidated AND any legal retarget exists, the
+engine installs a `PendingSelection::AttackRetarget`. Retarget candidate
+set prefers unsuspended Digimon; suspended fallback only when no
+unsuspended exist. Python does not have an equivalent retarget
+interrupt. Rust leads.
+
+Known v1 looseness: retarget candidate ordering (unsuspended-priority)
+is stricter than declaration-time mask ordering. Logged in API doc
+§Phase 9 constraint 4.
+
+### 15.5 🟡 Collision MUST-block — Rust leads
+
+Rust Phase 9 implements `<Collision>` as a mask-layer mandate: the
+`AttackState::BlockOpen` mask builder flips `is_optional = false` on the
+block selection and drops the PASS/no-block action bit. `CannotBlock`
+still gates individual defenders before Collision elevates the choice
+to mandatory (a CannotBlock defender is simply not a candidate). Python
+`permanent.py:502` expands the Blocker-eligible set for `<Collision>`
+but does not convert the opt-in block window into a mandatory one. Rust
+leads.
+
+### 15.6 🟢 Piercing post-battle security check
+
+Rust Phase 9 adds `AttackState::PostBattle`: if the attacker survives,
+the defender was a Digimon, the defender was wiped, and the attacker
+has `<Piercing>`, enter a security check against the defending player
+(standard `OnSecurityCheck` dispatch; one card). Piercing on
+direct-player-attack does NOT fire — this is a post-Digimon-battle rule
+only. Python has the equivalent post-battle check in
+`combat.py:_resolve_piercing`. Parity reached.
+
+### 15.7 🟢 Reboot unsuspend consumer
+
+Rust Phase 9 wires `<Reboot>` into the opponent's unsuspend phase: at
+the start of the opponent's unsuspend step, every Reboot permanent on
+either battle area unsuspends, gated by `CannotUnsuspend` /
+`CannotBeUnsuspendedByEffect`. Python has the equivalent consumer. Parity
+reached.
+
+### 15.8 🟡 `OnBlock` / `OnAllyAttack` / `OnOpponentAttack` dispatch
+
+Rust Phase 9 fires all three: `OnBlock` via `TriggerSource::PlayerBattleArea`
+fan-out after block declaration (both players' battle areas scanned);
+`OnAllyAttack` on attacker-controller's OTHER permanents (attacker itself
+filtered out structurally); `OnOpponentAttack` on opposing-controller
+permanents. Python `combat.py:58-74` fires `OnAllyAttack`. `OnBlock` and
+`OnOpponentAttack` do not have comparable Python fire-sites — Rust leads
+on those two. Flagged for parity follow-up if Python is not retired
+before cards depending on these observers migrate.
+
+### 15.9 🟡 Native `<Raid>` keyword parsing — pre-existing parity gap, not Phase 9
+
+Rust has mask-layer `<Raid>` retarget (Phase 9) but printed `<Raid>` on
+the card face is still not `has_keyword`-queryable — it must be granted
+via a modifier emission. Phase 3 covered `<Collision>`, `<Piercing>`,
+`<Reboot>` but `<Raid>` was out of scope. Same gap as before Phase 9; not
+introduced by this phase. Tracked as a cross-engine parity item for a
+future Phase 3 follow-up.

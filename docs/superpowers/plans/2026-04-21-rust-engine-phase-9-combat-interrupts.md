@@ -950,19 +950,21 @@ The following are intentionally **not** in Phase 9:
 
 ## Status
 
-Phase 9 Combat Interrupts — **🚧 NOT YET STARTED**. Plan written 2026-04-21.
+Phase 9 Combat Interrupts — **✅ Landed 2026-04-21**. Plan written 2026-04-21.
 
-Expected final: 671 → ~711 (+40 net new tests: 8 WouldAttack + 5 redirect + 6 Counter + 4 Raid + 3 Collision + 4 Piercing + 3 Reboot + 6 observers + 1 e2e).
+Baseline 671 → 710 passing after Task 8 (+39 net new tests). Task 9 is docs-only, no test count change. Task 10 behavioral e2e will bring the suite to ~711 passing.
 
-| Task | Commit | Landing | Quality fix |
-|------|--------|---------|-------------|
-| 1 WhenWouldAttack/WouldBeAttackTarget | TBD | TBD | TBD |
-| 2 ctx redirect/cancel | TBD | TBD | TBD |
-| 3 Counter broadening | TBD | TBD | TBD |
-| 4 Raid retarget | TBD | TBD | TBD |
-| 5 Collision mandate | TBD | TBD | TBD |
-| 6 Piercing post-battle | TBD | TBD | TBD |
-| 7 Reboot unsuspend | TBD | TBD | TBD |
-| 8 OnBlock + OnAlly/OpponentAttack | TBD | TBD | TBD |
-| 9 Docs | TBD | TBD | TBD |
-| 10 Behavioral e2e | TBD | TBD | TBD |
+| Task | Commit | Landing | Test delta |
+|------|--------|---------|------------|
+| 1 WhenWouldAttack/WouldBeAttackTarget dispatch + Phase 6 auto-install | `4a40bebb` → `c7d26c95` (quality fixes) | 2026-04-21 | +8 (→ 679) |
+| 2 `ctx.redirect_attack` + `ctx.cancel_attack` | `815b14a7` | 2026-04-21 | +5 (→ 684) |
+| 3 Counter window broadening (3 candidate shapes) | `f8971264` | 2026-04-21 | +6 (→ 690) |
+| 4 Raid retarget + `AttackState::PostBlock` | `c5195f4b` | 2026-04-21 | +4 (→ 694) |
+| 5 Collision MUST-block | `8ede9c71` | 2026-04-21 | +3 (→ 697) |
+| 6 Piercing post-battle + `AttackState::PostBattle` | `5887afef` | 2026-04-21 | +4 (→ 701) |
+| 7 Reboot unsuspend consumer | `0173fa68` | 2026-04-21 | +3 (→ 704) |
+| 8 `OnBlock` + `OnAllyAttack` + `OnOpponentAttack` dispatch | `7a7b6fdb` | 2026-04-21 | +6 (→ 710) |
+| 9 Docs (RUST_ENGINE_API + PARITY + roadmap + plan status) | this commit | 2026-04-21 | 0 (710) |
+| 10 Behavioral end-to-end | upcoming | TBD | +1 (→ 711 expected) |
+
+Zero warnings under `RUSTFLAGS="-D warnings"`. `ACTION_SPACE_SIZE` unchanged at 2168. No `TODO(phase-9-stub)` markers remain in the tree.
