@@ -9,3 +9,4 @@ mod parse_steps;
 mod parse_predicates;
 mod parse_formulas;
 mod parse_declarative;
+mod i18n_scaffolding;

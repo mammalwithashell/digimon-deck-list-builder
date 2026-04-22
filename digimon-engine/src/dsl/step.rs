@@ -540,6 +540,10 @@ pub struct SelectFieldArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -552,6 +556,10 @@ pub struct SelectZoneArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -564,6 +572,10 @@ pub struct SelectMaterialArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -577,6 +589,10 @@ pub struct SelectUnionArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -586,6 +602,10 @@ pub struct SelectPermutationArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -602,6 +622,10 @@ pub struct SelectCountCappedArgs {
     pub optional_zero: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub distinct_by: Option<crate::dsl::alt_path::DistinctBy>,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -612,6 +636,10 @@ pub struct SelectEffectChoiceArgs {
     pub bind_as: Option<String>,
     #[serde(default)]
     pub prompt: String,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

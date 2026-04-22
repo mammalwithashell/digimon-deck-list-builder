@@ -39,6 +39,17 @@ pub struct TriggeredClause {
     #[serde(default)]
     pub scope: ClauseScope,
 
+    /// Optional short effect summary displayed when the clause activates.
+    /// Authored in `en-US`; used as the canonical localization key when
+    /// translated. See spec §7b.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+
+    /// Explicit localization key override. If absent, derived positionally
+    /// as `<card_id>.clause[<index>].summary`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary_key: Option<String>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub active_when: Option<PredicateSpec>,
 
@@ -130,6 +141,12 @@ pub struct DeclarativeClause {
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub active_when: Option<PredicateSpec>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary_key: Option<String>,
 
     /// Free-form body keyed by clause-kind — validated in Task 9 via `typed_body()`.
     /// Storing as `IndexMap<String, serde_yml::Value>` preserves key order
