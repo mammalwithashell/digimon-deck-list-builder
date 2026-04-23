@@ -227,6 +227,81 @@ fn nested_floor_div_wrapping_base_per_delta() {
     assert_eq!(eval_formula(&f, &rctx, FormulaSubject::Permanent(h)), 3);
 }
 
+// ---------------------------------------------------------------------------
+// Task 5: exhaustive variant coverage smoke test
+// ---------------------------------------------------------------------------
+
+/// Build every `CompiledFormula` variant once and call `eval_formula` on it.
+/// The goal is to ensure no match arm panics. One sanity `assert_eq!` on
+/// `Literal` confirms the evaluator is actually running; remaining variants
+/// are exercised for panic-freedom only.
+#[test]
+fn all_formula_variants_eval_without_panic() {
+    let r = runner();
+    let rctx = fresh_rctx(&r);
+
+    // Literal — sanity check
+    assert_eq!(
+        eval_formula(&CompiledFormula::Literal(42), &rctx, FormulaSubject::None),
+        42
+    );
+
+    // BasePerDelta — CardCountInZone works with FormulaSubject::None
+    let _ = eval_formula(
+        &CompiledFormula::BasePerDelta {
+            base: 1000,
+            per: CompiledPerSelector::CardCountInZone,
+            delta: 500,
+        },
+        &rctx,
+        FormulaSubject::None,
+    );
+
+    // FloorDiv
+    let _ = eval_formula(
+        &CompiledFormula::FloorDiv(vec![
+            CompiledFormula::Literal(10),
+            CompiledFormula::Literal(3),
+        ]),
+        &rctx,
+        FormulaSubject::None,
+    );
+
+    // Max
+    let _ = eval_formula(
+        &CompiledFormula::Max(vec![
+            CompiledFormula::Literal(1),
+            CompiledFormula::Literal(2),
+        ]),
+        &rctx,
+        FormulaSubject::None,
+    );
+
+    // Min
+    let _ = eval_formula(
+        &CompiledFormula::Min(vec![
+            CompiledFormula::Literal(1),
+            CompiledFormula::Literal(2),
+        ]),
+        &rctx,
+        FormulaSubject::None,
+    );
+
+    // Aggregate
+    let _ = eval_formula(
+        &CompiledFormula::Aggregate(CompiledAggregateSelector::HighestDp),
+        &rctx,
+        FormulaSubject::None,
+    );
+
+    // RawRust — returns 0 (Phase 4 deferred), must not panic
+    let _ = eval_formula(
+        &CompiledFormula::RawRust("some_raw_rust_id".to_string()),
+        &rctx,
+        FormulaSubject::None,
+    );
+}
+
 /// Max([Aggregate(LowestDp), Literal(1000)])
 ///
 /// The aggregate_runner field has three Digimon with DPs 2000, 5000, 1000.
