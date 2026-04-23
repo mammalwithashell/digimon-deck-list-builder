@@ -1,3 +1,4 @@
+#![recursion_limit = "512"]
 //! Card-scripting DSL (Phase 0 — parse + validate only).
 //!
 //! See `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md` for the
