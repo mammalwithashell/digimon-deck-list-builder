@@ -4,6 +4,7 @@
 //! `Effect`s at `effects()` time. Triggered clauses, identity, alt_paths,
 //! and raw_rust are skipped in Phase 1c (Phase 2 owns them).
 
+pub mod lower_aura;
 pub mod lower_grant_keyword;
 pub mod modifier_map;
 pub mod predicate;
@@ -49,8 +50,27 @@ impl CardEffect for DslCardEffect {
                             out.push(e);
                         }
                     }
+                    CompiledDeclarativeClause::Aura {
+                        scope,
+                        active_when,
+                        target,
+                        dp_modifier,
+                        grant_keyword,
+                        ..
+                    } => {
+                        if let Some(e) = lower_aura::lower(
+                            card,
+                            *scope,
+                            active_when.clone(),
+                            target.clone(),
+                            *dp_modifier,
+                            grant_keyword.clone(),
+                        ) {
+                            out.push(e);
+                        }
+                    }
                     _ => {
-                        // Other declarative clauses lowered in Tasks 6-8.
+                        // Other declarative clauses lowered in Tasks 7-8.
                     }
                 },
             }

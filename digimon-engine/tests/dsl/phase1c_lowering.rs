@@ -78,3 +78,99 @@ fn grant_keyword_unknown_name_skips_emission() {
     let card = CardHandle(0);
     assert!(dsl.effects(card).is_empty());
 }
+
+use digimon_dsl::compiled::{
+    CompiledGrantKeywordValue, CompiledPlayerRef, CompiledPredicate,
+};
+
+fn fixture_aura_self_dp(amount: i32) -> CompiledCard {
+    CompiledCard {
+        card: "F-AURA-SELF".into(),
+        name: "Fixture".into(),
+        kind: CompiledCardKind::Digimon,
+        level: Some(4),
+        color: vec![],
+        cost: Some(5),
+        dp: Some(4000),
+        traits: vec![],
+        form: None,
+        attribute: None,
+        ace_overflow: None,
+        identity: None,
+        alt_paths: vec![],
+        effects: vec![CompiledClause::Declarative(
+            CompiledDeclarativeClause::Aura {
+                scope: CompiledScope::Inherited,
+                active_when: None,
+                target: CompiledPredicate::default(),
+                dp_modifier: Some(amount),
+                grant_keyword: None,
+                modifier: None,
+                summary: None,
+                summary_key: None,
+            },
+        )],
+    }
+}
+
+#[test]
+fn self_aura_with_dp_modifier_sets_static_dp_field() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_aura_self_dp(2000)));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert_eq!(effects[0].dp_modifier, 2000);
+    assert!(effects[0].inherited, "scope: inherited should set the inherited flag");
+}
+
+fn fixture_aura_filtered(
+    target: CompiledPredicate,
+    grant: Option<CompiledGrantKeywordValue>,
+    dp: Option<i32>,
+) -> CompiledCard {
+    CompiledCard {
+        card: "F-AURA-FILT".into(),
+        name: "Fixture".into(),
+        kind: CompiledCardKind::Tamer,
+        level: None,
+        color: vec![],
+        cost: Some(3),
+        dp: None,
+        traits: vec![],
+        form: None,
+        attribute: None,
+        ace_overflow: None,
+        identity: None,
+        alt_paths: vec![],
+        effects: vec![CompiledClause::Declarative(
+            CompiledDeclarativeClause::Aura {
+                scope: CompiledScope::FaceUp,
+                active_when: None,
+                target,
+                dp_modifier: dp,
+                grant_keyword: grant,
+                modifier: None,
+                summary: None,
+                summary_key: None,
+            },
+        )],
+    }
+}
+
+#[test]
+fn filtered_aura_emits_declarative_with_process_but_no_static_dp() {
+    let target = CompiledPredicate {
+        owner: Some(CompiledPlayerRef::You),
+        name_contains: Some("Omnimon".into()),
+        ..Default::default()
+    };
+    let grant = Some(CompiledGrantKeywordValue {
+        keyword: "SecurityAttackPlus".into(),
+        value: Some(1),
+    });
+    let dsl = DslCardEffect::new(Arc::new(fixture_aura_filtered(target, grant, None)));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert!(effects[0].declarative);
+    assert_eq!(effects[0].dp_modifier, 0);
+    assert!(effects[0].process.is_some());
+}
