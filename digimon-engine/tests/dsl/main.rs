@@ -33,3 +33,4 @@ mod phase2a_end_to_end;
 mod replacement;
 mod partition;
 mod delay;
+mod standalone_declaratives_exit;
