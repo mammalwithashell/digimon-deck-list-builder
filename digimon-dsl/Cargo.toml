@@ -11,5 +11,4 @@ serde_yml = "0.0.12"
 schemars = { version = "0.8", features = ["indexmap2"] }
 thiserror = "1"
 indexmap = { version = "2", features = ["serde"] }
-rkyv = { version = "0.7", features = ["validation"] }
-bytecheck = "0.6"
+bincode = "1.3"

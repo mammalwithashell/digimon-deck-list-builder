@@ -1,30 +1,18 @@
-//! Compiled card IR — rkyv-friendly mirror of `CardSpec` used as the
-//! on-disk / in-memory format for distributed card packs.
+//! Compiled card IR — bincode-friendly mirror of `CardSpec`.
 //!
-//! Phase 1b Task 2: top-level types + stubs for nested. Task 3 populates
-//! the stubs. Task 4 adds the lowering pass (CardSpec → CompiledCard).
+//! Used as the on-disk / in-memory format for distributed card packs.
+//! Phase 1b Task 3: full IR with recursive types embedded directly
+//! (no zero-copy — bincode does a single-shot deserialize at boot,
+//! ~20ms for a 4000-card pack, well inside the 100ms budget).
 //!
-//! # rkyv design note
-//!
-//! rkyv 0.7 cannot derive `Archive` for self-referential types (e.g. a type
-//! that transitively contains `Vec<Self>`).  `CompiledCard`'s outermost
-//! fields — card number, name, level, cost, DP, traits, etc. — are
-//! non-recursive and are zero-copy archived normally.  The recursive effect
-//! tree (`CompiledClause` / `CompiledStep` / `CompiledPredicate` /
-//! `CompiledFormula`) and the alt-path list are stored as `serde_json`-
-//! encoded byte blobs (`effects_blob` / `alt_paths_blob`) within the
-//! rkyv-archived `CompiledCard`.  The typed accessor helpers
-//! `CompiledCard::effects()` and `CompiledCard::alt_paths()` decode them on
-//! demand.  This keeps zero-copy for the hot-path metadata look-ups while
-//! avoiding the rkyv recursive-type limitation.
+//! Phase 1c will add the bridge from `CompiledCard` to engine `Effect`
+//! closures.
 
-use rkyv::{Archive, Serialize as RkyvSerialize, Deserialize as RkyvDeserialize};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-// ── Top-level card ──────────────────────────────────────────────────
+// ── Top-level ──────────────────────────────────────────────────────
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Debug, Clone, PartialEq)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledCard {
     pub card: String,
     pub name: String,
@@ -37,34 +25,12 @@ pub struct CompiledCard {
     pub form: Option<String>,
     pub attribute: Option<String>,
     pub ace_overflow: Option<i32>,
-    /// Encoded `Option<CompiledIdentity>` — serde_json bytes.
-    pub identity_blob: Vec<u8>,
-    /// Encoded `Vec<CompiledAltPath>` — serde_json bytes.
-    pub alt_paths_blob: Vec<u8>,
-    /// Encoded `Vec<CompiledClause>` — serde_json bytes.
-    pub effects_blob: Vec<u8>,
+    pub identity: Option<CompiledIdentity>,
+    pub alt_paths: Vec<CompiledAltPath>,
+    pub effects: Vec<CompiledClause>,
 }
 
-impl CompiledCard {
-    /// Decode the identity field.  Returns `None` if identity is absent or
-    /// decoding fails (should not happen for well-formed packs).
-    pub fn identity(&self) -> Option<CompiledIdentity> {
-        serde_json::from_slice(&self.identity_blob).ok().flatten()
-    }
-
-    /// Decode the alt-paths list.
-    pub fn alt_paths(&self) -> Vec<CompiledAltPath> {
-        serde_json::from_slice(&self.alt_paths_blob).unwrap_or_default()
-    }
-
-    /// Decode the effect clause list.
-    pub fn effects(&self) -> Vec<CompiledClause> {
-        serde_json::from_slice(&self.effects_blob).unwrap_or_default()
-    }
-}
-
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledCardKind {
     Digimon,
     Tamer,
@@ -73,8 +39,7 @@ pub enum CompiledCardKind {
     Token,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledColor {
     Red,
     Blue,
@@ -87,16 +52,12 @@ pub enum CompiledColor {
 
 // ── Identity ────────────────────────────────────────────────────────
 
-/// Non-recursive — safe to derive rkyv Archive.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledIdentity {
     pub name_aliases: Vec<CompiledNameAlias>,
 }
 
-/// Non-recursive — safe to derive rkyv Archive.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledNameAlias {
     pub treat_as: String,
     pub zone: Vec<CompiledZone>,
@@ -104,8 +65,7 @@ pub struct CompiledNameAlias {
     pub has_inherited_name: Option<String>,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledZone {
     Hand,
     Deck,
@@ -119,10 +79,8 @@ pub enum CompiledZone {
 }
 
 // ── Alt-paths ───────────────────────────────────────────────────────
-// All alt-path types are recursive (they embed CompiledPredicate /
-// CompiledStep) so they use serde only, no rkyv Archive derive.
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledAltPath {
     pub kind: CompiledAltPathKind,
     pub from: Option<Box<CompiledPredicate>>,
@@ -136,8 +94,7 @@ pub struct CompiledAltPath {
     pub marker: bool,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledAltPathKind {
     Digivolve,
     DnaDigivolve,
@@ -148,7 +105,7 @@ pub enum CompiledAltPathKind {
     ActivatedDigivolve,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledMaterial {
     pub filter: CompiledPredicate,
     pub repeat: Option<CompiledRepeat>,
@@ -157,31 +114,28 @@ pub struct CompiledMaterial {
     pub stack_under: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledRepeat {
     Unbounded,
     Range { min: u8, max: u8 },
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledDistinctBy {
     CardNumber,
     Level,
     Name,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledCost {
     Literal(i32),
     Formula(CompiledFormula),
 }
 
 // ── Predicate tree ──────────────────────────────────────────────────
-// Recursive (contains Vec<CompiledPredicate>, Box<CompiledPredicate>).
-// serde only.
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct CompiledPredicate {
     pub kind: Option<CompiledCardKind>,
     pub level_eq: Option<u8>,
@@ -241,32 +195,31 @@ pub struct CompiledPredicate {
     pub has_alt_path: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledDpConstraint {
     Literal(i32),
     Formula(CompiledFormula),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledBindingCompare {
     Binding(String),
     Literal(i64),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledCountAggregate {
     pub filter: Box<CompiledPredicate>,
     pub n: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledExistential {
     pub of: CompiledPlayerRef,
     pub predicate: CompiledPredicate,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledPlayerRef {
     You,
     Opponent,
@@ -275,9 +228,8 @@ pub enum CompiledPlayerRef {
 }
 
 // ── Formulas ────────────────────────────────────────────────────────
-// Recursive (Vec<CompiledFormula>).  serde only.
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledFormula {
     Literal(i32),
     BasePerDelta {
@@ -292,8 +244,7 @@ pub enum CompiledFormula {
     RawRust(String),
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledPerSelector {
     MaterialCount,
     StackSize,
@@ -302,8 +253,7 @@ pub enum CompiledPerSelector {
     CardCountInZone,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledAggregateSelector {
     LowestDp,
     HighestDp,
@@ -312,15 +262,14 @@ pub enum CompiledAggregateSelector {
 }
 
 // ── Clauses ─────────────────────────────────────────────────────────
-// Recursive (contain Vec<CompiledStep>).  serde only.
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledClause {
     Triggered(CompiledTriggeredClause),
     Declarative(CompiledDeclarativeClause),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledTriggeredClause {
     pub when: Vec<CompiledTiming>,
     pub scope: CompiledScope,
@@ -334,7 +283,7 @@ pub struct CompiledTriggeredClause {
     pub summary_key: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledDeclarativeClause {
     Aura {
         scope: CompiledScope,
@@ -423,8 +372,7 @@ pub enum CompiledDeclarativeClause {
     },
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum CompiledScope {
     #[default]
     FaceUp,
@@ -432,8 +380,7 @@ pub enum CompiledScope {
     Both,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledTiming {
     OnPlay,
     WhenDigivolving,
@@ -472,16 +419,15 @@ pub enum CompiledTiming {
     Delayed,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledGrantKeywordValue {
     pub keyword: String,
     pub value: Option<i32>,
 }
 
 // ── Steps ───────────────────────────────────────────────────────────
-// Recursive (Vec<CompiledStep>).  serde only.
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledStep {
     GainMemory(i32),
     LoseMemory(i32),
@@ -541,7 +487,7 @@ pub enum CompiledStep {
     RawRust { fn_name: String, consumes: Vec<String>, binds: Vec<String> },
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledBindingRef {
     Named(String),
     SelfRef,
@@ -554,23 +500,108 @@ pub enum CompiledBindingRef {
     OfPermanent(String),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledModifierTarget {
     Binding(CompiledBindingRef),
     Filter(CompiledPredicate),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledCostDelta {
     Free,
     Printed,
     Literal(i32),
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledStackPosition {
     Top,
     Bottom,
     Random,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_card() -> CompiledCard {
+        CompiledCard {
+            card: "ST2-13".into(),
+            name: "Hammer Spark".into(),
+            kind: CompiledCardKind::Option,
+            level: None,
+            color: vec![CompiledColor::Blue],
+            cost: Some(0),
+            dp: None,
+            traits: vec![],
+            form: None,
+            attribute: None,
+            ace_overflow: None,
+            identity: None,
+            alt_paths: vec![],
+            effects: vec![CompiledClause::Triggered(CompiledTriggeredClause {
+                when: vec![CompiledTiming::MainFromHand],
+                scope: CompiledScope::FaceUp,
+                active_when: None,
+                condition: None,
+                optional: false,
+                once_per_turn: false,
+                max_per_turn: None,
+                process: vec![CompiledStep::GainMemory(1)],
+                summary: None,
+                summary_key: None,
+            })],
+        }
+    }
+
+    #[test]
+    fn compiled_card_round_trips_through_bincode() {
+        let original = sample_card();
+        let bytes = bincode::serialize(&original).expect("bincode serialize");
+        let reparsed: CompiledCard = bincode::deserialize(&bytes).expect("bincode deserialize");
+        assert_eq!(original, reparsed);
+    }
+
+    #[test]
+    fn compiled_card_with_recursive_predicate() {
+        // Exercise the recursive Box<CompiledPredicate> path that rkyv
+        // couldn't handle.
+        let pred = CompiledPredicate {
+            any_of: vec![
+                CompiledPredicate { name_contains: Some("Greymon".into()), ..Default::default() },
+                CompiledPredicate { name_contains: Some("Garurumon".into()), ..Default::default() },
+            ],
+            ..Default::default()
+        };
+        let card = CompiledCard {
+            card: "X-1".into(),
+            name: "Test".into(),
+            kind: CompiledCardKind::Digimon,
+            level: Some(6),
+            color: vec![CompiledColor::Red],
+            cost: Some(11),
+            dp: Some(12000),
+            traits: vec![],
+            form: None,
+            attribute: None,
+            ace_overflow: None,
+            identity: None,
+            alt_paths: vec![],
+            effects: vec![CompiledClause::Triggered(CompiledTriggeredClause {
+                when: vec![CompiledTiming::OnPlay],
+                scope: CompiledScope::FaceUp,
+                active_when: None,
+                condition: Some(pred),
+                optional: false,
+                once_per_turn: false,
+                max_per_turn: None,
+                process: vec![],
+                summary: None,
+                summary_key: None,
+            })],
+        };
+        let bytes = bincode::serialize(&card).unwrap();
+        let reparsed: CompiledCard = bincode::deserialize(&bytes).unwrap();
+        assert_eq!(card, reparsed);
+    }
 }
