@@ -51,13 +51,63 @@ pub fn eval_formula(
 }
 
 fn resolve_per(
-    _sel: CompiledPerSelector,
-    _rctx: &EffectReadContext<'_>,
-    _subject: FormulaSubject,
+    sel: CompiledPerSelector,
+    rctx: &EffectReadContext<'_>,
+    subject: FormulaSubject,
 ) -> u32 {
-    // Task 2 implements per-selectors. Return 0 so BasePerDelta degrades to
-    // its base until Task 2 fills in the real count source.
-    0
+    match sel {
+        CompiledPerSelector::MaterialCount => subject_stack(rctx, subject)
+            .map(|n| n.saturating_sub(1)) // top card excluded
+            .unwrap_or(0),
+        CompiledPerSelector::StackSize => subject_stack(rctx, subject).unwrap_or(0),
+        CompiledPerSelector::AllyCount => {
+            // Count Digimon on rctx.player's battle area excluding the subject.
+            let subject_idx = match subject {
+                FormulaSubject::Permanent(h) if h.player == rctx.player => Some(h.index),
+                _ => None,
+            };
+            let n = rctx.game.player(rctx.player).battle_area.len();
+            let mut count = 0u32;
+            for i in 0..n {
+                if subject_idx == Some(i as u8) {
+                    continue;
+                }
+                count += 1;
+            }
+            count
+        }
+        CompiledPerSelector::DigivolutionColorCount => {
+            let h = match subject {
+                FormulaSubject::Permanent(h) => h,
+                _ => return 0,
+            };
+            let Some(perm) = rctx.game.player(h.player).battle_area.get(h.index as usize) else {
+                return 0;
+            };
+            let mut colors: std::collections::HashSet<crate::enums::CardColor> =
+                Default::default();
+            for cs in &perm.card_sources {
+                for c in cs.colors(&rctx.game.card_data) {
+                    colors.insert(*c);
+                }
+            }
+            colors.len() as u32
+        }
+        CompiledPerSelector::CardCountInZone => {
+            // Defaults to the acting player's hand when no zone annotation
+            // is available at the formula level. Phase 2+ refines this when
+            // the formula carries a zone tag.
+            rctx.game.player(rctx.player).hand.len() as u32
+        }
+    }
+}
+
+fn subject_stack(rctx: &EffectReadContext<'_>, subject: FormulaSubject) -> Option<u32> {
+    let FormulaSubject::Permanent(h) = subject else {
+        return None;
+    };
+    let perm = rctx.game.player(h.player).battle_area.get(h.index as usize)?;
+    Some(perm.card_sources.len() as u32)
 }
 
 fn resolve_aggregate(
