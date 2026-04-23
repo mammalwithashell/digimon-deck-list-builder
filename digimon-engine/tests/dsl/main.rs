@@ -35,3 +35,4 @@ mod partition;
 mod delay;
 mod standalone_declaratives_exit;
 mod phase2b_binding_ref;
+mod phase2b_continuation;
