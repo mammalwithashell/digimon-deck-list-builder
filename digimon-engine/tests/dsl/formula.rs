@@ -1,4 +1,4 @@
-use digimon_dsl::compiled::{CompiledFormula, CompiledPerSelector};
+use digimon_dsl::compiled::{CompiledAggregateSelector, CompiledFormula, CompiledPerSelector};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::formula::{eval_formula, FormulaSubject};
 use digimon_engine::effect_context::EffectReadContext;
@@ -109,4 +109,73 @@ fn base_per_delta_uses_material_count_when_subject_is_permanent_with_stack() {
         delta: -1,
     };
     assert_eq!(eval_formula(&f, &rctx, FormulaSubject::Permanent(h)), 3);
+}
+
+/// Build a DebugRunner with three Digimon of known DP/level on player 0's
+/// battle area, then verify all four aggregate selectors against those values.
+///
+/// Card A: dp=2000, level=3 (make_test_card defaults)
+/// Card B: dp=5000, level=5
+/// Card C: dp=1000, level=4
+///
+/// LowestDp  → 1000   HighestDp  → 5000
+/// LowestLevel → 3    HighestLevel → 5
+fn aggregate_runner() -> DebugRunner {
+    let card_a = make_test_card("AGG_A", "A");
+    let mut card_b = make_test_card("AGG_B", "B");
+    card_b.dp = Some(5000);
+    card_b.level = Some(5);
+    let mut card_c = make_test_card("AGG_C", "C");
+    card_c.dp = Some(1000);
+    card_c.level = Some(4);
+
+    let mut runner = DebugRunner::builder()
+        .add_card(card_a)
+        .add_card(card_b)
+        .add_card(card_c)
+        .hand(0, &["AGG_A"])
+        .build();
+
+    runner.place_on_field(0, "AGG_A", None);
+    runner.place_on_field(0, "AGG_B", None);
+    runner.place_on_field(0, "AGG_C", None);
+    runner
+}
+
+fn agg_rctx(runner: &DebugRunner) -> EffectReadContext<'_> {
+    // Use the top card of the first battle-area permanent as the source card.
+    let card = runner.game.players[0].battle_area[0].top_card().handle();
+    EffectReadContext::new(&runner.game, card, None, 0)
+}
+
+#[test]
+fn aggregate_lowest_dp() {
+    let r = aggregate_runner();
+    let rctx = agg_rctx(&r);
+    let f = CompiledFormula::Aggregate(CompiledAggregateSelector::LowestDp);
+    assert_eq!(eval_formula(&f, &rctx, FormulaSubject::None), 1000);
+}
+
+#[test]
+fn aggregate_highest_dp() {
+    let r = aggregate_runner();
+    let rctx = agg_rctx(&r);
+    let f = CompiledFormula::Aggregate(CompiledAggregateSelector::HighestDp);
+    assert_eq!(eval_formula(&f, &rctx, FormulaSubject::None), 5000);
+}
+
+#[test]
+fn aggregate_lowest_level() {
+    let r = aggregate_runner();
+    let rctx = agg_rctx(&r);
+    let f = CompiledFormula::Aggregate(CompiledAggregateSelector::LowestLevel);
+    assert_eq!(eval_formula(&f, &rctx, FormulaSubject::None), 3);
+}
+
+#[test]
+fn aggregate_highest_level() {
+    let r = aggregate_runner();
+    let rctx = agg_rctx(&r);
+    let f = CompiledFormula::Aggregate(CompiledAggregateSelector::HighestLevel);
+    assert_eq!(eval_formula(&f, &rctx, FormulaSubject::None), 5);
 }

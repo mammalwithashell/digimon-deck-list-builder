@@ -111,9 +111,26 @@ fn subject_stack(rctx: &EffectReadContext<'_>, subject: FormulaSubject) -> Optio
 }
 
 fn resolve_aggregate(
-    _sel: CompiledAggregateSelector,
-    _rctx: &EffectReadContext<'_>,
+    sel: CompiledAggregateSelector,
+    rctx: &EffectReadContext<'_>,
 ) -> i32 {
-    // Task 3 implements aggregates.
-    0
+    let mut dp: Vec<i32> = Vec::new();
+    let mut lv: Vec<u8> = Vec::new();
+    for p in 0..rctx.game.players.len() {
+        for perm in &rctx.game.players[p].battle_area {
+            let top = perm.top_card();
+            if let Some(d) = top.dp(&rctx.game.card_data) {
+                dp.push(d);
+            }
+            if let Some(l) = top.level(&rctx.game.card_data) {
+                lv.push(l);
+            }
+        }
+    }
+    match sel {
+        CompiledAggregateSelector::LowestDp => dp.into_iter().min().unwrap_or(0),
+        CompiledAggregateSelector::HighestDp => dp.into_iter().max().unwrap_or(0),
+        CompiledAggregateSelector::LowestLevel => lv.into_iter().min().unwrap_or(0) as i32,
+        CompiledAggregateSelector::HighestLevel => lv.into_iter().max().unwrap_or(0) as i32,
+    }
 }
