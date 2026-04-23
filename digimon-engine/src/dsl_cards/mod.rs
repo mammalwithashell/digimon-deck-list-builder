@@ -6,6 +6,7 @@
 
 pub mod bindings;
 pub mod lower_aura;
+pub mod raw_rust;
 pub mod lower_cost_reduction;
 pub mod lower_flood_gate;
 pub mod lower_grant_keyword;
