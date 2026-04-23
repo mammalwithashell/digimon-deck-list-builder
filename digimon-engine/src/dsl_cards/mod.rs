@@ -4,12 +4,15 @@
 //! `Effect`s at `effects()` time. Triggered clauses, identity, alt_paths,
 //! and raw_rust are skipped in Phase 1c (Phase 2 owns them).
 
+pub mod bindings;
 pub mod lower_aura;
 pub mod lower_cost_reduction;
 pub mod lower_flood_gate;
 pub mod lower_grant_keyword;
 pub mod modifier_map;
 pub mod predicate;
+pub mod step;
+pub mod timing_map;
 
 use std::sync::Arc;
 
