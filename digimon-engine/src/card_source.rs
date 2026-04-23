@@ -1,8 +1,9 @@
 use crate::card_data::CardData;
 use crate::enums::{CardColor, CardKind, PlayerId};
+use serde::{Deserialize, Serialize};
 
 /// Lightweight handle to a CardSource in the game. Copy-able, used in closures.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CardHandle(pub u16);
 
 /// A card instance in the game — one per physical card in a deck/hand/field/trash.

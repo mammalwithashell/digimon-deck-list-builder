@@ -58,6 +58,11 @@ fn phase_int(p: GamePhase) -> i64 {
         GamePhase::AllianceTiming => 16,
         GamePhase::EndOfTurnAction => 15,
         GamePhase::GameOver => 4, // no Python equivalent; End=4 is nearest
+        // Phase 4 variants — no Python equivalent yet; reuse SelectTarget (5)
+        // as a placeholder. Tasks 2-5 will add proper Python-side values.
+        GamePhase::SelectUnion => 5,
+        GamePhase::SelectPermutation => 5,
+        GamePhase::SelectBudgeted => 5,
     }
 }
 

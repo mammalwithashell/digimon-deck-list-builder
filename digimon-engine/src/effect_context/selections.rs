@@ -23,10 +23,20 @@
 
 use crate::card_source::CardSource;
 use crate::effect_context::EffectContext;
-use crate::enums::{GamePhase, PlayerId};
+use crate::enums::{CardKind, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
+
+/// Identifies which zone `select_count_capped_multi` draws candidates from.
+///
+/// - `Hand`  — action IDs map to `PLAY_HAND_START + i` (range 0–29)
+/// - `Trash` — action IDs map to `TRASH_EFFECT_START + i` (range 1150–1194)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CountCappedZone {
+    Hand,
+    Trash,
+}
 
 impl<'a> EffectContext<'a> {
     /// Prompt `self.player` to pick a Digimon from their clockwise-next
@@ -130,7 +140,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -187,7 +197,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -259,7 +269,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -320,7 +330,7 @@ impl<'a> EffectContext<'a> {
             });
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -380,7 +390,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -449,7 +459,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -478,6 +488,277 @@ impl<'a> EffectContext<'a> {
         });
     }
 
+    /// Prompt `self.player` (or `of_player`) to pick one card from a union of
+    /// zones — e.g. hand OR trash. The `zones` bitset selects which zones
+    /// are in scope (`UnionZoneSet::HAND | UnionZoneSet::TRASH`). Filter runs
+    /// once per card at install time; callback receives a `CardHandle` for the
+    /// chosen card.
+    ///
+    /// Action IDs reuse existing ranges: hand slots map to `PLAY_HAND_START +
+    /// i`; trash slots map to `TRASH_EFFECT_START + i`. The inner callback
+    /// disambiguates by range before invoking the user callback. No new action
+    /// range is introduced. This matches Python's `effect_play_from_zone`
+    /// dual-range approach.
+    ///
+    /// If no card passes the filter (across all zones), this is a no-op —
+    /// matching the silent-empty contract used by the other select_* helpers.
+    ///
+    /// **Filter signature:** unlike `select_hand`/`select_trash` (which pass a
+    /// `usize` index), this helper's filter receives `&CardSource` so cross-zone
+    /// predicates can inspect the card directly without branching on whether the
+    /// index is a hand or trash index.
+    pub fn select_union_zone<F, C>(
+        &mut self,
+        of_player: PlayerId,
+        zones: crate::selection::UnionZoneSet,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, &CardSource) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
+    {
+        use crate::action::space::{HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT};
+        use crate::selection::UnionZoneSet;
+
+        let mut valid_action_ids: Vec<u16> = Vec::new();
+
+        // Hand zone — collect lengths first, then filter per index to avoid
+        // simultaneous `&game` + `&game.player.hand[i]` borrows.
+        if zones.contains(UnionZoneSet::HAND) {
+            let hand_len = self.game.player(of_player).hand.len();
+            let cap = hand_len.min(HAND_MAIN_LIMIT);
+            for i in 0..cap {
+                // Clone the CardSource so we can release the borrow on
+                // `self.game` before passing `&Game` to the filter.
+                let card_clone = self.game.player(of_player).hand[i].clone();
+                if filter(self.game, &card_clone) {
+                    valid_action_ids.push(PLAY_HAND_START + i as u16);
+                }
+            }
+        }
+
+        // Trash zone — same pattern.
+        if zones.contains(UnionZoneSet::TRASH) {
+            let trash_len = self.game.player(of_player).trash.len();
+            let cap = trash_len.min(TRASH_MAIN_LIMIT);
+            for i in 0..cap {
+                let card_clone = self.game.player(of_player).trash[i].clone();
+                if filter(self.game, &card_clone) {
+                    valid_action_ids.push(TRASH_EFFECT_START + i as u16);
+                }
+            }
+        }
+
+        if valid_action_ids.is_empty() {
+            return;
+        }
+
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let user_callback: Box<
+            dyn FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync,
+        > = Box::new(callback);
+
+        let previous_phase = self.game.current_phase;
+        self.game.current_phase = crate::enums::GamePhase::SelectUnion;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::UnionZone { zones },
+            selecting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                debug_assert!(
+                    action_id < PLAY_HAND_END || action_id >= TRASH_EFFECT_START,
+                    "select_union_zone: action_id {} falls in gap between PLAY_HAND ({}..{}) and TRASH_EFFECT ({}..); valid_action_ids was populated incorrectly",
+                    action_id, PLAY_HAND_START, PLAY_HAND_END, TRASH_EFFECT_START
+                );
+                // Disambiguate by range.
+                let handle = if action_id >= TRASH_EFFECT_START {
+                    let idx = (action_id - TRASH_EFFECT_START) as usize;
+                    game.player(of_player).trash[idx].handle()
+                } else {
+                    // PLAY_HAND_START range (0-29)
+                    let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
+                    game.player(of_player).hand[idx].handle()
+                };
+                let mut ctx =
+                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                user_callback(&mut ctx, handle);
+            }),
+            on_decline: None,
+        });
+    }
+
+    /// Prompt `self.player` to place N `items` in a chosen order via sequential
+    /// single-item picks. After the player selects all items the final
+    /// `callback` fires with a `Vec<CardHandle>` in chosen order.
+    ///
+    /// **Encoding**: each step reuses the `SEL_REVEAL_START` (30–39) range.
+    /// `valid_action_ids[i] = SEL_REVEAL_START + i` where `i` is an index
+    /// into the *remaining* (not yet picked) list. After each pick the engine
+    /// re-installs a fresh `PendingSelection` for the next step with the
+    /// picked item removed. Phase is `GamePhase::SelectPermutation`;
+    /// `kind = SelectionKind::OrderedPermutation { remaining: n }`.
+    ///
+    /// **No-approximations contract**: even singleton permutations surface as a
+    /// one-choice selection so the RL agent sees every ordering decision.
+    ///
+    /// **Empty items**: final callback fires immediately; no selection installed.
+    ///
+    /// **Cap**: capped at 10 items (`debug_assert` in debug builds; clamp in
+    /// release). This matches `SEL_REVEAL_START` range width (30–39 = 10 slots).
+    pub fn select_ordered_permutation<C>(
+        &mut self,
+        items: Vec<crate::card_source::CardHandle>,
+        prompt: &str,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>) + Send + Sync + 'static,
+    {
+        debug_assert!(items.len() <= 10, "ordered permutation capped at 10 items");
+        let items = if items.len() > 10 {
+            items.into_iter().take(10).collect()
+        } else {
+            items
+        };
+
+        // Empty: skip all selection steps, invoke the callback immediately.
+        if items.is_empty() {
+            callback(self, Vec::new());
+            return;
+        }
+
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let previous_phase = self.game.current_phase;
+        let prompt_owned = prompt.to_string();
+
+        let final_callback: Box<
+            dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
+        > = Box::new(move |game: &mut Game, ordered: Vec<crate::card_source::CardHandle>| {
+            let mut ctx = EffectContext::new(game, source_card, source_permanent, selecting_player);
+            callback(&mut ctx, ordered);
+        });
+
+        install_permutation_step(
+            self.game,
+            items,
+            Vec::new(),
+            prompt_owned,
+            source_card,
+            source_permanent,
+            selecting_player,
+            previous_phase,
+            final_callback,
+        );
+    }
+
+    /// Prompt `of_player` to pick *up to* `max` cards from `zone` via
+    /// sequential single-item picks. Each pick reuses the existing zone action
+    /// range (`PLAY_HAND_START + i` for hand, `TRASH_EFFECT_START + i` for
+    /// trash). `PASS` (action 62) commits early; reaching `picked == max`
+    /// auto-commits immediately. The final `callback` fires with a
+    /// `Vec<CardHandle>` of picked items in pick order.
+    ///
+    /// **PASS availability** (no-approximations policy — every branch is RL-visible):
+    /// - `is_optional_zero = false`: PASS becomes available only after `picked >= 1`.
+    /// - `is_optional_zero = true`:  PASS is available even at `picked == 0`,
+    ///   allowing the player to select nothing.
+    /// Encoded via `PendingSelection::is_optional` so the mask builder gates
+    /// PASS correctly on each step.
+    ///
+    /// **Empty filter**: if no card passes `filter` at install time, `callback`
+    /// fires immediately with an empty `Vec`; no `PendingSelection` is installed.
+    ///
+    /// **Cap**: `max` is asserted `<= 10` in debug builds.
+    pub fn select_count_capped_multi<F, C>(
+        &mut self,
+        of_player: PlayerId,
+        zone: CountCappedZone,
+        max: u8,
+        prompt: &str,
+        is_optional_zero: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>) + Send + Sync + 'static,
+    {
+        debug_assert!(max <= 10, "select_count_capped_multi: max must be <= 10");
+
+        use crate::action::space::{HAND_MAIN_LIMIT, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT};
+
+        // Collect valid candidates at install time using the filter.
+        let (zone_len, range_start) = match zone {
+            CountCappedZone::Hand => {
+                let len = self.game.player(of_player).hand.len().min(HAND_MAIN_LIMIT);
+                (len, PLAY_HAND_START)
+            }
+            CountCappedZone::Trash => {
+                let len = self.game.player(of_player).trash.len().min(TRASH_MAIN_LIMIT);
+                (len, TRASH_EFFECT_START)
+            }
+        };
+
+        // Collect all indices whose card passes the filter. We clone each card
+        // to avoid a simultaneous immutable + mutable borrow of self.game.
+        let mut candidate_indices: Vec<usize> = Vec::with_capacity(zone_len);
+        for i in 0..zone_len {
+            let card_clone = match zone {
+                CountCappedZone::Hand => self.game.player(of_player).hand[i].clone(),
+                CountCappedZone::Trash => self.game.player(of_player).trash[i].clone(),
+            };
+            if filter(self.game, &card_clone) {
+                candidate_indices.push(i);
+            }
+        }
+
+        // Empty filter → invoke final callback immediately; no selection installed.
+        if candidate_indices.is_empty() {
+            callback(self, Vec::new());
+            return;
+        }
+
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let previous_phase = self.game.current_phase;
+        let prompt_owned = prompt.to_string();
+
+        let final_callback: Box<
+            dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
+        > = Box::new(move |game: &mut Game, picks: Vec<crate::card_source::CardHandle>| {
+            let mut ctx = EffectContext::new(game, source_card, source_permanent, selecting_player);
+            callback(&mut ctx, picks);
+        });
+
+        install_count_capped_step(
+            self.game,
+            of_player,
+            zone,
+            range_start,
+            max,
+            is_optional_zero,
+            candidate_indices,
+            Vec::new(), // accum starts empty
+            prompt_owned,
+            source_card,
+            source_permanent,
+            selecting_player,
+            previous_phase,
+            final_callback,
+        );
+    }
+
     /// Mark a security slot face-up. Consumed by the observation tensor so
     /// the card's identity is exposed to the RL agent (it would otherwise be
     /// zeroed for hidden-information safety — §3.3). The slot is keyed by
@@ -501,6 +782,12 @@ impl<'a> EffectContext<'a> {
     ///
     /// Silently no-ops if the field is full or no security check is in
     /// progress. Mirrors Python's `Game.effect_play_from_security`.
+    ///
+    /// Phase 6 flood-gate: if the revealed card is a Digimon and the
+    /// defender has `CannotPlayDigimonByEffect` installed, the play is
+    /// blocked — this method returns without raising `pending.played`.
+    /// The security-resolution loop in `combat.rs` sees `played == false`
+    /// and trashes the card via its normal "didn't stick" path.
     pub fn play_from_security(&mut self) {
         let turn = self.game.turn_count;
         let field_slots = self.game.rules.field_slots as usize;
@@ -515,6 +802,24 @@ impl<'a> EffectContext<'a> {
         let card = pending.card.clone();
 
         if self.game.player(defender).battle_area.len() >= field_slots {
+            return;
+        }
+
+        // Phase 6: CannotPlayDigimonByEffect gates effect-initiated plays,
+        // including security triggers. If the revealed card is a Digimon
+        // and the defending player has the modifier installed, block the
+        // play by returning early without raising `pending.played`.
+        // The security-resolution loop (combat.rs) will see `played == false`
+        // and trash the card via the normal "didn't stick" path — no double
+        // push needed here.
+        // Tamer security triggers are NOT gated — only Digimon.
+        let is_digimon = card.card_kind(&self.game.card_data) == CardKind::Digimon;
+        if is_digimon
+            && self
+                .game
+                .modifiers
+                .player_has(defender, ModifierType::CannotPlayDigimonByEffect)
+        {
             return;
         }
 
@@ -566,7 +871,7 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        let selecting_player = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
 
@@ -606,4 +911,468 @@ impl<'a> EffectContext<'a> {
             on_decline: None,
         });
     }
+
+    // ─── Opponent-as-selector builder ─────────────────────────────────────────
+
+    /// Returns a scope that overrides `selecting_player` for any `select_*`
+    /// call made through it. Use when card text reads "your opponent chooses"
+    /// rather than "you choose".
+    ///
+    /// Example:
+    /// ```ignore
+    /// // "Your opponent chooses one of your Digimon and trashes it."
+    /// ctx.as_selecting_player(opponent).select_own_permanent(
+    ///     "Opponent: choose a Digimon to trash",
+    ///     false,
+    ///     |_g, _perm| true,
+    ///     |ctx, handle| { ctx.delete_permanent(handle); },
+    /// );
+    /// ```
+    ///
+    /// The override is set immediately before the underlying helper runs and
+    /// cleared before `select_*` returns — it does not persist past the
+    /// method call.
+    pub fn as_selecting_player(
+        &mut self,
+        player: crate::enums::PlayerId,
+    ) -> EffectContextSelectorScope<'_, 'a> {
+        EffectContextSelectorScope {
+            ctx: self,
+            selecting_player: player,
+        }
+    }
+}
+
+// ── EffectContextSelectorScope ───────────────────────────────────────────────
+
+/// Scope returned by [`EffectContext::as_selecting_player`]. Each `select_*`
+/// method on this scope temporarily sets `ctx.override_selecting_player` to
+/// `self.selecting_player` before delegating to the underlying
+/// `EffectContext::select_*` helper, then clears the override before returning.
+///
+/// This guarantees the override never outlives the method call — even if the
+/// underlying helper is a no-op (empty filter → early return).
+///
+/// Not forwarded: `select_material`, `select_reveal`, `select_security` —
+/// these are rarely routed to the opponent; add a forwarder here if a real card requires it.
+pub struct EffectContextSelectorScope<'scope, 'g> {
+    ctx: &'scope mut EffectContext<'g>,
+    selecting_player: crate::enums::PlayerId,
+}
+
+impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
+    /// Install a selection where `self.selecting_player` picks from the
+    /// effect controller's own battle area. Forwards to
+    /// `EffectContext::select_own_permanent` with the override applied.
+    pub fn select_own_permanent<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, crate::permanent::PermanentHandle) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_own_permanent(prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a selection where `self.selecting_player` picks from the
+    /// effect controller's opponent's battle area. Forwards to
+    /// `EffectContext::select_opponent_permanent` with the override applied.
+    pub fn select_opponent_permanent<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, crate::permanent::PermanentHandle) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_opponent_permanent(prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install an effect-choice selection where `self.selecting_player` picks
+    /// the branch. Forwards to `EffectContext::select_effect_choice`.
+    pub fn select_effect_choice<C>(
+        &mut self,
+        prompt: &str,
+        labels: Vec<String>,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_effect_choice(prompt, labels, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a hand-pick selection where `self.selecting_player` picks from
+    /// `of_player`'s hand. Forwards to `EffectContext::select_hand`.
+    pub fn select_hand<F, C>(
+        &mut self,
+        of_player: crate::enums::PlayerId,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_hand(of_player, prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a trash-pick selection where `self.selecting_player` picks from
+    /// `of_player`'s trash. Forwards to `EffectContext::select_trash`.
+    pub fn select_trash<F, C>(
+        &mut self,
+        of_player: crate::enums::PlayerId,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_trash(of_player, prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a union-zone selection where `self.selecting_player` picks.
+    /// Forwards to `EffectContext::select_union_zone`.
+    pub fn select_union_zone<F, C>(
+        &mut self,
+        of_player: crate::enums::PlayerId,
+        zones: crate::selection::UnionZoneSet,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_union_zone(of_player, zones, prompt, is_optional, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install a count-capped multi-select where `self.selecting_player` picks.
+    /// Forwards to `EffectContext::select_count_capped_multi`.
+    pub fn select_count_capped_multi<F, C>(
+        &mut self,
+        of_player: crate::enums::PlayerId,
+        zone: crate::effect_context::CountCappedZone,
+        max: u8,
+        prompt: &str,
+        is_optional_zero: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_count_capped_multi(of_player, zone, max, prompt, is_optional_zero, filter, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+
+    /// Install an ordered-permutation selection where `self.selecting_player`
+    /// picks. Forwards to `EffectContext::select_ordered_permutation`.
+    pub fn select_ordered_permutation<C>(
+        &mut self,
+        items: Vec<crate::card_source::CardHandle>,
+        prompt: &str,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>) + Send + Sync + 'static,
+    {
+        let prev = self.ctx.override_selecting_player.take();
+        self.ctx.override_selecting_player = Some(self.selecting_player);
+        self.ctx.select_ordered_permutation(items, prompt, callback);
+        self.ctx.override_selecting_player = prev;
+    }
+}
+
+// ── ordered permutation trampoline ──────────────────────────────────────────
+
+/// Install one step of an ordered-permutation selection into `game`.
+///
+/// Each step presents the player with `remaining.len()` choices encoded as
+/// `SEL_REVEAL_START + i`. When the player picks index `i`, the chosen item
+/// is appended to `accum`, removed from `remaining`, and this function is
+/// called again for the next step — until `remaining` is empty, at which
+/// point `final_callback` fires with `accum` (the full ordered result).
+///
+/// This is a free function (not a method on `EffectContext`) so it can be
+/// called from inside a `Box<dyn FnOnce>` without any recursive closure
+/// or `Arc` indirection. The pattern works because each step's closure is a
+/// plain `FnOnce` that captures `remaining`, `accum`, and a new box for the
+/// next step — no closure references itself.
+#[allow(clippy::too_many_arguments)]
+fn install_permutation_step(
+    game: &mut Game,
+    remaining: Vec<crate::card_source::CardHandle>,
+    accum: Vec<crate::card_source::CardHandle>,
+    prompt: String,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<crate::permanent::PermanentHandle>,
+    selecting_player: crate::enums::PlayerId,
+    previous_phase: GamePhase,
+    final_callback: Box<
+        dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
+    >,
+) {
+    use crate::action::space::SEL_REVEAL_START;
+    use crate::selection::{PendingSelection, SelectionKind};
+
+    let n = remaining.len() as u8;
+    let valid_action_ids: Vec<u16> = (0..remaining.len())
+        .map(|i| SEL_REVEAL_START + i as u16)
+        .collect();
+
+    game.current_phase = GamePhase::SelectPermutation;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::OrderedPermutation { remaining: n },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: false,
+        prompt: prompt.clone(),
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        callback: Box::new(move |game: &mut Game, action_id: u16| {
+            debug_assert!(
+                action_id >= SEL_REVEAL_START && action_id < SEL_REVEAL_START + remaining.len() as u16,
+                "select_ordered_permutation: action_id {} outside expected range [{}, {}); valid_action_ids was populated incorrectly",
+                action_id, SEL_REVEAL_START, SEL_REVEAL_START + remaining.len() as u16
+            );
+            let pick_idx = (action_id - SEL_REVEAL_START) as usize;
+            let mut new_remaining = remaining;
+            let mut new_accum = accum;
+            let picked = new_remaining.remove(pick_idx);
+            new_accum.push(picked);
+
+            if new_remaining.is_empty() {
+                // All items placed — invoke the final callback.
+                final_callback(game, new_accum);
+            } else {
+                // More items remain — install the next step.
+                install_permutation_step(
+                    game,
+                    new_remaining,
+                    new_accum,
+                    prompt,
+                    source_card,
+                    source_permanent,
+                    selecting_player,
+                    previous_phase,
+                    final_callback,
+                );
+            }
+        }),
+        on_decline: None,
+    });
+}
+
+// ── count-capped multi-select trampoline ─────────────────────────────────────
+
+/// Install one step of a count-capped multi-select into `game`.
+///
+/// Each step presents the player with the remaining (not yet picked) candidate
+/// action IDs. `PASS` (action 62) is available when `is_optional_zero` is set
+/// **or** at least one pick has already been made (`accum.len() >= 1`); this is
+/// encoded via `PendingSelection::is_optional` so `resolve_generic_selection`
+/// routes PASS to `on_decline` and the mask builder gates PASS correctly.
+///
+/// PASS resolution fires `on_decline`, which commits by calling `final_callback`.
+/// Non-PASS picks fire `callback`, which either auto-commits (at max) or
+/// re-installs for the next step. The shared `final_callback` is wrapped in
+/// `Arc<Mutex<Option<...>>>` so both closures can take ownership when fired.
+///
+/// `candidate_indices` lists the zone indices still eligible (already-picked
+/// indices are removed after each step). `range_start` is `PLAY_HAND_START` for
+/// hand or `TRASH_EFFECT_START` for trash.
+///
+/// This is a free function (not an `EffectContext` method) so it can be called
+/// recursively from inside a `Box<dyn FnOnce>` without any `Arc`/self-reference.
+#[allow(clippy::too_many_arguments)]
+fn install_count_capped_step(
+    game: &mut Game,
+    of_player: PlayerId,
+    zone: CountCappedZone,
+    range_start: u16,
+    max: u8,
+    is_optional_zero: bool,
+    candidate_indices: Vec<usize>, // zone indices still eligible
+    accum: Vec<crate::card_source::CardHandle>, // handles picked so far (in order)
+    prompt: String,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<crate::permanent::PermanentHandle>,
+    selecting_player: PlayerId,
+    previous_phase: GamePhase,
+    final_callback: Box<
+        dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
+    >,
+) {
+    use std::sync::{Arc, Mutex};
+    use crate::selection::{PendingSelection, SelectionKind};
+
+    let picked = accum.len() as u8;
+
+    // `is_optional` drives PASS gating in `resolve_generic_selection` and the
+    // mask builder. True when the player is allowed to commit early at this step.
+    let is_optional = is_optional_zero || picked >= 1;
+
+    // Build valid_action_ids from remaining candidate indices.
+    let valid_action_ids: Vec<u16> = candidate_indices
+        .iter()
+        .map(|&i| range_start + i as u16)
+        .collect();
+
+    // SAFETY INVARIANT: Exactly one of `callback` or `on_decline` will ever fire
+    // per installed PendingSelection. When `resolve_generic_selection` dispatches
+    // one of them, the PendingSelection is taken and dropped — dropping the other
+    // closure with it. So only one `.take()` ever executes; the Arc ref-count on
+    // the non-firing side drops to zero unused.
+    //
+    // Why Arc<Mutex<Option<_>>> instead of moving `final_callback` into one closure:
+    // `FnOnce` isn't `Clone`, and `Effect` requires `Send + Sync` (rules out `Rc`).
+    // The Mutex is structurally uncontested (engine is single-threaded at this
+    // layer); its only role is to satisfy the `Send + Sync` bound on the shared
+    // storage. See `install_permutation_step` for the simpler `FnOnce`-per-closure
+    // pattern used where there's no PASS-commit alternative.
+    let shared_cb: Arc<Mutex<Option<Box<dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync>>>> =
+        Arc::new(Mutex::new(Some(final_callback)));
+    let shared_cb_decline = Arc::clone(&shared_cb);
+
+    // Clone the accum for the on_decline path (the callback path moves accum).
+    let accum_for_decline = accum.clone();
+
+    game.current_phase = GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::CountCappedMultiSelect { max, picked },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: prompt.clone(),
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        callback: Box::new(move |game: &mut Game, action_id: u16| {
+            debug_assert!(
+                action_id >= range_start
+                    && candidate_indices.contains(&((action_id - range_start) as usize)),
+                "select_count_capped_multi callback: action_id {} not in expected zone range (range_start={}, candidates={:?})",
+                action_id, range_start, candidate_indices
+            );
+
+            // Identify picked zone index and resolve the CardHandle.
+            let pick_zone_idx = (action_id - range_start) as usize;
+            let card_handle = match zone {
+                CountCappedZone::Hand => game.player(of_player).hand[pick_zone_idx].handle(),
+                CountCappedZone::Trash => game.player(of_player).trash[pick_zone_idx].handle(),
+            };
+
+            // Build new state for the next step.
+            let mut new_accum = accum;
+            new_accum.push(card_handle);
+
+            // Auto-commit when max reached.
+            if new_accum.len() == max as usize {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(
+                    cb_opt.is_some(),
+                    "count_capped invariant violated: final_callback already consumed (both paths fired?)"
+                );
+                if let Some(cb) = cb_opt {
+                    cb(game, new_accum);
+                }
+                return;
+            }
+
+            // Remove the picked index from candidates for the next step.
+            let new_candidates: Vec<usize> = candidate_indices
+                .into_iter()
+                .filter(|&i| i != pick_zone_idx)
+                .collect();
+
+            // If no candidates remain, commit early with what we have.
+            if new_candidates.is_empty() {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(
+                    cb_opt.is_some(),
+                    "count_capped invariant violated: final_callback already consumed (both paths fired?)"
+                );
+                if let Some(cb) = cb_opt {
+                    cb(game, new_accum);
+                }
+                return;
+            }
+
+            // Must unwrap the final_callback from the Arc to pass it to the next
+            // step as a `Box<dyn FnOnce>`. Since exactly one branch fires, the
+            // `take()` is guaranteed to succeed here (the on_decline path has not
+            // fired yet).
+            let next_cb: Box<dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync> =
+                Box::new(move |game, picks| {
+                    let cb_opt = shared_cb.lock().unwrap().take();
+                    debug_assert!(
+                        cb_opt.is_some(),
+                        "count_capped invariant violated: final_callback already consumed (both paths fired?)"
+                    );
+                    if let Some(cb) = cb_opt {
+                        cb(game, picks);
+                    }
+                });
+
+            // Install the next step.
+            install_count_capped_step(
+                game,
+                of_player,
+                zone,
+                range_start,
+                max,
+                is_optional_zero,
+                new_candidates,
+                new_accum,
+                prompt,
+                source_card,
+                source_permanent,
+                selecting_player,
+                previous_phase,
+                next_cb,
+            );
+        }),
+        on_decline: Some(Box::new(move |game: &mut Game| {
+            // PASS commit — fire final callback with whatever has been picked.
+            let cb_opt = shared_cb_decline.lock().unwrap().take();
+            debug_assert!(
+                cb_opt.is_some(),
+                "count_capped invariant violated: final_callback already consumed (both paths fired?)"
+            );
+            if let Some(cb) = cb_opt {
+                cb(game, accum_for_decline);
+            }
+        })),
+    });
 }

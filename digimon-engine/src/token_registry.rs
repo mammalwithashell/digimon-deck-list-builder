@@ -56,6 +56,7 @@ impl TokenDef {
             inherited_text: String::new(),
             security_text: String::new(),
             effect_class_name: self.card_id.clone(),
+            keywords: Vec::new(),
             index: 0,
             norm_id: 0.0,
         }

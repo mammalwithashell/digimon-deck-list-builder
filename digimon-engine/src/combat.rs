@@ -35,6 +35,86 @@ use crate::selection::{
     TriggerSource,
 };
 
+/// Phase 9 Task 3 — taxonomy of Counter-window candidates. The broadened
+/// window unifies three distinct resolution paths behind a single
+/// selection:
+///
+/// - `Blast` — existing blast-digivolve path (hand card + field target).
+/// - `HandOption` — an Option card in the defender's hand with a
+///   `.counter()` + `EffectTiming::CounterEffect` effect. Routed through
+///   Phase 8's `play_option_from_hand` pipeline with an overlay that
+///   fires CounterEffect BEFORE OptionMain.
+/// - `FieldAbility` — a defender's battle-area permanent whose top card
+///   exposes a `.counter()` + `EffectTiming::CounterEffect` ability.
+///   Fired directly via `fire_counter_ability` — no card play, no cost.
+///
+/// Stored inside the Counter selection callback closure so the chosen
+/// action ID resolves to the correct path. See spec
+/// `docs/superpowers/specs/2026-04-21-combat-interrupt-completion-design.md`
+/// §5 and the plan file for the design rationale.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CounterCandidate {
+    /// Blast-digivolve from `hand_index` onto `field_index`.
+    Blast { hand_index: u8, field_index: u8 },
+    /// Play the Option at `hand_index` as a Counter Option (normal cost).
+    HandOption { hand_index: u8 },
+    /// Activate the Counter ability on battle-area permanent at
+    /// `perm_index`.
+    FieldAbility { perm_index: u8 },
+}
+
+/// Maximum Counter-window depth per attack. DCGO (and the Digimon TCG
+/// rules) do not allow nested Counter windows — a counter effect that
+/// itself triggers another attack does not open a fresh Counter window
+/// for the secondary attack. Spec §5.4.
+const MAX_COUNTER_DEPTH: u8 = 1;
+
+/// Phase 9 Task 4 — result of the PostBlock Raid retarget rider.
+/// Crate-private; the state machine arm routes on this.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RaidRetargetOutcome {
+    /// Rider didn't apply (target still valid, no Raid, or Player target).
+    /// Caller transitions to `Battle`.
+    Proceed,
+    /// A retarget `PendingSelection` was installed. Caller yields —
+    /// `advance_pending_attack` exits on `pending_selection.is_some()`.
+    SelectionInstalled,
+    /// Rider applied (Raid attacker + invalid target) but no legal
+    /// retarget candidate exists. `cleanup_attack` has already run;
+    /// caller returns the terminal result directly.
+    Fizzled,
+}
+
+/// Phase 9 internal dispatcher result for the pair of attack-declaration
+/// replacements (`WhenWouldAttack` + `WhenWouldBeAttackTarget`). Kept
+/// crate-private; callers route back into the public `AttackResult` enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WouldAttackOutcome {
+    /// No replacement cancelled or parked; caller continues normally.
+    Proceed,
+    /// A mandatory cancel fired, or an optional replacement resolved to
+    /// cancel. Caller must route through `cleanup_attack(Cancelled)`.
+    Cancelled,
+    /// An optional replacement installed a `PendingSelection`; caller must
+    /// return `InProgress`. Re-entry lands via the selection callback.
+    Pending,
+}
+
+/// Error returned by script-facing combat helpers
+/// (`ctx.redirect_attack`, `ctx.cancel_attack`) when the precondition
+/// is not met. Spec §6.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttackError {
+    /// No `pending_attack` is installed — the helper was called outside
+    /// an active attack (e.g. from an `OnPlay` observer).
+    NoActiveAttack,
+    /// The proposed redirect target is not a legal attack target —
+    /// wrong controller, not a Digimon (`option_state != Standard`, or
+    /// a Tamer/Option/DigiEgg), or an out-of-range handle. For Player
+    /// targets: rejecting the attacker's own controller.
+    InvalidTarget,
+}
+
 /// Result of an attack resolution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AttackResult {
@@ -52,6 +132,11 @@ pub enum AttackResult {
     AttackerDeletedBySecurity,
     /// Attack connected on a defenseless player — game over.
     GameWon,
+    /// Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget` replacement
+    /// cancelled the attack before any battle state was observable. No
+    /// memory swing, no battle, no security check — but `EndOfAttack` still
+    /// fires for symmetry with interrupt-aborted attacks.
+    Cancelled,
     /// The attack has paused on an interrupt (Alliance / Counter / Block).
     /// `game.pending_attack` is set with the in-flight state, and a
     /// `pending_selection` is installed for the player who owes a decision.
@@ -90,13 +175,10 @@ impl Game {
             return false;
         }
         // Summoning sickness: can't attack on the turn it was played unless
-        // Rush has been granted or this is a Vortex end-of-turn attack
-        // (§2.1 parity fix). Native Rush from a card's static keyword list
-        // is not yet checked — that requires the effect-listing
-        // infrastructure (§2.1b / §4.5). For now, only modifier-granted
-        // Rush exempts a permanent.
+        // Rush is present (native printed OR modifier-granted) or this is a
+        // Vortex end-of-turn attack (§2.1b parity fix).
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
-        if is_fresh && !vortex && !self.modifiers.has_keyword(handle, Keyword::Rush) {
+        if is_fresh && !vortex && !self.has_keyword(handle, Keyword::Rush) {
             return false;
         }
         true
@@ -197,9 +279,31 @@ impl Game {
             blocker: None,
             is_vortex: vortex,
             is_overclock,
+            cancelled: false,
+            battle_occurred: false,
             return_phase,
             state: AttackState::Declared,
+            counter_depth: 0,
         });
+
+        // Phase 9: WhenWouldAttack fires on the attacker BEFORE any
+        // observable state transitions (suspend / OnAttack / memory). A
+        // mandatory cancel at this point rolls the attack back cleanly —
+        // attacker not suspended, no Rush turn-count bump, no OnAttack
+        // triggers.
+        //
+        // Optional replacements install a `PendingSelection::Replacement`
+        // and we return `InProgress` — the selection callback re-enters by
+        // resolving directly to the committed outcome. Spec §4.1 + §6.1.
+        match self.fire_would_attack_dispatch(attacker, target) {
+            WouldAttackOutcome::Proceed => {}
+            WouldAttackOutcome::Cancelled => {
+                return self.cleanup_attack(AttackResult::Cancelled);
+            }
+            WouldAttackOutcome::Pending => {
+                return AttackResult::InProgress;
+            }
+        }
 
         // Mark attacker as attacking (§2.2 parity).
         if let Some(perm) = self
@@ -263,6 +367,17 @@ impl Game {
             };
             let state = pa.state;
             let attacker = pa.attacker;
+            let cancelled = pa.cancelled;
+
+            // Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
+            // replacement (or a `ctx.cancel_attack()` from a later phase)
+            // may have flagged the attack as cancelled while an optional
+            // replacement selection was resolving. Short-circuit straight
+            // to cleanup — EndOfAttack still fires for symmetry; EndOfBattle
+            // does NOT (no DP comparison ran).
+            if cancelled && state != AttackState::Cleanup {
+                return self.cleanup_attack(AttackResult::Cancelled);
+            }
 
             // Attacker validity check: OnAttack / interrupt effects may
             // have deleted it. Any state past Declared requires a live
@@ -292,7 +407,31 @@ impl Game {
                     // If one installs, next loop iteration sees
                     // pending_selection and yields.
                     if !self.try_enter_block() {
-                        self.transition_attack_state(AttackState::Battle);
+                        self.transition_attack_state(AttackState::PostBlock);
+                    }
+                }
+                AttackState::PostBlock => {
+                    // Phase 9 Task 4 — post-Block Raid retarget rider. If
+                    // `effective_target` became invalid during the Block
+                    // window (OnAttack side-effects, Counter bodies, block
+                    // redirects, etc.) AND the attacker has `<Raid>` AND at
+                    // least one legal retarget exists, install a retarget
+                    // selection. Otherwise fall through to Battle (which
+                    // handles its own trivial-connect for invalid targets).
+                    match self.try_enter_raid_retarget() {
+                        RaidRetargetOutcome::Proceed => {
+                            self.transition_attack_state(AttackState::Battle);
+                        }
+                        RaidRetargetOutcome::SelectionInstalled => {
+                            // Selection parked — next loop iteration yields
+                            // on `pending_selection.is_some()`.
+                        }
+                        RaidRetargetOutcome::Fizzled => {
+                            // Raid applies, no retarget candidates —
+                            // cleanup_attack already ran; exit the state
+                            // machine with a terminal Cancelled result.
+                            return AttackResult::Cancelled;
+                        }
                     }
                 }
                 AttackState::Battle => {
@@ -306,7 +445,61 @@ impl Game {
                         // (§2.5j).
                         return AttackResult::InProgress;
                     }
+
+                    // Phase 9 Task 6 — `<Piercing>` post-battle security
+                    // check. Fires iff the just-resolved battle was a
+                    // Digimon-vs-Digimon match in which the attacker
+                    // survived, the defender was wiped, AND the attacker
+                    // has `<Piercing>`. We re-check survival here because
+                    // OnDeletion / EndOfBattle triggers that ran inside
+                    // `resolve_battle` may have deleted the attacker.
+                    //
+                    // The security pipeline may park on a
+                    // `PendingSelection`; in that case we return
+                    // `InProgress` and `advance_security_resolution`
+                    // finalizes via `cleanup_attack` when the chain clears.
+                    if outcome == AttackResult::AttackerWins {
+                        if let Some(pa) = self.pending_attack.as_ref() {
+                            let attacker_h = pa.attacker;
+                            let defender_handle = match pa.effective_target {
+                                AttackTarget::Digimon(h) => Some(h),
+                                AttackTarget::Player(_) => None,
+                            };
+                            if let Some(defender_h) = defender_handle {
+                                let defender_wiped = !self.handle_valid(defender_h);
+                                let attacker_alive = self.handle_valid(attacker_h);
+                                if defender_wiped
+                                    && attacker_alive
+                                    && self.has_keyword(attacker_h, Keyword::Piercing)
+                                {
+                                    self.transition_attack_state(AttackState::PostBattle);
+                                    let piercing_outcome =
+                                        self.enter_piercing_security_check(attacker_h);
+                                    match piercing_outcome {
+                                        AttackResult::InProgress => {
+                                            return AttackResult::InProgress;
+                                        }
+                                        terminal => {
+                                            return self.cleanup_attack(terminal);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     return self.cleanup_attack(outcome);
+                }
+                AttackState::PostBattle => {
+                    // Defensive: the Battle arm handles PostBattle inline
+                    // (transition + fire + return). If we land here it's
+                    // because a selection callback re-entered
+                    // `advance_pending_attack` while the security pipeline
+                    // is still in flight — but in that case
+                    // `advance_security_resolution` is responsible for
+                    // finalizing via `cleanup_attack`. Just yield so the
+                    // in-flight security resolution can continue.
+                    return AttackResult::InProgress;
                 }
                 AttackState::Cleanup => {
                     // Shouldn't normally reach here — cleanup_attack is
@@ -322,6 +515,224 @@ impl Game {
     fn transition_attack_state(&mut self, new_state: AttackState) {
         if let Some(pa) = self.pending_attack.as_mut() {
             pa.state = new_state;
+        }
+    }
+
+    /// Phase 9 helper. Drives the two attack-declaration replacement
+    /// dispatches back-to-back: first `WhenWouldAttack` on the attacker,
+    /// then `WhenWouldBeAttackTarget` on the declared target.
+    ///
+    /// Returns one of:
+    /// - `Proceed` — no cancel, no substitution parked. Caller continues
+    ///   into suspend → OnAttack → state machine.
+    /// - `Cancelled` — a mandatory cancel fired (or an optional cancel
+    ///   installed a selection and its accept path committed cancel).
+    ///   Caller routes through `cleanup_attack(Cancelled)`.
+    /// - `Pending` — an optional replacement parked a
+    ///   `PendingSelection::Replacement`. The caller returns
+    ///   `AttackResult::InProgress`. When the selection resolves via the
+    ///   generic replacement-accept commit path in `replacement.rs`,
+    ///   `pa.cancelled` is set (or `effective_target` is substituted) and
+    ///   the next `advance_pending_attack` tick picks up the mutated state.
+    ///
+    /// Subject mapping:
+    /// - `WhenWouldAttack` → `ReplacementSubject::Permanent(attacker)`.
+    /// - `WhenWouldBeAttackTarget` → `Permanent(h)` for Digimon targets,
+    ///   `Player(pid)` for direct player attacks.
+    ///
+    /// `Substituted` outcomes:
+    /// - On `WhenWouldAttack`: attacker-side substitution is v1-unsupported
+    ///   (debug_assert). Spec §4.1 — no meaningful shape for "a different
+    ///   attacker takes over"; reserved for future cards.
+    /// - On `WhenWouldBeAttackTarget`: rewrites `pending_attack.effective_target`
+    ///   and fires the global `OnAttackTargetChange` observer.
+    fn fire_would_attack_dispatch(
+        &mut self,
+        attacker: PermanentHandle,
+        target: AttackTarget,
+    ) -> WouldAttackOutcome {
+        use crate::replacement::{ReplacementCause, ReplacementOutcome, ReplacementSubject};
+
+        // 1. WhenWouldAttack on attacker.
+        let outcome = self.try_replace(
+            EffectTiming::WhenWouldAttack,
+            ReplacementSubject::Permanent(attacker),
+            ReplacementCause::Battle,
+            None,
+        );
+        match outcome {
+            ReplacementOutcome::Cancelled => {
+                return WouldAttackOutcome::Cancelled;
+            }
+            ReplacementOutcome::Substituted(_) => {
+                // Attacker-side substitution isn't supported in v1.
+                debug_assert!(
+                    false,
+                    "WhenWouldAttack Substituted outcome not supported in v1 — \
+                     attacker-side replacement only supports Cancelled / None / \
+                     CustomHandled. Use WhenWouldBeAttackTarget for redirects."
+                );
+            }
+            ReplacementOutcome::Redirected(_) => {
+                // Redirected is not meaningful for attack-shape (no zone move).
+                debug_assert!(
+                    false,
+                    "WhenWouldAttack Redirected outcome not meaningful — \
+                     attack replacements do not produce zone moves."
+                );
+            }
+            ReplacementOutcome::None | ReplacementOutcome::CustomHandled => {}
+        }
+
+        // Optional replacement may have parked a selection. Yield to the
+        // callback to drive re-entry.
+        if self.pending_selection.is_some() {
+            return WouldAttackOutcome::Pending;
+        }
+        // The optional-accept path may have committed `cancel()` already —
+        // pick that up here before firing the target-side replacement.
+        if self
+            .pending_attack
+            .as_ref()
+            .is_some_and(|pa| pa.cancelled)
+        {
+            return WouldAttackOutcome::Cancelled;
+        }
+
+        // 2. WhenWouldBeAttackTarget on declared target.
+        let target_subject = match target {
+            AttackTarget::Digimon(h) => ReplacementSubject::Permanent(h),
+            AttackTarget::Player(pid) => ReplacementSubject::Player(pid),
+        };
+        let outcome = self.try_replace(
+            EffectTiming::WhenWouldBeAttackTarget,
+            target_subject,
+            ReplacementCause::Battle,
+            None,
+        );
+        match outcome {
+            ReplacementOutcome::Cancelled => {
+                return WouldAttackOutcome::Cancelled;
+            }
+            ReplacementOutcome::Substituted(new_subject) => {
+                use crate::replacement::ReplacementSubject;
+                let new_target = match new_subject {
+                    ReplacementSubject::Permanent(h) => AttackTarget::Digimon(h),
+                    ReplacementSubject::Player(pid) => AttackTarget::Player(pid),
+                    ReplacementSubject::Card(_, _) => {
+                        debug_assert!(
+                            false,
+                            "Attack target substitution does not accept Card subjects"
+                        );
+                        return WouldAttackOutcome::Proceed;
+                    }
+                };
+                self.apply_attack_target_substitution(new_target);
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "WhenWouldBeAttackTarget Redirected outcome not meaningful — \
+                     use Substituted for target rewrites."
+                );
+            }
+            ReplacementOutcome::None | ReplacementOutcome::CustomHandled => {}
+        }
+
+        if self.pending_selection.is_some() {
+            return WouldAttackOutcome::Pending;
+        }
+        if self
+            .pending_attack
+            .as_ref()
+            .is_some_and(|pa| pa.cancelled)
+        {
+            return WouldAttackOutcome::Cancelled;
+        }
+
+        WouldAttackOutcome::Proceed
+    }
+
+    /// Apply a `Substituted` outcome from `WhenWouldBeAttackTarget`:
+    /// rewrite `pending_attack.effective_target` and fire the global
+    /// `OnAttackTargetChange` observer. Mirrors the block-redirect
+    /// fan-out at `try_enter_block`.
+    ///
+    /// Shared entry point used by both:
+    /// - the dispatcher path (`fire_would_attack_dispatch`) — converts a
+    ///   `ReplacementSubject` from an `rctx.substitute(...)` call; and
+    /// - the script-facing `EffectContext::redirect_attack` helper (§6.1).
+    ///
+    /// Callers must have already validated the target; this method does
+    /// not re-check target legality. No-op if `pending_attack` is `None`
+    /// or `new_target` equals the current `effective_target` (suppress
+    /// redundant `OnAttackTargetChange` fan-out).
+    pub(crate) fn apply_attack_target_substitution(
+        &mut self,
+        new_target: AttackTarget,
+    ) {
+        // No active attack — silent no-op (callers should have checked).
+        let Some(pa) = self.pending_attack.as_mut() else {
+            return;
+        };
+        // Firing-guard: a redirect to the current effective target is a
+        // no-op — don't re-fire OnAttackTargetChange.
+        if pa.effective_target == new_target {
+            return;
+        }
+        pa.effective_target = new_target;
+
+        // OnAttackTargetChange: global observer fan-out across both players'
+        // battle areas. Matches the Block-redirect fire site.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnAttackTargetChange,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+    }
+
+    /// Validate whether `target` is a legal attack target for `attacker`.
+    ///
+    /// Rules:
+    /// - `AttackTarget::Digimon(h)`: handle must resolve to an on-field
+    ///   permanent that is a Digimon with `OptionState::Standard`, and
+    ///   must not be the attacker itself (self-attack is never legal).
+    ///   Controller is NOT restricted here — redirect_attack on the
+    ///   attacker's own side is conceivable for future cards; the existing
+    ///   `can_attack` / mask layer handles the "opponent-only" rule for
+    ///   attack DECLARATION. Replacement-driven redirects honor whatever
+    ///   the replacement author encodes.
+    /// - `AttackTarget::Player(pid)`: legal only if `pid != attacker.player`.
+    ///
+    /// Delayed / Training option permanents are rejected by the
+    /// `handle_valid` inner check (`OptionState::Standard`), matching the
+    /// existing target-legality guard in `begin_attack_impl`.
+    pub(crate) fn validate_attack_target(
+        &self,
+        attacker: PermanentHandle,
+        target: AttackTarget,
+    ) -> Result<(), AttackError> {
+        match target {
+            AttackTarget::Digimon(h) => {
+                if h == attacker {
+                    return Err(AttackError::InvalidTarget);
+                }
+                if !self.handle_valid(h) {
+                    return Err(AttackError::InvalidTarget);
+                }
+                Ok(())
+            }
+            AttackTarget::Player(pid) => {
+                if pid == attacker.player {
+                    return Err(AttackError::InvalidTarget);
+                }
+                if (pid as usize) >= self.players.len() {
+                    return Err(AttackError::InvalidTarget);
+                }
+                Ok(())
+            }
         }
     }
 
@@ -363,7 +774,7 @@ impl Game {
             if !perm.is_digimon(&self.card_data) {
                 continue;
             }
-            if !self.modifiers.has_keyword(h, Keyword::Alliance) {
+            if !self.has_keyword(h, Keyword::Alliance) {
                 continue;
             }
             candidates.push(i as u8);
@@ -411,21 +822,21 @@ impl Game {
                 let ally_dp = game.effective_dp(ally).unwrap_or(0);
                 game.modifiers.add(
                     attacker,
-                    ModifierEntry {
-                        modifier: ModifierType::ChangeDp,
-                        value: ally_dp,
-                        expiry: Expiry::EndOfAttack,
-                        source_player: attacker_player,
-                    },
+                    ModifierEntry::simple(
+                        ModifierType::ChangeDp,
+                        ally_dp,
+                        Expiry::EndOfAttack,
+                        attacker_player,
+                    ),
                 );
                 game.modifiers.add(
                     attacker,
-                    ModifierEntry {
-                        modifier: ModifierType::SecurityAttackChange,
-                        value: 1,
-                        expiry: Expiry::EndOfAttack,
-                        source_player: attacker_player,
-                    },
+                    ModifierEntry::simple(
+                        ModifierType::SecurityAttackChange,
+                        1,
+                        Expiry::EndOfAttack,
+                        attacker_player,
+                    ),
                 );
                 // Suspend the ally.
                 if let Some(perm) = game
@@ -452,24 +863,29 @@ impl Game {
         true
     }
 
-    /// Scan the defender's hand for blast-digivolve candidates paired
-    /// against valid field targets; install a `PendingSelection` in
-    /// `CounterTiming` if any pair exists. Returns `true` on install,
-    /// `false` if the defender has no viable counter and the caller should
-    /// auto-advance to BlockOpen.
+    /// Scan the defender's hand + battle area for Counter-window
+    /// candidates; install a `PendingSelection` in `CounterTiming` if
+    /// any candidate exists. Returns `true` on install, `false` if the
+    /// defender has no viable counter and the caller should auto-advance
+    /// to BlockOpen.
     ///
-    /// PR6 scope: **Digimon-target attacks only**. Player-target attacks
-    /// skip Counter to match Python (`combat.py:139` scopes Counter to
-    /// Digimon targets). Memory cost is not deducted — blast digivolve is
-    /// always free during Counter per Python `_decode_counter` and DCGO
-    /// `BlastDigivolution.cs:109`.
+    /// Phase 9 Task 3 broadens the scan from blast-digivolve-only to a
+    /// union over three candidate shapes (see `CounterCandidate`):
+    ///   - Blast digivolve candidates (hand card + field target).
+    ///   - Hand Counter Options — Option cards in the defender's hand
+    ///     with a `.counter()` + `CounterEffect`-timing effect, routed
+    ///     through Phase 8's `play_option_from_hand` pipeline.
+    ///   - Field Counter abilities — defender's battle-area Digimon with
+    ///     a `.counter()` + `CounterEffect`-timing triggered ability.
     ///
-    /// A blast candidate is any hand card whose `CardEffect::effects`
-    /// include one or more entries with `blast_digivolve = true`. Valid
-    /// pairings are those where `Game::can_digivolve(card, perm)` passes
-    /// for a field Digimon on the defender's side.
+    /// Scope: **Digimon-target attacks only**. Player-target attacks
+    /// skip Counter to match Python (`combat.py:139`).
+    ///
+    /// Depth guard: if `pa.counter_depth >= MAX_COUNTER_DEPTH`, the scan
+    /// returns `false` immediately — a counter body that launches a
+    /// nested attack does NOT open a fresh Counter window (spec §5.4).
     fn try_enter_counter(&mut self) -> bool {
-        use crate::action::space::encode_digivolve;
+        use crate::action::space::{encode_attack, encode_digivolve, PLAY_HAND_START};
 
         let Some(pa) = self.pending_attack.as_ref() else {
             return false;
@@ -481,38 +897,140 @@ impl Game {
         };
         let attacker = pa.attacker;
 
+        // Depth guard (spec §5.4): nested Counter windows are not allowed.
+        // The guard triggers on either signal:
+        //   - `pa.counter_depth >= MAX_COUNTER_DEPTH` — the *current*
+        //     attack has already opened a Counter window once.
+        //   - `self.in_counter_window` — we are inside a counter body
+        //     that launched this attack (the pending_attack was just
+        //     replaced by the nested begin_attack; its counter_depth is
+        //     a fresh 0, but `in_counter_window` carries the context).
+        if pa.counter_depth >= MAX_COUNTER_DEPTH || self.in_counter_window {
+            return false;
+        }
+
+        let mut candidates: Vec<CounterCandidate> = Vec::new();
+
+        // 1. Scan the defender's hand.
         let hand_len = self.player(defender_player).hand.len();
         let field_len = self.player(defender_player).battle_area.len();
-        let mut valid_action_ids: Vec<u16> = Vec::new();
-
         for h_idx in 0..hand_len {
             let card = &self.player(defender_player).hand[h_idx];
             let card_id = card.card_id(&self.card_data).to_string();
             let card_handle = card.handle();
+            let card_kind = card.card_kind(&self.card_data);
             let Some(effects) = self.effects_for_card(&card_id, card_handle) else {
                 continue;
             };
-            if !effects.iter().any(|e| e.blast_digivolve) {
-                continue;
+
+            // Blast digivolve (existing path).
+            let has_blast = effects.iter().any(|e| e.blast_digivolve);
+            if has_blast {
+                // Re-borrow hand with fresh index; effects_for_card only
+                // saw a local view.
+                let card = &self.player(defender_player).hand[h_idx];
+                for f_idx in 0..field_len {
+                    let perm = &self.player(defender_player).battle_area[f_idx];
+                    if !perm.is_digimon(&self.card_data) {
+                        continue;
+                    }
+                    if !self.can_digivolve(card, perm) {
+                        continue;
+                    }
+                    candidates.push(CounterCandidate::Blast {
+                        hand_index: h_idx as u8,
+                        field_index: f_idx as u8,
+                    });
+                }
             }
 
-            // Re-borrow with a fresh index into hand since effects_for_card
-            // took only a local view.
-            let card = &self.player(defender_player).hand[h_idx];
-            for f_idx in 0..field_len {
-                let perm = &self.player(defender_player).battle_area[f_idx];
-                if !perm.is_digimon(&self.card_data) {
-                    continue;
+            // Hand Counter Option (new): Option card with a `.counter()` +
+            // CounterEffect-timing effect, and NOT a blast card (blast
+            // overlaps both flags; it's scored as a Blast candidate
+            // above and must not double-emit as a HandOption).
+            if card_kind == CardKind::Option {
+                let has_counter_option = effects.iter().any(|e| {
+                    e.counter
+                        && !e.blast_digivolve
+                        && e.timing == EffectTiming::CounterEffect
+                });
+                if has_counter_option {
+                    // Color-match gate parity with Phase 8 Option play
+                    // (if the Option's color cannot be satisfied, the
+                    // play would fail anyway — don't offer the candidate).
+                    let player_ref = self.player(defender_player);
+                    let card = &player_ref.hand[h_idx];
+                    if crate::action::mask::option_color_match_available(
+                        card,
+                        player_ref,
+                        &self.card_data,
+                    ) {
+                        candidates.push(CounterCandidate::HandOption {
+                            hand_index: h_idx as u8,
+                        });
+                    }
                 }
-                if !self.can_digivolve(card, perm) {
-                    continue;
-                }
-                valid_action_ids.push(encode_digivolve(h_idx as u16, f_idx as u16));
             }
         }
 
-        if valid_action_ids.is_empty() {
+        // 2. Scan the defender's battle area for field Counter abilities.
+        for f_idx in 0..field_len {
+            let perm = &self.player(defender_player).battle_area[f_idx];
+            // Only Standard-state permanents offer triggered abilities
+            // (Delayed / Training / Linked are structural).
+            if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
+                continue;
+            }
+            if !perm.is_digimon(&self.card_data) {
+                continue;
+            }
+            let top = perm.top_card();
+            let card_id = top.card_id(&self.card_data).to_string();
+            let source_card = top.handle();
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            let has_field_counter = effects.iter().any(|e| {
+                e.counter && e.timing == EffectTiming::CounterEffect
+            });
+            if has_field_counter {
+                candidates.push(CounterCandidate::FieldAbility {
+                    perm_index: f_idx as u8,
+                });
+            }
+        }
+
+        if candidates.is_empty() {
             return false;
+        }
+
+        // Encode each candidate as a distinct action ID. The mapping is
+        // phase-gated (`GamePhase::CounterTiming`) so collisions with
+        // other phase's action-ID ranges are not possible at the mask or
+        // decoder layer.
+        let valid_action_ids: Vec<u16> = candidates
+            .iter()
+            .map(|c| match c {
+                CounterCandidate::Blast { hand_index, field_index } => {
+                    encode_digivolve(*hand_index as u16, *field_index as u16)
+                }
+                CounterCandidate::HandOption { hand_index } => {
+                    PLAY_HAND_START + *hand_index as u16
+                }
+                CounterCandidate::FieldAbility { perm_index } => {
+                    encode_attack(0, *perm_index as u16)
+                }
+            })
+            .collect();
+
+        // Snapshot the candidate list into the closure for decoding.
+        let candidate_snapshot = candidates.clone();
+
+        // Increment the counter-depth guard — subsequent nested attacks
+        // launched by the counter body will see `counter_depth >= 1` and
+        // skip their own Counter windows.
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.counter_depth = pa.counter_depth.saturating_add(1);
         }
 
         let source_card = self.player(attacker.player).battle_area[attacker.index as usize]
@@ -522,30 +1040,32 @@ impl Game {
         self.current_phase = GamePhase::CounterTiming;
 
         self.pending_selection = Some(PendingSelection {
-            // Hand kind is the primary resource (the hand card); the action
-            // ID encodes (hand_idx, field_idx) via encode_digivolve.
+            // SelectionKind::Hand is a defensible umbrella — the primary
+            // resource is the defender's hand, and the mask renderer is
+            // phase-gated (`CounterTiming`) and reads `valid_action_ids`
+            // directly, so the kind is not load-bearing for dispatch.
             kind: SelectionKind::Hand,
             selecting_player: defender_player,
             previous_phase,
-            valid_action_ids,
+            valid_action_ids: valid_action_ids.clone(),
             is_optional: true,
-            prompt: "Blast digivolve (counter)".to_string(),
+            prompt: "Counter (blast / option / field ability)".to_string(),
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                use crate::action::space::decode_digivolve;
-                let (h_idx, f_idx) = decode_digivolve(action_id);
-                game.execute_blast_digivolve(
-                    defender_player,
-                    h_idx as usize,
-                    f_idx as usize,
-                );
+                // Match the resolved action_id back to a candidate.
+                let picked = valid_action_ids
+                    .iter()
+                    .position(|&a| a == action_id)
+                    .and_then(|pos| candidate_snapshot.get(pos).copied());
+                if let Some(cand) = picked {
+                    game.resolve_counter_selection(defender_player, cand);
+                }
 
-                // WhenDigivolving / OnDeletion cascades during the blast may
-                // have deleted the attacker. If so, skip BlockOpen and
-                // Battle — jump straight to Cleanup, matching DCGO
-                // AttackProcess.cs:301's "attacker gone" branch.
+                // WhenDigivolving / field-counter bodies may have deleted
+                // the attacker. If so skip Block + Battle; jump to
+                // Cleanup (mirrors DCGO AttackProcess.cs:301).
                 let next_state = match game.pending_attack.as_ref() {
                     Some(pa) if game.handle_valid(pa.attacker) => AttackState::BlockOpen,
                     Some(_) => AttackState::Cleanup,
@@ -563,6 +1083,58 @@ impl Game {
         });
 
         true
+    }
+
+    /// Route a resolved Counter candidate to its execution path. Called
+    /// from the Counter-selection callback after decoding the action ID
+    /// back into a `CounterCandidate`.
+    pub(crate) fn resolve_counter_selection(
+        &mut self,
+        defender: PlayerId,
+        candidate: CounterCandidate,
+    ) {
+        match candidate {
+            CounterCandidate::Blast {
+                hand_index,
+                field_index,
+            } => {
+                self.execute_blast_digivolve(
+                    defender,
+                    hand_index as usize,
+                    field_index as usize,
+                );
+            }
+            CounterCandidate::HandOption { hand_index } => {
+                // Route through Phase 8's Option pipeline with the
+                // CounterEffect overlay active. `play_option_core` reads
+                // `in_counter_window` to fire CounterEffect BEFORE
+                // OptionMain. Clear the flag afterward even if the pipeline
+                // pauses (an OptionMain-side selection); a nested re-entry
+                // during that pause would still see `in_counter_window =
+                // false`, preserving correct CounterEffect scoping.
+                self.in_counter_window = true;
+                let _result = self.play_option_from_hand(defender, hand_index as usize);
+                self.in_counter_window = false;
+            }
+            CounterCandidate::FieldAbility { perm_index } => {
+                let handle = PermanentHandle {
+                    player: defender,
+                    index: perm_index,
+                };
+                self.fire_counter_ability(handle);
+            }
+        }
+    }
+
+    /// Fire a field Counter ability: enqueue the permanent's
+    /// `CounterEffect`-timing effect(s) and drain. No card play, no cost.
+    /// Phase 9 Task 3.
+    fn fire_counter_ability(&mut self, handle: PermanentHandle) {
+        self.enqueue_triggered(
+            EffectTiming::CounterEffect,
+            TriggerSource::Permanent(handle),
+        );
+        self.drain_effect_queue();
     }
 
     /// Perform the blast-digivolve card movement and fire the
@@ -633,7 +1205,7 @@ impl Game {
         // Mirrors Python's `_is_collision` check in
         // `permanent.py::can_be_blocker`.
         let attacker_has_collision =
-            self.modifiers.has_keyword(attacker, Keyword::Collision);
+            self.has_keyword(attacker, Keyword::Collision);
 
         let battle_area_len = self.player(defender_player).battle_area.len();
         let mut candidates: Vec<u8> = Vec::new();
@@ -655,10 +1227,17 @@ impl Game {
             if !perm.is_digimon(&self.card_data) {
                 continue;
             }
+            // `CannotBlock` (Phase 6 restriction) short-circuits
+            // candidacy regardless of Collision — Collision promotes
+            // every opponent Digimon to "has Blocker" but does NOT
+            // override a printed/modifier `CannotBlock` gate.
+            if self.modifiers.has(h, ModifierType::CannotBlock) {
+                continue;
+            }
             // Blocker required UNLESS the attacker has Collision, which
             // grants Blocker to every opponent Digimon for this attack.
             if !attacker_has_collision
-                && !self.modifiers.has_keyword(h, Keyword::Blocker)
+                && !self.has_keyword(h, Keyword::Blocker)
             {
                 continue;
             }
@@ -668,6 +1247,13 @@ impl Game {
         if candidates.is_empty() {
             return false;
         }
+
+        // §8: when the attacker has `<Collision>` AND the candidate list
+        // is non-empty, the Block selection is MANDATORY — the defender
+        // MUST declare a blocker. Without Collision (or with an empty
+        // pool — handled by the early-return above) the selection
+        // remains optional.
+        let is_optional = !attacker_has_collision;
 
         let valid_action_ids: Vec<u16> = candidates
             .iter()
@@ -691,7 +1277,7 @@ impl Game {
             selecting_player: defender_player,
             previous_phase,
             valid_action_ids,
-            is_optional: true, // Block is always a "may" — PASS means decline.
+            is_optional,
             prompt: "Declare a blocker".to_string(),
             effect_choices: None,
             source_card,
@@ -709,21 +1295,248 @@ impl Game {
                     pa.is_blocked = true;
                     pa.blocker = Some(blocker);
                     pa.effective_target = AttackTarget::Digimon(blocker);
-                    pa.state = AttackState::Battle;
+                    pa.state = AttackState::PostBlock;
                 }
+                // OnAttackTargetChange: fires in all players' battle areas
+                // when Block rewrites effective_target. Observer timing for
+                // "when an attack is redirected" effects (e.g. Medusamon).
+                for pid in 0..game.players.len() {
+                    game.enqueue_triggered(
+                        crate::enums::EffectTiming::OnAttackTargetChange,
+                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                    );
+                }
+                game.drain_effect_queue();
+
+                // Phase 9 Task 8 — OnBlock fires globally after the blocker
+                // is declared. Both players' battle areas are scanned;
+                // observers can read `game.pending_attack.{attacker,
+                // effective_target}` (effective_target now points at the
+                // blocker) from within their process closures.
+                for pid in 0..game.players.len() {
+                    game.enqueue_triggered(
+                        crate::enums::EffectTiming::OnBlock,
+                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                    );
+                }
+                game.drain_effect_queue();
+
                 game.advance_pending_attack();
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
-                // Block declined — advance to Battle. Attack proceeds
-                // against its original target.
+                // Block declined — advance to PostBlock (Raid retarget
+                // rider, then Battle). Attack proceeds against its
+                // original target unless the target became invalid
+                // during the Block window.
                 if let Some(pa) = game.pending_attack.as_mut() {
-                    pa.state = AttackState::Battle;
+                    pa.state = AttackState::PostBlock;
                 }
                 game.advance_pending_attack();
             })),
         });
 
         true
+    }
+
+    /// Phase 9 Task 4 — Raid target-switch rider. Evaluates the
+    /// post-Block checkpoint:
+    ///
+    /// 1. Only fires for Digimon-shaped targets. Direct player attacks
+    ///    do not retarget via Raid (spec §4.2 — the attack was already
+    ///    aimed at a player, Raid's "pick a new Digimon" semantics
+    ///    don't apply).
+    /// 2. Only fires when `effective_target` is INVALID — i.e. the
+    ///    handle no longer resolves to a legal attack target.
+    /// 3. Only fires when the attacker has `<Raid>` (modifier-granted
+    ///    or native). Mirrors the mask-layer Raid check (see
+    ///    `action/mask.rs:137`).
+    /// 4. Candidate list uses the Raid-mask prioritization:
+    ///    unsuspended opposing Digimon first (tied on max DP),
+    ///    falling back to any legal opposing Digimon if no unsuspended
+    ///    candidates exist. Legality excludes `CannotAttackTarget`
+    ///    (Phase 6 restriction) and requires `OptionState::Standard`.
+    ///
+    /// Returns `true` iff a selection was installed (and the state
+    /// machine must yield). Returns `false` when the rider doesn't
+    /// apply OR when no candidates exist; the `false` path leaves the
+    /// state machine to transition to Battle, whose existing
+    /// "invalid defender → AttackerWins" fallback preserves Phase 4
+    /// semantics for the no-Raid / no-Raid-candidate case.
+    ///
+    /// When Raid candidates exist but the legal set is empty (all
+    /// opposing Digimon carry `CannotAttackTarget`, for instance), this
+    /// helper runs `cleanup_attack` directly and returns `Fizzled` —
+    /// the attack terminates with no battle resolution.
+    fn try_enter_raid_retarget(&mut self) -> RaidRetargetOutcome {
+        let Some(pa) = self.pending_attack.as_ref() else {
+            return RaidRetargetOutcome::Proceed;
+        };
+        // Raid retarget only applies to Digimon targets. Player attacks
+        // don't gain a new target via Raid.
+        let target_handle = match pa.effective_target {
+            AttackTarget::Digimon(h) => h,
+            AttackTarget::Player(_) => return RaidRetargetOutcome::Proceed,
+        };
+        // If the target is still valid, fall through to Battle — no
+        // retarget needed.
+        if self.handle_valid(target_handle) {
+            return RaidRetargetOutcome::Proceed;
+        }
+        let attacker = pa.attacker;
+        if !self.has_keyword(attacker, Keyword::Raid) {
+            return RaidRetargetOutcome::Proceed;
+        }
+
+        let candidates = self.raid_retarget_candidates(attacker);
+        if candidates.is_empty() {
+            // Raid applies but no legal retarget — fizzle the attack.
+            self.cleanup_attack(AttackResult::Cancelled);
+            return RaidRetargetOutcome::Fizzled;
+        }
+
+        self.install_raid_retarget_selection(attacker, candidates);
+        RaidRetargetOutcome::SelectionInstalled
+    }
+
+    /// Enumerate legal Raid retarget candidates on the opposing side.
+    /// Priority mirrors the mask-layer Raid selection (see
+    /// `action/mask.rs:137`): unsuspended Digimon tied at max effective
+    /// DP, falling back to any legal opposing Digimon when no
+    /// unsuspended candidate exists.
+    ///
+    /// Legality filters:
+    /// - Must be a Digimon (not Tamer/Option/DigiEgg).
+    /// - Must be in `OptionState::Standard` (excludes Delayed/Training/
+    ///   Linked option permanents).
+    /// - Must NOT carry `ModifierType::CannotAttackTarget` (Phase 6).
+    ///
+    /// Returns permanent indices on the opposing side (same ordering
+    /// as battle_area).
+    fn raid_retarget_candidates(&self, attacker: PermanentHandle) -> Vec<u8> {
+        let opp_id = 1 - attacker.player;
+        if (opp_id as usize) >= self.players.len() {
+            return Vec::new();
+        }
+        let opp = self.player(opp_id);
+        let max_opp = opp.battle_area.len();
+
+        // First pass: unsuspended candidates + track max DP.
+        let mut unsuspended: Vec<(u8, i32)> = Vec::new();
+        for j in 0..max_opp {
+            let t = &opp.battle_area[j];
+            if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
+                continue;
+            }
+            if !t.is_digimon(&self.card_data) {
+                continue;
+            }
+            let t_handle = PermanentHandle {
+                player: opp_id,
+                index: j as u8,
+            };
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotAttackTarget)
+            {
+                continue;
+            }
+            if t.is_suspended {
+                continue;
+            }
+            let dp = self.effective_dp(t_handle).unwrap_or(0);
+            unsuspended.push((j as u8, dp));
+        }
+
+        if !unsuspended.is_empty() {
+            let max_dp = unsuspended.iter().map(|&(_, dp)| dp).max().unwrap_or(0);
+            return unsuspended
+                .into_iter()
+                .filter(|&(_, dp)| dp == max_dp)
+                .map(|(j, _)| j)
+                .collect();
+        }
+
+        // Fallback: any legal opposing Digimon (suspended or otherwise)
+        // when no unsuspended candidates exist. Raid rules permit this
+        // — "highest DP if no unsuspended available".
+        let mut fallback: Vec<u8> = Vec::new();
+        for j in 0..max_opp {
+            let t = &opp.battle_area[j];
+            if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
+                continue;
+            }
+            if !t.is_digimon(&self.card_data) {
+                continue;
+            }
+            let t_handle = PermanentHandle {
+                player: opp_id,
+                index: j as u8,
+            };
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotAttackTarget)
+            {
+                continue;
+            }
+            fallback.push(j as u8);
+        }
+        fallback
+    }
+
+    /// Install the Raid retarget `PendingSelection`. The selecting
+    /// player is the attacker's controller. On resolution the selection
+    /// routes through `apply_attack_target_substitution` — reusing the
+    /// Task 2 entry point that fires `OnAttackTargetChange` globally —
+    /// then transitions to `AttackState::Battle` and re-enters the state
+    /// machine.
+    fn install_raid_retarget_selection(
+        &mut self,
+        attacker: PermanentHandle,
+        candidates: Vec<u8>,
+    ) {
+        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+
+        let attacker_player = attacker.player;
+        let opp_id = 1 - attacker_player;
+        let valid_action_ids: Vec<u16> = candidates
+            .iter()
+            .map(|&j| encode_attack(0, j as u16))
+            .collect();
+
+        let source_card = self.player(attacker_player).battle_area[attacker.index as usize]
+            .top_card()
+            .handle();
+        let previous_phase = self.current_phase;
+
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::OppField,
+            selecting_player: attacker_player,
+            previous_phase,
+            valid_action_ids,
+            // Raid retarget is mandatory: once a legal retarget exists,
+            // the attacker must pick one (the alternative — fizzling —
+            // is reserved for the no-candidates path, which never
+            // installs a selection).
+            is_optional: false,
+            prompt: "Raid — pick a new target".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: Some(attacker),
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let new_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                let new_target = PermanentHandle {
+                    player: opp_id,
+                    index: new_index,
+                };
+                // Reuse the shared entry point — rewrites
+                // `effective_target` and fires OnAttackTargetChange.
+                game.apply_attack_target_substitution(AttackTarget::Digimon(new_target));
+                game.transition_attack_state(AttackState::Battle);
+                game.advance_pending_attack();
+            }),
+            on_decline: None,
+        });
     }
 
     /// Resolve the battle once all interrupt windows have cleared.
@@ -754,6 +1567,29 @@ impl Game {
                 self.resolve_player_security_loop(attacker, defender_player)
             }
         }
+    }
+
+    /// Phase 9 Task 6 — fire the `<Piercing>` follow-up security check.
+    /// Reuses the standard security-resolution pipeline: counts +
+    /// `SecurityAttackChange` modifier sum, honors `Jamming` on the
+    /// attacker during the Digimon-battle phase, and drains
+    /// `SecuritySkill` / `OnSecurityCheck` / `OnLoseSecurity` normally.
+    /// The defending player is inferred from the attack's effective
+    /// target, which has just been wiped — we read `attacker.player`'s
+    /// opponent for the defender id.
+    ///
+    /// Returns `AttackResult::InProgress` if the security pipeline
+    /// installed a `PendingSelection`; in that case the caller returns
+    /// `InProgress` and `advance_security_resolution` finalizes via
+    /// `cleanup_attack` when the chain clears. Otherwise returns a
+    /// terminal outcome that the caller routes through
+    /// `cleanup_attack`.
+    fn enter_piercing_security_check(
+        &mut self,
+        attacker: PermanentHandle,
+    ) -> AttackResult {
+        let defender_player: PlayerId = 1 - attacker.player;
+        self.resolve_player_security_loop(attacker, defender_player)
     }
 
     /// Security-check loop for a `Player` attack. Installs the first
@@ -925,7 +1761,7 @@ impl Game {
                                     .and_then(|p| p.card.dp(&self.card_data))
                                     .unwrap_or(0);
                                 if attacker_dp < sec_dp
-                                    && !self.modifiers.has_keyword(attacker, Keyword::Jamming)
+                                    && !self.has_keyword(attacker, Keyword::Jamming)
                                 {
                                     self.delete_permanent_with_effects(attacker);
                                     if let Some(st) = self.security_resolution.as_mut() {
@@ -980,6 +1816,14 @@ impl Game {
                     self.set_security_phase(SecurityPhase::Dispose);
                 }
                 SecurityPhase::Dispose => {
+                    // TODO(phase-7-task-6): fire `WhenWouldLoseSecurity` here
+                    // (subject: Card(revealed_card, Zone::Security), cause:
+                    // SecurityCheck, original_destination: Some(Zone::Trash))
+                    // before the `pending_security` trash below. Deferred in
+                    // Task 4 because cancelling the security-loss requires
+                    // re-inserting the revealed card back into
+                    // `player.security` — non-trivial plumbing that's best
+                    // addressed alongside native keyword wiring (Task 6).
                     // Extract info before clearing state.
                     let state = self
                         .security_resolution
@@ -996,6 +1840,18 @@ impl Game {
                         if !pending.played {
                             self.player_mut(defender).trash.push(pending.card);
                         }
+                    }
+
+                    // OnOpponentSecurityRemoved: fires in the attacker's
+                    // battle area after a security card leaves the defender's
+                    // stack (trashed or played from security). Medusamon core
+                    // archetype observer.
+                    if let Some(atk) = attacker_opt {
+                        self.enqueue_triggered(
+                            crate::enums::EffectTiming::OnOpponentSecurityRemoved,
+                            crate::selection::TriggerSource::PlayerBattleArea(atk.player),
+                        );
+                        self.drain_effect_queue();
                     }
 
                     // Hard terminal: attacker was deleted mid-check.
@@ -1075,6 +1931,19 @@ impl Game {
     /// caller. Called from both `begin_attack` (early-exit paths) and
     /// `advance_pending_attack` (normal terminal paths).
     fn cleanup_attack(&mut self, outcome: AttackResult) -> AttackResult {
+        // Invariant: a cancelled attack never reached battle resolution.
+        // `battle_occurred` is set only by `resolve_battle`, which is
+        // unreachable once a WhenWouldAttack / WhenWouldBeAttackTarget
+        // replacement commits `pa.cancelled = true`.
+        debug_assert!(
+            !(outcome == AttackResult::Cancelled
+                && self
+                    .pending_attack
+                    .as_ref()
+                    .map(|pa| pa.battle_occurred)
+                    .unwrap_or(false)),
+            "cancelled attack should not have battle_occurred=true"
+        );
         if let Some(pa) = self.pending_attack.as_ref() {
             let h = pa.attacker;
             if let Some(perm) = self
@@ -1085,6 +1954,19 @@ impl Game {
                 perm.is_attacking = false;
             }
         }
+
+        // EndOfAttack: observer timing, fires in every player's battle area.
+        // Used by "at the end of an attack" effects. Fires before modifiers
+        // are expired and pending_attack is cleared, so effects can still
+        // inspect the attack context.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::EndOfAttack,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
         outcome
@@ -1103,11 +1985,23 @@ impl Game {
         self.player(handle.player)
             .battle_area
             .get(handle.index as usize)
-            .map(|p| p.is_digimon(&self.card_data))
+            .map(|p| {
+                // Must be a Digimon (Tamers, DigiEggs, Options aren't attack
+                // targets). Phase 8 Task 3 reinforces this for Delayed /
+                // Training Options: they live on battle_area but are not
+                // attackable. Linked (Task 4) is attached sideways to its
+                // host and doesn't occupy a standalone permanent slot.
+                p.is_digimon(&self.card_data)
+                    && matches!(
+                        p.option_state,
+                        crate::permanent::OptionState::Standard
+                    )
+            })
             .unwrap_or(false)
     }
 
-    /// Fire OnAttack effects for the attacker.
+    /// Fire OnAttack effects for the attacker, then WhenAttacking for every
+    /// permanent in the attacker's battle area (observer timing).
     ///
     /// Thin wrapper over the effect-queue drainer. Single-trigger cases
     /// fire in one step; multi-trigger cases park on a `TriggerOrder`
@@ -1118,24 +2012,80 @@ impl Game {
             crate::selection::TriggerSource::Permanent(handle),
         );
         self.drain_effect_queue();
+
+        // WhenAttacking: observer timing — fires for every permanent in the
+        // attacker's battle area right after OnAttack. Distinct from OnAttack
+        // (which is scoped to the single attacker). Both fire before the
+        // Alliance window opens.
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::WhenAttacking,
+            crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+        );
+        self.drain_effect_queue();
+
+        // Phase 9 Task 8 — OnAllyAttack fan-out. Observer timing firing on
+        // every permanent in the attacker-controller's battle area EXCEPT
+        // the attacker itself. We piggyback on the PlayerBattleArea scan
+        // and filter the attacker's own slot from the queue after enqueue.
+        let attacker_queue_start = self.effect_queue.len();
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAllyAttack,
+            crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+        );
+        // Drop any entries whose source_permanent is the attacker itself
+        // — the attacker does not fire its own OnAllyAttack observer.
+        let mut i = attacker_queue_start;
+        while i < self.effect_queue.len() {
+            if self.effect_queue[i].source_permanent == Some(handle) {
+                self.effect_queue.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        self.drain_effect_queue();
+
+        // Phase 9 Task 8 — OnOpponentAttack fan-out. Observer timing on
+        // every permanent in the non-attacker controller's battle area.
+        let opp = 1 - handle.player;
+        if (opp as usize) < self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnOpponentAttack,
+                crate::selection::TriggerSource::PlayerBattleArea(opp),
+            );
+            self.drain_effect_queue();
+        }
     }
 
     /// Resolve battle between two permanents by DP comparison.
+    ///
+    /// Fires `EndOfBattle` for all players' battle areas after the DP
+    /// comparison completes (before `EndOfAttack`). This timing only fires
+    /// for Digimon-vs-Digimon battles — direct player attacks go through
+    /// `resolve_player_security_loop` instead.
     fn resolve_battle(
         &mut self,
         attacker: PermanentHandle,
         defender: PermanentHandle,
     ) -> AttackResult {
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.battle_occurred = true;
+        }
         let a_dp = self.effective_dp(attacker).unwrap_or(0);
         let d_dp = self.effective_dp(defender).unwrap_or(0);
 
-        if a_dp > d_dp {
+        let outcome = if a_dp > d_dp {
             // Attacker wins — defender is deleted.
-            self.delete_permanent_with_effects(defender);
+            self.delete_permanent_with_cause(
+                defender,
+                crate::replacement::ReplacementCause::Battle,
+            );
             AttackResult::AttackerWins
         } else if a_dp < d_dp {
             // Defender wins — attacker is deleted.
-            self.delete_permanent_with_effects(attacker);
+            self.delete_permanent_with_cause(
+                attacker,
+                crate::replacement::ReplacementCause::Battle,
+            );
             AttackResult::DefenderWins
         } else {
             // Tie — both are deleted. Delete in order: defender first to match
@@ -1143,14 +2093,33 @@ impl Game {
             // Since the second deletion can shift indices, re-resolve via card_index
             // to be safe: we use the handles directly since delete_permanent_with_effects
             // reads the top card's card_index before deletion.
-            self.delete_permanent_with_effects(defender);
+            self.delete_permanent_with_cause(
+                defender,
+                crate::replacement::ReplacementCause::Battle,
+            );
             // After deleting defender, attacker's own handle index is unchanged
             // (different player's battle_area), so the attacker handle is still valid.
             if self.handle_valid(attacker) {
-                self.delete_permanent_with_effects(attacker);
+                self.delete_permanent_with_cause(
+                    attacker,
+                    crate::replacement::ReplacementCause::Battle,
+                );
             }
             AttackResult::MutualDestruction
+        };
+
+        // EndOfBattle: fires only when a Digimon-vs-Digimon battle resolves.
+        // Direct player attacks with security loops skip this timing.
+        // Fire in every player's battle area, before EndOfAttack.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::EndOfBattle,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
         }
+        self.drain_effect_queue();
+
+        outcome
     }
 
     /// Delete a permanent, firing its OnDeletion effects first.
@@ -1159,12 +2128,170 @@ impl Game {
     /// OnDeletion effects are enqueued + drained before the actual deletion,
     /// so the effect closures can still observe the permanent on the field
     /// (matches the pre-drainer legacy ordering).
+    ///
+    /// Phase 7: this entry point infers the `ReplacementCause` from live game
+    /// state (security-resolution / pending-attack / effect_source_player) and
+    /// delegates to `delete_permanent_with_cause`. Callers that already know
+    /// the cause (e.g. `resolve_battle` → `Battle`) should invoke
+    /// `delete_permanent_with_cause` directly.
     pub fn delete_permanent_with_effects(&mut self, handle: PermanentHandle) {
+        let cause = self.infer_deletion_cause(handle);
+        self.delete_permanent_with_cause(handle, cause);
+    }
+
+    /// Cause-aware deletion entry point. Fires
+    /// `WhenWouldLeaveBattleArea` / `WhenWouldBeDeleted` replacement windows
+    /// before committing the deletion. See design spec §5, §7.3.
+    ///
+    /// Task 3 limitation: if an optional replacement installs a
+    /// `PendingSelection::Replacement` at EITHER dispatch stage
+    /// (`WhenWouldLeaveBattleArea` or `WhenWouldBeDeleted`), this method
+    /// early-returns without committing. The caller is then responsible for
+    /// re-driving the deletion after the selection resolves (or for
+    /// inspecting `replacement_pending_outcome` and applying the chosen
+    /// outcome manually).
+    ///
+    /// Re-drive idempotency caveat: if the FIRST stage returned `None` and
+    /// the SECOND stage parked a selection, a naive re-drive re-fires
+    /// `WhenWouldLeaveBattleArea` — which is safe for pure `cancel`/`handled`
+    /// replacements but NOT for processes that mutate state before setting
+    /// outcome. Task 6 native keywords avoid the issue because Barrier /
+    /// Evade / etc. are single-stage `WhenWouldBeDeleted` replacements.
+    ///
+    /// In practice Task 3 tests exercise mandatory replacements only;
+    /// optional flow is covered end-to-end by Task 6's native-keyword
+    /// scenarios.
+    pub fn delete_permanent_with_cause(
+        &mut self,
+        handle: PermanentHandle,
+        cause: crate::replacement::ReplacementCause,
+    ) {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        let subject = ReplacementSubject::Permanent(handle);
+
+        // Phase 7 Task 3: replacement window — fire the super-timing first,
+        // then the route-specific would.
+        let leave_outcome = self.try_replace(
+            EffectTiming::WhenWouldLeaveBattleArea,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.pending_selection.is_some() {
+            // Optional replacement parked a selection. Task 3 stops here;
+            // caller re-drives. See doc comment above.
+            return;
+        }
+
+        let outcome = match leave_outcome {
+            ReplacementOutcome::None => self.try_replace(
+                EffectTiming::WhenWouldBeDeleted,
+                subject,
+                cause,
+                Some(Zone::Trash),
+            ),
+            other => other,
+        };
+        if self.pending_selection.is_some() {
+            return;
+        }
+
+        match outcome {
+            ReplacementOutcome::None => {
+                self.commit_permanent_deletion(handle);
+            }
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                // Skip deletion — no OnDeletion / OnAnyDeletion fires.
+            }
+            ReplacementOutcome::Redirected(Zone::Deck) => {
+                // Route-specific return_to_deck does not fire
+                // WhenWouldLeaveBattleArea / OnReturn observers at the Task-3
+                // fire-site; Task 4 wires those.
+                self.return_to_deck(handle, crate::enums::StackPosition::Bottom);
+            }
+            ReplacementOutcome::Redirected(Zone::Hand) => {
+                self.return_to_hand(handle);
+            }
+            ReplacementOutcome::Redirected(other) => {
+                debug_assert!(
+                    false,
+                    "unexpected redirect destination for WhenWouldBeDeleted: {:?}",
+                    other
+                );
+                self.commit_permanent_deletion(handle);
+            }
+            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(source_h)) => {
+                // Partition-like: operate on the substituted permanent. The
+                // substituted subject gets its own replacement pass via
+                // recursion; depth guard protects against pathological chains.
+                self.delete_permanent_with_cause(source_h, cause);
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "non-Permanent substitute subject for WhenWouldBeDeleted"
+                );
+                self.commit_permanent_deletion(handle);
+            }
+        }
+    }
+
+    /// Core deletion body (OnDeletion → remove → modifier cleanup →
+    /// OnAnyDeletion) — shared between the direct fallthrough and the
+    /// defensive branches of `delete_permanent_with_cause`.
+    fn commit_permanent_deletion(&mut self, handle: PermanentHandle) {
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDeletion,
             crate::selection::TriggerSource::Permanent(handle),
         );
         self.drain_effect_queue();
+
+        // Phase 8 Task 4: drain any linked cards BEFORE removing the
+        // permanent so the OnLinkedCardTrashed observer sees the host still
+        // in place (as required by the Appmon-trait card text). Each linked
+        // card trashes to the host owner's trash; fire OnLinkedCardTrashed
+        // globally if anything was linked.
+        //
+        // TODO(phase-8-followup): this host-cascade trashes linked cards
+        // via a direct `trash.push` — it does NOT route through Phase 7's
+        // `WhenWouldBeTrashed` replacement window. v1 constraint (spec
+        // §8.2): firing WWBT here while the host is being deleted risks
+        // recursive dispatch (a linked-card replacement could redirect or
+        // substitute into another leave-the-field event on the same host,
+        // spiralling through the deletion chain). Revisit once the
+        // replacement recursion model is proven out on simpler fire-sites.
+        let had_linked = {
+            let linked = self
+                .player(handle.player)
+                .battle_area
+                .get(handle.index as usize)
+                .map(|p| !p.linked_cards.is_empty())
+                .unwrap_or(false);
+            if linked {
+                let taken = std::mem::take(
+                    &mut self.player_mut(handle.player).battle_area
+                        [handle.index as usize]
+                        .linked_cards,
+                );
+                for card in taken {
+                    self.player_mut(handle.player).trash.push(card);
+                }
+                true
+            } else {
+                false
+            }
+        };
+        if had_linked {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnLinkedCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+                );
+            }
+            self.drain_effect_queue();
+        }
 
         // Permanent may already have been removed by an OnDeletion effect
         // (self-sacrifice patterns). Check before deleting.
@@ -1180,6 +2307,21 @@ impl Game {
         // Clear any modifiers on the handle (by index), even if the permanent
         // was already gone — modifiers live in a separate registry.
         self.modifiers.clear_permanent(handle);
+        // Phase 6: expire any player-scoped modifiers sourced from this permanent.
+        self.modifiers.expire_player_on_permanent_leave(handle);
+
+        // OnAnyDeletion: global observer — fires in every player's battle area
+        // after a permanent is deleted (battle-driven, effect-driven, or
+        // security-check). The deleted permanent is already gone from
+        // battle_area at this point, so handle-based listeners won't encounter
+        // a stale entry.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnAnyDeletion,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
     }
 
 }

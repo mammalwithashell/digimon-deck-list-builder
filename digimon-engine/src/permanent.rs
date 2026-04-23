@@ -11,6 +11,28 @@ pub struct PermanentHandle {
     pub index: u8,
 }
 
+/// Additional state a Permanent carries when its top card is an Option.
+/// For Digimon/Tamer/DigiEgg permanents this is always `Standard`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionState {
+    Standard,
+    /// Delay Option placed on the field, awaiting its scheduled trigger.
+    /// `trash_on_turn` is the **absolute turn number** (matching
+    /// `Game.turn_count`) at which this Option self-trashes and fires its
+    /// `DelayEffect`. The value is computed at delay-installation time from
+    /// the `DelayTrigger` + the current turn (Task 3 installs; Task 3 drives
+    /// the end-of-turn scan).
+    Delayed { owner: PlayerId, trash_on_turn: u16 },
+    Linked { host: PermanentHandle },
+    Training { owner: PlayerId },
+}
+
+impl Default for OptionState {
+    fn default() -> Self {
+        OptionState::Standard
+    }
+}
+
 /// A card (or digivolution stack) on the field.
 #[derive(Debug, Clone)]
 pub struct Permanent {
@@ -38,6 +60,9 @@ pub struct Permanent {
     /// Reset in `new_turn`. Used to compute OPT (once-per-turn) state for
     /// the observation tensor and to gate future effect firing.
     pub effect_activations: HashMap<(CardHandle, u8), u8>,
+    /// Phase 8: additional state when the top card is an Option.
+    /// For Digimon/Tamer/DigiEgg permanents this is always `Standard`.
+    pub option_state: OptionState,
 }
 
 impl Permanent {
@@ -52,6 +77,7 @@ impl Permanent {
             attacks_this_turn: 0,
             is_attacking: false,
             effect_activations: HashMap::new(),
+            option_state: OptionState::Standard,
         }
     }
 
@@ -151,6 +177,13 @@ impl Permanent {
     pub fn digivolve(&mut self, card: CardSource, turn: u16) {
         self.card_sources.push(card);
         self.turn_digivolved = turn;
+    }
+
+    /// Insert `card` at the bottom of the digivolution stack (position 0).
+    /// The current top card remains on top. Matches DCGO's "place X as the
+    /// bottom digivolution source" semantics.
+    pub fn push_under(&mut self, card: crate::card_source::CardSource) {
+        self.card_sources.insert(0, card);
     }
 
     /// Reset per-turn state.

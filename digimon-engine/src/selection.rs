@@ -19,6 +19,44 @@ use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{EffectTiming, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
 
+/// Bitset of zones for `SelectionKind::UnionZone`. Designed to be extended
+/// with additional zone bits in later Phase 4 tasks without breaking callers.
+///
+/// The `|` operator is implemented so callers can write
+/// `UnionZoneSet::HAND | UnionZoneSet::TRASH` in the same style as `bitflags`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnionZoneSet(pub u8);
+
+impl UnionZoneSet {
+    /// The player's hand.
+    pub const HAND: UnionZoneSet = UnionZoneSet(0b0001);
+    /// The player's trash.
+    pub const TRASH: UnionZoneSet = UnionZoneSet(0b0010);
+
+    /// Returns `true` if the given zone bit is set.
+    pub fn contains(self, other: UnionZoneSet) -> bool {
+        self.0 & other.0 == other.0
+    }
+
+    /// Returns `true` if no zone bits are set.
+    pub fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+}
+
+impl std::ops::BitOr for UnionZoneSet {
+    type Output = UnionZoneSet;
+    fn bitor(self, rhs: UnionZoneSet) -> UnionZoneSet {
+        UnionZoneSet(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for UnionZoneSet {
+    fn bitor_assign(&mut self, rhs: UnionZoneSet) {
+        self.0 |= rhs.0;
+    }
+}
+
 /// Called when a selection resolves with a concrete action ID.
 pub type SelectionCallback =
     Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
@@ -56,6 +94,30 @@ pub enum SelectionKind {
     /// two or more triggers queued at the same timing (Digimon rules let
     /// the controller order their own simultaneous triggers).
     TriggerOrder,
+
+    // ── Phase 4 kinds ─────────────────────────────────────────────────────
+    // Full mask + decoder + helper dispatch lands in Tasks 2-5. Defined
+    // here so all downstream match arms compile from day one.
+
+    /// Pick one card from a union of two or more zones (e.g. hand OR trash).
+    /// `zones` is a `UnionZoneSet` bitfield indicating which zones are in
+    /// scope. The action-space encoding for each zone is resolved in Task 2.
+    UnionZone { zones: UnionZoneSet },
+
+    /// Pick cards in an ordered sequence (permutation). The caller re-installs
+    /// the prompt after each pick, decrementing `remaining`; at 0 the callback
+    /// fires with the final pick. Full decoder lands in Task 3.
+    OrderedPermutation { remaining: u8 },
+
+    /// Pick up to `max` cards from a zone; `picked` tracks how many have been
+    /// chosen so far. The callback fires on each pick; the effect decides when
+    /// to stop (or the player passes once `picked >= 1`). Full decoder in Task 4.
+    CountCappedMultiSelect { max: u8, picked: u8 },
+
+    /// Player may accept or decline an optional replacement effect. Backed by
+    /// EffectChoice action range (accept) + PASS (decline). `valid_action_ids`
+    /// holds exactly one ACCEPT entry; `is_optional = true` admits PASS.
+    Replacement,
 }
 
 /// One branch of a `SelectionKind::EffectChoice` prompt.
@@ -239,6 +301,49 @@ pub struct PendingSecurity {
     pub played: bool,
 }
 
+/// Transient state for an Option card mid-resolution. Mirrors
+/// PendingSecurity / PendingAttack. Carries the card between pay-cost
+/// and dispose so effect scripts can reference it via ctx.source_card.
+#[derive(Debug, Clone)]
+pub struct PendingOption {
+    pub owner: PlayerId,
+    pub card: CardSource,
+    pub resolution_phase: OptionResolutionPhase,
+}
+
+/// Outcome of a `play_option_from_hand` / `play_option_from_trash` call.
+///
+/// `Trashed` — Standard Option fully resolved and went to owner's trash.
+/// `Pending` — an `OptionMain` effect installed a `PendingSelection`;
+///   caller must drive the selection to completion (dispose re-enters via
+///   the post-resolution path).
+/// `Invalid` — validation failed; no state was mutated.
+/// `Delayed` / `Linked` / `Training` — populated in Tasks 3/4/5.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
+pub enum OptionPlayResult {
+    Trashed,
+    Delayed(PermanentHandle),
+    Linked { source: PermanentHandle },
+    Training(PermanentHandle),
+    Pending,
+    Invalid,
+}
+
+/// Where we are in the resolve-and-dispose sequence for an Option card.
+///
+/// Variants appear in typical execution order: Link Options begin with
+/// `LinkSelectHost` (pay cost → select host → fire `OptionMain` → attach →
+/// fire `OnLink` → `Done`); Standard / Delay / Training Options begin with
+/// `MainEffectDrain`; all Options terminate at `Done`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionResolutionPhase {
+    LinkSelectHost,
+    MainEffectDrain,
+    Disposing,
+    Done,
+}
+
 /// Phase of an in-flight security-card resolution. Drives the
 /// `drive_security_resolution` state machine in `combat.rs` so that a
 /// `pending_selection` installed inside a `SecuritySkill` process can pause
@@ -321,8 +426,26 @@ pub enum AttackState {
     CounterOpen,
     /// Waiting for the defender to declare a blocker (or decline).
     BlockOpen,
+    /// Phase 9 Task 4 — post-Block / pre-Battle checkpoint. The state
+    /// machine lands here unconditionally once the Block window closes
+    /// (whether a block was declared, declined, or no candidate existed).
+    /// The PostBlock arm tests whether `effective_target` is still valid;
+    /// if not, it considers Raid-driven retarget before either transitioning
+    /// to Battle or fizzling to Cleanup. Spec §4.2.
+    PostBlock,
     /// No further interrupts pending. `resolve_pending_battle` will fire.
     Battle,
+    /// Phase 9 Task 6 — post-Battle checkpoint. The Battle arm transitions
+    /// the attack here immediately before firing a `<Piercing>`-driven
+    /// follow-up security check against the defending player. The state
+    /// is primarily a provenance marker: `resolve_pending_battle` has
+    /// already run (DP compared + defender wiped), and the security
+    /// pipeline takes over via `enter_piercing_security_check`. If that
+    /// pipeline parks on a `PendingSelection` (e.g. a `WhenWouldLoseSecurity`
+    /// optional replacement), `advance_security_resolution` finalizes the
+    /// attack via `cleanup_attack` when the selection chain clears.
+    /// Spec §4.3.
+    PostBattle,
     /// Post-battle: clear EndOfAttack modifiers, fire EndOfAttack triggers.
     Cleanup,
 }
@@ -351,10 +474,28 @@ pub struct PendingAttack {
     /// suspend-on-declare step is suppressed. Matches Python
     /// `resolve_attack(..., without_suspend=True)`.
     pub is_overclock: bool,
+    /// Phase 9: set by a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
+    /// replacement whose process calls `rctx.cancel()`. `advance_pending_attack`
+    /// detects this and short-circuits directly to `Cleanup`. EndOfAttack
+    /// still fires in cleanup; EndOfBattle does NOT (no battle occurred).
+    pub cancelled: bool,
+    /// Phase 9: set to `true` by `resolve_battle` once a Digimon-vs-Digimon
+    /// DP comparison has run. Used by cleanup to decide whether EndOfBattle
+    /// should fire — Phase 1 fires it unconditionally inside `resolve_battle`,
+    /// so this flag is currently informational / test-visible only. Player
+    /// security attacks leave this `false`, matching the Python semantics
+    /// where EndOfBattle only fires for Digimon-vs-Digimon battles.
+    pub battle_occurred: bool,
     /// Phase to return to once the attack finishes (`Main` for normal
     /// attacks, `EndOfTurnAction` for end-of-turn vortex attacks, etc.).
     pub return_phase: GamePhase,
     pub state: AttackState,
+    /// Phase 9 Task 3 — how many Counter windows this attack has already
+    /// entered. Incremented when `try_enter_counter` installs a Counter
+    /// selection; compared against `MAX_COUNTER_DEPTH` (= 1) on
+    /// subsequent entries to suppress nested Counter windows that would
+    /// otherwise recurse from a counter body's side-effects. Spec §5.4.
+    pub counter_depth: u8,
 }
 
 /// Helper type alias so callers can spell `Game.effect_queue` without

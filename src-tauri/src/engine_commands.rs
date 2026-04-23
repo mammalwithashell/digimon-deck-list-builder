@@ -277,6 +277,7 @@ fn synth_card(id: &str, name: &str, kind: CardKind, dp: Option<i32>, cost: u16) 
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        keywords: Vec::new(),
     }
 }
 

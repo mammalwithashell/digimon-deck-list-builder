@@ -17,7 +17,7 @@ use crate::action::space::{
     PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, TARGETS_PER_ATTACKER, TRASH_EFFECT_END,
     TRASH_EFFECT_START,
 };
-use crate::enums::{GamePhase, PlayerId};
+use crate::enums::{CardKind, GamePhase, PlayerId, PlaySource};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
@@ -47,7 +47,13 @@ impl Game {
             | GamePhase::EffectChoice
             | GamePhase::BlockTiming
             | GamePhase::CounterTiming
-            | GamePhase::AllianceTiming => {
+            | GamePhase::AllianceTiming
+            // Phase 4 selection kinds — full dispatch lands in Tasks 2-5;
+            // route through resolve_selection now so the state machine can
+            // already accept callbacks installed by later tasks.
+            | GamePhase::SelectUnion
+            | GamePhase::SelectPermutation
+            | GamePhase::SelectBudgeted => {
                 let _ = self.resolve_selection(player_id, action_id);
             }
             GamePhase::EndOfTurnAction => self.decode_end_of_turn_action(action_id),
@@ -76,10 +82,27 @@ impl Game {
     fn decode_main(&mut self, action_id: u16) {
         let tp = self.turn_player();
 
-        // [0..30) — Play from hand
+        // [0..30) — Play from hand. Fork on CardKind: Digimon / Tamer go
+        // through the field-play path; Options go through the Phase 8
+        // Option pipeline (pay cost → OnUseOption + OptionMain → dispose).
         if (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id) {
             let hand_idx = action_id as usize;
-            let _ = self.play_from_hand(tp, hand_idx);
+            let card_kind = self
+                .player(tp)
+                .hand
+                .get(hand_idx)
+                .map(|c| c.card_kind(&self.card_data));
+            match card_kind {
+                Some(CardKind::Option) => {
+                    let _ = self.play_option_from_hand(tp, hand_idx);
+                }
+                Some(CardKind::Digimon) | Some(CardKind::Tamer) => {
+                    let _ = self.play_from_hand(tp, hand_idx);
+                }
+                // DigiEgg / Token / missing — not playable via Main-phase
+                // hand-play. Silent no-op matches Python's decoder.
+                _ => {}
+            }
             return;
         }
 
@@ -120,9 +143,9 @@ impl Game {
         if (DIGIVOLVE_START..DIGIVOLVE_END).contains(&action_id) {
             let (hand, field) = decode_digivolve(action_id);
             if field == BREEDING_TARGET {
-                self.digivolve_from_hand_onto_breeding(tp, hand as usize);
+                self.digivolve_from_hand_onto_breeding(tp, hand as usize, PlaySource::ByDigivolve);
             } else {
-                self.digivolve_from_hand(tp, hand as usize, field as usize);
+                self.digivolve_from_hand(tp, hand as usize, field as usize, PlaySource::ByDigivolve);
             }
             return;
         }
