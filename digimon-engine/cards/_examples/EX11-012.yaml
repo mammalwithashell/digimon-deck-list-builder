@@ -1,0 +1,39 @@
+card: EX11-012
+name: Medusamon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 12000
+traits: [Dragonkin, LIBERATOR]
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+
+  - kind: grant_keyword
+    keyword: Progress
+
+  - when: [when_digivolving, end_of_attack]
+    optional: true
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 11000
+          prompt: "Delete"
+      - delete_permanent: { target: tgt }
+      - optional:
+          - select_trash:
+              of: opponent
+              bind_as: r
+              filter: {}
+              prompt: "Return a card to bottom of deck"
+          - return_to_deck_from_reveal: { of: opponent, card: r, position: bottom }
+          - play_token:
+              controller: opponent
+              token_name: Petrification
+
+  # NOTE: The [All Turns] clause is elided — see cards.json for the full body.

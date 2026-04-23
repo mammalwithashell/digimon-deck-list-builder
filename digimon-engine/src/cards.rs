@@ -62,5 +62,16 @@ pub fn build_registry() -> CardEffectRegistry {
     test::register(&mut registry);
     bt17::register(&mut registry);
     tokens::register(&mut registry);
+
+    // DSL-authored cards (embedded at build time via build.rs → cards.pack).
+    // Registered AFTER hand-written sets so DSL overrides on collision.
+    #[cfg(feature = "dsl-yaml-loader")]
+    {
+        match crate::dsl_registry::from_embedded() {
+            Ok(pack) => crate::dsl_cards::register_dsl_cards(&mut registry, &pack),
+            Err(e) => eprintln!("DSL embedded pack failed to load: {e}"),
+        }
+    }
+
     registry
 }

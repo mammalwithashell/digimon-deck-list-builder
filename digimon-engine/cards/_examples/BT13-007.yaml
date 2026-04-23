@@ -1,0 +1,42 @@
+card: BT13-007
+name: King Drasil_7D6
+kind: digi_egg
+color: [black]
+cost: 0
+
+effects:
+  - kind: flood_gate
+    scope: face_up
+    active_when: { in_breeding: true }
+    modifier: CannotDigivolve
+    target: { of: you, zone: [battle_area] }
+
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    once_per_turn: true
+    when_any_ally_played: { trait_has: "Royal Knight" }
+    amount_fn: { raw_rust: bt13_007_royal_knight_cost_reduction }
+
+  - when: start_of_your_main_phase
+    scope: face_up
+    active_when: { in_breeding: true }
+    process:
+      - reveal_top_deck: { of: you, count: 1, zone: digi_egg_deck, bind_as: shown }
+      - place_as_bottom_source:
+          source: shown
+          target: self
+      - for_each:
+          over: { of: you, zone: [battle_area], trait_has: "Royal Knight" }
+          bind_as: rk
+          body:
+            - place_as_bottom_source:
+                source: { permanent: rk }
+                target: self
+
+  - scope: inherited
+    when: on_option_placed
+    active_when: { in_breeding: true }
+    once_per_turn: true
+    condition: { event_card_trait_has: "Royal Knight" }
+    process:
+      - gain_memory: 1

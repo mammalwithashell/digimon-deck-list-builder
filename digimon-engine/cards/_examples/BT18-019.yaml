@@ -1,0 +1,63 @@
+card: BT18-019
+name: Millenniummon
+kind: digimon
+level: 7
+color: [red, purple]
+cost: 14
+dp: 14000
+traits: [Composite]
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { name_is: "Kimeramon" }
+      - { name_is: "Machinedramon" }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: [on_play, when_digivolving]
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Delete a Digimon"
+      - delete_permanent: { target: tgt }
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: trash
+                max: 10
+                bind_as: returns
+                filter: { kind: digimon }
+                distinct_by: level
+                prompt: "Return cards (different levels each)"
+            - for_each:
+                over: { binding: returns }
+                bind_as: c
+                body:
+                  - return_to_deck_from_reveal: { of: opponent, card: c, position: top }
+                  - gain_memory: 1
+
+  - when: on_deletion
+    optional: true
+    process:
+      - select_trash:
+          of: you
+          bind_as: kim
+          filter: { name_is: "Kimeramon" }
+          prompt: "Return Kimeramon"
+      - select_trash:
+          of: you
+          bind_as: mach
+          filter: { name_is: "Machinedramon" }
+          prompt: "Return Machinedramon"
+      - return_to_deck_from_reveal: { of: you, card: kim, position: bottom }
+      - return_to_deck_from_reveal: { of: you, card: mach, position: bottom }
+      - select_trash:
+          of: you
+          bind_as: millen
+          filter: { name_is: "Millenniummon" }
+          prompt: "Play Millenniummon free"
+      - play_from_trash_free: { of: you, hand_index: millen }

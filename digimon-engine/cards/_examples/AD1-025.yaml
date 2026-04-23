@@ -1,0 +1,33 @@
+card: AD1-025
+name: Omnimon
+kind: digimon
+level: 7
+color: [red, black]
+cost: 15
+dp: 15000
+traits: [Holy Warrior, Royal Knight, ADVENTURE, Hero]
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, name_contains: "Greymon" }
+      - { level_eq: 6, name_contains: "Garurumon" }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    summary: "Raid / Blocker / Partition"
+    keyword: Raid
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - kind: partition
+    sources:
+      - { name_contains: "WarGreymon" }
+      - { name_contains: "MetalGarurumon" }
+    exclude_cause: [own_effect, battle]
+
+  - when: [on_play, when_digivolving]
+    process:
+      - raw_rust: { fn: ad1_025_on_play_process }

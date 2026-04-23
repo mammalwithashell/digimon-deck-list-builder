@@ -11,7 +11,19 @@ rand = "0.8"
 ort = { version = "2.0.0-rc.10", default-features = false, features = ["ndarray", "std", "download-binaries", "tls-rustls"] }
 ndarray = "0.17"
 
+# DSL lives in a separate leaf crate so build.rs can depend on it.
+digimon-dsl = { path = "../digimon-dsl", optional = true }
+
+[features]
+default = ["dsl-yaml-loader"]
+dsl-yaml-loader = ["dep:digimon-dsl"]
+
+[build-dependencies]
+digimon-dsl = { path = "../digimon-dsl" }
+
 [dev-dependencies]
+# serde_yml is used directly in DSL test files (e.g. serde_yml::from_str).
+serde_yml = "0.0.12"
 
 # Tests are grouped by domain into 7 binaries. Each binary's entry point is
 # `tests/<domain>/main.rs`; sibling files are `mod`-imported and supply the
@@ -80,3 +92,8 @@ path = "tests/replacements/main.rs"
 [[test]]
 name = "option_flow"
 path = "tests/option_flow/main.rs"
+
+[[test]]
+name = "dsl"
+path = "tests/dsl/main.rs"
+required-features = ["dsl-yaml-loader"]

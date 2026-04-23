@@ -1,0 +1,8 @@
+[package]
+name = "dsl-schema-export"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+digimon-dsl = { path = "../../digimon-dsl" }
+serde_json = "1"

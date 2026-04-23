@@ -1,0 +1,70 @@
+card: BT17-015
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+traits: [Dragonkin]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, name_contains: "Greymon" }
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        name_contains: "Tai Kamiya"
+    amount: 3
+    summary: "-3 cost with Tai Kamiya"
+
+  - when: [on_play, when_digivolving]
+    summary: "Delete 8000 DP or digivolve Gabumon free"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Delete opponent Digimon (\u22648000 DP)"
+            - "Digivolve Gabumon into MetalGarurumon free"
+          prompt: "Choose effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_opponent_permanent:
+                bind_as: target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 8000
+                prompt: "Delete a Digimon (\u22648000 DP)"
+            - delete_permanent: { target: target }
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: base
+                filter: { name_contains: "Gabumon" }
+                prompt: "Choose Gabumon"
+            - select_hand:
+                of: you
+                bind_as: evo
+                filter: { name_contains: "MetalGarurumon" }
+                prompt: "Digivolve into..."
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: evo
+                cost: 0
+                ignore_requirements: true
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition: { source_name_contains: "Omnimon" }
+    process:
+      - trash_top_security: { of: opponent }
