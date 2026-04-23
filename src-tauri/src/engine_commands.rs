@@ -124,6 +124,7 @@ fn card_kind_str(k: CardKind) -> &'static str {
         CardKind::Tamer => "Tamer",
         CardKind::Option => "Option",
         CardKind::DigiEgg => "DigiEgg",
+        CardKind::Token => "Token",
     }
 }
 
@@ -160,6 +161,9 @@ fn phase_str(p: GamePhase) -> &'static str {
         GamePhase::AllianceTiming => "AllianceTiming",
         GamePhase::EndOfTurnAction => "EndOfTurnAction",
         GamePhase::GameOver => "GameOver",
+        GamePhase::SelectUnion => "SelectUnion",
+        GamePhase::SelectPermutation => "SelectPermutation",
+        GamePhase::SelectBudgeted => "SelectBudgeted",
     }
 }
 
@@ -173,6 +177,7 @@ fn attack_result_str(r: AttackResult) -> &'static str {
         AttackResult::AttackerDeletedBySecurity => "AttackerDeletedBySecurity",
         AttackResult::GameWon => "GameWon",
         AttackResult::InProgress => "InProgress",
+        AttackResult::Cancelled => "Cancelled",
     }
 }
 

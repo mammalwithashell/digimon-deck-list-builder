@@ -10,6 +10,7 @@ import { GamePage } from '@/pages/GamePage';
 import { DeckBuilderPage } from '@/pages/DeckBuilderPage';
 import { LobbyPage } from '@/pages/LobbyPage';
 import { PatchNotesPage } from '@/pages/PatchNotesPage';
+import { UpdaterBridge } from '@/updater/UpdaterBridge';
 import { useAuthStore } from '@/stores/authStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
@@ -47,6 +48,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <UpdaterBridge />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />

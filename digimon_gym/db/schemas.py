@@ -1010,3 +1010,115 @@ class ManifestResponse(BaseModel):
 class PrepareModelResponse(BaseModel):
     filename: str
     downloaded: bool
+
+
+# ── App Releases (Tauri auto-updater) ─────────────────────────────────────
+
+class AppReleaseArtifactCreate(BaseModel):
+    target: Literal["windows-x86_64", "linux-x86_64"]
+    # filename is server-derived from version + target; not accepted on input
+
+
+class AppReleaseCreateRequest(BaseModel):
+    version: str                         # SemVer
+    channel: Literal["alpha", "beta", "stable"] = "alpha"
+    engine_commit: str
+    min_version: str                     # SemVer floor
+    release_notes: str = ""
+    targets: List[Literal["windows-x86_64", "linux-x86_64"]]
+
+
+class AppReleaseArtifactUploadSlot(BaseModel):
+    target: str
+    upload_url: str
+    spaces_key: str
+    filename: str
+    expires_in: int
+
+
+class AppReleaseCreateResponse(BaseModel):
+    release_id: str
+    version: str
+    channel: str
+    artifacts: List[AppReleaseArtifactUploadSlot]
+
+
+class AppReleaseConfirmRequest(BaseModel):
+    signature_b64: str                   # base64 Ed25519 signature from cargo tauri signer
+
+
+class AppReleaseConfirmResponse(BaseModel):
+    release_id: str
+    target: str
+    file_sha256: str
+    file_size_bytes: int
+
+
+class AppReleaseArtifactResponse(BaseModel):
+    target: str
+    spaces_key: str
+    filename: str
+    file_sha256: Optional[str]
+    file_size_bytes: Optional[int]
+    signature_b64: Optional[str]
+
+    model_config = {"from_attributes": True}
+
+
+class AppReleaseResponse(BaseModel):
+    id: str
+    version: str
+    channel: str
+    engine_commit: str
+    min_version: str
+    release_notes: str
+    published: bool
+    published_at: Optional[datetime]
+    state: str
+    created_at: datetime
+    updated_at: datetime
+    artifacts: List[AppReleaseArtifactResponse]
+
+    model_config = {"from_attributes": True}
+
+
+class ListAppReleasesResponse(BaseModel):
+    releases: List[AppReleaseResponse]
+
+
+class AppReleaseUpdateRequest(BaseModel):
+    release_notes: Optional[str] = None
+    min_version: Optional[str] = None
+
+
+# ── Release manifest (consumed by Tauri's updater plugin) ─────────────────
+
+class ReleaseManifestPlatform(BaseModel):
+    signature: str
+    url: str
+
+
+class ReleaseManifest(BaseModel):
+    """Shape served at updates/<channel>/latest.json in Spaces.
+
+    Conforms to Tauri v2's updater manifest with project-specific extensions
+    (min_version, engine_commit, channel, release_id)."""
+    version: str
+    pub_date: str                                              # ISO 8601 UTC
+    notes: str
+    platforms: Dict[str, ReleaseManifestPlatform]              # keyed by target
+    min_version: str
+    engine_commit: str
+    channel: str
+    release_id: str
+
+
+class UnpublishResponse(BaseModel):
+    channel: str
+    current_version: Optional[str]
+
+
+class RegenerateManifestResponse(BaseModel):
+    channel: str
+    current_version: Optional[str]
+    manifest: Optional[ReleaseManifest]

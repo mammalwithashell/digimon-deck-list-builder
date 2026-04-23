@@ -8,6 +8,7 @@ use digimon_tcg::deck_storage;
 use digimon_tcg::engine_commands;
 use digimon_tcg::inference_state;
 use digimon_tcg::models;
+use digimon_tcg::updater;
 
 use std::sync::Arc;
 
@@ -28,6 +29,13 @@ fn models_cache_root() -> std::path::PathBuf {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            updater::spawn_min_version_check(handle);
+            Ok(())
+        })
         .manage(RustEngineState::default())
         .manage(InferenceState::default())
         .manage(Arc::new(ModelsManager::new(models_cache_root())))

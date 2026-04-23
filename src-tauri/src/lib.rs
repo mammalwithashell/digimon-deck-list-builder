@@ -8,3 +8,4 @@ pub mod deck_storage;
 pub mod engine_commands;
 pub mod inference_state;
 pub mod models;
+pub mod updater;
