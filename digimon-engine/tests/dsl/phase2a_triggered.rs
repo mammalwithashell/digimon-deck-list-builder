@@ -70,3 +70,89 @@ fn resolve_player_maps_compiled_player_refs() {
         assert_eq!(resolve_player(&ctx, CompiledPlayerRef::Any), 0);
     }
 }
+
+// ── Task 6: triggered clause lowering ────────────────────────────────────────
+
+use digimon_dsl::compiled::{
+    CompiledCard, CompiledCardKind, CompiledClause, CompiledScope, CompiledStep,
+    CompiledTriggeredClause,
+};
+use digimon_engine::dsl_cards::DslCardEffect;
+use digimon_engine::effect::CardEffect;
+use std::sync::Arc;
+
+fn fixture_on_play_gain_memory(n: i32) -> CompiledCard {
+    CompiledCard {
+        card: "F-T1".into(),
+        name: "Fixture".into(),
+        kind: CompiledCardKind::Digimon,
+        level: Some(3),
+        color: vec![],
+        cost: Some(3),
+        dp: Some(2000),
+        traits: vec![],
+        form: None,
+        attribute: None,
+        ace_overflow: None,
+        identity: None,
+        alt_paths: vec![],
+        effects: vec![CompiledClause::Triggered(CompiledTriggeredClause {
+            when: vec![CompiledTiming::OnPlay],
+            scope: CompiledScope::FaceUp,
+            active_when: None,
+            condition: None,
+            optional: false,
+            once_per_turn: false,
+            max_per_turn: None,
+            process: vec![CompiledStep::GainMemory(n)],
+            summary: Some("Gain N memory".into()),
+            summary_key: None,
+        })],
+    }
+}
+
+#[test]
+fn triggered_clause_emits_one_effect_per_timing() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_on_play_gain_memory(1)));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert_eq!(effects[0].timing, digimon_engine::enums::EffectTiming::OnPlay);
+    assert!(effects[0].on_play);
+}
+
+#[test]
+fn triggered_clause_with_multiple_timings_emits_one_effect_each() {
+    let mut c = fixture_on_play_gain_memory(1);
+    if let CompiledClause::Triggered(t) = &mut c.effects[0] {
+        t.when = vec![CompiledTiming::OnPlay, CompiledTiming::WhenDigivolving];
+    }
+    let dsl = DslCardEffect::new(Arc::new(c));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 2);
+    let timings: Vec<_> = effects.iter().map(|e| e.timing).collect();
+    assert!(timings.contains(&digimon_engine::enums::EffectTiming::OnPlay));
+    assert!(timings.contains(&digimon_engine::enums::EffectTiming::WhenDigivolving));
+}
+
+#[test]
+fn triggered_clause_once_per_turn_sets_max_per_turn_to_one() {
+    let mut c = fixture_on_play_gain_memory(1);
+    if let CompiledClause::Triggered(t) = &mut c.effects[0] {
+        t.once_per_turn = true;
+    }
+    let dsl = DslCardEffect::new(Arc::new(c));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects[0].max_per_turn, 1);
+}
+
+#[test]
+fn triggered_clause_skips_non_target_timings() {
+    // OnAllyPlayed is a DSL-only virtual timing — timing_map returns None,
+    // so the clause should not emit.
+    let mut c = fixture_on_play_gain_memory(1);
+    if let CompiledClause::Triggered(t) = &mut c.effects[0] {
+        t.when = vec![CompiledTiming::OnAllyPlayed];
+    }
+    let dsl = DslCardEffect::new(Arc::new(c));
+    assert!(dsl.effects(CardHandle(0)).is_empty());
+}

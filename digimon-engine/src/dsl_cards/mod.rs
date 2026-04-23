@@ -9,6 +9,7 @@ pub mod lower_aura;
 pub mod lower_cost_reduction;
 pub mod lower_flood_gate;
 pub mod lower_grant_keyword;
+pub mod lower_triggered;
 pub mod modifier_map;
 pub mod predicate;
 pub mod step;
@@ -51,8 +52,8 @@ impl CardEffect for DslCardEffect {
         let mut out = Vec::new();
         'clause: for clause in &self.compiled.effects {
             match clause {
-                CompiledClause::Triggered(_) => {
-                    // Phase 1c: triggered clauses are not lowered.
+                CompiledClause::Triggered(clause) => {
+                    out.extend(lower_triggered::lower(card, clause));
                 }
                 CompiledClause::Declarative(decl) => match decl {
                     CompiledDeclarativeClause::GrantKeyword {
