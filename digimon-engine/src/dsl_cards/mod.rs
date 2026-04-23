@@ -9,6 +9,7 @@ pub mod lower_aura;
 pub mod lower_cost_reduction;
 pub mod lower_flood_gate;
 pub mod lower_grant_keyword;
+pub mod lower_partition;
 pub mod lower_replacement;
 pub mod lower_triggered;
 pub mod modifier_map;
@@ -164,6 +165,21 @@ impl CardEffect for DslCardEffect {
                         ) {
                             out.push(e);
                         }
+                    }
+                    CompiledDeclarativeClause::Partition {
+                        scope,
+                        active_when,
+                        sources,
+                        exclude_cause,
+                        ..
+                    } => {
+                        out.push(lower_partition::lower(
+                            card,
+                            *scope,
+                            active_when.clone(),
+                            sources.clone(),
+                            exclude_cause.clone(),
+                        ));
                     }
                     _ => {
                         // Other declarative clauses lowered in Tasks 7-8+.
