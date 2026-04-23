@@ -174,3 +174,62 @@ fn filtered_aura_emits_declarative_with_process_but_no_static_dp() {
     assert_eq!(effects[0].dp_modifier, 0);
     assert!(effects[0].process.is_some());
 }
+
+fn fixture_cost_reduction(amount: i32, condition: Option<CompiledPredicate>) -> CompiledCard {
+    CompiledCard {
+        card: "F-CR".into(),
+        name: "Fixture".into(),
+        kind: CompiledCardKind::Digimon,
+        level: Some(6),
+        color: vec![],
+        cost: Some(11),
+        dp: Some(11000),
+        traits: vec![],
+        form: None,
+        attribute: None,
+        ace_overflow: None,
+        identity: None,
+        alt_paths: vec![],
+        effects: vec![CompiledClause::Declarative(
+            CompiledDeclarativeClause::CostReduction {
+                scope: CompiledScope::FaceUp,
+                active_when: None,
+                reduction_timing: Some("before_pay_cost".into()),
+                when_playing_this: true,
+                when_any_ally_played: None,
+                condition,
+                once_per_turn: false,
+                amount: Some(amount),
+                amount_fn: None,
+                pay_cost: vec![],
+                summary: None,
+                summary_key: None,
+            },
+        )],
+    }
+}
+
+#[test]
+fn cost_reduction_when_playing_this_emits_before_pay_cost_effect() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_cost_reduction(3, None)));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert_eq!(
+        effects[0].timing,
+        digimon_engine::enums::EffectTiming::BeforePayCost
+    );
+    assert!(effects[0].cost_reduction_fn.is_some());
+}
+
+#[test]
+fn cost_reduction_without_literal_amount_skips_emission() {
+    // amount_fn path is Phase 2+ — drop for now.
+    let mut c = fixture_cost_reduction(0, None);
+    if let CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { amount, .. }) =
+        &mut c.effects[0]
+    {
+        *amount = None;
+    }
+    let dsl = DslCardEffect::new(Arc::new(c));
+    assert!(dsl.effects(CardHandle(0)).is_empty());
+}

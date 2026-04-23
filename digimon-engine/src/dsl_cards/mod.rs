@@ -5,6 +5,7 @@
 //! and raw_rust are skipped in Phase 1c (Phase 2 owns them).
 
 pub mod lower_aura;
+pub mod lower_cost_reduction;
 pub mod lower_grant_keyword;
 pub mod modifier_map;
 pub mod predicate;
@@ -35,7 +36,7 @@ impl CardEffect for DslCardEffect {
         use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
 
         let mut out = Vec::new();
-        for clause in &self.compiled.effects {
+        'clause: for clause in &self.compiled.effects {
             match clause {
                 CompiledClause::Triggered(_) => {
                     // Phase 1c: triggered clauses are not lowered.
@@ -67,6 +68,51 @@ impl CardEffect for DslCardEffect {
                             grant_keyword.clone(),
                         ) {
                             out.push(e);
+                        }
+                    }
+                    CompiledDeclarativeClause::CostReduction {
+                        scope,
+                        active_when,
+                        reduction_timing,
+                        when_playing_this,
+                        when_any_ally_played,
+                        condition,
+                        once_per_turn,
+                        amount,
+                        amount_fn,
+                        pay_cost,
+                        ..
+                    } => {
+                        // Phase 1c scope: only when_playing_this + literal amount
+                        // + no pay_cost + no ally-played hook + before_pay_cost timing.
+                        let timing_ok = matches!(
+                            reduction_timing.as_deref(),
+                            None | Some("before_pay_cost")
+                        );
+                        if !timing_ok {
+                            continue 'clause;
+                        }
+                        if !*when_playing_this {
+                            continue 'clause;
+                        }
+                        if when_any_ally_played.is_some() {
+                            continue 'clause;
+                        }
+                        if amount_fn.is_some() {
+                            continue 'clause;
+                        }
+                        if !pay_cost.is_empty() {
+                            continue 'clause;
+                        }
+                        if let Some(a) = *amount {
+                            out.push(lower_cost_reduction::lower(
+                                card,
+                                *scope,
+                                active_when.clone(),
+                                condition.clone(),
+                                *once_per_turn,
+                                a,
+                            ));
                         }
                     }
                     _ => {
