@@ -144,3 +144,28 @@ fn raw_rust_declarative_clause_returns_fn_produced_effects() {
         digimon_engine::enums::EffectTiming::OnPlay,
     );
 }
+
+#[test]
+fn budget_zero_card_count_does_not_exceed() {
+    use digimon_engine::dsl_cards::raw_rust::exceeds_budget;
+    assert!(!exceeds_budget(0, 0));
+    assert!(!exceeds_budget(5, 0));
+}
+
+#[test]
+fn budget_under_three_percent_does_not_exceed() {
+    use digimon_engine::dsl_cards::raw_rust::exceeds_budget;
+    // 3 / 100 = exactly 3% — should NOT exceed.
+    assert!(!exceeds_budget(3, 100));
+    // 2 / 100 = 2%.
+    assert!(!exceeds_budget(2, 100));
+}
+
+#[test]
+fn budget_over_three_percent_exceeds() {
+    use digimon_engine::dsl_cards::raw_rust::exceeds_budget;
+    // 4 / 100 = 4% — exceeds.
+    assert!(exceeds_budget(4, 100));
+    // 10 / 50 = 20%.
+    assert!(exceeds_budget(10, 50));
+}

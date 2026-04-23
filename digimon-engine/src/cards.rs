@@ -74,12 +74,26 @@ pub fn build_registry() -> CardEffectRegistry {
         raw.register_step("ad1_025_on_play_process", |_ctx| { /* real impl TBD */ });
         raw.register_declarative("bt10_111_arm_digixros_wildcard_for_turn", |_card| Vec::new());
 
+        // Capture counts BEFORE raw is moved into Arc.
+        let raw_fn_count = raw.step_count() + raw.declarative_count();
+
         match crate::dsl_registry::from_embedded() {
-            Ok(pack) => crate::dsl_cards::register_dsl_cards_with_raw(
-                &mut registry,
-                &pack,
-                Some(Arc::new(raw)),
-            ),
+            Ok(pack) => {
+                let card_count = pack.len();
+                if crate::dsl_cards::raw_rust::exceeds_budget(raw_fn_count, card_count) {
+                    eprintln!(
+                        "WARNING: raw_rust budget exceeded: {} fns for {} cards ({:.1}%)",
+                        raw_fn_count,
+                        card_count,
+                        (raw_fn_count as f32) / (card_count as f32) * 100.0,
+                    );
+                }
+                crate::dsl_cards::register_dsl_cards_with_raw(
+                    &mut registry,
+                    &pack,
+                    Some(Arc::new(raw)),
+                );
+            }
             Err(e) => eprintln!("DSL embedded pack failed to load: {e}"),
         }
     }

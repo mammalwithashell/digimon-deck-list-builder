@@ -63,3 +63,12 @@ impl std::fmt::Debug for EngineRawRustRegistry {
             .finish()
     }
 }
+
+/// Returns true when the raw_rust budget (step + declarative fn count) exceeds
+/// 3% of the card pool. `card_count == 0` returns false (nothing to ratio against).
+pub fn exceeds_budget(raw_fn_count: usize, card_count: usize) -> bool {
+    if card_count == 0 {
+        return false;
+    }
+    (raw_fn_count as f32) / (card_count as f32) > 0.03
+}
