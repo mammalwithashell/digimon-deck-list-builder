@@ -37,7 +37,6 @@ effects:
     trigger: end_of_your_turn
     registers:
       kind: dna_digivolve
-      target_zone: hand
     applies_to:
       of: you
       zone: [battle_area]
