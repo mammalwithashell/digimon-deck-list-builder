@@ -22,3 +22,33 @@ fn register_and_lookup_declarative_fn() {
     r.register_declarative("noop_decl", |_card: CardHandle| Vec::new());
     assert!(r.declarative_fn("noop_decl").is_some());
 }
+
+#[test]
+fn dsl_card_effect_accepts_raw_registry_and_stores_arc() {
+    use digimon_dsl::compiled::{CompiledCard, CompiledCardKind};
+    use digimon_engine::dsl_cards::DslCardEffect;
+    use std::sync::Arc;
+
+    let mut reg = EngineRawRustRegistry::new();
+    reg.register_step("noop", |_| {});
+    let reg = Arc::new(reg);
+
+    let compiled = CompiledCard {
+        card: "F".into(),
+        name: "F".into(),
+        kind: CompiledCardKind::Digimon,
+        level: None,
+        color: vec![],
+        cost: None,
+        dp: None,
+        traits: vec![],
+        form: None,
+        attribute: None,
+        ace_overflow: None,
+        identity: None,
+        alt_paths: vec![],
+        effects: vec![],
+    };
+    let dsl = DslCardEffect::with_raw_registry(Arc::new(compiled), reg.clone());
+    assert!(dsl.raw_registry().and_then(|r: &EngineRawRustRegistry| r.step_fn("noop")).is_some());
+}

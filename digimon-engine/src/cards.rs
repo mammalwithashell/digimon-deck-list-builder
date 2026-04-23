@@ -67,8 +67,19 @@ pub fn build_registry() -> CardEffectRegistry {
     // Registered AFTER hand-written sets so DSL overrides on collision.
     #[cfg(feature = "dsl-yaml-loader")]
     {
+        use std::sync::Arc;
+        let mut raw = crate::dsl_cards::raw_rust::EngineRawRustRegistry::new();
+        // Sample raw_rust registrations — cards reference these by fn_name in YAML.
+        // Real implementations land per-archetype in the card migration phase.
+        raw.register_step("ad1_025_on_play_process", |_ctx| { /* real impl TBD */ });
+        raw.register_declarative("bt10_111_arm_digixros_wildcard_for_turn", |_card| Vec::new());
+
         match crate::dsl_registry::from_embedded() {
-            Ok(pack) => crate::dsl_cards::register_dsl_cards(&mut registry, &pack),
+            Ok(pack) => crate::dsl_cards::register_dsl_cards_with_raw(
+                &mut registry,
+                &pack,
+                Some(Arc::new(raw)),
+            ),
             Err(e) => eprintln!("DSL embedded pack failed to load: {e}"),
         }
     }
