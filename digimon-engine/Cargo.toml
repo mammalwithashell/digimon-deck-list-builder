@@ -18,6 +18,9 @@ digimon-dsl = { path = "../digimon-dsl", optional = true }
 default = ["dsl-yaml-loader"]
 dsl-yaml-loader = ["dep:digimon-dsl"]
 
+[build-dependencies]
+digimon-dsl = { path = "../digimon-dsl" }
+
 [dev-dependencies]
 # serde_yml is used directly in DSL test files (e.g. serde_yml::from_str).
 serde_yml = "0.0.12"
