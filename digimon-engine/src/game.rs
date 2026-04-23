@@ -1017,6 +1017,50 @@ impl Game {
         None
     }
 
+    /// Resolve a `CardHandle` to its `&CardData` by scanning all zones —
+    /// mirrors `card_kind_for_handle` but returns the full data record so
+    /// callers can read name, traits, colors, etc. Used by the DSL predicate
+    /// evaluator (`dsl_cards::predicate`).
+    ///
+    /// Returns `None` if no `CardSource` with the given `card_index` is found.
+    pub fn card_data_for_handle(
+        &self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<&crate::card_data::CardData> {
+        let target_index = handle.0;
+        for player in &self.players {
+            if let Some(cs) = player.hand.iter().find(|c| c.card_index == target_index) {
+                return Some(&self.card_data[cs.data_index]);
+            }
+            if let Some(cs) = player.trash.iter().find(|c| c.card_index == target_index) {
+                return Some(&self.card_data[cs.data_index]);
+            }
+            for perm in &player.battle_area {
+                if let Some(cs) = perm.card_sources.iter().find(|c| c.card_index == target_index) {
+                    return Some(&self.card_data[cs.data_index]);
+                }
+                if let Some(cs) = perm.linked_cards.iter().find(|c| c.card_index == target_index) {
+                    return Some(&self.card_data[cs.data_index]);
+                }
+            }
+            if let Some(breeding) = &player.breeding_area {
+                if let Some(cs) = breeding.card_sources.iter().find(|c| c.card_index == target_index) {
+                    return Some(&self.card_data[cs.data_index]);
+                }
+            }
+            if let Some(cs) = player.security.iter().find(|c| c.card_index == target_index) {
+                return Some(&self.card_data[cs.data_index]);
+            }
+            if let Some(cs) = player.deck.iter().find(|c| c.card_index == target_index) {
+                return Some(&self.card_data[cs.data_index]);
+            }
+        }
+        if let Some(cs) = self.revealed_cards.iter().find(|c| c.card_index == target_index) {
+            return Some(&self.card_data[cs.data_index]);
+        }
+        None
+    }
+
     // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───
 
     /// Sum of static `dp_modifier` values from a single source's effects

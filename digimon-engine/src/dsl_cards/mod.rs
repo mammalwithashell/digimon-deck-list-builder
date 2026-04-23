@@ -4,6 +4,8 @@
 //! `Effect`s at `effects()` time. Triggered clauses, identity, alt_paths,
 //! and raw_rust are skipped in Phase 1c (Phase 2 owns them).
 
+pub mod predicate;
+
 use std::sync::Arc;
 
 use digimon_dsl::compiled::CompiledCard;
