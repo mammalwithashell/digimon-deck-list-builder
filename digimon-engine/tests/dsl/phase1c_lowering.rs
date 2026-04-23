@@ -233,3 +233,57 @@ fn cost_reduction_without_literal_amount_skips_emission() {
     let dsl = DslCardEffect::new(Arc::new(c));
     assert!(dsl.effects(CardHandle(0)).is_empty());
 }
+
+fn fixture_flood_gate(modifier: &str, target: CompiledPredicate) -> CompiledCard {
+    CompiledCard {
+        card: "F-FG".into(),
+        name: "Fixture".into(),
+        kind: CompiledCardKind::Digimon,
+        level: Some(7),
+        color: vec![],
+        cost: Some(15),
+        dp: Some(17000),
+        traits: vec![],
+        form: None,
+        attribute: None,
+        ace_overflow: None,
+        identity: None,
+        alt_paths: vec![],
+        effects: vec![CompiledClause::Declarative(
+            CompiledDeclarativeClause::FloodGate {
+                scope: CompiledScope::FaceUp,
+                active_when: Some(CompiledPredicate { your_turn: Some(true), ..Default::default() }),
+                modifier: modifier.into(),
+                target,
+                summary: None,
+                summary_key: None,
+            },
+        )],
+    }
+}
+
+#[test]
+fn flood_gate_emits_declarative_with_process_closure() {
+    let target = CompiledPredicate {
+        owner: Some(CompiledPlayerRef::Opponent),
+        kind: Some(CompiledCardKind::Option),
+        ..Default::default()
+    };
+    let dsl = DslCardEffect::new(Arc::new(fixture_flood_gate(
+        "CannotActivateSecurityEffects",
+        target,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert!(effects[0].declarative);
+    assert!(effects[0].process.is_some());
+}
+
+#[test]
+fn flood_gate_unknown_modifier_skips_emission() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_flood_gate(
+        "NoSuchModifier",
+        CompiledPredicate::default(),
+    )));
+    assert!(dsl.effects(CardHandle(0)).is_empty());
+}

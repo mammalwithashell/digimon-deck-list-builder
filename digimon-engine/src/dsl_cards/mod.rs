@@ -6,6 +6,7 @@
 
 pub mod lower_aura;
 pub mod lower_cost_reduction;
+pub mod lower_flood_gate;
 pub mod lower_grant_keyword;
 pub mod modifier_map;
 pub mod predicate;
@@ -115,8 +116,25 @@ impl CardEffect for DslCardEffect {
                             ));
                         }
                     }
+                    CompiledDeclarativeClause::FloodGate {
+                        scope,
+                        active_when,
+                        modifier,
+                        target,
+                        ..
+                    } => {
+                        if let Some(e) = lower_flood_gate::lower(
+                            card,
+                            *scope,
+                            active_when.clone(),
+                            modifier,
+                            target.clone(),
+                        ) {
+                            out.push(e);
+                        }
+                    }
                     _ => {
-                        // Other declarative clauses lowered in Tasks 7-8.
+                        // Other declarative clauses lowered in Tasks 7-8+.
                     }
                 },
             }
