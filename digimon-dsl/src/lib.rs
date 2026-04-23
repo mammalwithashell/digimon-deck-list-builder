@@ -23,9 +23,11 @@ pub mod errors;
 pub mod formula;
 pub mod identity;
 pub mod loader;
+pub mod pack;
 pub mod predicate;
 pub mod pretty;
 pub mod raw_rust_registry;
+pub mod registry;
 pub mod schema;
 pub mod spec;
 pub mod step;
@@ -33,4 +35,6 @@ pub mod validator;
 
 pub use common::PlayerRef;
 pub use errors::{DslError, ValidationError};
+pub use pack::CardPack;
+pub use registry::CardRegistry;
 pub use spec::CardSpec;
