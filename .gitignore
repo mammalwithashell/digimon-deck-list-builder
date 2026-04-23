@@ -16,6 +16,8 @@ nul
 frontend/dist/
 frontend/node_modules/
 .env
+.env.local
+.env.*.local
 data/app.db
 frontend/tsconfig.tsbuildinfo
 .playwright-mcp/

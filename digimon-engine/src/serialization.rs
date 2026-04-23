@@ -58,6 +58,11 @@ fn phase_int(p: GamePhase) -> i64 {
         GamePhase::AllianceTiming => 16,
         GamePhase::EndOfTurnAction => 15,
         GamePhase::GameOver => 4, // no Python equivalent; End=4 is nearest
+        // Phase 4 variants — no Python equivalent yet; reuse SelectTarget (5)
+        // as a placeholder. Tasks 2-5 will add proper Python-side values.
+        GamePhase::SelectUnion => 5,
+        GamePhase::SelectPermutation => 5,
+        GamePhase::SelectBudgeted => 5,
     }
 }
 
@@ -189,11 +194,15 @@ mod tests {
 
 fn kind_int(cd: &CardData) -> i64 {
     // Match Python CardKind int values: 0=Digimon, 1=Tamer, 2=Option, 3=DigiEgg.
+    // Token is serialized as Digimon (0) for Python-parity purposes — the
+    // Python side has no Token variant, and token permanents are indistinguishable
+    // from Digimon to the tensor/serializer. See Phase 10 plan.
     match cd.card_kind {
         CardKind::Digimon => 0,
         CardKind::Tamer => 1,
         CardKind::Option => 2,
         CardKind::DigiEgg => 3,
+        CardKind::Token => 0, // treated as Digimon
     }
 }
 

@@ -1,0 +1,946 @@
+//! Replacement-effect framework — "Would*" timings + dispatcher.
+//!
+//! See docs/superpowers/specs/2026-04-21-would-replacement-timings-design.md.
+//!
+//! Task 1 landed the data types. Task 2 (this module's body) adds the
+//! `try_replace` dispatcher, candidate collection/layering, and the
+//! `PendingSelection::Replacement` installer for optional replacements.
+
+use crate::action::space::REPLACEMENT_ACCEPT;
+use crate::card_source::CardHandle;
+use crate::effect_context::{EffectContext, EffectReadContext};
+use crate::enums::{EffectTiming, GamePhase, PlayerId, Zone};
+use crate::permanent::PermanentHandle;
+use crate::selection::{PendingSelection, SelectionKind};
+
+/// Maximum nesting depth for `try_replace`. If recursion reaches this value,
+/// further replacement attempts short-circuit to `ReplacementOutcome::None`
+/// to prevent a pathological self-referential chain from hanging the engine.
+pub const MAX_REPLACEMENT_DEPTH: u8 = 8;
+
+/// Why a state change is happening — consumed by replacement effects that
+/// filter on cause (e.g. "cannot be trashed by your opponent's effects").
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ReplacementCause {
+    Battle,
+    OwnEffect,
+    OpponentEffect,
+    SecurityCheck,
+    Cost,
+}
+
+/// What's about to happen — a permanent leaving the field, a card being
+/// trashed from hand, a player about to draw, etc.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ReplacementSubject {
+    Permanent(PermanentHandle),
+    Card(CardHandle, Zone),
+    Player(PlayerId),
+}
+
+/// The outcome a replacement effect sets. Mutually exclusive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReplacementOutcome {
+    None,
+    Cancelled,
+    Redirected(Zone),
+    Substituted(ReplacementSubject),
+    CustomHandled,
+}
+
+/// Closure type for passive modifier replacement conditions. Evaluated at
+/// try_replace time to decide whether the modifier applies.
+///
+/// **`EffectReadContext` caveat:** passives have no installer `CardHandle`
+/// (modifiers live in the registry, not on a specific effect), so the
+/// context passed to this closure uses a sentinel `CardHandle(0)` for
+/// `source_card`. **Do not read `ctx.source_card` from this closure** —
+/// it aliases the first card allocated in the game, not the modifier's
+/// installer. The meaningful inputs are the `&ReplacementSubject`
+/// parameter (the event's target) and `ctx.source_permanent`, which for
+/// permanent-scoped passives points at the *target* permanent, and for
+/// player-scoped passives points at the installer permanent (if any).
+pub type ReplacementConditionFn =
+    Box<dyn Fn(&EffectReadContext, &ReplacementSubject) -> bool + Send + Sync + 'static>;
+
+/// Closure type for replacement effect processes. Receives a
+/// ReplacementContext so the process can mutate state AND set the outcome.
+pub type ReplacementProcessFn =
+    Box<dyn Fn(&mut ReplacementContext<'_>) + Send + Sync + 'static>;
+
+/// Passed to Would* effect processes. `effect` is the underlying effect ctx;
+/// `cause`, `subject`, `original_destination` are snapshot event data; the
+/// process sets `outcome` via helpers to tell the dispatcher what to do.
+pub struct ReplacementContext<'g> {
+    pub effect: &'g mut EffectContext<'g>,
+    pub cause: ReplacementCause,
+    pub subject: ReplacementSubject,
+    pub original_destination: Option<Zone>,
+    pub(crate) outcome: ReplacementOutcome,
+}
+
+impl<'g> ReplacementContext<'g> {
+    pub fn cancel(&mut self) {
+        self.outcome = ReplacementOutcome::Cancelled;
+    }
+    pub fn redirect_to(&mut self, dest: Zone) {
+        self.outcome = ReplacementOutcome::Redirected(dest);
+    }
+    pub fn substitute(&mut self, subject: ReplacementSubject) {
+        self.outcome = ReplacementOutcome::Substituted(subject);
+    }
+    pub fn handled(&mut self) {
+        self.outcome = ReplacementOutcome::CustomHandled;
+    }
+}
+
+// ─── Dispatcher ────────────────────────────────────────────────────
+
+/// Controller of the subject for layering purposes.
+///
+/// Stub: `Card(_, Zone)` resolves via the card's owning player derived by
+/// scanning zones — but the hot path here is `Permanent` (which carries
+/// `handle.player`) and `Player`. For Task 2 the Card path is approximated
+/// by returning the first player (no callers yet); Task 3+ fire-sites will
+/// extend this when they start using the Card subject.
+pub(crate) fn subject_controller_id(
+    game: &crate::game::Game,
+    subject: ReplacementSubject,
+) -> PlayerId {
+    match subject {
+        ReplacementSubject::Permanent(h) => h.player,
+        ReplacementSubject::Player(p) => p,
+        ReplacementSubject::Card(handle, _zone) => {
+            // Scan zones to find the owning player. Best-effort for Task 2;
+            // Task 3+ fire-sites are expected to always pass a Permanent or
+            // Player subject. Fall back to player 0 if not found.
+            for (pid, player) in game.players.iter().enumerate() {
+                let found = player
+                    .hand
+                    .iter()
+                    .chain(player.trash.iter())
+                    .chain(player.deck.iter())
+                    .chain(player.security.iter())
+                    .any(|cs| cs.handle() == handle);
+                if found {
+                    return pid as PlayerId;
+                }
+            }
+            0
+        }
+    }
+}
+
+/// What kind of candidate this is, for dispatch at run time.
+///
+/// - `EffectClosure { card_id, effect_slot }` — a card effect with a
+///   `replacement_process` closure. The dispatcher re-looks-up the effect
+///   by `(card_id, effect_slot)` and runs its process closure.
+/// - `PassiveCancel` — a passive restriction modifier (e.g.
+///   `CannotBeReturnedToDeck`). Passives always cancel mandatorily; the
+///   dispatcher synthesizes a `rctx.cancel()` directly.
+#[derive(Debug, Clone)]
+enum CandidateKind {
+    EffectClosure { card_id: String, effect_slot: u8 },
+    PassiveCancel,
+}
+
+/// One replacement candidate — effect-face or passive-modifier. Stored as
+/// `(card_id, effect_slot)` indices for the `EffectClosure` variant so we
+/// can re-look-up the `Effect` in `run_candidate` without holding a borrow
+/// across `&mut Game` calls.
+///
+/// Mirrors the `QueuedEffect` pattern in `selection.rs`.
+#[derive(Debug, Clone)]
+struct Candidate {
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_controller: PlayerId,
+    is_mandatory: bool,
+    effect_name: String,
+    kind: CandidateKind,
+}
+
+/// The `Game::try_replace` free-function body. Called via the thin wrapper
+/// on `Game` so the `impl Game` block stays readable.
+///
+/// Implements spec §7.5 — two recursion guards:
+///
+/// 1. **Depth guard** — `replacement_depth < MAX_REPLACEMENT_DEPTH` or the
+///    dispatcher short-circuits. Belt-and-suspenders against pathological
+///    mutual-cancellation loops.
+/// 2. **Once-per-event guard** (§7.5) — a `(timing, subject)` pair that has
+///    already fired within this call chain is skipped. Prevents the
+///    `WhenWouldLeaveBattleArea` super-timing from re-firing when its
+///    redirect routes through another leave-the-field helper that would
+///    dispatch the same timing again (e.g. `delete → Redirected(Deck) →
+///    return_to_deck → would-re-fire-leave-battle-area`).
+///
+/// The fired-set is cleared at the outermost entry (`replacement_depth == 0`)
+/// so back-to-back unrelated replacement events each start with a clean slate.
+pub(crate) fn try_replace_impl(
+    game: &mut crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> ReplacementOutcome {
+    // Depth guard.
+    if game.replacement_depth >= MAX_REPLACEMENT_DEPTH {
+        return ReplacementOutcome::None;
+    }
+
+    // §7.5: at the outermost entry, clear the fired-set so a fresh call chain
+    // starts clean. EXCEPT when `in_replacement_commit` is set — that marks a
+    // callback-commit continuation (the original top-level fire-site unwound
+    // when the optional selection installed; the callback is re-entering
+    // `try_replace` via a zone-mover to finish committing the outcome) and
+    // the fired-set must carry through so the super-timing + route-specific
+    // timing already fired in the original chain stay blocked. Nested calls
+    // (depth > 0) inherit the outer chain's set unconditionally.
+    if game.replacement_depth == 0 && !game.in_replacement_commit {
+        game.replacement_fired.clear();
+    }
+
+    // §7.5 once-per-event guard — if this (timing, subject) already fired in
+    // the current call chain, skip re-dispatch. Critical for redirect routes
+    // that funnel through the super-timing `WhenWouldLeaveBattleArea`.
+    //
+    // During a callback-commit continuation (`in_replacement_commit`), we
+    // treat the guard more strictly: ANY prior fire for this subject blocks
+    // new replacements, regardless of timing. Rationale: once the player has
+    // accepted/declined a replacement for this event, the redirect route must
+    // not re-prompt for a *different* Would* timing on the same subject (the
+    // canonical case is Decode's deck→hand redirect, where the `return_to_hand`
+    // commit must NOT install a second PendingSelection for the hand-timing
+    // Decode replacement — that would double-prompt for what is logically a
+    // single event).
+    let key = (timing, subject);
+    let blocked = if game.in_replacement_commit {
+        game.replacement_fired
+            .iter()
+            .any(|(_t, s)| *s == subject)
+    } else {
+        game.replacement_fired.contains(&key)
+    };
+    if blocked {
+        return ReplacementOutcome::None;
+    }
+    game.replacement_fired.insert(key);
+
+    game.replacement_depth = game.replacement_depth.saturating_add(1);
+
+    let outcome =
+        try_replace_inner(game, timing, subject, cause, original_destination);
+
+    game.replacement_depth = game.replacement_depth.saturating_sub(1);
+    outcome
+}
+
+fn try_replace_inner(
+    game: &mut crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> ReplacementOutcome {
+    // Collect candidates. We layer by controller: own_reps (subject's
+    // controller) first, then opp_reps.
+    let subject_controller = subject_controller_id(game, subject);
+    let candidates = collect_candidates(game, timing, subject, cause);
+
+    if candidates.is_empty() {
+        return ReplacementOutcome::None;
+    }
+
+    let (own_reps, opp_reps): (Vec<_>, Vec<_>) = candidates
+        .into_iter()
+        .partition(|c| c.source_controller == subject_controller);
+
+    // TODO(phase-7-followup): when either side has >1 candidates, install a
+    // TriggerOrder-style selection so the controller picks the order. v1
+    // runs them in collection order.
+    let ordered: Vec<Candidate> =
+        own_reps.into_iter().chain(opp_reps.into_iter()).collect();
+
+    // Walk candidates. Mandatory candidates compose (the last non-None
+    // outcome wins for v1 — documented). Optional candidates install a
+    // PendingSelection and break the loop; when the selection resolves,
+    // the callback writes `game.replacement_pending_outcome` and the caller
+    // is responsible for re-entering if more candidates remain.
+    let mut acc_outcome = ReplacementOutcome::None;
+    for cand in ordered {
+        if cand.is_mandatory {
+            let o = run_mandatory_candidate(
+                game,
+                &cand,
+                subject,
+                cause,
+                original_destination,
+            );
+            if o != ReplacementOutcome::None {
+                acc_outcome = o;
+            }
+        } else {
+            install_optional_selection(
+                game,
+                &cand,
+                subject_controller,
+                subject,
+                cause,
+                original_destination,
+            );
+            // Selection is pending — caller resumes via resolve_selection.
+            // Outcome will be written to game.replacement_pending_outcome.
+            return acc_outcome;
+        }
+    }
+
+    acc_outcome
+}
+
+/// Walk the sources of candidate replacement effects and emit one
+/// `Candidate` per match. Order:
+/// 1. Subject's own effects at `timing` (only relevant for `Permanent` subject).
+/// 2. Other battle-area permanents' effects at `timing`.
+/// 3. Passive modifier candidates via `passive_modifier_candidates` — scans
+///    both permanent- and player-scoped `CannotBe*` / `CannotBeDestroyed*`
+///    modifiers, honoring `cause_filter` and `replacement_condition`. Emits
+///    `PassiveCancel` candidates that synthesize `ReplacementOutcome::Cancelled`
+///    at dispatch. See §10 of the spec.
+fn collect_candidates(
+    game: &crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+) -> Vec<Candidate> {
+    let mut out: Vec<Candidate> = Vec::new();
+
+    // Snapshot subject's permanent (if any) so we can order subject-first.
+    let subject_perm: Option<PermanentHandle> = match subject {
+        ReplacementSubject::Permanent(h) => Some(h),
+        _ => None,
+    };
+
+    // Collect from a permanent's effects, filtering by timing and
+    // replacement_process presence.
+    let push_from_perm = |out: &mut Vec<Candidate>, h: PermanentHandle| {
+        let Some(player) = game.players.get(h.player as usize) else {
+            return;
+        };
+        let Some(perm) = player.battle_area.get(h.index as usize) else {
+            return;
+        };
+        let top = perm.top_card();
+        let card_id = top.card_id(&game.card_data).to_string();
+        let source_card = top.handle();
+
+        let Some(effects) = game.effects_for_card(&card_id, source_card) else {
+            return;
+        };
+
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.timing != timing {
+                continue;
+            }
+            if effect.replacement_process.is_none() {
+                // Would-timed effect with no replacement_process is a
+                // structural gap; skip silently for now (card registry
+                // authors are expected to always attach one).
+                continue;
+            }
+            if let Some(cond) = &effect.condition {
+                let ctx = EffectReadContext::new(game, source_card, Some(h), h.player);
+                if !cond(&ctx) {
+                    continue;
+                }
+            }
+            let _ = cause; // cause_filter on card effects is Task 6 scope
+            out.push(Candidate {
+                source_card,
+                source_permanent: Some(h),
+                source_controller: h.player,
+                is_mandatory: !effect.optional,
+                effect_name: effect.name.clone(),
+                kind: CandidateKind::EffectClosure {
+                    card_id: card_id.clone(),
+                    effect_slot: slot as u8,
+                },
+            });
+        }
+    };
+
+    // (1) Subject's own effects first (for Permanent subjects).
+    if let Some(h) = subject_perm {
+        push_from_perm(&mut out, h);
+    }
+
+    // (2) Other battle-area permanents' effects.
+    for player_idx in 0..game.players.len() {
+        let player = &game.players[player_idx];
+        for idx in 0..player.battle_area.len() {
+            let h = PermanentHandle {
+                player: player_idx as PlayerId,
+                index: idx as u8,
+            };
+            if Some(h) == subject_perm {
+                continue;
+            }
+            push_from_perm(&mut out, h);
+        }
+    }
+
+    // (3) Passive modifier candidates — scans the modifier registry for
+    // permanent- and player-scoped `CannotBe*` entries that map to this
+    // timing via `passive_modifier_to_would`. Each match emits a
+    // `PassiveCancel` candidate that synthesizes `Cancelled` at dispatch.
+    out.extend(passive_modifier_candidates(game, timing, subject, cause));
+
+    out
+}
+
+/// Map a passive restriction `ModifierType` to the `EffectTiming` at which
+/// it should fire as a cancel-replacement. Returns `None` for modifier
+/// variants that are not passive replacements (e.g. DP changes, granted
+/// keywords, etc.).
+///
+/// This is the single source of truth for the Task 5 migration of Phase 6
+/// (`CannotBeReturnedToDeck` / `…Hand` / `CannotBeTrashedByEffect` /
+/// `CannotBeDeDigivolved`) + Phase 0 (`CannotBeDestroyed` /
+/// `CannotBeDestroyedByBattle` / `CannotBeDestroyedByEffect`) modifiers
+/// onto the would-replacement framework.
+pub(crate) fn passive_modifier_to_would(
+    modifier: crate::enums::ModifierType,
+) -> Option<EffectTiming> {
+    use crate::enums::ModifierType;
+    match modifier {
+        ModifierType::CannotBeReturnedToDeck => Some(EffectTiming::WhenWouldBeReturnedToDeck),
+        ModifierType::CannotBeReturnedToHand => Some(EffectTiming::WhenWouldBeReturnedToHand),
+        ModifierType::CannotBeTrashedByEffect => Some(EffectTiming::WhenWouldBeTrashed),
+        ModifierType::CannotBeDeDigivolved => Some(EffectTiming::WhenWouldBeDeDigivolved),
+        // Phase 0 destruction-protection: all fire at WhenWouldBeDeleted.
+        // The cause_filter distinguishes them:
+        //   - CannotBeDestroyed         → None (cause-agnostic)
+        //   - CannotBeDestroyedByBattle → Some(Battle)
+        //   - CannotBeDestroyedByEffect → None (both own + opp effects)
+        ModifierType::CannotBeDestroyed => Some(EffectTiming::WhenWouldBeDeleted),
+        ModifierType::CannotBeDestroyedByBattle => Some(EffectTiming::WhenWouldBeDeleted),
+        ModifierType::CannotBeDestroyedByEffect => Some(EffectTiming::WhenWouldBeDeleted),
+        // Phase 9 combat restrictions — map Phase 6 attack-restriction
+        // modifiers onto Phase 7/9 replacement timings so the attack
+        // declaration fire site can dispatch them without a parallel scan.
+        // `CannotAttack` on a permanent cancels when that permanent is the
+        // ATTACKER subject of `WhenWouldAttack`; `CannotAttackTarget` cancels
+        // when the permanent is the TARGET subject of `WhenWouldBeAttackTarget`.
+        ModifierType::CannotAttack => Some(EffectTiming::WhenWouldAttack),
+        ModifierType::CannotAttackTarget => Some(EffectTiming::WhenWouldBeAttackTarget),
+        _ => None,
+    }
+}
+
+/// Passive-modifier replacement collector (Phase 7 Task 5).
+///
+/// Scans `ModifierRegistry` for entries whose `ModifierType` maps to the
+/// current `timing` via `passive_modifier_to_would` and whose `cause_filter`
+/// and `replacement_condition` pass. Each match emits a mandatory
+/// `PassiveCancel` candidate.
+fn passive_modifier_candidates(
+    game: &crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+) -> Vec<Candidate> {
+    let mut out: Vec<Candidate> = Vec::new();
+
+    // For `Card(_, Zone)` subjects the v1 model does not scope passive
+    // modifiers (no per-card-in-hand modifier store). Skip.
+    let target_player: PlayerId = match subject {
+        ReplacementSubject::Permanent(h) => h.player,
+        ReplacementSubject::Player(p) => p,
+        ReplacementSubject::Card(_, _) => return out,
+    };
+
+    // (a) Permanent-scoped modifiers — only for Permanent subjects.
+    if let ReplacementSubject::Permanent(handle) = subject {
+        for entry in game.modifiers.permanent_modifiers_iter(handle) {
+            let Some(entry_timing) = passive_modifier_to_would(entry.modifier) else {
+                continue;
+            };
+            if entry_timing != timing {
+                continue;
+            }
+            if let Some(cf) = entry.cause_filter {
+                if cf != cause {
+                    continue;
+                }
+            }
+            if let Some(cond) = &entry.replacement_condition {
+                let read_ctx = EffectReadContext::new(
+                    game,
+                    CardHandle(0),
+                    Some(handle),
+                    handle.player,
+                );
+                if !cond(&read_ctx, &subject) {
+                    continue;
+                }
+            }
+            out.push(Candidate {
+                source_card: CardHandle(0),
+                source_permanent: Some(handle),
+                source_controller: entry.source_player,
+                is_mandatory: true,
+                effect_name: format!("Passive {:?}", entry.modifier),
+                kind: CandidateKind::PassiveCancel,
+            });
+        }
+    }
+
+    // (b) Player-scoped modifiers — applicable to all subject kinds where
+    // `target_player` is resolved. A player-scoped "cannot be returned to
+    // hand" modifier on P1 means P1's permanents cannot be returned.
+    for entry in game.modifiers.player_modifiers_iter(target_player) {
+        let Some(entry_timing) = passive_modifier_to_would(entry.modifier) else {
+            continue;
+        };
+        if entry_timing != timing {
+            continue;
+        }
+        if let Some(cf) = entry.cause_filter {
+            if cf != cause {
+                continue;
+            }
+        }
+        if let Some(cond) = &entry.replacement_condition {
+            // Use the subject's permanent as source_permanent when available.
+            let source_perm = match subject {
+                ReplacementSubject::Permanent(h) => Some(h),
+                _ => entry.source_permanent,
+            };
+            let read_ctx = EffectReadContext::new(
+                game,
+                CardHandle(0),
+                source_perm,
+                target_player,
+            );
+            if !cond(&read_ctx, &subject) {
+                continue;
+            }
+        }
+        out.push(Candidate {
+            source_card: CardHandle(0),
+            source_permanent: entry.source_permanent,
+            source_controller: entry.source_player,
+            is_mandatory: true,
+            effect_name: format!("Passive {:?} (player-scoped)", entry.modifier),
+            kind: CandidateKind::PassiveCancel,
+        });
+    }
+
+    out
+}
+
+/// Run a mandatory candidate by dispatching on its kind.
+///
+/// - `EffectClosure` — re-looks-up the effect via `(card_id, effect_slot)`,
+///   builds a `ReplacementContext`, and invokes the `replacement_process`
+///   closure.
+/// - `PassiveCancel` — synthesizes a `ctx.cancel()` directly (passive
+///   restriction modifiers always cancel).
+fn run_mandatory_candidate(
+    game: &mut crate::game::Game,
+    cand: &Candidate,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> ReplacementOutcome {
+    match &cand.kind {
+        CandidateKind::EffectClosure { card_id, effect_slot } => run_candidate_inner(
+            game,
+            card_id,
+            cand.source_card,
+            cand.source_permanent,
+            cand.source_controller,
+            *effect_slot,
+            subject,
+            cause,
+            original_destination,
+        ),
+        CandidateKind::PassiveCancel => {
+            // Passive restriction modifiers always cancel. No effect closure
+            // to run; just return Cancelled.
+            let _ = (game, subject, cause, original_destination);
+            ReplacementOutcome::Cancelled
+        }
+    }
+}
+
+/// Shared run-a-replacement-process body. Used by `run_mandatory_candidate`
+/// and by the optional-accept callback.
+fn run_candidate_inner(
+    game: &mut crate::game::Game,
+    card_id: &str,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    controller: PlayerId,
+    effect_slot: u8,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> ReplacementOutcome {
+    let Some(effects) = game.effects_for_card(card_id, source_card) else {
+        return ReplacementOutcome::None;
+    };
+    let Some(effect) = effects.get(effect_slot as usize) else {
+        return ReplacementOutcome::None;
+    };
+    let Some(process) = effect.replacement_process.as_ref() else {
+        return ReplacementOutcome::None;
+    };
+
+    // Build the EffectContext then the ReplacementContext. The
+    // ReplacementContext holds `&mut EffectContext` so we must keep the
+    // EffectContext alive for the duration of the process call.
+    let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
+    let mut rep_ctx = ReplacementContext {
+        effect: &mut ctx,
+        cause,
+        subject,
+        original_destination,
+        outcome: ReplacementOutcome::None,
+    };
+    process(&mut rep_ctx);
+    rep_ctx.outcome
+}
+
+/// Install a `PendingSelection::Replacement` prompt for an optional
+/// candidate. The callback captures the re-lookup indices + the subject
+/// metadata and writes the resulting outcome into
+/// `game.replacement_pending_outcome`.
+fn install_optional_selection(
+    game: &mut crate::game::Game,
+    cand: &Candidate,
+    subject_controller: PlayerId,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) {
+    debug_assert!(
+        game.pending_selection.is_none(),
+        "install_optional_selection must not overwrite a live pending selection; \
+         Task 3+ fire-sites should only call try_replace at decision points \
+         where no selection is already in flight"
+    );
+    let previous_phase = game.current_phase;
+    game.current_phase = GamePhase::EffectChoice;
+    game.replacement_pending_outcome = None;
+
+    // Passive modifiers are always mandatory — install_optional_selection
+    // should never be reached for a PassiveCancel candidate.
+    let (card_id, effect_slot) = match &cand.kind {
+        CandidateKind::EffectClosure { card_id, effect_slot } => {
+            (card_id.clone(), *effect_slot)
+        }
+        CandidateKind::PassiveCancel => {
+            debug_assert!(
+                false,
+                "install_optional_selection called with PassiveCancel candidate — \
+                 passive modifiers must always be mandatory"
+            );
+            return;
+        }
+    };
+    let source_card = cand.source_card;
+    let source_permanent = cand.source_permanent;
+    let controller = cand.source_controller;
+
+    let callback = make_accept_callback(
+        card_id,
+        source_card,
+        source_permanent,
+        controller,
+        effect_slot,
+        subject,
+        cause,
+        original_destination,
+    );
+    let on_decline = make_decline_callback(subject, cause, original_destination);
+
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::Replacement,
+        selecting_player: subject_controller,
+        previous_phase,
+        valid_action_ids: vec![REPLACEMENT_ACCEPT],
+        is_optional: true,
+        prompt: format!("May accept replacement: {}", cand.effect_name),
+        effect_choices: None,
+        source_card: cand.source_card,
+        source_permanent: cand.source_permanent,
+        callback,
+        on_decline: Some(on_decline),
+    });
+}
+
+/// Panic-safe helper for the `in_replacement_commit` flag around
+/// `commit_deferred_outcome`. Sets the flag, invokes `body`, and restores the
+/// prior value — even if `body` panics. Without this, a panic inside a
+/// replacement commit would leak `in_replacement_commit = true` and every
+/// subsequent top-level `try_replace` would spuriously treat itself as a
+/// callback-commit continuation (failing to clear `replacement_fired`,
+/// blocking legitimate replacement dispatch).
+fn run_commit_with_flag<F>(game: &mut crate::game::Game, body: F)
+where
+    F: FnOnce(&mut crate::game::Game),
+{
+    use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+
+    let prior = game.in_replacement_commit;
+    game.in_replacement_commit = true;
+
+    // `Game` isn't `UnwindSafe` in general (it holds mutable state, interior
+    // mutability via closures, etc.), but for the purposes of restoring this
+    // single boolean on panic, `AssertUnwindSafe` is the documented pattern.
+    // Any further observation of `Game` after a caught panic would be unsound;
+    // we do not observe it — we restore the flag and resume the unwind.
+    let result = catch_unwind(AssertUnwindSafe(|| body(game)));
+
+    game.in_replacement_commit = prior;
+
+    if let Err(payload) = result {
+        resume_unwind(payload);
+    }
+}
+
+/// Build the accept-side callback for an optional replacement. When fired
+/// via `resolve_selection(player, REPLACEMENT_ACCEPT)`, re-looks-up the
+/// effect and runs its `replacement_process`, then commits the resulting
+/// outcome at the appropriate fire-site (since the original fire-site
+/// call has already unwound by the time the selection resolves).
+///
+/// Phase 7 Task 6: previously this only wrote to
+/// `replacement_pending_outcome`; now it also commits the outcome so that
+/// printed optional keywords (Barrier/Evade/Fragment/Decode) behave
+/// end-to-end without additional fire-site plumbing.
+fn make_accept_callback(
+    card_id: String,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    controller: PlayerId,
+    effect_slot: u8,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> crate::selection::SelectionCallback {
+    Box::new(move |game: &mut crate::game::Game, _action_id: u16| {
+        let outcome = run_candidate_inner(
+            game,
+            &card_id,
+            source_card,
+            source_permanent,
+            controller,
+            effect_slot,
+            subject,
+            cause,
+            original_destination,
+        );
+        game.replacement_pending_outcome = Some(outcome);
+        // §7.5: mark this as a callback-commit continuation so the fired-set
+        // from the original call chain survives the zone-mover re-entry.
+        // `run_commit_with_flag` is panic-safe — if anything in the commit
+        // body panics, the flag is restored before the unwind propagates.
+        run_commit_with_flag(game, |game| {
+            commit_deferred_outcome(game, subject, cause, original_destination, outcome);
+        });
+    })
+}
+
+/// Build the decline-side callback for an optional replacement. The caller's
+/// fire-site already early-returned when the selection installed, so we must
+/// now commit the ORIGINAL event (what was about to happen before the
+/// replacement was offered) using `original_destination` as a routing hint.
+/// Leaves `replacement_pending_outcome` at `None` per prior behavior.
+fn make_decline_callback(
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> crate::selection::DeclineCallback {
+    Box::new(move |game: &mut crate::game::Game| {
+        // Decline → outcome stays None → commit the original event.
+        // §7.5: mark this as a callback-commit continuation so the fired-set
+        // from the original call chain survives the zone-mover re-entry.
+        // `run_commit_with_flag` is panic-safe — if anything in the commit
+        // body panics, the flag is restored before the unwind propagates.
+        run_commit_with_flag(game, |game| {
+            commit_deferred_outcome(
+                game,
+                subject,
+                cause,
+                original_destination,
+                ReplacementOutcome::None,
+            );
+        });
+    })
+}
+
+/// Commit a `ReplacementOutcome` at the appropriate fire-site now that the
+/// optional-selection has resolved and the original fire-site call has
+/// unwound. Dispatches on (`subject`, `original_destination`) to pick the
+/// right commit path; a no-op outcome for the None case routes through the
+/// original event (e.g. actual deletion) so the decline path behaves as if
+/// no replacement was in scope at all.
+///
+/// This bridges the "optional replacement vs synchronous fire-site" gap
+/// introduced in Task 3/4 without modifying those fire-sites directly.
+fn commit_deferred_outcome(
+    game: &mut crate::game::Game,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+    outcome: ReplacementOutcome,
+) {
+    // TODO(phase-7-followup): parallel commit logic. The outcome-commit arms
+    // here MUST stay in sync with the synchronous commit arms in each fire-site
+    // (combat.rs::delete_permanent_with_cause,
+    // game_actions.rs::{return_to_hand, return_to_deck, place_on_security},
+    // effect_context::{draw, de_digivolve, trash_*}). If a fire-site adds a
+    // new outcome variant or new destination Zone, update here too.
+    // Only Permanent subjects with a known original_destination have a
+    // known fire-site to re-enter. Other subject kinds (Card-in-zone,
+    // Player) currently cover trash-by-effect / draw — those fire-sites
+    // apply the outcome synchronously and don't use optional replacements
+    // in v1.
+    let perm = match subject {
+        ReplacementSubject::Permanent(h) => h,
+        other => {
+            // v1 commit_deferred_outcome only handles Permanent subjects.
+            // Card/Player optional replacements either (a) have a fire-site
+            // that re-enters via a parked state machine (Phase 8 Task 6's
+            // Option-dispose flow parks `pending_option` in `Disposing`
+            // and re-dispatches from `advance_pending_option`), or (b)
+            // have no optional-replacement pathway in v1 (draw, trash-by-
+            // effect are mandatory-only today). If neither applies, the
+            // outcome is silently dropped — that would be a correctness
+            // bug. The debug_assert catches unexpected callers in dev.
+            debug_assert!(
+                game.pending_option.is_some(),
+                "commit_deferred_outcome called with non-Permanent subject ({other:?}); \
+                 fire-site must implement its own deferred commit path (or \
+                 park a pending_* slot that re-dispatches)"
+            );
+            let _ = other;
+            return;
+        }
+    };
+    let Some(dest) = original_destination else {
+        return;
+    };
+
+    match (dest, outcome) {
+        // Deletion path — original_destination == Trash.
+        (Zone::Trash, ReplacementOutcome::None) => {
+            // Decline path for a deletion: actually delete now, bypassing
+            // the replacement window (already offered and declined).
+            commit_permanent_deletion_no_replace(game, perm);
+        }
+        (Zone::Trash, ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled) => {
+            // Already handled by process — nothing to do.
+        }
+        (Zone::Trash, ReplacementOutcome::Redirected(Zone::Deck)) => {
+            game.return_to_deck(perm, crate::enums::StackPosition::Bottom);
+        }
+        (Zone::Trash, ReplacementOutcome::Redirected(Zone::Hand)) => {
+            let _ = game.return_to_hand(perm);
+        }
+        (Zone::Trash, ReplacementOutcome::Redirected(_)) => {}
+        (Zone::Trash, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {
+            game.delete_permanent_with_cause(other, cause);
+        }
+        (Zone::Trash, ReplacementOutcome::Substituted(_)) => {}
+
+        // Return-to-hand path.
+        (Zone::Hand, ReplacementOutcome::None) => {
+            let _ = game.return_to_hand(perm);
+        }
+        (Zone::Hand, ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled) => {}
+        (Zone::Hand, ReplacementOutcome::Redirected(Zone::Deck)) => {
+            game.return_to_deck(perm, crate::enums::StackPosition::Bottom);
+        }
+        (Zone::Hand, ReplacementOutcome::Redirected(Zone::Trash)) => {
+            game.delete_permanent_with_cause(perm, cause);
+        }
+        (Zone::Hand, ReplacementOutcome::Redirected(Zone::Hand)) => {
+            // Redirect-to-Hand when already going to Hand: redundant in terms
+            // of final destination but we still must commit the move, since
+            // the original fire-site unwound on selection-install.
+            //
+            // Post-§7.5 guard: safe to call `return_to_hand` directly — the
+            // once-per-event guard prevents `WhenWouldBeReturnedToHand` from
+            // re-firing for the same subject within this call chain.
+            let _ = game.return_to_hand(perm);
+        }
+        (Zone::Hand, ReplacementOutcome::Redirected(_)) => {}
+        (Zone::Hand, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {
+            let _ = game.return_to_hand(other);
+        }
+        (Zone::Hand, ReplacementOutcome::Substituted(_)) => {}
+
+        // Return-to-deck path.
+        (Zone::Deck, ReplacementOutcome::None) => {
+            game.return_to_deck(perm, crate::enums::StackPosition::Bottom);
+        }
+        (Zone::Deck, ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled) => {}
+        (Zone::Deck, ReplacementOutcome::Redirected(Zone::Hand)) => {
+            let _ = game.return_to_hand(perm);
+        }
+        (Zone::Deck, ReplacementOutcome::Redirected(Zone::Trash)) => {
+            game.delete_permanent_with_cause(perm, cause);
+        }
+        (Zone::Deck, ReplacementOutcome::Redirected(_)) => {}
+        (Zone::Deck, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {
+            game.return_to_deck(other, crate::enums::StackPosition::Bottom);
+        }
+        (Zone::Deck, ReplacementOutcome::Substituted(_)) => {}
+
+        // Other destinations (BattleArea, Security, …) — not produced by
+        // any current fire-site for Permanent subjects.
+        _ => {}
+    }
+}
+
+/// Commit a permanent's deletion without re-running the replacement window.
+/// Mirrors the post-replacement arm of `Game::delete_permanent_with_cause`
+/// (OnDeletion → remove → OnAnyDeletion) but bypasses try_replace because
+/// the replacement window has already been offered and declined.
+fn commit_permanent_deletion_no_replace(
+    game: &mut crate::game::Game,
+    handle: PermanentHandle,
+) {
+    use crate::enums::EffectTiming;
+    use crate::selection::TriggerSource;
+
+    game.enqueue_triggered(
+        EffectTiming::OnDeletion,
+        TriggerSource::Permanent(handle),
+    );
+    game.drain_effect_queue();
+
+    if game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+        .is_some()
+    {
+        game.player_mut(handle.player)
+            .delete_permanent(handle.index as usize);
+    }
+    game.modifiers.clear_permanent(handle);
+    game.modifiers.expire_player_on_permanent_leave(handle);
+
+    for pid in 0..game.players.len() {
+        game.enqueue_triggered(
+            EffectTiming::OnAnyDeletion,
+            TriggerSource::PlayerBattleArea(pid as PlayerId),
+        );
+    }
+    game.drain_effect_queue();
+}

@@ -4,6 +4,7 @@ pub mod events;
 pub mod rules;
 pub mod card_data;
 pub mod card_registry;
+pub mod token_registry;
 pub mod card_source;
 pub mod permanent;
 pub mod player;
@@ -16,6 +17,7 @@ pub mod tensor;
 pub mod modifiers;
 pub mod effect;
 pub mod effect_context;
+pub mod replacement;
 pub mod cards;
 pub mod combat;
 pub mod selection;
@@ -34,15 +36,16 @@ pub use enums::*;
 pub use rules::{CardRestriction, Rules};
 pub use card_data::CardData;
 pub use card_registry::CardRegistry;
+pub use token_registry::{TokenDef, TokenRegistry};
 pub use card_source::{CardHandle, CardSource};
 pub use permanent::{Permanent, PermanentHandle};
 pub use player::Player;
 pub use game::Game;
 pub use tensor::{build_tensor, TENSOR_SIZE};
 pub use action::build_action_mask;
-pub use modifiers::{ModifierEntry, ModifierRegistry};
+pub use modifiers::{ModifierEntry, ModifierRegistry, PlayerModifierEntry};
 pub use effect::{CardEffect, Effect, EffectBuilder};
-pub use effect_context::{EffectContext, EffectReadContext};
+pub use effect_context::{CountCappedZone, EffectContext, EffectReadContext};
 pub use cards::{build_registry, CardEffectRegistry};
 pub use combat::AttackResult;
 pub use debug_runner::{DebugRunner, DebugRunnerBuilder};
@@ -55,5 +58,5 @@ pub use crate::events::GameEvent;
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,
     PendingSelection, PendingSelectionView, QueuedEffect, SelectionCallback, SelectionError,
-    SelectionKind, TriggerSource,
+    SelectionKind, TriggerSource, UnionZoneSet,
 };

@@ -124,6 +124,7 @@ fn card_kind_str(k: CardKind) -> &'static str {
         CardKind::Tamer => "Tamer",
         CardKind::Option => "Option",
         CardKind::DigiEgg => "DigiEgg",
+        CardKind::Token => "Token",
     }
 }
 
@@ -160,6 +161,9 @@ fn phase_str(p: GamePhase) -> &'static str {
         GamePhase::AllianceTiming => "AllianceTiming",
         GamePhase::EndOfTurnAction => "EndOfTurnAction",
         GamePhase::GameOver => "GameOver",
+        GamePhase::SelectUnion => "SelectUnion",
+        GamePhase::SelectPermutation => "SelectPermutation",
+        GamePhase::SelectBudgeted => "SelectBudgeted",
     }
 }
 
@@ -173,6 +177,7 @@ fn attack_result_str(r: AttackResult) -> &'static str {
         AttackResult::AttackerDeletedBySecurity => "AttackerDeletedBySecurity",
         AttackResult::GameWon => "GameWon",
         AttackResult::InProgress => "InProgress",
+        AttackResult::Cancelled => "Cancelled",
     }
 }
 
@@ -276,12 +281,15 @@ fn synth_card(id: &str, name: &str, kind: CardKind, dp: Option<i32>, cost: u16) 
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        keywords: Vec::new(),
     }
 }
 
 /// Build a tiny test card database that works with the engine's built-in
 /// TEST-001..005 effects plus some vanilla Digimon for combat.
-fn test_card_db() -> HashMap<String, CardData> {
+///
+/// `pub` so integration tests can create games using the same card pool.
+pub fn test_card_db() -> HashMap<String, CardData> {
     let cards = vec![
         synth_card("TEST-001", "Memory Boost", CardKind::Digimon, Some(2000), 3),
         synth_card("TEST-002", "Draw Power", CardKind::Digimon, Some(2000), 3),
@@ -299,7 +307,8 @@ fn test_card_db() -> HashMap<String, CardData> {
     map
 }
 
-fn test_deck() -> Vec<String> {
+/// `pub` so integration tests can create standard test decks.
+pub fn test_deck() -> Vec<String> {
     // 50 main deck + 5 eggs.
     let mut deck = Vec::with_capacity(55);
     let mains = [
@@ -784,7 +793,10 @@ fn decider_kind(session: &GameSession, pid: PlayerId) -> PlayerKind {
 /// Bail out as soon as the game ends or a human seat is up — matches the
 /// hosted API's `InteractiveGame.run_step` contract so the frontend
 /// state machine doesn't care which backend is driving.
-fn run_agent_steps(
+///
+/// `pub` so integration tests under `tests/` can drive the game loop
+/// directly without going through the Tauri IPC layer.
+pub fn run_agent_steps(
     game: &mut Game,
     session: &GameSession,
     inference: &InferenceState,

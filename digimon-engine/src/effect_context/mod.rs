@@ -14,9 +14,11 @@
 
 mod selections;
 
+pub use selections::{CountCappedZone, EffectContextSelectorScope};
+
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
-use crate::enums::{Expiry, Keyword, ModifierType, PlayerId};
+use crate::enums::{Expiry, Keyword, ModifierType, PlayerId, PlaySource, StackPosition};
 use crate::game::Game;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
@@ -107,6 +109,25 @@ impl<'a> EffectReadContext<'a> {
         let player = self.game.player(h.player);
         player.battle_area.get(h.index as usize)
     }
+
+    /// Returns `true` if this effect's source card is a Tamer.
+    ///
+    /// Used by flood-gate discriminators like `CannotGainMemoryExceptFromTamers`
+    /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
+    /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
+    pub fn source_is_tamer(&self) -> bool {
+        // Fast path: if we know the source permanent, check its top card directly.
+        if let Some(h) = self.source_permanent {
+            if let Some(perm) = self.game.player(h.player).battle_area.get(h.index as usize) {
+                return perm.is_tamer(&self.game.card_data);
+            }
+        }
+        // Slow path: source_permanent is None (e.g. effect from hand/trash/security).
+        self.game
+            .card_kind_for_handle(self.source_card)
+            .map(|k| k == crate::enums::CardKind::Tamer)
+            .unwrap_or(false)
+    }
 }
 
 /// The context passed to every effect's `process` closure.
@@ -119,6 +140,11 @@ pub struct EffectContext<'a> {
     pub source_permanent: Option<PermanentHandle>,
     /// Player who controls the source.
     pub player: PlayerId,
+    /// Temporary override for `selecting_player` inside `as_selecting_player`
+    /// scope methods. `None` at all times except during the body of an
+    /// `EffectContextSelectorScope::select_*` call, where it is set to the
+    /// desired selector and cleared again before the method returns.
+    pub(super) override_selecting_player: Option<PlayerId>,
 }
 
 impl<'a> EffectContext<'a> {
@@ -133,6 +159,7 @@ impl<'a> EffectContext<'a> {
             source_card,
             source_permanent,
             player,
+            override_selecting_player: None,
         }
     }
 
@@ -197,6 +224,25 @@ impl<'a> EffectContext<'a> {
         player.battle_area.get(h.index as usize)
     }
 
+    /// Returns `true` if this effect's source card is a Tamer.
+    ///
+    /// Used by flood-gate discriminators like `CannotGainMemoryExceptFromTamers`
+    /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
+    /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
+    pub fn source_is_tamer(&self) -> bool {
+        // Fast path: if we know the source permanent, check its top card directly.
+        if let Some(h) = self.source_permanent {
+            if let Some(perm) = self.game.player(h.player).battle_area.get(h.index as usize) {
+                return perm.is_tamer(&self.game.card_data);
+            }
+        }
+        // Slow path: source_permanent is None (e.g. effect from hand/trash/security).
+        self.game
+            .card_kind_for_handle(self.source_card)
+            .map(|k| k == crate::enums::CardKind::Tamer)
+            .unwrap_or(false)
+    }
+
     /// Reborrow this mut context as a read-only context — for condition
     /// closures, which take `&EffectReadContext`.
     pub fn as_read(&self) -> EffectReadContext<'_> {
@@ -211,6 +257,18 @@ impl<'a> EffectContext<'a> {
     // ─── Memory mutations ─────────────────────────────────────────────
 
     pub fn gain_memory(&mut self, amount: i16) {
+        let target = self.player;
+        // Phase 6: CannotGainMemoryByEffect — suppress all memory gains by effect.
+        if self.game.modifiers.player_has(target, ModifierType::CannotGainMemoryByEffect) {
+            return;
+        }
+        // Phase 6: CannotGainMemoryExceptFromTamers — only Tamer-sourced gains are
+        // allowed; block Digimon/Option-sourced gains.
+        if self.game.modifiers.player_has(target, ModifierType::CannotGainMemoryExceptFromTamers)
+            && !self.source_is_tamer()
+        {
+            return;
+        }
         self.game.gain_memory(amount);
     }
 
@@ -226,6 +284,48 @@ impl<'a> EffectContext<'a> {
     // ─── Card draw / trash ────────────────────────────────────────────
 
     pub fn draw(&mut self, player: PlayerId, count: u8) -> u8 {
+        use crate::enums::EffectTiming;
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Phase 6: if the drawing player has CannotDrawByEffect, suppress draw.
+        // The flood gate fires FIRST (preserves Phase 6 semantics); if blocked,
+        // no replacement window opens.
+        if self.game.modifiers.player_has(player, ModifierType::CannotDrawByEffect) {
+            return 0;
+        }
+
+        // Phase 7 Task 4: fire WhenWouldDraw once per draw call (not once
+        // per card). Subject is the drawing player; no original_destination.
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Player(player);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldDraw,
+            subject,
+            cause,
+            None,
+        );
+        if self.game.pending_selection.is_some() {
+            return 0;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return 0;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Redirected not meaningful for WhenWouldDraw (player-scoped)"
+                );
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "Substituted not supported for WhenWouldDraw v1"
+                );
+            }
+        }
+
         self.game.player_mut(player).draw_many(count)
     }
 
@@ -244,6 +344,59 @@ impl<'a> EffectContext<'a> {
         trashed
     }
 
+    /// Move the top card of `player`'s security stack to their trash.
+    /// No-op if the stack is empty. Returns true if a card was moved.
+    ///
+    /// Phase 7 Task 4: fires `WhenWouldBeTrashed` at entry. Subject carries
+    /// the top security card's handle; cause inferred.
+    pub fn trash_top_security(&mut self, player: PlayerId) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Snapshot the top-of-security card handle before any state change.
+        let top_handle = match self.game.player(player).security.last() {
+            Some(c) => c.handle(),
+            None => return false,
+        };
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Card(top_handle, Zone::Security);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeTrashed,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.game.pending_selection.is_some() {
+            return false;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return false;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Redirected not supported for WhenWouldBeTrashed v1"
+                );
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "Substituted not supported for WhenWouldBeTrashed v1"
+                );
+            }
+        }
+
+        let p = self.game.player_mut(player);
+        if let Some(card) = p.security.pop() {
+            p.trash.push(card);
+            true
+        } else {
+            false
+        }
+    }
+
     // ─── Field mutations ──────────────────────────────────────────────
 
     pub fn delete_permanent(&mut self, target: PermanentHandle) {
@@ -251,21 +404,468 @@ impl<'a> EffectContext<'a> {
         if (target.index as usize) < player.battle_area.len() {
             player.delete_permanent(target.index as usize);
             self.game.modifiers.clear_permanent(target);
+            // Phase 6: expire any player-scoped modifiers sourced from this permanent.
+            self.game.modifiers.expire_player_on_permanent_leave(target);
         }
     }
 
+    /// Pop up to `amount` cards off `target`'s digivolution stack,
+    /// trashing each popped source into the target owner's trash.
+    ///
+    /// Rules:
+    ///   * Never pops the base card — `Permanent` must always retain at
+    ///     least one `CardSource`.
+    ///   * `stop_at_level = Some(L)` — stop early if popping would leave
+    ///     a top whose level is strictly less than `L`. For standard
+    ///     De-Digivolve N use `Some(3)` (card text: "You can't trash
+    ///     past level 3 cards").
+    ///   * `stop_at_level = None` — no level floor; pop until the base.
+    ///   * `amount = Some(N)` — cap pops at N.
+    ///   * `amount = None` — unbounded (equivalent to `Some(u8::MAX)`).
+    ///
+    /// Returns the actual number of cards popped.
+    pub fn de_digivolve(
+        &mut self,
+        target: PermanentHandle,
+        stop_at_level: Option<u8>,
+        amount: Option<u8>,
+    ) -> u8 {
+        use crate::enums::EffectTiming;
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Phase 7 Task 4: fire WhenWouldBeDeDigivolved once at entry (not
+        // per iteration of the popping loop). Substitute(Permanent) retargets
+        // the loop at another permanent; v1 does not support "reduce N" via
+        // mutable ctx — scripts that want to reduce N should cancel and
+        // re-call with a lower amount.
+        let cause = self.game.infer_effect_cause(target.player);
+        let subject = ReplacementSubject::Permanent(target);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeDeDigivolved,
+            subject,
+            cause,
+            None,
+        );
+        if self.game.pending_selection.is_some() {
+            return 0;
+        }
+        let effective_target = match outcome {
+            ReplacementOutcome::None => target,
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return 0;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Redirected not meaningful for WhenWouldBeDeDigivolved"
+                );
+                target
+            }
+            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => other,
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "non-Permanent substitute for WhenWouldBeDeDigivolved"
+                );
+                target
+            }
+        };
+        let target = effective_target;
+
+        let max = amount.unwrap_or(u8::MAX);
+        let mut popped: u8 = 0;
+
+        while popped < max {
+            let perm = match self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+            {
+                Some(p) => p,
+                None => break,
+            };
+
+            if perm.stack_size() <= 1 {
+                break;
+            }
+
+            let next_top_level = {
+                let stack = perm.digivolution_cards();
+                let next_top = &stack[stack.len() - 2];
+                next_top.level(&self.game.card_data)
+            };
+
+            if let (Some(floor), Some(nt_level)) = (stop_at_level, next_top_level) {
+                if nt_level < floor {
+                    break;
+                }
+            }
+
+            let owner = target.player;
+            let p = self.game.player_mut(owner);
+            let stack = &mut p.battle_area[target.index as usize].card_sources;
+            debug_assert!(stack.len() >= 2, "stack_size-guard failed");
+            let popped_card = stack.pop().expect("stack_size-guarded pop");
+            p.trash.push(popped_card);
+            popped += 1;
+        }
+
+        popped
+    }
+
+    /// Materialize a token on `controller`'s battle area.
+    ///
+    /// Looks up `token_name` in `game.token_registry`, synthesizes a
+    /// `CardSource` with `is_token = true`, wraps it in a `Permanent`, and
+    /// pushes onto `controller.battle_area`. No play cost, no OnPlay
+    /// observer fan-out (tokens enter via effect, not via `play_from_hand`).
+    ///
+    /// Returns the spawned permanent's handle, or `None` if the token name
+    /// is unknown or the field is full.
+    pub fn play_token(
+        &mut self,
+        controller: crate::enums::PlayerId,
+        token_name: &str,
+    ) -> Option<crate::permanent::PermanentHandle> {
+        use crate::card_source::CardSource;
+        use crate::permanent::{Permanent, PermanentHandle};
+
+        let def = self.game.token_registry.get(token_name)?;
+        let target_card_id = def.card_id.clone();
+        let data_index = self
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == target_card_id)?;
+        debug_assert_eq!(
+            self.game.card_data[data_index].card_kind,
+            crate::enums::CardKind::Token,
+            "token_registry entry must map to a CardKind::Token CardData row"
+        );
+
+        let slots = self.game.rules.field_slots as usize;
+        if self.game.player(controller).battle_area.len() >= slots {
+            return None;
+        }
+
+        let card_index = self.game.next_card_index();
+        let mut card = CardSource::new_token(data_index, controller, card_index);
+        card.card_index = card_index;
+        let turn = self.game.turn_count;
+        let perm = Permanent::new(card, turn);
+
+        let player = self.game.player_mut(controller);
+        player.battle_area.push(perm);
+        let idx = player.battle_area.len() - 1;
+        Some(PermanentHandle {
+            player: controller,
+            index: idx as u8,
+        })
+    }
+
+    /// Suspend a permanent and fire `OnSuspend` observers.
+    /// Delegates to `Game::suspend` — the canonical single-target chokepoint.
     pub fn suspend(&mut self, target: PermanentHandle) {
-        let player = self.game.player_mut(target.player);
-        if let Some(perm) = player.battle_area.get_mut(target.index as usize) {
-            perm.is_suspended = true;
-        }
+        self.game.suspend(target);
     }
 
+    /// Unsuspend a permanent and fire `OnUnsuspend` observers.
+    /// Delegates to `Game::unsuspend` — the canonical single-target chokepoint.
     pub fn unsuspend(&mut self, target: PermanentHandle) {
-        let player = self.game.player_mut(target.player);
-        if let Some(perm) = player.battle_area.get_mut(target.index as usize) {
-            perm.is_suspended = false;
+        self.game.unsuspend(target);
+    }
+
+    /// Move a specific card from `player`'s deck to their hand.
+    pub fn add_to_hand_from_deck(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        self.game.add_to_hand_from_deck(player, card)
+    }
+
+    /// Move a specific card from `player`'s trash to their hand.
+    pub fn add_to_hand_from_trash(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        self.game.add_to_hand_from_trash(player, card)
+    }
+
+    /// Reveal up to `n` cards from the top of `player`'s deck. See
+    /// `Game::reveal_top_deck`.
+    pub fn reveal_top_deck(
+        &mut self,
+        player: PlayerId,
+        n: u8,
+    ) -> Vec<crate::card_source::CardHandle> {
+        self.game.reveal_top_deck(player, n)
+    }
+
+    /// Snapshot of the current reveal pool. Scripts inspect this to decide
+    /// follow-up moves.
+    pub fn revealed(&self) -> &[crate::card_source::CardSource] {
+        &self.game.revealed_cards
+    }
+
+    /// Trash a specific hand card by index.
+    ///
+    /// Phase 7 Task 4: fires `WhenWouldBeTrashed` at entry. Subject is the
+    /// hand card handle; cause inferred.
+    pub fn trash_from_hand_by_index(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<crate::card_source::CardHandle> {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Snapshot the card handle before any mutation. Return early if
+        // the index is invalid.
+        let card_handle = {
+            let p = self.game.player(player);
+            if hand_index >= p.hand.len() {
+                return None;
+            }
+            p.hand[hand_index].handle()
+        };
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Card(card_handle, Zone::Hand);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeTrashed,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.game.pending_selection.is_some() {
+            return None;
         }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return None;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Redirected not supported for WhenWouldBeTrashed v1"
+                );
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "Substituted not supported for WhenWouldBeTrashed v1"
+                );
+            }
+        }
+
+        self.game.trash_from_hand_by_index(player, hand_index)
+    }
+
+    /// Move a specific revealed card into `player`'s hand.
+    pub fn add_to_hand_from_reveal(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        self.game.add_to_hand_from_reveal(player, card)
+    }
+
+    /// Move a specific revealed card into `player`'s trash.
+    pub fn trash_from_reveal(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        self.game.trash_from_reveal(player, card)
+    }
+
+    /// Move a specific revealed card back to `player`'s deck at `position`.
+    pub fn return_to_deck_from_reveal(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+        position: crate::enums::StackPosition,
+    ) -> bool {
+        self.game.return_to_deck_from_reveal(player, card, position)
+    }
+
+    /// Place all cards currently in `game.revealed_cards` back onto `player`'s
+    /// deck at `position`, in a player-chosen order.
+    ///
+    /// **Contract**: `ordered_vec[0]` is drawn first among the placed cards.
+    ///
+    /// - **Empty pool** → silent no-op; no `PendingSelection` installed.
+    /// - **1 card** → still installs a 1-choice `OrderedPermutation` so the RL
+    ///   agent sees the (trivial) ordering decision (no-approximations policy).
+    /// - **N cards** → installs `select_ordered_permutation` over the remainder;
+    ///   the callback places cards at `position` using the correct iteration
+    ///   direction so `ordered_vec[0]` ends up drawn first:
+    ///   - `Top`:    iterate `rev()`, push each (`deck.push`) — last pushed lands
+    ///               at Vec-end (= deck top = drawn first).
+    ///   - `Bottom`: iterate forward, insert each at index 0 (`deck.insert(0)`) —
+    ///               each subsequent insert pushes the previous card deeper; final
+    ///               state has `ordered_vec[0]` at the highest index among the
+    ///               placed group (closest to top of the bottom-placed set).
+    ///   - `Random`: iterate forward, call `return_to_deck_from_reveal(Random)`
+    ///               for each — placement order is semantically irrelevant but the
+    ///               permutation selection is still surfaced to the RL agent.
+    pub fn place_remainder_on_deck(
+        &mut self,
+        player: PlayerId,
+        position: StackPosition,
+    ) {
+        // Snapshot handles of every card currently in the reveal pool.
+        let remainder: Vec<CardHandle> = self
+            .game
+            .revealed_cards
+            .iter()
+            .map(|cs| cs.handle())
+            .collect();
+
+        // Empty pool → silent no-op.
+        if remainder.is_empty() {
+            return;
+        }
+
+        debug_assert!(
+            remainder.len() <= 10,
+            "place_remainder_on_deck: reveal pool has {} cards; select_ordered_permutation is capped at 10",
+            remainder.len()
+        );
+
+        self.select_ordered_permutation(
+            remainder,
+            "Place remaining cards on deck in any order",
+            move |ctx, ordered_vec| {
+                match position {
+                    StackPosition::Top => {
+                        // Reverse-iterate: last item is pushed first, so ordered_vec[0]
+                        // is pushed last → lands at Vec-end (deck top) → drawn first.
+                        for handle in ordered_vec.iter().rev() {
+                            let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Top);
+                            debug_assert!(placed, "place_remainder_on_deck: handle {:?} not found in revealed_cards at placement time", handle);
+                        }
+                    }
+                    StackPosition::Bottom => {
+                        // Forward-iterate with insert(0): ordered_vec[0] is inserted
+                        // first at index 0; each subsequent insert pushes it one step
+                        // further from index 0. Final: ordered_vec[0] is at the highest
+                        // index among the placed group (closest to top within the
+                        // bottom-placed set) → drawn first among them.
+                        for handle in ordered_vec.iter() {
+                            let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
+                            debug_assert!(placed, "place_remainder_on_deck: handle {:?} not found in revealed_cards at placement time", handle);
+                        }
+                    }
+                    StackPosition::Random => {
+                        // Each card is placed at a random position. The permutation
+                        // selection is still surfaced — the ordering is strategically
+                        // irrelevant but the RL action space must see it (§17).
+                        for handle in ordered_vec.iter() {
+                            let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Random);
+                            debug_assert!(placed, "place_remainder_on_deck: handle {:?} not found in revealed_cards at placement time", handle);
+                        }
+                    }
+                }
+            },
+        );
+    }
+
+    /// Shuffle `player`'s deck. Pair with `add_to_hand_from_deck` for
+    /// "search and shuffle" effects.
+    pub fn shuffle_deck(&mut self, player: PlayerId) {
+        self.game.shuffle_deck(player);
+    }
+
+    /// Play a card from `player`'s hand at `hand_index`, deducting memory
+    /// according to `cost_delta`. OnPlay effects fire.
+    ///
+    /// Returns the `PermanentHandle` of the new field permanent, or `None`
+    /// if the hand index is invalid, the battle area is full, or memory is
+    /// insufficient.
+    pub fn play_from_hand_with_cost(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<PermanentHandle> {
+        let field_index =
+            self.game
+                .play_from_hand_with_cost(player, hand_index, cost_delta, PlaySource::ByEffect)?;
+        Some(PermanentHandle {
+            player,
+            index: field_index as u8,
+        })
+    }
+
+    /// Play a card from `player`'s trash at `trash_index`, deducting memory
+    /// according to `cost_delta`. OnPlay effects fire.
+    pub fn play_from_trash_with_cost(
+        &mut self,
+        player: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<PermanentHandle> {
+        let field_index = self
+            .game
+            .play_from_trash_with_cost(player, trash_index, cost_delta, PlaySource::ByEffect)?;
+        Some(PermanentHandle {
+            player,
+            index: field_index as u8,
+        })
+    }
+
+    /// Insert a card at the bottom of `target`'s digivolution stack. See
+    /// `Game::place_as_bottom_source`.
+    pub fn place_as_bottom_source(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+    ) -> bool {
+        self.game.place_as_bottom_source(source, target)
+    }
+
+    /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
+    pub fn return_to_hand(
+        &mut self,
+        target: PermanentHandle,
+    ) -> Option<crate::card_source::CardHandle> {
+        self.game.return_to_hand(target)
+    }
+
+    /// Return a permanent's top card to its owner's deck. See `Game::return_to_deck`.
+    pub fn return_to_deck(
+        &mut self,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+    ) -> bool {
+        self.game.return_to_deck(target, position)
+    }
+
+    /// Digivolve a card from `player`'s hand at `hand_index` onto `target`
+    /// by effect. Bypasses the Main-phase check; optionally ignores color
+    /// requirements (`ignore_color=true`); pays memory via `cost_delta`.
+    ///
+    /// Returns `true` on success. See `Game::effect_initiated_digivolve`.
+    pub fn effect_initiated_digivolve(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        ignore_color: bool,
+    ) -> bool {
+        self.game.effect_initiated_digivolve(
+            player,
+            hand_index,
+            target,
+            cost_delta,
+            ignore_color,
+            PlaySource::ByEffect,
+        )
     }
 
     // ─── Modifier registration ────────────────────────────────────────
@@ -273,12 +873,12 @@ impl<'a> EffectContext<'a> {
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
         self.game.modifiers.add(
             target,
-            ModifierEntry {
-                modifier: ModifierType::ChangeDp,
+            ModifierEntry::simple(
+                ModifierType::ChangeDp,
                 value,
                 expiry,
-                source_player: self.player,
-            },
+                self.player,
+            ),
         );
     }
 
@@ -291,12 +891,12 @@ impl<'a> EffectContext<'a> {
     ) {
         self.game.modifiers.add(
             target,
-            ModifierEntry {
+            ModifierEntry::simple(
                 modifier,
                 value,
                 expiry,
-                source_player: self.player,
-            },
+                self.player,
+            ),
         );
     }
 
@@ -309,6 +909,97 @@ impl<'a> EffectContext<'a> {
         self.game
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);
+    }
+
+    // ─── Breeding-area mutations ──────────────────────────────────────
+
+    /// Move a card from `source` to `player`'s security stack. Does not
+    /// fire `OnLoseSecurity` observers. See `Game::place_on_security`.
+    ///
+    /// Phase 6: gated by `CannotAddSecurityByEffect`. The gate checks the
+    /// ACTING player (the effect owner, `self.player`), not the target —
+    /// consistent with DCGO's per-player restriction semantics.
+    pub fn place_on_security(
+        &mut self,
+        player: PlayerId,
+        source: crate::enums::CardSourceRef,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        // Phase 6: if the acting player has CannotAddSecurityByEffect, suppress.
+        if self.game.modifiers.player_has(self.player, ModifierType::CannotAddSecurityByEffect) {
+            return false;
+        }
+        self.game.place_on_security(player, source, position, face_up)
+    }
+
+    // ─── Combat mutations (Phase 9 Task 2) ────────────────────────────
+
+    /// Redirect the active attack to a new target. Fires
+    /// `OnAttackTargetChange` globally. Spec §6.1.
+    ///
+    /// Callable from any effect closure running during an active attack —
+    /// `OnAttack`, `WhenAttacking`, a replacement process (equivalent to
+    /// `rctx.substitute(...)` via the replacement committer), or a
+    /// selection callback.
+    ///
+    /// Errors:
+    /// - `AttackError::NoActiveAttack` — `pending_attack` is `None`.
+    /// - `AttackError::InvalidTarget` — target is not a legal attack target
+    ///   (own attacker, non-Digimon, Delayed/Training Option, or wrong
+    ///   player for a direct-player attack).
+    ///
+    /// No-op + `Ok(())` if `new_target` equals the current effective
+    /// target (suppress redundant `OnAttackTargetChange` fan-out).
+    pub fn redirect_attack(
+        &mut self,
+        new_target: crate::selection::AttackTarget,
+    ) -> Result<(), crate::combat::AttackError> {
+        use crate::combat::AttackError;
+        let Some(pa) = self.game.pending_attack.as_ref() else {
+            return Err(AttackError::NoActiveAttack);
+        };
+        let attacker = pa.attacker;
+        self.game.validate_attack_target(attacker, new_target)?;
+        self.game.apply_attack_target_substitution(new_target);
+        Ok(())
+    }
+
+    /// Cancel the active attack. Sets `pending_attack.cancelled = true`;
+    /// `advance_pending_attack` detects the flag and short-circuits to
+    /// `Cleanup`. `EndOfAttack` still fires (cleanup symmetry);
+    /// `EndOfBattle` does NOT (no DP comparison ran). Spec §6.2.
+    ///
+    /// Errors: `AttackError::NoActiveAttack` if `pending_attack` is `None`.
+    ///
+    /// **Late-cancel semantics.** If called after a `ctx.redirect_attack`
+    /// in the same attack, the redirect's mutation to
+    /// `effective_target` survives — `cancelled` short-circuits
+    /// `advance_pending_attack` regardless. Cancel wins over redirect
+    /// in the sense that no battle occurs; the redirected target is
+    /// observable only via the `OnAttackTargetChange` observer that
+    /// already fired.
+    pub fn cancel_attack(&mut self) -> Result<(), crate::combat::AttackError> {
+        use crate::combat::AttackError;
+        let Some(pa) = self.game.pending_attack.as_mut() else {
+            return Err(AttackError::NoActiveAttack);
+        };
+        pa.cancelled = true;
+        Ok(())
+    }
+
+    /// Move the top of `player`'s digitama deck into the breeding area.
+    ///
+    /// Returns `true` if a hatch occurred — i.e. the breeding slot was
+    /// empty and the digitama deck had at least one card.  Returns `false`
+    /// if the breeding slot was already occupied or the digitama deck was
+    /// empty.
+    ///
+    /// No `PermanentHandle` is returned: breeding-area permanents are
+    /// addressed separately from battle-area permanents and do not use
+    /// the same handle type.
+    pub fn hatch(&mut self, player: PlayerId) -> bool {
+        self.game.hatch(player)
     }
 }
 
@@ -344,5 +1035,14 @@ mod tests {
         assert_eq!(ctx.memory(), 3);
         ctx.lose_memory(2);
         assert_eq!(ctx.memory(), 1);
+    }
+
+    #[test]
+    fn play_token_unknown_name_returns_none() {
+        let db = min_db();
+        let deck = vec!["BT1-001".to_string(); 10];
+        let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
+        let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+        assert!(ctx.play_token(0, "no-such-token-lol").is_none());
     }
 }

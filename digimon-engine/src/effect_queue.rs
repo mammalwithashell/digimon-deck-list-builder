@@ -200,6 +200,13 @@ impl Game {
     /// Collect effects for a single permanent. Applies the same timing +
     /// flag filter as the legacy `fire_*` loops so enqueue is a drop-in
     /// replacement.
+    ///
+    /// Phase 8 Task 4: after the top card's own effects are collected, the
+    /// host's `linked_cards` are scanned for `.linked()` effects at the same
+    /// timing. A sideways-inherited effect fires attributed to the host's
+    /// controller and source-permanent, but with `source_card` pointing at
+    /// the linked card so the re-lookup in `run_queued_effect_inner` finds
+    /// the right script.
     fn enqueue_from_permanent(&mut self, timing: EffectTiming, handle: PermanentHandle) {
         let Some(perm) = self
             .players
@@ -212,27 +219,161 @@ impl Game {
         let card_id = top.card_id(&self.card_data).to_string();
         let source_card = top.handle();
 
-        let Some(effects) = self.effects_for_card(&card_id, source_card) else {
-            return;
-        };
-
         let tp = self.turn_player();
         let is_turn_player = handle.player == tp;
 
-        for (slot, effect) in effects.iter().enumerate() {
-            if !timing_flag_matches(effect, timing) {
-                continue;
+        // Defensive guard — not reachable through current dispatch paths but
+        // prevents future double-enqueue if a caller fires a timing directly on
+        // a Training permanent with an effect authored .inherited(). Today no
+        // such card pattern exists; see Phase 8 Task 5 design for rationale.
+        let skip_inherited = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|p| matches!(p.option_state, crate::permanent::OptionState::Training { .. }))
+            .unwrap_or(false);
+
+        if let Some(effects) = self.effects_for_card(&card_id, source_card) {
+            for (slot, effect) in effects.iter().enumerate() {
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                if skip_inherited && effect.inherited {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card,
+                    source_permanent: Some(handle),
+                    controller: handle.player,
+                    timing,
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: card_id.clone(),
+                });
             }
-            self.effect_queue.push_back(QueuedEffect {
-                source_card,
-                source_permanent: Some(handle),
-                controller: handle.player,
-                timing,
-                effect_slot: slot as u8,
-                is_optional: effect.optional,
-                is_turn_player,
-                card_id: card_id.clone(),
-            });
+        }
+
+        // Phase 8 Task 4: sideways inheritance from linked cards. Snapshot
+        // linked-card identity first to drop the `perm` borrow before
+        // iterating (effects_for_card borrows &self).
+        let linked_sources: Vec<(String, crate::card_source::CardHandle)> = {
+            let perm = self
+                .players
+                .get(handle.player as usize)
+                .and_then(|p| p.battle_area.get(handle.index as usize));
+            match perm {
+                Some(p) => p
+                    .linked_cards
+                    .iter()
+                    .map(|c| (c.card_id(&self.card_data).to_string(), c.handle()))
+                    .collect(),
+                None => Vec::new(),
+            }
+        };
+        for (linked_card_id, linked_source) in linked_sources {
+            let Some(effects) = self.effects_for_card(&linked_card_id, linked_source) else {
+                continue;
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if !effect.linked {
+                    continue;
+                }
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card: linked_source,
+                    source_permanent: Some(handle),
+                    controller: handle.player,
+                    timing,
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: linked_card_id.clone(),
+                });
+            }
+        }
+
+        // Phase 8 Task 5 — Training sideways inheritance.
+        //
+        // Scope note (v1): this scan fires on every same-owner permanent's timing
+        // dispatch. The spec-intended scope is narrower — Training effects should
+        // inherit ONLY to the breeding-area permanent, firing on breeding's own
+        // timings. But the engine currently has no TriggerSource::BreedingArea
+        // (breeding permanents don't dispatch timings), so the broad scope is a
+        // pragmatic interim.
+        //
+        // TODO(phase-8-refinement): once breeding-area timing dispatch exists,
+        // tighten this scan to gate on the source permanent being in the breeding
+        // area (or use a new TriggerSource::BreedingArea). Current broad scope
+        // will cause Training .inherited() effects to apply to all of owner's
+        // field, which is incorrect for printed Training cards. File as engine
+        // gap if a Training card ships before the refinement.
+        //
+        // When any permanent the owner controls fires a timing, also scan
+        // the owner's battle_area for `OptionState::Training` permanents
+        // and include their `inherited` effects at the same timing. The
+        // training-card's permanent is never the source_permanent here —
+        // source_permanent stays as the scanning perm (e.g. the hatched
+        // digimon) so effect scripts can read the target via the normal
+        // `ctx.source_permanent` path. Skip when the scanning perm is
+        // itself a Training permanent to avoid self-attribution loops.
+        //
+        // Skipping the scan when `self_is_training` keeps Training's own
+        // OnTrainingTrash firing single-shot from `move_from_breeding`'s
+        // direct `TriggerSource::Permanent(training_handle)` dispatch.
+        let self_is_training = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|p| matches!(p.option_state, crate::permanent::OptionState::Training { .. }))
+            .unwrap_or(false);
+        if !self_is_training {
+            let training_sources: Vec<(String, crate::card_source::CardHandle)> = {
+                let p = match self.players.get(handle.player as usize) {
+                    Some(p) => p,
+                    None => return,
+                };
+                p.battle_area
+                    .iter()
+                    .filter_map(|perm| {
+                        if matches!(
+                            perm.option_state,
+                            crate::permanent::OptionState::Training { .. }
+                        ) {
+                            let top = perm.top_card();
+                            Some((top.card_id(&self.card_data).to_string(), top.handle()))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            };
+            for (training_card_id, training_source) in training_sources {
+                let Some(effects) = self.effects_for_card(&training_card_id, training_source)
+                else {
+                    continue;
+                };
+                for (slot, effect) in effects.iter().enumerate() {
+                    if !effect.inherited {
+                        continue;
+                    }
+                    if !timing_flag_matches(effect, timing) {
+                        continue;
+                    }
+                    self.effect_queue.push_back(QueuedEffect {
+                        source_card: training_source,
+                        source_permanent: Some(handle),
+                        controller: handle.player,
+                        timing,
+                        effect_slot: slot as u8,
+                        is_optional: effect.optional,
+                        is_turn_player,
+                        card_id: training_card_id.clone(),
+                    });
+                }
+            }
         }
     }
 
@@ -260,6 +401,18 @@ impl Game {
     /// effect removed from the registry, etc.) — same tolerance the legacy
     /// `fire_*` loops had.
     fn run_queued_effect(&mut self, qe: QueuedEffect) {
+        // Set the effect-source attribution for replacement-cause inference.
+        // Saved on entry, restored on exit — supports nested drains (an
+        // effect queues another effect that recursively drains before this
+        // one returns).
+        let prev_effect_source = self.effect_source_player;
+        self.effect_source_player = Some(qe.controller);
+        let out = self.run_queued_effect_inner(qe);
+        self.effect_source_player = prev_effect_source;
+        out
+    }
+
+    fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
         // Source permanent may have been deleted by a prior effect in this
         // batch. Skip silently — matches Python behavior.
         if let Some(perm_handle) = qe.source_permanent {
@@ -272,8 +425,29 @@ impl Game {
             };
             // Also skip if the specific source card has been shuffled out
             // of the top-card slot (e.g. permanent digivolved mid-batch).
-            // The card_index on the top card must match what we queued.
-            if perm.top_card().card_index != qe.source_card.0 {
+            // Phase 8 Task 4: a sideways-inherited effect's source_card is a
+            // card in `linked_cards`, not the top card — accept either.
+            // Phase 8 Task 5: a Training-sideways effect's source_card lives
+            // on a different `OptionState::Training` permanent the same
+            // owner controls; scan the owner's battle_area for it.
+            let top_matches = perm.top_card().card_index == qe.source_card.0;
+            let linked_matches = perm
+                .linked_cards
+                .iter()
+                .any(|c| c.card_index == qe.source_card.0);
+            let training_matches = self
+                .players
+                .get(perm_handle.player as usize)
+                .map(|p| {
+                    p.battle_area.iter().any(|pp| {
+                        matches!(
+                            pp.option_state,
+                            crate::permanent::OptionState::Training { .. }
+                        ) && pp.top_card().card_index == qe.source_card.0
+                    })
+                })
+                .unwrap_or(false);
+            if !top_matches && !linked_matches && !training_matches {
                 return;
             }
         }
@@ -306,6 +480,31 @@ impl Game {
                 }
             }
         }
+        // Note: pay_cost_fn is NOT gated by skip_condition. For SecuritySkill
+        // timing, pay_cost_fn still fires (intentional — pay-costs are
+        // orthogonal to the condition-skipping behavior for security effects).
+        //
+        // Phase 5 Task 3: pay-cost hook — fires after condition passes, before
+        // process. Mirrors the condition-check pattern above: borrow
+        // `&effect.pay_cost_fn` read-only, construct a fresh `EffectContext`
+        // for the mutable call, then drop both before the process block.
+        //
+        // v1 constraint: pay_cost_fn must be synchronous. Installing a
+        // PendingSelection inside the closure is undefined behavior for v1;
+        // cards needing selection-gated pay-costs should fold the selection
+        // into `process` instead. See Phase 5 non-goals.
+        if let Some(pay_cost) = &effect.pay_cost_fn {
+            let mut ctx = EffectContext::new(
+                self,
+                qe.source_card,
+                qe.source_permanent,
+                qe.controller,
+            );
+            if !pay_cost(&mut ctx) {
+                return; // cost not paid; skip process (silent abort, mirrors failed condition)
+            }
+        }
+
         if let Some(process) = &effect.process {
             let mut ctx = EffectContext::new(
                 self,
@@ -478,7 +677,71 @@ impl Game {
         if self.pending_selection.is_none() {
             self.advance_security_resolution();
         }
+        // Phase 8 Task 2: re-enter Option dispose if the resolved selection
+        // was parked inside an OptionMain body. Standard Options trash after
+        // the body finishes; Delay/Link/Training hook here in Tasks 3-5.
+        if self.pending_selection.is_none() {
+            self.advance_pending_option();
+        }
         Ok(())
+    }
+
+    /// Post-drain Option resolution hook, invoked from
+    /// `resolve_generic_selection` after the effect queue is fully drained.
+    ///
+    /// Only the `MainEffectDrain` phase dispatches through this hook: when an
+    /// OptionMain body parks a selection, this function is re-entered after
+    /// selection resolution to commit the Option's disposal (trash, or subtype
+    /// branch via `dispose_option`).
+    ///
+    /// Other phases are pass-through:
+    /// - `LinkSelectHost`: host-select unwind happens in the
+    ///   `install_link_host_selection` callback directly (calls
+    ///   `attach_linked_card`). The arm here exists only to prevent silent
+    ///   drops if a future path accidentally routes through advance.
+    /// - `Disposing`: populated by Task 6 (WhenWouldBeTrashed replacement
+    ///   window for Option self-trash).
+    /// - `Done`: terminal.
+    fn advance_pending_option(&mut self) {
+        let Some(pending) = self.pending_option.as_ref() else { return };
+        if !self.effect_queue.is_empty() {
+            return;
+        }
+        match pending.resolution_phase {
+            crate::selection::OptionResolutionPhase::MainEffectDrain => {
+                // Dispatch on the card's subtype flags. Standard → trash;
+                // Delay → park on field (Task 3). Link / Training land in
+                // Tasks 4-5 via the same dispatcher.
+                self.dispose_option();
+                self.check_turn_end();
+            }
+            crate::selection::OptionResolutionPhase::LinkSelectHost => {
+                // Unwind happens in install_link_host_selection's callback
+                // (calls attach_linked_card directly). This arm exists to
+                // prevent silent drops if routing drifts; the normal flow
+                // doesn't reach here.
+            }
+            crate::selection::OptionResolutionPhase::Disposing => {
+                // Task 6: an optional `WhenWouldBeTrashed` replacement
+                // installed a PendingSelection during `dispose_option`'s
+                // Standard arm. Now that the selection has resolved, the
+                // accept-side callback wrote the outcome into
+                // `replacement_pending_outcome` (None if declined — meaning
+                // the original trash should proceed). Take the parked
+                // pending_option back and commit the outcome via the
+                // shared helper, then cleanup and advance the turn state.
+                let pending = self.pending_option.take().expect("parked by dispose_option");
+                let outcome = self
+                    .replacement_pending_outcome
+                    .take()
+                    .unwrap_or(crate::replacement::ReplacementOutcome::None);
+                self.commit_option_trash_outcome(pending, outcome);
+                self.check_turn_end();
+            }
+            crate::selection::OptionResolutionPhase::Done => {
+                // Terminal; no-op.
+            }
+        }
     }
 }
 

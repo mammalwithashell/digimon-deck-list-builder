@@ -51,11 +51,12 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build desktop frontend
+      - name: Build frontend (desktop mode, prod API baked in)
         working-directory: frontend
         env:
           VITE_BUILD_TARGET: desktop
-        run: npm run build
+          VITE_API_URL: https://inbetweentheatre.duckdns.org
+        run: npm run build -- --mode desktop
 
       - name: Install tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
@@ -104,7 +105,13 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#desktop-v}"
           ENGINE_COMMIT=$(git rev-parse --short HEAD)
+          # Prefer the tag annotation (`git tag -a -m "..."`); fall back to
+          # the templated .github/RELEASE_NOTES.md (with {{VERSION}} replaced)
+          # which is the pre-existing convention from the prior workflow.
           NOTES=$(git tag -l --format='%(contents)' "$TAG")
+          if [ -z "$NOTES" ] && [ -f .github/RELEASE_NOTES.md ]; then
+            NOTES=$(sed "s/{{VERSION}}/$VERSION/g" .github/RELEASE_NOTES.md)
+          fi
           if [ -z "$NOTES" ]; then NOTES="Release $VERSION"; fi
           # Default min_version to X.Y.0 for an X.Y.Z[-suffix] tag.
           # Bump via PATCH /admin/releases/{id} {"min_version": "..."} afterward

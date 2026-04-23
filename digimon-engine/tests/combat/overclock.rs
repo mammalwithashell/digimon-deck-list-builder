@@ -29,6 +29,7 @@ fn make_digimon(id: &str, dp: i32) -> CardData {
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
+        keywords: Vec::new(),
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

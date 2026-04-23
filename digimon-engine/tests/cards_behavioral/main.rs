@@ -8,7 +8,9 @@
 //! companion tests covering the positive and negative branch of any
 //! conditional effect).
 
+mod de_digivolve;
 mod test_cards;
+mod tokens;
 
 // Sample template for forthcoming hand-written production card tests.
 // Currently ignored pending the engine gaps that BT17-015 depends on.

@@ -278,12 +278,7 @@ fn test_003_persistent_modifier_does_not_expire() {
     // Add a permanent +500 manually.
     r.game.modifiers.add(
         h,
-        digimon_engine::modifiers::ModifierEntry {
-            modifier: ModifierType::ChangeDp,
-            value: 500,
-            expiry: Expiry::Permanent,
-            source_player: 0,
-        },
+        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::ChangeDp, 500, Expiry::Permanent, 0),
     );
     assert_eq!(r.dp_of(h), Some(2500));
 
