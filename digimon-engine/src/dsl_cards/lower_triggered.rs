@@ -8,7 +8,7 @@ use digimon_dsl::compiled::{CompiledScope, CompiledTriggeredClause};
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
-use crate::dsl_cards::step::run_step;
+use crate::dsl_cards::step::run_steps;
 use crate::dsl_cards::timing_map::compiled_timing_to_engine;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::EffectTiming;
@@ -70,9 +70,11 @@ pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> 
 
         builder = builder.process(move |ctx| {
             let mut bindings = Bindings::new();
-            for step in process_steps.iter() {
-                run_step(step, ctx, &mut bindings);
-            }
+            // Phase 2b: `run_steps` drives the slice and yields control to
+            // a selection step if one is encountered — installing the tail
+            // as the selection's resolve callback so it continues once the
+            // player picks a target.
+            run_steps(process_steps.as_slice(), ctx, &mut bindings);
         });
 
         out.push(builder.build());
