@@ -22,3 +22,4 @@ mod real_cards_json;
 mod embedded_registry;
 mod pack_file_loader;
 mod phase1b_exit;
+mod phase1c_scaffold;
