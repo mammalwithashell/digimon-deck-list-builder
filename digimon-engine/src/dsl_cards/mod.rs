@@ -7,6 +7,7 @@
 pub mod bindings;
 pub mod lower_aura;
 pub mod lower_cost_reduction;
+pub mod lower_delay;
 pub mod lower_flood_gate;
 pub mod lower_grant_keyword;
 pub mod lower_partition;
@@ -179,6 +180,21 @@ impl CardEffect for DslCardEffect {
                             active_when.clone(),
                             sources.clone(),
                             exclude_cause.clone(),
+                        ));
+                    }
+                    CompiledDeclarativeClause::Delay {
+                        scope,
+                        active_when,
+                        trigger,
+                        process,
+                        ..
+                    } => {
+                        out.push(lower_delay::lower(
+                            card,
+                            *scope,
+                            active_when.clone(),
+                            *trigger,
+                            process.clone(),
                         ));
                     }
                     _ => {
