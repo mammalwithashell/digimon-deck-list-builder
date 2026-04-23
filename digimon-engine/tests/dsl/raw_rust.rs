@@ -94,3 +94,53 @@ fn raw_rust_step_invokes_registered_fn() {
     }
     assert!(CALLED.load(Ordering::SeqCst));
 }
+
+#[test]
+fn raw_rust_declarative_clause_returns_fn_produced_effects() {
+    use digimon_dsl::compiled::{
+        CompiledCard, CompiledCardKind, CompiledClause, CompiledDeclarativeClause,
+        CompiledScope, CompiledTiming,
+    };
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::dsl_cards::DslCardEffect;
+    use digimon_engine::effect::{CardEffect, Effect};
+    use std::sync::Arc;
+
+    let mut reg = EngineRawRustRegistry::new();
+    reg.register_declarative("emits_onplay", |card: CardHandle| {
+        vec![Effect::on_play(card).name("raw").process(|_| {}).build()]
+    });
+    let reg = Arc::new(reg);
+
+    let compiled = CompiledCard {
+        card: "F".into(),
+        name: "F".into(),
+        kind: CompiledCardKind::Digimon,
+        level: None,
+        color: vec![],
+        cost: None,
+        dp: None,
+        traits: vec![],
+        form: None,
+        attribute: None,
+        ace_overflow: None,
+        identity: None,
+        alt_paths: vec![],
+        effects: vec![CompiledClause::Declarative(
+            CompiledDeclarativeClause::RawRust {
+                fn_name: "emits_onplay".into(),
+                triggers: vec![CompiledTiming::OnPlay],
+                scope: CompiledScope::FaceUp,
+                summary: None,
+                summary_key: None,
+            },
+        )],
+    };
+    let dsl = DslCardEffect::with_raw_registry(Arc::new(compiled), reg);
+    let effects = <DslCardEffect as CardEffect>::effects(&dsl, CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert_eq!(
+        effects[0].timing,
+        digimon_engine::enums::EffectTiming::OnPlay,
+    );
+}

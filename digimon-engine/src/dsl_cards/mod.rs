@@ -161,6 +161,13 @@ impl CardEffect for DslCardEffect {
                             out.push(e);
                         }
                     }
+                    CompiledDeclarativeClause::RawRust { fn_name, .. } => {
+                        if let Some(r) = &self.raw {
+                            if let Some(f) = r.declarative_fn(fn_name) {
+                                out.extend(f(card));
+                            }
+                        }
+                    }
                     _ => {
                         // Other declarative clauses lowered in Tasks 7-8+.
                     }
