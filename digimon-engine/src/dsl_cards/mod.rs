@@ -4,6 +4,7 @@
 //! `Effect`s at `effects()` time. Triggered clauses, identity, alt_paths,
 //! and raw_rust are skipped in Phase 1c (Phase 2 owns them).
 
+pub mod lower_grant_keyword;
 pub mod modifier_map;
 pub mod predicate;
 
@@ -29,9 +30,31 @@ impl DslCardEffect {
 }
 
 impl CardEffect for DslCardEffect {
-    fn effects(&self, _card: CardHandle) -> Vec<Effect> {
-        // Phase 1c: declarative clauses only. Empty for now; per-clause
-        // lowering lands in Tasks 4-8.
-        Vec::new()
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
+
+        let mut out = Vec::new();
+        for clause in &self.compiled.effects {
+            match clause {
+                CompiledClause::Triggered(_) => {
+                    // Phase 1c: triggered clauses are not lowered.
+                }
+                CompiledClause::Declarative(decl) => match decl {
+                    CompiledDeclarativeClause::GrantKeyword {
+                        keyword, value, scope, ..
+                    } => {
+                        if let Some(e) =
+                            lower_grant_keyword::lower(card, keyword, *value, *scope)
+                        {
+                            out.push(e);
+                        }
+                    }
+                    _ => {
+                        // Other declarative clauses lowered in Tasks 6-8.
+                    }
+                },
+            }
+        }
+        out
     }
 }
