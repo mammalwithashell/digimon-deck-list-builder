@@ -1,13 +1,13 @@
-//! Predicate evaluator. Phase 1c: leaf fields only; combinators + existentials
-//! land in Task 3.
+//! Predicate evaluator. Phase 1c Task 3: leaf fields + combinators + existentials.
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledColor, CompiledPlayerRef, CompiledPredicate, CompiledZone,
+    CompiledCardKind, CompiledColor, CompiledExistential, CompiledPlayerRef, CompiledPredicate,
+    CompiledZone,
 };
 
 use crate::card_source::CardHandle;
 use crate::effect_context::EffectReadContext;
-use crate::enums::{CardColor, CardKind};
+use crate::enums::{CardColor, CardKind, PlayerId};
 use crate::permanent::PermanentHandle;
 
 /// The subject a predicate is applied to.
@@ -57,10 +57,87 @@ pub fn eval_predicate(
         }
     }
 
+    // Combinators — short-circuit on first failure.
+    for child in &pred.all_of {
+        if !eval_predicate(child, rctx, subject) {
+            return false;
+        }
+    }
+    if !pred.any_of.is_empty() {
+        let any_match = pred.any_of.iter().any(|c| eval_predicate(c, rctx, subject));
+        if !any_match {
+            return false;
+        }
+    }
+    for child in &pred.none_of {
+        if eval_predicate(child, rctx, subject) {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.not {
+        if eval_predicate(inner, rctx, subject) {
+            return false;
+        }
+    }
+
+    // Existentials — scan battle areas.
+    if let Some(ex) = &pred.any_permanent {
+        if !existential_any(ex, rctx) {
+            return false;
+        }
+    }
+    if let Some(ex) = &pred.no_permanent {
+        if existential_any(ex, rctx) {
+            return false;
+        }
+    }
+    if let Some(ex) = &pred.all_permanents {
+        if !existential_all(ex, rctx) {
+            return false;
+        }
+    }
+
     match subject {
         PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card),
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h),
         PredicateSubject::None => eval_no_subject_fields(pred),
+    }
+}
+
+fn existential_any(ex: &CompiledExistential, rctx: &EffectReadContext<'_>) -> bool {
+    for p in existential_players(ex.of, rctx) {
+        let n = rctx.game.player(p).battle_area.len();
+        for i in 0..n {
+            let handle = PermanentHandle { player: p, index: i as u8 };
+            if eval_predicate(&ex.predicate, rctx, PredicateSubject::Permanent(handle)) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn existential_all(ex: &CompiledExistential, rctx: &EffectReadContext<'_>) -> bool {
+    let mut any_seen = false;
+    for p in existential_players(ex.of, rctx) {
+        let n = rctx.game.player(p).battle_area.len();
+        for i in 0..n {
+            any_seen = true;
+            let handle = PermanentHandle { player: p, index: i as u8 };
+            if !eval_predicate(&ex.predicate, rctx, PredicateSubject::Permanent(handle)) {
+                return false;
+            }
+        }
+    }
+    any_seen
+}
+
+fn existential_players(of: CompiledPlayerRef, rctx: &EffectReadContext<'_>) -> Vec<PlayerId> {
+    match of {
+        CompiledPlayerRef::You => vec![rctx.player],
+        CompiledPlayerRef::Opponent => vec![rctx.opponent_id()],
+        CompiledPlayerRef::Active => vec![rctx.game.turn_player()],
+        CompiledPlayerRef::Any => (0..rctx.game.players.len() as PlayerId).collect(),
     }
 }
 
