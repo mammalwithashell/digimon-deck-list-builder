@@ -14,8 +14,10 @@ pub mod predicate;
 use std::sync::Arc;
 
 use digimon_dsl::compiled::CompiledCard;
+use digimon_dsl::CardRegistry as DslCardRegistry;
 
 use crate::card_source::CardHandle;
+use crate::cards::CardEffectRegistry;
 use crate::effect::{CardEffect, Effect};
 
 pub struct DslCardEffect {
@@ -147,5 +149,20 @@ impl CardEffect for DslCardEffect {
             }
         }
         out
+    }
+}
+
+/// Register every card in `dsl_registry` into `effect_registry` as a
+/// `DslCardEffect`. Existing entries (e.g. hand-written TEST-* cards)
+/// with the same `card_id` are replaced — DSL is authoritative once a
+/// card migrates (CLAUDE.md rule 21: cards migrate one direction only,
+/// Python → Rust → DSL).
+pub fn register_dsl_cards(
+    effect_registry: &mut CardEffectRegistry,
+    dsl_registry: &DslCardRegistry,
+) {
+    for (card_id, compiled) in dsl_registry.iter() {
+        let dsl_effect = Arc::new(DslCardEffect::new(Arc::new(compiled.clone())));
+        effect_registry.insert(card_id, dsl_effect);
     }
 }

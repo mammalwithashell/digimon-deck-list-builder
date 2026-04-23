@@ -303,3 +303,27 @@ fn ace_overflow_is_none_when_unset() {
     let dsl = DslCardEffect::new(Arc::new(fixture_grant_keyword("Blocker", None)));
     assert_eq!(dsl.ace_overflow(), None);
 }
+
+// ── Task 10: register_dsl_cards + build_registry ─────────────────────────────
+
+#[test]
+fn register_dsl_cards_inserts_every_pack_card_into_registry() {
+    let pack = digimon_engine::dsl_registry::from_embedded()
+        .expect("embedded pack loads");
+    let mut effects = digimon_engine::cards::CardEffectRegistry::new();
+    digimon_engine::dsl_cards::register_dsl_cards(&mut effects, &pack);
+    assert_eq!(effects.len(), pack.len());
+    for (card_id, _) in pack.iter() {
+        assert!(
+            effects.get(card_id).is_some(),
+            "missing DSL registration for {card_id}"
+        );
+    }
+}
+
+#[test]
+fn build_registry_contains_both_dsl_and_hand_written_cards() {
+    let registry = digimon_engine::cards::build_registry();
+    assert!(registry.get("TEST-001").is_some(), "hand-written TEST-001 present");
+    assert!(registry.get("ST2-13").is_some(), "DSL-authored ST2-13 present");
+}
