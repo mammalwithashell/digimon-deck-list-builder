@@ -6,11 +6,15 @@
 
 **Architecture:** The key constraint is that `build.rs` runs before `digimon-engine` compiles, so it can't call into `digimon-engine`'s own DSL code. The clean fix is a leaf crate `digimon-dsl/` at the workspace root holding all DSL types + loader + validator + compile + pack serialization. `digimon-engine` declares `digimon-dsl` as both a runtime dependency (for the `RealCardDataAdapter` bridge) and a build-dependency (so `build.rs` can invoke the compile pipeline). `tools/dsl-lint` and `tools/dsl-schema-export` point at `digimon-dsl` directly. `digimon-engine/src/dsl_bridge.rs` holds the one piece that needs both worlds: the `RealCardDataAdapter` that maps `crate::card_data::CardData` to `digimon_dsl::CardDataDb`.
 
-**Tech Stack:** `rkyv = "0.7"` for zero-copy deserialization of compiled card packs. Everything else carried over from Phase 0/1a.
+**Tech Stack:** `bincode = "1.3"` for compact serialization of compiled card packs. (Originally specified rkyv; pivoted to bincode during execution because rkyv 0.7's `Archive` derive cannot handle self-referential recursive types like `Vec<CompiledStep>` without a cycle-breaking workaround that defeats the zero-copy benefit. Bincode handles recursive `serde::Deserialize` trivially; the ~20 ms full-pack deserialize at boot is well inside the 100 ms budget given ~4,000 cards × ~4 clauses per card.) Spec §7a.3 explicitly called out bincode as the fallback path.
 
 **Spec reference:** `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md` §§ 4 (evaluator architecture), 7a (distribution), 7a.2 (runtime updates). Phase 0 + 1a plans + their close-out messages establish the ground state.
 
 **Phase 1a starting commit:** `32694ad3` (phase0_exit uses real adapter).
+
+**Mid-execution revisions (applied verbally during run):**
+- **Serialization:** bincode instead of rkyv (see Tech Stack above). Every `Archive`/`Serialize`/`Deserialize` rkyv derive in this plan becomes a regular `serde::{Serialize, Deserialize}` derive. `#[archive(check_bytes)]` attributes deleted. Calls like `rkyv::to_bytes` / `rkyv::from_bytes` become `bincode::serialize` / `bincode::deserialize`. No `archived_from_bytes` zero-copy view — bincode owns its deserialized output.
+- **Task 9 module rename:** `digimon-engine/src/card_registry.rs` is taken by main's tensor-indexing registry (PR #341). Rename the Phase 1b T9 module to `digimon-engine/src/dsl_registry.rs`. Update `digimon_engine::card_registry::from_embedded()` → `digimon_engine::dsl_registry::from_embedded()` throughout (Tasks 9, 10, 12).
 
 ---
 
