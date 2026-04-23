@@ -287,3 +287,19 @@ fn flood_gate_unknown_modifier_skips_emission() {
     )));
     assert!(dsl.effects(CardHandle(0)).is_empty());
 }
+
+// ── Task 9: ace_overflow accessor ────────────────────────────────────────────
+
+#[test]
+fn ace_overflow_reads_from_compiled_card() {
+    let mut c = fixture_grant_keyword("Blocker", None);
+    c.ace_overflow = Some(-5);
+    let dsl = DslCardEffect::new(Arc::new(c));
+    assert_eq!(dsl.ace_overflow(), Some(-5));
+}
+
+#[test]
+fn ace_overflow_is_none_when_unset() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_grant_keyword("Blocker", None)));
+    assert_eq!(dsl.ace_overflow(), None);
+}

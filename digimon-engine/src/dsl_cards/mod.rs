@@ -30,6 +30,13 @@ impl DslCardEffect {
     pub fn compiled(&self) -> &CompiledCard {
         &self.compiled
     }
+
+    /// Return the ACE overflow threshold for this card, if any.
+    /// Engine ACE integration reads this value to check whether a
+    /// Digimon can overflow memory during an attack.
+    pub fn ace_overflow(&self) -> Option<i32> {
+        self.compiled.ace_overflow
+    }
 }
 
 impl CardEffect for DslCardEffect {
