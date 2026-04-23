@@ -68,7 +68,7 @@ impl CardEffect for DslCardEffect {
         'clause: for clause in &self.compiled.effects {
             match clause {
                 CompiledClause::Triggered(clause) => {
-                    out.extend(lower_triggered::lower(card, clause));
+                    out.extend(lower_triggered::lower(card, clause, self.raw.clone()));
                 }
                 CompiledClause::Declarative(decl) => match decl {
                     CompiledDeclarativeClause::GrantKeyword {

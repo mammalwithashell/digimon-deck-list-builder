@@ -1,4 +1,5 @@
 use digimon_engine::dsl_cards::raw_rust::EngineRawRustRegistry;
+use std::sync::Arc as StdArc;
 
 #[test]
 fn empty_registry_reports_no_fns() {
@@ -51,4 +52,45 @@ fn dsl_card_effect_accepts_raw_registry_and_stores_arc() {
     };
     let dsl = DslCardEffect::with_raw_registry(Arc::new(compiled), reg.clone());
     assert!(dsl.raw_registry().and_then(|r: &EngineRawRustRegistry| r.step_fn("noop")).is_some());
+}
+
+#[test]
+fn raw_rust_step_invokes_registered_fn() {
+    use digimon_dsl::compiled::CompiledStep;
+    use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+    use digimon_engine::dsl_cards::bindings::Bindings;
+    use digimon_engine::effect_context::EffectContext;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    static CALLED: AtomicBool = AtomicBool::new(false);
+    CALLED.store(false, Ordering::SeqCst);
+
+    let mut reg = EngineRawRustRegistry::new();
+    reg.register_step("marker", |_ctx| {
+        CALLED.store(true, Ordering::SeqCst);
+    });
+    let reg = StdArc::new(reg);
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("F", "F"))
+        .hand(0, &["F"])
+        .build();
+    let card = runner.game.players[0].hand[0].handle();
+
+    let step = CompiledStep::RawRust {
+        fn_name: "marker".into(),
+        consumes: vec![],
+        binds: vec![],
+    };
+    let mut bindings = Bindings::new();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
+        digimon_engine::dsl_cards::step::run_step_with_raw(
+            &step,
+            &mut ctx,
+            &mut bindings,
+            Some(reg.as_ref()),
+        );
+    }
+    assert!(CALLED.load(Ordering::SeqCst));
 }

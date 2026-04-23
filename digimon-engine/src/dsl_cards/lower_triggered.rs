@@ -8,12 +8,17 @@ use digimon_dsl::compiled::{CompiledScope, CompiledTriggeredClause};
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
-use crate::dsl_cards::step::run_step;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::step::run_step_with_raw;
 use crate::dsl_cards::timing_map::compiled_timing_to_engine;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::EffectTiming;
 
-pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> {
+pub fn lower(
+    card: CardHandle,
+    clause: &CompiledTriggeredClause,
+    raw: Option<Arc<EngineRawRustRegistry>>,
+) -> Vec<Effect> {
     let mut out = Vec::new();
     for t in &clause.when {
         let Some(engine_timing) = compiled_timing_to_engine(*t) else {
@@ -23,6 +28,7 @@ pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> 
         let process_steps = Arc::new(clause.process.clone());
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
+        let raw_clone = raw.clone();
         let scope = clause.scope;
         let optional = clause.optional;
         let once_per_turn = clause.once_per_turn;
@@ -71,7 +77,7 @@ pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> 
         builder = builder.process(move |ctx| {
             let mut bindings = Bindings::new();
             for step in process_steps.iter() {
-                run_step(step, ctx, &mut bindings);
+                run_step_with_raw(step, ctx, &mut bindings, raw_clone.as_deref());
             }
         });
 
