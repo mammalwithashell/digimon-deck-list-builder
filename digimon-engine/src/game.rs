@@ -914,6 +914,38 @@ impl Game {
         self.pending_attack.as_ref().map(|p| p.attacker)
     }
 
+    /// Gate predicate for the `<Progress>` keyword.
+    ///
+    /// Returns `true` when:
+    ///   - `target` has `Keyword::Progress` (printed or granted), AND
+    ///   - `target` is the current attacker (`current_attacker() == Some(target)`), AND
+    ///   - `source` is `Some(pid)` where `pid != target.player`.
+    ///
+    /// Returns `false` if `source` is `None` (rule-driven mutations: battle,
+    /// cost, rule checks). Opponent *effects* are gated; battle damage and
+    /// cost-triggered cleanup are not.
+    ///
+    /// Callers: selection filters in `effect_context::selections`. Future
+    /// Phase B work wires this into `delete_permanent_with_effects` /
+    /// return-to-hand / negative-DP `modifiers.add` paths.
+    pub fn progress_excludes(
+        &self,
+        target: PermanentHandle,
+        source: Option<crate::enums::PlayerId>,
+    ) -> bool {
+        let Some(src) = source else { return false };
+        if src == target.player {
+            return false;
+        }
+        if self.current_attacker() != Some(target) {
+            return false;
+        }
+        self.has_keyword(target, crate::enums::Keyword::Progress)
+            || self
+                .modifiers
+                .has(target, crate::enums::ModifierType::ImmunityToOpponentEffects)
+    }
+
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
 
     /// Enumerate a card's effects by asking the registry for its impl.
@@ -1256,5 +1288,89 @@ mod current_attacker_tests {
     fn current_attacker_is_none_outside_combat() {
         let r = DebugRunner::builder().add_card(card("A")).start();
         assert!(r.game.current_attacker().is_none());
+    }
+
+    #[test]
+    fn progress_excludes_only_when_attacking_and_opponent_sourced() {
+        use crate::enums::{Expiry, Keyword};
+        let mut r = DebugRunner::builder()
+            .add_card(CardData {
+                keywords: vec![Keyword::Progress],
+                ..card("PROG")
+            })
+            .add_card(card("OPP"))
+            .start();
+        let progress = r.place_on_field(0, "PROG", None);
+        let _opp_perm = r.place_on_field(1, "OPP", None);
+
+        // Case 1: not attacking → never excluded.
+        assert!(
+            !r.game.progress_excludes(progress, Some(1)),
+            "not-attacking carrier: no exclusion"
+        );
+
+        // Case 2: attacking, but effect is own-sourced → no exclusion.
+        //
+        // Simulate an in-flight attack by inserting a PendingAttack.
+        use crate::selection::{AttackTarget, PendingAttack};
+        r.game.pending_attack = Some(PendingAttack {
+            attacker: progress,
+            original_target: AttackTarget::Player(1),
+            effective_target: AttackTarget::Player(1),
+            is_blocked: false,
+            blocker: None,
+            is_vortex: false,
+            is_overclock: false,
+            cancelled: false,
+            battle_occurred: false,
+            return_phase: crate::enums::GamePhase::Main,
+            state: crate::selection::AttackState::Declared,
+            counter_depth: 0,
+        });
+        assert!(
+            !r.game.progress_excludes(progress, Some(0)),
+            "own-sourced effect on own Progress: no exclusion"
+        );
+        assert!(
+            !r.game.progress_excludes(progress, None),
+            "no source player: no exclusion"
+        );
+
+        // Case 3: attacking + opponent-sourced → excluded.
+        assert!(
+            r.game.progress_excludes(progress, Some(1)),
+            "opponent-sourced effect on attacking Progress carrier: excluded"
+        );
+
+        // Clean up the fake attack state to avoid leaking into later tests.
+        r.game.pending_attack = None;
+
+        // Case 4: Progress granted via modifier also triggers.
+        let plain = r.place_on_field(0, "OPP", None);
+        assert!(!r.game.progress_excludes(plain, Some(1)));
+        r.game.modifiers.grant_keyword(
+            plain,
+            Keyword::Progress,
+            Expiry::EndOfTurn,
+            0,
+        );
+        r.game.pending_attack = Some(PendingAttack {
+            attacker: plain,
+            original_target: AttackTarget::Player(1),
+            effective_target: AttackTarget::Player(1),
+            is_blocked: false,
+            blocker: None,
+            is_vortex: false,
+            is_overclock: false,
+            cancelled: false,
+            battle_occurred: false,
+            return_phase: crate::enums::GamePhase::Main,
+            state: crate::selection::AttackState::Declared,
+            counter_depth: 0,
+        });
+        assert!(
+            r.game.progress_excludes(plain, Some(1)),
+            "modifier-granted Progress should gate the same"
+        );
     }
 }
