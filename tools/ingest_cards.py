@@ -20,6 +20,7 @@ from dataclasses import asdict
 # pulling the engine at API-fetch time when card_database.py isn't needed.
 
 CARDS_JSON = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "cards.json")
+CARD_OVERRIDES_JSON = os.path.join(os.path.dirname(__file__), "card_overrides.json")
 PRIORITY_SETS_TXT = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "scraper", "priority_sets.txt")
 
 COLOR_MAP = {
@@ -47,7 +48,7 @@ def parse_evo_costs(api_card):
     """Parse evolution costs from the API card data.
 
     Handles multiple evo costs (e.g. X-Antibody cards with 2+ evo lines).
-    The API provides evolution_cost, evolution_cost_2, etc.
+    The API provides evolution_cost, evolution_cost_2, evolution_cost_3.
 
     When evolution_color or evolution_level are missing from the API
     (common for newer sets), infers them from the card's own color and
@@ -56,17 +57,23 @@ def parse_evo_costs(api_card):
     """
     costs = []
     card_level = api_card.get("level")
-    card_color = api_card.get("color")
 
-    # Primary evo cost
-    evo_cost = api_card.get("evolution_cost")
-    evo_color = api_card.get("evolution_color")
-    evo_level = api_card.get("evolution_level")
+    # Primary + secondary + tertiary evo paths. Some tri-color cards
+    # (e.g. Ouryuken, Magnamon X-Antibody variants) have three.
+    for suffix, color_fallback_key in (
+        ("", "color"),
+        ("_2", "color2"),
+        ("_3", "color3"),
+    ):
+        evo_cost = api_card.get(f"evolution_cost{suffix}")
+        evo_color = api_card.get(f"evolution_color{suffix}")
+        evo_level = api_card.get(f"evolution_level{suffix}")
 
-    if evo_cost is not None and card_level and card_level >= 3:
-        # Infer missing color/level from card's own attributes
-        if not evo_color and card_color:
-            evo_color = card_color
+        if evo_cost is None or not card_level or card_level < 3:
+            continue
+
+        if not evo_color and api_card.get(color_fallback_key):
+            evo_color = api_card.get(color_fallback_key)
         if not evo_level and card_level:
             evo_level = card_level - 1
 
@@ -76,25 +83,6 @@ def parse_evo_costs(api_card):
                 "card_color": color_val,
                 "level": evo_level,
                 "memory_cost": evo_cost,
-            })
-
-    # Secondary evo cost (common for X-Antibody and dual-color cards)
-    evo_cost2 = api_card.get("evolution_cost_2")
-    evo_color2 = api_card.get("evolution_color_2")
-    evo_level2 = api_card.get("evolution_level_2")
-
-    if evo_cost2 is not None and card_level and card_level >= 3:
-        if not evo_color2 and api_card.get("color2"):
-            evo_color2 = api_card.get("color2")
-        if not evo_level2 and card_level:
-            evo_level2 = card_level - 1
-
-        if evo_color2 and evo_level2:
-            color_val2 = COLOR_MAP.get(evo_color2, 0)
-            costs.append({
-                "card_color": color_val2,
-                "level": evo_level2,
-                "memory_cost": evo_cost2,
             })
 
     return costs
@@ -183,12 +171,11 @@ def convert_card(api_card):
         card_index = 0
 
     colors = []
-    if api_card.get("color"):
-        c = COLOR_MAP.get(api_card["color"])
-        if c is not None:
-            colors.append(c)
-    if api_card.get("color2"):
-        c = COLOR_MAP.get(api_card["color2"])
+    for key in ("color", "color2", "color3"):
+        name = api_card.get(key)
+        if not name:
+            continue
+        c = COLOR_MAP.get(name)
         if c is not None and c not in colors:
             colors.append(c)
 
@@ -254,6 +241,48 @@ def save_cards_json(cards, cards_path):
     """Write cards dict to cards.json."""
     with open(cards_path, "w", encoding="utf-8") as f:
         json.dump(cards, f, indent=2, ensure_ascii=False)
+
+
+def load_card_overrides(path=None):
+    """Load the hand-maintained `card_overrides.json` sidecar.
+
+    The digimoncard.io API doesn't expose `color3` / `evolution_cost_3`
+    for every tri-color card (or gets them wrong for some sets), so this
+    file exists to correct known cases. Schema is
+    `{card_id: {field: value, ...}}` — any top-level cards.json field can
+    be overridden; the override values replace the ingest-produced ones
+    outright (no deep merge).
+    """
+    if path is None:
+        path = os.path.abspath(CARD_OVERRIDES_JSON)
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def apply_overrides(cards, overrides=None):
+    """Merge overrides into the in-memory cards dict.
+
+    Only fields present in each override entry are replaced; everything
+    else is left as-is. Overrides for unknown card_ids are skipped with
+    a warning (most likely a typo; surface the error rather than
+    silently ingesting an orphan entry).
+    """
+    if overrides is None:
+        overrides = load_card_overrides()
+    applied = 0
+    for cid, patch in overrides.items():
+        # Underscore-prefixed keys are meta/comments (e.g. `_comment`),
+        # not card IDs.
+        if cid.startswith("_"):
+            continue
+        if cid not in cards:
+            print(f"  WARNING: override for unknown card_id {cid!r} skipped")
+            continue
+        cards[cid].update(patch)
+        applied += 1
+    return applied
 
 
 def get_existing_set_ids(cards):
@@ -412,6 +441,9 @@ def bulk_ingest():
         if i < len(missing) - 1:
             time.sleep(1)
 
+    # Apply manual overrides (tri-color cards, API corrections) before save.
+    overrides_applied = apply_overrides(existing)
+
     # Save once at the end
     save_cards_json(existing, cards_path)
 
@@ -423,7 +455,7 @@ def bulk_ingest():
             sid = m.group(1)
             set_counts[sid] = set_counts.get(sid, 0) + 1
     print(f"\nDone. {len(existing)} total cards across {len(set_counts)} sets.")
-    print(f"Added {total_new} new cards.")
+    print(f"Added {total_new} new cards. Applied {overrides_applied} manual overrides.")
 
     # Warn about missing indices for new cards
     missing_indices = sum(1 for v in existing.values() if "index" not in v)
@@ -464,15 +496,22 @@ def backfill_xros_costs(cards_path=None):
         else:
             entry.pop("digixros_costs", None)
 
+    # Overrides run LAST so manual corrections win over both the API
+    # payload and the parser-derived fields above.
+    overrides_applied = apply_overrides(cards)
+
     save_cards_json(cards, cards_path)
-    return dna_count, digixros_count, len(cards)
+    return dna_count, digixros_count, len(cards), overrides_applied
 
 
 def main():
     # --backfill mode: regenerate dna_costs / digixros_costs from existing xros_req
     if len(sys.argv) >= 2 and sys.argv[1] == "--backfill":
-        dna_count, digixros_count, total = backfill_xros_costs()
-        print(f"Backfilled {total} cards: {dna_count} with dna_costs, {digixros_count} with digixros_costs")
+        dna_count, digixros_count, total, overrides_applied = backfill_xros_costs()
+        print(
+            f"Backfilled {total} cards: {dna_count} with dna_costs, "
+            f"{digixros_count} with digixros_costs, {overrides_applied} overrides applied"
+        )
         return
 
     # --bulk mode: ingest all priority sets
@@ -485,6 +524,7 @@ def main():
         set_id = sys.argv[2].upper()
         existing, cards_path = load_cards_json()
         existing = ingest_single_set(set_id, existing, cards_path)
+        apply_overrides(existing)
         save_cards_json(existing, cards_path)
 
         set_counts = {}
@@ -544,6 +584,7 @@ def main():
     # Load existing cards.json and merge (preserving index/norm_id)
     existing, cards_path = load_cards_json()
     merged = merge_set_into_cards(existing, new_cards, set_id)
+    apply_overrides(merged)
     save_cards_json(merged, cards_path)
 
     print(f"Wrote {len(merged)} total cards ({len(new_cards)} {set_id}) to {cards_path}")
