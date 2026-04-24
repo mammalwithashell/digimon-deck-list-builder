@@ -33,6 +33,30 @@ pub fn try_run(
             }
             true
         }
+        CompiledStep::Suspend { target } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                ctx.suspend(h);
+            }
+            true
+        }
+        CompiledStep::Unsuspend { target } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                ctx.unsuspend(h);
+            }
+            true
+        }
+        CompiledStep::ReturnToDeck { target, position, include_sources: _ } => {
+            // Phase 2c: `include_sources=true` is modelled in CompiledStep but engine
+            // API only supports the top-card-only form. When full-stack return lands
+            // (Phase 2d+), extend this arm.
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                let _ = ctx.return_to_deck(h, super::map_stack_position(*position));
+            }
+            true
+        }
         _ => false,
     }
 }

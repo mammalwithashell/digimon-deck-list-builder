@@ -85,3 +85,81 @@ fn return_to_hand_moves_permanent_to_owner_hand() {
         "hand size should be net-zero after play + ReturnToHand"
     );
 }
+
+#[test]
+fn suspend_then_unsuspend_round_trip() {
+    let card = make_test_card("T-SUS", "T-SUS");
+    let mut runner = DebugRunner::builder()
+        .add_card(card.clone())
+        .hand(0, &["T-SUS"])
+        .build();
+
+    let handle = runner.place_on_field(0, "T-SUS", None);
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+    assert!(
+        !runner.game.players[0].battle_area[0].is_suspended,
+        "permanent should start unsuspended"
+    );
+
+    let src_card = runner.game.players[0].battle_area[0].top_card().handle();
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("tgt", handle);
+
+    // --- Suspend ---
+    let suspend_step = CompiledStep::Suspend {
+        target: CompiledBindingRef::Named("tgt".into()),
+    };
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&suspend_step, &mut ctx, &mut bindings);
+    }
+    assert!(
+        runner.game.players[0].battle_area[0].is_suspended,
+        "permanent should be suspended after Suspend step"
+    );
+
+    // --- Unsuspend ---
+    let unsuspend_step = CompiledStep::Unsuspend {
+        target: CompiledBindingRef::Named("tgt".into()),
+    };
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&unsuspend_step, &mut ctx, &mut bindings);
+    }
+    assert!(
+        !runner.game.players[0].battle_area[0].is_suspended,
+        "permanent should be unsuspended after Unsuspend step"
+    );
+}
+
+#[test]
+fn return_to_deck_top_removes_permanent() {
+    let card = make_test_card("T-RTD", "T-RTD");
+    let mut runner = DebugRunner::builder()
+        .add_card(card.clone())
+        .hand(0, &["T-RTD"])
+        .build();
+
+    let handle = runner.place_on_field(0, "T-RTD", None);
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+
+    let src_card = runner.game.players[0].battle_area[0].top_card().handle();
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("tgt", handle);
+
+    let step = CompiledStep::ReturnToDeck {
+        target: CompiledBindingRef::Named("tgt".into()),
+        position: digimon_dsl::compiled::CompiledStackPosition::Top,
+        include_sources: false,
+    };
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        0,
+        "permanent should have been removed from battle area by ReturnToDeck"
+    );
+}
