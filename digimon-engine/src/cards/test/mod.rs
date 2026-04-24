@@ -32,7 +32,6 @@ mod test_022;
 mod test_023;
 mod test_024;
 mod test_025;
-mod test_026;
 mod test_027;
 mod test_028;
 mod test_phase7_cancel;
@@ -67,7 +66,6 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-023", Arc::new(test_023::Test023));
     registry.insert("TEST-024", Arc::new(test_024::Test024));
     registry.insert("TEST-025", Arc::new(test_025::Test025));
-    registry.insert("TEST-026", Arc::new(test_026::Test026));
     registry.insert("TEST-027", Arc::new(test_027::Test027));
     registry.insert("TEST-028", Arc::new(test_028::Test028));
     registry.insert("TEST-P7-CANCEL", Arc::new(test_phase7_cancel::TestP7Cancel));

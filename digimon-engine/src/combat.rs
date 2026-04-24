@@ -1759,31 +1759,29 @@ impl Game {
                 SecurityPhase::SecuritySkillDrain => {
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
-                    let attacker_opt = state.attacker;
-
-                    // §2.5c: attacker with Progress (native or granted)
-                    // entirely skips the defender's SecuritySkill phase.
-                    let progress_immune = attacker_opt
-                        .map(|atk| {
-                            self.has_keyword(atk, Keyword::Progress)
-                                || self
-                                    .modifiers
-                                    .has(atk, ModifierType::ImmunityToOpponentEffects)
-                        })
-                        .unwrap_or(false);
-
-                    if !progress_immune {
-                        self.enqueue_triggered(
-                            EffectTiming::SecuritySkill,
-                            TriggerSource::SecurityRevealed {
-                                defender,
-                                card: card_handle,
-                            },
-                        );
-                        self.drain_effect_queue();
-                        if self.pending_selection.is_some() {
-                            return None;
-                        }
+                    // NOTE: Progress / ImmunityToOpponentEffects is NOT
+                    // gated here. Per the printed rules (and DCGO's
+                    // `ProgressProcess`), Progress makes the attacking
+                    // Digimon immune to opponent effects during the attack,
+                    // but it does not suppress the defender's SecuritySkill
+                    // phase from firing — effects that don't target the
+                    // attacker (e.g. Digital Gate Open: play ≤3-cost
+                    // Digimon from hand/trash) still resolve normally.
+                    // The correct consumption site for Progress is at the
+                    // opponent-effect mutation points (selection filters,
+                    // delete_permanent with opponent-source attribution,
+                    // negative DP modifiers) — tracked in
+                    // docs/DCGO_KEYWORD_PARITY.md under "Progress".
+                    self.enqueue_triggered(
+                        EffectTiming::SecuritySkill,
+                        TriggerSource::SecurityRevealed {
+                            defender,
+                            card: card_handle,
+                        },
+                    );
+                    self.drain_effect_queue();
+                    if self.pending_selection.is_some() {
+                        return None;
                     }
                     self.set_security_phase(SecurityPhase::BattleResolved);
                 }

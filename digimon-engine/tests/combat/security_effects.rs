@@ -10,7 +10,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, Expiry, Keyword, ModifierType};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, ModifierType};
 use digimon_engine::modifiers::ModifierEntry;
 
 fn attacker() -> CardData {
@@ -199,71 +199,15 @@ fn pending_security_is_cleared_after_check() {
     );
 }
 
-// ─── §2.5c: Progress keyword / ImmunityToOpponentEffects modifier ────
-
-fn attacker_with_keyword(kw: Keyword) -> CardData {
-    let mut a = attacker();
-    a.keywords.push(kw);
-    a
-}
-
-/// Attacker with native `Keyword::Progress` must skip the defender's
-/// SecuritySkill phase entirely — TEST-026's memory-gain must not fire.
-#[test]
-fn progress_native_skips_security_skill() {
-    let mut r = DebugRunner::builder()
-        .add_card(attacker_with_keyword(Keyword::Progress))
-        .add_card(option("TEST-026"))
-        .security(1, &["TEST-026"])
-        .start();
-
-    let atk = r.place_on_field(0, "ATK", Some(0));
-    let memory_before = r.memory();
-
-    let result = r.attack_player(atk, 1, false);
-
-    assert_eq!(result, AttackResult::SecurityCheckSurvived);
-    assert_eq!(
-        r.memory(),
-        memory_before,
-        "Progress attacker must skip SecuritySkill — memory must NOT change"
-    );
-    // Card still leaves security and trashes — only the effect is gated.
-    assert_eq!(r.security_count(1), 0);
-    assert_eq!(r.trash_size(1), 1);
-}
-
-/// Granted `ModifierType::ImmunityToOpponentEffects` mirrors native
-/// Progress for the SecuritySkill gate.
-#[test]
-fn immunity_modifier_skips_security_skill() {
-    let mut r = DebugRunner::builder()
-        .add_card(attacker())
-        .add_card(option("TEST-026"))
-        .security(1, &["TEST-026"])
-        .start();
-
-    let atk = r.place_on_field(0, "ATK", Some(0));
-    r.game_mut().modifiers.add(
-        atk,
-        ModifierEntry::simple(
-            ModifierType::ImmunityToOpponentEffects,
-            1,
-            Expiry::EndOfTurn,
-            0,
-        ),
-    );
-    let memory_before = r.memory();
-
-    let result = r.attack_player(atk, 1, false);
-
-    assert_eq!(result, AttackResult::SecurityCheckSurvived);
-    assert_eq!(
-        r.memory(),
-        memory_before,
-        "ImmunityToOpponentEffects must skip SecuritySkill — memory must NOT change"
-    );
-}
+// §2.5c — Progress / ImmunityToOpponentEffects pilots removed.
+// The initial implementation gated SecuritySkillDrain on these, which
+// turned out to be semantically incorrect: Progress makes the attacker
+// immune to opponent effects during the attack, but does NOT suppress
+// the defender's SecuritySkill phase from firing. See
+// docs/DCGO_KEYWORD_PARITY.md under "Progress" for the correct consumer
+// shape (filter at opponent-effect mutation sites, not a phase gate).
+// The Keyword::Progress + ModifierType::ImmunityToOpponentEffects enum
+// primitives remain for the forthcoming correct implementation.
 
 // ─── §2.5d: DontBattleSecurityDigimon modifier ───────────────────────
 

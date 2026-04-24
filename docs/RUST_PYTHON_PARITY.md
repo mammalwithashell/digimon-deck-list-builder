@@ -130,9 +130,14 @@ Python's `_decode_counter` ([action_decoder.py:268-269](../digimon_gym/engine/ga
 
 **Verification needed:** write a test with equal-DP security and attacker, assert outcome matches Python's `AttackResolution::AttackerSurvives` / whatever it produces.
 
-### 2.5 🟢 Security effect execution — implemented
+### 2.5 🟡 Security effect execution — mostly implemented
 
-The security-effect pipeline is closed end-to-end: trigger → process (with Progress/ImmunityToOpponentEffects gate) → Digimon-vs-security DP battle (with DontBattleSecurityDigimon skip + inherited-stack DP adjustments) → OnSecurityCheck observer drain → OnLoseSecurity drain → trash-or-play disposition → OnOpponentSecurityRemoved observer drain (with selection-pause support). Selections installed at any drain site park the phase machine via `SecurityResolutionState` and resume through `advance_security_resolution`, so real-card security effects with prompts resolve correctly. The `2.5-harness` cross-engine YAML parity harness remains a separate deferred item — not a gameplay correctness blocker.
+The security-effect pipeline is closed end-to-end for the core flow: trigger → process → Digimon-vs-security DP battle (with DontBattleSecurityDigimon skip + inherited-stack DP adjustments) → OnSecurityCheck observer drain → OnLoseSecurity drain → trash-or-play disposition → OnOpponentSecurityRemoved observer drain (with selection-pause support). Selections installed at any drain site park the phase machine via `SecurityResolutionState` and resume through `advance_security_resolution`, so real-card security effects with prompts resolve correctly.
+
+**Known correctness residuals:**
+- §2.5c Progress / ImmunityToOpponentEffects — correct consumption deferred. Both Python and Rust currently diverge from printed rules (Python suppresses SecuritySkill drain entirely, which is wrong; Rust reverted the incorrect SecuritySkill gate to restore Python-parity for the security pipeline). Correct implementation wires Progress at opponent-effect mutation sites, not at the security phase boundary — tracked in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md).
+- `§2.5-harness` cross-engine YAML parity harness — deferred tooling, not a correctness blocker.
+- §2.5m `security_reveal` event emission — UI/replay surface, not a gameplay concern.
 
 **Python** — [player.py:556-699](../digimon_gym/engine/core/player.py#L556) `Player.security_attack` + [combat.py:188-221](../digimon_gym/engine/game/combat.py#L188) `_execute_security_checks`: pops the top security card, fires `EffectTiming.SecuritySkill` effects with `is_security_effect=True` against a context dict carrying `{game, player, card, attacker, security_digimon, turn_player, opponent_player}`, fires `OnSecurityCheck` globally after effects, runs the Digimon-vs-security DP battle (with `DONT_BATTLE_SECURITY_DIGIMON` skip, `_applies_to_opponent_security_digimon` DP adjustments, and native `_is_jamming` attacker protection), and routes the revealed card to trash unless an effect flipped `card._security_played = True` via `Game.effect_play_from_security`. `OnLoseSecurity` fires unconditionally at the end.
 
@@ -165,13 +170,22 @@ Enqueue + drain of the revealed card's `SecuritySkill` effects; `play_from_secur
 
 **Coverage:** [tests/security_effects.rs](../digimon-engine/tests/security_effects.rs) security-observer pilot cases.
 
-### 2.5c 🟢 Progress / immunity-to-opponent-effects gate — implemented
+### 2.5c 🟡 Progress / immunity-to-opponent-effects — both engines diverge from printed rules
 
-**Python** — [player.py:614-616](../digimon_gym/engine/core/player.py#L614) `if attacker.is_immune_to_opponent_effects: ... else: <fire SecuritySkill effects>`. An attacker with Progress entirely skips the defender's security effects.
+**Python** — [player.py:614-617](../digimon_gym/engine/core/player.py#L614) `if attacker.is_immune_to_opponent_effects: ... else: <fire SecuritySkill effects>`. Python entirely skips the defender's `SecuritySkill` phase when the attacker has Progress.
 
-**Rust** — [combat.rs SecuritySkillDrain arm](../digimon-engine/src/combat.rs) gates the `enqueue_triggered(SecuritySkill, ...)` call on `!self.has_keyword(attacker, Keyword::Progress) && !self.modifiers.has(attacker, ModifierType::ImmunityToOpponentEffects)`. Native printed `<Progress>` parses via `parse_printed_keywords` ([card_data.rs](../digimon-engine/src/card_data.rs)); granted `ImmunityToOpponentEffects` covers the modifier form.
+**Rust** — The 2026-04-24 `§2.5c` commit ported this Python behavior faithfully, but subsequent cross-check against the DCGO C# source ([`Progress.cs`](../DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Progress.cs)) and the printed rules ([RULES_CONTEXT.md §16-38](RULES_CONTEXT.md#L697)) showed both engines are wrong. Progress is a **per-permanent immunity to opponent effects during the attack** (`CanNotAffectedClass` on the attacking permanent, filtered by `IsOpponentEffect` + top-card-only, `UntilEndAttack` lifetime), NOT a SecuritySkill-drain gate. The defender's `[Security]` effects still resolve; only attacker-targeting clauses within them fail when the Progress attacker is the selection target.
 
-**Coverage:** [tests/combat/security_effects.rs](../digimon-engine/tests/combat/security_effects.rs) — `progress_native_skips_security_skill`, `immunity_modifier_skips_security_skill`.
+Example: Digital Gate Open's `[Security]` ("Play 1 Digimon with cost ≤3 from hand or trash free; add this card to the hand") has no attacker-targeting clause, so its effect must still fire even when the attacker has Progress. Mega Death's `[Security]` ("delete 1 opp Digimon with cost ≤5") does target, so its selection pool would exclude the Progress attacker — but the prompt still installs and the defender may pick a different target.
+
+**Current Rust state** — the incorrect `SecuritySkillDrain` gate has been reverted. `Keyword::Progress` and `ModifierType::ImmunityToOpponentEffects` remain in the enum as the correct primitives; no engine code currently consumes them.
+
+**Fix outline** — wire the check at opponent-effect mutation sites, not at the security phase boundary:
+- Selection filters (`select_opponent_permanent`, `select_any_permanent`, multi-select filters) must exclude a `Progress + is_attacking` target whose controller is the opposite side of the selector.
+- `delete_permanent_with_effects` called from an opponent-sourced effect must no-op when target is the Progress attacker (requires a source-attribution parameter on the mutation entry points — tracked in RUST_ENGINE_GAPS.md).
+- `modifiers.add` for opponent-sourced negative DP modifiers targeting the Progress attacker must be suppressed.
+
+This fix deliberately diverges from Python; Python's SecuritySkill-skip bug is left alone since Python is the transitional engine. Tracked long-term in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md) under "Progress".
 
 ### 2.5d 🟢 `DontBattleSecurityDigimon` modifier — implemented
 
@@ -578,7 +592,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 11. ~~**§3.5 — Selection tensor slots**~~ ✅ done — `valid_count / ACTION_SPACE_SIZE` and `selecting_player` written at slots 1371/1372 whenever `pending_selection.is_some()`.
 12. ~~**§2.3 Counter + blast digivolve**~~ ✅ done — `Effect::blast_digivolve` flag, `Game::can_digivolve` validator, `combat::try_enter_counter` + `execute_blast_digivolve`. Defender-only, Digimon-target only (Python parity). Attacker-deletion cascade routes to Cleanup without re-running Block/Battle.
 
-13. ~~**§2.5 — Security effect execution**~~ ✅ done (2026-04-24). Pipeline is closed end-to-end: §2.5a basic `SecuritySkill` dispatch, §2.5b `OnSecurityCheck` observer, §2.5c Progress / `ImmunityToOpponentEffects` gate, §2.5d `DontBattleSecurityDigimon` modifier, §2.5e inherited-stack DP adjustments, §2.5f native Jamming (via Phase 3 keyword parsing), §2.5g `EffectContext` security sugar, §2.5h `SecuritySkill` condition-skip, §2.5i single-source `TriggerOrder` suppression, §2.5j selection re-entrancy via `SecurityResolutionState` + `Dispose`/`DisposeFinalize` split, §2.5k `face_up_security` cleared on reveal, §2.5l `last_security_reveal` snapshot. Remaining: §2.5m `security_reveal` event (UI/replay event-parity, not gameplay) and §2.5-harness cross-engine YAML parity harness — neither a correctness blocker for real-card ports.
+13. **§2.5 — Security effect execution** — mostly done (2026-04-24). Closed sub-items: §2.5a basic `SecuritySkill` dispatch, §2.5b `OnSecurityCheck` observer, §2.5d `DontBattleSecurityDigimon` modifier, §2.5e inherited-stack DP adjustments, §2.5f native Jamming (via Phase 3 keyword parsing), §2.5g `EffectContext` security sugar, §2.5h `SecuritySkill` condition-skip, §2.5i single-source `TriggerOrder` suppression, §2.5j selection re-entrancy via `SecurityResolutionState` + `Dispose`/`DisposeFinalize` split, §2.5k `face_up_security` cleared on reveal, §2.5l `last_security_reveal` snapshot. Remaining: **§2.5c Progress / ImmunityToOpponentEffects** — deferred; both engines currently diverge from printed rules (see [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md) under "Progress"). Plus §2.5m `security_reveal` event (UI/replay only) and §2.5-harness cross-engine YAML parity harness — neither a correctness blocker for real-card ports.
 
 The rest (face-down security §3.3, remaining selection kinds §4.6d-residual `SelectSource`, etc.) can follow as cards that need them get implemented.
 
