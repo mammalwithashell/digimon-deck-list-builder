@@ -367,6 +367,14 @@ pub fn parse_printed_keywords(
                 continue;
             }
 
+            // Parametric: Material Save N
+            if let Some(rest) = trimmed.strip_prefix("Material Save") {
+                let n_str = rest.trim().split_whitespace().next().unwrap_or("");
+                let n = n_str.parse::<u8>().unwrap_or(1);
+                push_unique(Keyword::MaterialSave(n), &mut found);
+                continue;
+            }
+
             // Parametric: Fragment (N) — printed form is ＜Fragment (3)＞.
             // Also accept `Fragment N` as a conservative fallback in case
             // some printings omit the parens.

@@ -285,6 +285,11 @@ pub enum Keyword {
     Alliance,
     BlastDigivolve,
     Save,
+    /// DCGO `MaterialSave N` — active skill that moves up to N digivolution
+    /// sources under another permanent. Parsed from `<Material Save N>`.
+    /// Auto-install wires up in Phase D; the variant exists now so parser
+    /// and script authors can carry the parameter.
+    MaterialSave(u8),
     Fortitude,
     Overclock,
     Barrier,
