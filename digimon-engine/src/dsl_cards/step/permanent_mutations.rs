@@ -57,6 +57,15 @@ pub fn try_run(
             }
             true
         }
+        CompiledStep::DeDigivolve { target, amount, stop_at_level } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                // Engine signature is (target, stop_at_level, amount) — note stop_at_level
+                // precedes amount here, opposite to CompiledStep field order.
+                ctx.de_digivolve(h, *stop_at_level, *amount);
+            }
+            true
+        }
         _ => false,
     }
 }

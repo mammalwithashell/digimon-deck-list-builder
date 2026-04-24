@@ -163,3 +163,60 @@ fn return_to_deck_top_removes_permanent() {
         "permanent should have been removed from battle area by ReturnToDeck"
     );
 }
+
+#[test]
+fn de_digivolve_amount_one_pops_one_source() {
+    // Build a permanent with 2 CardSources: a base card + one digivolved on top.
+    let base_card = make_test_card("T-BASE", "T-BASE");
+    let top_card_data = make_test_card("T-TOP", "T-TOP");
+    let mut runner = DebugRunner::builder()
+        .add_card(base_card.clone())
+        .add_card(top_card_data.clone())
+        .hand(0, &["T-BASE"])
+        .build();
+
+    // Place the base card on the field (1 source).
+    let handle = runner.place_on_field(0, "T-BASE", None);
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+    assert_eq!(runner.game.players[0].battle_area[0].stack_size(), 1);
+
+    // Manually push a second CardSource on top to simulate digivolving.
+    {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "T-TOP")
+            .expect("T-TOP should be registered");
+        let card_index = runner.game.next_card_index();
+        let top_src = digimon_engine::card_source::CardSource::new(data_idx, 0, card_index);
+        runner.game.players[0].battle_area[0].card_sources.push(top_src);
+    }
+    assert_eq!(
+        runner.game.players[0].battle_area[0].stack_size(),
+        2,
+        "stack should have 2 sources after manual push"
+    );
+
+    // The "caster" src_card is the top card of the permanent.
+    let src_card = runner.game.players[0].battle_area[0].top_card().handle();
+
+    let step = CompiledStep::DeDigivolve {
+        target: CompiledBindingRef::Named("tgt".into()),
+        amount: Some(1),
+        stop_at_level: None,
+    };
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("tgt", handle);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.players[0].battle_area[0].stack_size(),
+        1,
+        "de_digivolve(amount=1) should have popped exactly one source"
+    );
+}
