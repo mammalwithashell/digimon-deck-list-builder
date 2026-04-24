@@ -7,13 +7,17 @@
 pub mod bindings;
 pub mod lower_aura;
 pub mod lower_cost_reduction;
+pub mod lower_delay;
 pub mod lower_flood_gate;
 pub mod lower_grant_keyword;
+pub mod lower_partition;
+pub mod lower_replacement;
 pub mod lower_triggered;
 pub mod modifier_map;
 pub mod predicate;
 pub mod step;
 pub mod timing_map;
+pub mod trigger_map;
 
 use std::sync::Arc;
 
@@ -145,6 +149,53 @@ impl CardEffect for DslCardEffect {
                         ) {
                             out.push(e);
                         }
+                    }
+                    CompiledDeclarativeClause::Replacement {
+                        scope,
+                        active_when,
+                        trigger,
+                        process,
+                        ..
+                    } => {
+                        if let Some(e) = lower_replacement::lower(
+                            card,
+                            *scope,
+                            active_when.as_ref(),
+                            trigger,
+                            process,
+                        ) {
+                            out.push(e);
+                        }
+                    }
+                    CompiledDeclarativeClause::Partition {
+                        scope,
+                        active_when,
+                        sources,
+                        exclude_cause,
+                        ..
+                    } => {
+                        out.push(lower_partition::lower(
+                            card,
+                            *scope,
+                            active_when.as_ref(),
+                            sources,
+                            exclude_cause,
+                        ));
+                    }
+                    CompiledDeclarativeClause::Delay {
+                        scope,
+                        active_when,
+                        trigger,
+                        process,
+                        ..
+                    } => {
+                        out.push(lower_delay::lower(
+                            card,
+                            *scope,
+                            active_when.as_ref(),
+                            *trigger,
+                            process,
+                        ));
                     }
                     _ => {
                         // Other declarative clauses lowered in Tasks 7-8+.
