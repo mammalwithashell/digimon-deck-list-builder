@@ -282,3 +282,23 @@ fn native_printed_jamming_survives_losing_security_battle() {
         "Jamming should protect the losing attacker from deletion"
     );
 }
+
+#[test]
+fn parser_material_save_parametric() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("\u{ff1c}Material Save 2\u{ff1e} (...)", "", "");
+    assert!(
+        kws.contains(&Keyword::MaterialSave(2)),
+        "got {:?}",
+        kws
+    );
+}
+
+#[test]
+fn parser_material_save_no_alias_to_save() {
+    // "<Material Save>" with no number should not alias back to Save —
+    // it must either produce MaterialSave(1) or not parse at all.
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("\u{ff1c}Material Save\u{ff1e}", "", "");
+    assert!(!kws.contains(&Keyword::Save), "must not alias MaterialSave -> Save");
+}
