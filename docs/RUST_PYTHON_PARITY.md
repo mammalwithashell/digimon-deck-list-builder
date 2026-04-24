@@ -130,9 +130,9 @@ Python's `_decode_counter` ([action_decoder.py:268-269](../digimon_gym/engine/ga
 
 **Verification needed:** write a test with equal-DP security and attacker, assert outcome matches Python's `AttackResolution::AttackerSurvives` / whatever it produces.
 
-### 2.5 🟡 Security effect execution — partial
+### 2.5 🟢 Security effect execution — implemented
 
-The security-effect pipeline landed end-to-end for straight-line effects (trigger → process → trash, or trigger → `play_from_security` → stay-on-field). Three synthetic pilots (TEST-020/021/022) exercise the pipeline in both engines and are pinned by paired tests. Real-card parity is blocked on the sub-gaps §2.5b–§2.5m below.
+The security-effect pipeline is closed end-to-end: trigger → process (with Progress/ImmunityToOpponentEffects gate) → Digimon-vs-security DP battle (with DontBattleSecurityDigimon skip + inherited-stack DP adjustments) → OnSecurityCheck observer drain → OnLoseSecurity drain → trash-or-play disposition → OnOpponentSecurityRemoved observer drain (with selection-pause support). Selections installed at any drain site park the phase machine via `SecurityResolutionState` and resume through `advance_security_resolution`, so real-card security effects with prompts resolve correctly. The `2.5-harness` cross-engine YAML parity harness remains a separate deferred item — not a gameplay correctness blocker.
 
 **Python** — [player.py:556-699](../digimon_gym/engine/core/player.py#L556) `Player.security_attack` + [combat.py:188-221](../digimon_gym/engine/game/combat.py#L188) `_execute_security_checks`: pops the top security card, fires `EffectTiming.SecuritySkill` effects with `is_security_effect=True` against a context dict carrying `{game, player, card, attacker, security_digimon, turn_player, opponent_player}`, fires `OnSecurityCheck` globally after effects, runs the Digimon-vs-security DP battle (with `DONT_BATTLE_SECURITY_DIGIMON` skip, `_applies_to_opponent_security_digimon` DP adjustments, and native `_is_jamming` attacker protection), and routes the revealed card to trash unless an effect flipped `card._security_played = True` via `Game.effect_play_from_security`. `OnLoseSecurity` fires unconditionally at the end.
 
@@ -165,29 +165,29 @@ Enqueue + drain of the revealed card's `SecuritySkill` effects; `play_from_secur
 
 **Coverage:** [tests/security_effects.rs](../digimon-engine/tests/security_effects.rs) security-observer pilot cases.
 
-### 2.5c 🔴 Progress / immunity-to-opponent-effects gate not wired
+### 2.5c 🟢 Progress / immunity-to-opponent-effects gate — implemented
 
 **Python** — [player.py:614-616](../digimon_gym/engine/core/player.py#L614) `if attacker.is_immune_to_opponent_effects: ... else: <fire SecuritySkill effects>`. An attacker with Progress entirely skips the defender's security effects.
 
-**Rust** — [combat.rs:912-922](../digimon-engine/src/combat.rs#L912) unconditionally fires `SecuritySkill`. No `ModifierType::ImmunityToOpponentEffects` exists in the enum; no `Keyword::Progress` variant either.
+**Rust** — [combat.rs SecuritySkillDrain arm](../digimon-engine/src/combat.rs) gates the `enqueue_triggered(SecuritySkill, ...)` call on `!self.has_keyword(attacker, Keyword::Progress) && !self.modifiers.has(attacker, ModifierType::ImmunityToOpponentEffects)`. Native printed `<Progress>` parses via `parse_printed_keywords` ([card_data.rs](../digimon-engine/src/card_data.rs)); granted `ImmunityToOpponentEffects` covers the modifier form.
 
-**Fix outline:** Add `ModifierType::ImmunityToOpponentEffects` (or `Keyword::Progress`) + a `modifiers.any_with_type(attacker, ...)` gate before the `enqueue_triggered(SecuritySkill, ...)` call. Deferred until the first Progress card is ported.
+**Coverage:** [tests/combat/security_effects.rs](../digimon-engine/tests/combat/security_effects.rs) — `progress_native_skips_security_skill`, `immunity_modifier_skips_security_skill`.
 
-### 2.5d 🔴 `DONT_BATTLE_SECURITY_DIGIMON` modifier not checked
+### 2.5d 🟢 `DontBattleSecurityDigimon` modifier — implemented
 
 **Python** — [player.py:644-650](../digimon_gym/engine/core/player.py#L644) checks `modifiers.has_modifier(attacker, ModifierType.DONT_BATTLE_SECURITY_DIGIMON)` and skips the Digimon-vs-security battle entirely when set.
 
-**Rust** — [combat.rs:928-942](../digimon-engine/src/combat.rs#L928) always runs the DP comparison for `CardKind::Digimon` security. No matching `ModifierType` variant.
+**Rust** — [combat.rs BattleResolved arm](../digimon-engine/src/combat.rs) gates the `CardKind::Digimon` DP-compare block on `!self.modifiers.has(attacker, ModifierType::DontBattleSecurityDigimon)`. Security card still leaves the stack and trashes; only the DP battle is skipped.
 
-**Fix outline:** Add `ModifierType::DontBattleSecurityDigimon` + gate the DP branch on `!modifiers.any_with_type(attacker, ...)`.
+**Coverage:** [tests/combat/security_effects.rs](../digimon-engine/tests/combat/security_effects.rs) — `dont_battle_security_digimon_skips_dp_compare`, `without_dont_battle_modifier_attacker_dies_to_higher_dp_security`.
 
-### 2.5e 🔴 Inherited-effect DP adjustments to security Digimon not applied
+### 2.5e 🟢 Inherited-stack DP adjustments to security Digimon — implemented
 
-**Python** — [player.py:654-666](../digimon_gym/engine/core/player.py#L654) iterates the attacker's inherited effects for `_applies_to_opponent_security_digimon + dp_modifier != 0`, adjusts `s_dp` before comparing. Powers cards like "This Digimon gains +3000 DP when attacking security".
+**Python** — [player.py:654-666](../digimon_gym/engine/core/player.py#L654) iterates the attacker's inherited effects for `_applies_to_opponent_security_digimon + dp_modifier != 0`, adjusts `s_dp` before comparing.
 
-**Rust** — [combat.rs:931](../digimon-engine/src/combat.rs#L931) uses `sec_card.dp(&self.card_data).unwrap_or(0)` raw — no inherited-effect pass over the attacker's stack.
+**Rust** — `Effect::applies_to_opponent_security_dp` flag ([effect.rs](../digimon-engine/src/effect.rs)) + `Game::attacker_security_dp_adjustment` helper ([combat.rs](../digimon-engine/src/combat.rs)) walks the attacker's full `card_sources` stack, sums `dp_modifier` on any effect carrying the flag, and the `BattleResolved` arm adds the total to the raw security DP via `saturating_add` before the compare. Matches Python's sign convention (positive `dp_modifier` raises security DP; negative favors the attacker).
 
-**Fix outline:** Introduce an `Effect` flag `applies_to_opponent_security_dp` and an `attacker_security_dp_adjustment(attacker)` helper on `Game` that iterates the attacker's `card_sources[..last]` inherited effects.
+**Coverage:** [tests/combat/security_effects.rs](../digimon-engine/tests/combat/security_effects.rs) — `inherited_applies_to_opponent_security_dp_adjusts_battle` via TEST-027 pilot.
 
 ### 2.5f 🟢 Native Jamming honored — implemented
 
@@ -195,68 +195,48 @@ Phase 3 landed unified keyword lookup (see §2.1b). The security DP battle in `c
 
 **Coverage:** `tests/keyword_parsing.rs` — `native_printed_jamming_survives_losing_security_battle`.
 
-### 2.5g 🔴 EffectContext missing security-specific context
+### 2.5g 🟢 EffectContext security sugar — implemented
 
 **Python** — security-effect context dict passed to each callback ([player.py:622-632](../digimon_gym/engine/core/player.py#L622)):
 ```
 { game, player, permanent=None, card, security_digimon, attacker, turn_player, opponent_player }
 ```
 
-**Rust** — `EffectContext` exposes only `{ game, source_card, source_permanent, player }`. A script that needs to inspect the attacker (e.g. "if the attacker is Red, gain 2 memory") or the security Digimon (e.g. "if this Digimon's DP is less than 5000, Jamming") has no API. `ctx.opponent_id()` returns `next_clockwise(self.player)` which happens to equal the attacker's side in 2-player games — but breaks under EDH/Titan seating.
+**Rust** — `EffectContext` and `EffectReadContext` now expose `attacker() -> Option<PermanentHandle>`, `security_digimon() -> Option<CardHandle>`, and `turn_player_at_check() -> Option<PlayerId>` ([effect_context/mod.rs](../digimon-engine/src/effect_context/mod.rs)). All three read from `Game::security_resolution`, which is already populated by the security phase machine — no resolver changes required. Scripts now gate on attacker traits / security DP without reaching into `ctx.game`.
 
-**Fix outline:** Enrich `EffectContext` with optional handles set by the security resolver:
-```rust
-pub attacker: Option<PermanentHandle>,      // set during SecuritySkill
-pub security_digimon: Option<CardHandle>,   // set if the revealed card is a Digimon
-pub turn_player: PlayerId,                   // always valid
-```
-The existing `TriggerSource::SecurityRevealed` carries enough info to populate these at drain time.
+### 2.5h 🟢 Condition-check skip for `SecuritySkill` — implemented
 
-### 2.5h 🟡 Condition-check divergence on `SecuritySkill`
+**Python** — [player.py:619-622](../digimon_gym/engine/core/player.py#L619) iterates `effect_list(SecuritySkill)` without evaluating `effect.can_use_condition`.
 
-**Python** — [player.py:619-622](../digimon_gym/engine/core/player.py#L619) iterates `effect_list(SecuritySkill)`, checks `if effect.is_security_effect`, calls the callback directly. **No `effect.can_use_condition` check.**
+**Rust** — [effect_queue.rs `run_queued_effect_inner`](../digimon-engine/src/effect_queue.rs) sets `let skip_condition = qe.timing == EffectTiming::SecuritySkill;` and bypasses the `effect.condition` check when set. Matches Python exactly. (Was tracked as open in an earlier revision of this doc; verified against code as part of §2.5 closure in 2026-04-24.)
 
-**Rust** — [effect_queue.rs:218-228](../digimon-engine/src/effect_queue.rs#L218) `run_queued_effect` evaluates `effect.condition` and returns without firing if it's false. A conditional `[Security]` effect (`[Security] If your opponent controls a Digimon, delete it.`) fires unconditionally in Python and only when the condition passes in Rust.
-
-**Fix outline:** Either (a) drop the condition check for queued effects whose `security` flag is set — simplest, matches Python exactly — or (b) audit Python to decide whether the condition-skip is intentional or a latent bug, then align both engines.
-
-### 2.5i 🟡 `TriggerOrder` prompt on multi-effect security cards
+### 2.5i 🟢 `TriggerOrder` suppression for single-source security — implemented
 
 **Python** — fires multiple SecuritySkill effects in `effect_list` order with no prompt.
 
-**Rust** — [effect_queue.rs:116-124](../digimon-engine/src/effect_queue.rs#L116) the drainer installs a `TriggerOrder` selection whenever a single controller has ≥ 2 queued effects. For a card with two `[Security]` effects (rare but real — see BT1-087 for the adjacent "two security effects on one card" pattern), Rust would prompt the defender and Python would not.
+**Rust** — [effect_queue.rs drainer](../digimon-engine/src/effect_queue.rs) short-circuits `install_trigger_order_selection` when every queued effect in the bundle is timing `SecuritySkill` and shares the same `source_card`. In that case the bundle is drained in queue order (which mirrors effect-list order) with no prompt installed. Mixed-source bundles (e.g. a SecuritySkill plus an unrelated OnPlay observer firing into the same controller's queue) still install the prompt.
 
-**Fix outline:** Short-circuit `TriggerOrder` installation when every queued effect in the bundle comes from the same `TriggerSource::SecurityRevealed` — fire in collection order like Python. Alternatively, only install the prompt when ≥ 2 effects are both `is_optional` (currently the prompt fires for any multi-bundle).
+**Coverage:** [tests/combat/security_effects.rs](../digimon-engine/tests/combat/security_effects.rs) — `two_security_effects_same_source_auto_fire_in_order` via TEST-028 pilot.
 
-### 2.5j 🔴 Selections inside security effects are not re-entrant with combat
+### 2.5j 🟢 Selections inside security effects re-entrant with combat — implemented
 
-**Python** — `security_attack` is re-entrant: an effect that installs a pending_selection (via `effect_play_from_zone`, `effect_select_opponent_permanent`, etc.) parks the selection; later resolution re-enters the combat flow via the attack state machine's selection-resume hooks (e.g. `_maybe_resume_combat_after_wa_selection`, [combat.py:85-90](../digimon_gym/engine/game/combat.py)).
+**Python** — `security_attack` is re-entrant: an effect that installs a pending_selection (via `effect_play_from_zone`, `effect_select_opponent_permanent`, etc.) parks the selection; later resolution re-enters the combat flow via the attack state machine's selection-resume hooks.
 
-**Rust** — `resolve_security_card` is synchronous. If a `SecuritySkill` process calls `ctx.select_hand` / `select_security` / etc., `drain_effect_queue` returns with `pending_selection = Some(...)`, but the surrounding `resolve_player_security_loop` doesn't know combat is mid-resolution — it treats the check as complete and returns to the caller. The `OnLoseSecurity` fire, Digimon battle, and trash disposition all never happen for the paused check.
+**Rust** — the security phase machine (`SecurityPhase` in [selection.rs](../digimon-engine/src/selection.rs) + `drive_security_resolution` in [combat.rs](../digimon-engine/src/combat.rs)) parks on `pending_selection` at each drain site and resumes via `advance_security_resolution`, called unconditionally from [effect_queue.rs `resolve_generic_selection`](../digimon-engine/src/effect_queue.rs) after any selection's callback fires. `SecurityResolutionState` holds the defender, attacker, turn player, current phase, remaining checks, and running outcome across the pause. The original `Dispose` phase has been split into `Dispose` (trash + OnOpponentSecurityRemoved drain) and `DisposeFinalize` (post-observer terminal decision) so a selection installed by the OnOpponentSecurityRemoved observer resumes without re-enqueueing the observer.
 
-**Impact:** Blocks porting every real-card security effect that includes a selection — BT1-087 (T.K., select a security card to reveal), BT10-094 (Breaclaw, play from hand/trash), and most tamers in the security-search family.
+**Coverage:** regression covered implicitly by the existing pilots (TEST-020/021/022) and the new pilots introduced with §2.5c/d/e/i closures.
 
-**Fix outline:** Extend `PendingAttack` with `security_state: Option<SecurityResolutionState { defender: PlayerId, remaining_checks: u8, mid_resolve_card: Option<CardSource> }>`. When `drain_effect_queue` pauses mid-security, stash the state and return. `resolve_generic_selection` resumes the remainder of `resolve_security_card` (Digimon battle + `OnLoseSecurity` + trash + loop-continue) after the selection's callback fires.
+### 2.5k 🟢 `face_up_security` cleared on reveal — implemented
 
-This is the **biggest load-bearing gap in §2.5** — it's what blocks real cards, not just synthetic pilots.
+**Python** — [player.py:575](../digimon_gym/engine/core/player.py#L575) `self.face_up_security.discard(security_card)`.
 
-### 2.5k 🟡 `face_up_security` stale entries on reveal
+**Rust** — [combat.rs `pop_and_start_security_check`](../digimon-engine/src/combat.rs) calls `self.player_mut(defender).face_up_security.remove(&sec_card.card_index)` immediately after popping the revealed card, capturing the prior state into `was_face_up` for `OnSecurityCheck` observers.
 
-**Python** — [player.py:575](../digimon_gym/engine/core/player.py#L575) `self.face_up_security.discard(security_card)` — removes the revealed card from the face-up set the moment it's popped.
+### 2.5l 🟢 `last_security_reveal` snapshot stored — implemented
 
-**Rust** — [combat.rs:771](../digimon-engine/src/combat.rs#L771) + [resolve_player_security_loop](../digimon-engine/src/combat.rs#L752) pops the card from `player.security` but never touches `player.face_up_security`. The stale `card_index` remains in the set forever.
+**Python** — [player.py:577-578](../digimon_gym/engine/core/player.py#L577) stashes the just-revealed card so subsequent observer contexts can inspect it.
 
-**Observable impact today:** none (the set is only consulted for cards still in security, and a popped card is no longer there). But if an effect ever returns a revealed card to security (possible via future scripts), the stale entry would make it appear face-up by accident.
-
-**Fix outline:** Add `player.face_up_security.remove(&card.card_index)` in `resolve_player_security_loop` immediately after the pop.
-
-### 2.5l 🟡 `_last_security_card` / `_last_security_was_face_up` not stored
-
-**Python** — [player.py:577-578](../digimon_gym/engine/core/player.py#L577) stashes the just-revealed card on the defender so the subsequent `OnSecurityCheck` context ([combat.py:211-212](../digimon_gym/engine/game/combat.py#L211)) can hand it to observer effects.
-
-**Rust** — no equivalent storage. Coupled to §2.5b — once `OnSecurityCheck` is fired, the observer context needs access to the revealed card. `Game.pending_security` covers this *during* the SecuritySkill drain but is cleared before the (currently unfired) `OnSecurityCheck` hook would run.
-
-**Fix outline:** Widen `Game.pending_security`'s lifetime so it persists through the `OnSecurityCheck` fire, or add a distinct `last_security_reveal: Option<SecurityRevealSnapshot>` field cleared on turn rotation.
+**Rust** — `SecurityResolutionState` ([selection.rs](../digimon-engine/src/selection.rs)) carries `revealed_card`, `card_kind`, and `was_face_up` for the full duration of the security check. `Game::last_security_reveal` exposes the same shape to observer scripts. Satisfies the observer-context requirement without widening `pending_security`'s lifetime.
 
 ### 2.5m 🟡 `security_reveal` event not emitted
 
@@ -598,7 +578,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 11. ~~**§3.5 — Selection tensor slots**~~ ✅ done — `valid_count / ACTION_SPACE_SIZE` and `selecting_player` written at slots 1371/1372 whenever `pending_selection.is_some()`.
 12. ~~**§2.3 Counter + blast digivolve**~~ ✅ done — `Effect::blast_digivolve` flag, `Game::can_digivolve` validator, `combat::try_enter_counter` + `execute_blast_digivolve`. Defender-only, Digimon-target only (Python parity). Attacker-deletion cascade routes to Cleanup without re-running Block/Battle.
 
-13. **§2.5 — Security effect execution** — partial. ✅ §2.5a basic `SecuritySkill` dispatch (trigger → process → trash + `play_from_security` bypass + `OnLoseSecurity`); ✅ §2.5b `OnSecurityCheck` observer timing fired (attack path — `OnSecurityCheckDrain` phase + `effect_queue.rs:65` defender-battle-area fan-out); ✅ `face_up_security` tensor parity (§3.3); ✅ `SelectSecurity` / `SelectReveal` helpers (§4.6d). Outstanding, in rough order of load-bearing-ness: **§2.5j re-entrant selections mid-security-resolve** (blocks every real card with a selection-using `[Security]` effect), §2.5g EffectContext extras (attacker / security_digimon / turn_player), §2.5c Progress immunity gate, §2.5d DontBattleSecurityDigimon modifier, §2.5e inherited-effect DP adjustments to security Digimon, §2.5f native Jamming (blocked on §2.1b), §2.5h condition-check divergence, §2.5i TriggerOrder-for-multi-security-effect, §2.5k `face_up_security` cleanup on reveal, §2.5l `_last_security_card` snapshot, §2.5m `security_reveal` event emission, §2.5-harness cross-engine YAML harness.
+13. ~~**§2.5 — Security effect execution**~~ ✅ done (2026-04-24). Pipeline is closed end-to-end: §2.5a basic `SecuritySkill` dispatch, §2.5b `OnSecurityCheck` observer, §2.5c Progress / `ImmunityToOpponentEffects` gate, §2.5d `DontBattleSecurityDigimon` modifier, §2.5e inherited-stack DP adjustments, §2.5f native Jamming (via Phase 3 keyword parsing), §2.5g `EffectContext` security sugar, §2.5h `SecuritySkill` condition-skip, §2.5i single-source `TriggerOrder` suppression, §2.5j selection re-entrancy via `SecurityResolutionState` + `Dispose`/`DisposeFinalize` split, §2.5k `face_up_security` cleared on reveal, §2.5l `last_security_reveal` snapshot. Remaining: §2.5m `security_reveal` event (UI/replay event-parity, not gameplay) and §2.5-harness cross-engine YAML parity harness — neither a correctness blocker for real-card ports.
 
 The rest (face-down security §3.3, remaining selection kinds §4.6d-residual `SelectSource`, etc.) can follow as cards that need them get implemented.
 

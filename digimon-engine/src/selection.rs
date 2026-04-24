@@ -363,9 +363,15 @@ pub enum SecurityPhase {
     OnSecurityCheckDrain,
     /// Enqueue + drain `OnLoseSecurity` on the revealed card (observer timing).
     OnLoseSecurityDrain,
-    /// Trash the card (unless `pending_security.played` is set) and clear
-    /// the resolution state.
+    /// Trash the card (unless `pending_security.played` is set), then fire
+    /// `OnOpponentSecurityRemoved` observers in the attacker's battle area.
+    /// If that observer drain installs a pending selection, the state
+    /// machine parks with phase advanced to `DisposeFinalize` so the resume
+    /// path doesn't re-enqueue the observer on re-entry (§2.5j residual).
     Dispose,
+    /// Post-observer finalization: extract `SecurityResolutionState`,
+    /// decide terminal outcome vs. loop to next security card.
+    DisposeFinalize,
 }
 
 /// Mid-security-check state. Installed by `Game::resolve_security_card` at

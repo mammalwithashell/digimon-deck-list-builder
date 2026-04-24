@@ -295,6 +295,11 @@ pub enum Keyword {
     Fragment(u8),
     Decode,
     ArmorPurge,
+
+    /// Progress — while the attacker has Progress, the defender's
+    /// `SecuritySkill` effects do not fire on reveal. Consumed by the
+    /// `SecuritySkillDrain` arm of `drive_security_resolution` (§2.5c).
+    Progress,
 }
 
 /// Zone where a card can exist.
@@ -376,6 +381,14 @@ pub enum ModifierType {
 
     // Security
     SecurityAttackChange,
+    /// Modifier-granted form of `Keyword::Progress` — used when the
+    /// immunity comes from a temporary effect rather than printed text.
+    /// Checked alongside native `Keyword::Progress` by the SecuritySkill
+    /// drain gate (§2.5c).
+    ImmunityToOpponentEffects,
+    /// Attacker skips the Digimon-vs-security DP battle entirely. Consumed
+    /// by the `BattleResolved` arm of `drive_security_resolution` (§2.5d).
+    DontBattleSecurityDigimon,
 
     // Digivolution
     CannotDigivolve,

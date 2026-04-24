@@ -157,6 +157,35 @@ impl Game {
         Some(base + bonus)
     }
 
+    /// Sum the attacker's digivolution-stack DP adjustments that apply to
+    /// the opposing security Digimon during a security DP battle (§2.5e).
+    /// Walks every `CardSource` in the stack — any effect flagged with
+    /// `applies_to_opponent_security_dp` contributes its `dp_modifier` to
+    /// the security Digimon's effective DP, including effects on the top
+    /// card. Returns 0 when the attacker has no such effects.
+    pub fn attacker_security_dp_adjustment(&self, attacker: PermanentHandle) -> i32 {
+        let Some(perm) = self
+            .player(attacker.player)
+            .battle_area
+            .get(attacker.index as usize)
+        else {
+            return 0;
+        };
+        let mut total: i32 = 0;
+        for source in &perm.card_sources {
+            let card_id = source.card_id(&self.card_data);
+            let Some(effects) = self.effects_for_card(card_id, source.handle()) else {
+                continue;
+            };
+            for effect in &effects {
+                if effect.applies_to_opponent_security_dp {
+                    total = total.saturating_add(effect.dp_modifier);
+                }
+            }
+        }
+        total
+    }
+
     /// Check whether a permanent can attack right now (atomic — ignores interrupts).
     ///
     /// `vortex` — pass `true` when the attack is invoked via the <Vortex>
@@ -1730,16 +1759,31 @@ impl Game {
                 SecurityPhase::SecuritySkillDrain => {
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
-                    self.enqueue_triggered(
-                        EffectTiming::SecuritySkill,
-                        TriggerSource::SecurityRevealed {
-                            defender,
-                            card: card_handle,
-                        },
-                    );
-                    self.drain_effect_queue();
-                    if self.pending_selection.is_some() {
-                        return None;
+                    let attacker_opt = state.attacker;
+
+                    // §2.5c: attacker with Progress (native or granted)
+                    // entirely skips the defender's SecuritySkill phase.
+                    let progress_immune = attacker_opt
+                        .map(|atk| {
+                            self.has_keyword(atk, Keyword::Progress)
+                                || self
+                                    .modifiers
+                                    .has(atk, ModifierType::ImmunityToOpponentEffects)
+                        })
+                        .unwrap_or(false);
+
+                    if !progress_immune {
+                        self.enqueue_triggered(
+                            EffectTiming::SecuritySkill,
+                            TriggerSource::SecurityRevealed {
+                                defender,
+                                card: card_handle,
+                            },
+                        );
+                        self.drain_effect_queue();
+                        if self.pending_selection.is_some() {
+                            return None;
+                        }
                     }
                     self.set_security_phase(SecurityPhase::BattleResolved);
                 }
@@ -1753,13 +1797,21 @@ impl Game {
                     let attacker_opt = state.attacker;
                     if kind == CardKind::Digimon {
                         if let Some(attacker) = attacker_opt {
-                            if self.handle_valid(attacker) {
+                            if self.handle_valid(attacker)
+                                && !self
+                                    .modifiers
+                                    .has(attacker, ModifierType::DontBattleSecurityDigimon)
+                            {
                                 let attacker_dp = self.effective_dp(attacker).unwrap_or(0);
-                                let sec_dp = self
+                                let raw_sec_dp = self
                                     .pending_security
                                     .as_ref()
                                     .and_then(|p| p.card.dp(&self.card_data))
                                     .unwrap_or(0);
+                                // §2.5e: attacker's inherited stack may carry
+                                // "+N DP when attacking security" modifiers.
+                                let sec_dp = raw_sec_dp
+                                    .saturating_add(self.attacker_security_dp_adjustment(attacker));
                                 if attacker_dp < sec_dp
                                     && !self.has_keyword(attacker, Keyword::Jamming)
                                 {
@@ -1824,18 +1876,14 @@ impl Game {
                     // re-inserting the revealed card back into
                     // `player.security` — non-trivial plumbing that's best
                     // addressed alongside native keyword wiring (Task 6).
-                    // Extract info before clearing state.
-                    let state = self
-                        .security_resolution
-                        .take()
-                        .expect("checked Some above");
-                    let defender = state.defender;
-                    let attacker_opt = state.attacker;
-                    let remaining = state.checks_remaining;
-                    let outcome = state.outcome_so_far;
 
                     // Trash the revealed card unless an effect raised the
                     // `played` bit via `EffectContext::play_from_security`.
+                    // `security_resolution` stays alive across the observer
+                    // drain so a selection installed by an observer can
+                    // resume through `DisposeFinalize` (§2.5j residual).
+                    let defender = state.defender;
+                    let attacker_opt = state.attacker;
                     if let Some(pending) = self.pending_security.take() {
                         if !pending.played {
                             self.player_mut(defender).trash.push(pending.card);
@@ -1852,7 +1900,28 @@ impl Game {
                             crate::selection::TriggerSource::PlayerBattleArea(atk.player),
                         );
                         self.drain_effect_queue();
+                        if self.pending_selection.is_some() {
+                            // Park: on resume, `DisposeFinalize` skips the
+                            // re-enqueue and proceeds straight to terminal
+                            // finalization.
+                            self.set_security_phase(SecurityPhase::DisposeFinalize);
+                            return None;
+                        }
                     }
+                    self.set_security_phase(SecurityPhase::DisposeFinalize);
+                }
+                SecurityPhase::DisposeFinalize => {
+                    // Post-observer finalization. `security_resolution` is
+                    // still live; drain it now and decide the terminal
+                    // outcome (or loop to the next card).
+                    let state = self
+                        .security_resolution
+                        .take()
+                        .expect("checked Some above");
+                    let defender = state.defender;
+                    let attacker_opt = state.attacker;
+                    let remaining = state.checks_remaining;
+                    let outcome = state.outcome_so_far;
 
                     // Hard terminal: attacker was deleted mid-check.
                     if matches!(outcome, AttackResult::AttackerDeletedBySecurity) {

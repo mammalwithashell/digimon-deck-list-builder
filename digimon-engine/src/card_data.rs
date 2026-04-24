@@ -285,6 +285,7 @@ pub fn parse_printed_keywords(
                 ("Partition", Keyword::Partition),
                 ("Vortex", Keyword::Vortex),
                 ("Collision", Keyword::Collision),
+                ("Progress", Keyword::Progress),
             ] {
                 if trimmed.starts_with(prefix) {
                     push_unique(kw, &mut found);
