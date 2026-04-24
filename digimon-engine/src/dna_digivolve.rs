@@ -25,10 +25,14 @@ fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -
             _ => return false,
         }
     }
-    if let Some(color) = req.card_color {
-        if !meta.colors.contains(&color) {
-            return false;
-        }
+    // Slash-color reqs like "Blue/Purple Lv.6" accept any listed color on
+    // the material. Empty `card_colors` means "any color" (name/level
+    // gated only). Match the Python semantics at
+    // `digivolve_validator.py::perm_matches_req`.
+    if !req.card_colors.is_empty()
+        && !req.card_colors.iter().any(|c| meta.colors.contains(c))
+    {
+        return false;
     }
     if !req.name_contains.is_empty()
         && !meta

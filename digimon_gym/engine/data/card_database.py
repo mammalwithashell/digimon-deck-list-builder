@@ -42,6 +42,20 @@ def _parse_card_color_field(value):
     return CardColor(value)
 
 
+def _parse_dna_requirement_colors(req_data):
+    """Extract DnaRequirement.card_colors from a JSON requirement dict.
+
+    Prefers the current list form (``card_colors: ["Blue", "Purple"]``).
+    Falls back to the legacy scalar form (``card_color: "Blue"``) so
+    partially-regenerated cards.json files still load.
+    """
+    if 'card_colors' in req_data and req_data['card_colors']:
+        parsed = [_parse_card_color_field(c) for c in req_data['card_colors']]
+        return [c for c in parsed if c is not None]
+    legacy = _parse_card_color_field(req_data.get('card_color'))
+    return [legacy] if legacy is not None else []
+
+
 def parse_xros_req(xros_req: str) -> List[DnaCost]:
     """Parse the xros_req text from DigimonCard.io API into DnaCost objects.
 
@@ -113,7 +127,7 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
     if bare_name_match:
         return DnaRequirement(
             level=0,
-            card_color=None,
+            card_colors=[],
             name_contains=bare_name_match.group(1).strip(),
             text_contains="",
         )
@@ -140,20 +154,20 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
         logger.warning("No valid level found in DNA requirement: %r", text)
         return None
 
-    # Extract color(s): look for color names before 'Lv'
-    card_color = None
+    # Extract color(s): look for color names before 'Lv'. Multi-color
+    # ("Blue/Purple") is preserved as a list — all listed colors satisfy
+    # the half (slash reads as OR per printed card text).
+    card_colors: List[CardColor] = []
     color_text = text.split('Lv')[0].strip() if 'Lv' in text else ""
     if color_text:
-        # Handle multi-color like "Blue/Purple"
-        color_names = [c.strip().lower() for c in color_text.split('/')]
-        for cn in color_names:
-            if cn in _COLOR_NAME_MAP:
-                card_color = _COLOR_NAME_MAP[cn]
-                break  # Use the first color for matching
+        for cn in (c.strip().lower() for c in color_text.split('/')):
+            color = _COLOR_NAME_MAP.get(cn)
+            if color is not None and color not in card_colors:
+                card_colors.append(color)
 
     return DnaRequirement(
         level=level,
-        card_color=card_color,
+        card_colors=card_colors,
         name_contains=name_contains,
         text_contains=text_contains,
     )
@@ -435,13 +449,13 @@ class CardDatabase:
                 req2_data = dc.get('requirement2', {})
                 req1 = DnaRequirement(
                     level=req1_data.get('level', 0),
-                    card_color=_parse_card_color_field(req1_data.get('card_color')),
+                    card_colors=_parse_dna_requirement_colors(req1_data),
                     name_contains=req1_data.get('name_contains', ''),
                     text_contains=req1_data.get('text_contains', ''),
                 )
                 req2 = DnaRequirement(
                     level=req2_data.get('level', 0),
-                    card_color=_parse_card_color_field(req2_data.get('card_color')),
+                    card_colors=_parse_dna_requirement_colors(req2_data),
                     name_contains=req2_data.get('name_contains', ''),
                     text_contains=req2_data.get('text_contains', ''),
                 )

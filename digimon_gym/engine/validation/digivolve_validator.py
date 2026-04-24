@@ -175,9 +175,12 @@ def _perm_matches_dna_req(perm: 'Permanent', req: 'DnaRequirement') -> bool:
     if req.level != 0 and perm.level != req.level:
         return False
 
-    # Color must match (if specified)
-    if req.card_color is not None:
-        if req.card_color not in perm.top_card.card_colors:
+    # Color must match (empty list means any color). Slash-color DNA
+    # reqs like "Blue/Purple Lv.6" allow any listed color on the
+    # material — satisfied when the material has AT LEAST ONE of the
+    # listed colors in its own colors.
+    if req.card_colors:
+        if not any(c in perm.top_card.card_colors for c in req.card_colors):
             return False
 
     # Name must match (if specified)

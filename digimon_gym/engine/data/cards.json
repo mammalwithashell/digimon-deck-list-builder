@@ -387,13 +387,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -818,13 +822,13 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Greymon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Garurumon",
           "text_contains": ""
         },
@@ -27905,13 +27909,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -28896,13 +28904,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -30415,13 +30427,13 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "",
           "text_contains": ""
         },
@@ -34057,13 +34069,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -43960,13 +43976,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -44947,13 +44967,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -48899,13 +48923,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -57998,13 +58026,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -58488,13 +58520,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -58904,13 +58940,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Black",
+          "card_colors": [
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -59891,13 +59931,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Black",
+          "card_colors": [
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -60417,13 +60461,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -63986,13 +64034,13 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Greymon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Garurumon",
           "text_contains": ""
         },
@@ -64608,13 +64656,13 @@
       {
         "requirement1": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Fenriloogamon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Kazuchimon",
           "text_contains": ""
         },
@@ -65331,13 +65379,13 @@
       {
         "requirement1": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Kimeramon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Machinedramon",
           "text_contains": ""
         },
@@ -66198,13 +66246,19 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue",
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Green",
+          "card_colors": [
+            "Green",
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -72660,13 +72714,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -72866,13 +72924,13 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Jesmon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Gankoomon",
           "text_contains": ""
         },
@@ -73469,13 +73527,18 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green",
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -73779,13 +73842,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -74390,13 +74457,18 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Black",
+          "card_colors": [
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow",
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -74925,13 +74997,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -75015,13 +75091,17 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -75221,13 +75301,15 @@
       {
         "requirement1": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Fenriloogamon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": "Pulsemon"
         },
@@ -77217,13 +77299,19 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue",
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Green",
+          "card_colors": [
+            "Green",
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -79825,13 +79913,13 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Greymon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Garurumon",
           "text_contains": ""
         },
@@ -83963,13 +84051,18 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Black",
+          "card_colors": [
+            "Black",
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -84547,13 +84640,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -86321,13 +86418,17 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -87651,13 +87752,18 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Red",
+          "card_colors": [
+            "Red",
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -95139,13 +95245,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -96991,13 +97101,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -97080,13 +97194,17 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -97410,13 +97528,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -99637,13 +99759,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -102455,13 +102581,13 @@
       {
         "requirement1": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Apollomon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Dianamon",
           "text_contains": ""
         },
@@ -102848,13 +102974,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Black",
+          "card_colors": [
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -103605,13 +103735,17 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -104800,13 +104934,19 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow",
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green",
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -106404,13 +106544,19 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green",
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Black",
+          "card_colors": [
+            "Black",
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -108508,13 +108654,18 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Black",
+          "card_colors": [
+            "Black",
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -108672,13 +108823,19 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue",
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Black",
+          "card_colors": [
+            "Black",
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -108687,13 +108844,13 @@
       {
         "requirement1": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Plesiomon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Seadramon",
           "text_contains": ""
         },
@@ -108849,13 +109006,18 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple",
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -109300,13 +109462,19 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Green",
+          "card_colors": [
+            "Green",
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Red",
+          "card_colors": [
+            "Red",
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -110001,13 +110169,19 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple",
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow",
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -110016,13 +110190,13 @@
       {
         "requirement1": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Piedmon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Myotismon",
           "text_contains": ""
         },
@@ -111058,13 +111232,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -111965,13 +112143,19 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green",
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue",
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -118150,13 +118334,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Black",
+          "card_colors": [
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -125892,13 +126080,18 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue",
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -125947,13 +126140,19 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow",
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Green",
+          "card_colors": [
+            "Green",
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -126037,13 +126236,19 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Black",
+          "card_colors": [
+            "Black",
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple",
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -126485,13 +126690,17 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -127579,13 +127788,13 @@
       {
         "requirement1": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Kimeramon",
           "text_contains": ""
         },
         "requirement2": {
           "level": 0,
-          "card_color": null,
+          "card_colors": [],
           "name_contains": "Machinedramon",
           "text_contains": ""
         },
@@ -127632,13 +127841,18 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple",
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -133621,13 +133835,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -133854,13 +134072,17 @@
       {
         "requirement1": {
           "level": 4,
-          "card_color": "Green",
+          "card_colors": [
+            "Green"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 4,
-          "card_color": "Blue",
+          "card_colors": [
+            "Blue"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -134198,13 +134420,17 @@
       {
         "requirement1": {
           "level": 5,
-          "card_color": "Yellow",
+          "card_colors": [
+            "Yellow"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 5,
-          "card_color": "Purple",
+          "card_colors": [
+            "Purple"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
@@ -135248,13 +135474,17 @@
       {
         "requirement1": {
           "level": 6,
-          "card_color": "Red",
+          "card_colors": [
+            "Red"
+          ],
           "name_contains": "",
           "text_contains": ""
         },
         "requirement2": {
           "level": 6,
-          "card_color": "Black",
+          "card_colors": [
+            "Black"
+          ],
           "name_contains": "",
           "text_contains": ""
         },

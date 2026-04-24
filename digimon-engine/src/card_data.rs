@@ -20,15 +20,44 @@ pub struct DnaRequirement {
     /// Required level. 0 means "any level" (name/text-only requirement).
     #[serde(default)]
     pub level: u8,
-    /// Optional color constraint. `None` means any color.
-    #[serde(default)]
-    pub card_color: Option<CardColor>,
+    /// Color constraint. Empty means any color. Multiple entries come
+    /// from slash-color printed text (e.g. "Blue/Purple Lv.6" — either
+    /// a Blue or a Purple material satisfies the half). The `card_color`
+    /// alias accepts the pre-migration scalar shape so cards.json files
+    /// emitted before the multi-color pipeline still deserialize.
+    #[serde(
+        default,
+        alias = "card_color",
+        deserialize_with = "deserialize_card_colors",
+    )]
+    pub card_colors: Vec<CardColor>,
     /// Case-insensitive substring against `card_name`. Empty = no constraint.
     #[serde(default)]
     pub name_contains: String,
     /// Case-insensitive substring against `effect_text`. Empty = no constraint.
     #[serde(default)]
     pub text_contains: String,
+}
+
+/// Accept both the current list form (`card_colors: ["Blue", "Purple"]`)
+/// and the legacy scalar form (`card_colors: "Blue"`) produced by earlier
+/// cards.json exports. Serde's `#[serde(default)]` covers absent/null.
+fn deserialize_card_colors<'de, D>(deserializer: D) -> Result<Vec<CardColor>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Form {
+        Many(Vec<CardColor>),
+        One(CardColor),
+    }
+    match Option::<Form>::deserialize(deserializer)? {
+        Some(Form::Many(v)) => Ok(v),
+        Some(Form::One(c)) => Ok(vec![c]),
+        None => Ok(vec![]),
+    }
 }
 
 /// A DNA digivolve cost entry. Two requirements plus a memory cost.

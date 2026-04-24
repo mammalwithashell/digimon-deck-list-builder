@@ -154,7 +154,7 @@ class TestBT23_102Mastemon:
         assert len(dna_costs) == 1, "Should have exactly 1 DNA cost"
         dc = dna_costs[0]
         assert dc.memory_cost == 0, "DNA digivolve should cost 0"
-        colors = {dc.requirement1.card_color, dc.requirement2.card_color}
+        colors = set(dc.requirement1.card_colors) | set(dc.requirement2.card_colors)
         assert CardColor.Yellow in colors, "One requirement should be Yellow"
         assert CardColor.Purple in colors, "One requirement should be Purple"
         assert dc.requirement1.level == 5 and dc.requirement2.level == 5, \

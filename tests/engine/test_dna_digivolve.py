@@ -61,12 +61,12 @@ def make_dna_card(card_id="DNA-001", name="DnaMon", dp=10000, level=5,
     dna_cost = DnaCost(
         requirement1=DnaRequirement(
             level=req1_level,
-            card_color=req1_color,
+            card_colors=[req1_color] if req1_color is not None else [],
             name_contains=req1_name,
         ),
         requirement2=DnaRequirement(
             level=req2_level,
-            card_color=req2_color,
+            card_colors=[req2_color] if req2_color is not None else [],
             name_contains=req2_name,
         ),
         memory_cost=memory_cost,
@@ -114,20 +114,27 @@ def init_test_registry():
 
 class TestDnaDataModel:
     def test_dna_requirement_defaults(self):
-        """DnaRequirement defaults to no color and no name constraint."""
+        """DnaRequirement defaults to no colors and no name constraint."""
         req = DnaRequirement(level=4)
         assert req.level == 4
-        assert req.card_color is None
+        assert req.card_colors == []
         assert req.name_contains == ""
 
     def test_dna_cost_fields(self):
         """DnaCost holds two requirements and a memory cost."""
-        req1 = DnaRequirement(level=4, card_color=CardColor.Blue)
-        req2 = DnaRequirement(level=4, card_color=CardColor.Green)
+        req1 = DnaRequirement(level=4, card_colors=[CardColor.Blue])
+        req2 = DnaRequirement(level=4, card_colors=[CardColor.Green])
         cost = DnaCost(requirement1=req1, requirement2=req2, memory_cost=0)
-        assert cost.requirement1.card_color == CardColor.Blue
-        assert cost.requirement2.card_color == CardColor.Green
+        assert cost.requirement1.card_colors == [CardColor.Blue]
+        assert cost.requirement2.card_colors == [CardColor.Green]
         assert cost.memory_cost == 0
+
+    def test_dna_requirement_multi_color(self):
+        """Slash-color DNA reqs ("Blue/Purple") carry multiple colors."""
+        req = DnaRequirement(
+            level=6, card_colors=[CardColor.Blue, CardColor.Purple],
+        )
+        assert req.card_colors == [CardColor.Blue, CardColor.Purple]
 
     def test_entity_base_has_dna_costs(self):
         """CEntity_Base initializes with empty dna_costs list."""
@@ -145,11 +152,26 @@ class TestXrosReqParser:
         result = parse_xros_req("[DNA Digivolve] Blue Lv.4 + Green Lv.4: Cost 0")
         assert len(result) == 1
         dna = result[0]
-        assert dna.requirement1.card_color == CardColor.Blue
+        assert dna.requirement1.card_colors == [CardColor.Blue]
         assert dna.requirement1.level == 4
-        assert dna.requirement2.card_color == CardColor.Green
+        assert dna.requirement2.card_colors == [CardColor.Green]
         assert dna.requirement2.level == 4
         assert dna.memory_cost == 0
+
+    def test_parse_slash_color(self):
+        """Parse '[DNA Digivolve] Black Lv.6 + Yellow/Red Lv.6: Cost 0'.
+
+        Regression: the parser used to drop every color after the first
+        slash, losing Red here. Mirrors BT20-060 Alphamon: Ouryuken's
+        printed DNA text.
+        """
+        result = parse_xros_req(
+            "[DNA Digivolve] Black Lv.6 + Yellow/Red Lv.6: Cost 0"
+        )
+        assert len(result) == 1
+        dna = result[0]
+        assert dna.requirement1.card_colors == [CardColor.Black]
+        assert dna.requirement2.card_colors == [CardColor.Yellow, CardColor.Red]
 
     def test_parse_name_constraint(self):
         """Parse DNA with name-based requirements."""
@@ -162,7 +184,7 @@ class TestXrosReqParser:
         dna = result[0]
         assert dna.requirement1.level == 6
         assert dna.requirement1.name_contains == "Greymon"
-        assert dna.requirement1.card_color is None
+        assert dna.requirement1.card_colors == []
         assert dna.requirement2.level == 6
         assert dna.requirement2.name_contains == "Garurumon"
         assert dna.memory_cost == 0
@@ -211,19 +233,19 @@ class TestXrosReqParser:
         # Round-trip through JSON to catch any non-serializable fields.
         reloaded_json = _json.loads(_json.dumps(serialized))
 
-        assert reloaded_json[0]["requirement1"]["card_color"] == "Blue"
-        assert reloaded_json[0]["requirement2"]["card_color"] == "Green"
+        assert reloaded_json[0]["requirement1"]["card_colors"] == ["Blue"]
+        assert reloaded_json[0]["requirement2"]["card_colors"] == ["Green"]
         assert reloaded_json[0]["memory_cost"] == 2
 
         # Feed through the loader helper and confirm the reverse mapping.
-        assert _parse_card_color_field(reloaded_json[0]["requirement1"]["card_color"]) == CardColor.Blue
-        assert _parse_card_color_field(reloaded_json[0]["requirement2"]["card_color"]) == CardColor.Green
+        assert _parse_card_color_field(reloaded_json[0]["requirement1"]["card_colors"][0]) == CardColor.Blue
+        assert _parse_card_color_field(reloaded_json[0]["requirement2"]["card_colors"][0]) == CardColor.Green
         assert _parse_card_color_field(None) is None
         # Legacy int encoding (top-level `card_colors` convention) still works.
         assert _parse_card_color_field(int(CardColor.Purple.value)) == CardColor.Purple
 
-    def test_name_only_requirement_emits_null_color(self):
-        """Name-constrained DNA requirements emit card_color=null in JSON."""
+    def test_name_only_requirement_emits_empty_colors(self):
+        """Name-constrained DNA requirements emit card_colors=[] in JSON."""
         from tools.ingest_cards import _dna_cost_to_json
 
         source = parse_xros_req(
@@ -231,10 +253,40 @@ class TestXrosReqParser:
             "+ Lv.6 w/[Garurumon] in name : Cost 0"
         )
         serialized = _dna_cost_to_json(source[0])
-        assert serialized["requirement1"]["card_color"] is None
+        assert serialized["requirement1"]["card_colors"] == []
         assert serialized["requirement1"]["name_contains"] == "Greymon"
-        assert serialized["requirement2"]["card_color"] is None
+        assert serialized["requirement2"]["card_colors"] == []
         assert serialized["requirement2"]["name_contains"] == "Garurumon"
+
+    def test_slash_color_round_trip(self):
+        """Slash-color DNA req serializes as a multi-entry list."""
+        import json as _json
+        from tools.ingest_cards import _dna_cost_to_json
+
+        source = parse_xros_req(
+            "[DNA Digivolve] Black Lv.6 + Yellow/Red Lv.6: Cost 0"
+        )
+        serialized = _dna_cost_to_json(source[0])
+        reloaded = _json.loads(_json.dumps(serialized))
+        assert reloaded["requirement1"]["card_colors"] == ["Black"]
+        assert reloaded["requirement2"]["card_colors"] == ["Yellow", "Red"]
+
+    def test_loader_accepts_legacy_scalar_card_color(self):
+        """Partially-migrated cards.json (scalar `card_color`) still loads.
+
+        Guards against breaking users mid-migration when the backfill
+        hasn't run yet or a downstream tool produced the old shape.
+        """
+        from digimon_gym.engine.data.card_database import _parse_dna_requirement_colors
+
+        # New schema: list form wins.
+        assert _parse_dna_requirement_colors({"card_colors": ["Blue", "Purple"]}) == [
+            CardColor.Blue, CardColor.Purple,
+        ]
+        # Legacy schema: scalar fallback.
+        assert _parse_dna_requirement_colors({"card_color": "Green"}) == [CardColor.Green]
+        # Neither present: empty (any color).
+        assert _parse_dna_requirement_colors({}) == []
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -281,6 +333,40 @@ class TestDnaValidation:
                                      colors=[CardColor.Blue, CardColor.Green])])
 
         assert can_dna_digivolve(dna_card, perm, perm) is False
+
+    def test_dna_slash_color_accepts_either_listed_color(self):
+        """Req "Black Lv.6 + Yellow/Red Lv.6" accepts Red as the second material.
+
+        This is BT20-060 Alphamon: Ouryuken's printed DNA. Before the
+        multi-color DnaRequirement migration, the parser kept only
+        Yellow for requirement2, so a Red material was silently rejected
+        even though the printed card explicitly accepts it.
+        """
+        # Req1 = Black Lv.6; Req2 = Yellow OR Red at Lv.6.
+        dna_card = make_dna_card(
+            req1_color=CardColor.Black, req1_level=6,
+            req2_color=None, req2_level=6,  # set below via direct patch
+        )
+        dna_card.c_entity_base.dna_costs[0].requirement2 = DnaRequirement(
+            level=6, card_colors=[CardColor.Yellow, CardColor.Red],
+        )
+        black_perm = Permanent([make_card(
+            name="BlackMon", level=6, colors=[CardColor.Black],
+        )])
+        red_perm = Permanent([make_card(
+            name="RedMon", level=6, colors=[CardColor.Red],
+        )])
+        yellow_perm = Permanent([make_card(
+            name="YellowMon", level=6, colors=[CardColor.Yellow],
+        )])
+
+        assert can_dna_digivolve(dna_card, black_perm, red_perm) is True
+        assert can_dna_digivolve(dna_card, black_perm, yellow_perm) is True
+        # Green still rejected — slash only widens to the listed colors.
+        green_perm = Permanent([make_card(
+            name="GreenMon", level=6, colors=[CardColor.Green],
+        )])
+        assert can_dna_digivolve(dna_card, black_perm, green_perm) is False
 
     def test_dna_name_constraint(self):
         """DNA with name requirement matches correctly."""
@@ -849,9 +935,9 @@ class TestBT16Paildramon:
         card = make_paildramon()
         assert len(card.c_entity_base.dna_costs) == 1
         dna = card.c_entity_base.dna_costs[0]
-        assert dna.requirement1.card_color == CardColor.Blue
+        assert dna.requirement1.card_colors == [CardColor.Blue]
         assert dna.requirement1.level == 4
-        assert dna.requirement2.card_color == CardColor.Green
+        assert dna.requirement2.card_colors == [CardColor.Green]
         assert dna.requirement2.level == 4
         assert dna.memory_cost == 0
 
@@ -979,11 +1065,11 @@ class TestEX6UltimateChaosmon:
         card = make_ultimate_chaosmon()
         assert len(card.c_entity_base.dna_costs) == 1
         dna = card.c_entity_base.dna_costs[0]
-        # "Yellow/Black" → parser picks first color: Yellow
-        assert dna.requirement1.card_color == CardColor.Yellow
+        # "Yellow/Black" → both colors preserved (slash = OR).
+        assert dna.requirement1.card_colors == [CardColor.Yellow, CardColor.Black]
         assert dna.requirement1.level == 6
-        # "Green/Purple" → parser picks first color: Green
-        assert dna.requirement2.card_color == CardColor.Green
+        # "Green/Purple" → both colors preserved.
+        assert dna.requirement2.card_colors == [CardColor.Green, CardColor.Purple]
         assert dna.requirement2.level == 6
         assert dna.memory_cost == 0
 

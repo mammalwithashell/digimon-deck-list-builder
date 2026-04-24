@@ -104,9 +104,12 @@ def _card_color_to_json(color):
 
 
 def _dna_requirement_to_json(req):
+    # `card_colors` is a list of variant-name strings because printed
+    # DNA reqs can be slash-color (e.g. "Blue/Purple Lv.6"). An empty
+    # list means "any color" — level/name gated only.
     return {
         "level": int(req.level),
-        "card_color": _card_color_to_json(req.card_color),
+        "card_colors": [_card_color_to_json(c) for c in req.card_colors if c is not None],
         "name_contains": req.name_contains,
         "text_contains": req.text_contains,
     }
