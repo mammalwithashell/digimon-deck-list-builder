@@ -48,9 +48,10 @@ pub fn try_run(
             true
         }
         CompiledStep::ReturnToDeck { target, position, include_sources: _ } => {
-            // Phase 2c: `include_sources=true` is modelled in CompiledStep but engine
-            // API only supports the top-card-only form. When full-stack return lands
-            // (Phase 2d+), extend this arm.
+            // Phase 2c: `include_sources=true` is modelled in CompiledStep but the
+            // engine currently trashes lower sources regardless — there is no
+            // stack-return API yet. Phase 2d must add one (faithful full-stack
+            // return) before this arm can honor `include_sources=true`.
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
                 let _ = ctx.return_to_deck(h, super::map_stack_position(*position));
