@@ -24,6 +24,24 @@ _COLOR_NAME_MAP = {
 }
 
 
+def _parse_card_color_field(value):
+    """Normalize a JSON `card_color` field into `Optional[CardColor]`.
+
+    Accepts variant-name strings (``"Red"``, emitted by the ingest
+    pipeline for DNA/DigiXros costs) or raw int enum values (legacy
+    encoding, still used by top-level `card_colors`). ``None``, empty
+    string, and ``"NoColor"`` all map to ``None``.
+    """
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        key = value.lower()
+        if key == "nocolor":
+            return None
+        return _COLOR_NAME_MAP.get(key)
+    return CardColor(value)
+
+
 def parse_xros_req(xros_req: str) -> List[DnaCost]:
     """Parse the xros_req text from DigimonCard.io API into DnaCost objects.
 
@@ -417,13 +435,15 @@ class CardDatabase:
                 req2_data = dc.get('requirement2', {})
                 req1 = DnaRequirement(
                     level=req1_data.get('level', 0),
-                    card_color=CardColor(req1_data['card_color']) if 'card_color' in req1_data and req1_data['card_color'] is not None else None,
+                    card_color=_parse_card_color_field(req1_data.get('card_color')),
                     name_contains=req1_data.get('name_contains', ''),
+                    text_contains=req1_data.get('text_contains', ''),
                 )
                 req2 = DnaRequirement(
                     level=req2_data.get('level', 0),
-                    card_color=CardColor(req2_data['card_color']) if 'card_color' in req2_data and req2_data['card_color'] is not None else None,
+                    card_color=_parse_card_color_field(req2_data.get('card_color')),
                     name_contains=req2_data.get('name_contains', ''),
+                    text_contains=req2_data.get('text_contains', ''),
                 )
                 entity.dna_costs.append(DnaCost(
                     requirement1=req1,
@@ -431,13 +451,40 @@ class CardDatabase:
                     memory_cost=dc.get('memory_cost', 0),
                 ))
 
-            # DNA costs from xros_req text (API format)
+            # DNA costs from xros_req text (API format; fallback when
+            # structured `dna_costs` is absent)
             xros_req = entry.get('xros_req', '')
             if xros_req and not entity.dna_costs:
                 entity.dna_costs = parse_xros_req(xros_req)
 
-            # DigiXros/Assembly costs from xros_req text
-            if xros_req:
+            # DigiXros/Assembly costs — prefer structured `digixros_costs`,
+            # fall back to raw `xros_req` parsing for hand-edited or legacy
+            # cards.json entries.
+            structured_digixros = entry.get('digixros_costs')
+            if structured_digixros:
+                for dxc in structured_digixros:
+                    elements = [
+                        DigiXrosElement(
+                            name_contains=el.get('name_contains', ''),
+                            trait_match=el.get('trait_match', ''),
+                            trait_alternatives=list(el.get('trait_alternatives', [])),
+                            level_max=el.get('level_max'),
+                            count=el.get('count', 1),
+                            is_digimon_only=el.get('is_digimon_only', True),
+                            color=_parse_card_color_field(el.get('color')),
+                        )
+                        for el in dxc.get('elements', [])
+                    ]
+                    entity.digixros_costs.append(DigiXrosCost(
+                        elements=elements,
+                        reduce_cost_per_card=dxc.get('reduce_cost_per_card', 0),
+                        max_materials=dxc.get('max_materials', -1),
+                        different_card_numbers=dxc.get('different_card_numbers', False),
+                        different_names=dxc.get('different_names', False),
+                        has_text=dxc.get('has_text', ''),
+                        source_zones=list(dxc.get('source_zones', ['hand', 'field'])),
+                    ))
+            elif xros_req:
                 digixros = parse_digixros_req(xros_req)
                 if digixros:
                     entity.digixros_costs = digixros

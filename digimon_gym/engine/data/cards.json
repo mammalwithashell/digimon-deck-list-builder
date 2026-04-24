@@ -382,7 +382,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] Lv.4 w/[Free]/[Hero] trait: Cost 3 \r\n[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.4 w/[Free]/[Hero] trait: Cost 3 \r\n[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "AD1-012": {
     "index": 4081,
@@ -796,7 +813,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": null,
+          "name_contains": "Greymon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": null,
+          "name_contains": "Garurumon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT1-001": {
     "index": 17,
@@ -27866,7 +27900,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Red Lv.4 + Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Red Lv.4 + Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT8-016": {
     "index": 822,
@@ -28840,7 +28891,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Yellow Lv.4 + Blue Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Yellow Lv.4 + Blue Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT8-043": {
     "index": 849,
@@ -30342,7 +30410,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Lv.4 + Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Lv.4 + Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": null,
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": null,
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT8-085": {
     "index": 891,
@@ -33967,7 +34052,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] Purple Lv.6 + Yellow Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Purple Lv.6 + Yellow Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT9-083": {
     "index": 1001,
@@ -35041,7 +35143,58 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Ballistamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Dorulumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Starmons",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 4,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-010": {
     "index": 1040,
@@ -35148,7 +35301,40 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon X4] x [Beelzemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon X4] x [Beelzemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon X4",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Beelzemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-013": {
     "index": 1043,
@@ -35185,7 +35371,67 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Ballistamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Dorulumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Starmons",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Sparrowmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 5,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-014": {
     "index": 1044,
@@ -35257,7 +35503,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon X5] x [Beelzemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon X5] x [Beelzemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon X5",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Beelzemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-016": {
     "index": 1046,
@@ -35584,7 +35863,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Greymon] x [MailBirdramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Greymon] x [MailBirdramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Greymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "MailBirdramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-025": {
     "index": 1055,
@@ -35656,7 +35968,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [MetalGreymon] x [Deckerdramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [MetalGreymon] x [Deckerdramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "MetalGreymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Deckerdramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-027": {
     "index": 1057,
@@ -36901,7 +37246,40 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -1] [SkullKnightmon] x [DeadlyAxemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -1] [SkullKnightmon] x [DeadlyAxemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "SkullKnightmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "DeadlyAxemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 1,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-062": {
     "index": 1092,
@@ -36973,7 +37351,49 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Monitamon] x [Monitamon] x [Monitamon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Monitamon] x [Monitamon] x [Monitamon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Monitamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Monitamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Monitamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-064": {
     "index": 1094,
@@ -37079,7 +37499,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [SkullKnightmon] x [DeadlyAxemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [SkullKnightmon] x [DeadlyAxemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "SkullKnightmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "DeadlyAxemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-067": {
     "index": 1097,
@@ -37478,7 +37931,31 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] 1 Digimon card w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] 1 Digimon card w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Bagra Army",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-078": {
     "index": 1108,
@@ -38458,7 +38935,31 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] 1 Digimon card w/[Xros Heart] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] 1 Digimon card w/[Xros Heart] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Xros Heart",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT10-112": {
     "index": 1142,
@@ -38763,7 +39264,40 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -1] [Shoutmon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -1] [Shoutmon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Starmons",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 1,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT11-010": {
     "index": 1152,
@@ -38872,7 +39406,49 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Ballistamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Dorulumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT11-013": {
     "index": 1155,
@@ -39087,7 +39663,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -3] [OmniShoutmon] x [ZeigGreymon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -3] [OmniShoutmon] x [ZeigGreymon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "OmniShoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "ZeigGreymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 3,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT11-019": {
     "index": 1161,
@@ -39127,7 +39736,76 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [OmniShoutmon] x [ZeigGreymon] x [Ballistamon] x [Dorulumon] x [Starmons] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [OmniShoutmon] x [ZeigGreymon] x [Ballistamon] x [Dorulumon] x [Starmons] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "OmniShoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "ZeigGreymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Ballistamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Dorulumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Starmons",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Sparrowmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 6,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT11-020": {
     "index": 1162,
@@ -39516,7 +40194,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [MetalGreymon] x [Cyberdramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [MetalGreymon] x [Cyberdramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "MetalGreymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Cyberdramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT11-031": {
     "index": 1173,
@@ -40976,7 +41687,40 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [DarkKnightmon] x [Tuwarmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [DarkKnightmon] x [Tuwarmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "DarkKnightmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Tuwarmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT11-072": {
     "index": 1214,
@@ -41331,7 +42075,40 @@
         "memory_cost": 2
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [MadLeomon] x 1 Digimon card w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [MadLeomon] x 1 Digimon card w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "MadLeomon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "",
+            "trait_match": "Bagra Army",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT11-082": {
     "index": 1224,
@@ -41511,7 +42288,31 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -3] 1 Digimon card w/[Xros Heart] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -3] 1 Digimon card w/[Xros Heart] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Xros Heart",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 3,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT11-087": {
     "index": 1229,
@@ -43154,7 +43955,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT12-029": {
     "index": 1283,
@@ -44124,7 +44942,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT12-056": {
     "index": 1310,
@@ -45166,7 +46001,40 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -3] [Mervamon] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -3] [Mervamon] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Mervamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Sparrowmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 3,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT12-085": {
     "index": 1339,
@@ -45892,7 +46760,40 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -3] [DarkKnightmon] x [Bagramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -3] [DarkKnightmon] x [Bagramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "DarkKnightmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Bagramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 3,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT12-112": {
     "index": 1366,
@@ -45924,7 +46825,33 @@
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": "DigiXros Requirements [DigiXros -1] ∞ Digimon cards w/[Xros Heart] or [Blue Flare] trait & different card numbers\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -1] ∞ Digimon cards w/[Xros Heart] or [Blue Flare] trait & different card numbers\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Xros Heart",
+            "trait_alternatives": [
+              "Blue Flare"
+            ],
+            "level_max": null,
+            "count": 99,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 1,
+        "max_materials": -1,
+        "different_card_numbers": true,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT13-001": {
     "index": 1367,
@@ -47967,7 +48894,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT13-060": {
     "index": 1426,
@@ -53585,7 +54529,40 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -1] [Shoutmon] x [Ballistamon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -1] [Shoutmon] x [Ballistamon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Ballistamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 1,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT15-013": {
     "index": 1593,
@@ -55293,7 +56270,44 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -1] [Agumon] or [Greymon] x [Gabumon] or [Garurumon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -1] [Agumon] or [Greymon] x [Gabumon] or [Garurumon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Agumon",
+            "trait_match": "",
+            "trait_alternatives": [
+              "Greymon"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Gabumon",
+            "trait_match": "",
+            "trait_alternatives": [
+              "Garurumon"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 1,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT15-061": {
     "index": 1641,
@@ -56979,7 +57993,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Red Lv.4 + Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Red Lv.4 + Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT16-013": {
     "index": 1695,
@@ -57452,7 +58483,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT16-026": {
     "index": 1708,
@@ -57851,7 +58899,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Yellow Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Yellow Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT16-037": {
     "index": 1719,
@@ -58821,7 +59886,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Black Lv.4 + Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Black Lv.4 + Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT16-064": {
     "index": 1746,
@@ -59330,7 +60412,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Purple Lv.4 + Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Purple Lv.4 + Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT16-078": {
     "index": 1760,
@@ -60632,7 +61731,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -3] [Agunimon] x [BurningGreymon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -3] [Agunimon] x [BurningGreymon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Agunimon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "BurningGreymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 3,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT17-018": {
     "index": 1802,
@@ -61035,7 +62167,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -3] [Lobomon] x [KendoGarurumon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -3] [Lobomon] x [KendoGarurumon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Lobomon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "KendoGarurumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 3,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT17-029": {
     "index": 1813,
@@ -62815,7 +63980,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": null,
+          "name_contains": "Greymon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": null,
+          "name_contains": "Garurumon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT17-079": {
     "index": 1863,
@@ -63420,7 +64602,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] [Fenriloogamon] + [Kazuchimon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] [Fenriloogamon] + [Kazuchimon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Fenriloogamon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Kazuchimon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT17-102": {
     "index": 1886,
@@ -64019,7 +65218,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Grumblemon] x [Gigasmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Grumblemon] x [Gigasmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Grumblemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Gigasmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT18-018": {
     "index": 1904,
@@ -64093,7 +65325,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] [Kimeramon] + [Machinedramon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] [Kimeramon] + [Machinedramon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Kimeramon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Machinedramon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT18-020": {
     "index": 1906,
@@ -64424,7 +65673,40 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Kumamon] x [Korikakumon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Kumamon] x [Korikakumon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Kumamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Korikakumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT18-029": {
     "index": 1915,
@@ -64460,7 +65742,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Lanamon] x [Calmaramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Lanamon] x [Calmaramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Lanamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Calmaramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT18-030": {
     "index": 1916,
@@ -64877,7 +66192,24 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[NSp] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.5 + Green/Black Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.5 w/[NSp] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.5 + Green/Black Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT18-042": {
     "index": 1928,
@@ -65354,7 +66686,40 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Kazemon] x [Zephyrmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Kazemon] x [Zephyrmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Kazemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Zephyrmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT18-055": {
     "index": 1941,
@@ -65390,7 +66755,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Arbormon] x [Petaldramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Arbormon] x [Petaldramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Arbormon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Petaldramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT18-056": {
     "index": 1942,
@@ -65739,7 +67137,31 @@
     "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When [Vemmon] returns to the bottom of the deck from this Digimon's digivolution cards, unsuspend this Digimon and it gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": "DigiXros Requirements [DigiXros -1] 4 [Vemmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -1] 4 [Vemmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Vemmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 4,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 1,
+        "max_materials": 4,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT18-066": {
     "index": 1952,
@@ -66067,7 +67489,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Mercurymon] x [Sephirothmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Mercurymon] x [Sephirothmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Mercurymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Sephirothmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT18-075": {
     "index": 1961,
@@ -66437,7 +67892,44 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Loweemon] or [Duskmon] x [KaiserLeomon] or [Velgrmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Loweemon] or [Duskmon] x [KaiserLeomon] or [Velgrmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Loweemon",
+            "trait_match": "",
+            "trait_alternatives": [
+              "Duskmon"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "KaiserLeomon",
+            "trait_match": "",
+            "trait_alternatives": [
+              "Velgrmon"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT18-085": {
     "index": 1971,
@@ -67248,7 +68740,58 @@
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Ballistamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Dorulumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Starmons",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 4,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT19-011": {
     "index": 1999,
@@ -67351,7 +68894,67 @@
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Shoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Ballistamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Dorulumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Starmons",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Sparrowmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 5,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT19-014": {
     "index": 2002,
@@ -67383,7 +68986,67 @@
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [OmniShoutmon] x [ZeigGreymon] x [AtlurBallistamon] x [JaegerDorulumon] x [RaptorSparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [OmniShoutmon] x [ZeigGreymon] x [AtlurBallistamon] x [JaegerDorulumon] x [RaptorSparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "OmniShoutmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "ZeigGreymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "AtlurBallistamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "JaegerDorulumon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "RaptorSparrowmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 5,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT19-015": {
     "index": 2003,
@@ -67775,7 +69438,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] Blue [Greymon] x [MailBirdramon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] Blue [Greymon] x [MailBirdramon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Greymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": "Blue"
+          },
+          {
+            "name_contains": "MailBirdramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT19-026": {
     "index": 2014,
@@ -69159,7 +70855,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [SkullKnightmon] x [DeadlyAxemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [SkullKnightmon] x [DeadlyAxemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "SkullKnightmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "DeadlyAxemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT19-064": {
     "index": 2052,
@@ -69230,7 +70959,33 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -1] 5 Lv.5 or lower [Cyborg] or [Composite] trait Digimon cards w/different card numbers\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -1] 5 Lv.5 or lower [Cyborg] or [Composite] trait Digimon cards w/different card numbers\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Cyborg",
+            "trait_alternatives": [
+              "Composite"
+            ],
+            "level_max": 5,
+            "count": 5,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 1,
+        "max_materials": 5,
+        "different_card_numbers": true,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT19-066": {
     "index": 2054,
@@ -69338,7 +71093,31 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Nene Amano] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Nene Amano] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Nene Amano",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT19-069": {
     "index": 2057,
@@ -70875,7 +72654,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Red Lv.4 + Purple Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Red Lv.4 + Purple Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT20-017": {
     "index": 2107,
@@ -71064,7 +72860,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] Lv.6 w/[Jesmon] in name + Lv.6 w/[Gankoomon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Lv.6 w/[Jesmon] in name + Lv.6 w/[Gankoomon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": null,
+          "name_contains": "Jesmon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": null,
+          "name_contains": "Gankoomon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT20-022": {
     "index": 2112,
@@ -71650,7 +73463,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Yellow Lv.6 + Green/Black Lv.6: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Yellow Lv.6 + Green/Black Lv.6: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT20-038": {
     "index": 2128,
@@ -71943,7 +73773,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT20-046": {
     "index": 2136,
@@ -72418,7 +74265,49 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Raijinmon] x [Fujinmon] x [Suijinmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Raijinmon] x [Fujinmon] x [Suijinmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Raijinmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Fujinmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Suijinmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "BT20-059": {
     "index": 2149,
@@ -72494,7 +74383,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] Black Lv.6 + Yellow/Red Lv.6: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Black Lv.6 + Yellow/Red Lv.6: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT20-061": {
     "index": 2151,
@@ -73012,7 +74918,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Purple Lv.4 + Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Purple Lv.4 + Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT20-075": {
     "index": 2165,
@@ -73085,7 +75008,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Purple Lv.5 + Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Purple Lv.5 + Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT20-077": {
     "index": 2167,
@@ -73274,7 +75214,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] [Fenriloogamon] + Yellow Lv.6 w/[Pulsemon] in text: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] [Fenriloogamon] + Yellow Lv.6 w/[Pulsemon] in text: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Fenriloogamon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": "Pulsemon"
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT20-082": {
     "index": 2172,
@@ -75253,7 +77210,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[WG] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.5 + Green/Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.5 w/[WG] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.5 + Green/Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT21-040": {
     "index": 2232,
@@ -77844,7 +79818,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 \r\n[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 \r\n[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": null,
+          "name_contains": "Greymon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": null,
+          "name_contains": "Garurumon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT22-016": {
     "index": 2310,
@@ -81965,7 +83956,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] Lv.4 w/[CS] trait: Cost 3 \r\n[DNA Digivolve] Yellow Lv.4 + Black/Blue Lv. 4: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.4 w/[CS] trait: Cost 3 \r\n[DNA Digivolve] Yellow Lv.4 + Black/Blue Lv. 4: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT23-033": {
     "index": 2429,
@@ -82532,7 +84540,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 \r\n[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 \r\n[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT23-048": {
     "index": 2444,
@@ -84289,7 +86314,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[CS] trait: Cost 5 \r\n[DNA Digivolve] Yellow Lv.5 + Purple Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.5 w/[CS] trait: Cost 5 \r\n[DNA Digivolve] Yellow Lv.5 + Purple Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT24-001": {
     "index": 2499,
@@ -85602,7 +87644,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] Lv.4 w/[TS] trait: Cost 3 \r\n[DNA Digivolve] Yellow Lv.4 + Red/Green Lv. 4: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.4 w/[TS] trait: Cost 3 \r\n[DNA Digivolve] Yellow Lv.4 + Red/Green Lv. 4: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "BT24-038": {
     "index": 2536,
@@ -87213,7 +89272,39 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "Assembly Requirements [Assembly -6] [Titamon] x [SkullBaluchimon] \r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "Assembly Requirements [Assembly -6] [Titamon] x [SkullBaluchimon] \r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Titamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "SkullBaluchimon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 6,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "BT24-082": {
     "index": 2580,
@@ -93041,7 +95132,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Red Lv.4 + Purple Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Red Lv.4 + Purple Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX3-011": {
     "index": 2761,
@@ -93185,7 +95293,34 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] 5 Digimon cards w/different names and [Dragon], [saur] or [Ceratopsian] in one of their traits\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] 5 Digimon cards w/different names and [Dragon], [saur] or [Ceratopsian] in one of their traits\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Dragon",
+            "trait_alternatives": [
+              "saur",
+              "Ceratopsian"
+            ],
+            "level_max": null,
+            "count": 5,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 5,
+        "different_card_numbers": false,
+        "different_names": true,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX3-015": {
     "index": 2765,
@@ -94849,7 +96984,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Purple Lv.4 + Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Purple Lv.4 + Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX3-062": {
     "index": 2812,
@@ -94921,7 +97073,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Purple Lv.5 + Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Purple Lv.5 + Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX3-064": {
     "index": 2814,
@@ -95234,7 +97403,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX4-001": {
     "index": 2825,
@@ -95909,7 +98095,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] Blue [Greymon] x [MailBirdramon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] Blue [Greymon] x [MailBirdramon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Greymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": "Blue"
+          },
+          {
+            "name_contains": "MailBirdramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX4-021": {
     "index": 2845,
@@ -95947,7 +98166,40 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] Blue [MetalGreymon] x [DarkKnightmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] Blue [MetalGreymon] x [DarkKnightmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "MetalGreymon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": "Blue"
+          },
+          {
+            "name_contains": "DarkKnightmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX4-022": {
     "index": 2846,
@@ -96880,7 +99132,40 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [SkullKnightmon] x [DeadlyAxemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [SkullKnightmon] x [DeadlyAxemon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "SkullKnightmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "DeadlyAxemon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX4-048": {
     "index": 2872,
@@ -97345,7 +99630,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] Blue Lv.6 + Red Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Blue Lv.6 + Red Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX4-061": {
     "index": 2885,
@@ -100146,7 +102448,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] [Apollomon] + [Dianamon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] [Apollomon] + [Dianamon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Apollomon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Dianamon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX5-074": {
     "index": 2972,
@@ -100522,7 +102841,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Red Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Red Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX6-012": {
     "index": 2984,
@@ -100937,7 +103273,34 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Sanzomon] or [Sagomon] or [Cho-Hakkaimon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Sanzomon] or [Sagomon] or [Cho-Hakkaimon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Sanzomon",
+            "trait_match": "",
+            "trait_alternatives": [
+              "Sagomon",
+              "Cho-Hakkaimon"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX6-024": {
     "index": 2996,
@@ -100973,7 +103336,34 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Sanzomon] or [Gokuumon] or [Cho-Hakkaimon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Sanzomon] or [Gokuumon] or [Cho-Hakkaimon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Sanzomon",
+            "trait_match": "",
+            "trait_alternatives": [
+              "Gokuumon",
+              "Cho-Hakkaimon"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX6-025": {
     "index": 2997,
@@ -101008,7 +103398,34 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Gokuumon] or [Sagomon] or [Cho-Hakkaimon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Gokuumon] or [Sagomon] or [Cho-Hakkaimon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Gokuumon",
+            "trait_match": "",
+            "trait_alternatives": [
+              "Sagomon",
+              "Cho-Hakkaimon"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX6-026": {
     "index": 2998,
@@ -101044,7 +103461,34 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] [Sanzomon] or [Gokuumon] or [Sagomon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] [Sanzomon] or [Gokuumon] or [Sagomon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Sanzomon",
+            "trait_match": "",
+            "trait_alternatives": [
+              "Gokuumon",
+              "Sagomon"
+            ],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX6-027": {
     "index": 2999,
@@ -101154,7 +103598,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Yellow Lv.5 + Purple Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Yellow Lv.5 + Purple Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX6-030": {
     "index": 3002,
@@ -102332,7 +104793,24 @@
         "memory_cost": 7
       }
     ],
-    "xros_req": "[DNA Digivolve] Yellow/Black Lv.6 + Green/Purple Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Yellow/Black Lv.6 + Green/Purple Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX6-063": {
     "index": 3035,
@@ -103919,7 +106397,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] Green/Yellow Lv.6 + Black/Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Green/Yellow Lv.6 + Black/Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX7-038": {
     "index": 3084,
@@ -106006,7 +108501,24 @@
     ],
     "xros_req": "[Digivolve] Lv.4 w/[DS] trait: Cost 3 \r\n[DNA Digivolve] Blue Lv.4 + Black/Purple Lv.4: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
     "index": 3145,
-    "norm_id": 0.15725
+    "norm_id": 0.15725,
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX8-026": {
     "card_id": "EX8-026",
@@ -106153,7 +108665,39 @@
     ],
     "xros_req": "[DNA Digivolve] Blue/Purple Lv.6 + Black/Yellow Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended. \r\n[DNA Digivolve] [Plesiomon] + Lv.5 w/[Seadramon] in name: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
     "index": 3149,
-    "norm_id": 0.15745
+    "norm_id": 0.15745,
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      },
+      {
+        "requirement1": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Plesiomon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": null,
+          "name_contains": "Seadramon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX8-030": {
     "card_id": "EX8-030",
@@ -106298,7 +108842,24 @@
     ],
     "xros_req": "[Digivolve] Lv.4 w/[NSo] trait: Cost 3 \r\n[DNA Digivolve] Yellow Lv.4 + Purple/Red Lv.4: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
     "index": 3153,
-    "norm_id": 0.15765
+    "norm_id": 0.15765,
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX8-034": {
     "card_id": "EX8-034",
@@ -106732,7 +109293,24 @@
     ],
     "xros_req": "[Digivolve] Lv.5 w/[NSo] trait: Cost 3 \r\n[DNA Digivolve] Green/Purple Lv.5 + Red/Yellow Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
     "index": 3165,
-    "norm_id": 0.15825
+    "norm_id": 0.15825,
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX8-046": {
     "card_id": "EX8-046",
@@ -107416,7 +109994,39 @@
     ],
     "xros_req": "[DNA Digivolve] Purple/Black Lv.6 + Yellow/Green Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended. \r\n[DNA Digivolve] [Piedmon] + [Myotismon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
     "index": 3184,
-    "norm_id": 0.1592
+    "norm_id": 0.1592,
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      },
+      {
+        "requirement1": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Piedmon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Myotismon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX8-065": {
     "card_id": "EX8-065",
@@ -108441,7 +111051,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[Digivolve] Lv.6 w/[DM] trait: Cost 5 \r\n[DNA Digivolve] Blue Lv.6 + Red Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.6 w/[DM] trait: Cost 5 \r\n[DNA Digivolve] Blue Lv.6 + Red Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX9-022": {
     "index": 4026,
@@ -109331,7 +111958,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Green/Yellow Lv.6 + Blue/Purple Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Green/Yellow Lv.6 + Blue/Purple Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX9-046": {
     "index": 4050,
@@ -109691,7 +112335,30 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "Assembly Requirements [Assembly -6] 4 [Negamon]\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "Assembly Requirements [Assembly -6] 4 [Negamon]\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Negamon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 4,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 6,
+        "max_materials": 4,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX9-056": {
     "index": 4060,
@@ -110328,7 +112995,30 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "Assembly Requirements [Assembly -7] 7 level 4 [DM] trait Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "Assembly Requirements [Assembly -7] 7 level 4 [DM] trait Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "DM",
+            "trait_alternatives": [],
+            "level_max": 4,
+            "count": 7,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 7,
+        "max_materials": 7,
+        "different_card_numbers": false,
+        "different_names": true,
+        "has_text": "",
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ]
   },
   "EX10-001": {
     "index": 3922,
@@ -110817,7 +113507,31 @@
         "memory_cost": 1
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] 1 Digimon card with ＜Save＞ in text\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] 1 Digimon card with ＜Save＞ in text\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 1,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "Save",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX10-016": {
     "index": 3937,
@@ -111516,7 +114230,31 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] 3 Digimon cards w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] 3 Digimon cards w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Bagra Army",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 3,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 3,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX10-035": {
     "index": 3956,
@@ -112270,7 +115008,31 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] 2 Digimon cards w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] 2 Digimon cards w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Bagra Army",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 2,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX10-056": {
     "index": 3977,
@@ -112306,7 +115068,31 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] 2 Digimon cards w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] 2 Digimon cards w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Bagra Army",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 2,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX10-057": {
     "index": 3978,
@@ -112372,7 +115158,31 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -2] 2 Digimon cards w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -2] 2 Digimon cards w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "",
+            "trait_match": "Bagra Army",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 2,
+            "is_digimon_only": true,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 2,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX10-059": {
     "index": 3980,
@@ -112409,7 +115219,40 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -3] [Bagramon] x [DarkKnightmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -3] [Bagramon] x [DarkKnightmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Bagramon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "DarkKnightmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 3,
+        "max_materials": 2,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "EX10-060": {
     "index": 3981,
@@ -115300,7 +118143,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Green Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Green Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "EX11-074": {
     "index": 3268,
@@ -120491,7 +123351,40 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "DigiXros Requirements [DigiXros -1] [Snatchmon] x 4 [Vemmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    "xros_req": "DigiXros Requirements [DigiXros -1] [Snatchmon] x 4 [Vemmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+    "digixros_costs": [
+      {
+        "elements": [
+          {
+            "name_contains": "Snatchmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "color": null
+          },
+          {
+            "name_contains": "Vemmon",
+            "trait_match": "",
+            "trait_alternatives": [],
+            "level_max": null,
+            "count": 4,
+            "is_digimon_only": false,
+            "color": null
+          }
+        ],
+        "reduce_cost_per_card": 1,
+        "max_materials": 5,
+        "different_card_numbers": false,
+        "different_names": false,
+        "has_text": "",
+        "source_zones": [
+          "hand",
+          "field"
+        ]
+      }
+    ]
   },
   "P-095": {
     "index": 3425,
@@ -122992,7 +125885,24 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[DS] trait: Cost 3 \r\n[DNA Digivolve] Blue/Black Lv.5 + Purple Lv.5: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.5 w/[DS] trait: Cost 3 \r\n[DNA Digivolve] Blue/Black Lv.5 + Purple Lv.5: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "P-172": {
     "index": 3502,
@@ -123030,7 +125940,24 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[NSp] trait: Cost 3 \r\n[DNA Digivolve] Yellow/Red Lv.5 + Green/Black Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.5 w/[NSp] trait: Cost 3 \r\n[DNA Digivolve] Yellow/Red Lv.5 + Green/Black Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "P-173": {
     "index": 3503,
@@ -123103,7 +126030,24 @@
         "memory_cost": 3
       }
     ],
-    "xros_req": "[Digivolve] Lv.5 w/[NSo] trait: Cost 3 \r\n[DNA Digivolve] Black/Yellow Lv.5 + Purple/Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.5 w/[NSo] trait: Cost 3 \r\n[DNA Digivolve] Black/Yellow Lv.5 + Purple/Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "P-175": {
     "index": 3505,
@@ -123534,7 +126478,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Purple Lv.5 + Yellow Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Purple Lv.5 + Yellow Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "P-188": {
     "index": 3518,
@@ -124611,7 +127572,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] [Kimeramon]: Cost 6 \r\n[DNA Digivolve] [Kimeramon] + [Machinedramon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] [Kimeramon]: Cost 6 \r\n[DNA Digivolve] [Kimeramon] + [Machinedramon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Kimeramon",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 0,
+          "card_color": null,
+          "name_contains": "Machinedramon",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "P-221": {
     "index": 3551,
@@ -124647,7 +127625,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Yellow Lv.6 + Purple/Black Lv.6: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Yellow Lv.6 + Purple/Black Lv.6: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "P-222": {
     "index": 3552,
@@ -130619,7 +133614,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "ST9-06": {
     "index": 3724,
@@ -130835,7 +133847,24 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[DNA Digivolve] Green Lv.4 + Blue Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Green Lv.4 + Blue Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 4,
+          "card_color": "Green",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 4,
+          "card_color": "Blue",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "ST9-12": {
     "index": 3730,
@@ -131162,7 +134191,24 @@
         "memory_cost": 5
       }
     ],
-    "xros_req": "[DNA Digivolve] Yellow Lv.5 + Purple Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Yellow Lv.5 + Purple Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 5,
+          "card_color": "Yellow",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 5,
+          "card_color": "Purple",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "ST10-07": {
     "index": 3740,
@@ -132195,7 +135241,24 @@
         "memory_cost": 6
       }
     ],
-    "xros_req": "[DNA Digivolve] Red Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[DNA Digivolve] Red Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "dna_costs": [
+      {
+        "requirement1": {
+          "level": 6,
+          "card_color": "Red",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "requirement2": {
+          "level": 6,
+          "card_color": "Black",
+          "name_contains": "",
+          "text_contains": ""
+        },
+        "memory_cost": 0
+      }
+    ]
   },
   "ST13-07": {
     "index": 3771,

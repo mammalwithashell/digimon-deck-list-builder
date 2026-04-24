@@ -166,6 +166,48 @@ class TestParseDigiXrosReq:
         count = sum(1 for c in db.cards.values() if c.digixros_costs)
         assert count == 60
 
+    def test_round_trip_through_cards_json_format(self):
+        """Parser output → JSON serializer → JSON → matches original shape.
+
+        Locks in the `color` variant-name encoding + list/bool types so
+        cards.json stays consumable by both engines.
+        """
+        import json as _json
+        from tools.ingest_cards import _digixros_cost_to_json
+
+        source = parse_digixros_req(
+            "[DigiXros\xa0-2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] "
+            "\r\nWhen this"
+        )
+        serialized = [_digixros_cost_to_json(dxc) for dxc in source]
+        reloaded = _json.loads(_json.dumps(serialized))
+
+        assert len(reloaded) == 1
+        xc = reloaded[0]
+        assert xc["reduce_cost_per_card"] == 2
+        assert xc["max_materials"] == 4
+        assert xc["source_zones"] == ["hand", "field"]
+        names = [el["name_contains"] for el in xc["elements"]]
+        assert names == ["Shoutmon", "Ballistamon", "Dorulumon", "Starmons"]
+        # JSON must use bool/null/list primitives — not Python tuples/enums.
+        for el in xc["elements"]:
+            assert isinstance(el["is_digimon_only"], bool)
+            assert el["color"] is None
+            assert isinstance(el["trait_alternatives"], list)
+
+    def test_assembly_source_zones_round_trip(self):
+        """Assembly variant ([Assembly -N] block) keeps `source_zones=['trash']`."""
+        import json as _json
+        from tools.ingest_cards import _digixros_cost_to_json
+
+        source = parse_digixros_req(
+            "[Assembly\xa0-1] [Agumon] x [Gabumon]\r\nWhen this"
+        )
+        assert source, "Assembly parser produced no result"
+        serialized = _digixros_cost_to_json(source[0])
+        reloaded = _json.loads(_json.dumps(serialized))
+        assert reloaded["source_zones"] == ["trash"]
+
 
 # ─── Validator Tests ──────────────────────────────────────────────────
 

@@ -100,6 +100,51 @@ fn production_indices_are_unique() {
 }
 
 #[test]
+fn production_cards_json_populates_dna_costs() {
+    // Guards the data-ingest pipeline in tools/ingest_cards.py: every card
+    // with a DNA Digivolve clause in `xros_req` must have a structured
+    // `dna_costs` entry that the Rust deserializer picks up. Before this
+    // pipeline landed, the field was always `[]` and the DNA-digivolve
+    // mask branch (see RUST_PYTHON_PARITY §4.5b) could not fire.
+    let Some(path) = cards_json_path() else {
+        return;
+    };
+    let cards = CardData::load_from_file(&path).unwrap();
+
+    let with_dna: Vec<_> = cards
+        .values()
+        .filter(|c| !c.dna_costs.is_empty())
+        .collect();
+    assert!(
+        with_dna.len() >= 50,
+        "expected >=50 cards with structured dna_costs in cards.json, got {}. \
+         Run `python -m tools.ingest_cards --backfill` to regenerate.",
+        with_dna.len()
+    );
+
+    // Every DNA entry must have two well-formed requirements.
+    for c in &with_dna {
+        for (i, dc) in c.dna_costs.iter().enumerate() {
+            // `level` is u8 so it's automatically >= 0; require at least one
+            // of {level, name_contains, text_contains} to be set on each
+            // requirement, mirroring the Python parser's "no valid level"
+            // rejection path.
+            let r1_set = dc.requirement1.level > 0
+                || !dc.requirement1.name_contains.is_empty()
+                || !dc.requirement1.text_contains.is_empty();
+            let r2_set = dc.requirement2.level > 0
+                || !dc.requirement2.name_contains.is_empty()
+                || !dc.requirement2.text_contains.is_empty();
+            assert!(
+                r1_set && r2_set,
+                "{} dna_costs[{}] has an empty requirement: {:?}",
+                c.card_id, i, dc,
+            );
+        }
+    }
+}
+
+#[test]
 fn norm_id_is_index_over_capacity() {
     // Python stores norm_id = index / REGISTRY_CAPACITY (20_000). Verify that
     // invariant holds in the Rust reader for a few sampled cards.

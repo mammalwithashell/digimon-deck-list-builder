@@ -13,6 +13,11 @@ import re
 import sys
 import time
 import urllib.request
+from dataclasses import asdict
+
+# Import the existing parsers and dataclasses so on-disk JSON matches the
+# shapes the runtime loader expects. These imports are local to avoid
+# pulling the engine at API-fetch time when card_database.py isn't needed.
 
 CARDS_JSON = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "cards.json")
 PRIORITY_SETS_TXT = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "scraper", "priority_sets.txt")
@@ -95,6 +100,80 @@ def parse_evo_costs(api_card):
     return costs
 
 
+def _card_color_to_json(color):
+    """Serialize a CardColor enum to its variant-name string (e.g. "Red").
+
+    Rust's `DnaRequirement.card_color: Option<CardColor>` uses default
+    serde derivation, which expects variant-name strings. `NoColor` and
+    `None` both emit JSON null.
+    """
+    if color is None:
+        return None
+    name = color.name
+    if name == "NoColor":
+        return None
+    return name
+
+
+def _dna_requirement_to_json(req):
+    return {
+        "level": int(req.level),
+        "card_color": _card_color_to_json(req.card_color),
+        "name_contains": req.name_contains,
+        "text_contains": req.text_contains,
+    }
+
+
+def _dna_cost_to_json(dc):
+    return {
+        "requirement1": _dna_requirement_to_json(dc.requirement1),
+        "requirement2": _dna_requirement_to_json(dc.requirement2),
+        "memory_cost": int(dc.memory_cost),
+    }
+
+
+def _digixros_element_to_json(el):
+    return {
+        "name_contains": el.name_contains,
+        "trait_match": el.trait_match,
+        "trait_alternatives": list(el.trait_alternatives),
+        "level_max": el.level_max,
+        "count": int(el.count),
+        "is_digimon_only": bool(el.is_digimon_only),
+        "color": _card_color_to_json(el.color),
+    }
+
+
+def _digixros_cost_to_json(dxc):
+    return {
+        "elements": [_digixros_element_to_json(e) for e in dxc.elements],
+        "reduce_cost_per_card": int(dxc.reduce_cost_per_card),
+        "max_materials": int(dxc.max_materials),
+        "different_card_numbers": bool(dxc.different_card_numbers),
+        "different_names": bool(dxc.different_names),
+        "has_text": dxc.has_text,
+        "source_zones": list(dxc.source_zones),
+    }
+
+
+def _parse_xros_costs(xros_req):
+    """Run the runtime parsers over a raw `xros_req` string.
+
+    Returns `(dna_costs_json, digixros_costs_json)` — each a list of dicts
+    ready for cards.json, or empty when the string has no matching block.
+    Imports are deferred because the runtime engine pulls heavy deps.
+    """
+    if not xros_req:
+        return [], []
+    from digimon_gym.engine.data.card_database import parse_xros_req, parse_digixros_req  # noqa: E402
+    dna_costs = parse_xros_req(xros_req)
+    digixros_costs = parse_digixros_req(xros_req)
+    return (
+        [_dna_cost_to_json(dc) for dc in dna_costs],
+        [_digixros_cost_to_json(dxc) for dxc in digixros_costs],
+    )
+
+
 def convert_card(api_card):
     """Convert a digimoncard.io API card to our cards.json format."""
     card_id = api_card["id"]
@@ -124,7 +203,10 @@ def convert_card(api_card):
 
     class_name = card_id.replace("-", "_")
 
-    return {
+    xros_req = api_card.get("xros_req") or ""
+    dna_costs_json, digixros_costs_json = _parse_xros_costs(xros_req)
+
+    out = {
         "card_id": card_id,
         "card_index": card_index,
         "card_name_eng": api_card.get("name", ""),
@@ -143,8 +225,13 @@ def convert_card(api_card):
         "inherited_effect_description_eng": api_card.get("source_effect") or "",
         "security_effect_description_eng": "",
         "evo_costs": parse_evo_costs(api_card),
-        "xros_req": api_card.get("xros_req") or "",
+        "xros_req": xros_req,
     }
+    if dna_costs_json:
+        out["dna_costs"] = dna_costs_json
+    if digixros_costs_json:
+        out["digixros_costs"] = digixros_costs_json
+    return out
 
 
 def load_cards_json():
@@ -345,7 +432,49 @@ def bulk_ingest():
         print("Run `python tools/build_registry.py` to assign stable indices.")
 
 
+def backfill_xros_costs(cards_path=None):
+    """Rewrite cards.json with parsed `dna_costs` / `digixros_costs` fields.
+
+    Reads each card's existing `xros_req` string and re-runs the runtime
+    parsers to emit structured fields alongside. Used to migrate cards.json
+    in place without re-fetching from the API. Returns `(dna_count,
+    digixros_count, total)` for caller logging.
+    """
+    if cards_path is None:
+        cards, cards_path = load_cards_json()
+    else:
+        with open(cards_path, "r", encoding="utf-8") as f:
+            cards = json.load(f)
+        if isinstance(cards, list):
+            cards = {c["card_id"]: c for c in cards}
+
+    dna_count = 0
+    digixros_count = 0
+    for entry in cards.values():
+        xros_req = entry.get("xros_req") or ""
+        dna_json, digixros_json = _parse_xros_costs(xros_req)
+        if dna_json:
+            entry["dna_costs"] = dna_json
+            dna_count += 1
+        else:
+            entry.pop("dna_costs", None)
+        if digixros_json:
+            entry["digixros_costs"] = digixros_json
+            digixros_count += 1
+        else:
+            entry.pop("digixros_costs", None)
+
+    save_cards_json(cards, cards_path)
+    return dna_count, digixros_count, len(cards)
+
+
 def main():
+    # --backfill mode: regenerate dna_costs / digixros_costs from existing xros_req
+    if len(sys.argv) >= 2 and sys.argv[1] == "--backfill":
+        dna_count, digixros_count, total = backfill_xros_costs()
+        print(f"Backfilled {total} cards: {dna_count} with dna_costs, {digixros_count} with digixros_costs")
+        return
+
     # --bulk mode: ingest all priority sets
     if len(sys.argv) >= 2 and sys.argv[1] == "--bulk":
         bulk_ingest()

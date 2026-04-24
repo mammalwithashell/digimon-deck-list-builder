@@ -195,6 +195,47 @@ class TestXrosReqParser:
         assert result[0].requirement1.name_contains == "Greymon"
         assert result[0].requirement2.name_contains == "Garurumon"
 
+    def test_round_trip_through_cards_json_format(self):
+        """Parser output → JSON serializer → loader produces equal DnaCost objects.
+
+        Locks in the `card_color` variant-name encoding that cards.json
+        emits for DNA requirements; ensures the runtime loader accepts it.
+        """
+        import json as _json
+        from tools.ingest_cards import _dna_cost_to_json
+        from digimon_gym.engine.data.card_database import _parse_card_color_field
+
+        source = parse_xros_req("[DNA Digivolve] Blue Lv.4 + Green Lv.4: Cost 2")
+        serialized = [_dna_cost_to_json(dc) for dc in source]
+
+        # Round-trip through JSON to catch any non-serializable fields.
+        reloaded_json = _json.loads(_json.dumps(serialized))
+
+        assert reloaded_json[0]["requirement1"]["card_color"] == "Blue"
+        assert reloaded_json[0]["requirement2"]["card_color"] == "Green"
+        assert reloaded_json[0]["memory_cost"] == 2
+
+        # Feed through the loader helper and confirm the reverse mapping.
+        assert _parse_card_color_field(reloaded_json[0]["requirement1"]["card_color"]) == CardColor.Blue
+        assert _parse_card_color_field(reloaded_json[0]["requirement2"]["card_color"]) == CardColor.Green
+        assert _parse_card_color_field(None) is None
+        # Legacy int encoding (top-level `card_colors` convention) still works.
+        assert _parse_card_color_field(int(CardColor.Purple.value)) == CardColor.Purple
+
+    def test_name_only_requirement_emits_null_color(self):
+        """Name-constrained DNA requirements emit card_color=null in JSON."""
+        from tools.ingest_cards import _dna_cost_to_json
+
+        source = parse_xros_req(
+            "[DNA Digivolve] Lv.6 w/[Greymon] in name "
+            "+ Lv.6 w/[Garurumon] in name : Cost 0"
+        )
+        serialized = _dna_cost_to_json(source[0])
+        assert serialized["requirement1"]["card_color"] is None
+        assert serialized["requirement1"]["name_contains"] == "Greymon"
+        assert serialized["requirement2"]["card_color"] is None
+        assert serialized["requirement2"]["name_contains"] == "Garurumon"
+
 
 # ═══════════════════════════════════════════════════════════════════════
 # C. DNA Validation Functions (10 tests)
