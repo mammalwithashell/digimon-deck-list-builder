@@ -904,6 +904,16 @@ impl Game {
         card_data.keywords.contains(&keyword)
     }
 
+    /// Returns the `PermanentHandle` of the currently-attacking permanent,
+    /// or `None` when no attack is in flight. Reads `pending_attack.attacker`
+    /// — the same source the mask and combat-resolution code use.
+    ///
+    /// Used by `progress_excludes` to gate opponent-effect mutations on
+    /// the Progress carrier specifically while it is the attacker.
+    pub fn current_attacker(&self) -> Option<PermanentHandle> {
+        self.pending_attack.as_ref().map(|p| p.attacker)
+    }
+
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
 
     /// Enumerate a card's effects by asking the registry for its impl.
@@ -1211,5 +1221,40 @@ impl Game {
             }
         }
         (total, used)
+    }
+}
+
+#[cfg(test)]
+mod current_attacker_tests {
+    use crate::debug_runner::DebugRunner;
+    use crate::card_data::CardData;
+    use crate::enums::{CardColor, CardKind};
+
+    fn card(id: &str) -> CardData {
+        CardData {
+            card_id: id.to_string(),
+            card_name: id.to_string(),
+            card_kind: CardKind::Digimon,
+            level: Some(4),
+            dp: Some(4000),
+            play_cost: 4,
+            colors: vec![CardColor::Red],
+            traits: Vec::new(),
+            evo_costs: Vec::new(),
+            dna_costs: Vec::new(),
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            security_text: String::new(),
+            keywords: Vec::new(),
+            effect_class_name: id.replace('-', "_"),
+            index: 0,
+            norm_id: 0.0,
+        }
+    }
+
+    #[test]
+    fn current_attacker_is_none_outside_combat() {
+        let r = DebugRunner::builder().add_card(card("A")).start();
+        assert!(r.game.current_attacker().is_none());
     }
 }
