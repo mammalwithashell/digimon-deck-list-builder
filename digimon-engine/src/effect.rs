@@ -63,6 +63,12 @@ pub struct Effect {
     pub dp_modifier: i32,
     pub cost_reduction: i32,
 
+    /// When `true`, this effect's `dp_modifier` is applied to the opposing
+    /// security Digimon's DP during the §2.5 security DP battle. Used for
+    /// inherited effects like "This Digimon gains +3000 DP when attacking
+    /// security". Set by `.applies_to_opponent_security_dp()`.
+    pub applies_to_opponent_security_dp: bool,
+
     /// Replacement-effect process closure — wired for "Would*" timings in
     /// Phase 7. Receives a `ReplacementContext` so the process can mutate
     /// game state AND set the replacement outcome (cancel / redirect /
@@ -341,6 +347,7 @@ impl EffectBuilder {
                 pay_cost_fn: None,
                 dp_modifier: 0,
                 cost_reduction: 0,
+                applies_to_opponent_security_dp: false,
                 replacement_process: None,
                 option_main: false,
                 delay_trigger: None,
@@ -451,6 +458,17 @@ impl EffectBuilder {
 
     pub fn dp_modifier(mut self, n: i32) -> Self {
         self.inner.dp_modifier = n;
+        self
+    }
+
+    /// Flag this effect as a DP adjustment applied to the opposing security
+    /// Digimon during the security DP battle (§2.5e). Intended for inherited
+    /// effects like "This Digimon gains +3000 DP when attacking security" —
+    /// set on an `inherited()` effect in tandem with `.dp_modifier(n)` and
+    /// the iterator walks the attacker's digivolution stack to sum the
+    /// contributions.
+    pub fn applies_to_opponent_security_dp(mut self) -> Self {
+        self.inner.applies_to_opponent_security_dp = true;
         self
     }
 

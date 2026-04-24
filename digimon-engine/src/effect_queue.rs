@@ -133,6 +133,34 @@ impl Game {
                 continue;
             }
 
+            // §2.5i: a security-reveal bundle coming from a single
+            // revealed card must auto-fire in collection order with no
+            // prompt. Python's `_execute_security_checks` iterates the
+            // effect list in order and fires each; Rust previously
+            // installed a `TriggerOrder` selection for `≥2` effects.
+            let is_single_source_security = bundle.iter().all(|&i| {
+                let qe = &self.effect_queue[i];
+                qe.timing == EffectTiming::SecuritySkill
+            }) && bundle
+                .iter()
+                .map(|&i| self.effect_queue[i].source_card)
+                .all(|sc| sc == self.effect_queue[bundle[0]].source_card);
+
+            if is_single_source_security {
+                // Drain in the same order the queue holds them.
+                let indices = bundle.clone();
+                for (k, &i) in indices.iter().enumerate() {
+                    // Each remove shifts later indices down by one
+                    // relative to `i`. Subtract `k` to compensate.
+                    let qe = self
+                        .effect_queue
+                        .remove(i - k)
+                        .expect("bundle index in-bounds by construction");
+                    self.run_queued_effect(qe);
+                }
+                continue;
+            }
+
             // Multi-trigger bundle — install a TriggerOrder selection.
             // Cap at HAND_MAIN_LIMIT (30) to fit the reused 30-59 action
             // range. Overflow auto-fires in collection order after the prompt

@@ -128,6 +128,22 @@ impl<'a> EffectReadContext<'a> {
             .map(|k| k == crate::enums::CardKind::Tamer)
             .unwrap_or(false)
     }
+
+    // ─── Security-check sugar (§2.5g) ────────────────────────────────
+    // Mirrors the helpers on `EffectContext`. Available to condition
+    // closures so scripts can gate a `[Security]` effect on attacker traits.
+
+    pub fn attacker(&self) -> Option<PermanentHandle> {
+        self.game.security_resolution.as_ref().and_then(|s| s.attacker)
+    }
+
+    pub fn security_digimon(&self) -> Option<CardHandle> {
+        self.game.security_resolution.as_ref().map(|s| s.revealed_card)
+    }
+
+    pub fn turn_player_at_check(&self) -> Option<PlayerId> {
+        self.game.security_resolution.as_ref().map(|s| s.turn_player)
+    }
 }
 
 /// The context passed to every effect's `process` closure.
@@ -241,6 +257,30 @@ impl<'a> EffectContext<'a> {
             .card_kind_for_handle(self.source_card)
             .map(|k| k == crate::enums::CardKind::Tamer)
             .unwrap_or(false)
+    }
+
+    // ─── Security-check sugar (§2.5g) ────────────────────────────────
+    // Readers into `game.security_resolution`. Meaningful only while a
+    // security-attack resolution is in flight (i.e. inside a `[Security]`,
+    // `OnSecurityCheck`, or `OnLoseSecurity` process closure).
+
+    /// The attacker whose attack triggered the current security check, if
+    /// any. `None` for non-combat security reveals.
+    pub fn attacker(&self) -> Option<PermanentHandle> {
+        self.game.security_resolution.as_ref().and_then(|s| s.attacker)
+    }
+
+    /// The handle of the security card currently being resolved (the card
+    /// that was popped from the defender's security stack). `None` outside a
+    /// security-resolution context.
+    pub fn security_digimon(&self) -> Option<CardHandle> {
+        self.game.security_resolution.as_ref().map(|s| s.revealed_card)
+    }
+
+    /// Turn player at the moment the security check started. Stable across
+    /// the entire resolution even if an effect toggles turn state mid-flight.
+    pub fn turn_player_at_check(&self) -> Option<PlayerId> {
+        self.game.security_resolution.as_ref().map(|s| s.turn_player)
     }
 
     /// Reborrow this mut context as a read-only context — for condition
