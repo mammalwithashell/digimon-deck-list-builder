@@ -4,6 +4,8 @@
 //! (filter-target form for AddModifier is Phase 2d). Unknown expiry strings,
 //! unknown modifier names, or unknown keyword names cause the step to no-op —
 //! same strictness convention as 2b (invalid references don't panic).
+//!
+//! Phase 2c handlers: AddDpModifier, AddModifier, GrantKeyword.
 
 use digimon_dsl::compiled::{CompiledModifierTarget, CompiledStep};
 
@@ -43,6 +45,16 @@ pub fn try_run(
                 resolve_binding_ref(target_binding, ctx, bindings)
             {
                 ctx.add_modifier(h, modifier_ty, *value, expiry);
+            }
+            true
+        }
+        CompiledStep::GrantKeyword { target, keyword, expiry, value } => {
+            let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            let Some(kw) = crate::dsl_cards::modifier_map::lookup_keyword(keyword, *value) else {
+                return true;
+            };
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings) {
+                ctx.grant_keyword(h, kw, expiry);
             }
             true
         }

@@ -1,4 +1,4 @@
-//! Phase 2c — modifier step dispatch (AddDpModifier; AddModifier and GrantKeyword follow).
+//! Phase 2c — modifier step dispatch (AddDpModifier, AddModifier, GrantKeyword).
 
 use digimon_dsl::compiled::{CompiledBindingRef, CompiledModifierTarget, CompiledStep};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -186,5 +186,76 @@ fn add_modifier_filter_target_is_noop_until_2d() {
     assert!(
         runner.game.modifiers.get(handle, digimon_engine::enums::ModifierType::CannotAttack).is_empty(),
         "Filter target branch should be a no-op until Phase 2d"
+    );
+}
+
+/// GrantKeyword with a known keyword (Blocker) should cause `game.has_keyword`
+/// to return true for the target permanent.
+#[test]
+fn grant_keyword_blocker_is_queryable() {
+    let card = make_test_card("T-KW", "T-KW");
+    let mut runner = DebugRunner::builder()
+        .add_card(card.clone())
+        .hand(0, &["T-KW"])
+        .build();
+
+    let handle = runner.place_on_field(0, "T-KW", None);
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+
+    let src_card = runner.game.players[0].battle_area[0].top_card().handle();
+
+    let step = CompiledStep::GrantKeyword {
+        target: CompiledBindingRef::Named("tgt".into()),
+        keyword: "Blocker".into(),
+        expiry: "EndOfTurn".into(),
+        value: None,
+    };
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("tgt", handle);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert!(
+        runner.game.has_keyword(handle, digimon_engine::enums::Keyword::Blocker),
+        "GrantKeyword Blocker should make has_keyword return true for the target"
+    );
+}
+
+/// GrantKeyword with an unknown keyword name should no-op: no panic, and Blocker
+/// is not present on the target.
+#[test]
+fn grant_keyword_unknown_name_is_noop() {
+    let card = make_test_card("T-KWUNK", "T-KWUNK");
+    let mut runner = DebugRunner::builder()
+        .add_card(card.clone())
+        .hand(0, &["T-KWUNK"])
+        .build();
+
+    let handle = runner.place_on_field(0, "T-KWUNK", None);
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+
+    let src_card = runner.game.players[0].battle_area[0].top_card().handle();
+
+    let step = CompiledStep::GrantKeyword {
+        target: CompiledBindingRef::Named("tgt".into()),
+        keyword: "NotAKeyword".into(),
+        expiry: "EndOfTurn".into(),
+        value: None,
+    };
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("tgt", handle);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    // No keyword granted — Blocker should not be present.
+    assert!(
+        !runner.game.has_keyword(handle, digimon_engine::enums::Keyword::Blocker),
+        "unknown keyword name should be a no-op: Blocker not granted"
     );
 }
