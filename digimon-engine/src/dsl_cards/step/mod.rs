@@ -3,6 +3,7 @@
 
 pub mod draw;
 pub mod memory;
+pub mod permanent_mutations;
 pub mod selections;
 pub mod zone_moves;
 
@@ -57,6 +58,9 @@ pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut
         return;
     }
     if zone_moves::try_run(step, ctx, bindings) {
+        return;
+    }
+    if permanent_mutations::try_run(step, ctx, bindings) {
         return;
     }
     // Phase 2c+: other families.
