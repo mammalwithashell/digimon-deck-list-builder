@@ -1,9 +1,9 @@
 """Snapshot parity test for the tested-cards allowlist.
 
-Ensures ``digimon_gym/engine/data/tested_cards.json`` is in sync with the
-per-card behavioral test files under ``tests/behavioral/``. If a new test
-file is added without refreshing the snapshot this test fails and tells
-the developer to run ``python tools/build_tested_cards.py``.
+Ensures ``data/tested_cards.json`` is in sync with the per-card
+behavioral test files under ``tests/behavioral/``. If a new test file
+is added without refreshing the snapshot this test fails and tells the
+developer to run ``python tools/build_tested_cards.py``.
 """
 
 from __future__ import annotations
@@ -14,8 +14,9 @@ from pathlib import Path
 
 import pytest
 
+from digimon_gym.data_paths import TESTED_CARDS as OUTPUT_JSON
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_JSON = REPO_ROOT / "digimon_gym" / "engine" / "data" / "tested_cards.json"
 BUILD_TOOL = REPO_ROOT / "tools" / "build_tested_cards.py"
 
 

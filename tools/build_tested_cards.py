@@ -1,8 +1,7 @@
 """Build the tested-cards allowlist snapshot for the alpha release.
 
 Scans ``tests/behavioral/**/test_*.py`` for per-card behavioral test files
-and writes the canonical card IDs to
-``digimon_gym/engine/data/tested_cards.json``.
+and writes the canonical card IDs to ``data/tested_cards.json``.
 
 The snapshot is committed to the repo and consumed by:
 - the hosted API via ``digimon_gym/engine/tested_cards.py``
@@ -32,9 +31,12 @@ from collections import defaultdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from digimon_gym.data_paths import CARDS_JSON, TESTED_CARDS as OUTPUT_JSON  # noqa: E402
+
 BEHAVIORAL_DIR = REPO_ROOT / "tests" / "behavioral"
-CARDS_JSON = REPO_ROOT / "digimon_gym" / "engine" / "data" / "cards.json"
-OUTPUT_JSON = REPO_ROOT / "digimon_gym" / "engine" / "data" / "tested_cards.json"
 
 TEST_FILE_RE = re.compile(r"^test_([a-z]+\d*)_(\d+)\.py$")
 

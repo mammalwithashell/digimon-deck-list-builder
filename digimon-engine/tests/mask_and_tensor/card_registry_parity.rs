@@ -15,12 +15,7 @@ use digimon_engine::card_registry::{CardRegistry, PADDING_ID};
 fn cards_json_path() -> Option<PathBuf> {
     // CARGO_MANIFEST_DIR = digimon-engine/
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let candidate = manifest
-        .parent()?
-        .join("digimon_gym")
-        .join("engine")
-        .join("data")
-        .join("cards.json");
+    let candidate = manifest.parent()?.join("data").join("cards.json");
     if candidate.exists() {
         Some(candidate)
     } else {

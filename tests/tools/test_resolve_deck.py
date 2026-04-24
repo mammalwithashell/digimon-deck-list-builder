@@ -73,7 +73,7 @@ class TestResolveArchetype:
         import json
         from pathlib import Path
 
-        lib = json.loads(Path("digimon_gym/engine/data/deck_library.json").read_text(encoding="utf-8"))
+        lib = json.loads(Path("data/deck_library.json").read_text(encoding="utf-8"))
         archetypes = lib.get("archetypes", {})
         arch_name = None
         for name, data in archetypes.items():
@@ -97,10 +97,10 @@ class TestResolveArchetype:
         from pathlib import Path
 
         aliases = json.loads(
-            Path("digimon_gym/engine/data/archetype_aliases.json").read_text(encoding="utf-8")
+            Path("data/archetype_aliases.json").read_text(encoding="utf-8")
         )
         lib = json.loads(
-            Path("digimon_gym/engine/data/deck_library.json").read_text(encoding="utf-8")
+            Path("data/deck_library.json").read_text(encoding="utf-8")
         )
         archetypes = lib.get("archetypes", {})
 
@@ -158,7 +158,7 @@ class TestResolveArchetype:
         import json
         from pathlib import Path
 
-        lib = json.loads(Path("digimon_gym/engine/data/deck_library.json").read_text(encoding="utf-8"))
+        lib = json.loads(Path("data/deck_library.json").read_text(encoding="utf-8"))
         archetypes = lib.get("archetypes", {})
         for name, data in archetypes.items():
             if data.get("decklists"):

@@ -1,4 +1,5 @@
 """Tests for `tools/ingest_cards.py` — tri-color ingest + override merging."""
+from digimon_gym.data_paths import CARDS_JSON
 from tools.ingest_cards import (
     COLOR_MAP,
     apply_overrides,
@@ -131,7 +132,7 @@ class TestProductionCardsJsonTriColor:
 
     def test_magnamon_x_antibody_tricolor(self):
         import json as _json
-        d = _json.load(open("digimon_gym/engine/data/cards.json"))
+        d = _json.load(open(CARDS_JSON))
         cards = d if isinstance(d, list) else list(d.values())
         c = next(x for x in cards if x.get("card_id") == "BT16-102")
         assert set(c["card_colors"]) == {
@@ -140,7 +141,7 @@ class TestProductionCardsJsonTriColor:
 
     def test_alphamon_ouryuken_tricolor(self):
         import json as _json
-        d = _json.load(open("digimon_gym/engine/data/cards.json"))
+        d = _json.load(open(CARDS_JSON))
         cards = d if isinstance(d, list) else list(d.values())
         c = next(x for x in cards if x.get("card_id") == "BT20-060")
         assert set(c["card_colors"]) == {

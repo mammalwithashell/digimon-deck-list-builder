@@ -63,7 +63,7 @@ python tools/meta_loader.py --build
 ```
 
 - Scrapes tournament data from DigiLab, DigimonMeta, Egman Events.
-- Outputs: `digimon_gym/engine/data/deck_library.json`.
+- Outputs: `data/deck_library.json`.
 - Format: archetypes → decklists + `digilab_stats`.
 
 ### Configuration Parameters

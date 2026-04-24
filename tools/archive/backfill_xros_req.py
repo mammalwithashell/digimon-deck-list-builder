@@ -11,13 +11,10 @@ import sys
 import time
 import urllib.request
 
-CARDS_JSON = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "digimon_gym", "engine", "data", "cards.json"
-)
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CARDS_JSON = os.path.join(_REPO_ROOT, "data", "cards.json")
 SCRIPTS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "digimon_gym", "engine", "data", "scripts"
+    _REPO_ROOT, "digimon_gym", "engine", "data", "scripts"
 )
 API_URL = "https://digimoncard.io/index.php/api-public/search?card={card_id}"
 

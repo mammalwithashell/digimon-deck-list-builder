@@ -10,7 +10,14 @@ Options:
 """
 import argparse
 import json
+import sys
 from pathlib import Path
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from digimon_gym.data_paths import DECK_LIBRARY  # noqa: E402
 
 
 def main():
@@ -20,8 +27,7 @@ def main():
                         help="Minimum script coverage to include")
     args = parser.parse_args()
 
-    lib_path = Path(__file__).resolve().parent.parent / "digimon_gym" / "engine" / "data" / "deck_library.json"
-    lib = json.loads(lib_path.read_text(encoding="utf-8"))
+    lib = json.loads(DECK_LIBRARY.read_text(encoding="utf-8"))
 
     archetypes = lib.get("archetypes", {})
     rows = []

@@ -7,7 +7,7 @@ import sys
 import urllib.request
 
 API_URL = "https://digimoncard.io/index.php/api-public/search?pack=BT-14:%20Booster%20Blast%20Ace"
-CARDS_JSON = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "cards.json")
+CARDS_JSON = os.path.join(os.path.dirname(__file__), "..", "..", "data", "cards.json")
 
 COLOR_MAP = {
     "Red": 0, "Blue": 1, "Yellow": 2, "Green": 3,

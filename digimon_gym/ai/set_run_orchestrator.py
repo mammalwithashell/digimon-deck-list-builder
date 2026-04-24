@@ -761,7 +761,7 @@ class AISetRunOrchestrator:
         from tools.transpiler.scoring import score_card
         from tools.transpiler.validation import validate_card
 
-        cards_json_path = PROJECT_ROOT / "digimon_gym" / "engine" / "data" / "cards.json"
+        from digimon_gym.data_paths import CARDS_JSON as cards_json_path
         card_db = json.loads(cards_json_path.read_text(encoding="utf-8")) if cards_json_path.exists() else {}
 
         for item in items:

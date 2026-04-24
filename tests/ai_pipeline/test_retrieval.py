@@ -312,20 +312,20 @@ class TestChunkMarkdownBySection:
 
 class TestIsCardsJson:
     def test_correct_path(self):
-        p = Path("some/root/digimon_gym/engine/data/cards.json")
+        p = Path("some/root/data/cards.json")
         assert _is_cards_json(p) is True
 
     def test_wrong_filename(self):
-        p = Path("digimon_gym/engine/data/other.json")
+        p = Path("data/other.json")
         assert _is_cards_json(p) is False
 
     def test_cards_json_in_wrong_location(self):
-        """cards.json that is NOT under digimon_gym/engine/data/ should not match."""
-        p = Path("some/other/cards.json")
+        """cards.json that is NOT under data/ should not match."""
+        p = Path("some/other/subdir/cards.json")
         assert _is_cards_json(p) is False
 
     def test_windows_backslash(self):
-        p = Path("C:\\repo\\digimon_gym\\engine\\data\\cards.json")
+        p = Path("C:\\repo\\data\\cards.json")
         assert _is_cards_json(p) is True
 
 

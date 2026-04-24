@@ -19,8 +19,18 @@ from dataclasses import asdict
 # shapes the runtime loader expects. These imports are local to avoid
 # pulling the engine at API-fetch time when card_database.py isn't needed.
 
-CARDS_JSON = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "cards.json")
-CARD_OVERRIDES_JSON = os.path.join(os.path.dirname(__file__), "card_overrides.json")
+# Add project root to path so the shared `digimon_gym.data_paths` module
+# is importable when this script is run via `python -m tools.ingest_cards`
+# or `python tools/ingest_cards.py`.
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
+from digimon_gym.data_paths import CARDS_JSON as _CARDS_JSON_PATH
+from digimon_gym.data_paths import CARD_OVERRIDES as _CARD_OVERRIDES_PATH
+
+CARDS_JSON = str(_CARDS_JSON_PATH)
+CARD_OVERRIDES_JSON = str(_CARD_OVERRIDES_PATH)
 PRIORITY_SETS_TXT = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "scraper", "priority_sets.txt")
 
 COLOR_MAP = {

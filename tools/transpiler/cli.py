@@ -71,7 +71,7 @@ def main():
     if scan_api_arg is not None:
         # Load cards.json
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        cards_json_path = os.path.join(project_root, "digimon_gym", "engine", "data", "cards.json")
+        cards_json_path = os.path.join(project_root, "data", "cards.json")
         card_db: Dict[str, dict] = {}
         if os.path.exists(cards_json_path):
             with open(cards_json_path, encoding="utf-8") as f:

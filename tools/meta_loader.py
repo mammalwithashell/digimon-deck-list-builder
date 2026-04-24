@@ -36,6 +36,10 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+from digimon_gym.data_paths import (
+    ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH,
+    DECK_LIBRARY as _DECK_LIBRARY_PATH,
+)
 from digimon_gym.engine.data.deck_loader import (
     RE_CARD_ID,
     expand_deck_dict,
@@ -44,13 +48,8 @@ from digimon_gym.engine.data.deck_loader import (
 
 logger = logging.getLogger(__name__)
 
-DECK_LIBRARY_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "deck_library.json"
-)
-
-ARCHETYPE_ALIASES_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "archetype_aliases.json"
-)
+DECK_LIBRARY_PATH = str(_DECK_LIBRARY_PATH)
+ARCHETYPE_ALIASES_PATH = str(_ARCHETYPE_ALIASES_PATH)
 
 # Source priority for deduplication (higher = preferred)
 SOURCE_PRIORITY = {"digimonmeta": 3, "digilab": 2, "egman": 2, "digimoncard_io": 1, "manual": 0, "file": 0}
