@@ -9,6 +9,7 @@
 //! conditional effect).
 
 mod de_digivolve;
+mod rules_quiz;
 mod test_cards;
 mod tokens;
 

@@ -40,6 +40,14 @@ mod test_phase7_optional;
 mod test_phase7_recurse;
 mod test_phase7_redirect;
 mod test_phase7_substitute;
+// Test cards distilled from ZXavier's Digi Rulings quiz — one card per
+// isolated rule concept, named `test_q<NN>_<tag>.rs` where `NN` matches
+// the quiz question number the card is drawn from.
+mod test_q04_secatk;
+mod test_q10_capmem;
+mod test_q13_negdp;
+mod test_q16_ondel;
+mod test_q17_eotdel;
 
 pub use test_phase7_guard_sentinel::{GUARD_SENTINEL_WWBD, GUARD_SENTINEL_WWLBA};
 
@@ -75,6 +83,13 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-P7-RECURSE", Arc::new(test_phase7_recurse::TestP7Recurse));
     registry.insert("TEST-P7-REDIRECT", Arc::new(test_phase7_redirect::TestP7Redirect));
     registry.insert("TEST-P7-SUBSTITUTE", Arc::new(test_phase7_substitute::TestP7Substitute));
+
+    // Quiz-derived rule-concept cards.
+    registry.insert("TEST-Q04-SECATK", Arc::new(test_q04_secatk::TestQ04Secatk));
+    registry.insert("TEST-Q10-CAPMEM", Arc::new(test_q10_capmem::TestQ10Capmem));
+    registry.insert("TEST-Q13-NEGDP", Arc::new(test_q13_negdp::TestQ13Negdp));
+    registry.insert("TEST-Q16-ONDEL", Arc::new(test_q16_ondel::TestQ16Ondel));
+    registry.insert("TEST-Q17-EOTDEL", Arc::new(test_q17_eotdel::TestQ17Eotdel));
 
     // Suppress unused warning on ModifierType (referenced via add_dp_modifier helper).
     let _ = ModifierType::ChangeDp;
