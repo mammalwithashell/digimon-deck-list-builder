@@ -71,7 +71,9 @@ pub fn build_registry() -> CardEffectRegistry {
         let mut raw = crate::dsl_cards::raw_rust::EngineRawRustRegistry::new();
         // Sample raw_rust registrations — cards reference these by fn_name in YAML.
         // Real implementations land per-archetype in the card migration phase.
-        raw.register_step("ad1_025_on_play_process", |_ctx| { /* real impl TBD */ });
+        raw.register_step("ad1_025_on_play_process", |_ctx, _bindings| {
+            /* real impl TBD */
+        });
         raw.register_declarative("bt10_111_arm_digixros_wildcard_for_turn", |_card| Vec::new());
 
         // Capture counts BEFORE raw is moved into Arc.

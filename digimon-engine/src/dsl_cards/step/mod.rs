@@ -35,9 +35,11 @@ pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, _bindings: &mu
 }
 
 /// Like [`run_step`] but also handles `CompiledStep::RawRust` by looking up
-/// the fn name in `raw`. Unregistered names or a missing registry are silent
-/// no-ops (safe for RL: the agent sees no action to take but the game
-/// continues without crashing).
+/// the fn name in `raw` and invoking it with `(&mut EffectContext, &mut
+/// Bindings)` — so raw_rust fns can read/write the same binding environment
+/// DSL steps use. Unregistered names or a missing registry are silent no-ops
+/// (safe for RL: the agent sees no action to take but the game continues
+/// without crashing).
 pub fn run_step_with_raw(
     step: &CompiledStep,
     ctx: &mut EffectContext<'_>,
@@ -47,7 +49,7 @@ pub fn run_step_with_raw(
     if let CompiledStep::RawRust { fn_name, .. } = step {
         if let Some(r) = raw {
             if let Some(f) = r.step_fn(fn_name) {
-                f(ctx);
+                f(ctx, bindings);
             }
         }
         return;
