@@ -946,6 +946,37 @@ impl Game {
                 .has(target, crate::enums::ModifierType::ImmunityToOpponentEffects)
     }
 
+    /// Sum the net security-attack modifier contributed by native printed
+    /// `<Security A. +N>` and `<Security A. -N>` keywords on `target`.
+    /// Called by `resolve_player_security_loop` alongside the existing
+    /// `ModifierType::SecurityAttackChange` sum so cards with only the
+    /// printed keyword behave correctly without a hand-rolled script.
+    pub fn security_attack_keyword_bonus(
+        &self,
+        target: crate::permanent::PermanentHandle,
+    ) -> i32 {
+        use crate::enums::Keyword;
+        let Some(player) = self.players.get(target.player as usize) else {
+            return 0;
+        };
+        let Some(perm) = player.battle_area.get(target.index as usize) else {
+            return 0;
+        };
+        // Sum across the entire digivolution stack — inherited keywords count.
+        let mut total = 0i32;
+        for src in &perm.card_sources {
+            let card_data = &self.card_data[src.data_index];
+            for kw in &card_data.keywords {
+                match kw {
+                    Keyword::SecurityAttackPlus(n) => total += *n as i32,
+                    Keyword::SecurityAttackMinus(n) => total -= *n as i32,
+                    _ => {}
+                }
+            }
+        }
+        total
+    }
+
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
 
     /// Enumerate a card's effects by asking the registry for its impl.

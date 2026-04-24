@@ -20,3 +20,4 @@ mod rush_exemption;
 mod scenarios;
 mod security_effects;
 mod would_attack_replacements;
+mod security_attack_keyword;
