@@ -23,9 +23,9 @@ use crate::enums::{Expiry, Keyword};
 pub fn lower(
     card: CardHandle,
     scope: CompiledScope,
-    _active_when: Option<CompiledPredicate>,
-    _sources: Vec<CompiledPredicate>,
-    _exclude_cause: Vec<String>,
+    _active_when: Option<&CompiledPredicate>,
+    _sources: &[CompiledPredicate],
+    _exclude_cause: &[String],
 ) -> Effect {
     let mut builder = Effect::declarative(card)
         .name("Partition")

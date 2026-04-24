@@ -26,15 +26,15 @@ use crate::enums::{DelayTrigger, EffectTiming};
 pub fn lower(
     card: CardHandle,
     scope: CompiledScope,
-    _active_when: Option<CompiledPredicate>,
+    _active_when: Option<&CompiledPredicate>,
     trigger: CompiledTiming,
-    process_steps: Vec<CompiledStep>,
+    process_steps: &[CompiledStep],
 ) -> Effect {
     let delay_trigger = match trigger {
         CompiledTiming::EndOfYourTurn => DelayTrigger::EndOfThisTurn,
         _ => DelayTrigger::EndOfYourNextTurn,
     };
-    let process_arc = Arc::new(process_steps);
+    let process_arc: Arc<[CompiledStep]> = Arc::from(process_steps);
     let mut builder = EffectBuilder::new(card, EffectTiming::DelayEffect)
         .delay(delay_trigger)
         .process(move |ctx| {

@@ -170,6 +170,20 @@ fn inherited_scope_sets_inherited_flag_on_effect() {
     assert!(effects[0].inherited, "scope: Inherited should set the inherited flag");
 }
 
+#[test]
+fn face_up_scope_does_not_set_inherited_flag_on_effect() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_replacement(
+        "when_would_be_deleted",
+        CompiledScope::FaceUp,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert!(
+        !effects[0].inherited,
+        "scope: FaceUp must NOT set the inherited flag"
+    );
+}
+
 // ── Unknown trigger → empty emission ─────────────────────────────────────────
 
 #[test]

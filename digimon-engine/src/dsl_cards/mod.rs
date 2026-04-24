@@ -160,7 +160,7 @@ impl CardEffect for DslCardEffect {
                         if let Some(e) = lower_replacement::lower(
                             card,
                             *scope,
-                            active_when.clone(),
+                            active_when.as_ref(),
                             trigger,
                             process,
                         ) {
@@ -177,9 +177,9 @@ impl CardEffect for DslCardEffect {
                         out.push(lower_partition::lower(
                             card,
                             *scope,
-                            active_when.clone(),
-                            sources.clone(),
-                            exclude_cause.clone(),
+                            active_when.as_ref(),
+                            sources,
+                            exclude_cause,
                         ));
                     }
                     CompiledDeclarativeClause::Delay {
@@ -192,9 +192,9 @@ impl CardEffect for DslCardEffect {
                         out.push(lower_delay::lower(
                             card,
                             *scope,
-                            active_when.clone(),
+                            active_when.as_ref(),
                             *trigger,
-                            process.clone(),
+                            process,
                         ));
                     }
                     _ => {

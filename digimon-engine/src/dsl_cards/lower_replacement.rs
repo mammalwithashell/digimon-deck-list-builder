@@ -40,7 +40,7 @@ fn new_when_would_builder(card: CardHandle, timing: EffectTiming) -> Option<Effe
 pub fn lower(
     card: CardHandle,
     scope: CompiledScope,
-    _active_when: Option<CompiledPredicate>,
+    _active_when: Option<&CompiledPredicate>,
     trigger: &str,
     _process: &[CompiledStep],
 ) -> Option<Effect> {
