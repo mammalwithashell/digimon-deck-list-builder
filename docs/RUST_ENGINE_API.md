@@ -232,7 +232,7 @@ UntilLeaveField       # cleared when the permanent leaves the field
 - Attack: `CannotAttack`, `CannotAttackPlayer`, `CanAttackUnsuspended`, `CanAttackActivePlayer`
 - Suspend: `CannotSuspend`, `CannotUnsuspend`
 - Targeting: `CannotBeSelectedByEffect`, `CannotBeAffected`
-- Granted keywords: `GrantBlocker`, `GrantRush`, `GrantJamming`, `GrantPiercing`, `GrantReboot`, `GrantBlitz`, `GrantAlliance`, `GrantRaid`, `GrantBarrier`, `GrantArmor`, `GrantDecoy`
+- Granted keywords: `GrantBlocker`, `GrantRush`, `GrantJamming`, `GrantPiercing`, `GrantReboot`, `GrantBlitz`, `GrantAlliance`, `GrantRaid`, `GrantDecoy`
 - Security: `SecurityAttackChange`
 - Color/level: `ChangeColor`, `AddColor`, `ChangeLevel`
 
