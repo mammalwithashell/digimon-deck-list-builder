@@ -1635,10 +1635,11 @@ impl Game {
         attacker: PermanentHandle,
         defender_player: PlayerId,
     ) -> AttackResult {
-        let sa_bonus = self
+        let sa_modifier = self
             .modifiers
             .sum(attacker, ModifierType::SecurityAttackChange);
-        let checks = (1 + sa_bonus).max(0) as u8;
+        let sa_keyword = self.security_attack_keyword_bonus(attacker);
+        let checks = (1 + sa_modifier + sa_keyword).max(0) as u8;
         if checks == 0 {
             return AttackResult::SecurityCheckSurvived;
         }
