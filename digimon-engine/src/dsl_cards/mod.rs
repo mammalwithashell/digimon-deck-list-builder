@@ -6,6 +6,7 @@
 
 pub mod bindings;
 pub mod lower_aura;
+pub mod raw_rust;
 pub mod lower_cost_reduction;
 pub mod lower_flood_gate;
 pub mod lower_grant_keyword;
@@ -22,15 +23,24 @@ use digimon_dsl::CardRegistry as DslCardRegistry;
 
 use crate::card_source::CardHandle;
 use crate::cards::CardEffectRegistry;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect::{CardEffect, Effect};
 
 pub struct DslCardEffect {
     compiled: Arc<CompiledCard>,
+    raw: Option<Arc<EngineRawRustRegistry>>,
 }
 
 impl DslCardEffect {
     pub fn new(compiled: Arc<CompiledCard>) -> Self {
-        Self { compiled }
+        Self { compiled, raw: None }
+    }
+
+    pub fn with_raw_registry(
+        compiled: Arc<CompiledCard>,
+        registry: Arc<EngineRawRustRegistry>,
+    ) -> Self {
+        Self { compiled, raw: Some(registry) }
     }
 
     pub fn compiled(&self) -> &CompiledCard {
@@ -43,6 +53,11 @@ impl DslCardEffect {
     pub fn ace_overflow(&self) -> Option<i32> {
         self.compiled.ace_overflow
     }
+
+    /// Return a reference to the raw-Rust fn registry, if one was supplied.
+    pub fn raw_registry(&self) -> Option<&EngineRawRustRegistry> {
+        self.raw.as_deref()
+    }
 }
 
 impl CardEffect for DslCardEffect {
@@ -53,7 +68,7 @@ impl CardEffect for DslCardEffect {
         'clause: for clause in &self.compiled.effects {
             match clause {
                 CompiledClause::Triggered(clause) => {
-                    out.extend(lower_triggered::lower(card, clause));
+                    out.extend(lower_triggered::lower(card, clause, self.raw.clone()));
                 }
                 CompiledClause::Declarative(decl) => match decl {
                     CompiledDeclarativeClause::GrantKeyword {
@@ -146,6 +161,13 @@ impl CardEffect for DslCardEffect {
                             out.push(e);
                         }
                     }
+                    CompiledDeclarativeClause::RawRust { fn_name, .. } => {
+                        if let Some(r) = &self.raw {
+                            if let Some(f) = r.declarative_fn(fn_name) {
+                                out.extend(f(card));
+                            }
+                        }
+                    }
                     _ => {
                         // Other declarative clauses lowered in Tasks 7-8+.
                     }
@@ -156,17 +178,35 @@ impl CardEffect for DslCardEffect {
     }
 }
 
+/// Register every card in `dsl_registry` into `effect_registry`, optionally
+/// sharing an `EngineRawRustRegistry` so `RawRust` clauses can dispatch to
+/// hand-written Rust fns by name.
+///
+/// Existing entries (e.g. hand-written TEST-* cards) with the same `card_id`
+/// are replaced — DSL is authoritative once a card migrates
+/// (CLAUDE.md rule 21: cards migrate one direction only, Python → Rust → DSL).
+pub fn register_dsl_cards_with_raw(
+    effect_registry: &mut CardEffectRegistry,
+    dsl_registry: &DslCardRegistry,
+    raw: Option<Arc<EngineRawRustRegistry>>,
+) {
+    for (card_id, compiled) in dsl_registry.iter() {
+        let arc = Arc::new(compiled.clone());
+        let dsl_effect: Arc<dyn CardEffect> = match &raw {
+            Some(r) => Arc::new(DslCardEffect::with_raw_registry(arc, r.clone())),
+            None => Arc::new(DslCardEffect::new(arc)),
+        };
+        effect_registry.insert(card_id, dsl_effect);
+    }
+}
+
 /// Register every card in `dsl_registry` into `effect_registry` as a
-/// `DslCardEffect`. Existing entries (e.g. hand-written TEST-* cards)
-/// with the same `card_id` are replaced — DSL is authoritative once a
-/// card migrates (CLAUDE.md rule 21: cards migrate one direction only,
-/// Python → Rust → DSL).
+/// `DslCardEffect` with no raw-Rust registry attached.
+///
+/// Back-compat wrapper around [`register_dsl_cards_with_raw`].
 pub fn register_dsl_cards(
     effect_registry: &mut CardEffectRegistry,
     dsl_registry: &DslCardRegistry,
 ) {
-    for (card_id, compiled) in dsl_registry.iter() {
-        let dsl_effect = Arc::new(DslCardEffect::new(Arc::new(compiled.clone())));
-        effect_registry.insert(card_id, dsl_effect);
-    }
+    register_dsl_cards_with_raw(effect_registry, dsl_registry, None);
 }

@@ -33,3 +33,26 @@ pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, _bindings: &mu
     }
     // Phase 2b+: other families.
 }
+
+/// Like [`run_step`] but also handles `CompiledStep::RawRust` by looking up
+/// the fn name in `raw` and invoking it with `(&mut EffectContext, &mut
+/// Bindings)` — so raw_rust fns can read/write the same binding environment
+/// DSL steps use. Unregistered names or a missing registry are silent no-ops
+/// (safe for RL: the agent sees no action to take but the game continues
+/// without crashing).
+pub fn run_step_with_raw(
+    step: &CompiledStep,
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+    raw: Option<&crate::dsl_cards::raw_rust::EngineRawRustRegistry>,
+) {
+    if let CompiledStep::RawRust { fn_name, .. } = step {
+        if let Some(r) = raw {
+            if let Some(f) = r.step_fn(fn_name) {
+                f(ctx, bindings);
+            }
+        }
+        return;
+    }
+    run_step(step, ctx, bindings);
+}

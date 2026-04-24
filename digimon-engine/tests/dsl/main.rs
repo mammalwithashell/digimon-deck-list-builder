@@ -30,3 +30,4 @@ mod phase1c_exit;
 mod phase2a_triggered;
 mod phase2a_steps;
 mod phase2a_end_to_end;
+mod raw_rust;
