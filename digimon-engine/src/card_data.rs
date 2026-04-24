@@ -291,12 +291,11 @@ pub fn parse_printed_keywords(
             let trimmed = inside.trim();
 
             // Try non-parametric keywords first (longest-prefix wins).
-            // Order matters: "Blast Digivolve" before "Blast", "Armor Purge"
-            // before "Armor", "Decode" before "Decoy" — we check each prefix
-            // in order and break on the first match.
+            // Order matters: "Armor Purge" before any shorter Armor-prefixed
+            // token, "Decode" before "Decoy" — longest-prefix wins.
             let mut matched = false;
             for (prefix, kw) in [
-                ("Blast Digivolve", Keyword::Blast),
+                ("Blast Digivolve", Keyword::BlastDigivolve),
                 ("Blocker", Keyword::Blocker),
                 ("Rush", Keyword::Rush),
                 ("Jamming", Keyword::Jamming),
@@ -304,7 +303,6 @@ pub fn parse_printed_keywords(
                 ("Reboot", Keyword::Reboot),
                 ("Blitz", Keyword::Blitz),
                 ("Armor Purge", Keyword::ArmorPurge),
-                ("Armor", Keyword::Armor),
                 ("Raid", Keyword::Raid),
                 ("Alliance", Keyword::Alliance),
                 ("Save", Keyword::Save),
@@ -314,7 +312,6 @@ pub fn parse_printed_keywords(
                 ("Evade", Keyword::Evade),
                 ("Decode", Keyword::Decode),
                 ("Decoy", Keyword::Decoy),
-                ("Material", Keyword::Material),
                 ("Partition", Keyword::Partition),
                 ("Vortex", Keyword::Vortex),
                 ("Collision", Keyword::Collision),
