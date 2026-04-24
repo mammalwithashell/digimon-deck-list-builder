@@ -5,6 +5,7 @@
 //! and raw_rust are skipped in Phase 1c (Phase 2 owns them).
 
 pub mod bindings;
+pub mod formula;
 pub mod lower_aura;
 pub mod raw_rust;
 pub mod lower_cost_reduction;
