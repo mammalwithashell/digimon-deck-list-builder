@@ -436,10 +436,7 @@ class ArchitectExplainer:
         # Replicate build_opponents iteration to get names in order
         from digimon_gym.engine.data.deck_finder import load_implemented_card_ids
 
-        deck_library_path = (
-            Path(__file__).resolve().parent.parent
-            / "engine" / "data" / "deck_library.json"
-        )
+        from digimon_gym.data_paths import DECK_LIBRARY as deck_library_path
         if deck_library_path.exists():
             with open(deck_library_path, "r", encoding="utf-8") as f:
                 deck_library = json.load(f)

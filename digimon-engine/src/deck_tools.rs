@@ -3,9 +3,9 @@
 //! Port of `digimon_gym/engine/data/deck_loader.py` and
 //! `digimon_gym/engine/data/tested_cards.py` — behaviour must stay
 //! byte-for-byte compatible so the desktop app's deck UX matches what the
-//! hosted API accepts. The authoritative data files live under
-//! `digimon_gym/engine/data/` and are `include_str!`d at compile time so
-//! both engines read the exact same bytes.
+//! hosted API accepts. The authoritative data files live under `data/`
+//! at repo root and are `include_str!`d at compile time so both engines
+//! read the exact same bytes.
 //!
 //! Responsibilities:
 //! - Parse TTS (JSON array) + digimoncard.io text deck exports
@@ -20,9 +20,8 @@ use serde::Deserialize;
 
 // Data files — `include_str!` bakes the bytes into the crate, so there's no
 // separate resource-bundling step for desktop builds.
-const CARDS_JSON: &str = include_str!("../../digimon_gym/engine/data/cards.json");
-const TESTED_CARDS_JSON: &str =
-    include_str!("../../digimon_gym/engine/data/tested_cards.json");
+const CARDS_JSON: &str = include_str!("../../data/cards.json");
+const TESTED_CARDS_JSON: &str = include_str!("../../data/tested_cards.json");
 
 /// Minimal card metadata — only the fields validation + parsing touch.
 /// The full cards.json entry has many more keys (DP, effect text, etc.);

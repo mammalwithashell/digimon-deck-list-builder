@@ -193,7 +193,7 @@ def main() -> int:
     parser.add_argument(
         "--cards-json",
         type=Path,
-        default=PROJECT_ROOT / "digimon_gym" / "engine" / "data" / "cards.json",
+        default=PROJECT_ROOT / "data" / "cards.json",
     )
     parser.add_argument(
         "--scripts-root",

@@ -154,7 +154,7 @@ New `EffectContext` helpers landed alongside: `play_from_security`, `select_secu
 
 **Pilot cards** — synthetic TEST-020 / TEST-021 / TEST-022 live in both engines:
 - Rust: [digimon-engine/src/cards/test_cards.rs](../digimon-engine/src/cards/test_cards.rs) (structs Test020/Test021/Test022).
-- Python: [scripts/test/test_020.py](../digimon_gym/engine/data/scripts/test/test_020.py), [test_021.py](../digimon_gym/engine/data/scripts/test/test_021.py), [test_022.py](../digimon_gym/engine/data/scripts/test/test_022.py) + entries 4083/4084/4085 in [cards.json](../digimon_gym/engine/data/cards.json).
+- Python: [scripts/test/test_020.py](../digimon_gym/engine/data/scripts/test/test_020.py), [test_021.py](../digimon_gym/engine/data/scripts/test/test_021.py), [test_022.py](../digimon_gym/engine/data/scripts/test/test_022.py) + entries 4083/4084/4085 in [cards.json](../data/cards.json).
 
 ### 2.5a 🟢 Basic `SecuritySkill` dispatch — implemented
 

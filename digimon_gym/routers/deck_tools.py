@@ -95,7 +95,7 @@ def list_tested_cards():
 
     The list is derived from per-card behavioral tests under
     ``tests/behavioral/`` at build time and committed as
-    ``digimon_gym/engine/data/tested_cards.json``.
+    ``data/tested_cards.json``.
     """
     card_ids = sorted(load_tested_cards())
     return {"card_ids": card_ids, "card_count": len(card_ids)}

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 fn cards_json_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
-        .join("digimon_gym/engine/data/cards.json")
+        .join("data/cards.json")
 }
 
 #[test]

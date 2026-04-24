@@ -30,13 +30,15 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
 from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.enums import CardKind
 
-_DATA_DIR = _PROJECT_ROOT / "digimon_gym" / "engine" / "data"
-_MANIFEST_PATH = _DATA_DIR / "scripts" / "_frozen_manifest.json"
-_DECK_LIBRARY_PATH = _DATA_DIR / "deck_library.json"
-_SCRIPTS_DIR = _DATA_DIR / "scripts"
+# Scripts still live alongside the Python engine (language-specific code,
+# not shared data); only the pure data files moved to `data/`.
+_ENGINE_DATA_DIR = _PROJECT_ROOT / "digimon_gym" / "engine" / "data"
+_MANIFEST_PATH = _ENGINE_DATA_DIR / "scripts" / "_frozen_manifest.json"
+_SCRIPTS_DIR = _ENGINE_DATA_DIR / "scripts"
 _DCGO_DIR = _PROJECT_ROOT / "DCGO" / "Assets" / "Scripts" / "CardEffect"
 _QA_DIR = _PROJECT_ROOT / "qa" / "archetype-qa"
 

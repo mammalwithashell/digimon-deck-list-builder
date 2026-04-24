@@ -1,0 +1,11 @@
+{
+  "_comment": "Hand-maintained corrections to ingest_cards.py output. The digimoncard.io API only exposes `color` / `color2` (and `evolution_cost_2`), so tri-color cards lose their third color and any third digivolve path on ingest. This sidecar patches known cases. Schema: `{card_id: {field: value, ...}}` where any top-level cards.json field may be overridden; override values replace the ingest-produced ones outright. Applied AFTER all other ingest/backfill steps so manual corrections win. CardColor int key: Red=0, Blue=1, Yellow=2, Green=3, White=4, Black=5, Purple=6.",
+
+  "BT16-102": {
+    "card_colors": [2, 1, 4]
+  },
+
+  "BT20-060": {
+    "card_colors": [5, 2, 0]
+  }
+}

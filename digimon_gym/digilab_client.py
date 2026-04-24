@@ -146,9 +146,9 @@ class PeriodMeta:
     total_results: int = 0
 
 
-ARCHETYPE_ALIASES_PATH = os.path.join(
-    os.path.dirname(__file__), "engine", "data", "archetype_aliases.json"
-)
+from digimon_gym.data_paths import ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH
+
+ARCHETYPE_ALIASES_PATH = str(_ARCHETYPE_ALIASES_PATH)
 
 _ALIAS_MAP: Optional[Dict[str, str]] = None
 

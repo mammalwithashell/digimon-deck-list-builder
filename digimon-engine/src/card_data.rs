@@ -20,15 +20,44 @@ pub struct DnaRequirement {
     /// Required level. 0 means "any level" (name/text-only requirement).
     #[serde(default)]
     pub level: u8,
-    /// Optional color constraint. `None` means any color.
-    #[serde(default)]
-    pub card_color: Option<CardColor>,
+    /// Color constraint. Empty means any color. Multiple entries come
+    /// from slash-color printed text (e.g. "Blue/Purple Lv.6" — either
+    /// a Blue or a Purple material satisfies the half). The `card_color`
+    /// alias accepts the pre-migration scalar shape so cards.json files
+    /// emitted before the multi-color pipeline still deserialize.
+    #[serde(
+        default,
+        alias = "card_color",
+        deserialize_with = "deserialize_card_colors",
+    )]
+    pub card_colors: Vec<CardColor>,
     /// Case-insensitive substring against `card_name`. Empty = no constraint.
     #[serde(default)]
     pub name_contains: String,
     /// Case-insensitive substring against `effect_text`. Empty = no constraint.
     #[serde(default)]
     pub text_contains: String,
+}
+
+/// Accept both the current list form (`card_colors: ["Blue", "Purple"]`)
+/// and the legacy scalar form (`card_colors: "Blue"`) produced by earlier
+/// cards.json exports. Serde's `#[serde(default)]` covers absent/null.
+fn deserialize_card_colors<'de, D>(deserializer: D) -> Result<Vec<CardColor>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Form {
+        Many(Vec<CardColor>),
+        One(CardColor),
+    }
+    match Option::<Form>::deserialize(deserializer)? {
+        Some(Form::Many(v)) => Ok(v),
+        Some(Form::One(c)) => Ok(vec![c]),
+        None => Ok(vec![]),
+    }
 }
 
 /// A DNA digivolve cost entry. Two requirements plus a memory cost.
@@ -144,14 +173,18 @@ fn parse_card_kind(raw: u8) -> CardKind {
 }
 
 fn parse_card_color(raw: u8) -> CardColor {
+    // Must match Python's `CardColor` enum in
+    // `digimon_gym/engine/data/enums.py` and the ingester's `COLOR_MAP` in
+    // `tools/ingest_cards.py`, which together are the source of truth for
+    // the integers stored in `cards.json`.
     match raw {
         0 => CardColor::Red,
         1 => CardColor::Blue,
         2 => CardColor::Yellow,
         3 => CardColor::Green,
-        4 => CardColor::Black,
-        5 => CardColor::Purple,
-        6 => CardColor::White,
+        4 => CardColor::White,
+        5 => CardColor::Black,
+        6 => CardColor::Purple,
         _ => CardColor::Red, // fallback
     }
 }
@@ -405,5 +438,38 @@ mod tests {
         assert_eq!(card.colors, vec![CardColor::Red]);
         assert!(card.traits.contains(&"In-Training".to_string()));
         assert!(card.traits.contains(&"Lesser".to_string()));
+    }
+
+    /// Lock in Rust's int→enum color mapping to match Python's
+    /// `CardColor` enum (`digimon_gym/engine/data/enums.py`) and the
+    /// ingester's `COLOR_MAP` (`tools/ingest_cards.py`). Regression
+    /// guard for a prior bug where Rust had 4=Black / 5=Purple / 6=White
+    /// while cards.json uses Python's 4=White / 5=Black / 6=Purple
+    /// convention. Known references: Piedmon=Purple=6,
+    /// Machinedramon=Black=5, Susanoomon=White=4.
+    #[test]
+    fn card_color_int_mapping_matches_python() {
+        assert_eq!(parse_card_color(0), CardColor::Red);
+        assert_eq!(parse_card_color(1), CardColor::Blue);
+        assert_eq!(parse_card_color(2), CardColor::Yellow);
+        assert_eq!(parse_card_color(3), CardColor::Green);
+        assert_eq!(parse_card_color(4), CardColor::White);
+        assert_eq!(parse_card_color(5), CardColor::Black);
+        assert_eq!(parse_card_color(6), CardColor::Purple);
+    }
+
+    /// `CardColor` discriminants must equal the JSON-level ints because
+    /// `policies/greedy.rs` does `(*c as u8) == evo.card_color` to match
+    /// a live permanent's colors against an evo-cost entry without going
+    /// through the `parse_card_color` table.
+    #[test]
+    fn card_color_discriminants_match_python_ints() {
+        assert_eq!(CardColor::Red as u8, 0);
+        assert_eq!(CardColor::Blue as u8, 1);
+        assert_eq!(CardColor::Yellow as u8, 2);
+        assert_eq!(CardColor::Green as u8, 3);
+        assert_eq!(CardColor::White as u8, 4);
+        assert_eq!(CardColor::Black as u8, 5);
+        assert_eq!(CardColor::Purple as u8, 6);
     }
 }

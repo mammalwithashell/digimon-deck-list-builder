@@ -28,10 +28,7 @@ from digimon_gym.agents.architect_pool import CardConstraint
 
 logger = logging.getLogger(__name__)
 
-_DECK_LIBRARY_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "engine" / "data" / "deck_library.json"
-)
+from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
 
 # Prefer decklists from sources with better data quality.
 _SOURCE_PREFERENCE = {

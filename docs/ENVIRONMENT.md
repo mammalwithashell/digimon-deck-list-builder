@@ -152,7 +152,12 @@ opt-in — nothing here is required for core gameplay, PvP, or RL training.
 |-----|---------|---------|---------|
 | `ONNX_MODELS_DIR` | `models` | `digimon_gym/engine/model_utils.py` | Local directory where exported ONNX models are written/read. |
 | `ARCHITECT_MODELS_DIR` | `architect_runs` | `digimon_gym/routers/deck_optimizer.py` | Output dir for the Architect/Q-DeckRec agent runs. |
-| `ARCHETYPE_ALIASES_PATH` | `digimon_gym/data/archetype_aliases.json` | `digimon_gym/digilab_client.py`, `digimon_gym/agents/gauntlet.py` | Override path for the archetype-alias lookup table. |
+| `DIGIMON_DATA_DIR` | `data` (at repo root) | `digimon_gym/data_paths.py` | Override the whole data directory. Individual file env vars below still take precedence. |
+| `DIGIMON_CARDS_JSON` | `$DIGIMON_DATA_DIR/cards.json` | Python + Rust readers | Path to cards.json. Rust `digimon-engine-py` walks up from CWD as a fallback. |
+| `DIGIMON_DECK_LIBRARY` | `$DIGIMON_DATA_DIR/deck_library.json` | `digimon_gym/data_paths.py` | Path to the scraped deck library. |
+| `DIGIMON_ARCHETYPE_ALIASES` | `$DIGIMON_DATA_DIR/archetype_aliases.json` | `digimon_gym/digilab_client.py`, `digimon_gym/agents/gauntlet.py` | Override path for the archetype-alias lookup table. |
+| `DIGIMON_CARD_OVERRIDES` | `$DIGIMON_DATA_DIR/card_overrides.json` | `tools/ingest_cards.py` | Hand-maintained corrections applied over the raw API ingest (tri-color cards, etc.). |
+| `DIGIMON_TESTED_CARDS` | `$DIGIMON_DATA_DIR/tested_cards.json` | `digimon_gym/engine/data/tested_cards.py` | Tested-cards allowlist snapshot consumed by the deck builder. |
 
 ---
 

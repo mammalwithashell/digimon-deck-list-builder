@@ -7,8 +7,8 @@ Provides:
 
 import json
 import pytest
-from pathlib import Path
 
+from digimon_gym.data_paths import DECK_LIBRARY
 from digimon_gym.engine.data.card_registry import CardRegistry
 
 
@@ -30,12 +30,11 @@ def debug_runner():
     """
     from digimon_gym.engine.runners.debug_runner import DebugRunner
 
-    lib_path = Path(__file__).parent.parent / "digimon_gym" / "engine" / "data" / "deck_library.json"
     _cache = {}
 
     def _load_deck(archetype_name: str) -> list[str]:
         if archetype_name not in _cache:
-            with open(lib_path, "r", encoding="utf-8") as f:
+            with open(DECK_LIBRARY, "r", encoding="utf-8") as f:
                 library = json.load(f)
             arch = library["archetypes"].get(archetype_name)
             if not arch or not arch.get("decklists"):

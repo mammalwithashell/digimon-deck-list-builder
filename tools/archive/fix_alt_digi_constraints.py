@@ -19,8 +19,8 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, List, Tuple
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-CARDS_JSON = REPO_ROOT / "digimon_gym" / "engine" / "data" / "cards.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+CARDS_JSON = REPO_ROOT / "data" / "cards.json"
 SCRIPTS_DIR = REPO_ROOT / "digimon_gym" / "engine" / "data" / "scripts"
 
 

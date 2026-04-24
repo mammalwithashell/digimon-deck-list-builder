@@ -22,11 +22,15 @@ import sys
 import time
 import urllib.request
 
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
+from digimon_gym.data_paths import CARDS_JSON as _CARDS_JSON_PATH  # noqa: E402
+
 REGISTRY_CAPACITY = 20_000
 
-CARDS_JSON = os.path.join(
-    os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "cards.json"
-)
+CARDS_JSON = str(_CARDS_JSON_PATH)
 
 # All known set prefixes in the Digimon Card Game.
 # Card IDs use non-zero-padded numbers: BT1 (not BT01), EX8 (not EX08).

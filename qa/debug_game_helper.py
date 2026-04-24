@@ -6,12 +6,18 @@ Targeted debug games use the HTTP API for fine-grained control.
 
 import json
 import traceback
+import sys
 from pathlib import Path
 
 import requests
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from digimon_gym.data_paths import DECK_LIBRARY as DECK_LIBRARY_PATH  # noqa: E402
+
 BASE_URL = "http://localhost:8000"
-DECK_LIBRARY_PATH = Path(__file__).parent.parent / "digimon_gym" / "engine" / "data" / "deck_library.json"
 
 
 def load_deck(archetype_name: str) -> list[str]:

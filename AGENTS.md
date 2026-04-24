@@ -259,7 +259,7 @@ Decks sorted by source preference; position-biased within archetype.
 
 ## 3.5 Deck Library Pipeline
 
-`tools/meta_loader.py` → `digimon_gym/engine/data/deck_library.json` → `MetaGauntlet.load()`
+`tools/meta_loader.py` → `data/deck_library.json` → `MetaGauntlet.load()`
 
 ---
 
