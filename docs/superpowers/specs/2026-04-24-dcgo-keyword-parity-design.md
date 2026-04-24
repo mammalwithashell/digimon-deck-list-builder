@@ -21,7 +21,6 @@ Every keyword change must preserve the no-approximations invariant: no stubs, no
 ## 2. Non-goals
 
 - **Python engine parity.** This spec is Rust-only. Where the Rust fix deliberately diverges from the current Python behavior, we log a row in `RUST_PYTHON_PARITY.md`; we do not back-port. Python is in sunset.
-- **Post-alpha-scope keywords.** `Execute`, `Iceclad`, `MindLink`, and `Training` are not in any alpha archetype and are explicitly deferred past alpha scope. They get enum variants only when a scripted card requires them.
 - **New card scripting.** Card effects themselves are out of scope; this spec delivers the keyword substrate that card scripts and native-keyword parsing consume.
 - **Delay / Digi-Burst / Link+X / DNA Blast Digivolve.** These are mechanics, not keywords consumed via `Keyword` enum; their treatment belongs in separate specs (Delay already landed via the DSL Phase 2a lowering).
 
@@ -149,17 +148,32 @@ Enum variants + auto-installs for alpha-relevant missing keywords. Ordering foll
 - **E3. DeDigivolve(N) printed-form auto-install.** Existing `Keyword::DeDigivolve(N)` variant gets an active-skill auto-emit via `keyword_to_auto_effect`. Consumes the existing `ctx.de_digivolve_n` helper.
 - **E4. DrawX(N) printed-form auto-install.** `[Main]` active-skill draw for Option cards.
 
-### Phase F — Post-alpha (deferred, tracked)
+### Phase F — Remaining keyword backfill (lower archetype blast radius)
 
-Not blocking alpha. Enum variants added on-demand when a scripted card requires them.
+Lower priority than A-E but in scope. Each needs a new enum variant plus the specific primitives called out below.
 
-- Execute, Iceclad, MindLink, Training.
-- Iceclad specifically: RULES_CONTEXT 16-34 describes digi-card-count-vs-DP comparison, which requires a new branch in `resolve_pending_battle` gated on `has_keyword(Iceclad)` for both combatants. Non-trivial combat work; defer until a target card forces the issue.
+- **F1. Execute.** Trigger-type at end of your turn (RULES_CONTEXT 16-37). Optional attack; attack may target unsuspended Digimon; self deletes at end-of-attack.
+  - `Keyword::Execute` + `keyword_to_auto_effect` emits an `EndOfYourTurn` triggered effect that grants `MayAttack` + `CanAttackUnsuspended` for the window and installs an `OnEndOfAttack` observer that calls `ctx.delete_permanent(self)` with `cause = OwnEffect`.
+  - Depends on: already-existing `MayAttack` modifier (Phase 5), `CanAttackUnsuspended` modifier, `OnEndOfAttack` observer timing. `EndOfAttack` already exists in `EffectTiming` per [enums.rs:134](../../../digimon-engine/src/enums.rs). No new timings required.
+- **F2. Iceclad.** Passive (RULES_CONTEXT 16-34). Compare digivolution-card count instead of DP in battle (except vs Security Digimon). Higher count wins; same count = both combatants delete.
+  - `Keyword::Iceclad` + new battle-resolution branch in `resolve_pending_battle`. When either combatant has Iceclad, swap the DP-compare for a `card_sources.len()` compare; tie path routes both to `delete_permanent_with_effects` with `cause = Battle`. Security battle branch is unaffected (RULES 16-34 exception).
+  - No auto-install from `keyword_to_auto_effect`; consumption is a hard-coded combat-resolution branch gated on `has_keyword(combatant, Iceclad)`.
+  - Corrects the incorrect "immunity to suspension" description in DCGO_KEYWORD_PARITY.md (flagged in A6; implementation here).
+- **F3. MindLink.** Active-skill (RULES_CONTEXT 16-27). Place a Tamer with this effect in the digi cards of a Digimon that has no Tamer cards in its digi cards. Mandatory processing; optional timing under `[Main]`.
+  - `Keyword::MindLink` + new primitive `ctx.attach_tamer_to_digimon(tamer_handle, digimon_handle)` — adds the Tamer as a digivolution source with `stack_kind: Tamer` marker. Selection filter excludes Digimon whose sources contain any Tamer card.
+  - New `Permanent` helper `has_tamer_source() -> bool` backed by iterating `card_sources` and checking `card_type == CardType::Tamer`.
+  - `keyword_to_auto_effect` emits a `[Main]` active-skill effect on Tamers with `<Mind Link>`.
+- **F4. Training.** Active-skill (RULES_CONTEXT 16-40). Optional "by suspending this Digimon during main phase" (also active in breeding area). Places top deck card at bottom of self's digi cards face-down.
+  - `Keyword::Training` + new primitive `ctx.place_deck_top_under_self_face_down(perm)` — pops deck[0] and appends to `perm.card_sources` at index 0 (bottom) with a face-down marker. Face-down handling matches the approximation noted in [engine-gaps](../../RUST_ENGINE_GAPS.md) "Face-Down Card Tracking" (Resolved 2026-03-14): DCGO's `IsFlipped` is Security-only, so we use a `source_face_down: bool` flag on the new `CardSource` entry.
+  - `keyword_to_auto_effect` emits a `[Main]` active-skill with cost `Suspend(self)`. Must also be emittable from breeding area — extend the main-phase active-skill emission site to permit breeding-area consumption of this specific keyword.
+  - Open question: does DCGO's Training allow activation of a suspended Digimon's `<Training>` (presumably no, since the cost is "suspend this Digimon")? Verify against DCGO source before landing.
+
+**Exit criteria for F.** Every DCGO KeyWordEffects file has a matching Rust enum variant + consumer; the DCGO_KEYWORD_PARITY.md summary table contains no 🔴 or ❌ rows.
 
 ## 6. API surface changes
 
 ### Enum changes
-- `Keyword` — drop `Blast`, `Armor`, `Material`; add `MaterialSave(u8)`, `Retaliation`, `Scapegoat`. (Iceclad / MindLink / Execute / Training deferred to Phase F.)
+- `Keyword` — drop `Blast`, `Armor`, `Material`; add `MaterialSave(u8)`, `Retaliation`, `Scapegoat`, `Execute`, `Iceclad`, `MindLink`, `Training`. Final enum matches the 28 DCGO KeyWordEffects files 1:1 (modulo the printed/granted split on Barrier → Fortitude).
 - `ModifierType` — rename `GrantBarrier` → `GrantFortitude` (if any consumer exists) or drop.
 - `ReplacementCause` in `replacement.rs` — add `source: Option<PlayerId>` field. Variants stay the same.
 
@@ -178,9 +192,17 @@ Not blocking alpha. Enum variants added on-demand when a scripted card requires 
 - `Effect::security_attack_change(n: i8)` — already partially exists; confirm for auto-install emission.
 - `Effect::de_digivolve_active_skill(n: u8)` — thin wrapper over existing `ctx.de_digivolve_n`.
 - `Effect::draw_option_active_skill(n: u8)`.
+- `Effect::end_of_turn_self_delete_attack()` — Execute auto-install body.
+- `Effect::attach_tamer_to_digimon_active_skill()` — MindLink auto-install body.
+- `Effect::suspend_and_bottom_deck_face_down_active_skill()` — Training auto-install body.
+
+### `EffectContext` / primitive additions
+- `ctx.attach_tamer_to_digimon(tamer, target)` — new zone operation for MindLink.
+- `ctx.place_deck_top_under_self_face_down(perm)` — new zone operation for Training.
+- `Permanent::has_tamer_source() -> bool` — filter helper for MindLink target validation.
 
 ### `keyword_to_auto_effect` extensions
-Emits declarative effects for: `SecurityAttackPlus(N)`, `SecurityAttackMinus(N)`, `DeDigivolve(N)`, `DrawX(N)`, `Save`, `MaterialSave(N)`, `Decoy`, `Fortitude`, `Fragment(N)`, `ArmorPurge`, `Partition`, `Retaliation`, `Scapegoat`.
+Emits declarative effects for: `SecurityAttackPlus(N)`, `SecurityAttackMinus(N)`, `DeDigivolve(N)`, `DrawX(N)`, `Save`, `MaterialSave(N)`, `Decoy`, `Fortitude`, `Fragment(N)`, `ArmorPurge`, `Partition`, `Retaliation`, `Scapegoat`, `Execute`, `MindLink`, `Training`. `Iceclad` is hard-coded in combat resolution, not emitted as an effect.
 
 ## 7. Testing strategy
 
@@ -197,6 +219,10 @@ All phases TDD. Each keyword gets at least one `DebugRunner` behavioral test und
 - `TEST-MATERIAL-SAVE` — printed `<Material Save 2>` Digimon with ≥2 stack sources; active skill moves 2 sources under a Tamer.
 - `TEST-RETALIATION` — `<Retaliation>` Digimon; verifies only fires on battle deletion.
 - `TEST-SCAPEGOAT` — `<Scapegoat>` Digimon; verifies no fire on own-sourced deletion.
+- `TEST-EXECUTE` — `<Execute>` Digimon at end-of-turn; verifies attack-unsuspended permitted and self-delete fires at end of attack.
+- `TEST-ICECLAD` — two `<Iceclad>` combatants with different stack counts; verifies higher-count survives; equal-count path deletes both.
+- `TEST-MINDLINK` — `<Mind Link>` Tamer attaching to a Digimon with no Tamer sources; verifies target filter excludes Digimon already carrying a Tamer source.
+- `TEST-TRAINING` — `<Training>` Digimon activating from main phase + from breeding area; verifies suspend cost, deck-top-to-bottom-face-down placement, and rejection when already suspended.
 
 **Parity regression.** `cargo test --manifest-path digimon-engine/Cargo.toml` must remain green across all phases. `tests/test_rust_backend_parity.py` with `DIGIMON_BACKEND=rust` must remain green (or receive documented diff rows in `RUST_PYTHON_PARITY.md` for Progress semantics).
 
@@ -225,19 +251,28 @@ Each phase ends with a matching doc update — same commit or immediate follow-u
 - **Decoy color parameter.** `Keyword::Decoy` in the current enum is unparameterized, but DCGO Decoy is color-filtered (16-17). Before Phase D4 lands, decide: `Decoy(Color)` variant, or keep unparameterized and carry color on the granted `Effect`.
 - **MaterialSave on non-DigiXros cards.** RULES_CONTEXT 16-20 says "X cards from digi cards (specified in DigiXros requirements)". For non-DigiXros cards that print `<Material Save N>`, is the source set simply "any N stack sources"? Resolve by cross-checking DCGO's `MaterialSave.cs` before Phase D7.
 - **Fortitude source-count gate.** RULES_CONTEXT 16-26 says "Digimon with digi cards and this effect is deleted". Parity doc says "if sources available". Confirm the exact gate (≥1 source? any source type?) against DCGO before Phase D5.
+- **Iceclad scope.** RULES_CONTEXT 16-34 says "Compare number of digivolution cards instead of DP in battle". Unclear whether Iceclad applies when only *one* combatant has it (attacker's Iceclad imposes the comparison mode) or requires both sides. Verify against DCGO `Iceclad.cs` before Phase F2.
+- **Training activation on suspended self.** Cost is "suspend this Digimon", so presumably unsuspended-required, but verify against DCGO `Training.cs` before Phase F4.
+- **MindLink [Main] timing.** RULES_CONTEXT 16-27 says "Mandatory (but if [Main], player chooses timing)". Confirm whether the keyword always prints with a `[Main]` timing tag, or whether it can print without one (which would make activation automatic). Verify against DCGO + printed card samples before Phase F3.
 
 ## 11. Deliverable sequencing
 
 ```
-Phase A  (no new infra)            → ~1 week
-Phase B  (source-attribution)      → ~1 week    [depends on A]
-Phase C  (nested-select re-drive)  → ~1-2 weeks [independent of B; can parallel]
-Phase D  (alpha keyword wire-ups)  → ~2 weeks   [depends on B + C]
-Phase E  (missing-enum backfill)   → ~1 week    [depends on B]
-Phase F  (post-alpha)              → deferred
+Phase A  (no new infra)                          → ~1 week
+Phase B  (source-attribution)                    → ~1 week     [depends on A]
+Phase C  (nested-select re-drive)                → ~1-2 weeks  [independent of B; parallel]
+Phase D  (alpha keyword wire-ups)                → ~2 weeks    [depends on B + C]
+Phase E  (missing-enum backfill: alpha-critical) → ~1 week     [depends on B]
+Phase F  (remaining backfill: Execute, Iceclad,  → ~2 weeks    [F1/F3/F4 depend on B;
+           MindLink, Training)                                   F2 independent after A]
 ```
 
-Total critical path: A → B → D ≈ 4 weeks. Phase C can run parallel to B. Phase E can run parallel to D.
+Total critical path: A → B → D ≈ 4 weeks. Phase C parallel to B. Phase E parallel to D. Phase F sequencing:
+- F2 (Iceclad) has no cross-dependency on B/C/D and can start right after A lands.
+- F1 (Execute) depends on B5 (`ctx.was_deleted_by_effect` for the self-delete path's OnDeletion observers to see the correct cause).
+- F3 / F4 depend on their new primitives only; can run parallel to D once B ships.
+
+With parallelism: the full spec can complete in ~5 weeks of critical-path work plus parallel tracks.
 
 ## 12. Out-of-scope follow-ups
 
