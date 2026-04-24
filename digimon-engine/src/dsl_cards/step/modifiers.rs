@@ -5,7 +5,7 @@
 //! unknown modifier names, or unknown keyword names cause the step to no-op —
 //! same strictness convention as 2b (invalid references don't panic).
 
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledModifierTarget, CompiledStep};
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
@@ -26,6 +26,23 @@ pub fn try_run(
                 resolve_binding_ref(target, ctx, bindings)
             {
                 ctx.add_dp_modifier(h, *value, expiry);
+            }
+            true
+        }
+        CompiledStep::AddModifier { target, modifier, value, expiry } => {
+            let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier) else {
+                return true;
+            };
+            // Phase 2c: binding-target only. Filter-target multi-targeting ships in 2d.
+            let target_binding = match target {
+                CompiledModifierTarget::Binding(b) => b,
+                CompiledModifierTarget::Filter(_) => return true,
+            };
+            if let Some(ResolvedBinding::Permanent(h)) =
+                resolve_binding_ref(target_binding, ctx, bindings)
+            {
+                ctx.add_modifier(h, modifier_ty, *value, expiry);
             }
             true
         }

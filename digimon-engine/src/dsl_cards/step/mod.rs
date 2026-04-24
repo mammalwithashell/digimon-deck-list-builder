@@ -1,6 +1,6 @@
 //! Process-step lowering dispatch. Phase 2a: memory + draw/trash helpers.
 //! Phase 2b: continuation-passing dispatcher + selection handlers + zone-moves.
-//! Phase 2c: permanent mutations + modifier steps (AddDpModifier).
+//! Phase 2c: permanent mutations + modifier steps (AddDpModifier, AddModifier).
 
 pub mod draw;
 pub mod memory;
