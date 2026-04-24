@@ -68,13 +68,20 @@ impl<'a> EffectContext<'a> {
         C: FnOnce(&mut EffectContext<'_>, PermanentHandle) + Send + Sync + 'static,
     {
         let target_player = self.game.next_clockwise(self.player);
+        let source = Some(self.player);
+        let composed = move |game: &Game, h: PermanentHandle| -> bool {
+            if game.progress_excludes(h, source) {
+                return false;
+            }
+            filter(game, h)
+        };
         self.install_field_selection(
             SelectionKind::OppField,
             GamePhase::SelectTarget,
             target_player,
             prompt,
             is_optional,
-            filter,
+            composed,
             callback,
         );
     }

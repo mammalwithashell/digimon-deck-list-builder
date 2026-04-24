@@ -89,3 +89,79 @@ fn progress_attacker_does_not_suppress_security_skill_drain() {
         "one security card should have been consumed"
     );
 }
+
+#[test]
+fn select_opponent_permanent_excludes_progress_attacker() {
+    // Setup: own player P0 attacks with a Progress carrier. The
+    // defending side (P1) tries to select one of P0's Digimon via
+    // `select_opponent_permanent`. The Progress carrier must be
+    // filtered out; the non-Progress sibling must still be selectable.
+
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::effect_context::EffectContext;
+    use digimon_engine::enums::GamePhase;
+    use digimon_engine::selection::{AttackState, AttackTarget, PendingAttack};
+
+    let mut r = DebugRunner::builder()
+        .add_card(fighter_with_keywords("PROG", 6000, vec![Keyword::Progress]))
+        .add_card(fighter_with_keywords("SIB", 4000, vec![]))
+        .add_card(fighter_with_keywords("OPP", 3000, vec![]))
+        .start();
+
+    let progress = r.place_on_field(0, "PROG", None);
+    let sibling = r.place_on_field(0, "SIB", None);
+    let _opponent = r.place_on_field(1, "OPP", None);
+
+    // Mark Progress carrier as attacking.
+    r.game.pending_attack = Some(PendingAttack {
+        attacker: progress,
+        original_target: AttackTarget::Player(1),
+        effective_target: AttackTarget::Player(1),
+        is_blocked: false,
+        blocker: None,
+        is_vortex: false,
+        is_overclock: false,
+        cancelled: false,
+        battle_occurred: false,
+        return_phase: GamePhase::Main,
+        state: AttackState::Declared,
+        counter_depth: 0,
+    });
+
+    // Opponent (P1) installs a selection whose filter accepts ALL P0 Digimon.
+    // After Task 4's gate, the Progress attacker should not appear in the
+    // candidate list.
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1); // selecting player = 1
+        ctx.select_opponent_permanent(
+            "pick",
+            false,
+            |_game, _h| true,
+            move |_, _h| {
+                // Callback intentionally empty — we only inspect the pending
+                // selection's candidate list, not its resolution.
+            },
+        );
+    }
+
+    // `PendingSelection.valid_action_ids` holds the decoder-accepted
+    // action IDs for the installed selection. Its length is the count
+    // of selectable candidates. With Progress gating the attacker out
+    // of the opponent's candidate pool, we should see exactly one
+    // selectable permanent (the sibling).
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("selection should be installed");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        1,
+        "exactly one candidate should remain after Progress exclusion; \
+         got {} action IDs: {:?}",
+        pending.valid_action_ids.len(),
+        pending.valid_action_ids,
+    );
+
+    let _ = sibling; // silence unused warning
+}
