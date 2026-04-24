@@ -1,9 +1,10 @@
 //! Process-step lowering dispatch. Phase 2a: memory + draw/trash helpers.
 //! Phase 2b: continuation-passing dispatcher + selection handlers + zone-moves.
-//! Phase 2c: permanent mutations (Suspend/Unsuspend/ReturnToDeck).
+//! Phase 2c: permanent mutations + modifier steps (AddDpModifier).
 
 pub mod draw;
 pub mod memory;
+pub mod modifiers;
 pub mod permanent_mutations;
 pub mod selections;
 pub mod zone_moves;
@@ -77,5 +78,8 @@ pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut
     if permanent_mutations::try_run(step, ctx, bindings) {
         return;
     }
-    // Phase 2c+: other families.
+    if modifiers::try_run(step, ctx, bindings) {
+        return;
+    }
+    // Phase 2d+: other families.
 }
