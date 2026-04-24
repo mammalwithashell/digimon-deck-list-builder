@@ -7,6 +7,7 @@
 use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::dsl_cards::step::run_steps;
 use crate::effect_context::EffectContext;
 
@@ -21,6 +22,15 @@ pub fn try_run(
     match step {
         CompiledStep::Optional(body) => {
             // Phase 2c: always run the body. Opt-out UX lands in 2d.
+            run_steps(body, ctx, bindings);
+            true
+        }
+        CompiledStep::If { condition, then, else_branch } => {
+            let cond_holds = {
+                let rctx = ctx.as_read();
+                eval_predicate(condition, &rctx, PredicateSubject::None)
+            };
+            let body = if cond_holds { then } else { else_branch };
             run_steps(body, ctx, bindings);
             true
         }
