@@ -1,7 +1,10 @@
 //! Process-step lowering dispatch. Phase 2a: memory + draw/trash helpers.
+//! Phase 2b: continuation-passing dispatcher + selection handlers + zone-moves.
 
 pub mod draw;
 pub mod memory;
+pub mod selections;
+pub mod zone_moves;
 
 use digimon_dsl::compiled::CompiledPlayerRef;
 use digimon_dsl::compiled::CompiledStep;
@@ -22,14 +25,39 @@ pub fn resolve_player(ctx: &EffectContext<'_>, r: CompiledPlayerRef) -> PlayerId
     }
 }
 
+/// Drive the full step slice to completion. When a selection step is
+/// encountered, `selections::try_install` captures the tail as a
+/// heap-allocated callback and returns early; the rest of the slice
+/// will execute once the player resolves the selection.
+pub fn run_steps(
+    steps: &[CompiledStep],
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+) {
+    let mut i = 0;
+    while i < steps.len() {
+        let step = &steps[i];
+        // Selection steps install the remainder as their callback and return.
+        if selections::try_install(step, &steps[i + 1..], ctx, bindings.clone()) {
+            return;
+        }
+        // Synchronous families — execute and advance.
+        run_step(step, ctx, bindings);
+        i += 1;
+    }
+}
+
 /// Dispatch a compiled step to its family-specific handler. Unhandled
 /// steps are silently skipped in Phase 2a; Phase 2b/c/d add more families.
-pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) {
     if memory::try_run(step, ctx) {
         return;
     }
     if draw::try_run(step, ctx) {
         return;
     }
-    // Phase 2b+: other families.
+    if zone_moves::try_run(step, ctx, bindings) {
+        return;
+    }
+    // Phase 2c+: other families.
 }

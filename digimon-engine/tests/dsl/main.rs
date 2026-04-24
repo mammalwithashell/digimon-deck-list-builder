@@ -34,3 +34,8 @@ mod replacement;
 mod partition;
 mod delay;
 mod standalone_declaratives_exit;
+mod phase2b_binding_ref;
+mod phase2b_continuation;
+mod phase2b_zone_moves;
+mod phase2b_zone_moves_extra;
+mod phase2b_end_to_end;
