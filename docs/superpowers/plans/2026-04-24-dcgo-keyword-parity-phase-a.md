@@ -2,12 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Land the Phase A "unblocked" subset of the DCGO ↔ Rust keyword parity spec — Progress partial fix, Jamming widen, Security A. ±N auto-honor, enum cleanup, Save/MaterialSave variant split, and the doc updates.
+**Goal:** Land the Phase A "unblocked" subset of the DCGO ↔ Rust keyword parity spec — Progress partial fix, `Blast → BlastDigivolve` rename, Security A. ±N native consumption, enum cleanup, Save/MaterialSave variant split, and the doc updates.
 
 **Architecture:** Three clusters of change, each verifiable in isolation:
-1. **Combat gates** — `progress_excludes` helper + two new selection filters + a Jamming branch in `resolve_battle`.
+1. **Combat gates** — `progress_excludes` helper + selection filter wiring.
 2. **Native keyword consumption** — sum `SecurityAttackPlus/Minus(N)` at the `resolve_player_security_loop` site alongside the existing `ModifierType::SecurityAttackChange` sum.
-3. **Enum / parser cleanup** — drop dead variants (`Blast`, `Armor`, `Material`), split `MaterialSave` into its own parametric variant, drop `GrantBarrier` modifier slot.
+3. **Enum / parser cleanup** — rename `Keyword::Blast → Keyword::BlastDigivolve`, drop dead variants (`Armor`, `Material`, `GrantArmor`, `GrantBarrier`), split `MaterialSave` into its own parametric variant.
+
+**Correction landing with this plan (2026-04-24):** `Jamming` is **not** being widened. The parity doc's 🟡 flag was wrong — RULES_CONTEXT 16-8 is unambiguous that Jamming protects only from battle with Security Digimon, which matches Rust's existing behavior at [combat.rs:1814](../../digimon-engine/src/combat.rs). Task 6 (Jamming widening) has been removed from this plan; Task 10 (docs) updates the parity table accordingly.
 
 **Tech stack:** Rust (`digimon-engine` crate), `cargo test` for verification, DebugRunner-style integration tests following [digimon-engine/tests/combat/rush_exemption.rs](../../digimon-engine/tests/combat/rush_exemption.rs) as the model.
 
@@ -21,20 +23,19 @@
 
 | File | Role | Change |
 |---|---|---|
-| `digimon-engine/src/enums.rs` | Enum definitions | Drop `Keyword::Blast`, `Keyword::Armor`, `Keyword::Material`; drop `ModifierType::GrantBarrier`; add `Keyword::MaterialSave(u8)` |
-| `digimon-engine/src/card_data.rs` | Printed-keyword parser | Remove Blast/Armor/Material entries; add `Material Save N` parametric parse |
-| `digimon-engine/src/dsl_cards/modifier_map.rs` | DSL keyword lookup | Remove Blast/Armor; split `Save`/`MaterialSave` |
-| `digimon-engine/src/game.rs` | Game helpers | New `current_attacker() -> Option<PermanentHandle>` and `progress_excludes(target, source) -> bool` |
-| `digimon-engine/src/combat.rs` | Combat resolution | Widen Jamming in `resolve_battle`; add `security_attack_keyword_bonus()` sum in `resolve_player_security_loop` |
-| `digimon-engine/src/effect_context/selections.rs` | Selection filters | Wrap filter predicates with `progress_excludes` in `select_opponent_permanent` and `select_any_permanent` |
-| `digimon-dsl/src/validator.rs` | DSL modifier-name allow-list | Remove `"GrantBarrier"` from the grant-keyword list |
+| `digimon-engine/src/enums.rs` | Enum definitions | Rename `Keyword::Blast` → `BlastDigivolve`; drop `Keyword::Armor`, `Keyword::Material`; drop `ModifierType::GrantBarrier`, `GrantArmor`; add `Keyword::MaterialSave(u8)` |
+| `digimon-engine/src/card_data.rs` | Printed-keyword parser | Rename Blast mapping to `BlastDigivolve`; remove Armor/Material entries; add `Material Save N` parametric parse |
+| `digimon-engine/src/dsl_cards/modifier_map.rs` | DSL keyword lookup | Rename `"Blast"` → `BlastDigivolve`; remove `"Armor"`; split `Save`/`MaterialSave` |
+| `digimon-engine/src/game.rs` | Game helpers | New `current_attacker() -> Option<PermanentHandle>` and `progress_excludes(target, source) -> bool`; new `security_attack_keyword_bonus()` |
+| `digimon-engine/src/combat.rs` | Combat resolution | Add `security_attack_keyword_bonus()` sum in `resolve_player_security_loop` |
+| `digimon-engine/src/effect_context/selections.rs` | Selection filters | Wrap filter predicates with `progress_excludes` in `select_opponent_permanent` (and `select_any_permanent` if present) |
+| `digimon-dsl/src/validator.rs` | DSL modifier-name allow-list | Remove `"GrantBarrier"` and `"GrantArmor"` from the grant-keyword list |
 | `digimon-engine/tests/combat/progress_partial.rs` *(new)* | A1 behavioral tests | Security-skill-fires-with-Progress + selection-filter-excludes-Progress |
-| `digimon-engine/tests/combat/jamming_digimon_battle.rs` *(new)* | A2 behavioral test | Jamming survives Digimon-vs-Digimon DP loss |
 | `digimon-engine/tests/combat/security_attack_keyword.rs` *(new)* | A3 behavioral tests | `<Security A. +1>` gives 2 checks; `<Security A. -1>` gives 0; stacking with modifier adds |
-| `digimon-engine/tests/keyword_parsing.rs` | Parser tests | Update `Blast`/`Armor` assertions; add `Material Save N` test |
-| `digimon-engine/tests/combat/main.rs` | Test module index | Register three new combat test files |
-| `docs/DCGO_KEYWORD_PARITY.md` | Parity tracker | Flip Jamming / Progress / SecAttack / Blast / Armor / Material rows to ✅ (or removed); correct the Iceclad row's description per RULES_CONTEXT 16-34 |
-| `docs/RUST_ENGINE_API.md` | API reference | Remove `GrantBarrier` from granted-keywords list |
+| `digimon-engine/tests/keyword_parsing.rs` | Parser tests | Update `Blast → BlastDigivolve` assertion; drop `Armor` assertion; add `Material Save N` test |
+| `digimon-engine/tests/combat/main.rs` | Test module index | Register two new combat test files |
+| `docs/DCGO_KEYWORD_PARITY.md` | Parity tracker | Flip Jamming → ✅ (already correct per RULES 16-8); flip Progress → 🟡 partial; flip SecAttack rows → ✅; rename Blast row; remove Armor / Material rows; correct Iceclad description per RULES_CONTEXT 16-34 |
+| `docs/RUST_ENGINE_API.md` | API reference | Remove `GrantBarrier` and `GrantArmor` from granted-keywords list |
 | `docs/RUST_PYTHON_PARITY.md` | Cross-engine tracker | Add row documenting Progress semantics divergence (Rust correct, Python still skips SecuritySkill) |
 
 ---
@@ -662,15 +663,18 @@ git commit -m "engine: gate select_any_permanent with progress_excludes"
 
 ---
 
-## Task 6: Jamming — widen to Digimon-vs-Digimon battle
+## Task 6: _(removed — Jamming is already correct)_
 
-**Context.** Today `Keyword::Jamming` is checked only at the security-battle DP branch ([combat.rs:1814](../../digimon-engine/src/combat.rs)). Per RULES_CONTEXT 16-8, Jamming should also prevent the attacker from being deleted when it loses a regular Digimon-vs-Digimon battle. `resolve_battle` at [combat.rs:2132](../../digimon-engine/src/combat.rs) has three branches — attacker wins, defender wins, tie — and the defender-wins branch at line 2150-2156 is where the attacker is deleted. Add a Jamming guard there.
+Original scope was "widen Jamming to Digimon-vs-Digimon battle." **This has been removed.** RULES_CONTEXT 16-8 is unambiguous that Jamming protects only from battle with Security Digimon, which matches the existing Rust behavior at [combat.rs:1814](../../digimon-engine/src/combat.rs). The parity doc's 🟡 flag was based on an incorrect reading of DCGO; the doc will be corrected to ✅ in Task 10.
 
-**Files:**
-- Create: `digimon-engine/tests/combat/jamming_digimon_battle.rs`
-- Modify: `digimon-engine/tests/combat/main.rs`, `digimon-engine/src/combat.rs`
+No code change. Skip to Task 7.
 
-- [ ] **Step 6.1: Register the test module**
+<!-- Superseded-task content retained below for audit; do not execute. -->
+
+<details>
+<summary>Original (superseded) Jamming-widening task body — do not execute</summary>
+
+- [ ] **[SUPERSEDED] Step 6.1: Register the test module**
 
 Append to `digimon-engine/tests/combat/main.rs`:
 
@@ -876,16 +880,9 @@ cargo test --manifest-path digimon-engine/Cargo.toml
 
 Expected: all tests PASS.
 
-- [ ] **Step 6.7: Commit**
+- [ ] **[SUPERSEDED] Step 6.7: Commit** *(do not execute — Jamming widening is incorrect per RULES 16-8)*
 
-```bash
-git add digimon-engine/src/combat.rs digimon-engine/tests/combat/jamming_digimon_battle.rs digimon-engine/tests/combat/main.rs
-git commit -m "engine: Jamming protects attacker in Digimon-vs-Digimon battle
-
-Phase A §A2 — widen Jamming from security-only to all battle
-deletions (RULES_CONTEXT 16-8, DCGO CanNotBeDestroyedByBattleClass).
-Covers attacker DP-loss and tie (mutual destruction) on both sides."
-```
+</details>
 
 ---
 
@@ -1145,36 +1142,34 @@ additively with ModifierType::SecurityAttackChange grants."
 
 ---
 
-## Task 8: Remove dead `Keyword::Blast` / `Keyword::Armor` / `Keyword::Material`
+## Task 8: Rename `Keyword::Blast` → `BlastDigivolve`; remove dead `Keyword::Armor` / `Keyword::Material`
 
-**Context.** All three are parsed but never consumed. `Blast` duplicates `Effect::blast_digivolve` (the real BlastDigivolve handling); `Armor` has no DCGO counterpart; `Material` name-collides with DCGO's `MaterialSave` and will be replaced by `MaterialSave(u8)` in Task 10.
+**Context.** `Keyword::Blast` is the enum representation of the printed `<Blast Digivolve>` keyword — the name is misleading (the enum says `Blast` but it means Blast Digivolve). Per user direction (2026-04-24) the variant must be **renamed** to `BlastDigivolve`, not dropped. Auto-install — emitting `Effect::blast_digivolve=true` when the keyword is parsed — is deferred to Phase D; the variant keeps its current parsed-but-not-auto-installed status under the clearer name.
+
+`Keyword::Armor` and `ModifierType::GrantArmor` have no DCGO counterpart and are removed entirely. `Keyword::Material` name-collides with DCGO's `MaterialSave` and is replaced by `MaterialSave(u8)` in Task 9.
 
 **Files:**
-- Modify: `digimon-engine/src/enums.rs`, `digimon-engine/src/card_data.rs`, `digimon-engine/src/dsl_cards/modifier_map.rs`, `digimon-engine/tests/keyword_parsing.rs`
+- Modify: `digimon-engine/src/enums.rs`, `digimon-engine/src/card_data.rs`, `digimon-engine/src/dsl_cards/modifier_map.rs`, `digimon-engine/tests/keyword_parsing.rs`, `digimon-dsl/src/validator.rs`
 
 - [ ] **Step 8.1: Update the parser tests to reflect the new expected behavior**
 
 Modify `digimon-engine/tests/keyword_parsing.rs`:
 
-- `parses_blast_digivolve_not_confused_with_blast`: change assertion to expect an *empty* `kw` vec (the `<Blast Digivolve>` text, once `Keyword::Blast` is removed, has no native-keyword fallback — Blast Digivolve is handled via `Effect::blast_digivolve` on card scripts, not via a printed keyword).
-- `parser_armor_purge_before_armor`: remove the `assert!(!kws.contains(&Keyword::Armor));` line (Armor is no longer an enum variant).
+- `parses_blast_digivolve_not_confused_with_blast`: change the assertion to expect `Keyword::BlastDigivolve`. The test still serves its original purpose (longest-prefix match), but with the renamed variant.
+- `parser_armor_purge_before_armor`: remove the `assert!(!kws.contains(&Keyword::Armor));` line (Armor is no longer an enum variant; leave the positive `ArmorPurge` assertion).
 
-Rewrite these two tests as:
+Replace the two tests with:
 
 ```rust
 #[test]
-fn parses_blast_digivolve_produces_no_native_keyword() {
-    // <Blast Digivolve> is a counter-window play mechanic handled via
-    // Effect::blast_digivolve on card scripts, not via a printed keyword.
-    // The parser should no longer emit any Keyword variant for this text.
+fn parses_blast_digivolve_produces_blast_digivolve_variant() {
+    // "<Blast Digivolve>" parses to Keyword::BlastDigivolve. The longest-
+    // prefix match previously distinguished a (now-removed) standalone
+    // "Blast" keyword; this test remains as a regression guard on the
+    // printed-text → enum-variant mapping.
+    use digimon_engine::enums::Keyword;
     let kw = parse_printed_keywords("\u{ff1c}Blast Digivolve\u{ff1e} (...)", "", "");
-    assert!(
-        kw.is_empty() || !kw.iter().any(|k| matches!(k, _)),
-        "no native keyword for Blast Digivolve: got {:?}",
-        kw
-    );
-    // Stronger assertion: no Keyword should be produced.
-    assert_eq!(kw.len(), 0);
+    assert_eq!(kw, vec![Keyword::BlastDigivolve]);
 }
 
 #[test]
@@ -1185,68 +1180,51 @@ fn parser_armor_purge_matches_correctly() {
 }
 ```
 
-- [ ] **Step 8.2: Run updated parser tests — they should fail the other way now (still compiling against old enum)**
+- [ ] **Step 8.2: Run updated parser tests — expected FAIL on missing `Keyword::BlastDigivolve`**
 
 ```
 cargo test --manifest-path digimon-engine/Cargo.toml --test keyword_parsing -- --nocapture
 ```
 
-At this step the tests compile but `parses_blast_digivolve_produces_no_native_keyword` will FAIL because `Keyword::Blast` is still emitted.
+Expected: compile error — `Keyword::BlastDigivolve` doesn't exist yet. This is the failing-test signal for the rename.
 
-- [ ] **Step 8.3: Remove the three enum variants**
+- [ ] **Step 8.3: Rename `Keyword::Blast` → `BlastDigivolve` and remove the dead variants**
 
-Modify `digimon-engine/src/enums.rs` (around lines 276, 279, 285). Delete the lines:
+Modify `digimon-engine/src/enums.rs`:
 
-```rust
-    Armor,
-    ...
-    Blast,
-    ...
-    Material,
-```
+1. Replace the `Blast,` line (around line 279) with `BlastDigivolve,`.
+2. Delete the `Armor,` line (around line 276).
+3. Delete the `Material,` line (around line 285).
+4. Delete `GrantBarrier,` (around line 369).
+5. Delete `GrantArmor,` (search the `ModifierType` enum for it).
 
-Save the file. The Rust compiler will now flag every remaining reference.
+The Rust compiler will now flag every remaining `Keyword::Blast` / `Keyword::Armor` / `Keyword::Material` / `ModifierType::GrantBarrier` / `ModifierType::GrantArmor` reference as an error — each gets renamed (Blast) or deleted (the others) in the steps below.
 
-- [ ] **Step 8.4: Remove parser entries**
+- [ ] **Step 8.4: Update parser entries**
 
-In `digimon-engine/src/card_data.rs`, delete these three lines from the prefix-match table (around lines 266, 274, 284):
+In `digimon-engine/src/card_data.rs`:
 
-```rust
-                ("Blast Digivolve", Keyword::Blast),
-                ...
-                ("Armor", Keyword::Armor),
-                ...
-                ("Material", Keyword::Material),
-```
+- Rename `("Blast Digivolve", Keyword::Blast),` → `("Blast Digivolve", Keyword::BlastDigivolve),` (around line 266).
+- Delete `("Armor", Keyword::Armor),` (around line 274).
+- Delete `("Material", Keyword::Material),` (around line 284).
 
-Also update the comment at lines 261-263 that references "Blast Digivolve before Blast" and "Armor Purge before Armor" — after removal only Decode/Decoy ordering matters. Replace the comment with:
+Update the comment at lines 261-263 (it references "Blast Digivolve before Blast" and "Armor Purge before Armor", both obsolete after this change):
 
 ```rust
             // Order matters: "Armor Purge" before any shorter Armor-prefixed
             // token, "Decode" before "Decoy" — longest-prefix wins.
 ```
 
-- [ ] **Step 8.5: Remove DSL modifier-map entries**
+- [ ] **Step 8.5: Update DSL modifier-map entries**
 
-In `digimon-engine/src/dsl_cards/modifier_map.rs`, delete the two lines at ~32 and ~35:
+In `digimon-engine/src/dsl_cards/modifier_map.rs`:
 
-```rust
-        "Armor" => Keyword::Armor,
-        ...
-        "Blast" => Keyword::Blast,
-```
+- Rename `"Blast" => Keyword::Blast,` → `"BlastDigivolve" => Keyword::BlastDigivolve,` (around line 35). The `"Blast"` alias is dropped since it's ambiguous with DSL sugar.
+- Delete `"Armor" => Keyword::Armor,` (around line 32).
 
-- [ ] **Step 8.6: Drop `ModifierType::GrantBarrier`**
+- [ ] **Step 8.6: Remove `GrantBarrier` / `GrantArmor` from the DSL validator allow-list**
 
-In `digimon-engine/src/enums.rs` around line 369, delete:
-
-```rust
-    GrantBarrier,
-```
-
-In `digimon-dsl/src/validator.rs` line 249, remove `"GrantBarrier" |` from the allow-list.
-
-(The spec §6 permits either a rename to `GrantFortitude` or a drop. This plan drops because no consumer exists — the spec notes a consumer will add it back when a real card needs the granted form.)
+In `digimon-dsl/src/validator.rs` line 249, remove `"GrantBarrier" |` and `"GrantArmor" |` from the grant-keyword allow-list (both are gone from `ModifierType`).
 
 - [ ] **Step 8.7: Compile, fix any lingering references**
 
@@ -1254,7 +1232,11 @@ In `digimon-dsl/src/validator.rs` line 249, remove `"GrantBarrier" |` from the a
 cargo build --manifest-path digimon-engine/Cargo.toml
 ```
 
-Expected errors point at any remaining `Keyword::Blast` / `Keyword::Armor` / `Keyword::Material` / `ModifierType::GrantBarrier` reference. Delete each (they are all documented as dead code). If a test's exhaustive `match` loses an arm, leave it — the match will still be exhaustive with three fewer arms.
+Expected errors point at any remaining `Keyword::Blast` / `Keyword::Armor` / `Keyword::Material` / `ModifierType::GrantBarrier` / `ModifierType::GrantArmor` reference. For each:
+- `Keyword::Blast` → rename to `Keyword::BlastDigivolve` (it's the same variant).
+- `Keyword::Armor` / `Keyword::Material` / `ModifierType::GrantBarrier` / `ModifierType::GrantArmor` → delete the reference (dead code).
+
+If an exhaustive `match` loses an arm, leave it — the match remains exhaustive with fewer arms.
 
 - [ ] **Step 8.8: Run full test suite**
 
@@ -1262,20 +1244,22 @@ Expected errors point at any remaining `Keyword::Blast` / `Keyword::Armor` / `Ke
 cargo test --manifest-path digimon-engine/Cargo.toml
 ```
 
-Expected: PASS. If a test depends on any of the removed variants, it is verifying dead code — delete the test.
+Expected: PASS. If a test depends on any of the removed variants (not the renamed Blast), it is verifying dead code — delete the test.
 
 - [ ] **Step 8.9: Commit**
 
 ```bash
 git add digimon-engine/src/enums.rs digimon-engine/src/card_data.rs digimon-engine/src/dsl_cards/modifier_map.rs digimon-engine/tests/keyword_parsing.rs digimon-dsl/src/validator.rs
-git commit -m "engine: remove dead Keyword::{Blast,Armor,Material} + ModifierType::GrantBarrier
+git commit -m "engine: rename Keyword::Blast → BlastDigivolve; drop dead Armor/Material/Grant{Barrier,Armor}
 
-Phase A §A4 — none were consumed:
-  - Blast: Blast Digivolve runs through Effect::blast_digivolve
-  - Armor: no DCGO counterpart
-  - Material: name-collides with MaterialSave (added in next commit)
-  - GrantBarrier: mis-mapped Fortitude slot; re-add GrantFortitude
-    when a consumer appears."
+Phase A §A2 + §A4:
+  - Blast → BlastDigivolve: same parsed variant, clearer name.
+    Auto-install of Effect::blast_digivolve remains Phase D work.
+  - Armor: no DCGO counterpart; ArmorPurge is a separate variant.
+  - Material: name-collides with MaterialSave (added in next commit).
+  - GrantBarrier: mis-mapped Fortitude slot; GrantFortitude added
+    when a consumer appears.
+  - GrantArmor: mirror of Keyword::Armor; same deletion rationale."
 ```
 
 ---
@@ -1406,11 +1390,11 @@ that collapsed both into Keyword::Save. No consumer yet
 
 In the summary table:
 
-- **Jamming** row: change `🟡` to `✅`; update the Notes column to "Now checked in both security battle and Digimon-vs-Digimon battle (Phase A §A2, 2026-04-24)".
+- **Jamming** row: change `🟡` to `✅`; update the Notes column to **"Correct as-is per RULES_CONTEXT 16-8 (security-only). Previous parity-doc 🟡 flag was based on an incorrect reading of DCGO; reverted in Phase A."** Do NOT add any "widened" wording — no code change landed for Jamming.
 - **Progress** row: keep `🟡 (partial)`; update the Notes column to "Wrong SecuritySkill gate reverted; selection-filter exclusion landed Phase A §A1. Mutation-site coverage is Phase B."
 - **SecurityAttackPlus(N)** row: change `🔴` to `✅`; update Notes: "Consumed at resolve_player_security_loop alongside ModifierType::SecurityAttackChange (Phase A §A3)".
 - **SecurityAttackMinus(N)** row: same as above.
-- **Blast** row: remove the row entirely (variant deleted).
+- **Blast** row: rename to **"Blast Digivolve"**; change status to `🔴`; update Notes to "Parsed as `Keyword::BlastDigivolve` (renamed Phase A §A2). Auto-install of `Effect::blast_digivolve` from the keyword is Phase D work."
 - **Armor** row: remove entirely.
 - **Material** row: remove entirely.
 - **MaterialSave(count)** row: change `❌` to `🔴`; update Notes to "Enum variant + parser landed Phase A §A5; auto-install in Phase D".
@@ -1425,9 +1409,12 @@ Find the Iceclad row in the summary table. Current description says "Passive imm
 
 - [ ] **Step 10.3: Update Detailed-notes sections**
 
-In `docs/DCGO_KEYWORD_PARITY.md`, remove the `### Blast keyword variant is dead code` section and the `### Save / MaterialSave name collision` section's resolution status — replace each with a one-liner pointer to the Phase A commits that resolved it.
+In `docs/DCGO_KEYWORD_PARITY.md`:
 
-Remove the entire `### Progress — wrong site entirely` narrative if still present and replace with:
+- Remove the `### Jamming — scope too narrow` section entirely. Rationale: the section was based on an incorrect reading of DCGO; RULES_CONTEXT 16-8 confirms Rust's security-only behavior is correct.
+- Replace the `### Blast keyword variant is dead code` section with a one-liner: "Resolved Phase A §A2 — renamed to `Keyword::BlastDigivolve`; auto-install deferred to Phase D."
+- Replace the `### Save / MaterialSave name collision` section with: "Resolved Phase A §A5 — `Keyword::MaterialSave(u8)` split out; parser + modifier-map aliasing removed."
+- Remove or shorten the `### Progress — wrong site entirely` narrative and replace with:
 
 ```markdown
 ### Progress
@@ -1435,9 +1422,9 @@ Remove the entire `### Progress — wrong site entirely` narrative if still pres
 Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re-introduced, and `Game::progress_excludes` now gates `select_opponent_permanent`. Phase B extends to delete / return / negative-DP mutation sites. See the spec at [docs/superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md) §5 Phase A/B for the full plan.
 ```
 
-- [ ] **Step 10.4: Remove `GrantBarrier` from API reference**
+- [ ] **Step 10.4: Remove `GrantBarrier` and `GrantArmor` from API reference**
 
-In `docs/RUST_ENGINE_API.md`, find the line listing granted keywords (around line 235) and remove `, GrantBarrier`:
+In `docs/RUST_ENGINE_API.md`, find the line listing granted keywords (around line 235) and remove both `GrantBarrier` and `GrantArmor`:
 
 Before:
 ```
@@ -1446,7 +1433,7 @@ Before:
 
 After:
 ```
-- Granted keywords: `GrantBlocker`, `GrantRush`, `GrantJamming`, `GrantPiercing`, `GrantReboot`, `GrantBlitz`, `GrantAlliance`, `GrantRaid`, `GrantArmor`, `GrantDecoy`
+- Granted keywords: `GrantBlocker`, `GrantRush`, `GrantJamming`, `GrantPiercing`, `GrantReboot`, `GrantBlitz`, `GrantAlliance`, `GrantRaid`, `GrantDecoy`
 ```
 
 - [ ] **Step 10.5: Log the Progress divergence in `RUST_PYTHON_PARITY.md`**
@@ -1521,13 +1508,14 @@ git commit -m "engine: post-Phase-A cleanup — PyO3 / Tauri / parity smokes"
 
 ## Self-review checklist
 
-Against spec §5 Phase A:
+Against spec §5 Phase A (as corrected 2026-04-24):
 
 - **A1. Progress — partial fix.** Task 1 verifies the SecuritySkillDrain revert is in place; Tasks 2-5 add `current_attacker` + `progress_excludes` + wire into `select_opponent_permanent` and `select_any_permanent`. ✓
-- **A2. Jamming — widen.** Task 6 gates the DP-loss and tie-delete branches in `resolve_battle`. ✓
-- **A3. SecurityAttackPlus/Minus auto-install.** Task 7 consumes the keyword at `resolve_player_security_loop`. Plan deviates from spec's prescribed `keyword_to_auto_effect` path (rationale documented at top of plan) but delivers identical observable behavior. ✓
-- **A4. Enum cleanup.** Task 8 drops Blast / Armor / Material / GrantBarrier. ✓
+- **A2. Rename `Keyword::Blast` → `BlastDigivolve`.** Task 8 Steps 8.3-8.5 rename the variant and update parser + DSL modifier-map. Auto-install remains Phase D. ✓
+- **A3. SecurityAttackPlus/Minus native consumption.** Task 7 consumes the keyword at `resolve_player_security_loop` via `security_attack_keyword_bonus`, matching the Blocker/Jamming query-at-consumption pattern. ✓
+- **A4. Enum cleanup.** Task 8 drops Armor / Material / GrantBarrier / GrantArmor. ✓
 - **A5. Save/MaterialSave split.** Task 9 adds `Keyword::MaterialSave(u8)` + parametric parser; removes the `modifier_map.rs` aliasing. ✓
-- **A6. Docs update.** Task 10 updates `DCGO_KEYWORD_PARITY.md`, corrects Iceclad, touches `RUST_ENGINE_API.md` and `RUST_PYTHON_PARITY.md`. ✓
+- **A6. Docs update.** Task 10 updates `DCGO_KEYWORD_PARITY.md` (Jamming ✅ with correction note, Blast rename row, Progress 🟡 partial, Iceclad correction), touches `RUST_ENGINE_API.md` and `RUST_PYTHON_PARITY.md`. ✓
+- **Jamming (formerly "A2. Jamming — widen")** removed from this plan. Rust behavior is already correct per RULES_CONTEXT 16-8; the parity-doc 🟡 flag was incorrect and is retracted in Task 10. No code change. ✓ (Task 6 retained as a superseded block for audit trail.)
 
-**Exit criteria (spec §5 Phase A):** "All ✅ and 🟡-marked rows in the parity doc now accurate; Progress selection-filter gating verified against Digital Gate Open + Mega Death behavioral tests." — Partially met: Task 1 covers the Digital Gate Open shape with a generic SecuritySkill-fires test. A Mega Death-shaped test (opponent effect tries to select attacker and gets excluded) is covered by Task 4's behavioral test. Digital Gate Open's specific branch-selection is not exercised since no DCGO card impl is auto-registered; the generic test covers the invariant.
+**Exit criteria (spec §5 Phase A):** "All ✅ and 🟡-marked rows in the parity doc now accurate; Progress selection-filter gating verified against behavioral test pair (opponent-select-excludes-Progress; own-select-still-includes)." — Met: Tasks 1 + 4 cover the behavioral test pair; Task 10 fixes the parity-doc rows.

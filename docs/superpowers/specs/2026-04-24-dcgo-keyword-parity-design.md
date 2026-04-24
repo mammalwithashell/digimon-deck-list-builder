@@ -30,12 +30,16 @@ From DCGO_KEYWORD_PARITY.md summary table:
 
 | Bucket | Count | Keywords |
 |---|---|---|
-| ✅ Correct | 11 | Rush, Blocker, Piercing, Reboot, Blitz, Raid, Alliance, Vortex, Overclock, Collision, Barrier, Evade, Decode |
-| 🟡 Divergent | 3 | Jamming (scope), Progress (wrong site — shipped incorrect), Blast (dead variant) |
+| ✅ Correct | 12 | Rush, Blocker, Jamming, Piercing, Reboot, Blitz, Raid, Alliance, Vortex, Overclock, Collision, Barrier, Evade, Decode |
+| 🟡 Divergent | 1 | Progress (wrong site — shipped incorrect) |
 | 🟣 Deferred (nested-select infra) | 3 | Fragment(N), ArmorPurge, Partition |
-| 🔴 Parsed-but-unwired | 8 | SecurityAttackPlus(N), SecurityAttackMinus(N), DeDigivolve(N), DrawX(N), Save, Fortitude, Decoy, plus dead variants (Armor, Material) |
+| 🔴 Parsed-but-unwired / misnamed | 9 | SecurityAttackPlus(N), SecurityAttackMinus(N), DeDigivolve(N), DrawX(N), Save, Fortitude, Decoy, plus `Keyword::Blast` (needs rename to `BlastDigivolve` + auto-install) and dead variant `Keyword::Material` |
 | ❌ Missing from enum | 7 | MaterialSave(N), MindLink, Iceclad, Execute, Retaliation, Scapegoat, Training |
 | Enum mis-mapping | 1 | `GrantBarrier` sits where `GrantFortitude` belongs |
+
+**Note on Jamming (corrected 2026-04-24 against RULES_CONTEXT 16-8):** the parity doc previously flagged Jamming as 🟡 claiming DCGO protects in all battles. RULES_CONTEXT 16-8 is unambiguous — Jamming protects only from battle with Security Digimon, which matches Rust's current behavior at [combat.rs:1814](../../../digimon-engine/src/combat.rs). No engine change needed for Jamming; the parity doc row is being corrected in Phase A6 along with Iceclad.
+
+**Note on `Keyword::Armor`:** there is no DCGO `Armor` keyword at all. Only `Armor Purge` exists, and it's already a separate `Keyword::ArmorPurge` variant. All `Keyword::Armor` and `ModifierType::GrantArmor` references are dead and to be removed in Phase A.
 
 ## 4. Approach — three substrate threads
 
@@ -97,17 +101,19 @@ Phases are gated on the substrate threads they require. Each phase ends with `ca
 Unblocks alpha testing and prevents more cards from being scripted against the incorrect Progress site.
 
 - **A1. Progress — partial fix.** Revert the `SecuritySkillDrain` gate in [combat.rs:1762-1774](../../../digimon-engine/src/combat.rs). Add `Game::progress_excludes(target, source) -> bool` gated on `has_keyword(target, Progress) + target.is_attacking + source != target.controller`. Apply at selection filters (`select_opponent_permanent`, `select_any_permanent`, multi-select predicates in `effect_context/selections.rs`). Mutation-site coverage lands in Phase B.
-- **A2. Jamming — widen.** Add `has_keyword(attacker, Jamming)` check in `resolve_pending_battle` before the DP-loss `delete_permanent_with_effects(attacker)` branch — mirrors the existing security-battle branch at [combat.rs:1816](../../../digimon-engine/src/combat.rs).
-- **A3. SecurityAttackPlus / Minus auto-install.** Extend `keyword_to_auto_effect` to emit a declarative `SecurityAttackChange(N)` modifier effect for `Keyword::SecurityAttackPlus(N)` / `Keyword::SecurityAttackMinus(N)`.
+- **A2. Rename `Keyword::Blast` → `Keyword::BlastDigivolve`.** The parser's `"Blast Digivolve"` entry emits the renamed variant. The counter-window mechanic still runs through `Effect::blast_digivolve` for now — auto-install of the flag from the keyword lands in Phase D. Purpose of the Phase A rename: eliminate the misleading `Keyword::Blast` name, which has never been consumed and whose similarity to `Effect::blast_digivolve` has caused confusion.
+- **A3. SecurityAttackPlus / Minus native consumption.** Sum `Keyword::SecurityAttackPlus(N)` / `Keyword::SecurityAttackMinus(N)` values at `resolve_player_security_loop` alongside the existing `ModifierType::SecurityAttackChange` modifier sum. Matches the "query keyword directly at consumption site" pattern used for Blocker/Rush/Jamming; no new passive-modifier-effect infrastructure needed.
 - **A4. Enum cleanup.** Drop dead variants after grep-confirming zero consumers:
-  - `Keyword::Blast` — Blast Digivolve runs through `Effect::blast_digivolve` flag, not this variant.
-  - `Keyword::Armor` — no DCGO counterpart.
+  - `Keyword::Armor` — no DCGO counterpart; `Keyword::ArmorPurge` is a separate variant.
   - `Keyword::Material` — name collision with DCGO's `MaterialSave`.
-  - `ModifierType::GrantBarrier` — mis-mapped slot for Fortitude. Rename to `GrantFortitude`, or drop entirely until a granted form is needed.
-- **A5. Save / MaterialSave split.** Introduce `Keyword::MaterialSave(u8)`. Stop aliasing `"MaterialSave"` → `Save` in `parse_printed_keywords`. Auto-installs for both come in Phase C.
-- **A6. Update `DCGO_KEYWORD_PARITY.md`** with Phase A landings and correct the Iceclad description (RULES_CONTEXT 16-34 says Iceclad is digi-card-count-instead-of-DP, not "immunity to suspension").
+  - `ModifierType::GrantArmor` — no DCGO counterpart, mirror of `Keyword::Armor`.
+  - `ModifierType::GrantBarrier` — mis-mapped slot for Fortitude. Drop entirely; add proper `GrantFortitude` when a consumer appears.
+- **A5. Save / MaterialSave split.** Introduce `Keyword::MaterialSave(u8)`. Stop aliasing `"MaterialSave"` → `Save` in `dsl_cards/modifier_map.rs`. Add parametric parser for `<Material Save N>` in `card_data.rs`. Auto-installs for both come in Phase D.
+- **A6. Update `DCGO_KEYWORD_PARITY.md`** with Phase A landings. Corrections:
+  - Jamming: 🟡 → ✅ (parity doc was wrong; Rust is already correct per RULES_CONTEXT 16-8, security-only).
+  - Iceclad: fix description (RULES_CONTEXT 16-34 says Iceclad is digi-card-count-instead-of-DP, not "immunity to suspension").
 
-**Exit criteria.** All ✅ and 🟡-marked rows in the parity doc now accurate; Progress selection-filter gating verified against Digital Gate Open + Mega Death behavioral tests.
+**Exit criteria.** All ✅ and 🟡-marked rows in the parity doc now accurate (Jamming row fixed to ✅; Iceclad description corrected; Progress marked 🟡 partial); `Keyword::Blast` renamed to `Keyword::BlastDigivolve`; dead variants removed; `Keyword::MaterialSave(u8)` parses. Progress selection-filter gating verified against a behavioral test pair (opponent-select-excludes-Progress; own-select-still-includes).
 
 ### Phase B — Source-attribution substrate (§4.1)
 
@@ -132,7 +138,7 @@ Unblocks alpha testing and prevents more cards from being scripted against the i
 Auto-installs for keywords blocked on the substrate threads. Ordering within the phase follows the alpha blast-radius ranking in DCGO_KEYWORD_PARITY.md §"Gap ranking".
 
 - **D1. Fragment(N).** `WhenWouldBeDeleted` replacement selecting N digivolution sources from self to trash. Unblocks the Rocks archetype.
-- **D2. ArmorPurge.** N=1 specialization of Fragment; share the underlying `trash_own_sources(N)` primitive.
+- **D2. ArmorPurge.** Trashes the topmost digivolution source (the top of "digi cards", which is the card immediately under the current top Digimon). Cannot fire if that trash would leave the permanent without a card source underneath the top Digimon — i.e. the permanent must retain at least one digivolution source after the trash. Shares the underlying `trash_own_sources(N)` primitive with Fragment but adds the "has-source-remaining-afterward" gate. Open question (§10): exact gate condition — `card_sources.len() >= 3` before trash (top Digimon + source to trash + source to remain), or a looser `>= 2`? Verify against DCGO `ArmorPurge.cs` before landing.
 - **D3. Save.** `WhenWouldBeDeleted` replacement selecting one of controller's own Tamers to place self under as bottom source.
 - **D4. Decoy.** `WhenWouldBeDeleted` replacement, triggered on *ally* deletion (not self), redirecting deletion to self by color filter. Color parameter lives on the `Keyword::Decoy` variant.
 - **D5. Fortitude.** `OnAllyDeletion` observer playing self from trash free + unsuspended when source count gate passes.
@@ -173,8 +179,8 @@ Lower priority than A-E but in scope. Each needs a new enum variant plus the spe
 ## 6. API surface changes
 
 ### Enum changes
-- `Keyword` — drop `Blast`, `Armor`, `Material`; add `MaterialSave(u8)`, `Retaliation`, `Scapegoat`, `Execute`, `Iceclad`, `MindLink`, `Training`. Final enum matches the 28 DCGO KeyWordEffects files 1:1 (modulo the printed/granted split on Barrier → Fortitude).
-- `ModifierType` — rename `GrantBarrier` → `GrantFortitude` (if any consumer exists) or drop.
+- `Keyword` — rename `Blast` → `BlastDigivolve`; drop `Armor`, `Material`; add `MaterialSave(u8)`, `Retaliation`, `Scapegoat`, `Execute`, `Iceclad`, `MindLink`, `Training`. Final enum matches the 28 DCGO KeyWordEffects files 1:1 (modulo the printed/granted split on Barrier → Fortitude).
+- `ModifierType` — drop `GrantBarrier` (mis-mapped Fortitude slot) and `GrantArmor` (no DCGO counterpart). Add `GrantFortitude` when a consumer appears.
 - `ReplacementCause` in `replacement.rs` — add `source: Option<PlayerId>` field. Variants stay the same.
 
 ### `Game` helpers
@@ -214,7 +220,6 @@ All phases TDD. Each keyword gets at least one `DebugRunner` behavioral test und
 
 **Specific test cards (hand-written, not real printed cards):**
 - `TEST-PROGRESS-A` — passive `<Progress>`, attacks; exercised against opponent negative-DP effect, opponent delete-by-cost, own-sourced delete.
-- `TEST-JAMMING-A` — passive `<Jamming>`, low DP, attacks higher-DP defender; verifies no attacker delete on DP loss.
 - `TEST-SEC-ATTACK-PLUS` — printed `<Security A. +1>`, no hand-rolled script; expects 2 security attacks.
 - `TEST-MATERIAL-SAVE` — printed `<Material Save 2>` Digimon with ≥2 stack sources; active skill moves 2 sources under a Tamer.
 - `TEST-RETALIATION` — `<Retaliation>` Digimon; verifies only fires on battle deletion.
@@ -252,6 +257,8 @@ Each phase ends with a matching doc update — same commit or immediate follow-u
 - **MaterialSave on non-DigiXros cards.** RULES_CONTEXT 16-20 says "X cards from digi cards (specified in DigiXros requirements)". For non-DigiXros cards that print `<Material Save N>`, is the source set simply "any N stack sources"? Resolve by cross-checking DCGO's `MaterialSave.cs` before Phase D7.
 - **Fortitude source-count gate.** RULES_CONTEXT 16-26 says "Digimon with digi cards and this effect is deleted". Parity doc says "if sources available". Confirm the exact gate (≥1 source? any source type?) against DCGO before Phase D5.
 - **Iceclad scope.** RULES_CONTEXT 16-34 says "Compare number of digivolution cards instead of DP in battle". Unclear whether Iceclad applies when only *one* combatant has it (attacker's Iceclad imposes the comparison mode) or requires both sides. Verify against DCGO `Iceclad.cs` before Phase F2.
+- **ArmorPurge source-count gate.** User direction (2026-04-24): "trashes the top card and if it cannot trash the top card and still have a card source underneath, it cannot protect." Exact post-trash gate — `card_sources.len() >= 2` (top Digimon + ≥1 source remaining) or `>= 3` (top + source-to-trash + source-to-remain)? Verify against DCGO `ArmorPurge.cs` before Phase D2.
+- **BlastDigivolve auto-install.** Phase A renames the keyword variant; the auto-install emitting `Effect::blast_digivolve=true` on Counter-window effects (matching DCGO's `BlastDigivolution.cs` factory pattern) is left to Phase D. Confirm the Counter-window selection flow can accept a programmatic `Effect::blast_digivolve` push from the auto-install path.
 - **Training activation on suspended self.** Cost is "suspend this Digimon", so presumably unsuspended-required, but verify against DCGO `Training.cs` before Phase F4.
 - **MindLink [Main] timing.** RULES_CONTEXT 16-27 says "Mandatory (but if [Main], player chooses timing)". Confirm whether the keyword always prints with a `[Main]` timing tag, or whether it can print without one (which would make activation automatic). Verify against DCGO + printed card samples before Phase F3.
 
