@@ -12,6 +12,7 @@ mod on_block_observer;
 mod overclock;
 mod phase9_end_to_end;
 mod piercing_security;
+mod progress_partial;
 mod raid_retarget;
 mod reboot_unsuspend;
 mod redirect_and_cancel;
