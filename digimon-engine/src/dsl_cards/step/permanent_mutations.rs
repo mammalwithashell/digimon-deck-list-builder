@@ -5,21 +5,11 @@
 //! `ResolvedBinding::Permanent`; any other variant is silently skipped (same
 //! convention as the 2b zone-move handlers).
 
-use digimon_dsl::compiled::{CompiledStackPosition, CompiledStep};
+use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::effect_context::EffectContext;
-use crate::enums::StackPosition;
-
-#[allow(dead_code)]
-fn map_stack_position(p: CompiledStackPosition) -> StackPosition {
-    match p {
-        CompiledStackPosition::Top => StackPosition::Top,
-        CompiledStackPosition::Bottom => StackPosition::Bottom,
-        CompiledStackPosition::Random => StackPosition::Random,
-    }
-}
 
 /// Returns `true` if `step` is a permanent-mutation family handled here.
 /// Unknown steps fall through (the caller may try other families).

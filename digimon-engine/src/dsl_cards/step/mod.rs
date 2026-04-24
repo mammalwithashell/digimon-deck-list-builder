@@ -1,5 +1,6 @@
 //! Process-step lowering dispatch. Phase 2a: memory + draw/trash helpers.
 //! Phase 2b: continuation-passing dispatcher + selection handlers + zone-moves.
+//! Phase 2c: permanent mutations (Suspend/Unsuspend/ReturnToDeck).
 
 pub mod draw;
 pub mod memory;
@@ -8,11 +9,24 @@ pub mod selections;
 pub mod zone_moves;
 
 use digimon_dsl::compiled::CompiledPlayerRef;
+use digimon_dsl::compiled::CompiledStackPosition;
 use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::bindings::Bindings;
 use crate::effect_context::EffectContext;
 use crate::enums::PlayerId;
+use crate::enums::StackPosition;
+
+/// Map a `CompiledStackPosition` to the engine's `StackPosition`.
+/// Shared by `zone_moves` and `permanent_mutations` — lives here to avoid
+/// duplicate private copies in each sub-module.
+pub(super) fn map_stack_position(p: CompiledStackPosition) -> StackPosition {
+    match p {
+        CompiledStackPosition::Top => StackPosition::Top,
+        CompiledStackPosition::Bottom => StackPosition::Bottom,
+        CompiledStackPosition::Random => StackPosition::Random,
+    }
+}
 
 /// Resolve a `CompiledPlayerRef` to the concrete `PlayerId`. `Any` resolves
 /// to `ctx.player` — callers that want to fan out to every player should
