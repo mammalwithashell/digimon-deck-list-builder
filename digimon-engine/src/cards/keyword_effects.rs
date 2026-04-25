@@ -107,6 +107,10 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // matches printed Fragment text for cards that fail the gate but is
         // looser than DCGO's `canNoSelect: () => false` for cards that pass
         // the gate. Tracked as a deviation in the Phase D landing block.
+        // TODO(phase-c-substrate-mandatory): when run_candidate_inner supports
+        // mandatory replacements with pending_selection, remove .optional() here
+        // and change is_optional_zero on the select_count_capped_multi call to
+        // match DCGO's canNoSelect: () => false (Fragment.cs:38).
         Keyword::Fragment(n) => vec![Effect::when_would_be_deleted(card)
             .name(&format!("<Fragment ({n})>"))
             .optional()
@@ -173,19 +177,10 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     |_g, _src| true,
                     move |ctx, picks| {
                         // Trash each picked source from the carrier's stack
-                        // into the controller's trash.
-                        // `remove_card_from_any_zone` walks all zones; for
-                        // picks coming out of `CountCappedZone::Material`,
-                        // the cards are still physically in the carrier's
-                        // `card_sources`.
+                        // into the controller's trash via the EffectContext
+                        // primitive (stays within the API boundary).
                         for handle in picks {
-                            if let Some(taken) =
-                                ctx.game.remove_card_from_any_zone(handle)
-                            {
-                                ctx.game.players[controller as usize]
-                                    .trash
-                                    .push(taken);
-                            }
+                            ctx.trash_card_source(subject, handle);
                         }
                         // Cancel the original deletion — carrier survives
                         // with its remaining sources + top.

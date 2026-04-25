@@ -1192,6 +1192,39 @@ impl<'a> EffectContext<'a> {
         // See doc comment above for the DCGO deviation note.
     }
 
+    /// Trash a specific digivolution source from a permanent.
+    ///
+    /// Used by:
+    /// - `<Fragment (N)>` keyword auto-install (Phase D Task 4) — picked sources
+    ///   are trashed as the cancel-deletion cost.
+    /// - `<Partition>` keyword auto-install (Phase D Task 9) — sources are
+    ///   moved out of the deleted permanent's stack.
+    /// - Hand-authored card scripts that "trash a digivolution card" as a cost
+    ///   or effect.
+    ///
+    /// The card is removed from `perm.card_sources` (anywhere in the stack —
+    /// not just the top — see `armor_purge_top` for the top-card-only variant)
+    /// and pushed to the controller's trash.
+    ///
+    /// Panics if `card` is not present in `perm.card_sources`. Token cards
+    /// (`is_token == true`) are still pushed to trash; the caller's gate is
+    /// responsible for any token-aware filtering.
+    pub fn trash_card_source(&mut self, perm: PermanentHandle, card: CardHandle) {
+        let permanent = self
+            .game
+            .player_mut(perm.player)
+            .battle_area
+            .get_mut(perm.index as usize)
+            .expect("trash_card_source: permanent not found");
+        let pos = permanent
+            .card_sources
+            .iter()
+            .position(|c| c.handle() == card)
+            .expect("trash_card_source: card not in this permanent's stack");
+        let removed = permanent.card_sources.remove(pos);
+        self.game.player_mut(perm.player).trash.push(removed);
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_hand(
