@@ -32,11 +32,9 @@ DENY_EXACT = {
 
 SCOPE_SCRIPT = "script"
 SCOPE_SCRIPT_ENGINE = "script_engine"
-SCOPE_SCRIPT_ENGINE_TRANSPILER = "script_engine_transpiler"
 SCOPE_VALUES = {
     SCOPE_SCRIPT,
     SCOPE_SCRIPT_ENGINE,
-    SCOPE_SCRIPT_ENGINE_TRANSPILER,
 }
 
 # Curated engine files loaded for script_engine (and wider) scopes.
@@ -45,14 +43,6 @@ ENGINE_CORE_FILES = [
     "digimon_gym/engine/core/permanent.py",
     "digimon_gym/engine/interfaces/card_effect.py",
 ]
-
-# Additional transpiler files loaded for script_engine_transpiler scope.
-TRANSPILER_FILES = [
-    "tools/transpiler/generators.py",
-    "tools/transpiler/extractors.py",
-    "tools/transpiler/patterns.py",
-]
-
 
 class ApplyValidationError(RuntimeError):
     """Raised when fix output violates scope/hash safety rules."""
@@ -131,18 +121,13 @@ def _is_allowed_for_scope(
         return False
     if rel_path.endswith(".py") and rel_path.startswith("digimon_gym/engine/"):
         return True
-    if scope_profile == SCOPE_SCRIPT_ENGINE_TRANSPILER:
-        if rel_path.endswith(".py") and rel_path.startswith("tools/transpiler/"):
-            return True
     return False
 
 
 def get_allowed_roots_for_scope(scope_profile: str) -> list[str]:
     roots = ["digimon_gym/engine/data/scripts/"]
-    if scope_profile in {SCOPE_SCRIPT_ENGINE, SCOPE_SCRIPT_ENGINE_TRANSPILER}:
+    if scope_profile == SCOPE_SCRIPT_ENGINE:
         roots.append("digimon_gym/engine/")
-    if scope_profile == SCOPE_SCRIPT_ENGINE_TRANSPILER:
-        roots.append("tools/transpiler/")
     return roots
 
 
@@ -162,10 +147,8 @@ def _read_text_with_cap(path: Path, max_chars: int) -> tuple[str, bool]:
 def build_file_context_for_task(*, set_id: str, module_name: str, scope_profile: str) -> list[dict[str, str]]:
     paths = [get_primary_script_path(set_id, module_name)]
 
-    if scope_profile in {SCOPE_SCRIPT_ENGINE, SCOPE_SCRIPT_ENGINE_TRANSPILER}:
+    if scope_profile == SCOPE_SCRIPT_ENGINE:
         paths.extend(ENGINE_CORE_FILES)
-    if scope_profile == SCOPE_SCRIPT_ENGINE_TRANSPILER:
-        paths.extend(TRANSPILER_FILES)
 
     contexts: list[dict[str, str]] = []
     remaining_chars = MAX_CONTEXT_CHARS_TOTAL
@@ -298,7 +281,6 @@ def derive_targeted_tests(applied_files: list[str]) -> list[str]:
     tests: list[str] = []
     touched_sets: set[str] = set()
     has_engine_change = False
-    has_transpiler_change = False
 
     for rel in applied_files:
         if rel.startswith("digimon_gym/engine/data/scripts/") and not rel.startswith("digimon_gym/engine/data/scripts/_"):
@@ -307,8 +289,6 @@ def derive_targeted_tests(applied_files: list[str]) -> list[str]:
                 touched_sets.add(parts[4].lower())
         if rel.startswith("digimon_gym/engine/"):
             has_engine_change = True
-        if rel.startswith("tools/transpiler/"):
-            has_transpiler_change = True
 
     for set_id in sorted(touched_sets):
         candidate = f"tests/test_{set_id}_scripts.py"
@@ -318,10 +298,6 @@ def derive_targeted_tests(applied_files: list[str]) -> list[str]:
     if has_engine_change:
         if (PROJECT_ROOT / "tests/test_ai_pipeline.py").exists():
             tests.append("tests/test_ai_pipeline.py")
-    if has_transpiler_change:
-        for candidate in ("tests/test_build_registry.py", "tests/test_ai_pipeline.py"):
-            if (PROJECT_ROOT / candidate).exists():
-                tests.append(candidate)
 
     seen: set[str] = set()
     unique: list[str] = []
