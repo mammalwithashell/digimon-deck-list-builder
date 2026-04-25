@@ -202,7 +202,29 @@ printed keywords now require zero hand-rolled `CardEffect` code. See
 - Source-card Fortitude (DCGO `CardStack.Contains(card)` covers Fortitude on a digi source under another top; Phase D scope is top-card carriers only).
 - DSL Phase 3 wiring of replacement bodies (Phase C deferred; Phase D's hand-rolled keyword auto-installs consume substrate directly).
 
-### Phase E — Missing-from-enum backfill
+### Phase E — Missing-from-enum backfill ✅ landed 2026-04-25 on `claude/vigorous-elgamal-453703`
+
+**Deliverables shipped:**
+
+- **E1 Retaliation:** enum variant + parser + auto-install + 4 behavioral tests. `OnDeletion` trigger gated on `deletion_cause() == Battle`, deletes opposing combatant via new `ctx.battle_opponent_of` accessor. Mutual-destruction guarded via slot-empty check before cascade delete. (Commits `544d070e`, `7e974c28`.)
+
+- **E2 Scapegoat:** enum variant + parser + auto-install + 4 behavioral tests. `WhenWouldBeDeleted` optional substitute replacement gated on `cause != OwnEffect`. Parks own-permanent pick (same-controller, non-self) → sync substitute. (Commits `74f098d1`, `a795a9dc`.)
+
+- **Task 3 prerequisite (`battle_opponent_of` accessor):** read-only and mutable variants on `EffectReadContext` / `EffectContext`. Reads live `Game.pending_attack` and returns the opposing combatant for OnDeletion observers fired during battle resolution. (Commits `c4c68c84`, `5357d4a5`.)
+
+**Spec deviations:**
+
+1. **E3 DeDigivolve(N) and E4 DrawX(N) auto-installs intentionally NOT shipped.** A cards.json survey found zero bare printings — both keywords always pair with explicit effect text and timing tags (160 cards for DeDigivolve, 452 for DrawX). Auto-installing a generic `MainOnField` / `OnPlay` skill would double-fire alongside every card's hand-rolled action. Variants remain parsed; no `keyword_to_auto_effect` arm added. Status flag in the parity doc is ⚪ (parsed, no auto-install — intentional). The original "Parametric auto-install gap" framing assumed bare printings existed; they don't.
+
+2. **Retaliation cascade-delete cause = `OwnEffect` (not `Battle`).** `EffectContext::delete_permanent`'s `infer_deletion_cause()` returns `Battle` while `pending_attack` is live, which is misleading for Retaliation's cascade (we're firing the keyword's own effect, not initiating a new battle). Fixed in commit `7e974c28` to call `ctx.game.delete_permanent_with_cause(winner, ReplacementCause::OwnEffect)` explicitly.
+
+3. **Scapegoat outer-dialog UX divergence from DCGO.** With `.optional()` set at builder time and the candidate condition `EffectReadContext` not threading `cause`, the outer "may" dialog parks even on `OwnEffect` deletions (where DCGO's `CanActivateScapegoat` would suppress it). PASS proceeds correctly — end state matches DCGO. Cause-aware candidate filter tracked at `replacement.rs::try_replace_inner` for a future substrate phase.
+
+**No new substrate added.** Phase E was consumer-side wiring only — `battle_opponent_of` is a thin read-only accessor over `Game.pending_attack`. Phase B/C/D substrate (parked replacements, `pending_post_deletion_replays`, `was_deleted_by_effect`, deletion-cause threading) was reused as-is.
+
+---
+
+*Original Phase E spec (pre-landing):*
 
 Enum variants + auto-installs for alpha-relevant missing keywords. Ordering follows §"Missing-keyword backfill priorities" in the parity doc.
 

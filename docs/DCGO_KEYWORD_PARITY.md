@@ -12,6 +12,7 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 - 🔴 **Parsed-but-unwired** — native keyword parse lands in `CardData::keywords`, no engine code acts on it.
 - ❌ **Missing from enum** — DCGO has the keyword; Rust's `Keyword` enum does not.
 - 🟣 **Deferred** — wire-up blocked on a known infrastructure gap (usually nested-selection-in-replacement).
+- ⚪ **Parsed, no auto-install (intentional)** — the variant is parsed and available to hand-rolled scripts, but no `keyword_to_auto_effect` arm exists because real cards always pair the keyword with explicit effect text — auto-installing a generic effect would double-fire.
 
 ## Summary table
 
@@ -37,8 +38,8 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | ✅ | (Phase B: gated at ctx.delete_permanent / return_to_hand / return_to_deck / de_digivolve / suspend / negative DP) Wrong SecuritySkill gate reverted in Phase A; selection-filter exclusion landed Phase A §A1 via `Game::progress_excludes`. Mutation-site coverage closed in Phase B. |
 | SecurityAttackPlus(N) | Adds N security attacks to the Digimon | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). No `keyword_to_auto_effect` entry needed — keyword is queried directly at the resolution site, not emitted as a declarative effect. |
 | SecurityAttackMinus(N) | Same shape, negative delta | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). No `keyword_to_auto_effect` entry needed — keyword is queried directly at the resolution site, not emitted as a declarative effect. |
-| DeDigivolve(N) | Active skill — remove N top digivolution cards from target | 🔴 | Parsed, unconsumed. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` landed in Phase 10, but native printed form isn't wired to auto-emit the effect |
-| DrawX(N) | "Draw N" on Option cards | 🔴 | Parsed, unconsumed |
+| DeDigivolve(N) | Active skill — remove N top digivolution cards from target | ⚪ | Phase E cards.json survey 2026-04-25: 160 printings, all paired with explicit effect text + timing tag. Zero bare printings. Auto-install would double-fire alongside hand-rolled `[Main]` actions on every printing — intentionally NOT auto-installed. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` is the consumer for hand-rolled scripts. |
+| DrawX(N) | "Draw N" on Option cards | ⚪ | Phase E cards.json survey 2026-04-25: 452 printings across Digimon/DigiEgg/Tamer/Option, all combined with explicit timing tags. Zero bare printings. Auto-install would double-fire — intentionally NOT auto-installed. Script-level `ctx.draw(player, n)` is the consumer for hand-rolled scripts. |
 | Save | Place self under own Tamer as bottom source, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; optional `WhenWouldBeDeleted` replacement, Tamer pick + `ctx.place_card_under_permanent_bottom` + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/save.rs`. |
 | Fortitude | Play self from trash free + unsuspended when self-stack deleted, if sources available | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with source-count gate, `ctx.play_from_trash_free_unsuspended`. See `keyword_effects.rs` and `tests/keyword_phase_d/fortitude.rs`. |
 | Decoy | Redirect deletion of any same-controller ally to self | ✅ | Auto-installed in Phase D 2026-04-25; `WhenWouldBeDeleted` subscription on ally deletions, `ctx.substitute_replacement`. See `keyword_effects.rs` and `tests/keyword_phase_d/decoy.rs`. |
@@ -47,8 +48,8 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | MindLink | Attach Tamer card to a Digimon with empty Tamer slot | ❌ | Not in Rust enum |
 | Iceclad | Compare digivolution-card count instead of DP in battle (except vs Security Digimon); higher count wins, tie = both delete | ❌ | Not in Rust enum. Previous description ('immunity to suspension') was incorrect; actual mechanic is digi-card-count battle compare per RULES_CONTEXT 16-34. Wiring: Phase F2. |
 | Execute | Active skill — attack unsuspended opp, self-delete on end-of-attack | ❌ | Not in Rust enum |
-| Retaliation | When deleted by battle, destroy the winner | ❌ | Not in Rust enum |
-| Scapegoat | Delete another own Digimon to cancel own deletion | ❌ | Not in Rust enum |
+| Retaliation | When deleted by battle, destroy the winner | ✅ | Auto-installed in Phase E 2026-04-25; `OnDeletion` trigger gated on `deletion_cause() == Battle`, deletes opposing combatant via `ctx.battle_opponent_of` (new accessor) with explicit `OwnEffect` cascade cause. See `keyword_effects.rs` and `tests/keyword_phase_e/retaliation.rs`. RULES_CONTEXT 16-12. |
+| Scapegoat | Delete another own Digimon to cancel own deletion | ✅ | Auto-installed in Phase E 2026-04-25; `WhenWouldBeDeleted` substitute replacement gated on `cause != OwnEffect`, optional outer dialog → parked own-permanent pick → sync substitute. See `keyword_effects.rs` and `tests/keyword_phase_e/scapegoat.rs`. RULES_CONTEXT 16-31. Known UX divergence: outer dialog parks on `OwnEffect` cause and is dismissed via PASS — cause-aware candidate filter is tracked substrate gap (`replacement.rs::try_replace_inner`). |
 | Training | Active skill — suspend self + place top deck card as own bottom source face-down | ❌ | Not in Rust enum; Python has handling, Rust does not |
 
 ## Detailed notes on the divergences
@@ -84,14 +85,13 @@ Since no Fortitude card grants the keyword via modifier yet, the simplest fix is
 
 Resolved 2026-04-24. `Game::security_attack_keyword_bonus` sums printed `Keyword::SecurityAttackPlus(N)` / `Keyword::SecurityAttackMinus(N)` at `resolve_player_security_loop` alongside the existing `ModifierType::SecurityAttackChange` modifier sum. This follows the "query keyword directly at consumption site" pattern used for Blocker / Rush / Jamming — no `keyword_to_auto_effect` entry is required, and `Effect.security_attack_change` remains the granted-modifier path for cards that want to add or remove security attacks dynamically.
 
-### Parametric auto-install gap (generalized)
+### Parametric auto-install — resolved Phase E §E3/E4 (resolved-as-no-op)
 
-The "parsed but no auto-install" pattern still applies to:
+A 2026-04-25 cards.json survey found that `DeDigivolve(N)` (160 printings) and `DrawX(N)` (452 printings) are NEVER printed as bare keywords on real cards — every printing pairs the keyword with explicit effect text plus an explicit timing tag (`[Main]`, `[On Play]`, `[When Attacking]`, etc.). Auto-installing a generic `MainOnField` skill or `OnPlay` effect would double-fire alongside every card's hand-rolled action.
 
-- `DeDigivolve(N)` — no auto-emit of a main-phase active skill. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` exists, but the native printed form does not auto-emit. (Phase E §E3.)
-- `DrawX(N)` — no auto-emit of a `[Main]` draw effect. (Phase E §E4.)
+The variants are parsed (so deck-builder validation, RL action masking, and hand-rolled scripts can read them) but no `keyword_to_auto_effect` arm is added for either. Hand-rolled scripts call `ctx.de_digivolve(_, _, amount=Some(N))` and `ctx.draw(player, n)` directly. Marked ⚪ in the summary table.
 
-Fix shape is uniform: extend `keyword_to_auto_effect` to emit a matching declarative or active-skill `Effect` when the keyword is parametric and native-printed.
+This closes the "parametric auto-install gap" — the original framing assumed bare printings existed; they don't.
 
 ## Missing-keyword backfill priorities
 
@@ -99,9 +99,9 @@ Ordered by archetype relevance to the alpha scope (Royal Knights, Jesmon GX, Roc
 
 | Priority | Keyword | Why |
 |---|---|---|
-| 1 | Retaliation | Dark Masters core: BT15-077 LadyDevimon, BT15-079 Piedmon |
+| ~~1~~ | ~~Retaliation~~ | ~~Dark Masters core: BT15-077 LadyDevimon, BT15-079 Piedmon~~ ✅ resolved Phase E 2026-04-25 |
 | ~~2~~ | ~~MaterialSave(count)~~ | ~~Several Medusamon and Dark Masters entries use it~~ ✅ resolved Phase D |
-| 2 | Scapegoat | Dark Masters (LM-043 Darkdramon) |
+| ~~2~~ | ~~Scapegoat~~ | ~~Dark Masters (LM-043 Darkdramon)~~ ✅ resolved Phase E 2026-04-25 |
 | 3 | Training | Tied to TestCards.Training active-skill; needed for Rocks pre-evo slots |
 | 4 | Execute | Appears only on a handful of non-archetype cards; defer |
 | 5 | Iceclad, MindLink | Not in any alpha-target archetype; defer |
@@ -115,8 +115,8 @@ Ranked by alpha-archetype blast radius:
 3. **SecurityAttackPlus/Minus auto-install** — printed on many cards across all archetypes; trivial to add.
 4. **Jamming scope widening** — affects any attacking Digimon losing a regular Digimon battle; tens of cards.
 5. ~~**Save distinct from MaterialSave**~~ — ✅ resolved Phase D 2026-04-25. Save, Decoy, Fortitude, MaterialSave(N) all auto-installed.
-6. **Retaliation enum variant + replacement wire-up** — Dark Masters archetype blocker.
-7. ~~**Fortitude / DeDigivolve(N) parsed-form auto-install / Decoy**~~ — ✅ Fortitude + Decoy resolved Phase D 2026-04-25. DeDigivolve(N) auto-install remains pending (Phase A/E scope).
+6. ~~**Retaliation enum variant + replacement wire-up**~~ — ✅ resolved Phase E 2026-04-25. `OnDeletion` trigger auto-installed; Dark Masters archetype blocker cleared.
+7. ~~**Fortitude / DeDigivolve(N) parsed-form auto-install / Decoy**~~ — ✅ Fortitude + Decoy resolved Phase D 2026-04-25. DeDigivolve(N) auto-install resolved-as-no-op Phase E 2026-04-25 (zero bare printings; see ⚪ note in summary table).
 8. **Execute / Iceclad / MindLink / Training** — not in alpha archetypes; defer past alpha (Phase F).
 
 ## Source citations

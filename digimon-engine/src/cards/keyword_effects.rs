@@ -8,20 +8,27 @@
 //! Fragment(N) / Decode / Armor Purge behave as printed without a hand-authored
 //! `CardEffect` script.
 //!
-//! ## Coverage matrix (Phase D — landed 2026-04-25)
+//! ## Coverage matrix (Phase D — landed 2026-04-25, Phase E — landed 2026-04-25)
 //!
 //! Auto-installed: Barrier, Evade, Decode (Phase 7); Fragment(N), ArmorPurge,
-//! Save, Decoy, Fortitude, Partition, MaterialSave(N) (Phase D).
+//! Save, Decoy, Fortitude, Partition, MaterialSave(N) (Phase D);
+//! Retaliation, Scapegoat (Phase E).
 //!
 //! Selection-bearing replacements consume Phase C's parked-replacement
 //! substrate via `ctx.cancel_leave / handle_replacement / substitute_replacement`.
-//! Trigger-based keywords (Fortitude, Partition) use the standard observer
-//! pattern. MaterialSave(N) is a `[Main]` active skill (neither a replacement
+//! Trigger-based keywords (Fortitude, Partition, Retaliation) use the standard
+//! observer pattern. Scapegoat is an optional `WhenWouldBeDeleted` substitute
+//! replacement. MaterialSave(N) is a `[Main]` active skill (neither a replacement
 //! nor a deletion trigger) — see §Active-skill keywords below.
 //!
-//! Out-of-scope deferred: SecurityAttackPlus/Minus(N), DeDigivolve(N) printed
-//! form, DrawX(N) printed form (all Phase A/E), Retaliation, Scapegoat (Phase E),
-//! Execute, Iceclad, MindLink, Training (Phase F).
+//! Out-of-scope deferred: Execute, Iceclad, MindLink, Training (Phase F).
+//!
+//! Intentionally NOT auto-installed (per Phase E cards.json survey — zero
+//! bare printings; auto-install would double-fire alongside hand-rolled
+//! effect text on every card): DeDigivolve(N), DrawX(N).
+//!
+//! Consumed at resolution site (no auto-install needed): SecurityAttackPlus(N),
+//! SecurityAttackMinus(N) — see `Game::security_attack_keyword_bonus` (Phase A §A3).
 //!
 //! Most replacement keywords here produce **optional** replacements per
 //! printed rules ("you may" / "by [cost]"). Declining the optional selection
