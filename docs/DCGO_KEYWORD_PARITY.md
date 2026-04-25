@@ -55,7 +55,7 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 
 ### Progress — wrong site entirely
 
-Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re-introduced, and `Game::progress_excludes` now gates `select_opponent_permanent`. Phase B (2026-04-24) closed the mutation-site coverage: `ctx.delete_permanent`, `ctx.return_to_hand`, `ctx.return_to_deck`, `ctx.de_digivolve` (including the `amount=Some(N)` N-pop variant), `ctx.suspend`, and the negative-DP path through `ctx.add_dp_modifier` / `ctx.add_modifier` are all now hard-gated.
+Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re-introduced, and `Game::progress_excludes` now gates `select_opponent_permanent`. Phase B (2026-04-24) closed the mutation-site coverage: `ctx.delete_permanent`, `ctx.return_to_hand`, `ctx.return_to_deck`, `ctx.de_digivolve` (including the `amount=Some(N)` N-pop variant), `ctx.suspend`, and `ctx.add_dp_modifier` / `ctx.add_modifier` are all now hard-gated (the modifier path was subsequently broadened in Phase E prep — see § Progress — gate scope).
 
 **Source-attribution model.** Gates apply at the `EffectContext` layer where the source controller is statically known via `self.player`; Game-level fire-sites stay agnostic so rule-driven mutations (own-sourced deletes, security-check redirects, cost trash) flow through unchanged. Observers consume cause via the new `ctx.deletion_cause()` / `ctx.was_deleted_by_effect()` / `ctx.was_deleted_by_opponent()` accessors (Phase B §B5).
 
