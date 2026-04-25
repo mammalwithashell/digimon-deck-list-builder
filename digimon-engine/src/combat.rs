@@ -2268,7 +2268,18 @@ impl Game {
 
         match outcome {
             ReplacementOutcome::None => {
-                self.commit_permanent_deletion(handle);
+                // Phase B §B5: expose the cause to OnDeletion observers via
+                // `current_deletion_cause`. Set before the enqueue; cleared
+                // after the drain via panic-safe guard.
+                let prior = self.current_deletion_cause;
+                self.current_deletion_cause = Some(cause);
+                let result = std::panic::catch_unwind(
+                    std::panic::AssertUnwindSafe(|| self.commit_permanent_deletion(handle)),
+                );
+                self.current_deletion_cause = prior;
+                if let Err(payload) = result {
+                    std::panic::resume_unwind(payload);
+                }
             }
             ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
                 // Skip deletion — no OnDeletion / OnAnyDeletion fires.

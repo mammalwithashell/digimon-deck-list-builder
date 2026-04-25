@@ -210,6 +210,17 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) effect_source_player: Option<PlayerId>,
 
+    /// The cause of the deletion currently being observed by `OnDeletion`
+    /// effects. Set by `commit_permanent_deletion` immediately before
+    /// `enqueue_triggered(OnDeletion, ...)`; cleared after the drain via the
+    /// `commit_deletion_cause_guard` RAII helper. Read by
+    /// `EffectContext::deletion_cause()` / `was_deleted_by_effect()` /
+    /// `was_deleted_by_opponent()`.
+    ///
+    /// `None` outside an OnDeletion observer body. Phase B §B5.
+    #[doc(hidden)]
+    pub(crate) current_deletion_cause: Option<crate::replacement::ReplacementCause>,
+
     /// Phase 9 Task 3 — set to `true` while a hand Counter Option is
     /// resolving through `play_option_from_hand`. Consumed by
     /// `play_option_core` to fire CounterEffect timing on the played
@@ -349,6 +360,7 @@ impl Game {
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,
+            current_deletion_cause: None,
             in_counter_window: false,
         };
 
