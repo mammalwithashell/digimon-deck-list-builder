@@ -322,3 +322,35 @@ fn opponent_effect_cannot_unsuspend_does_not_freeze_progress_attacker() {
         "Progress attacker must not be frozen by opponent CannotUnsuspend"
     );
 }
+
+#[test]
+fn opponent_effect_cannot_attack_does_not_lock_progress_attacker() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        ctx.add_modifier(progress, ModifierType::CannotAttack, 0, Expiry::EndOfTurn);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert!(
+        !r.game.modifiers.has(progress, ModifierType::CannotAttack),
+        "Progress attacker must not pick up opponent-effect CannotAttack lockdown"
+    );
+}
+
+#[test]
+fn opponent_effect_dont_have_dp_does_not_apply_to_progress_attacker() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        ctx.add_modifier(progress, ModifierType::DontHaveDp, 0, Expiry::EndOfAttack);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert!(
+        !r.game.modifiers.has(progress, ModifierType::DontHaveDp),
+        "Progress attacker must not be DontHaveDp-clamped by opponent effect"
+    );
+}
