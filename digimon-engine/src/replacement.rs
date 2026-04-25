@@ -1065,8 +1065,10 @@ fn commit_deferred_outcome(
 
 /// Commit a permanent's deletion without re-running the replacement window.
 /// Mirrors the post-replacement arm of `Game::delete_permanent_with_cause`
-/// (OnDeletion → remove → OnAnyDeletion) but bypasses try_replace because
-/// the replacement window has already been offered and declined.
+/// (OnDeletion → finalize: linked-card cascade, `delete_permanent`, modifier
+/// cleanup, post-deletion replays drain, OnAnyDeletion) but bypasses
+/// `try_replace` because the replacement window has already been offered
+/// and declined.
 fn commit_permanent_deletion_no_replace(
     game: &mut crate::game::Game,
     handle: PermanentHandle,
@@ -1080,28 +1082,34 @@ fn commit_permanent_deletion_no_replace(
     );
     game.drain_effect_queue();
 
-    // TODO(phase-d-task-6-followup): mirror commit_permanent_deletion's
-    // pending_selection.is_some() defer-into-pending_deletion_resume guard
-    // here. Currently latent — no card mounts an OnDeletion-park trigger
-    // through this code path, but Fortitude (Task 8) might.
-
-    if game
-        .player(handle.player)
-        .battle_area
-        .get(handle.index as usize)
-        .is_some()
-    {
-        game.player_mut(handle.player)
-            .delete_permanent(handle.index as usize);
-    }
-    game.modifiers.clear_permanent(handle);
-    game.modifiers.expire_player_on_permanent_leave(handle);
-
-    for pid in 0..game.players.len() {
-        game.enqueue_triggered(
-            EffectTiming::OnAnyDeletion,
-            TriggerSource::PlayerBattleArea(pid as PlayerId),
+    // Phase D Task 6 followup (2026-04-25): an OnDeletion handler may have
+    // installed a player choice (e.g. printed `<Save>` parks an optional
+    // Tamer-pick). Park the rest of the deletion sequence to be finalized
+    // after the selection resolves; running `Player::delete_permanent`
+    // synchronously here would shift later permanents' indices and
+    // invalidate the parked selection. Mirrors the guard in
+    // `combat.rs::Game::commit_permanent_deletion`.
+    //
+    // Reachable when: a card hosts BOTH an optional `WhenWouldBeDeleted`
+    // replacement (e.g. `<Decoy>`, `<Barrier>`) AND an OnDeletion-parking
+    // handler (`<Save>`). The optional replacement was offered, the user
+    // declined, and the deferred-decline path lands here.
+    //
+    // `Game::resume_pending_deletion` (called from
+    // `effect_queue::resolve_generic_selection` after the parked selection
+    // resolves and the post-callback drain settles) runs
+    // `finalize_permanent_deletion` against the saved handle — the same
+    // resume hook used by the synchronous `commit_permanent_deletion` path,
+    // so `pending_post_deletion_replays` (Fortitude/Partition) and the
+    // linked-card cascade all run uniformly.
+    if game.pending_selection.is_some() {
+        debug_assert!(
+            game.pending_deletion_resume.is_none(),
+            "nested deferred deletion not supported (single-outstanding invariant)"
         );
+        game.pending_deletion_resume = Some(handle);
+        return;
     }
-    game.drain_effect_queue();
+
+    game.finalize_permanent_deletion(handle);
 }

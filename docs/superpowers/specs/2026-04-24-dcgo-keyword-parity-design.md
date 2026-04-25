@@ -194,13 +194,12 @@ printed keywords now require zero hand-rolled `CardEffect` code. See
 5. **Substrate extensions beyond original Phase D scope:**
    - `Game.pending_deletion_resume: Option<PermanentHandle>` (Task 6) — defers finalize of permanent deletion when an OnDeletion handler parks a selection.
    - `Game.pending_post_deletion_replays: Vec<(PlayerId, CardHandle)>` (Task 8) — schedules replay-from-trash after finalize completes. Used by Fortitude and Partition.
-6. **Mandatory parked-replacement constraint** — Fragment(N) is `.optional()` rather than mandatory because Phase C's parked-replacement substrate only supports nested selection inside optional replacements; mandatory replacements that install pending_selection trip a `debug_assert!`. Tagged `TODO(phase-c-substrate-mandatory)` in source. Spawn task chip exists for substrate extension.
+6. **Fragment(N) wired as mandatory** — DCGO `Fragment.cs:38` sets `canNoSelect: () => false`, so Fragment is mandatory once the gate (≥ N+1 sources) passes. The auto-install closure omits `.optional()` and parks the inner source-pick directly. Phase C's parked-replacement substrate supports both mandatory and optional candidates dispatching nested selections: the candidate-walk in `replacement::try_replace_inner` yields on `pending_selection.is_some()` after a mandatory candidate, and the post-process drain hook commits via the same `parked_replacement` slot for both branches.
 7. **Drive-by dispatcher alignment fix** — `activate_field_main`, `activate_hand_main`, and `activate_trash_main` were using raw `effect_registry.get()` instead of `effects_for_card`, missing keyword auto-installs. Fixed in Task 10 fixup (`99f7435a`).
 
 **Out-of-scope follow-ups:**
 - Color-grouped Decoy / Partition / MaterialSave (per-card-text overrides; not derivable from `Keyword::*` alone).
 - Source-card Fortitude (DCGO `CardStack.Contains(card)` covers Fortitude on a digi source under another top; Phase D scope is top-card carriers only).
-- Mandatory parked-replacement substrate (Fragment / future cards). Spawn task chip exists.
 - DSL Phase 3 wiring of replacement bodies (Phase C deferred; Phase D's hand-rolled keyword auto-installs consume substrate directly).
 
 ### Phase E — Missing-from-enum backfill

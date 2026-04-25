@@ -300,7 +300,7 @@ For the underlying substrate that makes this possible, see
 
 | Building block | Purpose |
 |---|---|
-| `.optional()` on the `Effect` builder | Parks the outer accept/decline dialog before the closure runs. Required when the effect body calls a `ctx.select_*` primitive; omitting it trips a `debug_assert!` in the substrate (a mandatory process must not install a nested selection). |
+| `.optional()` on the `Effect` builder | *Optional* — adds an outer accept/decline (PASS) dialog before the closure runs. Omit when the printed text is mandatory ("must") — the inner `ctx.select_*` will park directly. Phase C substrate dispatches the post-process drain hook for both branches. |
 | Self-scope guard in the closure body | `WhenWouldBeDeleted` fires for ALL battle-area permanents' deletions. The body must check `rctx.effect.source_permanent == Some(subject)` and early-return for neighbors. |
 | Gate check — early return without parking | Use `.condition(|ctx| ...)` to prevent the outer accept dialog from appearing when the pre-condition fails (e.g. insufficient sources). Failing a `.condition` skips the entire candidate, so no dialog, no parked selection. |
 | Parked outcome-setter inside the callback | After the selection resolves, call exactly one of `ctx.cancel_leave()`, `ctx.handle_replacement()`, `ctx.redirect_replacement(zone)`, or `ctx.substitute_replacement(subject)` to write the outcome. These panic in dev builds if called outside a parked-replacement scope. |

@@ -2350,7 +2350,11 @@ impl Game {
     /// path (Phase D Task 6) can resume from the same point after a parked
     /// selection resolves. See `commit_permanent_deletion` for the rationale
     /// behind the split.
-    fn finalize_permanent_deletion(&mut self, handle: PermanentHandle) {
+    ///
+    /// Visible to `crate::replacement` so the no-replace path
+    /// (`commit_permanent_deletion_no_replace`) can share the same finalize
+    /// step (linked-card cascade, post-deletion replays drain, OnAnyDeletion).
+    pub(crate) fn finalize_permanent_deletion(&mut self, handle: PermanentHandle) {
         // Phase 8 Task 4: drain any linked cards BEFORE removing the
         // permanent so the OnLinkedCardTrashed observer sees the host still
         // in place (as required by the Appmon-trait card text). Each linked

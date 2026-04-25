@@ -359,3 +359,129 @@ fn save_does_not_offer_opponent_tamers() {
         "SAVE-D is in trash via normal deletion"
     );
 }
+
+// ─── Test 5: no-replace path defers Save's parked Tamer-pick correctly ─────
+
+/// Regression for the I-2 follow-up at `replacement.rs::commit_permanent_
+/// deletion_no_replace`: a card hosting BOTH an optional `WhenWouldBeDeleted`
+/// replacement (`<Decoy>`) AND `<Save>` on the same carrier exercises the
+/// deferred-decline path. Without the `pending_selection.is_some()` guard,
+/// `Player::delete_permanent` would shift the Tamer's index synchronously
+/// while Save's parked Tamer-pick still references the old index, corrupting
+/// the selection's `valid_action_ids`.
+///
+/// Sequence:
+///   1. Carrier (Decoy + Save) and Tamer on field; carrier is deleted.
+///   2. The optional Decoy dialog is parked at candidate-collection time.
+///   3. The user PASSes — decline routes through `commit_deferred_outcome`
+///      `(Zone::Trash, ReplacementOutcome::None)` → `commit_permanent_
+///      deletion_no_replace`.
+///   4. OnDeletion drains; Save parks an optional Tamer-pick. The defer
+///      guard MUST stash `pending_deletion_resume = Some(carrier)` and
+///      return without calling `delete_permanent`.
+///   5. The user accepts the Tamer-pick; the Save callback places SAVE-D
+///      under the Tamer; the resume hook then runs
+///      `finalize_permanent_deletion` to remove the now-empty carrier.
+#[test]
+fn save_under_decoy_decline_defers_via_no_replace_path() {
+    fn decoy_save_carrier(id: &str) -> CardData {
+        CardData {
+            card_id: id.to_string(),
+            card_name: id.to_string(),
+            card_kind: CardKind::Digimon,
+            level: Some(4),
+            dp: Some(4000),
+            play_cost: 4,
+            colors: vec![CardColor::Red],
+            traits: Vec::new(),
+            evo_costs: Vec::new(),
+            dna_costs: Vec::new(),
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            security_text: String::new(),
+            keywords: vec![Keyword::Decoy, Keyword::Save],
+            effect_class_name: id.replace('-', "_"),
+            index: 0,
+            norm_id: 0.0,
+        }
+    }
+
+    let mut r = DebugRunner::builder()
+        .add_card(decoy_save_carrier("DECOY-SAVE"))
+        .add_card(tamer_card("TAMER"))
+        .start();
+
+    let carrier = r.place_on_field(0, "DECOY-SAVE", None);
+    let _tamer = r.place_on_field(0, "TAMER", None);
+
+    // Sanity: both permanents are on field at indices 0 and 1.
+    assert_eq!(carrier.index, 0);
+    assert_eq!(r.game.players[0].battle_area.len(), 2);
+
+    r.game.delete_permanent_with_effects(carrier);
+
+    // (2) The Decoy optional dialog is parked. PASS to decline.
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Decoy optional dialog must be parked");
+    assert!(pending.is_optional, "Decoy is optional");
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline Decoy");
+
+    // (4) After declining Decoy, the no-replace path ran: OnDeletion fired
+    // and Save parked a Tamer-pick. The deferred guard MUST have stashed
+    // the carrier handle and returned without calling delete_permanent —
+    // both the carrier and the Tamer are still on field at their original
+    // indices (otherwise Save's `valid_action_ids`, encoded against the
+    // original layout, would now point at the wrong slot).
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        2,
+        "carrier + Tamer both still on field while Save's Tamer-pick is parked"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[1]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TAMER",
+        "Tamer is still at the same index — no synchronous mid-stream delete"
+    );
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Save's Tamer-pick selection must be parked");
+    assert!(pending.is_optional, "Save's Tamer-pick is optional");
+
+    // (5) Accept the Tamer-pick.
+    let action = pending.valid_action_ids[0];
+    r.game.resolve_selection(0, action).expect("pick Tamer");
+
+    // Resume hook ran finalize_permanent_deletion — carrier is gone, Tamer
+    // remains with SAVE-D tucked under it.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "carrier finalized after the parked Save selection resolved"
+    );
+    let surviving = &r.game.players[0].battle_area[0];
+    assert_eq!(
+        surviving.top_card().card_id(&r.game.card_data),
+        "TAMER",
+    );
+    assert_eq!(
+        surviving.card_sources[0].card_id(&r.game.card_data),
+        "DECOY-SAVE",
+        "DECOY-SAVE was placed at the bottom of the Tamer's stack"
+    );
+    assert!(
+        !r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "DECOY-SAVE"),
+        "DECOY-SAVE was retrieved from trash by Save's post-deletion handler"
+    );
+}
