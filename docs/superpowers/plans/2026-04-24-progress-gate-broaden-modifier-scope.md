@@ -15,7 +15,7 @@
 
 **Branch baseline:** `claude/gracious-ptolemy-744e69` at commit `1febbe55`. Create a fresh worktree off that commit before Task 0.
 
-**Cross-reference (informational, no longer a gating decision):** All [`GiveEffectToPermanent/*.cs`](../DCGO/Assets/Scripts/Script/CardEffectCommons/GiveEffect/GiveEffectToPermanent) helpers — `ChangeDP`, `ChangeOriginDP`, `ChangeSAttack`, `CanNotAttack`, `CanNotSuspend`, `CanNotUnsuspend`, `CanNotBlock`, `CanNotReturnToHand`, `CanNoReturnToDeck`, `CanNotBeDeletedByBattle`, `CanNotBeDeletedByEffect`, `ImmuneFromDPMinus`, `ChangeLinkMax`, `ChangePlayCost`, `StartOfMainAttack` — all consult `targetPermanent.TopCard.CanNotBeAffected(activateClass)` before installing. Option A's blanket gate covers every one of them in one place.
+**Cross-reference (informational, no longer a gating decision):** All [`GiveEffectToPermanent/*.cs`](../DCGO/Assets/Scripts/Script/CardEffectCommons/GiveEffect/GiveEffectToPermanent) helpers — `ChangeDP`, `ChangeOriginDP`, `ChangeSAttack`, `CanNotAttack`, `CanNotSuspend`, `CanNotUnsuspend`, `CanNotBlock`, `CanNotReturnToHand`, `CanNoReturnToDeck` (spelling matches the literal DCGO file `CanNoReturnToDeck.cs` — upstream typo, not a transcription error here), `CanNotBeDeletedByBattle`, `CanNotBeDeletedByEffect`, `ImmuneFromDPMinus`, `ChangeLinkMax`, `ChangePlayCost`, `StartOfMainAttack` — all consult `targetPermanent.TopCard.CanNotBeAffected(activateClass)` before installing. Option A's blanket gate covers every one of them in one place.
 
 **Cross-engine parity caveat:** This deliberately diverges from the Python engine, which also lets opponent-sourced positive DP through. Add a row to [`docs/RUST_PYTHON_PARITY.md`](../RUST_PYTHON_PARITY.md) per Task 9.
 
