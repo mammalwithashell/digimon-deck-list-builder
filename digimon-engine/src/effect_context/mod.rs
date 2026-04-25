@@ -150,13 +150,22 @@ impl<'a> EffectReadContext<'a> {
     /// The `ReplacementCause` of the deletion currently being observed by
     /// this `OnDeletion` (or `OnAnyDeletion`) effect. `None` outside such an
     /// observer body. Phase B §B5.
+    ///
+    /// Set only while the `OnDeletion` / `OnAnyDeletion` queue drain for a
+    /// single `delete_permanent_with_cause` call is in flight; cleared on
+    /// drain completion via panic-safe guard.
+    ///
+    /// Scapegoat-style predicates ("deleted by anything other than own
+    /// effect") should read this directly rather than via
+    /// `was_deleted_by_effect`, since they fire for `Battle` /
+    /// `SecurityCheck` / `Cost` causes too.
     pub fn deletion_cause(&self) -> Option<crate::replacement::ReplacementCause> {
         self.game.current_deletion_cause
     }
 
     /// `true` when the current OnDeletion observer is firing because of an
     /// effect (own or opponent), as opposed to battle / security-check / cost.
-    /// Convenience for keywords like Scapegoat (cause ≠ OwnEffect) and
+    /// Convenience for "deleted by an effect" predicates, including
     /// Retaliation (cause == Battle, hence false here).
     pub fn was_deleted_by_effect(&self) -> bool {
         use crate::replacement::ReplacementCause;
@@ -317,11 +326,20 @@ impl<'a> EffectContext<'a> {
     // ─── OnDeletion cause accessors (Phase B §B5) ───────────────────────
 
     /// See `EffectReadContext::deletion_cause`.
+    ///
+    /// Set only while the `OnDeletion` / `OnAnyDeletion` queue drain for a
+    /// single `delete_permanent_with_cause` call is in flight; cleared on
+    /// drain completion via panic-safe guard. Scapegoat-style predicates
+    /// ("deleted by anything other than own effect") should read this
+    /// directly rather than via `was_deleted_by_effect`, since they fire for
+    /// `Battle` / `SecurityCheck` / `Cost` causes too.
     pub fn deletion_cause(&self) -> Option<crate::replacement::ReplacementCause> {
         self.game.current_deletion_cause
     }
 
-    /// See `EffectReadContext::was_deleted_by_effect`.
+    /// See `EffectReadContext::was_deleted_by_effect`. Convenience for
+    /// "deleted by an effect" predicates (e.g. Retaliation, where
+    /// cause == Battle, returns false).
     pub fn was_deleted_by_effect(&self) -> bool {
         use crate::replacement::ReplacementCause;
         matches!(
