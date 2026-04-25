@@ -175,53 +175,58 @@ fn classify_parsed_separates_eggs_and_unknown() {
 /// allows 4 copies.
 fn make_legal_deck() -> Vec<String> {
     let db = card_database();
-    // Prefer a card whose max_count_in_deck is 4 and is not on the
-    // banned/restricted list, since we'll have to repeat it up to 50x.
-    let card_id = db
-        .values()
-        .find(|c| {
-            c.card_kind == 0
-                && c.max_count_in_deck >= 4
-                && !is_banned_or_restricted(&c.card_id)
-        })
-        .expect("need at least one unrestricted 4-copy Digimon in the DB")
-        .card_id
-        .clone();
-    // 50 / 4 = 12 remainder 2; but repeating the same id 50x breaks copy
-    // limit (max 4). Instead pick 13 distinct legal ids, 4 copies each =
-    // 52 — trim back to 50.
-    let ids: Vec<String> = db
+    // `card_database()` returns a HashMap with non-deterministic iteration
+    // order, so sort by card_id before picking candidates — otherwise a
+    // restricted card (e.g. P-030) can land in the first 13 hits and the
+    // validator rejects the resulting 4-copy deck.
+    let mut candidates: Vec<&str> = db
         .values()
         .filter(|c| {
             c.card_kind == 0
                 && c.max_count_in_deck >= 4
                 && !is_banned_or_restricted(&c.card_id)
         })
-        .take(13)
-        .map(|c| c.card_id.clone())
+        .map(|c| c.card_id.as_str())
         .collect();
+    candidates.sort_unstable();
+    // 50 / 4 = 12 remainder 2; but repeating the same id 50x breaks copy
+    // limit (max 4). Instead pick 13 distinct legal ids, 4 copies each =
+    // 52 — trim back to 50.
+    let ids: Vec<&str> = candidates.into_iter().take(13).collect();
+    assert_eq!(ids.len(), 13, "need 13 unrestricted 4-copy Digimon in the DB");
     let mut deck = Vec::with_capacity(50);
     for cid in &ids {
         for _ in 0..4 {
             if deck.len() < 50 {
-                deck.push(cid.clone());
+                deck.push((*cid).to_string());
             }
         }
     }
-    let _ = card_id; // suppress unused warning when taken path above
     assert_eq!(deck.len(), 50);
     deck
 }
 
 fn is_banned_or_restricted(card_id: &str) -> bool {
+    // Mirror of `deck_tools.rs::BANNED_CARDS` and `RESTRICTED_CARDS`. These
+    // constants are private to the `deck_tools` module, so duplicating
+    // them here is the price of the test-side filter — keep them in sync
+    // when the validator's lists change.
     const BANNED: &[&str] = &["BT2-090", "BT5-109", "EX5-065"];
-    if BANNED.contains(&card_id) {
-        return true;
-    }
-    // restricted list is long — just check the choice-group members too,
-    // since those cards are on the restricted side of validate.
-    const CHOICE_GROUP_MEMBERS: &[&str] = &["EX2-007", "EX7-064", "BT20-037", "BT17-035", "EX8-037"];
-    CHOICE_GROUP_MEMBERS.contains(&card_id)
+    const RESTRICTED: &[&str] = &[
+        "BT1-090",  "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110",
+        "BT14-002", "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069",
+        "BT19-040", "BT2-047",  "BT2-069",  "BT3-054",  "BT3-103",  "BT4-104",
+        "BT4-111",  "BT6-100",  "BT6-104",  "BT7-038",  "BT7-064",  "BT7-069",
+        "BT7-072",  "BT7-107",  "BT9-098",  "BT9-099",  "EX1-021",  "EX1-068",
+        "EX2-039",  "EX2-070",  "EX3-057",  "EX4-006",  "EX4-019",  "EX4-030",
+        "EX5-015",  "EX5-018",  "EX5-062",  "P-008",    "P-025",    "P-029",
+        "P-030",    "P-123",    "P-130",    "ST2-13",   "ST9-09",
+    ];
+    const CHOICE_GROUP_MEMBERS: &[&str] =
+        &["EX2-007", "EX7-064", "BT20-037", "BT17-035", "EX8-037"];
+    BANNED.contains(&card_id)
+        || RESTRICTED.contains(&card_id)
+        || CHOICE_GROUP_MEMBERS.contains(&card_id)
 }
 
 #[test]
