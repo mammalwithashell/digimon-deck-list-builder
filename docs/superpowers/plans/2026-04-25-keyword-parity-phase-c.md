@@ -879,6 +879,14 @@ In `digimon-engine/src/effect_queue.rs:659-715`, find the line:
         }
 ```
 
+**Implementation note (commit `fe583dd5`):** the drain call must be GATED on
+`self.pending_selection.is_none()` — without this gate, the drain fires
+prematurely after the OUTER accept callback installs the inner select
+(case A in §5.1's data flow), short-circuiting the parked-replacement loop.
+The literal patch below misses the gate; the implementer added it during
+TDD. See call-site comment in `effect_queue.rs::resolve_generic_selection`
+for the rationale.
+
 Add the drain hook directly below (before the existing `if self.pending_selection.is_none() { self.drain_effect_queue(); }` block):
 
 ```rust
