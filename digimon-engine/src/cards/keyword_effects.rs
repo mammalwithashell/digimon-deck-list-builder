@@ -12,21 +12,14 @@
 //! ("you may"). Declining the optional selection leaves the original event
 //! (deletion / return-to-deck) to proceed normally.
 //!
-//! ## Deferred: Partition / ArmorPurge
+//! ## Deferred: Partition
 //!
-//! Printed `<Partition>` and `<Armor Purge>` require the replacement process
-//! to install a nested `PendingSelection::Source` so the player can pick
-//! which source in the permanent's digivolution stack to substitute/trash.
-//! The v1 replacement framework does not yet support nested selections
-//! inside a replacement process (the `rctx` borrow does not survive the
-//! callback boundary). Their enum variants (`Keyword::Partition`,
-//! `Keyword::ArmorPurge`) are parsed by `parse_printed_keywords` but this
-//! module intentionally returns `None` for them — a hand-authored
-//! `CardEffect` can still cover any such cards in the interim.
-//!
-//! TODO(phase-7-followup): Once nested-selection-inside-replacement lands,
-//! map Partition → "pick a source → substitute(Permanent(source_as_handle))"
-//! and ArmorPurge → same, but trash the picked source rather than delete it.
+//! Printed `<Partition>` is a leave-field trigger (not a replacement) that
+//! plays cards from two color-grouped subsets of the deleted permanent's
+//! digivolution sources, and is not yet auto-installed — see Phase D Task 9.
+//! `Keyword::Partition` is parsed by `parse_printed_keywords` but this module
+//! intentionally returns `Vec::new()` for it; hand-authored `CardEffect`s can
+//! cover Partition cards until Task 9 lands.
 
 use crate::card_source::CardHandle;
 use crate::effect::Effect;
@@ -228,8 +221,78 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 .build(),
         ],
 
+        // Phase D Task 5 — printed Armor Purge: "When this Digimon would be
+        // deleted, trash the top card of this Digimon. If you do, it isn't
+        // deleted." DCGO `ArmorPurge.cs:40-78`.
+        //
+        // Gate: `card_sources.len() >= 2` (top + ≥1 source under it). When the
+        // gate fails the auto-install body returns early; original deletion
+        // proceeds normally.
+        //
+        // Synchronous + mandatory. Unlike Fragment(N) (which goes through the
+        // Phase C parked-replacement substrate because it carries a nested
+        // selection), ArmorPurge has no player choice — it's purely a
+        // top-swap. The replacement-process closure calls `rctx.cancel()`
+        // directly, an outcome-setter that works in mandatory contexts (the
+        // `debug_assert!` in `run_candidate_inner` only trips when a mandatory
+        // process installs a `pending_selection`, which we do not). No
+        // `.optional()` wrapper required, no parked-replacement plumbing.
+        //
+        // The event-fire (OnDigivolutionCardTrashed) for the trashed top is
+        // handled by `EffectContext::armor_purge_top` itself; see Phase D
+        // Task 5 commit log.
+        Keyword::ArmorPurge => vec![Effect::when_would_be_deleted(card)
+            .name("<Armor Purge>")
+            // Gate at candidate-collection time so the dispatcher skips this
+            // candidate entirely when the stack is too small. Mirrors
+            // Fragment(N)'s condition pattern.
+            .condition(|ctx| {
+                let Some(perm) = ctx.source_permanent() else {
+                    return false;
+                };
+                perm.card_sources.len() >= 2
+            })
+            .replacement_process(|rctx| {
+                // Self-scope guard: only fire on the carrier's own deletion.
+                // `collect_candidates` enumerates this effect for every
+                // battle-area permanent's deletion at this timing, so the
+                // body must self-scope to avoid running for a neighbor.
+                let me_perm = rctx.effect.source_permanent;
+                let subject = match rctx.subject {
+                    ReplacementSubject::Permanent(h) => h,
+                    _ => return,
+                };
+                if Some(subject) != me_perm {
+                    return;
+                }
+
+                // Re-check the gate at process time. Belt-and-suspenders: a
+                // stack-mutating earlier replacement in the same chain could
+                // have shrunk the stack between collection and process.
+                let stack_len = rctx
+                    .effect
+                    .game
+                    .player(subject.player)
+                    .battle_area
+                    .get(subject.index as usize)
+                    .map(|p| p.card_sources.len())
+                    .unwrap_or(0);
+                if stack_len < 2 {
+                    return;
+                }
+
+                // Trash the top card and promote the next source — and fire
+                // OnDigivolutionCardTrashed (handled inside the primitive).
+                rctx.effect.armor_purge_top(subject);
+                // Cancel the original deletion synchronously. Honored by
+                // `delete_permanent_with_cause` (`Cancelled` arm — skip the
+                // commit, no OnDeletion / OnAnyDeletion fires).
+                rctx.cancel();
+            })
+            .build()],
+
         // Intentionally not auto-installed (see module docstring).
-        Keyword::Partition | Keyword::ArmorPurge => Vec::new(),
+        Keyword::Partition => Vec::new(),
 
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),
