@@ -773,6 +773,9 @@ impl Game {
     /// all OnPlay/WhenDigivolving/etc. effects have resolved). Callers should
     /// invoke `check_turn_end()` at the natural resolution boundary.
     pub fn pay_memory(&mut self, cost: u16) -> bool {
+        if cost == 0 {
+            return true;
+        }
         let new_memory = self.memory - cost as i16;
         if new_memory < self.rules.memory_range.0 {
             return false;

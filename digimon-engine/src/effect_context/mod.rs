@@ -1082,6 +1082,16 @@ impl<'a> EffectContext<'a> {
 
     /// Insert a card at the bottom of `target`'s digivolution stack. See
     /// `Game::place_as_bottom_source`.
+    ///
+    /// **Phase B Progress gate — intentionally omitted.** DCGO's primitive
+    /// `Permanent.AddDigivolutionCardsBottom` does not consult
+    /// `CanNotBeAffected` on the receiving permanent, and DCGO scripts that
+    /// place a source under an opponent's Digimon (e.g. EX10-059) do not
+    /// gate the target on Progress either. Adding a card under a stack is
+    /// not "affecting" the target in DCGO's semantics — the TopCard's
+    /// status is unchanged. Gating here would over-restrict relative to
+    /// DCGO and break parity with cards that intentionally route a source
+    /// under an opponent's Progress attacker.
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
