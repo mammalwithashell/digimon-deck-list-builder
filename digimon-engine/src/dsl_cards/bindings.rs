@@ -31,7 +31,16 @@ impl Bindings {
     }
 
     pub fn get(&self, name: &str) -> Option<BindingValue> {
-        self.slots.get(name).cloned()
+        self.get_ref(name).cloned()
+    }
+
+    /// Borrowing variant of `get`. Prefer this when the caller only needs to
+    /// inspect the value — avoids cloning the inner `Vec` for `PermanentList`
+    /// / `CardList`. `get` remains the convenience method for callers that
+    /// need to take ownership (e.g. `ResolvedBinding::PermanentList(v)`
+    /// destructuring in `binding_ref::resolve_named`).
+    pub fn get_ref(&self, name: &str) -> Option<&BindingValue> {
+        self.slots.get(name)
     }
 
     pub fn get_permanent(&self, name: &str) -> Option<PermanentHandle> {

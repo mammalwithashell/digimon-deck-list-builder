@@ -15,7 +15,7 @@ use std::sync::Arc;
 use digimon_dsl::compiled::{CompiledPlayerRef, CompiledStep, CompiledZone};
 
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::{resolve_player, run_steps};
+use crate::dsl_cards::step::{drain_dsl_outer_tail, resolve_player, run_steps};
 use crate::effect_context::{CountCappedZone, EffectContext};
 use crate::permanent::PermanentHandle;
 
@@ -119,9 +119,7 @@ fn install_select_hand(
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail captured by run_steps when
             // this selection was installed inside a control-flow body.
-            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
-                run_steps(&outer_tail, cb_ctx, &mut outer_b);
-            }
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }
@@ -149,9 +147,7 @@ fn install_select_trash(
             }
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail.
-            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
-                run_steps(&outer_tail, cb_ctx, &mut outer_b);
-            }
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }
@@ -176,9 +172,7 @@ fn install_select_own_permanent(
             }
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail.
-            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
-                run_steps(&outer_tail, cb_ctx, &mut outer_b);
-            }
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }
@@ -203,9 +197,7 @@ fn install_select_opponent_permanent(
             }
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail.
-            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
-                run_steps(&outer_tail, cb_ctx, &mut outer_b);
-            }
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }
@@ -247,9 +239,7 @@ fn install_select_count_capped_multi(
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail captured by run_steps when
             // this selection was installed inside a control-flow body.
-            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
-                run_steps(&outer_tail, cb_ctx, &mut outer_b);
-            }
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }

@@ -56,6 +56,46 @@ pub enum RunOutcome {
     Parked,
 }
 
+/// Park the outer-slice tail (steps that follow the just-parked control-
+/// flow / iteration step) onto `Game::dsl_outer_tail` so the eventual
+/// selection-callback can resume it via `drain_dsl_outer_tail`.
+///
+/// Empty tails are dropped — there's nothing to resume. The
+/// `debug_assert!` enforces the single-outstanding invariant documented
+/// on the slot.
+fn park_outer_tail(
+    ctx: &mut EffectContext<'_>,
+    bindings: &Bindings,
+    steps: &[CompiledStep],
+    i: usize,
+) {
+    let outer_tail = steps[i + 1..].to_vec();
+    if outer_tail.is_empty() {
+        return;
+    }
+    debug_assert!(
+        ctx.game.dsl_outer_tail.is_none(),
+        "dsl_outer_tail overwrite: an earlier outer continuation \
+         was never drained — likely a nested-park bug",
+    );
+    ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone()));
+}
+
+/// Drain `Game::dsl_outer_tail` if a parked outer continuation is
+/// pending. Selection-install callbacks call this after their own inner
+/// tail completes so the steps that followed an outer control-flow /
+/// iteration step (parked by `park_outer_tail`) actually run.
+///
+/// Public to the selections sub-module so new selection kinds added in
+/// future phases (`SelectReveal`, `SelectMaterial`, …) pick this up by
+/// calling one helper instead of duplicating the take + run_steps
+/// boilerplate per callback.
+pub(crate) fn drain_dsl_outer_tail(cb_ctx: &mut EffectContext<'_>) {
+    if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
+        run_steps(&outer_tail, cb_ctx, &mut outer_b);
+    }
+}
+
 /// Drive the full step slice to completion. When a selection step is
 /// encountered, `selections::try_install` captures the tail as a
 /// heap-allocated callback and returns `Parked`; the rest of the slice
@@ -76,17 +116,7 @@ pub fn run_steps(
 
         if let Some(outcome) = control_flow::try_run(step, ctx, bindings) {
             if matches!(outcome, RunOutcome::Parked) {
-                let outer_tail = steps[i + 1..].to_vec();
-                if !outer_tail.is_empty() {
-                    // Invariant: at most one outstanding outer continuation.
-                    // See Game::dsl_outer_tail doc for the full rationale.
-                    debug_assert!(
-                        ctx.game.dsl_outer_tail.is_none(),
-                        "dsl_outer_tail overwrite: an earlier outer continuation \
-                         was never drained — likely a nested-park bug",
-                    );
-                    ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone()));
-                }
+                park_outer_tail(ctx, bindings, steps, i);
                 return RunOutcome::Parked;
             }
             i += 1;
@@ -95,15 +125,7 @@ pub fn run_steps(
 
         if let Some(outcome) = iteration::try_run(step, ctx, bindings) {
             if matches!(outcome, RunOutcome::Parked) {
-                let outer_tail = steps[i + 1..].to_vec();
-                if !outer_tail.is_empty() {
-                    debug_assert!(
-                        ctx.game.dsl_outer_tail.is_none(),
-                        "dsl_outer_tail overwrite: an earlier outer continuation \
-                         was never drained — likely a nested-park bug",
-                    );
-                    ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone()));
-                }
+                park_outer_tail(ctx, bindings, steps, i);
                 return RunOutcome::Parked;
             }
             i += 1;
