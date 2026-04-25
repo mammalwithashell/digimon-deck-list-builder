@@ -53,25 +53,6 @@ def test_scope_script_rejects_engine_path():
         )
 
 
-def test_scope_script_engine_transpiler_allows_transpiler_path():
-    payload = {
-        "edits": [
-            {
-                "path": "tools/transpiler/cli.py",
-                "expected_hash": "abc",
-                "new_content": "x",
-            }
-        ]
-    }
-    edits = validate_edit_payload(
-        result_payload=payload,
-        scope_profile="script_engine_transpiler",
-        set_id="bt24",
-        module_name="bt24_001",
-    )
-    assert edits[0]["path"] == "tools/transpiler/cli.py"
-
-
 def test_scope_global_deny_blocks_github():
     payload = {
         "edits": [
@@ -85,7 +66,7 @@ def test_scope_global_deny_blocks_github():
     with pytest.raises(ApplyValidationError):
         validate_edit_payload(
             result_payload=payload,
-            scope_profile="script_engine_transpiler",
+            scope_profile="script_engine",
             set_id="bt24",
             module_name="bt24_001",
         )

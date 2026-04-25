@@ -169,11 +169,6 @@ class TestChunkPythonByAst:
             assert c["class_name"] == "MyClass"
             assert c["source_type"] == "engine_api"
 
-    def test_transpiler_source_type(self):
-        source = "def pattern_match(x):\n    return x\n"
-        chunks = chunk_python_by_ast(source, "tools/transpiler/patterns.py")
-        assert chunks[0]["source_type"] == "transpiler"
-
     def test_syntax_error_fallback(self):
         source = "def broken(\n  this is not valid python"
         chunks = chunk_python_by_ast(source, "digimon_gym/engine/game.py")
@@ -390,15 +385,11 @@ class TestInferPythonSourceType:
     def test_engine_subpath(self):
         assert _infer_python_source_type("digimon_gym/engine/core/permanent.py") == "engine_api"
 
-    def test_transpiler_path(self):
-        assert _infer_python_source_type("tools/transpiler/patterns.py") == "transpiler"
-
     def test_other_path(self):
         assert _infer_python_source_type("some/other/module.py") == "rules"
 
     def test_windows_backslash(self):
         assert _infer_python_source_type("digimon_gym\\engine\\game.py") == "engine_api"
-        assert _infer_python_source_type("tools\\transpiler\\patterns.py") == "transpiler"
 
 
 # ---------------------------------------------------------------------------
@@ -709,7 +700,7 @@ def _write_index(tmp_path: Path, chunks: list[dict], version: int = 2) -> Path:
 
 
 def _make_chunks() -> list[dict]:
-    """Standard set of 4 test chunks covering multiple source types."""
+    """Standard set of 3 test chunks covering multiple source types."""
     return [
         {
             "chunk_id": "game.py:decode",
@@ -730,13 +721,6 @@ def _make_chunks() -> list[dict]:
             "source": "cards.json",
             "source_type": "card_metadata",
             "text": "card BT1-001 Agumon level 3 rookie digimon",
-            "embedding": None,
-        },
-        {
-            "chunk_id": "patterns.py:match",
-            "source": "tools/transpiler/patterns.py",
-            "source_type": "transpiler",
-            "text": "pattern match transpiler helper function for cards",
             "embedding": None,
         },
     ]
