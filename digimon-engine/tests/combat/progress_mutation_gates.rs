@@ -192,3 +192,26 @@ fn opponent_effect_de_digivolve_does_not_pop_progress_attacker_stack() {
         "Progress attacker stack must be unchanged"
     );
 }
+
+#[test]
+fn opponent_effect_suspend_does_not_suspend_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    // Confirm starting state: attacker is unsuspended (the fake PendingAttack
+    // does not flip is_suspended; placement defaults to unsuspended).
+    assert!(
+        !r.game.players[0].battle_area[progress.index as usize].is_suspended,
+        "precondition: attacker starts unsuspended"
+    );
+
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        ctx.suspend(progress);
+    }
+    r.game.set_effect_source_player_for_test(None);
+
+    assert!(
+        !r.game.players[0].battle_area[progress.index as usize].is_suspended,
+        "Progress attacker must not be suspended by opponent effect"
+    );
+}
