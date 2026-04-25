@@ -285,3 +285,92 @@ fn armor_purge_does_not_clear_permanent_level_modifiers() {
         "SOURCE-CARD promoted to top"
     );
 }
+
+// ── Test 5: OnDigivolutionCardTrashed observer fires for the trashed top ─────
+
+/// Phase D Task 5 (Concern S1) — `armor_purge_top` MUST fire
+/// `OnDigivolutionCardTrashed` for the card it trashes from the top so that
+/// observers (e.g. Rocks-archetype source-trash listeners) see the event.
+/// Mirrors DCGO `ArmorPurge.cs:65-78`:
+/// `StackSkillInfos(hashtable, EffectTiming.WhenTopCardTrashed)`.
+///
+/// Strategy: register an OBSERVER `CardEffect` whose
+/// `OnDigivolutionCardTrashed` body adds a +100 ChangeDp modifier to itself.
+/// Place OBSERVER on the field, run `armor_purge_top` on a separate permanent,
+/// and assert the observer's DP grew by 100 — proof the event fired exactly
+/// once.
+#[test]
+fn armor_purge_top_fires_on_digivolution_card_trashed() {
+    use digimon_engine::cards::CardEffectRegistry;
+    use digimon_engine::effect::{CardEffect, Effect};
+    use digimon_engine::enums::ModifierType;
+    use std::sync::Arc;
+
+    struct ObserverEffect;
+    impl CardEffect for ObserverEffect {
+        fn effects(
+            &self,
+            card: digimon_engine::card_source::CardHandle,
+        ) -> Vec<Effect> {
+            vec![Effect::on_digivolution_card_trashed(card)
+                .name("count source-trash fires")
+                .process(|ctx| {
+                    if let Some(perm) = ctx.source_permanent {
+                        ctx.game.modifiers.add(
+                            perm,
+                            ModifierEntry::simple(
+                                ModifierType::ChangeDp,
+                                100,
+                                Expiry::Permanent,
+                                ctx.player,
+                            ),
+                        );
+                    }
+                })
+                .build()]
+        }
+    }
+
+    let mut registry = CardEffectRegistry::default();
+    registry.insert("OBSERVER", Arc::new(ObserverEffect));
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("TOP-DIGIMON"))
+        .add_card(make_digimon("SRC-MID"))
+        .add_card(make_digimon("OBSERVER"))
+        .with_registry(registry)
+        .start();
+
+    let tp = r.game.turn_player();
+
+    // Build a 2-source stack on player tp's field.
+    let perm_handle = r.place_on_field(tp, "SRC-MID", Some(0));
+    let perm_idx = perm_handle.index as usize;
+    push_source_on_top(&mut r, tp, perm_idx, "TOP-DIGIMON");
+
+    // Place OBSERVER on the same side.
+    let observer = r.place_on_field(tp, "OBSERVER", None);
+
+    // Baseline: OBSERVER has no DP delta yet.
+    let dp_before = r.game.modifiers.sum(observer, ModifierType::ChangeDp);
+    assert_eq!(dp_before, 0);
+
+    // Apply armor_purge_top → top is trashed → OnDigivolutionCardTrashed fires.
+    {
+        let dummy_handle = r.game.players[tp as usize].battle_area[perm_idx]
+            .top_card()
+            .handle();
+        let mut ctx = EffectContext::new(&mut r.game, dummy_handle, Some(perm_handle), tp);
+        ctx.armor_purge_top(perm_handle);
+    }
+
+    // OBSERVER must have observed exactly 1 source-trash event.
+    let dp_after = r.game.modifiers.sum(observer, ModifierType::ChangeDp);
+    assert_eq!(
+        dp_after,
+        100,
+        "OnDigivolutionCardTrashed must fire exactly once for the trashed top \
+         (observer DP delta = {})",
+        dp_after - dp_before
+    );
+}

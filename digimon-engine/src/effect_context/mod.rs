@@ -1151,6 +1151,10 @@ impl<'a> EffectContext<'a> {
     ///   - The previous `card_sources[last - 1]` entry (previously the
     ///     next-highest source) is now `top_card()`.
     ///   - The trashed top card is appended to `players[controller].trash`.
+    ///   - `EffectTiming::OnDigivolutionCardTrashed` is enqueued and drained
+    ///     so observers (e.g. Rocks-archetype source-trash listeners) see the
+    ///     trashed top. DCGO parity: `ArmorPurge.cs:65-78` —
+    ///     `StackSkillInfos(hashtable, EffectTiming.WhenTopCardTrashed)`.
     ///
     /// **Modifier note:** Modifiers in this engine are keyed by
     /// `PermanentHandle` (the full permanent), not by individual
@@ -1190,6 +1194,21 @@ impl<'a> EffectContext<'a> {
         // Modifier cleanup: no per-card-source tracking exists in this engine;
         // permanent-handle modifiers remain valid for the promoted top card.
         // See doc comment above for the DCGO deviation note.
+
+        // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors the
+        // existing dispatch in `Game::return_to_hand` /
+        // `Game::return_to_deck` (game_actions.rs:1345-1357 / 1481-1493) for
+        // sources-below-top, and matches DCGO `ArmorPurge.cs:65-78` which
+        // re-stacks `EffectTiming.WhenTopCardTrashed` after the trash. We
+        // enqueue once per player so observers on either side of the field
+        // pick it up.
+        for pid in 0..self.game.players.len() {
+            self.game.enqueue_triggered(
+                crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+            );
+        }
+        self.game.drain_effect_queue();
     }
 
     /// Trash a specific digivolution source from a permanent.
