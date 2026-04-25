@@ -16,8 +16,19 @@ use digimon_dsl::compiled::{CompiledPlayerRef, CompiledStep, CompiledZone};
 
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::{drain_dsl_outer_tail, resolve_player, run_steps};
-use crate::effect_context::{CountCappedZone, EffectContext};
+use crate::effect_context::{CountCappedZone, DistinctByMode, EffectContext};
 use crate::permanent::PermanentHandle;
+
+fn map_distinct_by(
+    d: Option<digimon_dsl::compiled::CompiledDistinctBy>,
+) -> Option<DistinctByMode> {
+    use digimon_dsl::compiled::CompiledDistinctBy;
+    d.map(|c| match c {
+        CompiledDistinctBy::CardNumber => DistinctByMode::CardNumber,
+        CompiledDistinctBy::Level => DistinctByMode::Level,
+        CompiledDistinctBy::Name => DistinctByMode::Name,
+    })
+}
 
 /// Returns `true` if `step` was a selection step and the remainder was
 /// installed as its callback. Returns `false` for any non-selection
@@ -76,7 +87,7 @@ pub fn try_install(
             true
         }
         CompiledStep::SelectCountCappedMulti {
-            of, zone, max, bind_as, prompt, optional_zero, ..
+            of, zone, max, bind_as, prompt, optional_zero, distinct_by, ..
         } => {
             install_select_count_capped_multi(
                 ctx,
@@ -86,6 +97,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional_zero,
+                map_distinct_by(*distinct_by),
                 tail.to_vec(),
                 bindings,
             );
@@ -309,6 +321,7 @@ fn install_select_count_capped_multi(
     bind_as: Option<String>,
     prompt: String,
     optional_zero: bool,
+    distinct_by: Option<DistinctByMode>,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
 ) {
@@ -328,6 +341,7 @@ fn install_select_count_capped_multi(
         max,
         &prompt,
         optional_zero,
+        distinct_by,
         |_game, _card| true, // Phase 2b/2c precedent: accept-all filter.
         move |cb_ctx, picks| {
             let mut b = bindings.clone();

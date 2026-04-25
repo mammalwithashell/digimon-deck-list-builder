@@ -85,6 +85,7 @@ fn auto_commits_at_max() {
             2,
             "pick up to 2",
             false,
+            None,
             |_, _| true,
             move |_, picks| {
                 *slot.lock().unwrap() = Some(picks);
@@ -195,6 +196,7 @@ fn pass_commits_early_when_picked_ge_1() {
             3,
             "pick up to 3",
             false,
+            None,
             |_, _| true,
             move |_, picks| {
                 *slot.lock().unwrap() = Some(picks);
@@ -252,6 +254,7 @@ fn pass_rejected_when_picked_zero_and_not_optional() {
             2,
             "pick up to 2",
             false,
+            None,
             |_, _| true,
             |_, _| {},
         );
@@ -314,6 +317,7 @@ fn optional_zero_allows_pass_at_start() {
             2,
             "pick up to 2 (optional)",
             true, // is_optional_zero = true
+            None,
             |_, _| true,
             move |_, picks| {
                 *slot.lock().unwrap() = Some(picks);
@@ -372,6 +376,7 @@ fn picked_items_excluded_from_next_step() {
             3,
             "pick up to 3",
             false,
+            None,
             |_, _| true,
             |_, _| {},
         );
@@ -433,6 +438,7 @@ fn kind_reflects_picked_counter() {
             2,
             "pick up to 2",
             false,
+            None,
             |_, _| true,
             |_, _| {},
         );
@@ -491,6 +497,7 @@ fn trash_zone_uses_correct_range() {
             2,
             "pick up to 2 from trash",
             false,
+            None,
             |_, _| true,
             |_, _| {},
         );
@@ -540,6 +547,7 @@ fn empty_filter_is_noop() {
             2,
             "pick (none pass)",
             false,
+            None,
             |_, _| false, // filter rejects all
             move |_, picks| {
                 assert!(picks.is_empty(), "no-op must deliver empty Vec");
