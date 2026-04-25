@@ -126,3 +126,74 @@ fn substitute_replacement_writes_substituted_outcome_to_parked_slot() {
         "substitute_replacement should write Substituted(other) to parked slot"
     );
 }
+
+use digimon_engine::effect::{CardEffect, Effect};
+use std::sync::{Arc, Mutex};
+
+#[test]
+fn post_process_hook_installs_parked_replacement_when_select_called() {
+    // Hand-rolled card with a WhenWouldBeDeleted replacement whose process
+    // closure installs a select_own_permanent — the post-process hook should
+    // see pending_selection.is_some() and install Game.parked_replacement.
+
+    struct ParkingCard {
+        installed: Arc<Mutex<bool>>,
+    }
+    impl CardEffect for ParkingCard {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            let installed = Arc::clone(&self.installed);
+            vec![Effect::when_would_be_deleted(card)
+                .name("PARK-TEST")
+                .optional()
+                .replacement_process(move |rctx| {
+                    rctx.effect.select_own_permanent(
+                        "pick anyone",
+                        false,
+                        |_g, _h| true,
+                        move |_ctx, _picked| {
+                            // Body never runs in this test — we resolve the
+                            // outer accept then inspect parked_replacement
+                            // before resolving the inner select.
+                        },
+                    );
+                    *installed.lock().unwrap() = true;
+                })
+                .build()]
+        }
+    }
+
+    let installed = Arc::new(Mutex::new(false));
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("PARK-TEST"))
+        .add_card(fighter("OTHER"))
+        .start();
+    r.register_effect(
+        "PARK-TEST",
+        Arc::new(ParkingCard { installed: Arc::clone(&installed) }),
+    );
+    let parker = r.place_on_field(0, "PARK-TEST", None);
+    let _other = r.place_on_field(0, "OTHER", None);
+
+    // Trigger the would-be-deleted dispatch.
+    r.game.delete_permanent_with_effects(parker);
+
+    // Outer optional-accept dialog is installed.
+    let pending = r.game.pending_selection.as_ref().expect("optional accept installed");
+    assert_eq!(pending.kind, digimon_engine::selection::SelectionKind::Replacement);
+
+    // Resolve the outer accept (REPLACEMENT_ACCEPT action).
+    use digimon_engine::action::space::REPLACEMENT_ACCEPT;
+    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept ok");
+
+    // Process closure ran (installed flag set).
+    assert!(*installed.lock().unwrap(), "process closure should have run");
+    // Inner select_own_permanent installed a fresh PendingSelection.
+    assert!(r.game.pending_selection.is_some(), "inner select installed");
+    // POST-PROCESS HOOK: parked_replacement populated.
+    let outcome = r.game.parked_replacement_outcome_for_test();
+    assert_eq!(
+        outcome,
+        Some(ReplacementOutcome::None),
+        "post-process hook should install Game.parked_replacement (outcome=None until callback writes)"
+    );
+}

@@ -630,19 +630,56 @@ fn run_candidate_inner(
         return ReplacementOutcome::None;
     };
 
-    // Build the EffectContext then the ReplacementContext. The
-    // ReplacementContext holds `&mut EffectContext` so we must keep the
-    // EffectContext alive for the duration of the process call.
-    let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
-    let mut rep_ctx = ReplacementContext {
-        effect: &mut ctx,
-        cause,
-        subject,
-        original_destination,
-        outcome: ReplacementOutcome::None,
+    // Build the EffectContext then the ReplacementContext in an inner scope
+    // so their borrows on `game` end before the post-process hook reads
+    // `game.pending_selection` and writes `game.parked_replacement`.
+    // ReplacementContext holds `&mut EffectContext` which holds `&mut Game`,
+    // so both must drop before we can re-borrow `game` mutably below.
+    let outcome = {
+        let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
+        let mut rep_ctx = ReplacementContext {
+            effect: &mut ctx,
+            cause,
+            subject,
+            original_destination,
+            outcome: ReplacementOutcome::None,
+        };
+        process(&mut rep_ctx);
+        rep_ctx.outcome
     };
-    process(&mut rep_ctx);
-    rep_ctx.outcome
+
+    // Phase C §4.3 — POST-PROCESS HOOK: detect nested-select park.
+    // If the process closure installed a PendingSelection (via ctx.select_*),
+    // snapshot the replacement context state into Game.parked_replacement
+    // so the user's callback can later set the outcome via
+    // EffectContext::cancel_leave / etc., and the post-callback hook in
+    // resolve_generic_selection can drain the slot via commit_deferred_outcome.
+    //
+    // Single-outstanding invariant: at most one parked replacement at a time.
+    if game.pending_selection.is_some() {
+        debug_assert!(
+            game.parked_replacement.is_none(),
+            "nested replacement park; outer outcome would be lost. Phase C \
+             scope assumes a callback that itself fires a deletion will not \
+             also install a select_* selection. If a real card requires \
+             nested-park, extend ParkedReplacement into a Vec-stack."
+        );
+        game.parked_replacement = Some(ParkedReplacement {
+            subject,
+            cause,
+            original_destination,
+            source_card,
+            source_permanent,
+            controller,
+            outcome: ReplacementOutcome::None,
+        });
+        // Caller (e.g. make_accept_callback) checks pending_selection.is_some()
+        // and yields without committing — the parked outcome will be drained
+        // after the user's select_* callback fires.
+        return ReplacementOutcome::None;
+    }
+
+    outcome
 }
 
 /// Install a `PendingSelection::Replacement` prompt for an optional
@@ -776,6 +813,15 @@ fn make_accept_callback(
             original_destination,
         );
         game.replacement_pending_outcome = Some(outcome);
+
+        // Phase C §4.3: if the process parked a selection (parked_replacement
+        // is now Some(_)), skip immediate commit — the post-callback hook in
+        // resolve_generic_selection will drain the slot after the user's
+        // select_* callback runs.
+        if game.parked_replacement.is_some() {
+            return;
+        }
+
         // §7.5: mark this as a callback-commit continuation so the fired-set
         // from the original call chain survives the zone-mover re-entry.
         // `run_commit_with_flag` is panic-safe — if anything in the commit
