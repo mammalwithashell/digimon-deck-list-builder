@@ -45,4 +45,5 @@ mod phase2c_control_flow;
 mod phase2c_end_to_end;
 mod phase2d_for_each;
 mod phase2d_helpers;
+mod phase2d_per_selected;
 mod phase2d_select_count_capped_multi;
