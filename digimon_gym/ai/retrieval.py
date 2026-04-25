@@ -35,10 +35,6 @@ DEFAULT_SOURCES = [
     PROJECT_ROOT / "digimon_gym" / "engine" / "core" / "permanent.py",
     PROJECT_ROOT / "digimon_gym" / "engine" / "core" / "card_source.py",
     PROJECT_ROOT / "digimon_gym" / "engine" / "core" / "card_script.py",
-    # Transpiler
-    PROJECT_ROOT / "tools" / "transpiler" / "patterns.py",
-    PROJECT_ROOT / "tools" / "transpiler" / "generators.py",
-    PROJECT_ROOT / "tools" / "transpiler" / "extractors.py",
 ]
 SOURCE_EXTENSIONS = {".md", ".txt", ".json", ".py"}
 PDF_EXTENSION = ".pdf"
@@ -111,8 +107,6 @@ def chunk_text(text: str, chunk_size: int = 1200, overlap: int = 200) -> list[st
 def _infer_python_source_type(file_path: str) -> str:
     """Infer source_type from a file path string."""
     normalized = file_path.replace("\\", "/")
-    if "tools/transpiler" in normalized:
-        return "transpiler"
     if "digimon_gym/engine" in normalized:
         return "engine_api"
     return "rules"
@@ -368,12 +362,6 @@ def _is_engine_python(path: Path) -> bool:
     return "digimon_gym/engine" in normalized
 
 
-def _is_transpiler_python(path: Path) -> bool:
-    """Check if a Python file is under tools/transpiler/."""
-    normalized = str(path).replace("\\", "/")
-    return "tools/transpiler" in normalized
-
-
 def _is_cards_json(path: Path) -> bool:
     """Check if a file is specifically data/cards.json."""
     normalized = str(path).replace("\\", "/")
@@ -396,8 +384,8 @@ def build_local_index(
         display_path = _display_source_path(source_file)
         suffix = source_file.suffix.lower()
 
-        if suffix == ".py" and (_is_engine_python(source_file) or _is_transpiler_python(source_file)):
-            # AST-aware chunking for engine and transpiler Python files
+        if suffix == ".py" and _is_engine_python(source_file):
+            # AST-aware chunking for engine Python files
             raw_chunks = chunk_python_by_ast(text, display_path)
             for cd in raw_chunks:
                 fn = cd.get("function_name")
