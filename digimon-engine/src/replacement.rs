@@ -110,6 +110,7 @@ impl<'g> ReplacementContext<'g> {
 /// references are at each field's doc comment.
 ///
 /// Phase C §4.1.
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct ParkedReplacement {
     pub subject: ReplacementSubject,
