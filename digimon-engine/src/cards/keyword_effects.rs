@@ -24,10 +24,10 @@
 //! Execute, Iceclad, MindLink, Training (Phase F).
 //!
 //! Most replacement keywords here produce **optional** replacements per
-//! printed rules ("you may"). Declining the optional selection leaves the
-//! original event (deletion / return-to-deck) to proceed normally. The
-//! optional auto-installs (Phase 7 + Phase D so far): Barrier, Evade, Decode,
-//! Save, Decoy. Mandatory ones: Fragment(N), ArmorPurge, Fortitude.
+//! printed rules ("you may" / "by [cost]"). Declining the optional selection
+//! leaves the original event (deletion / return-to-deck) to proceed normally.
+//! The optional auto-installs (Phase 7 + Phase D so far): Barrier, Evade,
+//! Decode, Save, Decoy, Fragment(N), ArmorPurge. Mandatory ones: Fortitude.
 //!
 //! ## Trigger-based keywords
 //!
@@ -135,21 +135,21 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // When the gate fails, the auto-install body returns early without
         // parking and the original deletion proceeds.
         //
-        // Mandatory semantics — matches DCGO `Fragment.cs:38`'s
-        // `canNoSelect: () => false`. Once the gate passes, the carrier's
-        // controller MUST pick N sources to trash; there is no outer accept
-        // dialog. This is enabled by the Phase C substrate extension that
-        // lets a MANDATORY replacement-process park a nested selection: the
-        // candidate-walk in `replacement::try_replace_inner` yields on
-        // `pending_selection.is_some()` after running the candidate, and
-        // the post-callback drain hook commits `cancel_leave()` after the
-        // user resolves the source-pick chain.
+        // Optional ("by [Effect]") per RULES_CONTEXT 16-36 ("Processing:
+        // Optional (choosing and trashing digi cards); if executed, prevention
+        // is mandatory") and DCGO `Fragment.cs:37`
+        // `SetUpActivateClass(..., isOptional=true, ...)`. The outer accept
+        // dialog represents the printed "you may" — declining proceeds with
+        // the original deletion. The `canNoSelect: () => false` flag in DCGO
+        // `Fragment.cs:38` governs only the INNER source-pick UI (once you've
+        // accepted, you must pick exactly N), and `is_optional_zero=false`
+        // below mirrors that.
         Keyword::Fragment(n) => vec![Effect::when_would_be_deleted(card)
             .name(&format!("<Fragment ({n})>"))
-            // Gate on stack size at candidate-collection time so the
-            // mandatory selection is suppressed when there aren't enough
-            // sources to pay the trash cost. DCGO `Fragment.cs:23`
-            // `CanReplace` checks
+            .optional()
+            // Gate on stack size at candidate-collection time so the outer
+            // accept dialog is suppressed when there aren't enough sources to
+            // pay the trash cost. DCGO `Fragment.cs:23` `CanReplace` checks
             // `DigivolutionCards.Count >= N` (DCGO `DigivolutionCards`
             // excludes the top card), which translates to
             // `card_sources.len() >= N + 1` here.
@@ -198,9 +198,11 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 }
 
                 // Park: select exactly N sources from the carrier's stack to
-                // trash. `is_optional_zero=false` matches DCGO's
-                // `canNoSelect: () => false` (Fragment.cs:38) — the inner
-                // pick can't be passed once the gate passes.
+                // trash. The outer accept already fired (`.optional()` on
+                // the effect); inside the accepted activation, picking is
+                // mandatory once the gate passes. `is_optional_zero=false`
+                // matches DCGO `Fragment.cs:38` `canNoSelect: () => false`
+                // — the inner pick UI does not offer "no selection".
                 let controller = subject.player;
                 rctx.effect.select_count_capped_multi(
                     controller,
@@ -263,27 +265,29 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         ],
 
         // Phase D Task 5 — printed Armor Purge: "When this Digimon would be
-        // deleted, trash the top card of this Digimon. If you do, it isn't
+        // deleted, by trashing the top card of this Digimon, it isn't
         // deleted." DCGO `ArmorPurge.cs:40-78`.
         //
-        // Gate: `card_sources.len() >= 2` (top + ≥1 source under it). When the
-        // gate fails the auto-install body returns early; original deletion
-        // proceeds normally.
+        // Optional ("by [cost]") per RULES_CONTEXT 16-18 ("Processing:
+        // Optional ('by trashing the top card of the Digimon')"). The outer
+        // accept dialog represents the printed "by trashing" optional cost —
+        // declining proceeds with the original deletion. Once accepted, the
+        // synchronous body trashes the top via `armor_purge_top` and cancels
+        // the deletion; no nested player selection is required.
         //
-        // Synchronous + mandatory. Unlike Fragment(N) (which goes through the
-        // Phase C parked-replacement substrate because it carries a nested
-        // selection), ArmorPurge has no player choice — it's purely a
-        // top-swap. The replacement-process closure calls `rctx.cancel()`
-        // directly, an outcome-setter that works in mandatory contexts (the
-        // `debug_assert!` in `run_candidate_inner` only trips when a mandatory
-        // process installs a `pending_selection`, which we do not). No
-        // `.optional()` wrapper required, no parked-replacement plumbing.
+        // Gate: `card_sources.len() >= 2` (top + ≥1 source under it). The
+        // condition runs inside `collect_candidates`, so when the gate fails
+        // the candidate is never produced — no outer accept dialog is offered
+        // and the original deletion proceeds normally. (The closure body's
+        // re-check is belt-and-suspenders for an earlier same-chain replacement
+        // shrinking the stack between collection and process.)
         //
         // The event-fire (OnDigivolutionCardTrashed) for the trashed top is
         // handled by `EffectContext::armor_purge_top` itself; see Phase D
         // Task 5 commit log.
         Keyword::ArmorPurge => vec![Effect::when_would_be_deleted(card)
             .name("<Armor Purge>")
+            .optional()
             // Gate at candidate-collection time so the dispatcher skips this
             // candidate entirely when the stack is too small. Mirrors
             // Fragment(N)'s condition pattern.
