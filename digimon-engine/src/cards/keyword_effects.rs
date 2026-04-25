@@ -5,12 +5,14 @@
 //! matching `WhenWouldBe*` replacement. `Game::effects_for_card` calls this
 //! for every keyword after retrieving registry effects and appends the
 //! non-`None` results so that cards with printed Barrier / Evade /
-//! Fragment(N) / Decode behave as printed without a hand-authored
+//! Fragment(N) / Decode / Armor Purge behave as printed without a hand-authored
 //! `CardEffect` script.
 //!
-//! All four keywords produce **optional** replacements per printed rules
-//! ("you may"). Declining the optional selection leaves the original event
-//! (deletion / return-to-deck) to proceed normally.
+//! Barrier, Evade, Fragment(N), and Decode produce **optional** replacements
+//! ("you may"). Armor Purge is **mandatory** and synchronous — no player
+//! choice is involved. Declining leaves the original event (deletion /
+//! return-to-deck) to proceed normally for the optional keywords;
+//! Armor Purge cannot be declined.
 //!
 //! ## Deferred: Partition / ArmorPurge
 //!
