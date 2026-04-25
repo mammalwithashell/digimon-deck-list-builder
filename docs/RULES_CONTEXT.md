@@ -1,5 +1,15 @@
 # Digimon TCG Rules Reference
 
+**This file is the canonical rules reference for the project.** When questioning whether a card or keyword is optional / mandatory, the targeting filter, the timing window, the processing order, etc., consult this document **before** reaching for the DCGO C# source. Keyword semantics (Save, Decoy, Fragment, Progress, …) live in §16 — each entry calls out the printed processing kind ("Optional" / "Mandatory") explicitly. DCGO is the implementation reference for details the manual leaves underspecified, not the authority on the rules themselves.
+
+For card-specific questions (what's printed on the card, errata, community ruling notes), consult, in order:
+1. `data/cards.json` (`effect_text` / `inherited_text` / `security_text`) — printed text.
+2. The Fandom wiki at `https://digimoncardgame.fandom.com/wiki/<CARD-ID>` — printed text + ruling notes.
+3. This file's keyword section for the abstract semantics behind the printed text.
+4. DCGO C# only as a tiebreaker for behavior the above don't pin down.
+
+See `CLAUDE.md` "Source priority for card / keyword / rules questions" for the project-wide policy.
+
 Sources:
 - Comprehensive Rules Manual Ver.3.6 (2025/12/25) — `Digimon TCG resources/general_rule.pdf`
   - Web: https://world.digimoncard.com/rule/pdf/general_rule.pdf?20251225

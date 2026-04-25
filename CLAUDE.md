@@ -9,8 +9,18 @@ It focuses on stable contracts and implementation shape, not static snapshot met
 
 This is a **Digimon TCG simulator** built for both human play and **RL agent training/deckbuilding**. The engine faithfully implements card effects so RL agents can learn optimal play strategies across the full card pool.
 
-- **DCGO** (`DCGO/`) is a git submodule containing the C# source from the Digimon Card Game Online client — the **behavioral source of truth** for card effects
 - **No-Approximations Policy**: every card effect must faithfully implement all card text; no stubs, no auto-selections; every choice must be exposed to the RL action space so agents can learn to make optimal decisions; gaps are marked BLOCKED and logged to `qa/archetype-qa/engine-gaps.md`
+
+### Source priority for card / keyword / rules questions
+
+When questioning *what a card or keyword should do* — for instance, "is Fragment optional?", "what does Save target?", "does Progress block X?" — consult sources in this order. **Do not skip ahead to DCGO when a primary source could answer the question.**
+
+1. **Printed card text** — `data/cards.json` (`effect_text`, `inherited_text`, `security_text`). The text on the physical card is what the no-approximations policy obligates us to implement. For an unfamiliar card, check the entry by `card_id` first.
+2. **Comprehensive Rules Manual** — `docs/RULES_CONTEXT.md` (decomposed) and `Digimon TCG resources/general_rule.pdf` (canonical). Keyword semantics live in §16; rule numbers like `16-36` cite the manual directly. **`RULES_CONTEXT.md` is the canonical interpretation of every keyword and timing — check it before reaching for an implementation reference.**
+3. **Fandom wiki** — `https://digimoncardgame.fandom.com/wiki/<CARD-ID>` for card-specific text + community-curated ruling notes (e.g. quirky interactions, errata). Useful when the printed text is terse.
+4. **DCGO C# source** (`DCGO/`) — the behavioral *implementation* reference. Use this as a tiebreaker for ambiguous behavior the primary sources don't pin down (e.g., the exact processing order of an interaction, the inner UI flow of a multi-pick). DCGO is not authoritative on whether something is optional or mandatory — that's printed text and rules manual territory. A C# flag like `isOptional=true` in `SetUpActivateClass` reflects DCGO's reading of the card; if the printed text and rules disagree, the printed text wins.
+
+DCGO remains useful — it captures every implementation detail the rules text glosses over — but its role is **after** the primary sources, not instead of them. Cross-checking against printed text / rules first prevents the misreading-DCGO-internals failure mode where a parameter name (`canNoSelect: () => false`) gets read as the cardinal answer when in fact it governs a sub-prompt within an already-optional flow.
 
 ### Rust pivot (in progress)
 
@@ -25,7 +35,7 @@ The project is migrating to a **Rust engine as the source of truth** (`digimon-e
 - **Desktop**: Tauri v2 (Rust shell) — Python-free; gameplay + inference + deck tools run entirely in the embedded `digimon-engine` crate, and AI models are fetched at runtime from the hosted API's manifest
 - **RL**: Gymnasium, Stable-Baselines3, ONNX Runtime for inference; env drives the Rust engine via PyO3
 - **AI Pipeline**: Claude API, Pinecone vector DB, git worktrees
-- **C# Reference**: DCGO submodule (`DCGO/`) — behavioral source of truth
+- **C# Reference**: DCGO submodule (`DCGO/`) — implementation reference for behavioral details. **Not** the canonical source for card / keyword / rules questions; see "Source priority" above (printed text + Rules Manual + fandom wiki come first).
 
 ## System Overview
 
