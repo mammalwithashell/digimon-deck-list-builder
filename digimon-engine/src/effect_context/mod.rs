@@ -1039,11 +1039,15 @@ impl<'a> EffectContext<'a> {
     /// `CardHandle` (stable across zone moves), not a positional `trash_index`.
     /// This method locates the card in the controller's trash by handle.
     ///
-    /// ## Panics
-    ///
-    /// Panics if `card` is not present in the controller's trash. This
-    /// represents a programming error — callers (e.g. the Fortitude auto-install
-    /// body) must ensure the card has been moved to trash before calling.
+    /// Returns `None` if the card is not in the controller's trash at call
+    /// time (e.g., if another effect moved it elsewhere). This is the
+    /// defensive behavior; callers like the deferred-replay drain in
+    /// `combat::finalize_permanent_deletion` absorb `None` silently. The
+    /// concrete failure mode this guards against: a `<Save>` + `<Fortitude>`
+    /// interaction where Save relocates the card under a Tamer between
+    /// Fortitude's queueing of the replay and the drain hook firing — at
+    /// which point the card is no longer in trash and replaying it would
+    /// panic.
     ///
     /// DCGO parity: `Fortitude.cs:54-63`
     ///   `PlayPermanentCards(payCost: false, isTapped: false,
@@ -1060,14 +1064,20 @@ impl<'a> EffectContext<'a> {
             .player(controller)
             .trash
             .iter()
-            .position(|c| c.handle() == card)
-            .unwrap_or_else(|| {
-                panic!(
-                    "play_from_trash_free_unsuspended: card {:?} not found in \
-                     player {}'s trash",
+            .position(|c| c.handle() == card);
+        let trash_index = match trash_index {
+            Some(i) => i,
+            None => {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "[debug] play_from_trash_free_unsuspended: card {:?} not in \
+                     player {}'s trash; another effect likely relocated it. \
+                     Skipping replay.",
                     card, controller
-                )
-            });
+                );
+                return None;
+            }
+        };
         let field_index = self.game.play_from_trash_with_cost(
             controller,
             trash_index,
