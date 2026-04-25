@@ -88,19 +88,21 @@ fn parses_blocker_and_security_attack_together() {
 }
 
 #[test]
-fn parses_blast_digivolve_not_confused_with_blast() {
-    // "Blast Digivolve" is longer than any standalone "Blast" keyword; verify
-    // the longest-prefix match works.
+fn parses_blast_digivolve_produces_blast_digivolve_variant() {
+    // "<Blast Digivolve>" parses to Keyword::BlastDigivolve. The longest-
+    // prefix match previously distinguished a (now-removed) standalone
+    // "Blast" keyword; this test remains as a regression guard on the
+    // printed-text → enum-variant mapping.
+    use digimon_engine::enums::Keyword;
     let kw = parse_printed_keywords("\u{ff1c}Blast Digivolve\u{ff1e} (...)", "", "");
-    assert_eq!(kw, vec![Keyword::Blast]);
+    assert_eq!(kw, vec![Keyword::BlastDigivolve]);
 }
 
 #[test]
-fn parser_armor_purge_before_armor() {
+fn parser_armor_purge_matches_correctly() {
     use digimon_engine::enums::Keyword;
     let kws = parse_printed_keywords("[When Digivolving] ＜Armor Purge＞ effect text", "", "");
     assert!(kws.contains(&Keyword::ArmorPurge));
-    assert!(!kws.contains(&Keyword::Armor));
 }
 
 #[test]
@@ -279,4 +281,24 @@ fn native_printed_jamming_survives_losing_security_battle() {
         r.battle_area_size(0) > 0,
         "Jamming should protect the losing attacker from deletion"
     );
+}
+
+#[test]
+fn parser_material_save_parametric() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("\u{ff1c}Material Save 2\u{ff1e} (...)", "", "");
+    assert!(
+        kws.contains(&Keyword::MaterialSave(2)),
+        "got {:?}",
+        kws
+    );
+}
+
+#[test]
+fn parser_material_save_no_alias_to_save() {
+    // "<Material Save>" with no number should not alias back to Save —
+    // it must either produce MaterialSave(1) or not parse at all.
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("\u{ff1c}Material Save\u{ff1e}", "", "");
+    assert!(!kws.contains(&Keyword::Save), "must not alias MaterialSave -> Save");
 }

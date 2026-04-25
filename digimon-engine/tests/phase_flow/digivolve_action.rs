@@ -199,13 +199,13 @@ fn decode_dna_digivolve_installs_material_selection() {
             memory_cost: 0,
             requirement1: DnaRequirement {
                 level: 2,
-                card_color: Some(CardColor::Red),
+                card_colors: vec![CardColor::Red],
                 name_contains: String::new(),
                 text_contains: String::new(),
             },
             requirement2: DnaRequirement {
                 level: 2,
-                card_color: Some(CardColor::Red),
+                card_colors: vec![CardColor::Red],
                 name_contains: String::new(),
                 text_contains: String::new(),
             },

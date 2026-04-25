@@ -22,7 +22,10 @@ fn keyword_map_covers_aura_grants_used_by_examples() {
         lookup_keyword("SecurityAttackPlus", Some(1)),
         Some(Keyword::SecurityAttackPlus(1))
     );
-    assert_eq!(lookup_keyword("MaterialSave", Some(1)), Some(Keyword::Save));
+    assert_eq!(
+        lookup_keyword("MaterialSave", Some(1)),
+        Some(Keyword::MaterialSave(1))
+    );
     assert_eq!(lookup_keyword("NotAKeyword", None), None);
 }
 

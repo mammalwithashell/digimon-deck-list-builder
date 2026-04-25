@@ -1000,11 +1000,15 @@ impl Game {
             (card.card_id(&self.card_data).to_string(), card.handle())
         };
 
-        let effect_impl = match self.effect_registry.get(&card_id) {
-            Some(arc) => arc,
+        // Use `effects_for_card` rather than the raw registry so that
+        // keyword-derived auto-installed effects are visible here. The
+        // action mask uses the same accessor — without this, the mask
+        // could emit a Hand [Main] bit for an auto-installed keyword
+        // that this dispatcher could not honor.
+        let effects = match self.effects_for_card(&card_id, handle) {
+            Some(e) => e,
             None => return false,
         };
-        let effects = effect_impl.effects(handle);
 
         for effect in &effects {
             if effect.timing != EffectTiming::MainFromHand {
@@ -1066,10 +1070,15 @@ impl Game {
         };
 
         for (is_under, card_id, source_handle) in sources {
-            let Some(effect_impl) = self.effect_registry.get(&card_id) else {
+            // Use `effects_for_card` rather than the raw registry so that
+            // keyword-derived auto-installed effects (e.g. printed
+            // `MaterialSave(N)`) are visible here. The action mask uses the
+            // same accessor — without this, the mask would emit a Field
+            // [Main] bit for an auto-installed keyword that this dispatcher
+            // could not honor.
+            let Some(effects) = self.effects_for_card(&card_id, source_handle) else {
                 continue;
             };
-            let effects = effect_impl.effects(source_handle);
             for (slot, effect) in effects.iter().enumerate() {
                 if effect.timing != EffectTiming::MainOnField {
                     continue;
@@ -1133,11 +1142,15 @@ impl Game {
             (card.card_id(&self.card_data).to_string(), card.handle())
         };
 
-        let effect_impl = match self.effect_registry.get(&card_id) {
-            Some(arc) => arc,
+        // Use `effects_for_card` rather than the raw registry so that
+        // keyword-derived auto-installed effects are visible here. The
+        // action mask uses the same accessor — without this, the mask
+        // could emit a Trash [Main] bit for an auto-installed keyword
+        // that this dispatcher could not honor.
+        let effects = match self.effects_for_card(&card_id, handle) {
+            Some(e) => e,
             None => return false,
         };
-        let effects = effect_impl.effects(handle);
 
         for effect in &effects {
             if effect.timing != EffectTiming::MainFromTrash {
@@ -1763,6 +1776,79 @@ impl Game {
         }
         target_player.battle_area[target.index as usize].push_under(taken);
         true
+    }
+
+    /// Search all zones of all players for a card matching `handle` and remove
+    /// it, returning the `CardSource`. Returns `None` if the card is not found
+    /// in any zone.
+    ///
+    /// Zones scanned (in order):
+    ///   1. Each player's `hand`
+    ///   2. Each player's `trash`
+    ///   3. Each player's `deck`
+    ///   4. Each player's `security`
+    ///   5. Each player's `battle_area` permanent card stacks (all sources)
+    ///   6. Each player's `breeding_area` card stack
+    ///   7. The game-level `revealed_cards` transient pool
+    ///
+    /// Used by `EffectContext::place_card_under_permanent_bottom` to locate
+    /// cards before tucking them under a permanent regardless of which zone
+    /// they currently live in.
+    pub(crate) fn remove_card_from_any_zone(
+        &mut self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<crate::card_source::CardSource> {
+        let player_count = self.players.len();
+
+        for pid in 0..player_count {
+            // --- hand ---
+            if let Some(pos) = self.players[pid].hand.iter().position(|c| c.handle() == handle) {
+                return Some(self.players[pid].hand.remove(pos));
+            }
+            // --- trash ---
+            if let Some(pos) = self.players[pid].trash.iter().position(|c| c.handle() == handle) {
+                return Some(self.players[pid].trash.remove(pos));
+            }
+            // --- deck ---
+            if let Some(pos) = self.players[pid].deck.iter().position(|c| c.handle() == handle) {
+                return Some(self.players[pid].deck.remove(pos));
+            }
+            // --- security ---
+            if let Some(pos) = self.players[pid].security.iter().position(|c| c.handle() == handle) {
+                return Some(self.players[pid].security.remove(pos));
+            }
+            // --- battle_area permanent stacks ---
+            for perm_idx in 0..self.players[pid].battle_area.len() {
+                let stack = &self.players[pid].battle_area[perm_idx].card_sources;
+                if let Some(src_pos) = stack.iter().position(|c| c.handle() == handle) {
+                    return Some(
+                        self.players[pid].battle_area[perm_idx]
+                            .card_sources
+                            .remove(src_pos),
+                    );
+                }
+            }
+            // --- breeding_area ---
+            if let Some(ref breeding) = self.players[pid].breeding_area {
+                if let Some(src_pos) = breeding.card_sources.iter().position(|c| c.handle() == handle) {
+                    return Some(
+                        self.players[pid]
+                            .breeding_area
+                            .as_mut()
+                            .unwrap()
+                            .card_sources
+                            .remove(src_pos),
+                    );
+                }
+            }
+        }
+
+        // --- revealed_cards transient pool ---
+        if let Some(pos) = self.revealed_cards.iter().position(|c| c.handle() == handle) {
+            return Some(self.revealed_cards.remove(pos));
+        }
+
+        None
     }
 
     /// Scan all battle-area permanents of both players for
