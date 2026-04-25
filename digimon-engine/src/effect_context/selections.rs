@@ -746,6 +746,11 @@ impl<'a> EffectContext<'a> {
                     .unwrap_or(0);
                 // Exclude top card: sources are indices 0..stack_len-1.
                 let source_count = stack_len.saturating_sub(1);
+                debug_assert!(
+                    source_count <= SOURCES_PER_FIELD as usize,
+                    "Material zone: source_count {} exceeds SOURCES_PER_FIELD {} for field_index {}",
+                    source_count, SOURCES_PER_FIELD, perm_handle.index
+                );
                 let base = SOURCE_SELECT_START
                     + perm_handle.index as u16 * SOURCES_PER_FIELD;
                 (source_count, base)
@@ -1260,8 +1265,9 @@ fn install_permutation_step(
 /// `Arc<Mutex<Option<...>>>` so both closures can take ownership when fired.
 ///
 /// `candidate_indices` lists the zone indices still eligible (already-picked
-/// indices are removed after each step). `range_start` is `PLAY_HAND_START` for
-/// hand or `TRASH_EFFECT_START` for trash.
+/// indices are removed after each step). `range_start` is `PLAY_HAND_START`
+/// for hand, `TRASH_EFFECT_START` for trash, or
+/// `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD` for material.
 ///
 /// This is a free function (not an `EffectContext` method) so it can be called
 /// recursively from inside a `Box<dyn FnOnce>` without any `Arc`/self-reference.

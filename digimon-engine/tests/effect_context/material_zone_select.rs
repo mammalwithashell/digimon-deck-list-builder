@@ -43,8 +43,9 @@ fn make_digimon(id: &str) -> CardData {
     }
 }
 
-/// Place `card_id` as a source at the bottom of a field permanent's
-/// digivolution stack (push to card_sources as a new lower entry).
+/// Append `card_id` on top of a field permanent's digivolution stack.
+/// Since `top_card() = card_sources.last()`, calling this after `place_on_field`
+/// displaces the previous top to a source position and makes `card_id` the new top.
 fn push_source_card(r: &mut DebugRunner, field_index: usize, card_id: &str) {
     let tp = r.game.turn_player();
     let data_idx = r
@@ -55,12 +56,6 @@ fn push_source_card(r: &mut DebugRunner, field_index: usize, card_id: &str) {
         .unwrap_or_else(|| panic!("push_source_card: unknown card_id {}", card_id));
     let card_index = r.game.next_card_index();
     let card = CardSource::new(data_idx, tp, card_index);
-    // Push ontop (push = digivolve-up). The plan wants 3 sources under the
-    // top. We build: BASE→SRCA→SRCB→SRCC→TOP by pushing BASE, then
-    // calling place_on_field for TOP, and appending sources.
-    // Simpler: append to card_sources; since top_card() = last(), we push
-    // under the existing top by inserting at the second-to-last position.
-    // Actually the easiest approach: just append — we will place TOP last.
     r.game.players[tp as usize].battle_area[field_index]
         .card_sources
         .push(card);
