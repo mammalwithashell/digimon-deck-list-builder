@@ -144,6 +144,34 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectUnionZone { of, zones, bind_as, prompt, optional, .. } => {
+            use crate::selection::UnionZoneSet;
+            let mut zoneset = UnionZoneSet(0);
+            for z in zones {
+                match z {
+                    CompiledZone::Hand => zoneset |= UnionZoneSet::HAND,
+                    CompiledZone::Trash => zoneset |= UnionZoneSet::TRASH,
+                    // Other zones not yet exposed by UnionZoneSet bitfield.
+                    // Silently skip — Phase 2f+ widens engine API as needed.
+                    _ => {}
+                }
+            }
+            if zoneset.0 == 0 {
+                // No supported zones: silent no-op; tail runs synchronously.
+                return false;
+            }
+            install_select_union_zone(
+                ctx,
+                *of,
+                zoneset,
+                bind_as.clone(),
+                prompt.clone(),
+                *optional,
+                tail.to_vec(),
+                bindings,
+            );
+            true
+        }
         _ => false,
     }
 }
@@ -422,6 +450,36 @@ fn install_select_material(
                 {
                     b.insert_card(name, card.handle());
                 }
+            }
+            run_steps(&tail, cb_ctx, &mut b);
+            drain_dsl_outer_tail(cb_ctx);
+        },
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_select_union_zone(
+    ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    zoneset: crate::selection::UnionZoneSet,
+    bind_as: Option<String>,
+    prompt: String,
+    optional: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+) {
+    let target_player = resolve_player(ctx, of);
+    let tail = Arc::new(tail);
+    ctx.select_union_zone(
+        target_player,
+        zoneset,
+        &prompt,
+        optional,
+        |_game, _card| true, // Phase 2e: accept-all filter.
+        move |cb_ctx, handle| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_card(name, handle);
             }
             run_steps(&tail, cb_ctx, &mut b);
             drain_dsl_outer_tail(cb_ctx);

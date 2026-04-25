@@ -54,3 +54,4 @@ mod phase2e_select_effect_choice;
 mod phase2e_select_material;
 mod phase2e_select_reveal;
 mod phase2e_select_security;
+mod phase2e_select_union_zone;
