@@ -243,3 +243,18 @@ class TestCardRegistry:
         norm = reg.norm_id_of("BT1-001")
         assert 0.0 < norm <= 1.0
         assert abs(norm * REGISTRY_CAPACITY - reg.index_of("BT1-001")) < 0.5
+
+
+class TestGetModelsDir:
+    def test_default(self, monkeypatch):
+        monkeypatch.delenv("ONNX_MODELS_DIR", raising=False)
+        from digimon_engine import get_models_dir
+        d = get_models_dir()
+        # Default is "models" relative to cwd
+        assert str(d).rstrip("/").rstrip("\\").endswith("models")
+
+    def test_env_override(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("ONNX_MODELS_DIR", str(tmp_path))
+        from digimon_engine import get_models_dir
+        d = get_models_dir()
+        assert str(d) == str(tmp_path)

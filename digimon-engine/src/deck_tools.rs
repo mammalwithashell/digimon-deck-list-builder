@@ -463,3 +463,12 @@ pub fn expand_deck_dict(counts: &HashMap<String, u32>) -> Vec<String> {
     }
     out
 }
+
+/// Resolve the ONNX models directory. Honors the `ONNX_MODELS_DIR` env
+/// var; falls back to `models` relative to the working directory.
+/// Mirrors Python `digimon_gym.engine.model_utils.get_models_dir`.
+pub fn get_models_dir() -> std::path::PathBuf {
+    std::env::var("ONNX_MODELS_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("models"))
+}

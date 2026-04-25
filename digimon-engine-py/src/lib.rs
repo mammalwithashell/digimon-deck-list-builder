@@ -355,6 +355,11 @@ impl CardRegistry {
     }
 }
 
+#[pyfunction]
+fn get_models_dir() -> PathBuf {
+    deck_tools::get_models_dir()
+}
+
 /// Python-visible wrapper around the static cards.json database.
 #[pyclass(module = "digimon_engine", name = "CardDatabase")]
 pub struct CardDatabase {}
@@ -748,5 +753,6 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<CardRegistry>()?;
     m.add("REGISTRY_CAPACITY", REGISTRY_CAPACITY)?;
     m.add("EMBEDDING_DIM", EMBEDDING_DIM)?;
+    m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     Ok(())
 }
