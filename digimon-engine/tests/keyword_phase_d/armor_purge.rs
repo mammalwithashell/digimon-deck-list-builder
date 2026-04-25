@@ -6,11 +6,14 @@
 //!      ("by trashing the top card"). On ACCEPT, synchronously trash the
 //!      current top Digimon, promote the next-highest source as the new
 //!      visible top, and cancel the original deletion.
-//!   2. On DECLINE of the outer dialog: original deletion proceeds.
+//!   2. On DECLINE of the outer dialog: original deletion proceeds; the top
+//!      is NOT independently trashed (the optional cost wasn't paid).
 //!   3. If `card_sources.len() < 2`: gate fails — no replacement fires, the
 //!      original deletion proceeds normally.
 //!   4. Self-scope: when a NEIGHBORING permanent is deleted, the ArmorPurge
 //!      carrier's auto-install body MUST NOT mutate any state.
+//!   5. OnDigivolutionCardTrashed fires when the swap actually trashes the
+//!      top.
 //!
 //! Mirrors DCGO `ArmorPurge.cs:40-78`. Optional ("by [cost]") per
 //! RULES_CONTEXT 16-18 — the outer accept dialog represents the optional
@@ -23,6 +26,8 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, CardKind, Keyword};
+
+use super::helpers::{assert_outer_accept_dialog_shape, drain_outer_accept_dialog};
 
 fn armor_purge_card(id: &str) -> CardData {
     CardData {
@@ -119,11 +124,8 @@ fn armor_purge_swaps_top_and_cancels_deletion() {
     // Opponent triggers deletion (any cause works; use the bare effects path).
     r.game.delete_permanent_with_effects(perm);
 
-    // Outer optional accept dialog installs.
-    assert!(
-        r.game.pending_selection.is_some(),
-        "ArmorPurge must install an outer accept dialog ('by trashing')"
-    );
+    // Outer optional accept dialog installs ("by trashing the top card").
+    assert_outer_accept_dialog_shape(&r);
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept");
@@ -167,7 +169,83 @@ fn armor_purge_swaps_top_and_cancels_deletion() {
     );
 }
 
-// ─── Test 2: gate fail — single-card stack → normal deletion ────────────────
+// ─── Test 2: outer-accept decline → no swap, deletion proceeds ─────────────
+
+/// 2-source stack: [BOTTOM, ARMOR-TOP]. Opponent deletes ARMOR-TOP. Outer
+/// accept dialog installs ("by trashing the top card"); on DECLINE (PASS) the
+/// "by trashing" cost isn't paid, the synchronous body never runs, the top
+/// card is NOT trashed, and the original deletion completes — both stack
+/// cards land in the trash exactly like a plain deletion. This proves the
+/// optional cost semantics: declining skips the replacement entirely.
+#[test]
+fn armor_purge_declining_outer_accept_proceeds_with_plain_deletion() {
+    let mut r = DebugRunner::builder()
+        .add_card(armor_purge_card("ARMOR-TOP"))
+        .add_card(plain_digimon("BOTTOM"))
+        .start();
+
+    let perm = r.place_on_field(0, "BOTTOM", None);
+    push_source_card(&mut r, 0, perm.index as usize, "ARMOR-TOP");
+    {
+        let p = &r.game.players[0].battle_area[perm.index as usize];
+        assert_eq!(p.card_sources.len(), 2, "preconditions: 2-card stack");
+    }
+
+    let trash_before = r.game.players[0].trash.len();
+
+    r.game.delete_permanent_with_effects(perm);
+
+    // Outer optional accept dialog installs.
+    assert_outer_accept_dialog_shape(&r);
+
+    // DECLINE the dialog (PASS is admitted implicitly via is_optional).
+    r.game.resolve_selection(0, PASS).expect("decline");
+
+    // No follow-up selection should be installed.
+    assert!(
+        r.game.pending_selection.is_none(),
+        "declining the outer accept dialog must NOT install a follow-up \
+         selection; got {:?}",
+        r.game.pending_selection.as_ref().map(|s| &s.kind),
+    );
+
+    // Original deletion proceeded: the carrier is gone.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        0,
+        "ArmorPurge carrier must be deleted normally when outer accept is \
+         declined"
+    );
+
+    // Plain deletion sends the entire 2-card stack to the trash. The top
+    // (ARMOR-TOP) is NOT trashed independently via the synchronous body —
+    // both cards land in trash via the deletion path itself.
+    assert_eq!(
+        r.game.players[0].trash.len(),
+        trash_before + 2,
+        "both stack cards must land in trash on plain deletion (no \
+         independent top-card trash from declined ArmorPurge); got {} new \
+         trash entries",
+        r.game.players[0].trash.len() - trash_before,
+    );
+    let trashed_ids: std::collections::HashSet<String> = r.game.players[0]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    assert!(
+        trashed_ids.contains("ARMOR-TOP"),
+        "ARMOR-TOP must be in trash; got {:?}",
+        trashed_ids,
+    );
+    assert!(
+        trashed_ids.contains("BOTTOM"),
+        "BOTTOM must be in trash; got {:?}",
+        trashed_ids,
+    );
+}
+
+// ─── Test 3: gate fail — single-card stack → normal deletion ────────────────
 
 /// Stack: [ARMOR-TOP] (no source under). Opponent deletes ARMOR-TOP. Gate
 /// `card_sources.len() >= 2` fails → no replacement fires → original deletion
@@ -207,7 +285,7 @@ fn armor_purge_with_no_source_does_not_protect() {
     );
 }
 
-// ─── Test 3: self-scope — auto-install no-ops on neighbor's deletion ────────
+// ─── Test 4: self-scope — auto-install no-ops on neighbor's deletion ────────
 
 /// When a NEIGHBORING permanent is deleted, the ArmorPurge carrier MUST NOT
 /// mutate any state — the carrier and its sources stay intact and the
@@ -244,21 +322,11 @@ fn armor_purge_does_not_fire_on_neighbor_deletion() {
     r.game.delete_permanent_with_effects(neighbor);
 
     // ArmorPurge is optional → an outer accept dialog MAY install for the
-    // carrier even when the subject is the neighbor. If so, drain it: the
-    // body's self-scope guard no-ops on accept and the original neighbor
-    // deletion proceeds.
-    if r.game.pending_selection.is_some() {
-        let pending = r.game.pending_selection.as_ref().unwrap();
-        let player = pending.selecting_player;
-        let action = if pending.valid_action_ids.contains(&REPLACEMENT_ACCEPT) {
-            REPLACEMENT_ACCEPT
-        } else {
-            PASS
-        };
-        r.game
-            .resolve_selection(player, action)
-            .expect("drain dialog");
-    }
+    // carrier even when the subject is the neighbor. If so, drain it by
+    // accepting: the body's self-scope guard no-ops and the original neighbor
+    // deletion proceeds. (`drain_outer_accept_dialog` asserts the dialog's
+    // valid_action_ids are exactly {REPLACEMENT_ACCEPT, PASS}.)
+    drain_outer_accept_dialog(&mut r, REPLACEMENT_ACCEPT);
 
     // After draining: no further selection should be pending. The body's
     // self-scope guard MUST have prevented any state mutation.
@@ -300,7 +368,7 @@ fn armor_purge_does_not_fire_on_neighbor_deletion() {
     );
 }
 
-// ─── Test 4: OnDigivolutionCardTrashed fires for the trashed top ────────────
+// ─── Test 5: OnDigivolutionCardTrashed fires for the trashed top ────────────
 
 /// When ArmorPurge cancels deletion by trashing the top card, the
 /// `OnDigivolutionCardTrashed` timing MUST fire so that any observers

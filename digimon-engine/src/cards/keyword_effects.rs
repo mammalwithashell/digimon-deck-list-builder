@@ -275,11 +275,12 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // synchronous body trashes the top via `armor_purge_top` and cancels
         // the deletion; no nested player selection is required.
         //
-        // Gate: `card_sources.len() >= 2` (top + ≥1 source under it). When the
-        // gate fails the auto-install body returns early; original deletion
-        // proceeds normally even if the player accepted (matches "if executed,
-        // prevention is mandatory" — but the cost is unpayable so the
-        // prevention can't be executed).
+        // Gate: `card_sources.len() >= 2` (top + ≥1 source under it). The
+        // condition runs inside `collect_candidates`, so when the gate fails
+        // the candidate is never produced — no outer accept dialog is offered
+        // and the original deletion proceeds normally. (The closure body's
+        // re-check is belt-and-suspenders for an earlier same-chain replacement
+        // shrinking the stack between collection and process.)
         //
         // The event-fire (OnDigivolutionCardTrashed) for the trashed top is
         // handled by `EffectContext::armor_purge_top` itself; see Phase D
