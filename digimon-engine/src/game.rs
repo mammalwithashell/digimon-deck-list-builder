@@ -578,6 +578,19 @@ impl Game {
         ReplacementCause::OwnEffect
     }
 
+    /// Test-only setter for `effect_source_player`. Production code MUST go
+    /// through `run_queued_effect` (which sets/restores around the dispatch).
+    /// Exposed `#[doc(hidden)] pub` so behavioral tests under
+    /// `digimon-engine/tests/` can simulate "opponent effect currently
+    /// resolving" without driving the queue.
+    #[doc(hidden)]
+    pub fn set_effect_source_player_for_test(
+        &mut self,
+        source: Option<crate::enums::PlayerId>,
+    ) {
+        self.effect_source_player = source;
+    }
+
     /// Get the next player clockwise from the given player.
     pub fn next_clockwise(&self, id: PlayerId) -> PlayerId {
         let pos = self
