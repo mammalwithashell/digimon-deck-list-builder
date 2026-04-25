@@ -22,14 +22,21 @@
 //! mandatory; uses the post-deletion replay substrate to play self from
 //! trash after `delete_permanent` finalizes).
 //!
-//! ## Deferred: Partition
+//! ## Partition (Phase D Task 9)
 //!
 //! Printed `<Partition>` is a leave-field trigger (not a replacement) that
-//! plays cards from two color-grouped subsets of the deleted permanent's
-//! digivolution sources, and is not yet auto-installed — see Phase D Task 9.
-//! `Keyword::Partition` is parsed by `parse_printed_keywords` but this module
-//! intentionally returns `Vec::new()` for it; hand-authored `CardEffect`s can
-//! cover Partition cards until Task 9 lands.
+//! plays cards from the deleted permanent's digivolution sources back to
+//! the field, free + unsuspended. The auto-install mounts as an
+//! `OnDeletion` trigger with a cause filter (`!Battle && !OwnEffect`) and
+//! a 2-pick selection over the carrier's `card_sources`. Picked cards are
+//! stashed in `Game.pending_post_deletion_replays` so they replay from
+//! trash (via `play_from_trash_free_unsuspended`) AFTER `delete_permanent`
+//! finalizes the carrier but BEFORE the `OnAnyDeletion` broadcast.
+//!
+//! Color grouping (`firstSources`/`secondSources` in DCGO) is per-card and
+//! comes from injected `partitionConditions`; the auto-install offers ANY
+//! source (no color filter). Per-card-text overrides apply color grouping
+//! via hand-rolled `CardEffect` if needed.
 
 use crate::card_source::CardHandle;
 use crate::effect::Effect;
@@ -607,8 +614,146 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
-        // Intentionally not auto-installed (see module docstring).
-        Keyword::Partition => Vec::new(),
+        // Phase D Task 9 — printed Partition: "When this Digimon leaves the
+        // battle area (other than via battle or your own effect), play 2 of
+        // its digivolution cards." DCGO `Partition.cs:9-23`, `:71-162`.
+        //
+        // ## Why this is an `OnDeletion` trigger (not a replacement)
+        //
+        // DCGO `Partition.cs` mounts as `CanTriggerWhenPermanentRemoveField`
+        // and never sets `willBeRemoveField = false` — the parent removal
+        // is NOT cancelled. Partition fires concurrent with the deletion
+        // and plays cards from the disposed digivolution sources.
+        //
+        // ## Cause filter (DCGO `Partition.cs:14-19`)
+        //
+        // ```
+        // if (!IsByBattle(...))
+        //     if (!IsByEffect(..., cardEffect => IsOwnerEffect(cardEffect, card)))
+        //         return true;
+        // ```
+        //
+        // Partition fires when the carrier is deleted by:
+        //   - Opponent's effect (`ReplacementCause::OpponentEffect`)
+        //   - SecurityCheck / Cost (rare; defensive coverage)
+        //
+        // Partition does NOT fire when the carrier is deleted by:
+        //   - Own effect (`ReplacementCause::OwnEffect`)
+        //   - Battle (`ReplacementCause::Battle`)
+        //
+        // ## Mechanics
+        //
+        // `Effect::on_deletion(card)` fires from `commit_permanent_deletion`
+        // BEFORE `delete_permanent` runs. At fire time the carrier is still
+        // in `battle_area` with its full `card_sources` stack — the 2-pick
+        // selection enumerates `CountCappedZone::Material(carrier)` (which
+        // excludes the top card by construction). When the parked selection
+        // resolves, the callback pushes the 2 picks into
+        // `Game.pending_post_deletion_replays`; the substrate hook in
+        // `finalize_permanent_deletion` drains the slot AFTER the carrier
+        // and its sources move to trash, calling
+        // `play_from_trash_free_unsuspended` per entry.
+        //
+        // **Substrate reuse.** This consumes the Phase D Task 8 slot
+        // (`pending_post_deletion_replays: Vec<(PlayerId, CardHandle)>`)
+        // and Phase D Task 6 deferred-deletion hook
+        // (`pending_deletion_resume`). No new substrate added — Partition
+        // is an exact composition of the two.
+        //
+        // ## Color grouping (out of Phase D scope)
+        //
+        // DCGO injects per-card `firstSources`/`secondSources` via
+        // `partitionConditions`. The auto-install offers ANY source from
+        // the carrier's stack with no color filter. Per-card overrides
+        // apply color grouping via hand-rolled `CardEffect`.
+        //
+        // ## Mandatory selection (DCGO `Partition.cs:98,126`)
+        //
+        // `canNoSelect: () => false` — once the gate (`>=2 sources` under
+        // top) passes, the controller MUST pick exactly 2 sources. We use
+        // `is_optional_zero=false` and rely on `select_count_capped_multi`'s
+        // auto-commit when `picked == max`.
+        //
+        // ## Self-scope
+        //
+        // OnDeletion is keyed on `TriggerSource::Permanent(carrier)` — the
+        // enqueue path (`enqueue_from_permanent`) only enumerates effects
+        // on the specific deleted permanent. So the trigger is naturally
+        // self-scoped (a neighbor's deletion doesn't fire Partition on
+        // this carrier). No subject-mismatch guard required.
+        Keyword::Partition => vec![Effect::on_deletion(card)
+            .name("<Partition>")
+            .process(|ctx| {
+                use crate::replacement::ReplacementCause;
+
+                // Cause filter: skip Battle and same-controller (OwnEffect).
+                // Note: this matches DCGO exactly. SecurityCheck / Cost
+                // causes DO trigger Partition (rare in practice).
+                let cause = ctx.deletion_cause();
+                if matches!(
+                    cause,
+                    Some(ReplacementCause::Battle | ReplacementCause::OwnEffect)
+                ) {
+                    return;
+                }
+
+                // Self-scope: OnDeletion is keyed on the carrier handle.
+                let Some(carrier) = ctx.source_permanent else {
+                    return;
+                };
+                let owner = carrier.player;
+
+                // Gate: ≥2 selectable sources under the top
+                // (`card_sources.len() >= 3` = top + 2+ sources).
+                // `Material` zone excludes the top, so the actual
+                // candidate count is `card_sources.len() - 1`.
+                let stack_len = match ctx
+                    .game
+                    .player(owner)
+                    .battle_area
+                    .get(carrier.index as usize)
+                {
+                    Some(p) => p.card_sources.len(),
+                    None => return,
+                };
+                if stack_len < 3 {
+                    return;
+                }
+
+                // Park the 2-pick. `select_count_capped_multi` auto-commits
+                // when `picked == max` so the callback runs after exactly
+                // two picks. The carrier is still on field — the parked
+                // selection's `valid_action_ids` map cleanly to live
+                // `card_sources` indices on `carrier`.
+                ctx.select_count_capped_multi(
+                    owner,
+                    CountCappedZone::Material(carrier),
+                    /*max=*/ 2,
+                    "select 2 cards to play",
+                    /*is_optional_zero=*/ false,
+                    |_g, _src| true,
+                    move |ctx, picks| {
+                        // Defensive: only act on a complete 2-pick. The
+                        // helper will short-circuit and pass an incomplete
+                        // accum if all candidates were exhausted (gate
+                        // ensures ≥2 candidates, so this should be
+                        // unreachable in practice).
+                        if picks.len() != 2 {
+                            return;
+                        }
+
+                        // Stash the picks for post-finalize replay. The
+                        // drain in `finalize_permanent_deletion` plays
+                        // each from trash, free, unsuspended.
+                        for handle in picks {
+                            ctx.game
+                                .pending_post_deletion_replays
+                                .push((owner, handle));
+                        }
+                    },
+                );
+            })
+            .build()],
 
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),
