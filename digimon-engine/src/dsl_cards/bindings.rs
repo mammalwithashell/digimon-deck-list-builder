@@ -94,6 +94,10 @@ impl Bindings {
         self.insert(name, BindingValue::TrashIndex(i));
     }
 
+    pub fn insert_literal(&mut self, name: &str, v: i64) {
+        self.insert(name, BindingValue::Literal(v));
+    }
+
     pub fn insert_permanent_list(&mut self, name: &str, list: Vec<PermanentHandle>) {
         self.insert(name, BindingValue::PermanentList(list));
     }
@@ -168,5 +172,12 @@ mod tests {
         let cloned = b.clone();
         b.insert_permanent_list("xs", vec![]); // mutate original
         assert_eq!(cloned.get_permanent_list("xs").unwrap().len(), 1);
+    }
+
+    #[test]
+    fn literal_insert_round_trip() {
+        let mut b = Bindings::new();
+        b.insert_literal("branch", 1);
+        assert_eq!(b.get_literal("branch"), Some(1));
     }
 }
