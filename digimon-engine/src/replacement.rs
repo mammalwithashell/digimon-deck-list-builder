@@ -818,6 +818,53 @@ where
     }
 }
 
+/// Phase C §4.4 — POST-CALLBACK DRAIN: take `Game.parked_replacement` (if any)
+/// and route its outcome through `commit_deferred_outcome`. Called from
+/// `effect_queue::resolve_generic_selection` after the user's selection
+/// callback returns. Panic-safe: the outer flag guard mirrors
+/// `run_commit_with_flag` so a panic in the commit body doesn't leak the
+/// `in_replacement_commit` flag.
+///
+/// No-op when `parked_replacement.is_none()` — the vast majority of
+/// selection resolutions don't involve a parked replacement.
+///
+/// Phase C §4.3 (I-2 follow-up): `replacement_pending_outcome` is expected
+/// to be `None` here — Task 6's accept-callback skip-when-parked path
+/// intentionally avoids writing it. The `debug_assert!` catches future
+/// regressions that would leak a stale outcome.
+pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Game) {
+    let Some(parked) = game.parked_replacement.take() else {
+        return;
+    };
+
+    debug_assert!(
+        game.replacement_pending_outcome.is_none(),
+        "parked-replacement drain expects replacement_pending_outcome unset; \
+         someone wrote a stale value between accept and drain"
+    );
+
+    use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe};
+
+    let prior = game.in_replacement_commit;
+    game.in_replacement_commit = true;
+
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        commit_deferred_outcome(
+            game,
+            parked.subject,
+            parked.cause,
+            parked.original_destination,
+            parked.outcome,
+        );
+    }));
+
+    game.in_replacement_commit = prior;
+
+    if let Err(payload) = result {
+        resume_unwind(payload);
+    }
+}
+
 /// Build the accept-side callback for an optional replacement. When fired
 /// via `resolve_selection(player, REPLACEMENT_ACCEPT)`, re-looks-up the
 /// effect and runs its `replacement_process`, then commits the resulting

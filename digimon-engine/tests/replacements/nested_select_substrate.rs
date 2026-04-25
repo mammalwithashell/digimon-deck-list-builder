@@ -197,3 +197,68 @@ fn post_process_hook_installs_parked_replacement_when_select_called() {
         "post-process hook should install Game.parked_replacement (outcome=None until callback writes)"
     );
 }
+
+#[test]
+fn post_callback_hook_drains_parked_and_commits_outcome() {
+    // After the inner select_* callback writes outcome via cancel_leave(),
+    // the post-callback hook in resolve_generic_selection should:
+    //   1. Take Game.parked_replacement
+    //   2. Run commit_deferred_outcome with the parked outcome
+    //   3. Leave Game.parked_replacement = None
+
+    struct CancelOnPickCard;
+    impl CardEffect for CancelOnPickCard {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::when_would_be_deleted(card)
+                .name("CANCEL-ON-PICK")
+                .optional()
+                .replacement_process(|rctx| {
+                    rctx.effect.select_own_permanent(
+                        "pick anyone",
+                        false,
+                        |_g, _h| true,
+                        |ctx, _picked| {
+                            ctx.cancel_leave();
+                        },
+                    );
+                })
+                .build()]
+        }
+    }
+
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("CANCEL-ON-PICK"))
+        .add_card(fighter("OTHER"))
+        .start();
+    r.register_effect("CANCEL-ON-PICK", Arc::new(CancelOnPickCard));
+    let parker = r.place_on_field(0, "CANCEL-ON-PICK", None);
+    let _other = r.place_on_field(0, "OTHER", None);
+
+    r.game.delete_permanent_with_effects(parker);
+
+    use digimon_engine::action::space::REPLACEMENT_ACCEPT;
+    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept ok");
+    assert!(
+        r.game.parked_replacement_outcome_for_test().is_some(),
+        "parked installed after accept"
+    );
+
+    // The inner OwnField selection's first valid action ID picks the parker.
+    let pending = r.game.pending_selection.as_ref().expect("inner select");
+    let action = pending.valid_action_ids[0];
+    let player = pending.selecting_player;
+    r.game.resolve_selection(player, action).expect("inner pick ok");
+
+    // POST-CALLBACK HOOK should have drained parked_replacement and committed.
+    assert!(
+        r.game.parked_replacement_outcome_for_test().is_none(),
+        "post-callback hook should clear parked_replacement after commit"
+    );
+    // Deletion was cancelled — parker stayed on the field.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        2,
+        "parker survived: deletion was cancelled by cancel_leave()"
+    );
+    assert!(r.game.pending_selection.is_none(), "no leftover selection");
+}

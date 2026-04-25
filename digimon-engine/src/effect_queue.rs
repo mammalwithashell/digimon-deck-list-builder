@@ -689,6 +689,18 @@ impl Game {
             (sel.callback)(self, action_id);
         }
 
+        // Phase C §4.4: drain parked-replacement slot (if any). If the
+        // resolved selection was a callback inside a replacement-process,
+        // its body wrote the outcome via EffectContext::cancel_leave() etc.;
+        // commit it now via commit_deferred_outcome.
+        //
+        // Skip when the just-run callback installed a fresh selection — that
+        // path is the OUTER accept callback parking the inner select; the
+        // drain belongs to whichever callback resolves WITHOUT nesting again.
+        if self.pending_selection.is_none() {
+            crate::replacement::try_drain_parked_replacement_with_guard(self);
+        }
+
         // If the callback parked a fresh selection, leave the drainer alone.
         // Otherwise resume — this covers both the normal post-callback case
         // and the `TriggerOrder` "continue picking the next bundle entry"
