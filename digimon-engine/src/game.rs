@@ -271,6 +271,31 @@ pub struct Game {
     /// runs strictly before any `OnDeletion` handler can fire and park here.
     #[doc(hidden)]
     pub(crate) pending_deletion_resume: Option<crate::permanent::PermanentHandle>,
+
+    /// Phase D Task 8 — deferred replays from a just-deleted permanent's
+    /// trash residency. Set during `OnDeletion` (carrier still on field) by
+    /// triggers like printed `<Fortitude>` that want to replay self from
+    /// trash AFTER the deletion fully commits.
+    ///
+    /// `finalize_permanent_deletion` drains this slot AFTER `delete_permanent`
+    /// has moved the carrier + sources to trash but BEFORE the global
+    /// `OnAnyDeletion` broadcast. Each entry's controller calls
+    /// `EffectContext::play_from_trash_free_unsuspended(card)` to retrieve
+    /// the card from trash and put it on the field unsuspended at zero cost.
+    ///
+    /// Why this slot exists: in the Rust engine, `OnAnyDeletion` is enqueued
+    /// via `TriggerSource::PlayerBattleArea`, which scans only currently-live
+    /// permanents. The just-deleted carrier is in trash, so its OnAnyDeletion
+    /// effects are NOT picked up by that scan. Modeling Fortitude as a pure
+    /// `OnAnyDeletion` observer would therefore silently miss its own
+    /// trigger. This slot is a focused substrate hook for the
+    /// "OnDeletion-detected, post-finalize-applied" pattern.
+    ///
+    /// Drained inside `finalize_permanent_deletion`; never persists across
+    /// turn boundaries.
+    #[doc(hidden)]
+    pub(crate) pending_post_deletion_replays:
+        Vec<(crate::enums::PlayerId, crate::card_source::CardHandle)>,
 }
 
 impl Game {
@@ -407,6 +432,7 @@ impl Game {
             parked_replacement: None,
             in_counter_window: false,
             pending_deletion_resume: None,
+            pending_post_deletion_replays: Vec::new(),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it

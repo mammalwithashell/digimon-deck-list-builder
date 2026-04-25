@@ -2413,6 +2413,27 @@ impl Game {
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
 
+        // Phase D Task 8 — drain post-deletion replays (e.g. printed
+        // `<Fortitude>` keyword auto-install). The carrier's OnDeletion
+        // handler stashed `(controller, self_card)` here while the carrier
+        // was still on field; now that `delete_permanent` has moved the
+        // carrier's top + sources to trash, we can safely retrieve the
+        // self_card via `play_from_trash_free_unsuspended`. Drained BEFORE
+        // the OnAnyDeletion broadcast so observers see the replayed
+        // permanent on field.
+        if !self.pending_post_deletion_replays.is_empty() {
+            let replays = std::mem::take(&mut self.pending_post_deletion_replays);
+            for (controller, card) in replays {
+                let mut ctx = crate::effect_context::EffectContext::new(
+                    self,
+                    card,
+                    None,
+                    controller,
+                );
+                ctx.play_from_trash_free_unsuspended(card);
+            }
+        }
+
         // OnAnyDeletion: global observer — fires in every player's battle area
         // after a permanent is deleted (battle-driven, effect-driven, or
         // security-check). The deleted permanent is already gone from

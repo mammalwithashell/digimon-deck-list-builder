@@ -12,7 +12,15 @@
 //! printed rules ("you may"). Declining the optional selection leaves the
 //! original event (deletion / return-to-deck) to proceed normally. The
 //! optional auto-installs (Phase 7 + Phase D so far): Barrier, Evade, Decode,
-//! Save, Decoy. Mandatory ones: Fragment(N), Armor Purge.
+//! Save, Decoy. Mandatory ones: Fragment(N), Armor Purge, Fortitude.
+//!
+//! ## Trigger-based keywords
+//!
+//! Not all keywords ride on a `WhenWouldBe*` replacement window — some are
+//! triggers that observe a state change without modifying it. Currently
+//! installed: Save (`OnDeletion`, optional), Fortitude (`OnDeletion`,
+//! mandatory; uses the post-deletion replay substrate to play self from
+//! trash after `delete_permanent` finalizes).
 //!
 //! ## Deferred: Partition
 //!
@@ -502,6 +510,100 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 // dispatcher's `Substituted` commit arm handles the
                 // re-deletion of the carrier in place of the ally.
                 rctx.substitute(ReplacementSubject::Permanent(me_perm));
+            })
+            .build()],
+
+        // Phase D Task 8 — printed Fortitude: "When this Digimon is deleted
+        // (and the deleted stack had ≥1 digivolution source under the top),
+        // play it from trash without paying its cost and without suspending
+        // it." DCGO `Fortitude.cs:14-63`.
+        //
+        // ## Why this is an `OnDeletion` trigger (gate-detected pre-finalize,
+        // ## played post-finalize)
+        //
+        // DCGO `Fortitude.cs` mounts as a post-deletion trigger:
+        // `CanActivateFortitude` requires `IsExistOnTrash(card)` — the card
+        // must be in trash at fire time. The body re-plays the card via
+        // `PlayPermanentCards(payCost: false, isTapped: false, root: Trash)`.
+        //
+        // In the Rust engine, `OnDeletion` fires BEFORE `delete_permanent`
+        // (carrier still in `battle_area`), and `OnAnyDeletion` is enqueued
+        // via `TriggerSource::PlayerBattleArea` AFTER `delete_permanent` —
+        // which scans only currently-live permanents. The just-deleted
+        // carrier is in trash by then and is NOT picked up by that scan, so
+        // modeling Fortitude as a pure `OnAnyDeletion` observer would
+        // silently miss its own trigger.
+        //
+        // The auto-install therefore mounts at `OnDeletion` (so the carrier
+        // is still scannable for its effects, and `card_sources.len()` is
+        // readable for the gate check) and stashes a deferred replay in
+        // `Game.pending_post_deletion_replays`. The substrate hook in
+        // `combat::finalize_permanent_deletion` drains the slot AFTER
+        // `delete_permanent` moves the carrier + sources to trash but
+        // BEFORE the global `OnAnyDeletion` broadcast — running
+        // `play_from_trash_free_unsuspended(self_card)` for each entry. So:
+        //   - The card is in trash when retrieval runs (DCGO parity:
+        //     `IsExistOnTrash` holds at fire time).
+        //   - Subsequent `OnAnyDeletion` observers see the replayed
+        //     permanent already on field.
+        //
+        // ## Mandatory semantics
+        //
+        // DCGO Fortitude has no "may" clause (RULES_CONTEXT 16-26). The
+        // trigger fires unconditionally when the gate passes; this matches
+        // a non-`.optional()` `OnDeletion` process (no PASS dialog).
+        //
+        // ## Self-scope
+        //
+        // The trigger is keyed on the carrier's permanent handle — the
+        // OnDeletion enqueue path (`enqueue_triggered(OnDeletion,
+        // TriggerSource::Permanent(handle))` in
+        // `combat::commit_permanent_deletion`) only enumerates effects on
+        // the specific deleted permanent. So Fortitude is naturally
+        // self-scoped and does not fire on a neighbor's deletion. The
+        // carrier-side guard in the body (`source_permanent` matches) is a
+        // belt-and-suspenders defense.
+        //
+        // ## Known scope: source-card Fortitude (out of Phase D)
+        //
+        // DCGO `Fortitude.cs:32` filters via `CardStack.Contains(card)` —
+        // i.e. Fortitude on a digi source under the top fires when the
+        // stack containing it (as a source) is deleted. This auto-install
+        // covers only the top-card case (most common). Source-card
+        // Fortitude is rare and can be covered by a hand-rolled
+        // `CardEffect` override.
+        Keyword::Fortitude => vec![Effect::on_deletion(card)
+            .name("<Fortitude>")
+            .process(|ctx| {
+                // Self-scope: OnDeletion is keyed on the carrier's handle, so
+                // `source_permanent` should be Some(carrier).
+                let Some(handle) = ctx.source_permanent else {
+                    return;
+                };
+                let owner = handle.player;
+
+                // Gate: deleted stack had ≥1 source under the top — i.e.
+                // `card_sources.len() >= 2`. The carrier is still in
+                // `battle_area` at this timing (OnDeletion fires before
+                // `delete_permanent`).
+                let Some(perm) = ctx
+                    .game
+                    .player(owner)
+                    .battle_area
+                    .get(handle.index as usize)
+                else {
+                    return;
+                };
+                if perm.card_sources.len() < 2 {
+                    return;
+                }
+
+                // Capture self_card (the carrier's top card handle) and
+                // stash for the post-finalize replay.
+                let self_card = perm.top_card().handle();
+                ctx.game
+                    .pending_post_deletion_replays
+                    .push((owner, self_card));
             })
             .build()],
 
