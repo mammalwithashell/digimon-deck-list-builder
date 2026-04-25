@@ -34,7 +34,7 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Fragment(N) | Trash N sources from own stack to cancel deletion | 🟣 | Enum variant + printed parse work; consumer returns empty Vec — blocked on nested-select-in-replacement |
 | ArmorPurge | Trash 1 digivolution source as active skill | 🟣 | Same deferral as Fragment |
 | Partition | Split stack by 2 color/trait groups, play one from each on leave | 🟣 | Same deferral |
-| Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | 🟡 (partial) | Wrong SecuritySkill gate reverted; selection-filter exclusion landed Phase A §A1 via `Game::progress_excludes`. Mutation-site coverage is Phase B. |
+| Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | ✅ | (Phase B: gated at ctx.delete_permanent / return_to_hand / return_to_deck / de_digivolve / suspend / negative DP) Wrong SecuritySkill gate reverted in Phase A; selection-filter exclusion landed Phase A §A1 via `Game::progress_excludes`. Mutation-site coverage closed in Phase B. |
 | SecurityAttackPlus(N) | Adds N security attacks to the Digimon | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
 | SecurityAttackMinus(N) | Same shape, negative delta | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
 | DeDigivolve(N) | Active skill — remove N top digivolution cards from target | 🔴 | Parsed, unconsumed. Script-level helper `ctx.de_digivolve_n` landed in Phase 10, but native printed form isn't wired to auto-emit the effect |
@@ -55,7 +55,11 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 
 ### Progress — wrong site entirely
 
-Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re-introduced, and `Game::progress_excludes` now gates `select_opponent_permanent`. Phase B extends to delete / return / negative-DP mutation sites. See the spec at [superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md) §5 Phase A/B for the full plan.
+Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re-introduced, and `Game::progress_excludes` now gates `select_opponent_permanent`. Phase B (2026-04-24) closed the mutation-site coverage: `ctx.delete_permanent`, `ctx.return_to_hand`, `ctx.return_to_deck`, `ctx.de_digivolve` / `de_digivolve_n`, `ctx.suspend`, and the negative-DP path through `ctx.add_dp_modifier` / `ctx.add_modifier` are all now hard-gated.
+
+**Source-attribution model.** Gates apply at the `EffectContext` layer where the source controller is statically known via `self.player`; Game-level fire-sites stay agnostic so rule-driven mutations (own-sourced deletes, security-check redirects, cost trash) flow through unchanged. Observers consume cause via the new `ctx.deletion_cause()` / `ctx.was_deleted_by_effect()` / `ctx.was_deleted_by_opponent()` accessors (Phase B §B5).
+
+See the spec at [superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md) §5 Phase A/B for the full plan.
 
 ### Blast keyword variant is dead code
 
@@ -107,7 +111,7 @@ Ordered by archetype relevance to the alpha scope (Royal Knights, Jesmon GX, Roc
 
 Ranked by alpha-archetype blast radius:
 
-1. **Progress semantics fix** — affects Royal Knights (Imperialdramon:PM), DNA Omnimon core, Rocks. Highest blast radius, and a wrong implementation currently shipped.
+1. ~~**Progress semantics fix**~~ — ✅ resolved Phase A + B. Selection-filter exclusion + opponent-mutation-site gating both landed.
 2. **Fragment(N) wire-up** — Rocks archetype is built on Fragment. Blocked by nested-selection-in-replacement. Fix cascades to ArmorPurge + Partition.
 3. **SecurityAttackPlus/Minus auto-install** — printed on many cards across all archetypes; trivial to add.
 4. **Jamming scope widening** — affects any attacking Digimon losing a regular Digimon battle; tens of cards.

@@ -135,7 +135,7 @@ Python's `_decode_counter` ([action_decoder.py:268-269](../digimon_gym/engine/ga
 The security-effect pipeline is closed end-to-end for the core flow: trigger → process → Digimon-vs-security DP battle (with DontBattleSecurityDigimon skip + inherited-stack DP adjustments) → OnSecurityCheck observer drain → OnLoseSecurity drain → trash-or-play disposition → OnOpponentSecurityRemoved observer drain (with selection-pause support). Selections installed at any drain site park the phase machine via `SecurityResolutionState` and resume through `advance_security_resolution`, so real-card security effects with prompts resolve correctly.
 
 **Known correctness residuals:**
-- §2.5c Progress / ImmunityToOpponentEffects — correct consumption deferred. Both Python and Rust currently diverge from printed rules (Python suppresses SecuritySkill drain entirely, which is wrong; Rust reverted the incorrect SecuritySkill gate to restore Python-parity for the security pipeline). Correct implementation wires Progress at opponent-effect mutation sites, not at the security phase boundary — tracked in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md).
+- §2.5c Progress / ImmunityToOpponentEffects — Rust correct (Phase A + B); selection-filter exclusion + every opponent-sourced `EffectContext` mutation entry point gated. Python sunsetted with the SecuritySkill-skip bug intact. Tracked long-term in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md).
 - `§2.5-harness` cross-engine YAML parity harness — deferred tooling, not a correctness blocker.
 - §2.5m `security_reveal` event emission — UI/replay surface, not a gameplay concern.
 
@@ -170,13 +170,13 @@ Enqueue + drain of the revealed card's `SecuritySkill` effects; `play_from_secur
 
 **Coverage:** [tests/security_effects.rs](../digimon-engine/tests/security_effects.rs) security-observer pilot cases.
 
-### 2.5c 🟡 Progress / immunity-to-opponent-effects — Rust correct (Phase A partial), Python incorrect (sunsetted)
+### 2.5c 🟢 Progress / immunity-to-opponent-effects — Rust correct (Phase A + B), Python incorrect (sunsetted)
 
 **Python** — [player.py:614-617](../digimon_gym/engine/core/player.py#L614) `if attacker.is_immune_to_opponent_effects: ... else: <fire SecuritySkill effects>`. Python entirely skips the defender's `SecuritySkill` phase when the attacker has Progress. This is incorrect per DCGO [`Progress.cs`](../DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Progress.cs) and RULES_CONTEXT 16-38. Not back-ported; Python is the transitional engine.
 
-**Rust** — Phase A landed the correct partial implementation: the wrong `SecuritySkillDrain` gate was never re-introduced after revert, and `Game::progress_excludes` now gates `select_opponent_permanent` to exclude a `Progress + is_attacking` target from opponent-sourced selections. Mutation-site coverage (delete / return / negative-DP `modifiers.add`) is Phase B work. `Keyword::Progress` and `ModifierType::ImmunityToOpponentEffects` remain the correct primitives.
+**Rust** — Phase A landed the selection-filter half: the wrong `SecuritySkillDrain` gate was never re-introduced after revert, and `Game::progress_excludes` gates `select_opponent_permanent` to exclude a `Progress + is_attacking` target from opponent-sourced selections. Phase B (2026-04-24) closed the mutation-site half: every opponent-sourced `EffectContext` mutation entry point — `ctx.delete_permanent`, `ctx.return_to_hand`, `ctx.return_to_deck`, `ctx.de_digivolve` / `de_digivolve_n`, `ctx.suspend`, and the negative-DP path through `ctx.add_dp_modifier` / `ctx.add_modifier` — now hard-gates on `progress_excludes`. Rule-driven mutations (own-sourced deletes, security-check redirects, cost trash) flow through unchanged because the gate keys on `self.player` vs the target's controller. `Keyword::Progress` and `ModifierType::ImmunityToOpponentEffects` remain the correct primitives.
 
-**Status:** Rust correct (partial — selection-filter exclusion landed, mutation sites Phase B); Python incorrect (SecuritySkill-skip bug) — not back-ported.
+**Status:** Rust correct (Phase A + B); Python sunsetted.
 
 Example: Digital Gate Open's `[Security]` ("Play 1 Digimon with cost ≤3 from hand or trash free; add this card to the hand") has no attacker-targeting clause, so its effect must still fire even when the attacker has Progress. Mega Death's `[Security]` ("delete 1 opp Digimon with cost ≤5") does target, so its selection pool would exclude the Progress attacker — but the prompt still installs and the defender may pick a different target.
 
