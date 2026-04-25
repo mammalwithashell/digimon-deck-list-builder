@@ -1020,6 +1020,16 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // effect cannot trigger their Scapegoat. Battle, OpponentEffect,
         // SecurityCheck, and Cost all DO trigger.
         //
+        // The cause filter runs IN-BODY rather than via `.condition(...)`
+        // because the candidate-condition `EffectReadContext` does not
+        // currently carry `cause` (see `replacement.rs::try_replace_inner`
+        // — cause-aware card-effect filtering is a tracked substrate gap,
+        // out of Phase E scope). Consequence: the outer `.optional()`
+        // dialog still parks on `OwnEffect` deletions; PASS proceeds
+        // correctly so end-state matches DCGO, but the UX shows a
+        // spurious dialog. Promote to a `.condition`-gated form once the
+        // substrate threads `cause` into the candidate filter.
+        //
         // ## Selection chain
         //
         //   1. Outer optional accept dialog ("may"). PASS leaves the
