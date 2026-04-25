@@ -312,11 +312,11 @@ pub enum Keyword {
     /// `SecuritySkillDrain` arm of `drive_security_resolution` (§2.5c).
     Progress,
 
-    /// DCGO `Retaliation` — when this Digimon is deleted other than by an
-    /// effect (Battle, SecurityCheck, Cost), delete the opposing combatant.
-    /// Wire-up Phase E §E1 — auto-installed `OnDeletion` trigger that
-    /// reads `ctx.battle_opponent_of(self)` to find the winner.
-    /// RULES_CONTEXT 16-30 (verify exact rule number against the manual).
+    /// DCGO `Retaliation` — when this Digimon is deleted in battle, delete
+    /// the battled opponent Digimon. Mandatory trigger (RULES_CONTEXT 16-12).
+    /// Wire-up Phase E §E1 — auto-installed `OnDeletion` trigger gated on
+    /// `deletion_cause() == Some(Battle)` that calls
+    /// `ctx.battle_opponent_of(self)` to find the winner.
     Retaliation,
 
     /// DCGO `Scapegoat` — when this Digimon would be deleted by anything
