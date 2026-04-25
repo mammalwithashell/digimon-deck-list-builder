@@ -1077,6 +1077,61 @@ impl<'a> EffectContext<'a> {
         target_player.battle_area[target.index as usize].push_under(taken);
     }
 
+    /// Trash the current top Digimon of `perm` and promote the next-highest
+    /// digivolution source to become the new visible top. The remainder of the
+    /// stack is preserved intact.
+    ///
+    /// **Caller MUST gate on `perm.card_sources.len() >= 2` before invoking.**
+    /// This primitive `debug_assert!`s that constraint and will panic in debug
+    /// builds if violated. Production callers (the ArmorPurge auto-install
+    /// body) gate before calling.
+    ///
+    /// After the call:
+    ///   - `perm.card_sources.len()` decreases by 1.
+    ///   - The previous `card_sources[last - 1]` entry (previously the
+    ///     next-highest source) is now `top_card()`.
+    ///   - The trashed top card is appended to `players[controller].trash`.
+    ///
+    /// **Modifier note:** Modifiers in this engine are keyed by
+    /// `PermanentHandle` (the full permanent), not by individual
+    /// `CardSource`. Therefore, any modifiers currently attached to this
+    /// permanent handle remain valid for the new top card — no modifier
+    /// cleanup is performed here. This deviates from DCGO
+    /// `RemoveDigivolveRootEffect` (which removes inherited effects registered
+    /// by the trashed card specifically), but is the correct behavior for this
+    /// engine because inherited effects are script-driven, not stored as
+    /// `ModifierEntry` values.
+    ///
+    /// DCGO parity: `ArmorPurge.cs:50-65`
+    ///   `RemoveFromAllArea(topCard)` + `AddTrashCard(topCard)` +
+    ///   `RemoveDigivolveRootEffect(topCard, _permanent)`.
+    ///
+    /// Used by: `<Armor Purge>` keyword auto-install (Phase D Task 5).
+    pub fn armor_purge_top(&mut self, perm: PermanentHandle) {
+        let permanent = self
+            .game
+            .player_mut(perm.player)
+            .battle_area
+            .get_mut(perm.index as usize)
+            .expect("armor_purge_top: permanent handle is invalid");
+        debug_assert!(
+            permanent.card_sources.len() >= 2,
+            "armor_purge_top requires >= 1 source under the top card (stack len = {})",
+            permanent.card_sources.len()
+        );
+        let top = permanent
+            .card_sources
+            .pop()
+            .expect("len >= 2 invariant asserted above");
+        // The new top is now `permanent.card_sources.last()` automatically —
+        // no extra work needed (previous next-highest is now visible).
+        let controller = perm.player;
+        self.game.player_mut(controller).trash.push(top);
+        // Modifier cleanup: no per-card-source tracking exists in this engine;
+        // permanent-handle modifiers remain valid for the promoted top card.
+        // See doc comment above for the DCGO deviation note.
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_hand(
