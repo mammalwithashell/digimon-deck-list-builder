@@ -494,6 +494,17 @@ Each entry in `effects:` is one clause. Clauses come in two families:
 2. **Declarative clauses** — have a `kind:` discriminator. No `when:` or
    `process:`; semantics are fixed by the kind.
 
+**Clause ordering (locked, replay-deterministic):** when two or more
+clauses on the **same card** share a timing, they fire in the **order
+they appear in the YAML file**. Cross-card same-timing ordering follows
+the engine's existing trigger-queue rules (controller turn order, then
+permanent index, then enqueue order — see `effect_queue.rs`); the YAML
+order rule applies only within a single card's `effects:` list. This
+property is load-bearing for replay determinism (a re-ordered YAML file
+is a different card from the engine's perspective; the AOT compiler
+preserves order). Authoring tools and LLM agents must not reorder
+clauses without intent.
+
 #### 3.5.1 Triggered-clause schema
 
 | Field           | Required | Type                                                      | Notes                                                   |
@@ -512,14 +523,14 @@ Each entry in `effects:` is one clause. Clauses come in two families:
 | `kind`                | Purpose                                                                                      | Required fields                                                            |
 |-----------------------|----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
 | `aura`                | Persistent modifier applied to a target set while `active_when` holds                        | `target:` filter, one of `dp_modifier` / `grant_keyword` / `modifier`      |
-| `cost_reduction`      | `BeforePayCost` cost hook — static or formula                                                | `when_playing_this` OR `when_any_ally_played`, `amount` or `amount_fn`     |
-| `replacement`         | Interrupt + prompt + cancel-or-redirect (Evade, Partition, WouldBeDeleted)                   | `trigger:` (e.g. `would_be_deleted_in_battle`), `process:` steps           |
-| `partition`           | Sugar for the replacement "when this with each of these sources would leave, play them free" | `sources:` list of filters, `exclude_cause:` list                          |
+| `cost_reduction`      | `BeforePayCost` cost hook — static or formula; optional cost-resolution body + post-cost unlocks | `when_playing_this` OR `when_any_ally_played`, `amount` or `amount_fn`; optional `pay_cost:` (list of mutation steps performed at cost-resolution) and `unlocks:` (list of structured directives that mutate the play context after the cost resolves — see §3.5.4) |
+| `replacement`         | Interrupt + prompt + cancel-or-redirect (Evade, Partition, WouldBeDeleted)                   | `trigger:` (e.g. `would_be_deleted_in_battle`), optional `provenance:` filter (matches the leaving permanent's stack source), `process:` steps |
+| `partition`           | **Sugar over `replacement`** — see §3.5.5; lowers to a `replacement { trigger: would_leave_field, provenance: <sources>, process: [play_from_materials_free] }` clause with the Partition keyword's built-in exclusions (`Battle`) auto-applied | `sources:` list of filters |
 | `ace_overflow`        | Declarative `<Ace -N>`                                                                       | `value:` int (negative)                                                    |
 | `grant_keyword`       | Declarative `<Blocker>`, `<Rush>`, etc.                                                      | `keyword:` enum, optional `value:` for parametric                          |
 | `delay`               | Option-side `<Delay>` — persistent Option placement                                          | `trigger:` when to activate, `process:` steps                              |
 | `flood_gate`          | Player-scoped `CannotX` modifier                                                             | `modifier:` enum, `active_when:` required                                  |
-| `alt_path_registration` | Inherited alt-path registration — "any of your Digimon may DNA digivolve into hand"         | `registers:` mini alt-path block                                            |
+| `alt_path_registration` | Inherited alt-path registration — "any of your Digimon may DNA digivolve into hand"; see §3.5.6 for `applies_to:` projection semantics | `registers:` mini alt-path block; optional `applies_to:` filter (defaults to "every permanent the carrier owns")  |
 | `raw_rust`            | Escape hatch — invoke a named Rust fn as a whole clause                                      | `fn:` string (must be registered in the `CardEffectExtensionRegistry`)     |
 
 #### 3.5.3 Scope semantics
@@ -533,6 +544,109 @@ Each entry in `effects:` is one clause. Clauses come in two families:
   permanent holding the source. `source` remains this card.
 - `[face_up, inherited]` — active in both positions. Used rarely (Ace
   Overflow `inherited` sugar is handled separately).
+
+#### 3.5.4 `cost_reduction` — `pay_cost:` body + `unlocks:` directives
+
+Some cards (the X7 / DigiXros family) couple a `BeforePayCost` discount
+with a synchronous mini-process that runs **at cost resolution** and a
+set of **directives that mutate the play context** for that single play.
+Both fields are optional and only apply to `when_playing_this: true`
+clauses.
+
+- `pay_cost:` — list of `process:` steps (§3.7) that run after the
+  amount discount is applied but before the engine commits the play.
+  Bindings created here are visible to `unlocks:` directives that follow.
+  If any step parks a selection, the play is suspended until the
+  selection resolves; on decline, the entire play is cancelled (the cost
+  reduction does not apply, the player keeps their memory, the card
+  returns to its source zone).
+- `unlocks:` — list of structured directives that the engine consumes
+  before re-evaluating play legality. Each directive is one of:
+
+| Directive                  | Shape                                       | Effect                                                                                   |
+|----------------------------|---------------------------------------------|------------------------------------------------------------------------------------------|
+| `digixros_zones_extend:`   | list of zone enums                          | For this play only, the DigiXros material search includes these additional source zones. |
+| `digixros_count_minus:`    | int                                         | Reduce the required material count for this play by N (floored at 0).                    |
+| `treat_source_as:`         | `{ name_is: <string> }`                     | Override the played card's name for this play's alt-path matching (X-Antibody pattern).  |
+| `add_play_color:`          | list of color enum                          | Add temporary colors to the source for color-requirement matching.                       |
+| `raw_rust:`                | `{ fn: <name>, args: {...} }`               | Escape hatch — see §6.                                                                   |
+
+Directive list is closed; new directives are a schema change. The
+validator rejects unknown directive keys.
+
+#### 3.5.5 `partition` — sugar over `replacement`
+
+`partition` is **deprecated as a separate clause kind** and exists only
+for backwards-compatible authoring. The validator emits an info-level
+diagnostic suggesting the equivalent `replacement` shape.
+
+The Partition keyword carries its own rule-mandated exclusions — most
+notably "does not trigger on battle deletion". These exclusions are
+**not** authored on the clause; they are baked into the lowering and
+apply uniformly to every Partition card. An author writing `kind:
+partition` writes only the `sources:` list:
+
+```yaml
+# Authored:
+- kind: partition
+  sources: [{ name_is: "Royal Knight" }, { trait_has: "Olympos XII" }]
+
+# Equivalent (preferred — what it lowers to):
+- kind: replacement
+  trigger: would_leave_field
+  exclude_cause: [Battle]   # ← injected by the lowering, not authored
+  provenance:
+    any_of:
+      - { name_is: "Royal Knight" }
+      - { trait_has: "Olympos XII" }
+  process:
+    - play_from_materials_free: { source: { binding: provenance_match } }
+```
+
+The `provenance:` filter matches against the leaving permanent's stack
+sources (top + every digivolution source); the matched source becomes
+the implicit `provenance_match` binding. This unifies `partition` with
+the Phase 7 engine work (`WhenWouldBeDeleted` with provenance filter)
+so there is one underlying primitive rather than two.
+
+**Authoring rule:** if a card needs Partition behavior with *additional*
+or *different* exclusions than the keyword's defaults, author the
+`replacement` form directly with the `exclude_cause:` list. Don't extend
+`partition` with exclusion overrides — keep that sugar minimal so it
+stays a 1:1 representation of the printed keyword.
+
+#### 3.5.6 `alt_path_registration` — `applies_to:` scope projection
+
+`alt_path_registration` (used by BT17-007 Agumon's "Yu may DNA
+digivolve into hand from any of your Digimon" pattern) registers an
+alt-path that applies to a set of permanents *other than* the source.
+The `applies_to:` filter projects the registration scope:
+
+```yaml
+- scope: inherited
+  kind: alt_path_registration
+  trigger: end_of_your_turn
+  applies_to:
+    of: you
+    zone: [battle_area]
+    # implicit `kind: digimon` — alt-paths only apply to digimon
+  registers:
+    kind: dna_digivolve
+    target_zone: hand
+```
+
+Semantics: while this clause is active (its `scope:` and the carrier's
+position in play satisfy the activation rules), every permanent matching
+`applies_to:` gains the `registers:` alt-path as an additional entry in
+its alt-path list, computed lazily by the engine when the digivolve /
+play check runs against that permanent. Registration is **observational**
+— the registered alt-path is not stored on the target permanent; it is
+re-derived per check. This avoids the "what happens if the carrier
+leaves mid-action" foot-gun.
+
+`applies_to:` defaults to `{ of: you, zone: [battle_area], kind: digimon }`
+when omitted. Set explicitly when the registration should target Tamers,
+opponent permanents, or specific named subsets.
 
 ### 3.6 Timing catalogue
 
@@ -682,10 +796,58 @@ closes over the post-select steps in the callback closure.
 | `schedule_delayed`        | `{ when: <timing>, body: [steps] }`                               | planned (Tier-2 gap) — delayed one-shot trigger  |
 | `raw_rust` (step form)    | `{ raw_rust: fn_name }` or `{ raw_rust: fn_name, args: {...} }`    | calls `fn(&mut EffectContext, &BindingMap) -> BindingMap` |
 
+**Iteration semantics (locked):**
+
+- **Snapshot at entry.** `for_each` and `per_selected` evaluate their
+  iteration set **once**, at entry, before any body step runs. Body steps
+  that mutate the iterated zone (`delete_permanent`, `return_to_hand`,
+  `return_to_deck`, `place_as_bottom_source`) do **not** add or remove
+  iterations; the loop drives the snapshot to completion. Susanoomon
+  ("for each material → place on security") is the canonical case: the
+  snapshot ensures the placed material is iterated even after the
+  trash/place body has consumed its source slot.
+- **Iteration order.** `for_each`: P0's battle_area in ascending index,
+  then P1's; within each player, ascending index at snapshot time. Stable
+  and turn-independent. `per_selected`: the order in which the player
+  picked them (the engine preserves pick order in the bound list).
+- **Vanished handles.** If a body step deletes a handle that a *later*
+  iteration would target, the iteration whose subject no longer resolves
+  silently no-ops on its body's binding-consuming verbs — the loop does
+  not skip iterations or panic. (This matches the 2b/2c silent-no-op
+  convention for invalid binding refs.)
+- **Inner park.** A body step that parks a selection halts the loop at
+  the current iteration; remaining iterations are abandoned in v1.
+  Faithful per-iteration resumption is a Phase-3 enhancement; cards that
+  truly need it (rare — Susanoomon does not) must use raw_rust until
+  then.
+
 ### 3.8 Filter / predicate catalogue
 
-A filter evaluates to `bool` given a game state and a candidate. Filters
-compose via `all_of:`, `any_of:`, `none_of:`, `not:`. Leaf predicates:
+A predicate evaluates to `bool`. Predicates split into three **scope
+types**, enforced by the validator. Mixing scopes inside `all_of:` /
+`any_of:` is allowed (each leaf is checked against the available
+context); mixing them in a position that requires one specific scope
+(e.g. a step's `target:` `filter:` requires `CandidatePredicate`) is a
+validation error rejected at lowering time, not at runtime.
+
+| Scope type            | Takes                                | Used in                                                      |
+|-----------------------|--------------------------------------|--------------------------------------------------------------|
+| `BoolPredicate`       | game state only (no candidate)       | `if:` condition, clause-level `condition:`, `active_when:`   |
+| `CandidatePredicate`  | game state + a card / permanent      | `target:` `filter:`, `for_each` `over:`, `select_*` `filter:`|
+| `AggregatePredicate`  | game state + an enumeration scope    | `count_lte:`, `any_permanent:`, `no_permanent:`, `all_permanents:` (these wrap a `CandidatePredicate` and an `of:` / `zone:` scope) |
+
+Each leaf predicate's scope type is fixed by its row in the table below.
+Combinators (`all_of:`, `any_of:`, `none_of:`, `not:`) take on the union
+scope of their children; if any child is a `CandidatePredicate`, the
+combinator becomes a `CandidatePredicate` (the candidate threads through
+to every child that needs one and is ignored by `BoolPredicate` children).
+
+The validator promise from §3.13 ("schema validator rejects typos")
+extends to scope: a `BoolPredicate` placed where a `CandidatePredicate`
+is required (e.g. `target: { your_turn: true }`) is a hard validation
+error with the offending path.
+
+Leaf predicates:
 
 | Predicate                          | Applies to                   | Notes                                              |
 |------------------------------------|------------------------------|----------------------------------------------------|
@@ -724,9 +886,18 @@ compose via `all_of:`, `any_of:`, `none_of:`, `not:`. Leaf predicates:
 | `on_field`                         | source-zone                  | this card is top of a battle-area permanent        |
 | `event_target_*`                   | observer context             | filter against the triggering event's target       |
 | `event_card_*`                     | observer context             | filter against the triggering event's card         |
-| `equals` / `not_equals`            | binding comparison           | `{ equals: [branch, 0] }`                          |
+| `equals` / `not_equals`            | binding comparison (Bool)    | `{ equals: [branch, 0] }`                          |
 
-`active_when:` accepts the same leaf predicates plus `all_of:` / `any_of:`.
+**Scope-type column** is implicit in "Applies to":
+- `card / permanent` → `CandidatePredicate`
+- `permanent` → `CandidatePredicate` (permanent-only)
+- `aggregate` / `existential` → `AggregatePredicate`
+- `global` / `source-zone` / `binding comparison` / `observer context`
+  → `BoolPredicate`
+
+`active_when:` accepts only `BoolPredicate` leaves plus combinators;
+candidate-shaped predicates inside an `active_when:` are a validation
+error (the clause has no candidate when the gate is evaluated).
 
 ### 3.9 Binding system
 
@@ -750,6 +921,37 @@ Rust-side map from `&'static str` to a tagged `Binding` enum
 
 Bindings are lexically scoped to the clause; they do not leak across
 clauses. `for_each` introduces a per-iteration binding.
+
+#### 3.9.1 Optional-select decline semantics
+
+A `select_*` step with `optional: true` may be **declined** by the
+selecting player. Decline semantics are uniform across every selection
+verb:
+
+1. The named `bind_as:` binding is **not installed** (the slot stays
+   absent in the binding map).
+2. The remainder of the `process:` body **short-circuits** — every step
+   that follows the declined selection is skipped, the clause resolves
+   immediately, and the engine advances to the next pending effect /
+   queued trigger.
+3. Inside an `optional:` *clause* (a triggered clause with
+   `optional: true`), decline of the clause-level yes/no
+   (`select_effect_choice`) collapses the entire `process:` body — same
+   short-circuit, no bindings installed.
+
+This is the v1 contract: declining a select aborts the clause. Cards
+that need branching on decline ("if you didn't, do X instead" — e.g.
+Millenniummon's DNA-origin bonus) use the explicit `select_effect_choice`
+yes/no pattern with two `if/then/else` arms keyed on the chosen label,
+**not** an optional select with a fallback. The `select_effect_choice`
+binding is always installed regardless of the chosen label.
+
+Continuation closures (Phase 2b/2c/2d `run_steps` callback path) must
+treat decline as a sentinel: the engine's selection-resolution path
+invokes the callback with a "declined" marker (action ID outside the
+candidate range, or a dedicated `pending_selection.declined` flag); the
+callback skips its body and drains `Game::dsl_outer_tail` (Phase 2d
+Task 7) so the outer slice resumes correctly.
 
 ### 3.10 Formula primitives
 
@@ -794,6 +996,129 @@ schema validator rejects typos.
 Maps to `Keyword` in `enums.rs`. Parametric keywords (`SecurityAttackPlus(n)`,
 `DeDigivolve(n)`, `DrawX(n)`) are authored as `{ keyword: SecurityAttackPlus,
 value: 1 }`.
+
+### 3.14 `tests:` — card-level behavioral tests (co-located)
+
+The single largest authoring-velocity win in this spec. Every card YAML
+**may** carry a top-level `tests:` block that the build pipeline lowers
+into generated `#[test]` functions wired to `DebugRunner`. This
+collapses two authoring surfaces (YAML + a separate Rust test file)
+into one, and lets LLM agents author behavioral coverage in the same
+edit as the effect they implement.
+
+The `/batch-implement-cards-rust` skill already mandates DebugRunner
+tests written *before* implementation; co-location enforces that
+discipline at the schema level — a card with `effects:` but no
+`tests:` warns at validation, and a card with `tests:` whose generated
+`#[test]` fails fails the build.
+
+Each entry in `tests:` is one scenario:
+
+| Field         | Required | Type                                          | Notes                                                                            |
+|---------------|----------|-----------------------------------------------|----------------------------------------------------------------------------------|
+| `name`        | yes      | string                                        | Snake-case; becomes the generated `#[test]` fn name (`test_<card_id>_<name>`).   |
+| `setup`       | yes      | object — see below                            | Initial game state.                                                              |
+| `actions`     | yes      | list of action shorthand                      | Sequence to drive; each entry is a named DSL action or a numeric action ID.      |
+| `expect`      | yes      | list of state-assert shorthand                | Game-state assertions checked after `actions` resolve.                           |
+| `seed`        | optional | int                                           | RNG seed for deterministic shuffles (defaults to 0).                             |
+
+`setup:` shape:
+
+| Field         | Type                                       | Notes                                                                  |
+|---------------|--------------------------------------------|------------------------------------------------------------------------|
+| `hand`        | `{ p0: [card_id...], p1: [card_id...] }`   |                                                                        |
+| `field`       | `{ p0: [{ card: id, materials: [id...] }], p1: ... }` | Bottom-of-stack first.                                       |
+| `trash`       | `{ p0: [card_id...], p1: ... }`            |                                                                        |
+| `security`    | `{ p0: [card_id...], p1: ... }`            | Top first.                                                             |
+| `deck`        | `{ p0: [card_id...], p1: ... }`            | Top first.                                                             |
+| `memory`      | int                                        | Initial memory; positive = P0's, negative = P1's.                      |
+| `turn_player` | `p0` / `p1`                                | Defaults to `p0`.                                                      |
+
+`actions:` entries — each is one of:
+
+| Form                                       | Lowering                                                            |
+|--------------------------------------------|---------------------------------------------------------------------|
+| `play_from_hand: { of: p0, card: <id> }`   | Compute action ID + `runner.submit(...)`                            |
+| `digivolve: { of: p0, into: <id>, source: <field_index> }` | Same                                                |
+| `attack: { of: p0, attacker: <field_index>, target: security }` | Same                                          |
+| `pass`                                     | End turn                                                            |
+| `select: { pick: <int> }`                  | Resolve pending selection by candidate offset                       |
+| `decline`                                  | Resolve pending optional selection by declining                     |
+| `select_many: { picks: [<int>...] }`       | Resolve `select_count_capped_multi` with N picks then submit        |
+| `raw_action: <int>`                        | Submit raw action ID — escape hatch for cases not yet sugared       |
+
+`expect:` entries — each is one assertion:
+
+| Form                                          | Asserts                                                          |
+|-----------------------------------------------|------------------------------------------------------------------|
+| `field_count: { of: p0, eq: <int> }`          | Player's battle_area length                                      |
+| `field_contains: { of: p0, card: <id> }`      | Some battle_area permanent has `card` as its top                 |
+| `hand_count: { of: p0, eq: <int> }`           |                                                                  |
+| `trash_contains: { of: p0, card: <id> }`      |                                                                  |
+| `memory: { eq: <int> }`                       |                                                                  |
+| `dp: { permanent: { of: p0, index: <int> }, eq: <int> }` | Effective DP including modifiers                      |
+| `has_modifier: { permanent: ..., modifier: <enum>, present: <bool> }` |                                          |
+| `has_keyword: { permanent: ..., keyword: <enum>, present: <bool> }`   |                                          |
+| `winner: <p0 | p1 | null>`                    | Game-over winner check                                           |
+| `pending_selection: { kind: <enum> | absent }`| Used by partial-resolution scenarios                             |
+
+Worked example (compresses ~80 lines of hand-written Rust test):
+
+```yaml
+card: BT17-007
+name: "Agumon"
+# ... (effects definition omitted for brevity)
+
+tests:
+  - name: search_pulls_one_card
+    setup:
+      hand:    { p0: ["BT17-007"] }
+      deck:    { p0: ["BT3-008", "BT2-001"] }
+      memory:  3
+      turn_player: p0
+    actions:
+      - play_from_hand: { of: p0, card: "BT17-007" }
+      - select: { pick: 0 }   # pick BT3-008 from the search result
+    expect:
+      - field_count: { of: p0, eq: 1 }
+      - hand_count:  { of: p0, eq: 1 }
+      - hand_contains: { of: p0, card: "BT3-008" }
+
+  - name: search_decline_keeps_hand_empty
+    setup: { ... }   # same shape
+    actions:
+      - play_from_hand: { of: p0, card: "BT17-007" }
+      - decline
+    expect:
+      - field_count: { of: p0, eq: 1 }
+      - hand_count:  { of: p0, eq: 0 }
+```
+
+**Build-time lowering:** the `build.rs` step (§7a.1) emits one
+`#[test]` fn per scenario into a generated module
+(`src/cards/_generated_tests.rs`, included via a `pub mod` in
+`lib.rs`). Each generated test is a thin wrapper: build the
+`DebugRunner` from `setup:`, replay `actions:`, evaluate `expect:`,
+panic on mismatch. Failure messages include the source YAML path +
+scenario `name`.
+
+**Strict semantics:**
+- A card with `effects:` and no `tests:` block emits a validation
+  **warning** (not error) — vanillas legitimately don't need them.
+- Tests are NOT shipped in the desktop `cards.pack` blob (§7a). The
+  `build.rs` emits them only when compiling the test binary
+  (`#[cfg(test)]` gates the generated module).
+- `actions:` is strict — if an action doesn't apply (illegal play,
+  attempt to resolve a selection that isn't pending), the test fails
+  with a clear "expected pending selection of kind X, got Y" message.
+- `seed:` defaults to 0; for tests that depend on shuffle outcomes,
+  set `seed:` explicitly to lock determinism across machines.
+
+**Coverage policy:** the `/batch-implement-cards-rust` skill is updated
+in lockstep with this section to require ≥1 PASS + ≥1 negative-path
+(decline / no-legal-target / cost-can't-be-paid) scenario per
+non-vanilla card. The skill rejects cards whose `tests:` block lacks
+both.
 
 ## 4. Evaluator architecture (AOT)
 
@@ -863,10 +1188,15 @@ rather than dynamic dispatch.
 
 ### 4.4 Bindings
 
-`BindingMap` is a fixed-size tagged array (capacity 8, which covers
-every clause seen in the 34-card exploration with margin). Binding
-lookup is O(n) linear scan; the common case is 0–2 bindings per step so
-this is faster than a HashMap.
+`BindingMap` is a tagged array. Capacity is **provisional at 8** — this
+covers every clause seen in the 34-card exploration with margin, but is
+not measured against the full corpus. Phase 2 of the migration must run
+the lowering pipeline against `cards.json` and emit the per-card max
+binding count; if any card exceeds 8, switch the storage to `SmallVec<[_;
+8]>` (zero allocation in the common case, heap spill in the long tail)
+rather than bumping the inline capacity to a worst-case figure that
+penalises every card. Binding lookup is O(n) linear scan; the common
+case is 0–2 bindings per step so this is faster than a HashMap.
 
 ### 4.5 Parity with hand-written Rust
 
@@ -1511,10 +1841,14 @@ exploration surfaced zero cases where interpolation was required for
 a summary — every effect fit in one static line.
 
 Note: `prompt:` strings *do* sometimes benefit from interpolation
-("Return {pick_count} cards to hand") but the interactive selection
-prompts run only once per action and can interpolate at UI-render
-time from the `PendingSelection` struct's existing fields. No DSL
-templating surface needed.
+("Return {pick_count} cards to hand"). v1 carves out a narrow
+exception: `prompt:` may reference `PendingSelection` struct fields
+**only** — `{max}`, `{count_so_far}`, `{remaining}`, `{candidate_count}`.
+Interpolation happens at UI-render time, not at YAML parse time, and
+the placeholder set is a closed enum (the validator rejects unknown
+`{...}` tokens in `prompt:`). Binding-value interpolation
+(`{tgt.name}`) is **not** supported in v1 — that gates on the wider
+ICU MessageFormat work scoped for `summary:`.
 
 ### 7b.5 Engine-side event emission
 
@@ -1948,7 +2282,8 @@ effects:
     sources:
       - { name_contains: "WarGreymon" }
       - { name_contains: "MetalGarurumon" }
-    exclude_cause: [own_effect, battle]
+    # No exclude_cause: the Partition keyword's "not by battle" exclusion
+    # is keyword-default and applied automatically at lowering — see §3.5.5.
 
   - when: [on_play, when_digivolving]
     process:
