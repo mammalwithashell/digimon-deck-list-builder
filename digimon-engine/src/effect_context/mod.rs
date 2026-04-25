@@ -616,7 +616,11 @@ impl<'a> EffectContext<'a> {
 
     /// Suspend a permanent and fire `OnSuspend` observers.
     /// Delegates to `Game::suspend` — the canonical single-target chokepoint.
+    /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn suspend(&mut self, target: PermanentHandle) {
+        if self.game.progress_excludes(target, Some(self.player)) {
+            return;
+        }
         self.game.suspend(target);
     }
 
