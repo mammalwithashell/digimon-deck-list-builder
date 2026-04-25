@@ -5,6 +5,7 @@
 
 pub mod control_flow;
 pub mod draw;
+pub mod iteration;
 pub mod memory;
 pub mod modifiers;
 pub mod permanent_mutations;
@@ -44,43 +45,62 @@ pub fn resolve_player(ctx: &EffectContext<'_>, r: CompiledPlayerRef) -> PlayerId
     }
 }
 
+/// Whether a step ran synchronously to completion or installed a parked
+/// selection. Phase 2d Task 7 propagates this outward across nested
+/// `run_steps` re-entries so a parked selection inside an `If` /
+/// `ForEach` body suspends the outer slice instead of letting subsequent
+/// outer steps race ahead of the resolution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunOutcome {
+    Synchronous,
+    Parked,
+}
+
 /// Drive the full step slice to completion. When a selection step is
 /// encountered, `selections::try_install` captures the tail as a
-/// heap-allocated callback and returns early; the rest of the slice
+/// heap-allocated callback and returns `Parked`; the rest of the slice
 /// will execute once the player resolves the selection.
+///
+/// Phase 2d: the dispatcher fans out to control-flow / iteration handlers
+/// that may themselves park. A `Parked` from any of them propagates up.
+/// Task 7 wires outer-tail capture so steps after a parked control-flow
+/// step are deferred until the inner callback resolves.
 pub fn run_steps(
     steps: &[CompiledStep],
     ctx: &mut EffectContext<'_>,
     bindings: &mut Bindings,
-) {
+) -> RunOutcome {
     let mut i = 0;
     while i < steps.len() {
         let step = &steps[i];
 
-        // Control flow: drive the body via a recursive run_steps call, then
-        // advance the outer index. A selection step inside the body parks
-        // its own inner tail (the remainder of that body) as its callback.
-        // Steps AFTER the control-flow step in this outer slice run
-        // immediately on return — they are NOT captured by any inner park.
-        // Phase 2c card tests never exercise [CtrlFlow(has-select), More]
-        // patterns, so the current semantics are safe. Phase 2d must extend
-        // run_steps to propagate inner-park state upward before adding
-        // richer opt-out / delayed flows that need sequencing after the
-        // inner callback resolves.
-        if control_flow::try_run(step, ctx, bindings) {
+        if let Some(outcome) = control_flow::try_run(step, ctx, bindings) {
+            if matches!(outcome, RunOutcome::Parked) {
+                // Task 7: capture outer tail and resume after inner park.
+                return RunOutcome::Parked;
+            }
+            i += 1;
+            continue;
+        }
+
+        if let Some(outcome) = iteration::try_run(step, ctx, bindings) {
+            if matches!(outcome, RunOutcome::Parked) {
+                return RunOutcome::Parked;
+            }
             i += 1;
             continue;
         }
 
         // Selection steps install the remainder as their callback and return.
         if selections::try_install(step, &steps[i + 1..], ctx, bindings.clone()) {
-            return;
+            return RunOutcome::Parked;
         }
 
         // Synchronous families — execute and advance.
         run_step(step, ctx, bindings);
         i += 1;
     }
+    RunOutcome::Synchronous
 }
 
 /// Dispatch a compiled step to its family-specific handler. Unhandled

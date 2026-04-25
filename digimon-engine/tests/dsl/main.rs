@@ -43,3 +43,4 @@ mod phase2c_permanent_mutations;
 mod phase2c_modifiers;
 mod phase2c_control_flow;
 mod phase2c_end_to_end;
+mod phase2d_for_each;
