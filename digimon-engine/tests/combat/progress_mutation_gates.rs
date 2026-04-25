@@ -408,3 +408,29 @@ fn opponent_effect_negative_security_attack_does_not_apply_to_progress_attacker(
         "Progress attacker must not receive opponent-effect SecurityAttackChange(-1)"
     );
 }
+
+#[test]
+fn opponent_effect_protective_modifier_does_not_apply_to_progress_attacker() {
+    // DCGO-faithful: even a notionally-protective modifier (e.g. global
+    // "all Digimon can't be deleted by effects this turn" rider from an
+    // opponent's option) does not reach the Progress attacker. The gate
+    // is purely source-side per Progress.cs SkillCondition, not hostility-
+    // classified. Mirrors the positive-DP test's logic.
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        ctx.add_modifier(
+            progress,
+            ModifierType::CannotBeDestroyedByEffect,
+            0,
+            Expiry::EndOfTurn,
+        );
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert!(
+        !r.game.modifiers.has(progress, ModifierType::CannotBeDestroyedByEffect),
+        "Progress gate is source-side only — opponent-granted protection doesn't pass through"
+    );
+}
