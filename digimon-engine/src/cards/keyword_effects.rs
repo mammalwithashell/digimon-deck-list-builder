@@ -265,27 +265,28 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         ],
 
         // Phase D Task 5 — printed Armor Purge: "When this Digimon would be
-        // deleted, trash the top card of this Digimon. If you do, it isn't
+        // deleted, by trashing the top card of this Digimon, it isn't
         // deleted." DCGO `ArmorPurge.cs:40-78`.
+        //
+        // Optional ("by [cost]") per RULES_CONTEXT 16-18 ("Processing:
+        // Optional ('by trashing the top card of the Digimon')"). The outer
+        // accept dialog represents the printed "by trashing" optional cost —
+        // declining proceeds with the original deletion. Once accepted, the
+        // synchronous body trashes the top via `armor_purge_top` and cancels
+        // the deletion; no nested player selection is required.
         //
         // Gate: `card_sources.len() >= 2` (top + ≥1 source under it). When the
         // gate fails the auto-install body returns early; original deletion
-        // proceeds normally.
-        //
-        // Synchronous + mandatory. Unlike Fragment(N) (which goes through the
-        // Phase C parked-replacement substrate because it carries a nested
-        // selection), ArmorPurge has no player choice — it's purely a
-        // top-swap. The replacement-process closure calls `rctx.cancel()`
-        // directly, an outcome-setter that works in mandatory contexts (the
-        // `debug_assert!` in `run_candidate_inner` only trips when a mandatory
-        // process installs a `pending_selection`, which we do not). No
-        // `.optional()` wrapper required, no parked-replacement plumbing.
+        // proceeds normally even if the player accepted (matches "if executed,
+        // prevention is mandatory" — but the cost is unpayable so the
+        // prevention can't be executed).
         //
         // The event-fire (OnDigivolutionCardTrashed) for the trashed top is
         // handled by `EffectContext::armor_purge_top` itself; see Phase D
         // Task 5 commit log.
         Keyword::ArmorPurge => vec![Effect::when_would_be_deleted(card)
             .name("<Armor Purge>")
+            .optional()
             // Gate at candidate-collection time so the dispatcher skips this
             // candidate entirely when the stack is too small. Mirrors
             // Fragment(N)'s condition pattern.
