@@ -144,6 +144,37 @@ impl<'a> EffectReadContext<'a> {
     pub fn turn_player_at_check(&self) -> Option<PlayerId> {
         self.game.security_resolution.as_ref().map(|s| s.turn_player)
     }
+
+    // ─── OnDeletion cause accessors (Phase B §B5) ───────────────────────
+
+    /// The `ReplacementCause` of the deletion currently being observed by
+    /// this `OnDeletion` (or `OnAnyDeletion`) effect. `None` outside such an
+    /// observer body. Phase B §B5.
+    pub fn deletion_cause(&self) -> Option<crate::replacement::ReplacementCause> {
+        self.game.current_deletion_cause
+    }
+
+    /// `true` when the current OnDeletion observer is firing because of an
+    /// effect (own or opponent), as opposed to battle / security-check / cost.
+    /// Convenience for keywords like Scapegoat (cause ≠ OwnEffect) and
+    /// Retaliation (cause == Battle, hence false here).
+    pub fn was_deleted_by_effect(&self) -> bool {
+        use crate::replacement::ReplacementCause;
+        matches!(
+            self.game.current_deletion_cause,
+            Some(ReplacementCause::OwnEffect | ReplacementCause::OpponentEffect)
+        )
+    }
+
+    /// `true` when the current OnDeletion observer is firing because of an
+    /// opponent's effect specifically. Drives Mephistomon-style "when this is
+    /// deleted by your opponent's effect" riders.
+    pub fn was_deleted_by_opponent(&self) -> bool {
+        matches!(
+            self.game.current_deletion_cause,
+            Some(crate::replacement::ReplacementCause::OpponentEffect)
+        )
+    }
 }
 
 /// The context passed to every effect's `process` closure.
@@ -281,6 +312,30 @@ impl<'a> EffectContext<'a> {
     /// the entire resolution even if an effect toggles turn state mid-flight.
     pub fn turn_player_at_check(&self) -> Option<PlayerId> {
         self.game.security_resolution.as_ref().map(|s| s.turn_player)
+    }
+
+    // ─── OnDeletion cause accessors (Phase B §B5) ───────────────────────
+
+    /// See `EffectReadContext::deletion_cause`.
+    pub fn deletion_cause(&self) -> Option<crate::replacement::ReplacementCause> {
+        self.game.current_deletion_cause
+    }
+
+    /// See `EffectReadContext::was_deleted_by_effect`.
+    pub fn was_deleted_by_effect(&self) -> bool {
+        use crate::replacement::ReplacementCause;
+        matches!(
+            self.game.current_deletion_cause,
+            Some(ReplacementCause::OwnEffect | ReplacementCause::OpponentEffect)
+        )
+    }
+
+    /// See `EffectReadContext::was_deleted_by_opponent`.
+    pub fn was_deleted_by_opponent(&self) -> bool {
+        matches!(
+            self.game.current_deletion_cause,
+            Some(crate::replacement::ReplacementCause::OpponentEffect)
+        )
     }
 
     /// Reborrow this mut context as a read-only context — for condition
