@@ -113,6 +113,18 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectSecurity { of, bind_as, prompt, optional, .. } => {
+            install_select_security(
+                ctx,
+                *of,
+                bind_as.clone(),
+                prompt.clone(),
+                *optional,
+                tail.to_vec(),
+                bindings,
+            );
+            true
+        }
         _ => false,
     }
 }
@@ -315,6 +327,35 @@ fn install_select_reveal(
                 // resolution — currently impossible but defensive), silently
                 // skip the binding; downstream verbs that consume it no-op
                 // per the 2b/2c missing-binding convention.
+            }
+            run_steps(&tail, cb_ctx, &mut b);
+            drain_dsl_outer_tail(cb_ctx);
+        },
+    );
+}
+
+fn install_select_security(
+    ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    bind_as: Option<String>,
+    prompt: String,
+    optional: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+) {
+    let target_player = resolve_player(ctx, of);
+    let tail = Arc::new(tail);
+    ctx.select_security(
+        target_player,
+        &prompt,
+        optional,
+        |_game, _idx| true,
+        move |cb_ctx, idx| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                if let Some(card) = cb_ctx.game.player(target_player).security.get(idx) {
+                    b.insert_card(name, card.handle());
+                }
             }
             run_steps(&tail, cb_ctx, &mut b);
             drain_dsl_outer_tail(cb_ctx);
