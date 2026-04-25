@@ -306,3 +306,19 @@ fn rule_driven_delete_still_removes_progress_attacker() {
         "rule-driven (None-source) delete must still remove Progress attacker"
     );
 }
+
+#[test]
+fn opponent_effect_cannot_unsuspend_does_not_freeze_progress_attacker() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        ctx.add_modifier(progress, ModifierType::CannotUnsuspend, 0, Expiry::EndOfOpponentsTurn);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert!(
+        !r.game.modifiers.has(progress, ModifierType::CannotUnsuspend),
+        "Progress attacker must not be frozen by opponent CannotUnsuspend"
+    );
+}
