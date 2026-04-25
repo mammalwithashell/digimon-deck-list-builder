@@ -293,6 +293,15 @@ pub struct Game {
     ///
     /// Drained inside `finalize_permanent_deletion`; never persists across
     /// turn boundaries.
+    ///
+    /// **Coexistence with `pending_deletion_resume`:** if an `OnDeletion`
+    /// handler parks a selection (Phase D Task 6), `finalize_permanent_deletion`
+    /// is deferred until the selection resolves via `resume_pending_deletion`.
+    /// Any entries pushed to this slot during that OnDeletion batch will be
+    /// drained when `finalize_permanent_deletion` is eventually called — the
+    /// drain ordering guarantee (before `OnAnyDeletion`) still holds, but the
+    /// total wall-clock delay is longer. A card printing both `<Save>` and
+    /// `<Fortitude>` will experience this; it is a known edge case.
     #[doc(hidden)]
     pub(crate) pending_post_deletion_replays:
         Vec<(crate::enums::PlayerId, crate::card_source::CardHandle)>,
@@ -696,6 +705,16 @@ impl Game {
         &self,
     ) -> Option<crate::replacement::ReplacementOutcome> {
         self.parked_replacement.as_ref().map(|p| p.outcome)
+    }
+
+    /// Test-only getter for `pending_post_deletion_replays`. The field is
+    /// `pub(crate)`, so behavioral tests under `digimon-engine/tests/` cannot
+    /// read it directly. Returns `true` when the slot is empty (the steady
+    /// state — the slot is drained inside `finalize_permanent_deletion` and
+    /// never persists across deletion calls).
+    #[doc(hidden)]
+    pub fn pending_post_deletion_replays_is_empty_for_test(&self) -> bool {
+        self.pending_post_deletion_replays.is_empty()
     }
 
     /// Get the next player clockwise from the given player.

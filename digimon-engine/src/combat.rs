@@ -2421,16 +2421,40 @@ impl Game {
         // self_card via `play_from_trash_free_unsuspended`. Drained BEFORE
         // the OnAnyDeletion broadcast so observers see the replayed
         // permanent on field.
+        //
+        // Re-entrancy: if a replayed permanent's OnPlay triggers a second
+        // deletion whose OnDeletion handler pushes onto
+        // `pending_post_deletion_replays`, that push lands on the
+        // freshly-re-created Vec (`std::mem::take` swapped in an empty Vec).
+        // The second deletion's own `finalize_permanent_deletion` call will
+        // drain it. Order is depth-first, matching DCGO's synchronous
+        // resolution model.
         if !self.pending_post_deletion_replays.is_empty() {
             let replays = std::mem::take(&mut self.pending_post_deletion_replays);
             for (controller, card) in replays {
-                let mut ctx = crate::effect_context::EffectContext::new(
-                    self,
-                    card,
-                    None,
-                    controller,
-                );
-                ctx.play_from_trash_free_unsuspended(card);
+                // Save + set + restore `effect_source_player` around the
+                // replay so the replayer's controller drives any
+                // downstream effect resolution (especially Progress
+                // filtering on the replayed card's ETB), instead of
+                // leaking stale attribution from the surrounding
+                // deletion chain.
+                let prev_source = self.effect_source_player;
+                self.effect_source_player = Some(controller);
+                {
+                    let mut ctx = crate::effect_context::EffectContext::new(
+                        self,
+                        card,
+                        None,
+                        controller,
+                    );
+                    // `play_from_trash_free_unsuspended` returns None if the
+                    // battle area is full or a CannotPlayDigimonByEffect
+                    // modifier is active (DCGO `CanPlayAsNewPermanent` gate).
+                    // Silent skip is the correct behavior — the card remains
+                    // in trash.
+                    let _ = ctx.play_from_trash_free_unsuspended(card);
+                }
+                self.effect_source_player = prev_source;
             }
         }
 
