@@ -184,6 +184,37 @@ impl<'a> EffectReadContext<'a> {
             Some(crate::replacement::ReplacementCause::OpponentEffect)
         )
     }
+
+    /// Identify the opposing combatant in the currently-resolving battle.
+    ///
+    /// Returns `Some(opponent_handle)` when `Game.pending_attack` is live
+    /// AND the supplied `self_handle` matches one side of the battle:
+    ///   - `self_handle == attacker` → returns the defender
+    ///   - `self_handle == effective_target.as_digimon()` → returns the attacker
+    ///   - otherwise (no pending battle, or self is not a combatant) → `None`
+    ///
+    /// Used by Retaliation (Phase E §E1) to identify the battle winner from
+    /// inside an `OnDeletion` handler — the loser is mid-deletion (calling
+    /// the handler) and the winner is the other side of the pending attack.
+    /// Direct player attacks (`AttackTarget::Player`) return `None` because
+    /// there is no opposing Digimon.
+    pub fn battle_opponent_of(
+        &self,
+        self_handle: PermanentHandle,
+    ) -> Option<PermanentHandle> {
+        let pa = self.game.pending_attack.as_ref()?;
+        let defender = match pa.effective_target {
+            crate::AttackTarget::Digimon(h) => Some(h),
+            crate::AttackTarget::Player(_) => None,
+        }?;
+        if self_handle == pa.attacker {
+            Some(defender)
+        } else if self_handle == defender {
+            Some(pa.attacker)
+        } else {
+            None
+        }
+    }
 }
 
 /// The context passed to every effect's `process` closure.
@@ -354,6 +385,25 @@ impl<'a> EffectContext<'a> {
             self.game.current_deletion_cause,
             Some(crate::replacement::ReplacementCause::OpponentEffect)
         )
+    }
+
+    /// See [`EffectReadContext::battle_opponent_of`].
+    pub fn battle_opponent_of(
+        &self,
+        self_handle: PermanentHandle,
+    ) -> Option<PermanentHandle> {
+        let pa = self.game.pending_attack.as_ref()?;
+        let defender = match pa.effective_target {
+            crate::AttackTarget::Digimon(h) => Some(h),
+            crate::AttackTarget::Player(_) => None,
+        }?;
+        if self_handle == pa.attacker {
+            Some(defender)
+        } else if self_handle == defender {
+            Some(pa.attacker)
+        } else {
+            None
+        }
     }
 
     // ─── Replacement-process outcome-setters (Phase C §4.2) ──────────────
