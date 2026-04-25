@@ -125,6 +125,25 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectMaterial { of_permanent, bind_as, prompt, optional, .. } => {
+            use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
+            let perm = match resolve_binding_ref(of_permanent, ctx, &bindings) {
+                Some(ResolvedBinding::Permanent(h)) => h,
+                // Missing binding or wrong type: silent no-op (2b/2c convention).
+                // Return false so run_steps falls through and the tail runs synchronously.
+                _ => return false,
+            };
+            install_select_material(
+                ctx,
+                perm,
+                bind_as.clone(),
+                prompt.clone(),
+                *optional,
+                tail.to_vec(),
+                bindings,
+            );
+            true
+        }
         _ => false,
     }
 }
@@ -354,6 +373,53 @@ fn install_select_security(
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
                 if let Some(card) = cb_ctx.game.player(target_player).security.get(idx) {
+                    b.insert_card(name, card.handle());
+                }
+            }
+            run_steps(&tail, cb_ctx, &mut b);
+            drain_dsl_outer_tail(cb_ctx);
+        },
+    );
+}
+
+fn install_select_material(
+    ctx: &mut EffectContext<'_>,
+    perm: PermanentHandle,
+    bind_as: Option<String>,
+    prompt: String,
+    optional: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+) {
+    let tail = Arc::new(tail);
+    // Exclude the top card (last index): only offer non-top sources as candidates.
+    // Mirrors select_count_capped_multi(Material) which does stack_len - 1.
+    ctx.select_material(
+        perm,
+        &prompt,
+        optional,
+        move |game, src_idx| {
+            let total = game
+                .player(perm.player)
+                .battle_area
+                .get(perm.index as usize)
+                .map(|p| p.card_sources.len())
+                .unwrap_or(0);
+            // Exclude top card: top is at index total-1.
+            src_idx + 1 < total
+        },
+        move |cb_ctx, src_idx| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                let perm_owner = perm.player;
+                let perm_index = perm.index as usize;
+                if let Some(card) = cb_ctx
+                    .game
+                    .player(perm_owner)
+                    .battle_area
+                    .get(perm_index)
+                    .and_then(|p| p.card_sources.get(src_idx))
+                {
                     b.insert_card(name, card.handle());
                 }
             }
