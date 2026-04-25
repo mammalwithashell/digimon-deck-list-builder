@@ -950,11 +950,12 @@ impl Game {
     /// cost, rule checks). Opponent *effects* are gated; battle damage and
     /// cost-triggered cleanup are not.
     ///
-    /// Callers: `select_opponent_permanent` (selection-time gate, Phase A)
-    /// and the script-API mutation entry points on `EffectContext` (Phase B):
+    /// Callers: selection filters in `effect_context::selections`; opponent-
+    /// effect mutation entry points in `effect_context::add_modifier`,
     /// `delete_permanent`, `return_to_hand`, `return_to_deck`, `de_digivolve`,
-    /// `suspend`, and the negative-DP branches of `add_dp_modifier` /
-    /// `add_modifier`.
+    /// and `suspend`. The `add_modifier` site is unconditional — every
+    /// `ModifierType` and every value (positive, negative, or zero) is gated,
+    /// matching DCGO's `CanNotAffected` semantics literally.
     pub fn progress_excludes(
         &self,
         target: PermanentHandle,
