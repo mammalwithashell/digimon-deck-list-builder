@@ -1030,6 +1030,51 @@ impl<'a> EffectContext<'a> {
         self.game.place_as_bottom_source(source, target)
     }
 
+    /// Move `card` from whatever zone it currently occupies to the **bottom**
+    /// of `target`'s digivolution stack (`card_sources[0]`).
+    ///
+    /// The card is located by scanning all zones of all players in the
+    /// following priority order:
+    ///   1. Each player's `hand`
+    ///   2. Each player's `trash`
+    ///   3. Each player's `deck`
+    ///   4. Each player's `security`
+    ///   5. Each player's `battle_area` card stacks (all permanents)
+    ///   6. Each player's `breeding_area` card stack
+    ///
+    /// This covers every realistic source for `<Save>` (self just moved to
+    /// trash during deletion) and `<Material Save N>` (cards are in another
+    /// permanent's `card_sources`). Opponent deck / security are included for
+    /// completeness but Save/MaterialSave callers will never route through
+    /// them in normal play.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `card` cannot be located in any zone — this represents a
+    /// programming error (passing an invalid or already-moved handle).
+    ///
+    /// Used by: `<Save>`, `<Material Save N>`.
+    pub fn place_card_under_permanent_bottom(
+        &mut self,
+        card: CardHandle,
+        target: PermanentHandle,
+    ) {
+        let taken = self.game.remove_card_from_any_zone(card)
+            .unwrap_or_else(|| panic!(
+                "place_card_under_permanent_bottom: card {:?} not found in any zone",
+                card
+            ));
+
+        let target_player = self.game.player_mut(target.player);
+        if (target.index as usize) >= target_player.battle_area.len() {
+            // Safe-fail: target permanent no longer exists; route to its
+            // controller's trash rather than dropping the card on the floor.
+            target_player.trash.push(taken);
+            return;
+        }
+        target_player.battle_area[target.index as usize].push_under(taken);
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_hand(

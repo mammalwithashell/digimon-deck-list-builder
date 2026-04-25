@@ -1765,6 +1765,73 @@ impl Game {
         true
     }
 
+    /// Search all zones of all players for a card matching `handle` and remove
+    /// it, returning the `CardSource`. Returns `None` if the card is not found
+    /// in any zone.
+    ///
+    /// Zones scanned (in order):
+    ///   1. Each player's `hand`
+    ///   2. Each player's `trash`
+    ///   3. Each player's `deck`
+    ///   4. Each player's `security`
+    ///   5. Each player's `battle_area` permanent card stacks (all sources)
+    ///   6. Each player's `breeding_area` card stack
+    ///
+    /// Used by `EffectContext::place_card_under_permanent_bottom` to locate
+    /// cards before tucking them under a permanent regardless of which zone
+    /// they currently live in.
+    pub fn remove_card_from_any_zone(
+        &mut self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<crate::card_source::CardSource> {
+        let player_count = self.players.len();
+
+        for pid in 0..player_count {
+            // --- hand ---
+            if let Some(pos) = self.players[pid].hand.iter().position(|c| c.handle() == handle) {
+                return Some(self.players[pid].hand.remove(pos));
+            }
+            // --- trash ---
+            if let Some(pos) = self.players[pid].trash.iter().position(|c| c.handle() == handle) {
+                return Some(self.players[pid].trash.remove(pos));
+            }
+            // --- deck ---
+            if let Some(pos) = self.players[pid].deck.iter().position(|c| c.handle() == handle) {
+                return Some(self.players[pid].deck.remove(pos));
+            }
+            // --- security ---
+            if let Some(pos) = self.players[pid].security.iter().position(|c| c.handle() == handle) {
+                return Some(self.players[pid].security.remove(pos));
+            }
+            // --- battle_area permanent stacks ---
+            for perm_idx in 0..self.players[pid].battle_area.len() {
+                let stack = &self.players[pid].battle_area[perm_idx].card_sources;
+                if let Some(src_pos) = stack.iter().position(|c| c.handle() == handle) {
+                    return Some(
+                        self.players[pid].battle_area[perm_idx]
+                            .card_sources
+                            .remove(src_pos),
+                    );
+                }
+            }
+            // --- breeding_area ---
+            if let Some(ref breeding) = self.players[pid].breeding_area {
+                if let Some(src_pos) = breeding.card_sources.iter().position(|c| c.handle() == handle) {
+                    return Some(
+                        self.players[pid]
+                            .breeding_area
+                            .as_mut()
+                            .unwrap()
+                            .card_sources
+                            .remove(src_pos),
+                    );
+                }
+            }
+        }
+
+        None
+    }
+
     /// Scan all battle-area permanents of both players for
     /// `EffectTiming::BeforePayCost` effects whose condition passes, and
     /// accumulate the total cost reduction.

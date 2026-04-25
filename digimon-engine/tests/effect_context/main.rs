@@ -5,3 +5,4 @@
 //! feature or primitive; add new modules here as Phase D primitives land.
 
 mod material_zone_select;
+mod place_under_permanent;
