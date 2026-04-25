@@ -93,7 +93,7 @@ pub struct Game {
     /// RNG for shuffling and random effects.
     pub rng: StdRng,
     /// Counter for assigning unique card instance indices.
-    pub(crate) next_card_index: u16,
+    next_card_index: u16,
     /// Players still owing a mulligan decision, in order. Empty once mulligan
     /// is finalized. Driven by `accept_mulligan`; see §1.6 in RUST_PYTHON_PARITY.
     pub mulligan_pending: Vec<PlayerId>,
@@ -895,6 +895,20 @@ impl Game {
         let idx = self.next_card_index;
         self.next_card_index += 1;
         idx
+    }
+
+    /// Advance the card-index counter to `value` if it would move forward.
+    /// No-op if `value <= self.next_card_index` — the counter must never
+    /// regress, since that would re-issue an index already in circulation.
+    ///
+    /// Used by test harnesses (e.g. `DebugRunner`) that pre-seed cards with
+    /// indices `0..N` and need the game to allocate `N..` for any cards
+    /// minted after setup. Centralized here so future invariants around
+    /// card-index management have a single chokepoint.
+    pub(crate) fn advance_card_index_to(&mut self, value: u16) {
+        if value > self.next_card_index {
+            self.next_card_index = value;
+        }
     }
 
     // --- Convenience methods that avoid borrow conflicts ---
