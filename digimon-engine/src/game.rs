@@ -212,8 +212,8 @@ pub struct Game {
 
     /// The cause of the deletion currently being observed by `OnDeletion`
     /// effects. Set by `commit_permanent_deletion` immediately before
-    /// `enqueue_triggered(OnDeletion, ...)`; cleared after the drain via the
-    /// `commit_deletion_cause_guard` RAII helper. Read by
+    /// `enqueue_triggered(OnDeletion, ...)`; cleared after the drain via a
+    /// panic-safe `catch_unwind` scope at the fire-site. Read by
     /// `EffectContext::deletion_cause()` / `was_deleted_by_effect()` /
     /// `was_deleted_by_opponent()`.
     ///
