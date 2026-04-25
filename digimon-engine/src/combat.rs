@@ -2211,24 +2211,9 @@ impl Game {
     /// `WhenWouldLeaveBattleArea` / `WhenWouldBeDeleted` replacement windows
     /// before committing the deletion. See design spec §5, §7.3.
     ///
-    /// Task 3 limitation: if an optional replacement installs a
-    /// `PendingSelection::Replacement` at EITHER dispatch stage
-    /// (`WhenWouldLeaveBattleArea` or `WhenWouldBeDeleted`), this method
-    /// early-returns without committing. The caller is then responsible for
-    /// re-driving the deletion after the selection resolves (or for
-    /// inspecting `replacement_pending_outcome` and applying the chosen
-    /// outcome manually).
-    ///
-    /// Re-drive idempotency caveat: if the FIRST stage returned `None` and
-    /// the SECOND stage parked a selection, a naive re-drive re-fires
-    /// `WhenWouldLeaveBattleArea` — which is safe for pure `cancel`/`handled`
-    /// replacements but NOT for processes that mutate state before setting
-    /// outcome. Task 6 native keywords avoid the issue because Barrier /
-    /// Evade / etc. are single-stage `WhenWouldBeDeleted` replacements.
-    ///
-    /// In practice Task 3 tests exercise mandatory replacements only;
-    /// optional flow is covered end-to-end by Task 6's native-keyword
-    /// scenarios.
+    /// Nested-select-in-replacement is supported via Phase C's
+    /// `Game.parked_replacement` slot — see
+    /// `docs/superpowers/specs/2026-04-25-keyword-parity-phase-c-design.md`.
     pub fn delete_permanent_with_cause(
         &mut self,
         handle: PermanentHandle,
