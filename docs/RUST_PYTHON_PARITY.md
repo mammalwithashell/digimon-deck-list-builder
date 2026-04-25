@@ -182,6 +182,16 @@ Example: Digital Gate Open's `[Security]` ("Play 1 Digimon with cost ≤3 from h
 
 Tracked long-term in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md) under "Progress".
 
+### 2.5c-E 🟢 Progress gate scope (Rust broader than Python) — Phase E prep
+
+**Rust** ([`digimon-engine/src/effect_context/mod.rs::add_modifier`](../digimon-engine/src/effect_context/mod.rs)) — unconditional `progress_excludes` short-circuit at the top of `add_modifier`. Every opponent-sourced modifier against the Progress attacker is suppressed regardless of `ModifierType` variant or sign — including positive `ChangeDp` / `ChangeBaseDp` buffs, lockdown variants (`CannotAttack`, `CannotUnsuspend`, `DontHaveDp`, `SecurityAttackChange`), and even notionally-protective modifiers (e.g. `CannotBeDestroyedByEffect`) sourced by the opponent. `add_dp_modifier` is a thin pass-through. Matches DCGO's [`Progress.cs:99`](../DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Progress.cs#L99) `IsOpponentEffect` `SkillCondition` literal — purely a source-controller check, hostility-blind and sign-blind. Mirrors the `targetPermanent.TopCard.CanNotBeAffected(activateClass)` check that every [`GiveEffectToPermanent/*.cs`](../DCGO/Assets/Scripts/Script/CardEffectCommons/GiveEffect/GiveEffectToPermanent) helper performs.
+
+**Python** (`digimon_gym/engine/...`) — no Progress gate at the modifier sites. Opponent-sourced positive-DP buffs and protective modifiers land on the Progress attacker. (Same Phase-B-style hostility-blind gap that Rust just closed; additionally Python's broader Progress handling is incorrect per §2.5c.)
+
+**Disposition:** deliberate divergence — Rust matches DCGO literally; Python does not. Reverts the Phase B "positive DP buffs still apply" sanity carve-out (the `opponent_effect_positive_dp_still_applies_to_progress_attacker` test was flipped to its DCGO-faithful inverse). Hostility classification was rejected as the alternative because every new `ModifierType` variant would need re-classifying and protective-modifier riders sourced by opponents would silently leak. This row retires when the Python engine is retired.
+
+**Coverage:** [tests/combat/progress_mutation_gates.rs](../digimon-engine/tests/combat/progress_mutation_gates.rs) — 19 tests covering positive/negative DP, `ChangeBaseDp` (both signs), `SecurityAttackChange`, `CannotAttack`, `CannotUnsuspend`, `DontHaveDp`, opponent-granted `CannotBeDestroyedByEffect`, plus own-sourced negative controls (own buffs and own lockdowns still install on the carrier).
+
 ### 2.5d 🟢 `DontBattleSecurityDigimon` modifier — implemented
 
 **Python** — [player.py:644-650](../digimon_gym/engine/core/player.py#L644) checks `modifiers.has_modifier(attacker, ModifierType.DONT_BATTLE_SECURITY_DIGIMON)` and skips the Digimon-vs-security battle entirely when set.
