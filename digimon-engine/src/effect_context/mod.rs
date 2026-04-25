@@ -440,13 +440,17 @@ impl<'a> EffectContext<'a> {
     // ─── Field mutations ──────────────────────────────────────────────
 
     pub fn delete_permanent(&mut self, target: PermanentHandle) {
-        let player = self.game.player_mut(target.player);
-        if (target.index as usize) < player.battle_area.len() {
-            player.delete_permanent(target.index as usize);
-            self.game.modifiers.clear_permanent(target);
-            // Phase 6: expire any player-scoped modifiers sourced from this permanent.
-            self.game.modifiers.expire_player_on_permanent_leave(target);
+        // Phase B §B4: gate opponent-sourced effect deletes on Progress.
+        // Source is statically known here: `self.player` is the controller of
+        // the running effect.
+        if self.game.progress_excludes(target, Some(self.player)) {
+            return;
         }
+        // Route through the Game-level fire-site so OnDeletion observers and
+        // WhenWouldBeDeleted replacements run. `delete_permanent_with_effects`
+        // infers cause from `effect_source_player` / `pending_attack` /
+        // `security_resolution`.
+        self.game.delete_permanent_with_effects(target);
     }
 
     /// Pop up to `amount` cards off `target`'s digivolution stack,
