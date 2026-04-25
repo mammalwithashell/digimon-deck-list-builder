@@ -618,6 +618,30 @@ impl Game {
         self.effect_source_player = source;
     }
 
+    /// Test-only setter for `parked_replacement`. Production code must go
+    /// through the dispatcher's post-process hook in
+    /// `replacement::run_candidate_inner`. Exposed so behavioral tests under
+    /// `digimon-engine/tests/` can install a parked-replacement slot
+    /// directly without driving an entire replacement-dispatch flow.
+    #[doc(hidden)]
+    pub fn install_parked_replacement_for_test(
+        &mut self,
+        parked: crate::replacement::ParkedReplacement,
+    ) {
+        self.parked_replacement = Some(parked);
+    }
+
+    /// Test-only getter for the parked-replacement outcome. The
+    /// `parked_replacement` field is `pub(crate)`, so behavioral tests
+    /// under `digimon-engine/tests/` cannot read it directly. Returns
+    /// `None` when no replacement is parked.
+    #[doc(hidden)]
+    pub fn parked_replacement_outcome_for_test(
+        &self,
+    ) -> Option<crate::replacement::ReplacementOutcome> {
+        self.parked_replacement.as_ref().map(|p| p.outcome)
+    }
+
     /// Get the next player clockwise from the given player.
     pub fn next_clockwise(&self, id: PlayerId) -> PlayerId {
         let pos = self

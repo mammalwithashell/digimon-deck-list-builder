@@ -356,6 +356,29 @@ impl<'a> EffectContext<'a> {
         )
     }
 
+    // ─── Replacement-process outcome-setters (Phase C §4.2) ──────────────
+
+    /// Cancel the parked leave-the-field event. The carrier stays on the
+    /// field; the original deletion / return / etc. is suppressed.
+    ///
+    /// Writes `ReplacementOutcome::Cancelled` to `Game.parked_replacement.outcome`.
+    /// Calling this outside a parked-replacement scope is a `debug_assert!`
+    /// panic in dev builds; release builds silently no-op.
+    ///
+    /// Typical use: inside a `select_*` callback that runs as the body of a
+    /// `WhenWouldBeDeleted` replacement-process closure (e.g., Save:
+    /// "you may pick a Tamer to slide under instead of being deleted").
+    pub fn cancel_leave(&mut self) {
+        debug_assert!(
+            self.game.parked_replacement.is_some(),
+            "cancel_leave called outside a replacement-process callback; \
+             the outcome would be silently dropped"
+        );
+        if let Some(parked) = self.game.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
+        }
+    }
+
     /// Reborrow this mut context as a read-only context — for condition
     /// closures, which take `&EffectReadContext`.
     pub fn as_read(&self) -> EffectReadContext<'_> {

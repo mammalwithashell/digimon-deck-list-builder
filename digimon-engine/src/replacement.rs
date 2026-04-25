@@ -111,7 +111,7 @@ impl<'g> ReplacementContext<'g> {
 ///
 /// Phase C §4.1.
 #[derive(Debug)]
-pub(crate) struct ParkedReplacement {
+pub struct ParkedReplacement {
     pub subject: ReplacementSubject,
     pub cause: ReplacementCause,
     pub original_destination: Option<Zone>,
