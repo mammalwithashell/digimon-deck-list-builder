@@ -246,7 +246,7 @@ fn is_known_modifier(name: &str) -> bool {
         | "CannotSuspend" | "CannotUnsuspend"
         | "CannotBeSelectedByEffect" | "CannotBeAffected"
         | "GrantBlocker" | "GrantRush" | "GrantJamming" | "GrantPiercing" | "GrantReboot"
-        | "GrantBlitz" | "GrantAlliance" | "GrantRaid" | "GrantBarrier" | "GrantArmor"
+        | "GrantBlitz" | "GrantAlliance" | "GrantRaid"
         | "GrantDecoy" | "GrantVortex" | "GrantOverclock"
         | "MayAttack" | "ForceAttack"
         | "SecurityAttackChange"
@@ -265,9 +265,9 @@ fn is_known_keyword(name: &str) -> bool {
     matches!(
         name,
         "Blocker" | "SecurityAttackPlus" | "SecurityAttackMinus" | "Rush" | "Jamming"
-        | "Piercing" | "Reboot" | "DeDigivolve" | "DrawX" | "Blitz" | "Armor"
-        | "Raid" | "Alliance" | "Blast" | "Save" | "Fortitude" | "Overclock"
-        | "Barrier" | "Decoy" | "Material" | "Partition" | "Vortex" | "Collision"
+        | "Piercing" | "Reboot" | "DeDigivolve" | "DrawX" | "Blitz"
+        | "Raid" | "Alliance" | "BlastDigivolve" | "Save" | "Fortitude" | "Overclock"
+        | "Barrier" | "Decoy" | "Partition" | "Vortex" | "Collision"
         | "Progress" | "Evade" | "MaterialSave" | "Delay"
     )
 }

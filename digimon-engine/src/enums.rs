@@ -281,16 +281,19 @@ pub enum Keyword {
     DeDigivolve(u8),
     DrawX(u8),
     Blitz,
-    Armor,
     Raid,
     Alliance,
-    Blast,
+    BlastDigivolve,
     Save,
+    /// DCGO `MaterialSave N` — active skill that moves up to N digivolution
+    /// sources under another permanent. Parsed from `<Material Save N>`.
+    /// Auto-install wires up in Phase D; the variant exists now so parser
+    /// and script authors can carry the parameter.
+    MaterialSave(u8),
     Fortitude,
     Overclock,
     Barrier,
     Decoy,
-    Material,
     Partition,
     Vortex,
     /// Attacker keyword — while this Digimon is attacking, every opponent
@@ -374,8 +377,6 @@ pub enum ModifierType {
     GrantBlitz,
     GrantAlliance,
     GrantRaid,
-    GrantBarrier,
-    GrantArmor,
     GrantDecoy,
     GrantVortex,
     GrantOverclock,
