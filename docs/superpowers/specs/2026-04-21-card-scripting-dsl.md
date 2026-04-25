@@ -1542,6 +1542,28 @@ tensor+mask stream through 20 random game seeds is byte-identical.
 **Exit criteria:** ≥500 retired; parity suite green; one archetype
 (e.g. BT17 Tai/Matt DNA Omnimon core, ~50 cards) fully DSL-authored.
 
+**Sub-phase progress:**
+- **2a** (landed) — triggered clause lowering + memory/draw + `run_steps`
+  scaffold.
+- **2b** (landed) — selection steps (`SelectHand` / `SelectTrash` /
+  `SelectOwn|OpponentPermanent`), binding refs, continuation dispatcher,
+  zone moves.
+- **2c** (landed) — permanent mutations (Suspend / Unsuspend / Delete /
+  ReturnToHand / ReturnToDeck / DeDigivolve), AddDpModifier, AddModifier
+  binding-target, GrantKeyword, control flow (`If` / `Optional`).
+- **2d** (landed 2026-04-25) — multi-result bindings
+  (`BindingValue::PermanentList` + `CardList`), iteration verbs
+  (`ForEach`, `PerSelected`), multi-pick selection
+  (`SelectCountCappedMulti` over Hand/Trash), `AddModifier` filter-target
+  arm, and the `run_steps` continuation propagation fix
+  (`RunOutcome { Synchronous, Parked }` + `Game::dsl_outer_tail`).
+  Defers to 2e+: `ScheduleDelayed` (needs `ctx.schedule_delayed` engine
+  primitive), remaining selection kinds (Reveal / Security / Material /
+  UnionZone / OrderedPermutation / EffectChoice / AsSelectingPlayer),
+  play / digivolve / placement steps, formula values in modifier
+  `value` fields, and `distinct_by` enforcement on
+  `SelectCountCappedMulti`.
+
 ### 7.4 Phase 3 — Advanced clauses
 
 **Scope:** `replacement`, `partition`, `delay`, `schedule_delayed`,

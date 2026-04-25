@@ -12,11 +12,11 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledPlayerRef, CompiledStep};
+use digimon_dsl::compiled::{CompiledPlayerRef, CompiledStep, CompiledZone};
 
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::{resolve_player, run_steps};
-use crate::effect_context::EffectContext;
+use crate::dsl_cards::step::{drain_dsl_outer_tail, resolve_player, run_steps};
+use crate::effect_context::{CountCappedZone, EffectContext};
 use crate::permanent::PermanentHandle;
 
 /// Returns `true` if `step` was a selection step and the remainder was
@@ -75,6 +75,22 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectCountCappedMulti {
+            of, zone, max, bind_as, prompt, optional_zero, ..
+        } => {
+            install_select_count_capped_multi(
+                ctx,
+                *of,
+                *zone,
+                *max,
+                bind_as.clone(),
+                prompt.clone(),
+                *optional_zero,
+                tail.to_vec(),
+                bindings,
+            );
+            true
+        }
         _ => false,
     }
 }
@@ -101,6 +117,9 @@ fn install_select_hand(
                 b.insert_hand_index(name, idx as u16);
             }
             run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail captured by run_steps when
+            // this selection was installed inside a control-flow body.
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }
@@ -127,6 +146,8 @@ fn install_select_trash(
                 b.insert_trash_index(name, idx as u16);
             }
             run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail.
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }
@@ -150,6 +171,8 @@ fn install_select_own_permanent(
                 b.insert_permanent(name, handle);
             }
             run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail.
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }
@@ -173,6 +196,50 @@ fn install_select_opponent_permanent(
                 b.insert_permanent(name, handle);
             }
             run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail.
+            drain_dsl_outer_tail(cb_ctx);
+        },
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_select_count_capped_multi(
+    ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    zone: CompiledZone,
+    max: u8,
+    bind_as: Option<String>,
+    prompt: String,
+    optional_zero: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+) {
+    let target_player = resolve_player(ctx, of);
+    let engine_zone = match zone {
+        CompiledZone::Hand => CountCappedZone::Hand,
+        CompiledZone::Trash => CountCappedZone::Trash,
+        // Phase 2d scope: only Hand/Trash supported. Other zones (Materials,
+        // Security, Reveal, Source, Field, Deck, Breeding) silently no-op
+        // here; Phase 2e+ adds the missing engine API hooks.
+        _ => return,
+    };
+    let tail = Arc::new(tail);
+    ctx.select_count_capped_multi(
+        target_player,
+        engine_zone,
+        max,
+        &prompt,
+        optional_zero,
+        |_game, _card| true, // Phase 2b/2c precedent: accept-all filter.
+        move |cb_ctx, picks| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_card_list(name, picks);
+            }
+            run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail captured by run_steps when
+            // this selection was installed inside a control-flow body.
+            drain_dsl_outer_tail(cb_ctx);
         },
     );
 }
