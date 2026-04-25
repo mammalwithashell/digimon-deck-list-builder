@@ -306,8 +306,10 @@ Create `digimon-engine/src/dsl_cards/step/permanent_scan.rs`:
 
 ```rust
 //! Enumerate battle-area permanents matching a `CompiledPredicate`.
-//! Used by `ForEach`, `PerSelected` (when iterating a `PermanentList`),
-//! and `AddModifier { target: Filter(...) }`.
+//! Used by `ForEach` and `AddModifier { target: Filter(...) }`.
+//! `PerSelected` does NOT go through this helper — it iterates a
+//! pre-bound `PermanentList` / `CardList` directly (the binding was
+//! produced by an earlier `select_count_capped_multi`).
 //!
 //! Iteration order: P0's battle_area in ascending index, then P1's. Stable
 //! and turn-independent (callers that need turn-relative order should
@@ -1084,6 +1086,18 @@ In `digimon-engine/src/game.rs`, add a field to the `Game` struct:
 ///
 /// `None` outside of a parked control-flow continuation. Always cleared
 /// at the bottom of the selection callback that drained it.
+///
+/// **Invariant: at most one outstanding outer continuation at a time.**
+/// `run_steps` MUST `debug_assert!(self.dsl_outer_tail.is_none())` before
+/// writing — overwriting a `Some` value would silently drop a parked
+/// outer slice and abort the user's still-pending sequence. Today the
+/// dispatcher guarantees this by never re-entering `run_steps` from
+/// within a selection callback before that callback's drain runs (the
+/// callback drains and then the outer slice is gone), but a future
+/// change that allows nested parks (e.g. an `Optional` body whose
+/// inner `If` body itself parks) will need to either (a) make this a
+/// `Vec<(_, _)>` stack, or (b) refuse the second park with a clear
+/// validation error. Don't silently overwrite.
 pub dsl_outer_tail: Option<(
     Vec<digimon_dsl::compiled::CompiledStep>,
     crate::dsl_cards::bindings::Bindings,
@@ -1145,6 +1159,13 @@ pub fn run_steps(
             if matches!(outcome, RunOutcome::Parked) {
                 let outer_tail = steps[i + 1..].to_vec();
                 if !outer_tail.is_empty() {
+                    // Invariant: at most one outstanding outer continuation.
+                    // See Game::dsl_outer_tail doc for the full rationale.
+                    debug_assert!(
+                        ctx.game.dsl_outer_tail.is_none(),
+                        "dsl_outer_tail overwrite: an earlier outer continuation \
+                         was never drained — likely a nested-park bug",
+                    );
                     ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone()));
                 }
                 return RunOutcome::Parked;
@@ -1157,6 +1178,11 @@ pub fn run_steps(
             if matches!(outcome, RunOutcome::Parked) {
                 let outer_tail = steps[i + 1..].to_vec();
                 if !outer_tail.is_empty() {
+                    debug_assert!(
+                        ctx.game.dsl_outer_tail.is_none(),
+                        "dsl_outer_tail overwrite: an earlier outer continuation \
+                         was never drained — likely a nested-park bug",
+                    );
                     ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone()));
                 }
                 return RunOutcome::Parked;
