@@ -91,6 +91,17 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectEffectChoice { labels, bind_as, prompt, .. } => {
+            install_select_effect_choice(
+                ctx,
+                labels.clone(),
+                bind_as.clone(),
+                prompt.clone(),
+                tail.to_vec(),
+                bindings,
+            );
+            true
+        }
         _ => false,
     }
 }
@@ -235,6 +246,31 @@ fn install_select_count_capped_multi(
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
                 b.insert_card_list(name, picks);
+            }
+            run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail captured by run_steps when
+            // this selection was installed inside a control-flow body.
+            drain_dsl_outer_tail(cb_ctx);
+        },
+    );
+}
+
+fn install_select_effect_choice(
+    ctx: &mut EffectContext<'_>,
+    labels: Vec<String>,
+    bind_as: Option<String>,
+    prompt: String,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+) {
+    let tail = Arc::new(tail);
+    ctx.select_effect_choice(
+        &prompt,
+        labels,
+        move |cb_ctx, idx| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_literal(name, idx as i64);
             }
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail captured by run_steps when
