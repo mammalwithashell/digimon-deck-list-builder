@@ -131,3 +131,64 @@ fn opponent_effect_return_to_deck_does_not_bounce_progress_attacker() {
         "deck size unchanged"
     );
 }
+
+#[test]
+fn opponent_effect_de_digivolve_does_not_pop_progress_attacker_stack() {
+    // Build a Progress carrier with two stack sources so de_digivolve has
+    // something to pop. We layer a second source manually because Phase B
+    // doesn't depend on the digivolve action path.
+    use digimon_engine::card_source::CardSource;
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("PROG", 6000, vec![Keyword::Progress]))
+        .add_card(fighter("BOTTOM", 2000, vec![]))
+        .add_card(fighter("OPP", 4000, vec![]))
+        .start();
+    let progress = r.place_on_field(0, "PROG", None);
+    let _opp = r.place_on_field(1, "OPP", None);
+    // Inject a second card under the top so the stack has 2 sources.
+    {
+        let bottom_idx = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BOTTOM")
+            .unwrap();
+        let next = r.game.next_card_index();
+        let bottom_card = CardSource::new(bottom_idx, 0, next);
+        let perm = &mut r.game.players[0].battle_area[progress.index as usize];
+        perm.card_sources.insert(0, bottom_card);
+    }
+    let stack_size_before = r.game.players[0].battle_area[progress.index as usize]
+        .card_sources
+        .len();
+
+    r.game.pending_attack = Some(PendingAttack {
+        attacker: progress,
+        original_target: AttackTarget::Player(1),
+        effective_target: AttackTarget::Player(1),
+        is_blocked: false,
+        blocker: None,
+        is_vortex: false,
+        is_overclock: false,
+        cancelled: false,
+        battle_occurred: false,
+        return_phase: GamePhase::Main,
+        state: AttackState::Declared,
+        counter_depth: 0,
+    });
+    r.game.set_effect_source_player_for_test(Some(1));
+    let popped = {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        ctx.de_digivolve(progress, None, Some(1))
+    };
+    r.game.set_effect_source_player_for_test(None);
+
+    assert_eq!(popped, 0, "de_digivolve must report 0 pops on Progress carrier");
+    assert_eq!(
+        r.game.players[0].battle_area[progress.index as usize]
+            .card_sources
+            .len(),
+        stack_size_before,
+        "Progress attacker stack must be unchanged"
+    );
+}
