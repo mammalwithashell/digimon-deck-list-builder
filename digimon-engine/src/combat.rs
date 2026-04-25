@@ -1635,10 +1635,11 @@ impl Game {
         attacker: PermanentHandle,
         defender_player: PlayerId,
     ) -> AttackResult {
-        let sa_bonus = self
+        let sa_modifier = self
             .modifiers
             .sum(attacker, ModifierType::SecurityAttackChange);
-        let checks = (1 + sa_bonus).max(0) as u8;
+        let sa_keyword = self.security_attack_keyword_bonus(attacker);
+        let checks = (1 + sa_modifier + sa_keyword).max(0) as u8;
         if checks == 0 {
             return AttackResult::SecurityCheckSurvived;
         }
@@ -2210,24 +2211,9 @@ impl Game {
     /// `WhenWouldLeaveBattleArea` / `WhenWouldBeDeleted` replacement windows
     /// before committing the deletion. See design spec §5, §7.3.
     ///
-    /// Task 3 limitation: if an optional replacement installs a
-    /// `PendingSelection::Replacement` at EITHER dispatch stage
-    /// (`WhenWouldLeaveBattleArea` or `WhenWouldBeDeleted`), this method
-    /// early-returns without committing. The caller is then responsible for
-    /// re-driving the deletion after the selection resolves (or for
-    /// inspecting `replacement_pending_outcome` and applying the chosen
-    /// outcome manually).
-    ///
-    /// Re-drive idempotency caveat: if the FIRST stage returned `None` and
-    /// the SECOND stage parked a selection, a naive re-drive re-fires
-    /// `WhenWouldLeaveBattleArea` — which is safe for pure `cancel`/`handled`
-    /// replacements but NOT for processes that mutate state before setting
-    /// outcome. Task 6 native keywords avoid the issue because Barrier /
-    /// Evade / etc. are single-stage `WhenWouldBeDeleted` replacements.
-    ///
-    /// In practice Task 3 tests exercise mandatory replacements only;
-    /// optional flow is covered end-to-end by Task 6's native-keyword
-    /// scenarios.
+    /// Nested-select-in-replacement is supported via Phase C's
+    /// `Game.parked_replacement` slot — see
+    /// `docs/superpowers/specs/2026-04-25-keyword-parity-phase-c-design.md`.
     pub fn delete_permanent_with_cause(
         &mut self,
         handle: PermanentHandle,
@@ -2267,7 +2253,18 @@ impl Game {
 
         match outcome {
             ReplacementOutcome::None => {
-                self.commit_permanent_deletion(handle);
+                // Phase B §B5: expose the cause to OnDeletion observers via
+                // `current_deletion_cause`. Set before the enqueue; cleared
+                // after the drain via panic-safe guard.
+                let prior = self.current_deletion_cause;
+                self.current_deletion_cause = Some(cause);
+                let result = std::panic::catch_unwind(
+                    std::panic::AssertUnwindSafe(|| self.commit_permanent_deletion(handle)),
+                );
+                self.current_deletion_cause = prior;
+                if let Err(payload) = result {
+                    std::panic::resume_unwind(payload);
+                }
             }
             ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
                 // Skip deletion — no OnDeletion / OnAnyDeletion fires.
@@ -2308,6 +2305,19 @@ impl Game {
     /// Core deletion body (OnDeletion → remove → modifier cleanup →
     /// OnAnyDeletion) — shared between the direct fallthrough and the
     /// defensive branches of `delete_permanent_with_cause`.
+    ///
+    /// **Phase D Task 6 — deferred completion.** If an `OnDeletion`-timed
+    /// effect parks a `pending_selection` (e.g. printed `<Save>` asks
+    /// the controller to pick a Tamer), the rest of the deletion sequence
+    /// (linked-card cascade, `Player::delete_permanent`, modifier cleanup,
+    /// `OnAnyDeletion`) MUST defer until that selection resolves —
+    /// otherwise the synchronous `delete_permanent` would shift later
+    /// permanents' indices, invalidating the parked selection's
+    /// `valid_action_ids`. Detected via `pending_selection.is_some()`
+    /// after the OnDeletion drain; the deferred state is parked in
+    /// `Game.pending_deletion_resume` and resumed by
+    /// `resolve_generic_selection`'s post-callback hook (calls
+    /// `resume_pending_deletion`).
     fn commit_permanent_deletion(&mut self, handle: PermanentHandle) {
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDeletion,
@@ -2315,6 +2325,36 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        // Phase D Task 6: an OnDeletion handler installed a player choice
+        // (e.g. printed Save). Park the rest of the deletion sequence to be
+        // finalized after the selection resolves; running synchronously
+        // here would shift later permanents' indices and invalidate the
+        // parked selection.
+        if self.pending_selection.is_some() {
+            debug_assert!(
+                self.pending_deletion_resume.is_none(),
+                "nested deferred deletion not supported (single-outstanding invariant)"
+            );
+            self.pending_deletion_resume = Some(handle);
+            return;
+        }
+
+        self.finalize_permanent_deletion(handle);
+    }
+
+    /// Run the post-OnDeletion-drain portion of a permanent's deletion:
+    /// linked-card cascade, `Player::delete_permanent`, modifier cleanup,
+    /// `OnAnyDeletion` enqueue + drain.
+    ///
+    /// Split out from `commit_permanent_deletion` so the deferred-completion
+    /// path (Phase D Task 6) can resume from the same point after a parked
+    /// selection resolves. See `commit_permanent_deletion` for the rationale
+    /// behind the split.
+    ///
+    /// Visible to `crate::replacement` so the no-replace path
+    /// (`commit_permanent_deletion_no_replace`) can share the same finalize
+    /// step (linked-card cascade, post-deletion replays drain, OnAnyDeletion).
+    pub(crate) fn finalize_permanent_deletion(&mut self, handle: PermanentHandle) {
         // Phase 8 Task 4: drain any linked cards BEFORE removing the
         // permanent so the OnLinkedCardTrashed observer sees the host still
         // in place (as required by the Appmon-trait card text). Each linked
@@ -2377,6 +2417,51 @@ impl Game {
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
 
+        // Phase D Task 8 — drain post-deletion replays (e.g. printed
+        // `<Fortitude>` keyword auto-install). The carrier's OnDeletion
+        // handler stashed `(controller, self_card)` here while the carrier
+        // was still on field; now that `delete_permanent` has moved the
+        // carrier's top + sources to trash, we can safely retrieve the
+        // self_card via `play_from_trash_free_unsuspended`. Drained BEFORE
+        // the OnAnyDeletion broadcast so observers see the replayed
+        // permanent on field.
+        //
+        // Re-entrancy: if a replayed permanent's OnPlay triggers a second
+        // deletion whose OnDeletion handler pushes onto
+        // `pending_post_deletion_replays`, that push lands on the
+        // freshly-re-created Vec (`std::mem::take` swapped in an empty Vec).
+        // The second deletion's own `finalize_permanent_deletion` call will
+        // drain it. Order is depth-first, matching DCGO's synchronous
+        // resolution model.
+        if !self.pending_post_deletion_replays.is_empty() {
+            let replays = std::mem::take(&mut self.pending_post_deletion_replays);
+            for (controller, card) in replays {
+                // Save + set + restore `effect_source_player` around the
+                // replay so the replayer's controller drives any
+                // downstream effect resolution (especially Progress
+                // filtering on the replayed card's ETB), instead of
+                // leaking stale attribution from the surrounding
+                // deletion chain.
+                let prev_source = self.effect_source_player;
+                self.effect_source_player = Some(controller);
+                {
+                    let mut ctx = crate::effect_context::EffectContext::new(
+                        self,
+                        card,
+                        None,
+                        controller,
+                    );
+                    // `play_from_trash_free_unsuspended` returns None if the
+                    // battle area is full or a CannotPlayDigimonByEffect
+                    // modifier is active (DCGO `CanPlayAsNewPermanent` gate).
+                    // Silent skip is the correct behavior — the card remains
+                    // in trash.
+                    let _ = ctx.play_from_trash_free_unsuspended(card);
+                }
+                self.effect_source_player = prev_source;
+            }
+        }
+
         // OnAnyDeletion: global observer — fires in every player's battle area
         // after a permanent is deleted (battle-driven, effect-driven, or
         // security-check). The deleted permanent is already gone from
@@ -2389,6 +2474,24 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+    }
+
+    /// Resume a deletion that was deferred by `commit_permanent_deletion`
+    /// when an `OnDeletion` handler parked a `pending_selection`. Called by
+    /// `effect_queue::resolve_generic_selection` after the parked selection
+    /// resolves and the post-callback drain returns without re-parking.
+    ///
+    /// Reads + clears `Game.pending_deletion_resume` and runs
+    /// `finalize_permanent_deletion` against the saved handle. If a fresh
+    /// selection is parked during finalization (e.g. an `OnAnyDeletion`
+    /// observer asks for a target), `pending_deletion_resume` stays cleared
+    /// — the new selection drives the resume of its OWN drain through the
+    /// effect queue, not through this hook.
+    pub(crate) fn resume_pending_deletion(&mut self) {
+        let Some(handle) = self.pending_deletion_resume.take() else {
+            return;
+        };
+        self.finalize_permanent_deletion(handle);
     }
 
 }

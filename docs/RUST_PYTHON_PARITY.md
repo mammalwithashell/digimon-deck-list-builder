@@ -135,7 +135,7 @@ Python's `_decode_counter` ([action_decoder.py:268-269](../digimon_gym/engine/ga
 The security-effect pipeline is closed end-to-end for the core flow: trigger → process → Digimon-vs-security DP battle (with DontBattleSecurityDigimon skip + inherited-stack DP adjustments) → OnSecurityCheck observer drain → OnLoseSecurity drain → trash-or-play disposition → OnOpponentSecurityRemoved observer drain (with selection-pause support). Selections installed at any drain site park the phase machine via `SecurityResolutionState` and resume through `advance_security_resolution`, so real-card security effects with prompts resolve correctly.
 
 **Known correctness residuals:**
-- §2.5c Progress / ImmunityToOpponentEffects — correct consumption deferred. Both Python and Rust currently diverge from printed rules (Python suppresses SecuritySkill drain entirely, which is wrong; Rust reverted the incorrect SecuritySkill gate to restore Python-parity for the security pipeline). Correct implementation wires Progress at opponent-effect mutation sites, not at the security phase boundary — tracked in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md).
+- §2.5c Progress / ImmunityToOpponentEffects — Rust correct (Phase A + B); selection-filter exclusion + every opponent-sourced `EffectContext` mutation entry point gated. Python sunsetted with the SecuritySkill-skip bug intact. Tracked long-term in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md).
 - `§2.5-harness` cross-engine YAML parity harness — deferred tooling, not a correctness blocker.
 - §2.5m `security_reveal` event emission — UI/replay surface, not a gameplay concern.
 
@@ -170,22 +170,17 @@ Enqueue + drain of the revealed card's `SecuritySkill` effects; `play_from_secur
 
 **Coverage:** [tests/security_effects.rs](../digimon-engine/tests/security_effects.rs) security-observer pilot cases.
 
-### 2.5c 🟡 Progress / immunity-to-opponent-effects — both engines diverge from printed rules
+### 2.5c 🟢 Progress / immunity-to-opponent-effects — Rust correct (Phase A + B), Python incorrect (sunsetted)
 
-**Python** — [player.py:614-617](../digimon_gym/engine/core/player.py#L614) `if attacker.is_immune_to_opponent_effects: ... else: <fire SecuritySkill effects>`. Python entirely skips the defender's `SecuritySkill` phase when the attacker has Progress.
+**Python** — [player.py:614-617](../digimon_gym/engine/core/player.py#L614) `if attacker.is_immune_to_opponent_effects: ... else: <fire SecuritySkill effects>`. Python entirely skips the defender's `SecuritySkill` phase when the attacker has Progress. This is incorrect per DCGO [`Progress.cs`](../DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Progress.cs) and RULES_CONTEXT 16-38. Not back-ported; Python is the transitional engine.
 
-**Rust** — The 2026-04-24 `§2.5c` commit ported this Python behavior faithfully, but subsequent cross-check against the DCGO C# source ([`Progress.cs`](../DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Progress.cs)) and the printed rules ([RULES_CONTEXT.md §16-38](RULES_CONTEXT.md#L697)) showed both engines are wrong. Progress is a **per-permanent immunity to opponent effects during the attack** (`CanNotAffectedClass` on the attacking permanent, filtered by `IsOpponentEffect` + top-card-only, `UntilEndAttack` lifetime), NOT a SecuritySkill-drain gate. The defender's `[Security]` effects still resolve; only attacker-targeting clauses within them fail when the Progress attacker is the selection target.
+**Rust** — Phase A landed the selection-filter half: the wrong `SecuritySkillDrain` gate was never re-introduced after revert, and `Game::progress_excludes` gates `select_opponent_permanent` to exclude a `Progress + is_attacking` target from opponent-sourced selections. Phase B (2026-04-24) closed the mutation-site half: every opponent-sourced `EffectContext` mutation entry point — `ctx.delete_permanent`, `ctx.return_to_hand`, `ctx.return_to_deck`, `ctx.de_digivolve` (covering both the all-pops and `amount=Some(N)` N-pop forms), `ctx.suspend`, and the negative-DP path through `ctx.add_dp_modifier` / `ctx.add_modifier` — now hard-gates on `progress_excludes`. Rule-driven mutations (own-sourced deletes, security-check redirects, cost trash) flow through unchanged because the gate keys on `self.player` vs the target's controller. `Keyword::Progress` and `ModifierType::ImmunityToOpponentEffects` remain the correct primitives.
+
+**Status:** Rust correct (Phase A + B); Python sunsetted.
 
 Example: Digital Gate Open's `[Security]` ("Play 1 Digimon with cost ≤3 from hand or trash free; add this card to the hand") has no attacker-targeting clause, so its effect must still fire even when the attacker has Progress. Mega Death's `[Security]` ("delete 1 opp Digimon with cost ≤5") does target, so its selection pool would exclude the Progress attacker — but the prompt still installs and the defender may pick a different target.
 
-**Current Rust state** — the incorrect `SecuritySkillDrain` gate has been reverted. `Keyword::Progress` and `ModifierType::ImmunityToOpponentEffects` remain in the enum as the correct primitives; no engine code currently consumes them.
-
-**Fix outline** — wire the check at opponent-effect mutation sites, not at the security phase boundary:
-- Selection filters (`select_opponent_permanent`, `select_any_permanent`, multi-select filters) must exclude a `Progress + is_attacking` target whose controller is the opposite side of the selector.
-- `delete_permanent_with_effects` called from an opponent-sourced effect must no-op when target is the Progress attacker (requires a source-attribution parameter on the mutation entry points — tracked in RUST_ENGINE_GAPS.md).
-- `modifiers.add` for opponent-sourced negative DP modifiers targeting the Progress attacker must be suppressed.
-
-This fix deliberately diverges from Python; Python's SecuritySkill-skip bug is left alone since Python is the transitional engine. Tracked long-term in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md) under "Progress".
+Tracked long-term in [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md) under "Progress".
 
 ### 2.5d 🟢 `DontBattleSecurityDigimon` modifier — implemented
 

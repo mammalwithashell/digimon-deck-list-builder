@@ -210,6 +210,31 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) effect_source_player: Option<PlayerId>,
 
+    /// The cause of the deletion currently being observed by `OnDeletion`
+    /// effects. Set by `commit_permanent_deletion` immediately before
+    /// `enqueue_triggered(OnDeletion, ...)`; cleared after the drain via a
+    /// panic-safe `catch_unwind` scope at the fire-site. Read by
+    /// `EffectContext::deletion_cause()` / `was_deleted_by_effect()` /
+    /// `was_deleted_by_opponent()`.
+    ///
+    /// `None` outside an OnDeletion observer body. Phase B §B5.
+    #[doc(hidden)]
+    pub(crate) current_deletion_cause: Option<crate::replacement::ReplacementCause>,
+
+    /// Parked replacement state when a `WhenWouldBe*` replacement-process
+    /// closure installs a nested player selection. Set by the dispatcher's
+    /// post-process hook in `replacement::run_candidate_inner`; drained by
+    /// `effect_queue::resolve_generic_selection` after the user's callback
+    /// runs. `None` outside a parked-replacement scope.
+    ///
+    /// **Single-outstanding invariant:** at most one slot occupied at a time;
+    /// the dispatcher `debug_assert!`s on duplicate install.
+    ///
+    /// **Coexistence with `dsl_outer_tail`** (Phase 2d): independent slots for
+    /// independent concerns. Phase C §4.1.
+    #[doc(hidden)]
+    pub(crate) parked_replacement: Option<crate::replacement::ParkedReplacement>,
+
     /// Phase 9 Task 3 — set to `true` while a hand Counter Option is
     /// resolving through `play_option_from_hand`. Consumed by
     /// `play_option_core` to fire CounterEffect timing on the played
@@ -217,6 +242,69 @@ pub struct Game {
     /// resolver finishes the Option play. Spec §5.2.
     #[doc(hidden)]
     pub(crate) in_counter_window: bool,
+
+    /// Phase D Task 6 — deferred-deletion finalizer. Set when an
+    /// `OnDeletion`-timed effect (such as the printed `<Save>` keyword
+    /// auto-install) parks a `pending_selection` mid-deletion. Cleared by
+    /// `resume_pending_deletion` after the parked selection's callback
+    /// resolves and the effect queue drains.
+    ///
+    /// While set, no further deletions can begin (the carrier slot is in an
+    /// indeterminate state — its top card is mid-flight to trash, and the
+    /// surrounding `commit_permanent_deletion` is paused waiting on the
+    /// player's choice). Single-outstanding invariant. Enforced at the
+    /// deferral site in `commit_permanent_deletion` (debug-asserted on
+    /// duplicate park). A second top-level `delete_permanent_with_cause`
+    /// call while this slot is set is theoretically possible but not
+    /// produced by any existing fire-site under a parked selection.
+    ///
+    /// **Single-outstanding invariant.** Deletions don't nest in practice
+    /// (the only way a second deletion could fire mid-Save would be a
+    /// replacement-driven side-effect, which can't happen under a parked
+    /// selection). If this assumption ever breaks, replace the field with
+    /// a stack.
+    ///
+    /// **Coexistence with `parked_replacement`:** `parked_replacement` is
+    /// drained earlier in `resolve_generic_selection`; the two slots
+    /// address orthogonal concerns and do not interfere — a
+    /// `WhenWouldBeDeleted` replacement parking via `parked_replacement`
+    /// runs strictly before any `OnDeletion` handler can fire and park here.
+    #[doc(hidden)]
+    pub(crate) pending_deletion_resume: Option<crate::permanent::PermanentHandle>,
+
+    /// Phase D Task 8 — deferred replays from a just-deleted permanent's
+    /// trash residency. Set during `OnDeletion` (carrier still on field) by
+    /// triggers like printed `<Fortitude>` that want to replay self from
+    /// trash AFTER the deletion fully commits.
+    ///
+    /// `finalize_permanent_deletion` drains this slot AFTER `delete_permanent`
+    /// has moved the carrier + sources to trash but BEFORE the global
+    /// `OnAnyDeletion` broadcast. Each entry's controller calls
+    /// `EffectContext::play_from_trash_free_unsuspended(card)` to retrieve
+    /// the card from trash and put it on the field unsuspended at zero cost.
+    ///
+    /// Why this slot exists: in the Rust engine, `OnAnyDeletion` is enqueued
+    /// via `TriggerSource::PlayerBattleArea`, which scans only currently-live
+    /// permanents. The just-deleted carrier is in trash, so its OnAnyDeletion
+    /// effects are NOT picked up by that scan. Modeling Fortitude as a pure
+    /// `OnAnyDeletion` observer would therefore silently miss its own
+    /// trigger. This slot is a focused substrate hook for the
+    /// "OnDeletion-detected, post-finalize-applied" pattern.
+    ///
+    /// Drained inside `finalize_permanent_deletion`; never persists across
+    /// turn boundaries.
+    ///
+    /// **Coexistence with `pending_deletion_resume`:** if an `OnDeletion`
+    /// handler parks a selection (Phase D Task 6), `finalize_permanent_deletion`
+    /// is deferred until the selection resolves via `resume_pending_deletion`.
+    /// Any entries pushed to this slot during that OnDeletion batch will be
+    /// drained when `finalize_permanent_deletion` is eventually called — the
+    /// drain ordering guarantee (before `OnAnyDeletion`) still holds, but the
+    /// total wall-clock delay is longer. A card printing both `<Save>` and
+    /// `<Fortitude>` will experience this; it is a known edge case.
+    #[doc(hidden)]
+    pub(crate) pending_post_deletion_replays:
+        Vec<(crate::enums::PlayerId, crate::card_source::CardHandle)>,
 }
 
 impl Game {
@@ -349,7 +437,11 @@ impl Game {
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,
+            current_deletion_cause: None,
+            parked_replacement: None,
             in_counter_window: false,
+            pending_deletion_resume: None,
+            pending_post_deletion_replays: Vec::new(),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -578,6 +670,53 @@ impl Game {
         ReplacementCause::OwnEffect
     }
 
+    /// Test-only setter for `effect_source_player`. Production code MUST go
+    /// through `run_queued_effect` (which sets/restores around the dispatch).
+    /// Exposed `#[doc(hidden)] pub` so behavioral tests under
+    /// `digimon-engine/tests/` can simulate "opponent effect currently
+    /// resolving" without driving the queue.
+    #[doc(hidden)]
+    pub fn set_effect_source_player_for_test(
+        &mut self,
+        source: Option<crate::enums::PlayerId>,
+    ) {
+        self.effect_source_player = source;
+    }
+
+    /// Test-only setter for `parked_replacement`. Production code must go
+    /// through the dispatcher's post-process hook in
+    /// `replacement::run_candidate_inner`. Exposed so behavioral tests under
+    /// `digimon-engine/tests/` can install a parked-replacement slot
+    /// directly without driving an entire replacement-dispatch flow.
+    #[doc(hidden)]
+    pub fn install_parked_replacement_for_test(
+        &mut self,
+        parked: crate::replacement::ParkedReplacement,
+    ) {
+        self.parked_replacement = Some(parked);
+    }
+
+    /// Test-only getter for the parked-replacement outcome. The
+    /// `parked_replacement` field is `pub(crate)`, so behavioral tests
+    /// under `digimon-engine/tests/` cannot read it directly. Returns
+    /// `None` when no replacement is parked.
+    #[doc(hidden)]
+    pub fn parked_replacement_outcome_for_test(
+        &self,
+    ) -> Option<crate::replacement::ReplacementOutcome> {
+        self.parked_replacement.as_ref().map(|p| p.outcome)
+    }
+
+    /// Test-only getter for `pending_post_deletion_replays`. The field is
+    /// `pub(crate)`, so behavioral tests under `digimon-engine/tests/` cannot
+    /// read it directly. Returns `true` when the slot is empty (the steady
+    /// state — the slot is drained inside `finalize_permanent_deletion` and
+    /// never persists across deletion calls).
+    #[doc(hidden)]
+    pub fn pending_post_deletion_replays_is_empty_for_test(&self) -> bool {
+        self.pending_post_deletion_replays.is_empty()
+    }
+
     /// Get the next player clockwise from the given player.
     pub fn next_clockwise(&self, id: PlayerId) -> PlayerId {
         let pos = self
@@ -634,6 +773,9 @@ impl Game {
     /// all OnPlay/WhenDigivolving/etc. effects have resolved). Callers should
     /// invoke `check_turn_end()` at the natural resolution boundary.
     pub fn pay_memory(&mut self, cost: u16) -> bool {
+        if cost == 0 {
+            return true;
+        }
         let new_memory = self.memory - cost as i16;
         if new_memory < self.rules.memory_range.0 {
             return false;
@@ -914,20 +1056,36 @@ impl Game {
         self.pending_attack.as_ref().map(|p| p.attacker)
     }
 
-    /// Gate predicate for the `<Progress>` keyword.
+    /// Gate predicate for the `<Progress>` keyword **and** the
+    /// `ImmunityToOpponentEffects` modifier (both surface the same
+    /// "opponent cannot target this with effects while it is the current
+    /// attacker" rule; bundling them keeps every opponent-effect call-site
+    /// to one branch).
     ///
     /// Returns `true` when:
-    ///   - `target` has `Keyword::Progress` (printed or granted), AND
     ///   - `target` is the current attacker (`current_attacker() == Some(target)`), AND
-    ///   - `source` is `Some(pid)` where `pid != target.player`.
+    ///   - `source` is `Some(pid)` where `pid != target.player`, AND
+    ///   - `target` has either `Keyword::Progress` (printed or granted) **or**
+    ///     `ModifierType::ImmunityToOpponentEffects`.
     ///
     /// Returns `false` if `source` is `None` (rule-driven mutations: battle,
     /// cost, rule checks). Opponent *effects* are gated; battle damage and
     /// cost-triggered cleanup are not.
     ///
-    /// Callers: selection filters in `effect_context::selections`. Future
-    /// Phase B work wires this into `delete_permanent_with_effects` /
-    /// return-to-hand / negative-DP `modifiers.add` paths.
+    /// `ImmunityToOpponentEffects` is currently only applied with
+    /// attack-scoped expiry (`EndOfAttack` / `EndOfBattle`), so the
+    /// `current_attacker` gate is always satisfied when the modifier is
+    /// live. If a future card grants the modifier with broader expiry,
+    /// split this into `progress_excludes` (Progress only) +
+    /// `effect_immunity_excludes` (modifier only) and update both
+    /// call-sites; the helpers' shape is identical so the split is
+    /// mechanical.
+    ///
+    /// Callers: `select_opponent_permanent` (selection-time gate, Phase A)
+    /// and the script-API mutation entry points on `EffectContext` (Phase B):
+    /// `delete_permanent`, `return_to_hand`, `return_to_deck`, `de_digivolve`,
+    /// `suspend`, and the negative-DP branches of `add_dp_modifier` /
+    /// `add_modifier`.
     pub fn progress_excludes(
         &self,
         target: PermanentHandle,
@@ -944,6 +1102,58 @@ impl Game {
             || self
                 .modifiers
                 .has(target, crate::enums::ModifierType::ImmunityToOpponentEffects)
+    }
+
+    /// Returns `true` when an effect is currently resolving AND its
+    /// controller is not `target`'s controller. The "opponent effect is
+    /// targeting me" predicate that drives Mephistomon-style OnDeletion
+    /// riders, Scapegoat eligibility (cause ≠ OwnEffect), and the
+    /// `was_deleted_by_opponent` accessor.
+    ///
+    /// Returns `false` when:
+    ///   - no effect is currently resolving (`effect_source_player == None`),
+    ///   - the resolving effect's controller equals `target.player`.
+    ///
+    /// Phase B §B5.
+    pub fn opponent_sourced_mutation(
+        &self,
+        target: crate::permanent::PermanentHandle,
+    ) -> bool {
+        match self.effect_source_player {
+            Some(src) => src != target.player,
+            None => false,
+        }
+    }
+
+    /// Sum the net security-attack modifier contributed by native printed
+    /// `<Security A. +N>` and `<Security A. -N>` keywords on `target`.
+    /// Called by `resolve_player_security_loop` alongside the existing
+    /// `ModifierType::SecurityAttackChange` sum so cards with only the
+    /// printed keyword behave correctly without a hand-rolled script.
+    pub fn security_attack_keyword_bonus(
+        &self,
+        target: crate::permanent::PermanentHandle,
+    ) -> i32 {
+        use crate::enums::Keyword;
+        let Some(player) = self.players.get(target.player as usize) else {
+            return 0;
+        };
+        let Some(perm) = player.battle_area.get(target.index as usize) else {
+            return 0;
+        };
+        // Sum across the entire digivolution stack — inherited keywords count.
+        let mut total = 0i32;
+        for src in &perm.card_sources {
+            let card_data = &self.card_data[src.data_index];
+            for kw in &card_data.keywords {
+                match kw {
+                    Keyword::SecurityAttackPlus(n) => total += *n as i32,
+                    Keyword::SecurityAttackMinus(n) => total -= *n as i32,
+                    _ => {}
+                }
+            }
+        }
+        total
     }
 
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
@@ -971,8 +1181,9 @@ impl Game {
         // slot order. Phase 7 Task 6 appends keyword-derived auto-install
         // replacements (Barrier / Evade / Fragment(N) / Decode) so cards
         // with those printed keywords get the matching WhenWouldBe* process
-        // without hand-authoring. Partition / ArmorPurge are intentionally
-        // deferred — see `crate::cards::keyword_effects` docstring.
+        // without hand-authoring. Phase D Tasks 4-10 (Fragment(N), ArmorPurge,
+        // Save, Decoy, Fortitude, Partition, MaterialSave(N)) are
+        // auto-installed.
         let registry_effects = self.effect_registry.get(card_id).map(|impl_| impl_.effects(handle));
 
         // Look up CardData for this card_id. The vec scan is O(card_data_len)
@@ -1372,5 +1583,28 @@ mod current_attacker_tests {
             r.game.progress_excludes(plain, Some(1)),
             "modifier-granted Progress should gate the same"
         );
+    }
+
+    #[test]
+    fn opponent_sourced_mutation_only_when_effect_source_differs() {
+        let mut r = DebugRunner::builder()
+            .add_card(card("A"))
+            .add_card(card("B"))
+            .start();
+        let a = r.place_on_field(0, "A", None);
+        let _b = r.place_on_field(1, "B", None);
+
+        // No effect resolving → false.
+        assert!(!r.game.opponent_sourced_mutation(a));
+
+        // Own effect resolving → false.
+        r.game.set_effect_source_player_for_test(Some(0));
+        assert!(!r.game.opponent_sourced_mutation(a));
+
+        // Opponent effect resolving → true.
+        r.game.set_effect_source_player_for_test(Some(1));
+        assert!(r.game.opponent_sourced_mutation(a));
+
+        r.game.set_effect_source_player_for_test(None);
     }
 }

@@ -19,7 +19,7 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 |---|---|---|---|
 | Rush | Passive `HasRush` flag — exempts summoning sickness | ✅ | `can_attack` + mask both gate on it |
 | Blocker | Passive flag — permits blocking | ✅ | `try_enter_block` requires it (or Collision) |
-| Jamming | `CanNotBeDestroyedByBattleClass` — blocks **all** battle destruction | 🟡 | Rust only applies to losing security battle, not Digimon-vs-Digimon combat loss |
+| Jamming | `CanNotBeDestroyedByBattleClass` — blocks **all** battle destruction | ✅ | Correct as-is per RULES_CONTEXT 16-8 (security-only). Previous parity-doc 🟡 flag was based on an incorrect reading of DCGO; corrected in Phase A. |
 | Piercing | Forces security continuation after winning Digimon battle | ✅ | `combat.rs:502` post-battle hook |
 | Reboot | Auto-unsuspend at start of controller's turn | ✅ | `game_phases.rs:70` ResetPhase hook |
 | Blitz | End-of-turn player attack if opponent has ≥1 memory | ✅ | Mask + action path |
@@ -31,23 +31,21 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Barrier | Trash top deck card to cancel own deletion | ✅ | Auto-install `WhenWouldBeDeleted` in `cards/keyword_effects.rs:49` |
 | Evade | Send self to deck bottom instead of trash on deletion | ✅ | Auto-install `WhenWouldBeDeleted` in `cards/keyword_effects.rs:77` |
 | Decode | Return self to own hand instead of opp deck/hand | ✅ | Auto-install two `WhenWouldBeReturnedTo*` replacements in `cards/keyword_effects.rs:103` |
-| Fragment(N) | Trash N sources from own stack to cancel deletion | 🟣 | Enum variant + printed parse work; consumer returns empty Vec — blocked on nested-select-in-replacement |
-| ArmorPurge | Trash 1 digivolution source as active skill | 🟣 | Same deferral as Fragment |
-| Partition | Split stack by 2 color/trait groups, play one from each on leave | 🟣 | Same deferral |
-| Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | 🟡 (**wrong**) | Rust currently gates SecuritySkill drain instead — see §Progress below |
-| SecurityAttackPlus(N) | Adds N security attacks to the Digimon | 🔴 | Parsed; consumed **nowhere**. `resolve_player_security_loop` uses `SecurityAttackChange` modifier only |
-| SecurityAttackMinus(N) | Same shape, negative delta | 🔴 | Same gap |
-| DeDigivolve(N) | Active skill — remove N top digivolution cards from target | 🔴 | Parsed, unconsumed. Script-level helper `ctx.de_digivolve_n` landed in Phase 10, but native printed form isn't wired to auto-emit the effect |
+| Fragment(N) | Trash N sources from own stack to cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; mandatory replacement via `CountCappedZone::Material` source-pick + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/fragment_n.rs`. |
+| ArmorPurge | Trash current top Digimon, promote next source as new top, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; mandatory replacement via `ctx.armor_purge_top` primitive + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/armor_purge.rs`. |
+| Partition | On leave-field (not battle/own-effect): pick + play 2 cards from own sources free+unsuspended | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with cause filter (`!Battle && !OwnEffect`), 2-pick source selection. See `keyword_effects.rs` and `tests/keyword_phase_d/partition.rs`. |
+| Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | ✅ | (Phase B: gated at ctx.delete_permanent / return_to_hand / return_to_deck / de_digivolve / suspend / negative DP) Wrong SecuritySkill gate reverted in Phase A; selection-filter exclusion landed Phase A §A1 via `Game::progress_excludes`. Mutation-site coverage closed in Phase B. |
+| SecurityAttackPlus(N) | Adds N security attacks to the Digimon | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
+| SecurityAttackMinus(N) | Same shape, negative delta | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
+| DeDigivolve(N) | Active skill — remove N top digivolution cards from target | 🔴 | Parsed, unconsumed. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` landed in Phase 10, but native printed form isn't wired to auto-emit the effect |
 | DrawX(N) | "Draw N" on Option cards | 🔴 | Parsed, unconsumed |
-| Armor | DCGO has no standalone "Armor" keyword — only `Armor Purge` | 🔴 | Rust enum variant + printed parse exist with no DCGO counterpart. Candidate for removal or rename |
-| Save | Place deleted card under own Digimon/Tamer as bottom source | 🔴 | Parsed, unconsumed. Rust also aliases "MaterialSave" to this variant — see §Save / MaterialSave below |
-| Fortitude | Play self from trash free + unsuspended when ally deleted, if sources available | 🔴 | Parsed, unconsumed. Note: Rust's enum has `GrantBarrier` where `GrantFortitude` should live — see §Fortitude below |
-| Decoy | Redirect deletion to another own permanent (color-filtered) | 🔴 | Parsed; `GrantDecoy` exists; no consumer |
-| Material | Not a DCGO keyword under this name — likely collision with C# `MaterialSave` | 🔴 | Rust variant exists; no DCGO counterpart. Remove or merge |
-| Blast | `Blast Digivolve` counter-window play | 🟡 | Parsed as `Keyword::Blast`. Rust handles the mechanic via the distinct `Effect::blast_digivolve` flag + `try_enter_counter`, NOT via this keyword variant — so the variant is dead code |
-| MaterialSave(count) | Move up-to-N own stack sources under another permanent — active skill | ❌ | Not in Rust enum; not scripted |
+| Save | Place self under own Tamer as bottom source, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; optional `WhenWouldBeDeleted` replacement, Tamer pick + `ctx.place_card_under_permanent_bottom` + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/save.rs`. |
+| Fortitude | Play self from trash free + unsuspended when self-stack deleted, if sources available | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with source-count gate, `ctx.play_from_trash_free_unsuspended`. See `keyword_effects.rs` and `tests/keyword_phase_d/fortitude.rs`. |
+| Decoy | Redirect deletion of any same-controller ally to self | ✅ | Auto-installed in Phase D 2026-04-25; `WhenWouldBeDeleted` subscription on ally deletions, `ctx.substitute_replacement`. See `keyword_effects.rs` and `tests/keyword_phase_d/decoy.rs`. |
+| Blast Digivolve | `Blast Digivolve` counter-window play | 🔴 | Parsed as `Keyword::BlastDigivolve` (renamed Phase A §A2). Auto-install of `Effect::blast_digivolve` from the keyword is deferred (Phase D scope did not include BlastDigivolve). |
+| MaterialSave(count) | Move up-to-N own stack sources under another permanent — `[Main]` active skill | ✅ | Auto-installed in Phase D 2026-04-25; `MainOnField` effect with gate (≥1 source + ≥1 own Tamer), own-Tamer pick then source-pick via `CountCappedZone::Material`, tuck via `ctx.place_card_under_permanent_bottom`. See `keyword_effects.rs` and `tests/keyword_phase_d/material_save.rs`. |
 | MindLink | Attach Tamer card to a Digimon with empty Tamer slot | ❌ | Not in Rust enum |
-| Iceclad | Passive immunity to suspension | ❌ | Not in Rust enum (`ModifierType::CannotSuspend` exists, but no keyword wrapper) |
+| Iceclad | Compare digivolution-card count instead of DP in battle (except vs Security Digimon); higher count wins, tie = both delete | ❌ | Not in Rust enum. Previous description ('immunity to suspension') was incorrect; actual mechanic is digi-card-count battle compare per RULES_CONTEXT 16-34. Wiring: Phase F2. |
 | Execute | Active skill — attack unsuspended opp, self-delete on end-of-attack | ❌ | Not in Rust enum |
 | Retaliation | When deleted by battle, destroy the winner | ❌ | Not in Rust enum |
 | Scapegoat | Delete another own Digimon to cancel own deletion | ❌ | Not in Rust enum |
@@ -57,55 +55,21 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 
 ### Progress — wrong site entirely
 
-DCGO's [`Progress.cs`](../DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Progress.cs) `ProgressProcess` installs a `CanNotAffectedClass` onto the attacking permanent's `UntilEndAttackEffects`. The class carries:
+Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re-introduced, and `Game::progress_excludes` now gates `select_opponent_permanent`. Phase B (2026-04-24) closed the mutation-site coverage: `ctx.delete_permanent`, `ctx.return_to_hand`, `ctx.return_to_deck`, `ctx.de_digivolve` (including the `amount=Some(N)` N-pop variant), `ctx.suspend`, and the negative-DP path through `ctx.add_dp_modifier` / `ctx.add_modifier` are all now hard-gated.
 
-- **`SkillCondition`** — `IsOpponentEffect(cardEffect, cardSource)` — only blocks opponent-sourced effects.
-- **`CardCondition`** — target card must be the attacker's current top card.
-- **Lifetime** — `UntilEndAttack` — expires when the attack resolves.
+**Source-attribution model.** Gates apply at the `EffectContext` layer where the source controller is statically known via `self.player`; Game-level fire-sites stay agnostic so rule-driven mutations (own-sourced deletes, security-check redirects, cost trash) flow through unchanged. Observers consume cause via the new `ctx.deletion_cause()` / `ctx.was_deleted_by_effect()` / `ctx.was_deleted_by_opponent()` accessors (Phase B §B5).
 
-It does **not** skip the defender's `SecuritySkill` phase. Digital Gate Open's `[Security]` effect (play a ≤3-cost Digimon from hand/trash; add self to hand) has no attacker-targeting clause, so Progress has nothing to block and both halves of the security effect should resolve. An effect like Mega Death's "delete an opp Digimon with cost ≤5" **does** target the attacker, so the Progress attacker is excluded from the selection pool (but the prompt still installs and the defender may pick a different target).
+See the spec at [superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md) §5 Phase A/B for the full plan.
 
-The 2026-04-24 `§2.5c` commit wires Progress at the wrong site — the `SecuritySkillDrain` phase gate in `combat.rs` — which causes Digital Gate Open to incorrectly no-op when the attacker has Progress. This commit will be reverted; the correct consumption belongs at opponent-effect mutation sites, not at the security phase boundary.
-
-**Fix outline:**
-- Keep `Keyword::Progress` and `ModifierType::ImmunityToOpponentEffects` in the enum.
-- Revert the `SecuritySkillDrain` gate in `combat.rs`.
-- Wire the check at selection filters (`select_opponent_permanent`, `select_any_permanent`, multi-select filters) to exclude a `Progress + is_attacking` target whose controller is the opposite side of the selector.
-- Wire at `delete_permanent_with_effects` and other mutation sites when the mutation is sourced by an opponent effect (requires a source-attribution parameter on these entry points — tracked in RUST_ENGINE_GAPS under "WhenWouldBeDeleted" replacement framework extensions).
-- Suppress negative-DP `modifiers.add` calls from opponent-sourced effects targeting the Progress attacker.
-
-This is semantically equivalent to widening `CannotBeAffected` / `CannotBeSelectedByEffect` semantics to fire implicitly for a Progress-and-attacking permanent against opponent-sourced mutations.
-
-Python has the same SecuritySkill-skip bug at [`player.py:614-617`](../digimon_gym/engine/core/player.py#L614). Fixing Rust here diverges from Python behavior but matches DCGO and the printed rules. Note this deliberate divergence in `docs/RUST_PYTHON_PARITY.md` when the fix lands.
-
-### Jamming — scope too narrow
-
-DCGO installs [`CanNotBeDestroyedByBattleClass`](../DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Jamming.cs) via `AddEffectToPermanent`. Any battle-deletion query consults it, covering both:
-
-1. Digimon-vs-Digimon combat where attacker's DP < defender's DP (attacker normally dies).
-2. Digimon-vs-security battle where attacker's DP < security Digimon's DP.
-
-Rust only checks Jamming at [`combat.rs:1816`](../digimon-engine/src/combat.rs) — the security DP battle branch. A Jamming attacker that loses a regular Digimon fight at attack-declare time still dies in Rust. That matches Python's historical behavior but diverges from printed rules (e.g. BT14-099 UlforceV-dramon X).
-
-**Fix:** add `has_keyword(attacker, Jamming)` check at the end of the Digimon-vs-Digimon DP compare in `resolve_pending_battle`, before the `delete_permanent_with_effects(attacker)` call.
+**`place_as_bottom_source` — reviewed, no gate.** Phase B's final code review flagged `EffectContext::place_as_bottom_source` as a candidate site. Verdict after cross-checking DCGO: not gated. DCGO's primitive [`Permanent.AddDigivolutionCardsBottom`](../DCGO/Assets/Scripts/Script/Permanent.cs#L1104) has no internal `CanNotBeAffected` check, and DCGO scripts that intentionally place a source under an opponent's Digimon (e.g. [EX10-059](../DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_059.cs#L218)) do not filter the target on `CanNotBeAffected` either. Adding a card under a stack is not "affecting" the target in DCGO's semantics — the TopCard's status is unchanged. Gating in Rust would over-restrict relative to DCGO. The decision is documented inline at [`effect_context/mod.rs::place_as_bottom_source`](../digimon-engine/src/effect_context/mod.rs).
 
 ### Blast keyword variant is dead code
 
-`Keyword::Blast` is parsed from `<Blast Digivolve>` text, but Rust's actual Blast Digivolve flow runs through the distinct `Effect::blast_digivolve` boolean flag set by card scripts on their Counter-window effect, consumed by `try_enter_counter`. The `Keyword::Blast` variant is therefore unused. Options:
-
-- Drop the variant + parsing entry.
-- Or auto-install a declarative `blast_digivolve=true` effect when the keyword is parsed, matching DCGO's `BlastDigivolution.cs` factory pattern.
+Resolved Phase A §A2 — renamed to `Keyword::BlastDigivolve`; auto-install remains deferred (not included in Phase D).
 
 ### Save / MaterialSave name collision
 
-DCGO has **two distinct keywords**:
-
-- **Save** — when this card is deleted and lands in trash, place it under another permanent as bottom source. Replacement-effect-on-deletion timing.
-- **MaterialSave(count)** — active skill on a Digimon, move up-to-N own digivolution-stack sources under another permanent. Main-phase active-skill timing.
-
-Rust's `parse_printed_keywords` routes both names to `Keyword::Save`, which has different trigger surfaces and should not share a variant.
-
-**Fix:** introduce `Keyword::MaterialSave(u8)`, stop aliasing "MaterialSave" to `Save` in the parser, and route each to its own consumer.
+Resolved Phase A §A5 — `Keyword::MaterialSave(u8)` split out; parser + `dsl_cards/modifier_map.rs` aliasing removed.
 
 ### Fortitude enum mis-mapping
 
@@ -139,24 +103,24 @@ Ordered by archetype relevance to the alpha scope (Royal Knights, Jesmon GX, Roc
 | Priority | Keyword | Why |
 |---|---|---|
 | 1 | Retaliation | Dark Masters core: BT15-077 LadyDevimon, BT15-079 Piedmon |
-| 2 | MaterialSave(count) | Several Medusamon and Dark Masters entries use it |
-| 3 | Scapegoat | Dark Masters (LM-043 Darkdramon) |
-| 4 | Training | Tied to TestCards.Training active-skill; needed for Rocks pre-evo slots |
-| 5 | Execute | Appears only on a handful of non-archetype cards; defer |
-| 6 | Iceclad, MindLink | Not in any alpha-target archetype; defer |
+| ~~2~~ | ~~MaterialSave(count)~~ | ~~Several Medusamon and Dark Masters entries use it~~ ✅ resolved Phase D |
+| 2 | Scapegoat | Dark Masters (LM-043 Darkdramon) |
+| 3 | Training | Tied to TestCards.Training active-skill; needed for Rocks pre-evo slots |
+| 4 | Execute | Appears only on a handful of non-archetype cards; defer |
+| 5 | Iceclad, MindLink | Not in any alpha-target archetype; defer |
 
 ## Gap ranking (consolidated for scheduling)
 
 Ranked by alpha-archetype blast radius:
 
-1. **Progress semantics fix** — affects Royal Knights (Imperialdramon:PM), DNA Omnimon core, Rocks. Highest blast radius, and a wrong implementation currently shipped.
-2. **Fragment(N) wire-up** — Rocks archetype is built on Fragment. Blocked by nested-selection-in-replacement. Fix cascades to ArmorPurge + Partition.
+1. ~~**Progress semantics fix**~~ — ✅ resolved Phase A + B. Selection-filter exclusion + opponent-mutation-site gating both landed.
+2. ~~**Fragment(N) wire-up**~~ — ✅ resolved Phase D 2026-04-25. Fragment(N), ArmorPurge, Partition all landed. Cascaded fix is complete.
 3. **SecurityAttackPlus/Minus auto-install** — printed on many cards across all archetypes; trivial to add.
 4. **Jamming scope widening** — affects any attacking Digimon losing a regular Digimon battle; tens of cards.
-5. **Save distinct from MaterialSave** — Save is on staples in multiple archetypes (P-186 Gallantmon etc.), needs its own variant + auto-install.
+5. ~~**Save distinct from MaterialSave**~~ — ✅ resolved Phase D 2026-04-25. Save, Decoy, Fortitude, MaterialSave(N) all auto-installed.
 6. **Retaliation enum variant + replacement wire-up** — Dark Masters archetype blocker.
-7. **Fortitude / DeDigivolve(N) parsed-form auto-install / Decoy** — known card lists.
-8. **Execute / Iceclad / MindLink / Training / MaterialSave** — not in alpha archetypes; defer past alpha.
+7. ~~**Fortitude / DeDigivolve(N) parsed-form auto-install / Decoy**~~ — ✅ Fortitude + Decoy resolved Phase D 2026-04-25. DeDigivolve(N) auto-install remains pending (Phase A/E scope).
+8. **Execute / Iceclad / MindLink / Training** — not in alpha archetypes; defer past alpha (Phase F).
 
 ## Source citations
 

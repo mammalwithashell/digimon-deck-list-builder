@@ -94,6 +94,38 @@ impl<'g> ReplacementContext<'g> {
     }
 }
 
+/// Captures the replacement-context state needed to resume a process closure
+/// after a nested player selection. Set by the dispatcher's post-process hook
+/// in `run_candidate_inner` when the process closure parks a `PendingSelection`;
+/// drained by `try_drain_parked_replacement_with_guard` in
+/// `effect_queue::resolve_generic_selection` after the user's callback runs.
+///
+/// **Single-outstanding invariant:** at most one parked replacement at a time.
+/// The post-process hook `debug_assert!`s on entry. If a real card surfaces a
+/// nested-park (callback's body itself fires another deletion that parks),
+/// escalate to a follow-up plan that converts the slot to a `Vec`-stack.
+///
+/// **Coexistence with `Game.dsl_outer_tail`** (Phase 2d): independent slots
+/// for independent concerns. Both can be `Some(_)` simultaneously; cross-
+/// references are at each field's doc comment.
+///
+/// Phase C §4.1.
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct ParkedReplacement {
+    pub subject: ReplacementSubject,
+    pub cause: ReplacementCause,
+    pub original_destination: Option<Zone>,
+    pub source_card: CardHandle,
+    pub source_permanent: Option<PermanentHandle>,
+    pub controller: PlayerId,
+    /// Outcome the in-flight callback writes via `EffectContext::cancel_leave()`
+    /// etc. Read by the dispatcher post-callback hook after the user closure
+    /// returns. Defaults to `ReplacementOutcome::None` — original event proceeds
+    /// when no outcome-setter is called.
+    pub outcome: ReplacementOutcome,
+}
+
 // ─── Dispatcher ────────────────────────────────────────────────────
 
 /// Controller of the subject for layering purposes.
@@ -268,6 +300,15 @@ fn try_replace_inner(
     // PendingSelection and break the loop; when the selection resolves,
     // the callback writes `game.replacement_pending_outcome` and the caller
     // is responsible for re-entering if more candidates remain.
+    //
+    // A mandatory candidate may also park a nested selection (e.g.
+    // `Keyword::Fragment(N)`: pick N sources to trash). When that happens,
+    // `run_candidate_inner` populates `Game.parked_replacement` and yields
+    // — we break out of the candidate walk so the parked-replacement drain
+    // hook (`try_drain_parked_replacement_with_guard` in `effect_queue.rs`)
+    // commits the outcome after the user resolves the nested chain. Any
+    // remaining candidates are dropped, mirroring the optional-install break
+    // below; v1 supports at most one parked replacement per call chain.
     let mut acc_outcome = ReplacementOutcome::None;
     for cand in ordered {
         if cand.is_mandatory {
@@ -280,6 +321,11 @@ fn try_replace_inner(
             );
             if o != ReplacementOutcome::None {
                 acc_outcome = o;
+            }
+            if game.pending_selection.is_some() {
+                // Mandatory candidate parked a nested selection. Yield to
+                // the user; the drain hook commits when the chain unwinds.
+                return acc_outcome;
             }
         } else {
             install_optional_selection(
@@ -577,6 +623,15 @@ fn run_mandatory_candidate(
 
 /// Shared run-a-replacement-process body. Used by `run_mandatory_candidate`
 /// and by the optional-accept callback.
+///
+/// If the process closure installed a `pending_selection` (via
+/// `ctx.select_*`), we snapshot a `ParkedReplacement` and return
+/// `ReplacementOutcome::None` so the caller can yield without committing —
+/// the parked outcome is later drained by the post-callback hook. Both the
+/// mandatory candidate-walk in `try_replace_inner` and the optional-accept
+/// callback in `make_accept_callback` rely on this: the candidate-walk
+/// breaks out of its loop on `pending_selection.is_some()`, and the accept
+/// callback skips its eager-commit branch on `parked_replacement.is_some()`.
 fn run_candidate_inner(
     game: &mut crate::game::Game,
     card_id: &str,
@@ -598,19 +653,68 @@ fn run_candidate_inner(
         return ReplacementOutcome::None;
     };
 
-    // Build the EffectContext then the ReplacementContext. The
-    // ReplacementContext holds `&mut EffectContext` so we must keep the
-    // EffectContext alive for the duration of the process call.
-    let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
-    let mut rep_ctx = ReplacementContext {
-        effect: &mut ctx,
-        cause,
-        subject,
-        original_destination,
-        outcome: ReplacementOutcome::None,
+    // Build the EffectContext then the ReplacementContext in an inner scope
+    // so their borrows on `game` end before the post-process hook reads
+    // `game.pending_selection` and writes `game.parked_replacement`.
+    // ReplacementContext holds `&mut EffectContext` which holds `&mut Game`,
+    // so both must drop before we can re-borrow `game` mutably below.
+    let outcome = {
+        let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
+        let mut rep_ctx = ReplacementContext {
+            effect: &mut ctx,
+            cause,
+            subject,
+            original_destination,
+            outcome: ReplacementOutcome::None,
+        };
+        process(&mut rep_ctx);
+        rep_ctx.outcome
     };
-    process(&mut rep_ctx);
-    rep_ctx.outcome
+
+    // Phase C §4.3 — POST-PROCESS HOOK: detect nested-select park.
+    // If the process closure installed a PendingSelection (via ctx.select_*),
+    // snapshot the replacement context state into Game.parked_replacement
+    // so the user's callback can later set the outcome via
+    // EffectContext::cancel_leave / etc., and the post-callback hook in
+    // resolve_generic_selection can drain the slot via commit_deferred_outcome.
+    //
+    // Single-outstanding invariant: at most one parked replacement at a time.
+    //
+    // Both mandatory and optional dispatch arm this hook. Mandatory parking
+    // (post-Phase-C-substrate-mandatory) lets keywords like `Fragment(N)`
+    // install a nested source-pick selection directly without an outer
+    // accept dialog, faithfully matching DCGO's `canNoSelect: () => false`.
+    // The candidate-walk in `try_replace_inner` breaks on `pending_selection
+    // .is_some()` after a mandatory candidate to mirror the optional yield.
+    if game.pending_selection.is_some() {
+        debug_assert!(
+            game.parked_replacement.is_none(),
+            "nested replacement park; outer outcome would be lost. Phase C \
+             scope assumes a callback that itself fires a deletion will not \
+             also install a select_* selection. If a real card requires \
+             nested-park, extend ParkedReplacement into a Vec-stack."
+        );
+        game.parked_replacement = Some(ParkedReplacement {
+            subject,
+            cause,
+            original_destination,
+            source_card,
+            source_permanent,
+            controller,
+            // Preserve any synchronous outcome the process set before parking
+            // (e.g. `rctx.cancel()` followed by `rctx.effect.select_*`). The
+            // user's nested callback can override via `ctx.*_replacement` (last
+            // write wins on parked.outcome); if it doesn't, the synchronous
+            // outcome takes effect on commit.
+            outcome,
+        });
+        // Caller (e.g. make_accept_callback) checks pending_selection.is_some()
+        // and yields without committing — the parked outcome will be drained
+        // after the user's select_* callback fires.
+        return ReplacementOutcome::None;
+    }
+
+    outcome
 }
 
 /// Install a `PendingSelection::Replacement` prompt for an optional
@@ -711,6 +815,43 @@ where
     }
 }
 
+/// Phase C §4.4 — POST-CALLBACK DRAIN: take `Game.parked_replacement` (if any)
+/// and route its outcome through `commit_deferred_outcome`. Called from
+/// `effect_queue::resolve_generic_selection` after the user's selection
+/// callback returns. Reuses `run_commit_with_flag` for panic-safe
+/// `in_replacement_commit` flag management.
+///
+/// No-op when `parked_replacement.is_none()` — the vast majority of
+/// selection resolutions don't involve a parked replacement.
+///
+/// Phase C §4.3 (I-2 follow-up): `replacement_pending_outcome` is expected
+/// to be `None` here — Task 6's accept-callback skip-when-parked path
+/// intentionally avoids writing it. The `debug_assert!` catches future
+/// regressions that would leak a stale outcome.
+pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Game) {
+    let Some(parked) = game.parked_replacement.take() else {
+        return;
+    };
+
+    debug_assert!(
+        game.replacement_pending_outcome.is_none(),
+        "parked-replacement drain expects replacement_pending_outcome unset; \
+         a writer (likely make_accept_callback or a fire-site that pre-populates \
+         the slot) leaked a value between accept-callback and drain. Check \
+         callers of `game.replacement_pending_outcome = Some(_)`."
+    );
+
+    run_commit_with_flag(game, move |game| {
+        commit_deferred_outcome(
+            game,
+            parked.subject,
+            parked.cause,
+            parked.original_destination,
+            parked.outcome,
+        );
+    });
+}
+
 /// Build the accept-side callback for an optional replacement. When fired
 /// via `resolve_selection(player, REPLACEMENT_ACCEPT)`, re-looks-up the
 /// effect and runs its `replacement_process`, then commits the resulting
@@ -743,7 +884,22 @@ fn make_accept_callback(
             cause,
             original_destination,
         );
+
+        // Phase C §4.3: if the process parked a selection, leave
+        // `replacement_pending_outcome` UNSET — the post-callback drain hook
+        // (Task 7) reads `parked_replacement.outcome` instead. Writing
+        // `Some(outcome)` here (where `outcome == ReplacementOutcome::None`
+        // because the post-process hook returned `None`) would leak a stale
+        // value that other consumers (e.g. `OptionResolutionPhase::Disposing`
+        // in `effect_queue.rs`, which `take()`s the slot and treats `None`
+        // as "decline → original event proceeds") misinterpret.
+        // Order matters: parked-check BEFORE the slot write.
+        if game.parked_replacement.is_some() {
+            return;
+        }
+
         game.replacement_pending_outcome = Some(outcome);
+
         // §7.5: mark this as a callback-commit continuation so the fired-set
         // from the original call chain survives the zone-mover re-entry.
         // `run_commit_with_flag` is panic-safe — if anything in the commit
@@ -909,8 +1065,10 @@ fn commit_deferred_outcome(
 
 /// Commit a permanent's deletion without re-running the replacement window.
 /// Mirrors the post-replacement arm of `Game::delete_permanent_with_cause`
-/// (OnDeletion → remove → OnAnyDeletion) but bypasses try_replace because
-/// the replacement window has already been offered and declined.
+/// (OnDeletion → finalize: linked-card cascade, `delete_permanent`, modifier
+/// cleanup, post-deletion replays drain, OnAnyDeletion) but bypasses
+/// `try_replace` because the replacement window has already been offered
+/// and declined.
 fn commit_permanent_deletion_no_replace(
     game: &mut crate::game::Game,
     handle: PermanentHandle,
@@ -924,23 +1082,34 @@ fn commit_permanent_deletion_no_replace(
     );
     game.drain_effect_queue();
 
-    if game
-        .player(handle.player)
-        .battle_area
-        .get(handle.index as usize)
-        .is_some()
-    {
-        game.player_mut(handle.player)
-            .delete_permanent(handle.index as usize);
-    }
-    game.modifiers.clear_permanent(handle);
-    game.modifiers.expire_player_on_permanent_leave(handle);
-
-    for pid in 0..game.players.len() {
-        game.enqueue_triggered(
-            EffectTiming::OnAnyDeletion,
-            TriggerSource::PlayerBattleArea(pid as PlayerId),
+    // Phase D Task 6 followup (2026-04-25): an OnDeletion handler may have
+    // installed a player choice (e.g. printed `<Save>` parks an optional
+    // Tamer-pick). Park the rest of the deletion sequence to be finalized
+    // after the selection resolves; running `Player::delete_permanent`
+    // synchronously here would shift later permanents' indices and
+    // invalidate the parked selection. Mirrors the guard in
+    // `combat.rs::Game::commit_permanent_deletion`.
+    //
+    // Reachable when: a card hosts BOTH an optional `WhenWouldBeDeleted`
+    // replacement (e.g. `<Decoy>`, `<Barrier>`) AND an OnDeletion-parking
+    // handler (`<Save>`). The optional replacement was offered, the user
+    // declined, and the deferred-decline path lands here.
+    //
+    // `Game::resume_pending_deletion` (called from
+    // `effect_queue::resolve_generic_selection` after the parked selection
+    // resolves and the post-callback drain settles) runs
+    // `finalize_permanent_deletion` against the saved handle — the same
+    // resume hook used by the synchronous `commit_permanent_deletion` path,
+    // so `pending_post_deletion_replays` (Fortitude/Partition) and the
+    // linked-card cascade all run uniformly.
+    if game.pending_selection.is_some() {
+        debug_assert!(
+            game.pending_deletion_resume.is_none(),
+            "nested deferred deletion not supported (single-outstanding invariant)"
         );
+        game.pending_deletion_resume = Some(handle);
+        return;
     }
-    game.drain_effect_queue();
+
+    game.finalize_permanent_deletion(handle);
 }
