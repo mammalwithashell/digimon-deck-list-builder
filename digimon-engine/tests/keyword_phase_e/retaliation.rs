@@ -61,6 +61,16 @@ fn retaliation_deletes_winner_when_self_loses_battle() {
     );
     assert_eq!(r.game.players[0].trash.len(), 1, "ATK lands in P0 trash");
     assert_eq!(r.game.players[1].trash.len(), 1, "RETAL lands in P1 trash");
+    assert_eq!(
+        r.game.players[0].trash[0].card_id(&r.game.card_data),
+        "ATK",
+        "P0 trash should contain ATK (deleted by Retaliation)"
+    );
+    assert_eq!(
+        r.game.players[1].trash[0].card_id(&r.game.card_data),
+        "RETAL",
+        "P1 trash should contain RETAL (deleted by losing battle)"
+    );
 }
 
 // ─── Test 2: cause gate — effect deletion does NOT fire Retaliation ──────────

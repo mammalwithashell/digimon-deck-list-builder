@@ -952,6 +952,22 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // double-delete on an already-departed permanent — silent no-op
         // rather than routing through a deletion that would be a no-op at
         // `finalize_permanent_deletion` but incurs unnecessary work.
+        //
+        // ## Cause = OwnEffect (explicit)
+        //
+        // We bypass `ctx.delete_permanent` (which routes through
+        // `infer_deletion_cause`) because `pending_attack` is still live
+        // during the OnDeletion drain — `infer_deletion_cause` would return
+        // `Battle` even though Retaliation is the carrier's own triggered
+        // effect, not a new battle initiation. Using `OwnEffect` explicitly:
+        //   - correctly labels the cascade delete for downstream Battle-gated
+        //     triggers (a winner with its own Retaliation sees `OwnEffect`
+        //     and correctly does NOT re-fire its own cause gate);
+        //   - is accurate: the winner is deleted by the loser's keyword effect,
+        //     not by the battle resolution itself.
+        // Progress guard (Phase B §B4) is reproduced inline — Retaliation is
+        // an opponent-sourced effect from the winner's perspective, so
+        // `ctx.player` (the loser's controller) is the correct acting player.
         Keyword::Retaliation => vec![Effect::on_deletion(card)
             .name("<Retaliation>")
             .process(|ctx| {
@@ -980,7 +996,16 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 {
                     return;
                 }
-                ctx.delete_permanent(winner);
+                // Progress guard (Phase B §B4): replicated from
+                // `ctx.delete_permanent`. `ctx.player` is the loser's
+                // controller — the acting player for this effect.
+                if ctx.game.progress_excludes(winner, Some(ctx.player)) {
+                    return;
+                }
+                // Explicit cause=OwnEffect — bypasses infer_deletion_cause's
+                // pending_attack→Battle short-circuit. See doc comment above.
+                ctx.game
+                    .delete_permanent_with_cause(winner, ReplacementCause::OwnEffect);
             })
             .build()],
 
