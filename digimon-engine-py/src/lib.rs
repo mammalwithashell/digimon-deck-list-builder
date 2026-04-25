@@ -21,7 +21,10 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use serde_json::Value;
 
+use pyo3::wrap_pyfunction;
+
 use ::digimon_engine::card_data::CardData;
+use ::digimon_engine::deck_tools;
 use ::digimon_engine::events::GameEvent;
 use ::digimon_engine::HeadlessRunner;
 
@@ -123,6 +126,53 @@ impl PyCard {
             security_text: card.security_text.clone(),
         }
     }
+}
+
+/// Python-visible wrapper around `deck_tools::DeckValidationResult`.
+#[pyclass(module = "digimon_engine", name = "PyDeckValidationResult")]
+#[derive(Clone)]
+pub struct PyDeckValidationResult {
+    #[pyo3(get)]
+    pub is_valid: bool,
+    #[pyo3(get)]
+    pub errors: Vec<String>,
+    #[pyo3(get)]
+    pub warnings: Vec<String>,
+}
+
+#[pyfunction]
+fn parse_tts(raw: &str) -> PyResult<Vec<String>> {
+    deck_tools::parse_tts(raw).map_err(PyValueError::new_err)
+}
+
+#[pyfunction]
+fn parse_text(raw: &str) -> PyResult<Vec<String>> {
+    deck_tools::parse_text(raw).map_err(PyValueError::new_err)
+}
+
+#[pyfunction]
+fn parse_deck(raw: &str) -> PyResult<Vec<String>> {
+    deck_tools::parse_deck(raw).map_err(PyValueError::new_err)
+}
+
+#[pyfunction]
+fn summarize_deck(card_ids: Vec<String>) -> HashMap<String, u32> {
+    deck_tools::summarize_deck(&card_ids)
+}
+
+#[pyfunction]
+fn validate_deck(card_ids: Vec<String>) -> PyDeckValidationResult {
+    let result = deck_tools::validate_deck(&card_ids);
+    PyDeckValidationResult {
+        is_valid: result.is_valid,
+        errors: result.errors,
+        warnings: result.warnings,
+    }
+}
+
+#[pyfunction]
+fn out_of_set_cards(card_ids: Vec<String>) -> Vec<String> {
+    deck_tools::out_of_set_cards(card_ids.iter().cloned()).into_iter().collect()
 }
 
 /// Python-visible wrapper around the static cards.json database.
@@ -501,5 +551,12 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RustHeadlessGame>()?;
     m.add_class::<CardDatabase>()?;
     m.add_class::<PyCard>()?;
+    m.add_class::<PyDeckValidationResult>()?;
+    m.add_function(wrap_pyfunction!(parse_tts, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_text, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_deck, m)?)?;
+    m.add_function(wrap_pyfunction!(summarize_deck, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_deck, m)?)?;
+    m.add_function(wrap_pyfunction!(out_of_set_cards, m)?)?;
     Ok(())
 }

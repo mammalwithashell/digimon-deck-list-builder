@@ -54,3 +54,56 @@ class TestCardDatabase:
         card = db.get_card("BT1-001")
         assert card is not None
         assert card.card_id == "BT1-001"
+
+
+class TestDeckTools:
+    def test_parse_tts_simple(self):
+        from digimon_engine import parse_tts
+        # TTS format is a JSON array of card-id strings.
+        ids = parse_tts('["BT1-001", "BT1-002", "BT1-002"]')
+        assert ids == ["BT1-001", "BT1-002", "BT1-002"]
+
+    def test_parse_text_basic(self):
+        from digimon_engine import parse_text
+        # digimoncard.io text format: "<count> <name> <card_id>"
+        ids = parse_text("1 Yokomon BT1-001\n2 Sukamon BT1-002")
+        assert ids == ["BT1-001", "BT1-002", "BT1-002"]
+
+    def test_parse_deck_dispatches_tts(self):
+        from digimon_engine import parse_deck
+        ids = parse_deck('["BT1-001"]')
+        assert ids == ["BT1-001"]
+
+    def test_parse_deck_dispatches_text(self):
+        from digimon_engine import parse_deck
+        ids = parse_deck("1 Yokomon BT1-001")
+        assert ids == ["BT1-001"]
+
+    def test_summarize_deck(self):
+        from digimon_engine import summarize_deck
+        summary = summarize_deck(["BT1-001", "BT1-001", "BT1-002"])
+        assert summary["BT1-001"] == 2
+        assert summary["BT1-002"] == 1
+
+    def test_validate_deck_invalid_too_many_copies(self):
+        from digimon_engine import validate_deck
+        # 50 copies of one card violates the 4-copy limit
+        result = validate_deck(["BT1-001"] * 50)
+        assert hasattr(result, "is_valid")
+        assert result.is_valid is False
+        assert isinstance(result.errors, list)
+        assert isinstance(result.warnings, list)
+
+    def test_out_of_set_cards_returns_unknowns(self):
+        from digimon_engine import out_of_set_cards
+        # out_of_set_cards filters out cards in the tested-cards allowlist.
+        # We don't know which IDs are tested at test-write time, but a
+        # made-up ID definitely isn't, so it must appear in the output.
+        bad = out_of_set_cards(["ZZ99-999"])
+        assert "ZZ99-999" in bad
+
+    def test_out_of_set_cards_dedupe(self):
+        from digimon_engine import out_of_set_cards
+        # Duplicates collapse — matches Python's first-seen semantics.
+        bad = out_of_set_cards(["ZZ99-999", "ZZ99-999"])
+        assert bad.count("ZZ99-999") == 1
