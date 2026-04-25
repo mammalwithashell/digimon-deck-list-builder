@@ -1,17 +1,35 @@
 //! Process-step lowering dispatch. Phase 2a: memory + draw/trash helpers.
 //! Phase 2b: continuation-passing dispatcher + selection handlers + zone-moves.
+//! Phase 2c: permanent mutations + modifier steps (AddDpModifier, AddModifier, GrantKeyword)
+//!           + control-flow steps (Optional, If).
 
+pub mod control_flow;
 pub mod draw;
 pub mod memory;
+pub mod modifiers;
+pub mod permanent_mutations;
 pub mod selections;
 pub mod zone_moves;
 
 use digimon_dsl::compiled::CompiledPlayerRef;
+use digimon_dsl::compiled::CompiledStackPosition;
 use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::bindings::Bindings;
 use crate::effect_context::EffectContext;
 use crate::enums::PlayerId;
+use crate::enums::StackPosition;
+
+/// Map a `CompiledStackPosition` to the engine's `StackPosition`.
+/// Shared by `zone_moves` and `permanent_mutations` — lives here to avoid
+/// duplicate private copies in each sub-module.
+pub(super) fn map_stack_position(p: CompiledStackPosition) -> StackPosition {
+    match p {
+        CompiledStackPosition::Top => StackPosition::Top,
+        CompiledStackPosition::Bottom => StackPosition::Bottom,
+        CompiledStackPosition::Random => StackPosition::Random,
+    }
+}
 
 /// Resolve a `CompiledPlayerRef` to the concrete `PlayerId`. `Any` resolves
 /// to `ctx.player` — callers that want to fan out to every player should
@@ -37,10 +55,27 @@ pub fn run_steps(
     let mut i = 0;
     while i < steps.len() {
         let step = &steps[i];
+
+        // Control flow: drive the body via a recursive run_steps call, then
+        // advance the outer index. A selection step inside the body parks
+        // its own inner tail (the remainder of that body) as its callback.
+        // Steps AFTER the control-flow step in this outer slice run
+        // immediately on return — they are NOT captured by any inner park.
+        // Phase 2c card tests never exercise [CtrlFlow(has-select), More]
+        // patterns, so the current semantics are safe. Phase 2d must extend
+        // run_steps to propagate inner-park state upward before adding
+        // richer opt-out / delayed flows that need sequencing after the
+        // inner callback resolves.
+        if control_flow::try_run(step, ctx, bindings) {
+            i += 1;
+            continue;
+        }
+
         // Selection steps install the remainder as their callback and return.
         if selections::try_install(step, &steps[i + 1..], ctx, bindings.clone()) {
             return;
         }
+
         // Synchronous families — execute and advance.
         run_step(step, ctx, bindings);
         i += 1;
@@ -59,5 +94,11 @@ pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut
     if zone_moves::try_run(step, ctx, bindings) {
         return;
     }
-    // Phase 2c+: other families.
+    if permanent_mutations::try_run(step, ctx, bindings) {
+        return;
+    }
+    if modifiers::try_run(step, ctx, bindings) {
+        return;
+    }
+    // Phase 2d+: other families.
 }

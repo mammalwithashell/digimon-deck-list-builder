@@ -2,22 +2,12 @@
 //! `AddToHandFromDeck`, `AddToHandFromTrash`, and the reveal-pool / security-mark
 //! family added in Task 5.
 
-use digimon_dsl::compiled::{CompiledStackPosition, CompiledStep};
+use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
-use crate::enums::StackPosition;
-
-/// Map a `CompiledStackPosition` to the engine's `StackPosition`.
-fn map_stack_position(p: CompiledStackPosition) -> StackPosition {
-    match p {
-        CompiledStackPosition::Top => StackPosition::Top,
-        CompiledStackPosition::Bottom => StackPosition::Bottom,
-        CompiledStackPosition::Random => StackPosition::Random,
-    }
-}
 
 /// Returns `true` if `step` is a zone-move family handled here. Unknown
 /// steps fall through (the caller may try other families).
@@ -96,7 +86,7 @@ pub fn try_run(
             };
             let p = resolve_player(ctx, *of);
             if let ResolvedBinding::Card(h) = resolved {
-                ctx.return_to_deck_from_reveal(p, h, map_stack_position(*position));
+                ctx.return_to_deck_from_reveal(p, h, super::map_stack_position(*position));
             }
             true
         }
@@ -126,7 +116,7 @@ pub fn try_run(
 
         CompiledStep::PlaceRemainderOnDeck { of, position } => {
             let p = resolve_player(ctx, *of);
-            ctx.place_remainder_on_deck(p, map_stack_position(*position));
+            ctx.place_remainder_on_deck(p, super::map_stack_position(*position));
             true
         }
 

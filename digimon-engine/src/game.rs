@@ -917,16 +917,30 @@ impl Game {
         self.pending_attack.as_ref().map(|p| p.attacker)
     }
 
-    /// Gate predicate for the `<Progress>` keyword.
+    /// Gate predicate for the `<Progress>` keyword **and** the
+    /// `ImmunityToOpponentEffects` modifier (both surface the same
+    /// "opponent cannot target this with effects while it is the current
+    /// attacker" rule; bundling them keeps every opponent-effect call-site
+    /// to one branch).
     ///
     /// Returns `true` when:
-    ///   - `target` has `Keyword::Progress` (printed or granted), AND
     ///   - `target` is the current attacker (`current_attacker() == Some(target)`), AND
-    ///   - `source` is `Some(pid)` where `pid != target.player`.
+    ///   - `source` is `Some(pid)` where `pid != target.player`, AND
+    ///   - `target` has either `Keyword::Progress` (printed or granted) **or**
+    ///     `ModifierType::ImmunityToOpponentEffects`.
     ///
     /// Returns `false` if `source` is `None` (rule-driven mutations: battle,
     /// cost, rule checks). Opponent *effects* are gated; battle damage and
     /// cost-triggered cleanup are not.
+    ///
+    /// `ImmunityToOpponentEffects` is currently only applied with
+    /// attack-scoped expiry (`EndOfAttack` / `EndOfBattle`), so the
+    /// `current_attacker` gate is always satisfied when the modifier is
+    /// live. If a future card grants the modifier with broader expiry,
+    /// split this into `progress_excludes` (Progress only) +
+    /// `effect_immunity_excludes` (modifier only) and update both
+    /// call-sites; the helpers' shape is identical so the split is
+    /// mechanical.
     ///
     /// Callers: selection filters in `effect_context::selections`. Future
     /// Phase B work wires this into `delete_permanent_with_effects` /
