@@ -1009,6 +1009,89 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
+        // Phase E §E2 — printed Scapegoat: "When this Digimon would be
+        // deleted [other than by your own effect], you may delete another
+        // of your Digimon to prevent it." DCGO `Scapegoat.cs`.
+        // RULES_CONTEXT 16-31 (Immediate-type, Optional).
+        //
+        // ## Cause filter
+        //
+        // `rctx.cause != OwnEffect` — RULES_CONTEXT 16-31: a player's own
+        // effect cannot trigger their Scapegoat. Battle, OpponentEffect,
+        // SecurityCheck, and Cost all DO trigger.
+        //
+        // ## Selection chain
+        //
+        //   1. Outer optional accept dialog ("may"). PASS leaves the
+        //      original deletion to proceed.
+        //   2. On ACCEPT: parked own-permanent pick via
+        //      `rctx.effect.select_own_permanent(...)`. Filter: same-
+        //      controller, non-self. Mandatory once accepted (DCGO: once
+        //      committed to substitute, must pick).
+        //   3. On pick: `ctx.substitute_replacement(Permanent(picked))`
+        //      writes `Substituted` to the parked slot. The dispatcher's
+        //      post-callback hook commits the substituted deletion.
+        //
+        // ## Self-scope
+        //
+        // `WhenWouldBeDeleted` enumerates only effects on the deletion
+        // subject's permanent, so this body is naturally self-scoped.
+        // The `subject == me_perm` guard is an explicit belt-and-suspenders
+        // defense against any future cross-permanent enumeration changes.
+        //
+        // ## No-candidate handling
+        //
+        // If the controller has no other permanents, `select_own_permanent`
+        // no-ops silently (no candidates → no `pending_selection` installed
+        // → no parked replacement → original deletion proceeds). This
+        // matches DCGO `CanActivateScapegoat` returning false when there
+        // are no valid targets.
+        Keyword::Scapegoat => vec![Effect::when_would_be_deleted(card)
+            .name("<Scapegoat>")
+            .optional()
+            .replacement_process(|rctx| {
+                use crate::replacement::{ReplacementCause, ReplacementSubject};
+
+                // Self-scope guard.
+                let me_perm = match rctx.effect.source_permanent {
+                    Some(h) => h,
+                    None => return,
+                };
+                let subject = match rctx.subject {
+                    ReplacementSubject::Permanent(h) => h,
+                    _ => return,
+                };
+                if subject != me_perm {
+                    return;
+                }
+
+                // Cause filter: skip OwnEffect.
+                if matches!(rctx.cause, ReplacementCause::OwnEffect) {
+                    return;
+                }
+
+                let owner = me_perm.player;
+
+                // Inner pick: another of own permanents. Filter: same-
+                // controller, non-self. Mandatory once accepted
+                // (is_optional=false). `select_own_permanent` no-ops
+                // silently when no candidates match — no pending_selection
+                // is installed, so the dispatcher commits no outcome and
+                // the original deletion proceeds.
+                rctx.effect.select_own_permanent(
+                    "select another of your Digimon to delete instead",
+                    /*is_optional=*/ false,
+                    move |_g, h| h.player == owner && h != me_perm,
+                    move |ctx, picked| {
+                        // Substitute the deletion subject to the picked
+                        // permanent. The dispatcher's Substituted commit
+                        // arm finalizes the redirected deletion.
+                        ctx.substitute_replacement(ReplacementSubject::Permanent(picked));
+                    },
+                );
+            })
+            .build()],
+
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),
     }
