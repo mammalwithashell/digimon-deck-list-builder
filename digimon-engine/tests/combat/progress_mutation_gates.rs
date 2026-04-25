@@ -88,3 +88,46 @@ fn opponent_effect_delete_does_not_remove_progress_attacker() {
         "Progress attacker must survive opponent-effect delete"
     );
 }
+
+#[test]
+fn opponent_effect_return_to_hand_does_not_bounce_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        let _ = ctx.return_to_hand(progress);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "Progress attacker must survive opponent-effect return-to-hand"
+    );
+    assert!(
+        r.game.players[0].hand.is_empty(),
+        "no card returned to hand"
+    );
+}
+
+#[test]
+fn opponent_effect_return_to_deck_does_not_bounce_progress_attacker() {
+    use digimon_engine::enums::StackPosition;
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    let deck_size_before = r.game.players[0].deck.len();
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        let _ = ctx.return_to_deck(progress, StackPosition::Bottom);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "Progress attacker must survive opponent-effect return-to-deck"
+    );
+    assert_eq!(
+        r.game.players[0].deck.len(),
+        deck_size_before,
+        "deck size unchanged"
+    );
+}

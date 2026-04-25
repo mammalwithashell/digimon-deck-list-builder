@@ -873,19 +873,27 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
+    /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_hand(
         &mut self,
         target: PermanentHandle,
     ) -> Option<crate::card_source::CardHandle> {
+        if self.game.progress_excludes(target, Some(self.player)) {
+            return None;
+        }
         self.game.return_to_hand(target)
     }
 
     /// Return a permanent's top card to its owner's deck. See `Game::return_to_deck`.
+    /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_deck(
         &mut self,
         target: PermanentHandle,
         position: crate::enums::StackPosition,
     ) -> bool {
+        if self.game.progress_excludes(target, Some(self.player)) {
+            return false;
+        }
         self.game.return_to_deck(target, position)
     }
 
