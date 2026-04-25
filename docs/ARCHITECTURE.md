@@ -38,8 +38,6 @@ Detailed architecture documentation extracted from CLAUDE.md. For project overvi
 - `tools/build_registry.py`: append-only card registry builder (DigimonCard.io API)
 - `tools/ingest_cards.py`: card metadata ingestion from DigimonCard.io API
 - `tools/train_card_autoencoder.py`: warm-start embedding generator
-- `tools/transpile_dcgo.py`: C#→Python card effect transpiler
-- `tools/transpiler/`: transpiler package
 - `tools/ingest_pinecone.py` / `tools/verify_pinecone.py`: Pinecone vector DB management
 - `tools/meta_loader.py`: meta deck data loader
 - `tools/check_frozen_integrity.py`: CI frozen script integrity guard
@@ -294,7 +292,6 @@ Common scope profiles:
 
 - `script`
 - `script_engine`
-- `script_engine_transpiler`
 
 ## Desktop Distribution (Tauri v2)
 
