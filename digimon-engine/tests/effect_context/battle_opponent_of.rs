@@ -156,6 +156,70 @@ fn battle_opponent_of_returns_defender_when_self_is_attacker() {
     );
 }
 
+/// Direct-player-attack test: when the attacker attacks the player directly
+/// (no opposing Digimon), `battle_opponent_of(atk_handle)` must return `None`
+/// because `effective_target` is `AttackTarget::Player(_)`, not a Digimon.
+/// This covers the `Player(_) => None` arm in the accessor body.
+#[test]
+fn battle_opponent_of_returns_none_for_direct_player_attack() {
+    // P0 has ATK + ALLY; P1 has no Digimon → attack resolves as a player attack.
+    // ALLY's OnAllyAttack observer fires while pending_attack is live and
+    // effective_target == Player(1). It calls battle_opponent_of(atk) → None.
+    let result_cell: Arc<Mutex<Option<Option<PermanentHandle>>>> = Arc::new(Mutex::new(None));
+
+    struct PlayerAttackCapture {
+        atk_handle: Arc<Mutex<Option<PermanentHandle>>>,
+        result: Arc<Mutex<Option<Option<PermanentHandle>>>>,
+    }
+    impl CardEffect for PlayerAttackCapture {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            let handle_cell = self.atk_handle.clone();
+            let result_cell = self.result.clone();
+            vec![Effect::on_ally_attack(card)
+                .name("player-attack battle_opponent_of None check")
+                .process(move |ctx| {
+                    let handle = handle_cell.lock().unwrap().expect("atk handle must be set");
+                    *result_cell.lock().unwrap() = Some(ctx.battle_opponent_of(handle));
+                })
+                .build()]
+        }
+    }
+
+    let atk_handle_cell: Arc<Mutex<Option<PermanentHandle>>> = Arc::new(Mutex::new(None));
+
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("ATK", 5000))
+        .add_card(fighter("ALLY", 4000))
+        .start();
+
+    r.register_effect(
+        "ALLY",
+        Arc::new(PlayerAttackCapture {
+            atk_handle: atk_handle_cell.clone(),
+            result: result_cell.clone(),
+        }),
+    );
+
+    // P1 intentionally has no Digimon — direct player attack.
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _ally = r.place_on_field(0, "ALLY", Some(0));
+
+    *atk_handle_cell.lock().unwrap() = Some(atk);
+
+    r.attack_player(atk, 1, false);
+
+    let observed = result_cell
+        .lock()
+        .unwrap()
+        .expect("OnAllyAttack must have fired on ALLY");
+
+    assert_eq!(
+        observed, None,
+        "battle_opponent_of(atk) must return None for a direct player attack \
+         — effective_target is Player(1), not a Digimon"
+    );
+}
+
 /// Non-combatant test: a bystander permanent on the field (not in the battle)
 /// calling `battle_opponent_of(bystander_handle)` returns `None`.
 #[test]
