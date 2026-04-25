@@ -260,15 +260,19 @@ fn material_save_picks_tamer_and_two_sources_moves_under_tamer() {
         "Tamer gained exactly 2 source cards (the picked sources)"
     );
     // Both picked sources are now under the Tamer (at the bottom of its stack).
-    let tamer_bottom_ids: Vec<String> = tamer_perm.card_sources[0..2]
-        .iter()
-        .map(|c| c.card_id(&r.game.card_data).to_string())
-        .collect();
-    assert!(
-        tamer_bottom_ids.contains(&"SRC-A".to_string())
-            && tamer_bottom_ids.contains(&"SRC-B".to_string()),
-        "both SRC-A and SRC-B are at the bottom of the Tamer's stack, got {:?}",
-        tamer_bottom_ids
+    // Phase D Task 3 ordering property: each picked source is placed at the
+    // bottom of the Tamer's stack one at a time. SRC-A was picked first, so
+    // it landed at index 0; the SRC-B pick then bottom-inserted, pushing
+    // SRC-A to index 1. The original TAMER source remains the visible top.
+    assert_eq!(
+        tamer_perm.card_sources[0].card_id(&r.game.card_data),
+        "SRC-B",
+        "second-picked source (SRC-B) sits at the very bottom (index 0) after bottom-insert pushed SRC-A up"
+    );
+    assert_eq!(
+        tamer_perm.card_sources[1].card_id(&r.game.card_data),
+        "SRC-A",
+        "first-picked source (SRC-A) is at index 1 — pushed up one slot by the second pick"
     );
     assert_eq!(
         tamer_perm.top_card().card_id(&r.game.card_data),

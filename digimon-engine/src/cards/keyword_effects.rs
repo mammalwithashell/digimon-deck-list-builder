@@ -845,6 +845,9 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 let owner = me.player;
 
                 // Step 1: pick a Tamer (own, mandatory).
+                // mandatory once activation is chosen — the [Main] activation itself is
+                // the "may" hook; unlike Save's post-deletion Tamer pick, declining here
+                // has no semantic meaning (player can simply not activate).
                 ctx.select_own_permanent(
                     "select a Tamer to receive digivolution cards",
                     /*is_optional=*/ false,

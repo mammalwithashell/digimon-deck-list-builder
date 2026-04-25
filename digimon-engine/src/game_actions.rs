@@ -1000,11 +1000,15 @@ impl Game {
             (card.card_id(&self.card_data).to_string(), card.handle())
         };
 
-        let effect_impl = match self.effect_registry.get(&card_id) {
-            Some(arc) => arc,
+        // Use `effects_for_card` rather than the raw registry so that
+        // keyword-derived auto-installed effects are visible here. The
+        // action mask uses the same accessor — without this, the mask
+        // could emit a Hand [Main] bit for an auto-installed keyword
+        // that this dispatcher could not honor.
+        let effects = match self.effects_for_card(&card_id, handle) {
+            Some(e) => e,
             None => return false,
         };
-        let effects = effect_impl.effects(handle);
 
         for effect in &effects {
             if effect.timing != EffectTiming::MainFromHand {
@@ -1138,11 +1142,15 @@ impl Game {
             (card.card_id(&self.card_data).to_string(), card.handle())
         };
 
-        let effect_impl = match self.effect_registry.get(&card_id) {
-            Some(arc) => arc,
+        // Use `effects_for_card` rather than the raw registry so that
+        // keyword-derived auto-installed effects are visible here. The
+        // action mask uses the same accessor — without this, the mask
+        // could emit a Trash [Main] bit for an auto-installed keyword
+        // that this dispatcher could not honor.
+        let effects = match self.effects_for_card(&card_id, handle) {
+            Some(e) => e,
             None => return false,
         };
-        let effects = effect_impl.effects(handle);
 
         for effect in &effects {
             if effect.timing != EffectTiming::MainFromTrash {
