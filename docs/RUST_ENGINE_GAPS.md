@@ -131,6 +131,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 **RESOLVED 2026-04-25 (Phase C):** nested-selection-in-replacement substrate landed via `Game.parked_replacement` + `EffectContext` outcome-setters (`cancel_leave` / `handle_replacement` / `redirect_replacement` / `substitute_replacement`). Phase D auto-installs (Save, Decoy, Fortitude, Fragment, ArmorPurge, Partition) can now be authored. See [`docs/superpowers/specs/2026-04-25-keyword-parity-phase-c-design.md`](../superpowers/specs/2026-04-25-keyword-parity-phase-c-design.md).
 
+**FULLY RESOLVED 2026-04-25 (Phase D):** all seven alpha-tier selection-bearing keyword auto-installs landed — `Fragment(N)` (commits d4fd09a0 + db47ca35), `ArmorPurge` (f08d5eca + e07031d5), `Save` (re-mounted as OnDeletion: 5c072623 + doc 608fb970), `Decoy` (3a6b70a5), `Fortitude` (e57ae55e + 8ae02510), `Partition` (5b18d355 + 7f499326), `MaterialSave(N)` (d353013a + dispatcher fix 99f7435a). Cards declaring only these printed keywords now require zero hand-rolled `CardEffect` code. Substrate extensions: `Game.pending_deletion_resume` (Save) and `Game.pending_post_deletion_replays` (Fortitude/Partition). See [`docs/superpowers/plans/2026-04-25-keyword-parity-phase-d.md`](../superpowers/plans/2026-04-25-keyword-parity-phase-d.md).
+
 ### Selection: multi-select with aggregate-sum constraint (and count-capped sibling)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18)
@@ -280,7 +282,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** RUST_PYTHON_PARITY §2.5c.
 
 ### `<Armor Purge>` keyword (leave-field replacement variant)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED (2026-04-25)
 - **Discovered in:** Medusamon (2026-04-17)
 - **Card(s):** BT24-018 Styracomon, P-137 Flamedramon
 - **Effect text:** "`<Armor Purge>` (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)"
@@ -288,6 +290,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Suggested API shape:** Built atop the `WhenWouldBeDeleted` replacement framework (separate gap). `Keyword::ArmorPurge` + `ctx.trash_top_source_of_self()` primitive; auto-emit the replacement effect from native-keyword parsing.
 - **Workaround:** None — BLOCKED without the replacement-effect framework.
 - **Related:** See "WhenWouldBeDeleted / leave-field replacement-effect framework" above.
+
+**RESOLVED 2026-04-25 (Phase D):** `ctx.armor_purge_top(perm)` primitive landed (commit f08d5eca, fires `OnDigivolutionCardTrashed`); `Keyword::ArmorPurge` auto-install wired in `keyword_to_auto_effect` (commit e07031d5); docstring updated (56e48afc). Gate: `card_sources.len() >= 2`; no player selection — top-swap is forced. See [`docs/superpowers/plans/2026-04-25-keyword-parity-phase-d.md`](../superpowers/plans/2026-04-25-keyword-parity-phase-d.md).
 
 ### `<Training>` keyword
 - **Severity:** 🔴 BLOCKING
@@ -510,7 +514,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "Native printed keyword parsing"; "Phase-granular turn timings"; RUST_PYTHON_PARITY §2.3 (combat interrupts); RUST_ENGINE_API.md §9 (Block / Counter / Alliance interrupt phases not yet wired).
 
 ### `Keyword::Decoy` color-filter parameter + replacement-framework wiring
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED (2026-04-25)
 - **Discovered in:** TS Olympos (2026-04-18)
 - **Card(s):** ST12-12 Sistermon Blanc
 - **Effect text:** "this Digimon gains ＜Decoy (Red/Black)＞ (When your other Red or Black Digimon would be deleted by an opponent's effect, you may delete this Digimon to prevent 1 of those Digimon's deletion.)"
@@ -518,6 +522,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Suggested API shape:** `Keyword::Decoy(Vec<Color>)` (or bitmask `u8` for copy-safety). Update `ModifierType::GrantDecoy` to carry the same payload. Replacement-framework hook filters candidate protected-ally slots by the color list. Native-keyword parsing emits `Decoy(colors)` when it parses `<Decoy (Red/Black)>` from card text.
 - **Workaround:** "None — BLOCKED." A parameterless Decoy overapplies (protects all colors) and still requires the unimplemented replacement framework.
 - **Related:** "WhenWouldBeDeleted / leave-field replacement-effect framework"; "Native printed keyword parsing".
+
+**RESOLVED 2026-04-25 (Phase D):** `Keyword::Decoy` auto-install wired in `keyword_to_auto_effect` (commit 3a6b70a5). **Deviation from original spec:** kept un-parameterized — DCGO `DecoyProcess` injects color via per-card `CanSelectPermanentCondition` predicate, not enum-level. Phase D auto-install offers any same-controller Digimon (excluding self) as the substitute; per-card-text color filters override via hand-rolled `CardEffect`. Color-grouped Decoy wiring is a tracked follow-up. See [`docs/superpowers/plans/2026-04-25-keyword-parity-phase-d.md`](../superpowers/plans/2026-04-25-keyword-parity-phase-d.md).
 
 ### Trash all digivolution cards of a permanent (unbounded stack-peel)
 - **Severity:** 🔴 BLOCKING
@@ -863,7 +869,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 **Closed by Phase 1 (2026-04-19):** Observer timing wired in `digimon-engine` — see `fire_on_digivolution_card_trashed()` in `digimon-engine/src/game_actions.rs` (called per-batch from `return_to_hand`/`return_to_deck` with `TrashCause::Effect`). Builder: `Effect::on_digivolution_card_trashed(card)` in `digimon-engine/src/effect.rs`. Fires in each player's battle area to notify Tamer observers (e.g., P-169 Close, EX10-063 Close). See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
 
 ### `<Fragment (N)>` keyword — leave-field replacement via N-source self-trash
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED (2026-04-25)
 - **Discovered in:** Rocks (2026-04-18)
 - **Card(s):** EX10-036 Magneticdramon (`<Fragment (3)>`), EX8-051 Proganomon (`<Fragment (3)>`), EX10-033 Pyramidimon (`<Fragment (3)>`), EX8-055 Pyramidimon (`<Fragment (3)>`), EX10-034 Blastmon (`<Fragment (3)>`), EX11-044 Pyramidimon (`<Fragment (3)>`)
 - **Effect text:** "`<Fragment (N)>` (When this Digimon would be deleted, by trashing any N of its digivolution cards, it isn't deleted.)"
@@ -871,6 +877,8 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Suggested API shape:** `Keyword::Fragment(u8)` on the `Keyword` enum. Native-keyword parsing (existing gap) auto-emits `Effect::when_would_be_deleted(card).name("Fragment (N)").optional().condition(|ctx| ctx.source_permanent().map_or(false, |p| p.card_sources.len() > n as usize + 1)).pay_cost(|ctx| ctx.select_n_own_sources(n, ctx.source_permanent?.handle)).process(|ctx| ctx.cancel_leave())`. Introduce `ctx.select_n_own_sources(n: u8, target: PermanentHandle) -> Vec<usize>` as a new multi-select selection helper over the target's `card_sources[1..]` (excludes top-card). Integrates with `WhenWouldBeDeleted` framework (existing gap) and the new `OnDigivolutionCardTrashed` observer — the Fragment payment trashes the chosen sources via the unified trash-with-observer path.
 - **Workaround:** None — BLOCKED. Pay-or-die decisions under attack are RL-decision-critical; auto-pay violates §17 no-approximations; omit-Fragment misstates the card face and loses every Rocks mirror match (the archetype's main survivability engine is Fragment on every mid/late Digimon).
 - **Related:** "`WhenWouldBeDeleted` / leave-field replacement-effect framework" (parent framework); "`<Armor Purge>` keyword (leave-field replacement variant)" (N=1 sibling); "Native printed keyword parsing" (auto-emission path); new "`OnDigivolutionCardTrashed` observer timing" (downstream producer/consumer).
+
+**RESOLVED 2026-04-25 (Phase D):** `Keyword::Fragment(N)` auto-install wired in `keyword_to_auto_effect` (commit d4fd09a0 + fixup db47ca35). Uses `CountCappedZone::Material(perm)` (Task 0, commit 41b6eac2) and `ctx.trash_card_source` (extracted Task 4 review fixup db47ca35). Gate: `card_sources.len() >= N+1`. **Deviation:** Fragment(N) is `.optional()` — Phase C's parked-replacement substrate only supports optional replacements; mandatory replacements trip a `debug_assert!`. Tagged `TODO(phase-c-substrate-mandatory)` in source; spawn task exists for substrate extension. Save (5c072623), Fortitude (e57ae55e), Partition (5b18d355), and MaterialSave(N) (d353013a) also resolved in Phase D. See [`docs/superpowers/plans/2026-04-25-keyword-parity-phase-d.md`](../superpowers/plans/2026-04-25-keyword-parity-phase-d.md).
 
 ### `<Piercing>` combat-time security continuation after a winning battle
 - **Severity:** 🔴 BLOCKING

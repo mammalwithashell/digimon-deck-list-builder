@@ -166,6 +166,43 @@ Auto-installs for keywords blocked on the substrate threads. Ordering within the
 - **D6. Partition.** `WhenWouldLeaveBattleArea` (cause ≠ Battle) two-group selection; plays one card from each group from own stack without cost.
 - **D7. MaterialSave(N).** Active-skill emission: main-phase `Effect` moving up-to-N of own stack sources under another permanent (selection-bearing).
 
+✅ Landed 2026-04-25 on `claude/gracious-ptolemy-744e69`. All seven alpha-tier
+selection-bearing keyword auto-installs shipped. Cards declaring only these
+printed keywords now require zero hand-rolled `CardEffect` code. See
+[Phase D plan](../plans/2026-04-25-keyword-parity-phase-d.md).
+
+**Deliverables shipped (with commit SHAs):**
+- Task 0: `CountCappedZone::Material` — `41b6eac2` + fixup `9cf63728`
+- Task 1: `place_card_under_permanent_bottom` — `70b35032` + fixup `e239a996`
+- Task 2: `armor_purge_top` — `6828dcfe`
+- Task 3: `play_from_trash_free_unsuspended` — `49a55539`
+- Task 4: `Fragment(N)` auto-install — `d4fd09a0` + fixup `db47ca35`
+- Task 5: `ArmorPurge` auto-install — primitive update `f08d5eca` + auto-install `e07031d5` + docstring `56e48afc`
+- Task 6: `Save` — re-mounted as OnDeletion `5c072623` + doc fixups `608fb970`
+- Task 7: `Decoy` — `3a6b70a5`
+- Task 8: `Fortitude` — `e57ae55e` + source-attribution fix `8ae02510`
+- Task 9: `Partition` — `5b18d355` + comment refresh `7f499326`
+- Task 10: `MaterialSave(N)` — `d353013a` + dispatcher alignment `99f7435a`
+- Task 11: docs flip (`DCGO_KEYWORD_PARITY.md` + module docstring) — `10d8d3d8`
+- Task 12: `RUST_ENGINE_API.md` authoring template — `d04b904d`
+
+**Spec deviations:**
+1. **Decoy kept un-parameterized** — `Keyword::Decoy(Color)` was considered (§10 D4 open question) but DCGO injects color via per-card `CanSelectPermanentCondition` predicate, not enum-level. Auto-install offers any same-controller Digimon (excluding self); per-card-text color filter overrides via hand-rolled `CardEffect`. Color-grouped Decoy is a tracked follow-up.
+2. **Partition wired as trigger, not replacement** — §5 D6 originally wrote "WhenWouldLeaveBattleArea two-group selection". DCGO `Partition.cs` uses `CanTriggerWhenPermanentRemoveField` and does not set `willBeRemoveField=false`. Phase D wires as `OnDeletion` (trigger), not a parked-replacement.
+3. **MaterialSave wired as `[Main]` active skill, not nested-selection-in-replacement** — §5 D7 described a replacement-style body. DCGO `MaterialSave.cs` is invoked from a `[Main]` active skill. Phase D wires as `EffectTiming::MainOnField` declarative effect.
+4. **Save re-mounted as OnDeletion post-deletion trigger, not WhenWouldBeDeleted replacement** — initial Task 6 implementation was a `WhenWouldBeDeleted` replacement (matching the plan skeleton). Spec compliance review found this diverges from DCGO `Save.cs` (`IsTopCardInTrashOnDeletion`). Re-mounted as OnDeletion with substrate extension `Game.pending_deletion_resume: Option<PermanentHandle>` to defer `commit_permanent_deletion`'s finalize step when an OnDeletion handler parks a selection.
+5. **Substrate extensions beyond original Phase D scope:**
+   - `Game.pending_deletion_resume: Option<PermanentHandle>` (Task 6) — defers finalize of permanent deletion when an OnDeletion handler parks a selection.
+   - `Game.pending_post_deletion_replays: Vec<(PlayerId, CardHandle)>` (Task 8) — schedules replay-from-trash after finalize completes. Used by Fortitude and Partition.
+6. **Mandatory parked-replacement constraint** — Fragment(N) is `.optional()` rather than mandatory because Phase C's parked-replacement substrate only supports nested selection inside optional replacements; mandatory replacements that install pending_selection trip a `debug_assert!`. Tagged `TODO(phase-c-substrate-mandatory)` in source. Spawn task chip exists for substrate extension.
+7. **Drive-by dispatcher alignment fix** — `activate_field_main`, `activate_hand_main`, and `activate_trash_main` were using raw `effect_registry.get()` instead of `effects_for_card`, missing keyword auto-installs. Fixed in Task 10 fixup (`99f7435a`).
+
+**Out-of-scope follow-ups:**
+- Color-grouped Decoy / Partition / MaterialSave (per-card-text overrides; not derivable from `Keyword::*` alone).
+- Source-card Fortitude (DCGO `CardStack.Contains(card)` covers Fortitude on a digi source under another top; Phase D scope is top-card carriers only).
+- Mandatory parked-replacement substrate (Fragment / future cards). Spawn task chip exists.
+- DSL Phase 3 wiring of replacement bodies (Phase C deferred; Phase D's hand-rolled keyword auto-installs consume substrate directly).
+
 ### Phase E — Missing-from-enum backfill
 
 Enum variants + auto-installs for alpha-relevant missing keywords. Ordering follows §"Missing-keyword backfill priorities" in the parity doc.
