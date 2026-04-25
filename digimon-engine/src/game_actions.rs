@@ -1066,10 +1066,15 @@ impl Game {
         };
 
         for (is_under, card_id, source_handle) in sources {
-            let Some(effect_impl) = self.effect_registry.get(&card_id) else {
+            // Use `effects_for_card` rather than the raw registry so that
+            // keyword-derived auto-installed effects (e.g. printed
+            // `MaterialSave(N)`) are visible here. The action mask uses the
+            // same accessor — without this, the mask would emit a Field
+            // [Main] bit for an auto-installed keyword that this dispatcher
+            // could not honor.
+            let Some(effects) = self.effects_for_card(&card_id, source_handle) else {
                 continue;
             };
-            let effects = effect_impl.effects(source_handle);
             for (slot, effect) in effects.iter().enumerate() {
                 if effect.timing != EffectTiming::MainOnField {
                     continue;
