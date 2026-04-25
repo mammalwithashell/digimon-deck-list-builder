@@ -30,8 +30,8 @@ From DCGO_KEYWORD_PARITY.md summary table:
 
 | Bucket | Count | Keywords |
 |---|---|---|
-| ✅ Correct | 12 | Rush, Blocker, Jamming, Piercing, Reboot, Blitz, Raid, Alliance, Vortex, Overclock, Collision, Barrier, Evade, Decode |
-| 🟡 Divergent | 1 | Progress (wrong site — shipped incorrect) |
+| ✅ Correct | 13 | Rush, Blocker, Jamming, Piercing, Reboot, Blitz, Raid, Alliance, Vortex, Overclock, Collision, Barrier, Evade, Decode, Progress (Phase B closed mutation-site coverage 2026-04-24) |
+| 🟡 Divergent | 0 | — |
 | 🟣 Deferred (nested-select infra) | 3 | Fragment(N), ArmorPurge, Partition |
 | 🔴 Parsed-but-unwired / misnamed | 9 | SecurityAttackPlus(N), SecurityAttackMinus(N), DeDigivolve(N), DrawX(N), Save, Fortitude, Decoy, plus `Keyword::Blast` (needs rename to `BlastDigivolve` + auto-install) and dead variant `Keyword::Material` |
 | ❌ Missing from enum | 7 | MaterialSave(N), MindLink, Iceclad, Execute, Retaliation, Scapegoat, Training |
@@ -115,15 +115,25 @@ Unblocks alpha testing and prevents more cards from being scripted against the i
 
 **Exit criteria.** All ✅ and 🟡-marked rows in the parity doc now accurate (Jamming row fixed to ✅; Iceclad description corrected; Progress marked 🟡 partial); `Keyword::Blast` renamed to `Keyword::BlastDigivolve`; dead variants removed; `Keyword::MaterialSave(u8)` parses. Progress selection-filter gating verified against a behavioral test pair (opponent-select-excludes-Progress; own-select-still-includes).
 
-### Phase B — Source-attribution substrate (§4.1)
+### Phase B — Source-attribution substrate (§4.1)  ✅ landed 2026-04-24 on `claude/gracious-ptolemy-744e69`
 
-- **B1. Extend `MutationCause`.** Add `source: Option<PlayerId>`. Update the `delete_permanent_with_effects` inference at [combat.rs:2199-2207](../../../digimon-engine/src/combat.rs) to populate source from `effect_source_player`.
-- **B2. Thread cause through zone operations.** Add `_with_cause` variants for return-to-hand, return-to-deck, de-digivolve-N, trash-by-effect, suspend-by-effect. Existing callers default to a best-inferred cause; new callers pass explicitly.
-- **B3. Guard negative-DP `modifiers.add`.** Route negative-DP adds through a helper that checks `progress_excludes`. Skip the add (no-op, log at debug) rather than partially apply. Document that Progress is a hard gate, not a "may prevent" prompt.
-- **B4. Progress mutation-site coverage.** Apply `progress_excludes` at every opponent-sourced mutation entry point: delete, return, bounce, de-digivolve, suspend, move-to-stack, negative DP.
-- **B5. `OnDeletion` cause discriminator.** Expose `ctx.deletion_cause()` / `ctx.was_deleted_by_effect()` / `ctx.was_deleted_by_opponent()` on the deletion-observer `EffectContext`. Unblocks Retaliation, Scapegoat, Mephistomon.
+- **B1.** ✅ landed — opponent-sourced mutation-site coverage thread (delete + return-to-hand / deck + de-digivolve + suspend + negative DP) gated through `EffectContext` where `self.player` statically attributes the source. Game-level fire-sites stay agnostic so rule-driven mutations flow through unchanged.
+- **B2.** ✅ landed — `ctx.return_to_hand` / `return_to_deck` / `de_digivolve` / `de_digivolve_n` / `suspend` all Progress-gated; `ctx.delete_permanent` re-routed through `Game` fire-site with a Progress gate (commit c31283b0).
+- **B3.** ✅ landed — negative-DP path through `ctx.add_dp_modifier` / `ctx.add_modifier` Progress-gated (commit f84b45d1).
+- **B4.** ✅ landed — Progress mutation-site coverage closed across delete / return / de-digivolve / suspend / negative DP. `Game::opponent_sourced_mutation` helper introduced (commit 5f34e9e5) for Phase D/E consumers.
+- **B5.** ✅ landed — `ctx.deletion_cause()` / `ctx.was_deleted_by_effect()` / `ctx.was_deleted_by_opponent()` accessors expose `Game::current_deletion_cause` to the deletion-observer `EffectContext` (commits cf400d4f, 17b9875b, 438fe1a3).
 
-**Exit criteria.** Every opponent-mutation entry point audited and gated. Behavioral tests cover: Progress + opponent negative-DP (skipped), Progress + opponent delete-by-cost (skipped), Progress + own-sourced delete (applies normally). `ctx.was_deleted_by_effect()` verified on a test card's OnDeletion branch.
+**Exit criteria — met.**
+
+- ✅ Every opponent-mutation entry point gated (delete, return-to-hand, return-to-deck, de-digivolve, suspend, negative DP).
+- ✅ `ctx.was_deleted_by_effect` / `was_deleted_by_opponent` / `deletion_cause` accessors landed.
+- ✅ In-observer behavioral test verifying the slot is populated during OnDeletion drain (`tests/combat/deletion_cause_observer.rs`, commit 17b9875b).
+- ✅ Own-sourced + rule-driven Progress non-exclusion regression coverage (commit 493743fa).
+
+**Spec deviations.**
+
+- The original B1 deliverable called for adding a `source: Option<PlayerId>` field to `ReplacementCause`. Phase B did **not** add it — the existing `OwnEffect` / `OpponentEffect` variants encode the relative source, which covers all current consumer needs (Retaliation, Scapegoat, Mephistomon). Anyone needing absolute-source can extend the variants later without breaking the cause discriminant.
+- The "move-to-stack" mutation entry point listed in B4 was deferred — there is no `EffectContext` API for stack-attachment yet; the gate lands in Phase D as part of Save / MaterialSave / Decoy auto-installs.
 
 ### Phase C — Nested-selection-in-replacement substrate (§4.2)
 

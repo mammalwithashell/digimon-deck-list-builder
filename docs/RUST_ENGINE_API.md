@@ -176,6 +176,51 @@ ctx.grant_keyword(target, keyword: Keyword, expiry: Expiry)
 
 See §5 for `ModifierType` and `Expiry` values.
 
+### OnDeletion cause accessors
+
+Inside an `OnDeletion` (or `OnAnyDeletion`) observer body, the cause of the deletion currently being drained is exposed on the context. Outside such a body all three accessors return `None` / `false`. Phase B §B5.
+
+```rust
+ctx.deletion_cause() -> Option<ReplacementCause>   // raw cause: Battle / OwnEffect / OpponentEffect / SecurityCheck / Cost
+ctx.was_deleted_by_effect() -> bool                 // matches OwnEffect | OpponentEffect
+ctx.was_deleted_by_opponent() -> bool               // matches OpponentEffect
+```
+
+The same trio is mirrored on `EffectReadContext` for use inside `condition` closures.
+
+**Retaliation — fire only on battle deletion:**
+
+```rust
+Effect::on_deletion(card)
+    .name("Retaliation: delete the winner")
+    .condition(|ctx| ctx.deletion_cause() == Some(ReplacementCause::Battle))
+    .process(|ctx| { /* delete the battling opponent Digimon */ })
+    .build()
+```
+
+**Mephistomon — "when this is deleted by your opponent's effect":**
+
+```rust
+Effect::on_deletion(card)
+    .name("[On Deletion] Opponent-effect rider")
+    .condition(|ctx| ctx.was_deleted_by_opponent())
+    .process(|ctx| { /* play 1 [Gulfmon] / level-6 Dark Masters from hand or trash free */ })
+    .build()
+```
+
+**Scapegoat — eligibility predicate:**
+
+`Keyword::Scapegoat` cancels deletion when the cause is *not* `OwnEffect` (RULES_CONTEXT 16-31). `was_deleted_by_effect()` is too broad for this — it matches `OwnEffect` too — so use the raw cause:
+
+```rust
+.condition(|ctx| !matches!(
+    ctx.deletion_cause(),
+    Some(ReplacementCause::OwnEffect),
+))
+```
+
+The slot is populated by `Game::current_deletion_cause`, set by the deletion fire-site for the duration of the OnDeletion drain and cleared once the queue is empty. See `digimon-engine/tests/combat/deletion_cause_observer.rs` for the canonical regression.
+
 ---
 
 ## 4. Handles

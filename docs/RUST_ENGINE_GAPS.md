@@ -728,13 +728,14 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "Search-own-security-stack primitive (reveal full stack + select by filter)"; "Effect-initiated digivolve from security stack (free, trait-filtered)"; "Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)".
 
 ### OnDeletion cause discriminator ("if deleted by an effect" / "by battle" / "by your own effects")
-- **Severity:** 🔴 BLOCKING
+- **Status:** ✅ RESOLVED (2026-04-24)
+- **Resolution:** `EffectContext::deletion_cause() -> Option<ReplacementCause>` / `was_deleted_by_effect() -> bool` / `was_deleted_by_opponent() -> bool` landed in Phase B (commit 17b9875b). `Game::current_deletion_cause` is populated by the deletion fire-site (commit cf400d4f) and read on the `OnDeletion` `EffectContext` so `.condition` closures can branch on cause without installing a replacement effect. Unblocks Retaliation, Scapegoat, Mephistomon-style riders.
+- **Severity (historical):** 🔴 BLOCKING
 - **Discovered in:** Dark Masters (2026-04-18)
 - **Card(s):** BT17-068 Mephistomon
 - **Effect text:** "[On Deletion] If deleted by an effect, you may play 1 [Gulfmon] or 1 level 6 Digimon with the [Dark Masters] trait from your hand or trash without paying the cost."
-- **What's missing:** `EffectTiming::OnDeletion` fires unconditionally; no `DeletionCause { Battle, OwnEffect, OpponentEffect }` is plumbed into the `EffectContext` so the .condition closure can branch. Sibling axis to "Play / digivolve origin context flag" (which covers PlayCause for plays/digivolves) and to the source-attribution piece of the "WhenWouldBeDeleted / leave-field replacement-effect framework" gap (which covers replacement-time attribution). This entry is for the *observer* path so cards can self-gate on the cause without installing a full replacement effect.
-- **Suggested API shape:** Thread `DeletionCause` through every `delete_permanent_with_effects` call site (combat → `Battle`; effect-driven `ctx.delete_permanent` → `OwnEffect` or `OpponentEffect` based on `ctx.player`). Expose `ctx.was_deleted_by_effect() -> bool` / `ctx.deletion_cause() -> DeletionCause` on the OnDeletion `EffectContext`. Fold into the same context struct as `was_played_by_effect` and the `WhenWouldBeDeleted` cause field.
-- **Workaround:** "None — BLOCKED." Auto-firing the rider unconditionally over-applies to battle deletions; silently dropping it loses the only reliable Apocalymon-cycle recursion.
+- **What was missing:** `EffectTiming::OnDeletion` fired unconditionally; no `DeletionCause { Battle, OwnEffect, OpponentEffect }` was plumbed into the `EffectContext` so the .condition closure could branch. Sibling axis to "Play / digivolve origin context flag" (which covers PlayCause for plays/digivolves) and to the source-attribution piece of the "WhenWouldBeDeleted / leave-field replacement-effect framework" gap (which covers replacement-time attribution). This entry was for the *observer* path so cards can self-gate on the cause without installing a full replacement effect.
+- **Final API:** `ctx.deletion_cause() -> Option<ReplacementCause>` returns the raw cause (`Battle` / `OwnEffect` / `OpponentEffect` / `SecurityCheck` / `Cost`) when fired inside an `OnDeletion` body, `None` otherwise. `ctx.was_deleted_by_effect()` is the convenience predicate for `Some(OwnEffect | OpponentEffect)`. `ctx.was_deleted_by_opponent()` matches only `Some(OpponentEffect)`.
 - **Related:** "WhenWouldBeDeleted / leave-field replacement-effect framework"; "Play / digivolve origin context flag"; "Observer timings tied to specific events".
 
 ### Counter window + `<Blast Digivolve>` activation flow ([Hand][Counter] play path)
