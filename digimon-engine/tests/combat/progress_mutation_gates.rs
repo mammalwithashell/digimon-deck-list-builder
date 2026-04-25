@@ -434,3 +434,39 @@ fn opponent_effect_protective_modifier_does_not_apply_to_progress_attacker() {
         "Progress gate is source-side only — opponent-granted protection doesn't pass through"
     );
 }
+
+#[test]
+fn own_effect_cannot_attack_still_locks_progress_attacker() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(0));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.add_modifier(progress, ModifierType::CannotAttack, 0, Expiry::EndOfTurn);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert!(
+        r.game.modifiers.has(progress, ModifierType::CannotAttack),
+        "own-sourced CannotAttack must still install on Progress carrier"
+    );
+}
+
+#[test]
+fn own_effect_positive_dp_still_buffs_progress_attacker() {
+    // Sanity: own buffs are not gated. progress_excludes returns false when
+    // src == target.player, so own players can still buff their own
+    // attacking Progress carrier mid-attack.
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(0));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.add_dp_modifier(progress, 2000, Expiry::EndOfTurn);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert_eq!(
+        r.game.modifiers.sum(progress, ModifierType::ChangeDp),
+        2000,
+        "own-sourced positive DP must still install on Progress carrier"
+    );
+}
