@@ -397,6 +397,23 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Redirect the parked event to a different zone (e.g., Trash → Deck for
+    /// Evade, Trash → Hand for return-to-hand replacement).
+    ///
+    /// Writes `ReplacementOutcome::Redirected(zone)` to the parked slot.
+    /// Honored by `commit_deferred_outcome`'s existing redirect arms.
+    /// Calling outside a parked-replacement scope is a `debug_assert!` panic
+    /// in dev builds; release builds silently no-op.
+    pub fn redirect_replacement(&mut self, zone: crate::enums::Zone) {
+        debug_assert!(
+            self.game.parked_replacement.is_some(),
+            "redirect_replacement called outside a replacement-process callback"
+        );
+        if let Some(parked) = self.game.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::Redirected(zone);
+        }
+    }
+
     /// Reborrow this mut context as a read-only context — for condition
     /// closures, which take `&EffectReadContext`.
     pub fn as_read(&self) -> EffectReadContext<'_> {

@@ -88,3 +88,20 @@ fn handle_replacement_writes_custom_handled_to_parked_slot() {
         "handle_replacement should write CustomHandled to parked slot"
     );
 }
+
+#[test]
+fn redirect_replacement_writes_redirected_outcome_to_parked_slot() {
+    let mut r = DebugRunner::builder().add_card(fighter("X")).start();
+    let target = r.place_on_field(0, "X", None);
+    install_parked(&mut r.game, target);
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.redirect_replacement(Zone::Hand);
+    }
+    let outcome = r.game.parked_replacement_outcome_for_test().expect("slot still set");
+    assert_eq!(
+        outcome,
+        ReplacementOutcome::Redirected(Zone::Hand),
+        "redirect_replacement(Hand) should write Redirected(Hand) to parked slot"
+    );
+}
