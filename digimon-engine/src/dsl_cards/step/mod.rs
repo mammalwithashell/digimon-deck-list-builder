@@ -76,7 +76,17 @@ pub fn run_steps(
 
         if let Some(outcome) = control_flow::try_run(step, ctx, bindings) {
             if matches!(outcome, RunOutcome::Parked) {
-                // Task 7: capture outer tail and resume after inner park.
+                let outer_tail = steps[i + 1..].to_vec();
+                if !outer_tail.is_empty() {
+                    // Invariant: at most one outstanding outer continuation.
+                    // See Game::dsl_outer_tail doc for the full rationale.
+                    debug_assert!(
+                        ctx.game.dsl_outer_tail.is_none(),
+                        "dsl_outer_tail overwrite: an earlier outer continuation \
+                         was never drained — likely a nested-park bug",
+                    );
+                    ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone()));
+                }
                 return RunOutcome::Parked;
             }
             i += 1;
@@ -85,6 +95,15 @@ pub fn run_steps(
 
         if let Some(outcome) = iteration::try_run(step, ctx, bindings) {
             if matches!(outcome, RunOutcome::Parked) {
+                let outer_tail = steps[i + 1..].to_vec();
+                if !outer_tail.is_empty() {
+                    debug_assert!(
+                        ctx.game.dsl_outer_tail.is_none(),
+                        "dsl_outer_tail overwrite: an earlier outer continuation \
+                         was never drained — likely a nested-park bug",
+                    );
+                    ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone()));
+                }
                 return RunOutcome::Parked;
             }
             i += 1;

@@ -117,6 +117,11 @@ fn install_select_hand(
                 b.insert_hand_index(name, idx as u16);
             }
             run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail captured by run_steps when
+            // this selection was installed inside a control-flow body.
+            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
+                run_steps(&outer_tail, cb_ctx, &mut outer_b);
+            }
         },
     );
 }
@@ -143,6 +148,10 @@ fn install_select_trash(
                 b.insert_trash_index(name, idx as u16);
             }
             run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail.
+            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
+                run_steps(&outer_tail, cb_ctx, &mut outer_b);
+            }
         },
     );
 }
@@ -166,6 +175,10 @@ fn install_select_own_permanent(
                 b.insert_permanent(name, handle);
             }
             run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail.
+            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
+                run_steps(&outer_tail, cb_ctx, &mut outer_b);
+            }
         },
     );
 }
@@ -189,6 +202,10 @@ fn install_select_opponent_permanent(
                 b.insert_permanent(name, handle);
             }
             run_steps(&tail, cb_ctx, &mut b);
+            // Phase 2d Task 7: drain outer tail.
+            if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
+                run_steps(&outer_tail, cb_ctx, &mut outer_b);
+            }
         },
     );
 }
