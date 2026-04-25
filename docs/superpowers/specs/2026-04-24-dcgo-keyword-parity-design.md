@@ -118,7 +118,7 @@ Unblocks alpha testing and prevents more cards from being scripted against the i
 ### Phase B — Source-attribution substrate (§4.1)  ✅ landed 2026-04-24 on `claude/gracious-ptolemy-744e69`
 
 - **B1.** ✅ landed — opponent-sourced mutation-site coverage thread (delete + return-to-hand / deck + de-digivolve + suspend + negative DP) gated through `EffectContext` where `self.player` statically attributes the source. Game-level fire-sites stay agnostic so rule-driven mutations flow through unchanged.
-- **B2.** ✅ landed — `ctx.return_to_hand` / `return_to_deck` / `de_digivolve` / `de_digivolve_n` / `suspend` all Progress-gated; `ctx.delete_permanent` re-routed through `Game` fire-site with a Progress gate (commit c31283b0).
+- **B2.** ✅ landed — `ctx.return_to_hand` / `return_to_deck` / `de_digivolve` (covering both the all-pops and `amount=Some(N)` N-pop forms) / `suspend` all Progress-gated; `ctx.delete_permanent` re-routed through `Game` fire-site with a Progress gate (commit c31283b0).
 - **B3.** ✅ landed — negative-DP path through `ctx.add_dp_modifier` / `ctx.add_modifier` Progress-gated (commit f84b45d1).
 - **B4.** ✅ landed — Progress mutation-site coverage closed across delete / return / de-digivolve / suspend / negative DP. `Game::opponent_sourced_mutation` helper introduced (commit 5f34e9e5) for Phase D/E consumers.
 - **B5.** ✅ landed — `ctx.deletion_cause()` / `ctx.was_deleted_by_effect()` / `ctx.was_deleted_by_opponent()` accessors expose `Game::current_deletion_cause` to the deletion-observer `EffectContext` (commits cf400d4f, 17b9875b, 438fe1a3).
@@ -161,7 +161,7 @@ Enum variants + auto-installs for alpha-relevant missing keywords. Ordering foll
 
 - **E1. Retaliation.** `Keyword::Retaliation` + auto-installed `OnDeletion` effect that checks `ctx.was_deleted_by_effect() == false` and deletes the battled opponent Digimon. Hard blocker for Dark Masters (BT15-077, BT15-079).
 - **E2. Scapegoat.** `Keyword::Scapegoat` + `WhenWouldBeDeleted` replacement (cause ≠ OwnEffect per RULES_CONTEXT 16-31) selecting another own permanent to delete instead.
-- **E3. DeDigivolve(N) printed-form auto-install.** Existing `Keyword::DeDigivolve(N)` variant gets an active-skill auto-emit via `keyword_to_auto_effect`. Consumes the existing `ctx.de_digivolve_n` helper.
+- **E3. DeDigivolve(N) printed-form auto-install.** Existing `Keyword::DeDigivolve(N)` variant gets an active-skill auto-emit via `keyword_to_auto_effect`. Consumes the existing `ctx.de_digivolve(_, _, amount=Some(N))` helper.
 - **E4. DrawX(N) printed-form auto-install.** `[Main]` active-skill draw for Option cards.
 
 ### Phase F — Remaining keyword backfill (lower archetype blast radius)
@@ -206,7 +206,7 @@ Lower priority than A-E but in scope. Each needs a new enum variant plus the spe
 
 ### `Effect` builder additions
 - `Effect::security_attack_change(n: i8)` — already partially exists; confirm for auto-install emission.
-- `Effect::de_digivolve_active_skill(n: u8)` — thin wrapper over existing `ctx.de_digivolve_n`.
+- `Effect::de_digivolve_active_skill(n: u8)` — thin wrapper over existing `ctx.de_digivolve(_, _, Some(n))`.
 - `Effect::draw_option_active_skill(n: u8)`.
 - `Effect::end_of_turn_self_delete_attack()` — Execute auto-install body.
 - `Effect::attach_tamer_to_digimon_active_skill()` — MindLink auto-install body.
