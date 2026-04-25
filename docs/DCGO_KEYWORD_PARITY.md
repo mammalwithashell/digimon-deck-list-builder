@@ -31,19 +31,19 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Barrier | Trash top deck card to cancel own deletion | ✅ | Auto-install `WhenWouldBeDeleted` in `cards/keyword_effects.rs:49` |
 | Evade | Send self to deck bottom instead of trash on deletion | ✅ | Auto-install `WhenWouldBeDeleted` in `cards/keyword_effects.rs:77` |
 | Decode | Return self to own hand instead of opp deck/hand | ✅ | Auto-install two `WhenWouldBeReturnedTo*` replacements in `cards/keyword_effects.rs:103` |
-| Fragment(N) | Trash N sources from own stack to cancel deletion | 🟣 | Enum variant + printed parse work; consumer returns empty Vec — blocked on nested-select-in-replacement |
-| ArmorPurge | Trash 1 digivolution source as active skill | 🟣 | Same deferral as Fragment |
-| Partition | Split stack by 2 color/trait groups, play one from each on leave | 🟣 | Same deferral |
+| Fragment(N) | Trash N sources from own stack to cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; mandatory replacement via `CountCappedZone::Material` source-pick + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/fragment_n.rs`. |
+| ArmorPurge | Trash current top Digimon, promote next source as new top, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; mandatory replacement via `ctx.armor_purge_top` primitive + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/armor_purge.rs`. |
+| Partition | On leave-field (not battle/own-effect): pick + play 2 cards from own sources free+unsuspended | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with cause filter (`!Battle && !OwnEffect`), 2-pick source selection. See `keyword_effects.rs` and `tests/keyword_phase_d/partition.rs`. |
 | Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | ✅ | (Phase B: gated at ctx.delete_permanent / return_to_hand / return_to_deck / de_digivolve / suspend / negative DP) Wrong SecuritySkill gate reverted in Phase A; selection-filter exclusion landed Phase A §A1 via `Game::progress_excludes`. Mutation-site coverage closed in Phase B. |
 | SecurityAttackPlus(N) | Adds N security attacks to the Digimon | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
 | SecurityAttackMinus(N) | Same shape, negative delta | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
 | DeDigivolve(N) | Active skill — remove N top digivolution cards from target | 🔴 | Parsed, unconsumed. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` landed in Phase 10, but native printed form isn't wired to auto-emit the effect |
 | DrawX(N) | "Draw N" on Option cards | 🔴 | Parsed, unconsumed |
-| Save | Place deleted card under own Digimon/Tamer as bottom source | 🔴 | Parsed, unconsumed. |
-| Fortitude | Play self from trash free + unsuspended when ally deleted, if sources available | 🔴 | Parsed, unconsumed. Note: Rust's enum has `GrantBarrier` where `GrantFortitude` should live — see §Fortitude below |
-| Decoy | Redirect deletion to another own permanent (color-filtered) | 🔴 | Parsed; `GrantDecoy` exists; no consumer |
-| Blast Digivolve | `Blast Digivolve` counter-window play | 🔴 | Parsed as `Keyword::BlastDigivolve` (renamed Phase A §A2). Auto-install of `Effect::blast_digivolve` from the keyword is Phase D work. |
-| MaterialSave(count) | Move up-to-N own stack sources under another permanent — active skill | 🔴 | Enum variant + parametric `<Material Save N>` parser landed Phase A §A5; auto-install in Phase D. |
+| Save | Place self under own Tamer as bottom source, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; optional `WhenWouldBeDeleted` replacement, Tamer pick + `ctx.place_card_under_permanent_bottom` + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/save.rs`. |
+| Fortitude | Play self from trash free + unsuspended when self-stack deleted, if sources available | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with source-count gate, `ctx.play_from_trash_free_unsuspended`. See `keyword_effects.rs` and `tests/keyword_phase_d/fortitude.rs`. |
+| Decoy | Redirect deletion of any same-controller ally to self | ✅ | Auto-installed in Phase D 2026-04-25; `WhenWouldBeDeleted` subscription on ally deletions, `ctx.substitute_replacement`. See `keyword_effects.rs` and `tests/keyword_phase_d/decoy.rs`. |
+| Blast Digivolve | `Blast Digivolve` counter-window play | 🔴 | Parsed as `Keyword::BlastDigivolve` (renamed Phase A §A2). Auto-install of `Effect::blast_digivolve` from the keyword is deferred (Phase D scope did not include BlastDigivolve). |
+| MaterialSave(count) | Move up-to-N own stack sources under another permanent — `[Main]` active skill | ✅ | Auto-installed in Phase D 2026-04-25; `MainOnField` effect with gate (≥1 source + ≥1 own Tamer), own-Tamer pick then source-pick via `CountCappedZone::Material`, tuck via `ctx.place_card_under_permanent_bottom`. See `keyword_effects.rs` and `tests/keyword_phase_d/material_save.rs`. |
 | MindLink | Attach Tamer card to a Digimon with empty Tamer slot | ❌ | Not in Rust enum |
 | Iceclad | Compare digivolution-card count instead of DP in battle (except vs Security Digimon); higher count wins, tie = both delete | ❌ | Not in Rust enum. Previous description ('immunity to suspension') was incorrect; actual mechanic is digi-card-count battle compare per RULES_CONTEXT 16-34. Wiring: Phase F2. |
 | Execute | Active skill — attack unsuspended opp, self-delete on end-of-attack | ❌ | Not in Rust enum |
@@ -63,7 +63,7 @@ See the spec at [superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](sup
 
 ### Blast keyword variant is dead code
 
-Resolved Phase A §A2 — renamed to `Keyword::BlastDigivolve`; auto-install deferred to Phase D.
+Resolved Phase A §A2 — renamed to `Keyword::BlastDigivolve`; auto-install remains deferred (not included in Phase D).
 
 ### Save / MaterialSave name collision
 
@@ -101,24 +101,24 @@ Ordered by archetype relevance to the alpha scope (Royal Knights, Jesmon GX, Roc
 | Priority | Keyword | Why |
 |---|---|---|
 | 1 | Retaliation | Dark Masters core: BT15-077 LadyDevimon, BT15-079 Piedmon |
-| 2 | MaterialSave(count) | Several Medusamon and Dark Masters entries use it |
-| 3 | Scapegoat | Dark Masters (LM-043 Darkdramon) |
-| 4 | Training | Tied to TestCards.Training active-skill; needed for Rocks pre-evo slots |
-| 5 | Execute | Appears only on a handful of non-archetype cards; defer |
-| 6 | Iceclad, MindLink | Not in any alpha-target archetype; defer |
+| ~~2~~ | ~~MaterialSave(count)~~ | ~~Several Medusamon and Dark Masters entries use it~~ ✅ resolved Phase D |
+| 2 | Scapegoat | Dark Masters (LM-043 Darkdramon) |
+| 3 | Training | Tied to TestCards.Training active-skill; needed for Rocks pre-evo slots |
+| 4 | Execute | Appears only on a handful of non-archetype cards; defer |
+| 5 | Iceclad, MindLink | Not in any alpha-target archetype; defer |
 
 ## Gap ranking (consolidated for scheduling)
 
 Ranked by alpha-archetype blast radius:
 
 1. ~~**Progress semantics fix**~~ — ✅ resolved Phase A + B. Selection-filter exclusion + opponent-mutation-site gating both landed.
-2. **Fragment(N) wire-up** — Rocks archetype is built on Fragment. Blocked by nested-selection-in-replacement. Fix cascades to ArmorPurge + Partition.
+2. ~~**Fragment(N) wire-up**~~ — ✅ resolved Phase D 2026-04-25. Fragment(N), ArmorPurge, Partition all landed. Cascaded fix is complete.
 3. **SecurityAttackPlus/Minus auto-install** — printed on many cards across all archetypes; trivial to add.
 4. **Jamming scope widening** — affects any attacking Digimon losing a regular Digimon battle; tens of cards.
-5. **Save distinct from MaterialSave** — Save is on staples in multiple archetypes (P-186 Gallantmon etc.), needs its own variant + auto-install.
+5. ~~**Save distinct from MaterialSave**~~ — ✅ resolved Phase D 2026-04-25. Save, Decoy, Fortitude, MaterialSave(N) all auto-installed.
 6. **Retaliation enum variant + replacement wire-up** — Dark Masters archetype blocker.
-7. **Fortitude / DeDigivolve(N) parsed-form auto-install / Decoy** — known card lists.
-8. **Execute / Iceclad / MindLink / Training / MaterialSave** — not in alpha archetypes; defer past alpha.
+7. ~~**Fortitude / DeDigivolve(N) parsed-form auto-install / Decoy**~~ — ✅ Fortitude + Decoy resolved Phase D 2026-04-25. DeDigivolve(N) auto-install remains pending (Phase A/E scope).
+8. **Execute / Iceclad / MindLink / Training** — not in alpha archetypes; defer past alpha (Phase F).
 
 ## Source citations
 

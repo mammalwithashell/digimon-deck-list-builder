@@ -8,19 +8,35 @@
 //! Fragment(N) / Decode behave as printed without a hand-authored
 //! `CardEffect` script.
 //!
+//! ## Coverage matrix (Phase D — landed 2026-04-25)
+//!
+//! Auto-installed: Barrier, Evade, Decode (Phase 7); Fragment(N), ArmorPurge,
+//! Save, Decoy, Fortitude, Partition, MaterialSave(N) (Phase D).
+//!
+//! Selection-bearing replacements consume Phase C's parked-replacement
+//! substrate via `ctx.cancel_leave / handle_replacement / substitute_replacement`.
+//! Trigger-based keywords (Fortitude, Partition) use the standard observer
+//! pattern. MaterialSave(N) is a `[Main]` active skill (neither a replacement
+//! nor a deletion trigger) — see §Active-skill keywords below.
+//!
+//! Out-of-scope deferred: SecurityAttackPlus/Minus(N), DeDigivolve(N) printed
+//! form, DrawX(N) printed form (all Phase A/E), Retaliation, Scapegoat (Phase E),
+//! Execute, Iceclad, MindLink, Training (Phase F).
+//!
 //! Most replacement keywords here produce **optional** replacements per
 //! printed rules ("you may"). Declining the optional selection leaves the
 //! original event (deletion / return-to-deck) to proceed normally. The
 //! optional auto-installs (Phase 7 + Phase D so far): Barrier, Evade, Decode,
-//! Save, Decoy. Mandatory ones: Fragment(N), Armor Purge, Fortitude.
+//! Save, Decoy. Mandatory ones: Fragment(N), ArmorPurge, Fortitude.
 //!
 //! ## Trigger-based keywords
 //!
 //! Not all keywords ride on a `WhenWouldBe*` replacement window — some are
 //! triggers that observe a state change without modifying it. Currently
-//! installed: Save (`OnDeletion`, optional), Fortitude (`OnDeletion`,
-//! mandatory; uses the post-deletion replay substrate to play self from
-//! trash after `delete_permanent` finalizes).
+//! installed: Fortitude (`OnDeletion`, mandatory; uses the post-deletion
+//! replay substrate to play self from trash after `delete_permanent`
+//! finalizes) and Partition (`OnDeletion` with cause filter, trigger-based
+//! play of digivolution source cards).
 //!
 //! ## Active-skill keywords (Phase D Task 10)
 //!
