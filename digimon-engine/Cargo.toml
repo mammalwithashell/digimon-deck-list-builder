@@ -97,3 +97,7 @@ path = "tests/option_flow/main.rs"
 name = "dsl"
 path = "tests/dsl/main.rs"
 required-features = ["dsl-yaml-loader"]
+
+[[test]]
+name = "effect_context"
+path = "tests/effect_context/main.rs"
