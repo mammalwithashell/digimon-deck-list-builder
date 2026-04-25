@@ -252,14 +252,23 @@ pub struct Game {
     /// While set, no further deletions can begin (the carrier slot is in an
     /// indeterminate state — its top card is mid-flight to trash, and the
     /// surrounding `commit_permanent_deletion` is paused waiting on the
-    /// player's choice). This is enforced by an early-out in
-    /// `delete_permanent_with_cause` (debug-asserted).
+    /// player's choice). Single-outstanding invariant. Enforced at the
+    /// deferral site in `commit_permanent_deletion` (debug-asserted on
+    /// duplicate park). A second top-level `delete_permanent_with_cause`
+    /// call while this slot is set is theoretically possible but not
+    /// produced by any existing fire-site under a parked selection.
     ///
     /// **Single-outstanding invariant.** Deletions don't nest in practice
     /// (the only way a second deletion could fire mid-Save would be a
     /// replacement-driven side-effect, which can't happen under a parked
     /// selection). If this assumption ever breaks, replace the field with
     /// a stack.
+    ///
+    /// **Coexistence with `parked_replacement`:** `parked_replacement` is
+    /// drained earlier in `resolve_generic_selection`; the two slots
+    /// address orthogonal concerns and do not interfere — a
+    /// `WhenWouldBeDeleted` replacement parking via `parked_replacement`
+    /// runs strictly before any `OnDeletion` handler can fire and park here.
     #[doc(hidden)]
     pub(crate) pending_deletion_resume: Option<crate::permanent::PermanentHandle>,
 }

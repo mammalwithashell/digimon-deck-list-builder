@@ -11,12 +11,12 @@
 //!   3. The auto-install must self-scope: when a NEIGHBORING permanent is
 //!      deleted, the Fragment carrier's replacement must NOT fire.
 //!
-//! Mirrors DCGO `Fragment.cs:23-77`. Per Phase C substrate constraints
-//! (mandatory replacement processes can NOT install a `pending_selection`),
-//! the auto-install uses `Effect::optional()` with an outer accept dialog —
-//! see Task 4 deviation note in the parent plan.
+//! Mirrors DCGO `Fragment.cs:23-77` with mandatory semantics
+//! (`canNoSelect: () => false`). The Phase C substrate now supports
+//! mandatory replacement-processes parking a nested selection, so the
+//! auto-install installs the source-pick directly with no outer accept
+//! dialog.
 
-use digimon_engine::action::space::REPLACEMENT_ACCEPT;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
@@ -116,17 +116,17 @@ fn fragment_2_picks_two_sources_and_cancels_deletion() {
     let trash_before = r.game.players[0].trash.len();
     r.game.delete_permanent_with_effects(frag);
 
-    // The Fragment auto-install runs as an optional replacement (Phase C
-    // substrate constraint). The outer accept dialog should be parked.
-    let pending = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("Fragment must park an outer accept selection");
-    assert_eq!(pending.selecting_player, 0, "carrier owner selects");
-    r.game
-        .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept");
+    // Mandatory Fragment auto-install: no outer accept dialog — the inner
+    // multi-pick selection is parked directly by the candidate-walk in
+    // `replacement::try_replace_inner`.
+    {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Fragment must park the source-pick selection directly");
+        assert_eq!(pending.selecting_player, 0, "carrier owner selects");
+    }
 
     // Multi-pick chain: pick 2 sources. Each pick uses the first available
     // valid action id.
@@ -210,17 +210,15 @@ fn fragment_2_with_only_one_source_does_not_park() {
 ///
 /// **Substrate note**: Phase C's dispatcher pushes a candidate from every
 /// battle-area permanent's effects whose timing matches, so the Fragment
-/// carrier's optional outer-accept dialog MAY be installed when a neighbor is
-/// being deleted. The auto-install body's `if Some(subject) != me_perm` guard
-/// then no-ops on accept (no outcome set → original deletion proceeds). We
-/// resolve any installed dialog to drain the substrate and verify the
-/// behavioral outcome: neighbor gone, Fragment carrier and sources unchanged.
-/// (A future dispatcher-level self-scope filter would suppress the dialog
-/// entirely; tracked separately.)
+/// carrier's mandatory replacement-process body IS invoked when a neighbor
+/// is being deleted. The auto-install body's `if Some(subject) != me_perm`
+/// guard early-returns without setting any outcome and without installing
+/// a `pending_selection`, so the candidate-walk yields nothing and the
+/// original neighbor deletion proceeds. (A future dispatcher-level
+/// self-scope filter would suppress the candidate entirely; tracked
+/// separately.)
 #[test]
 fn fragment_does_not_fire_on_neighbor_deletion() {
-    use digimon_engine::action::space::PASS;
-
     let mut r = DebugRunner::builder()
         .add_card(fragment_card("FRAG"))
         .add_card(plain_digimon("SRC-A"))
@@ -252,26 +250,10 @@ fn fragment_does_not_fire_on_neighbor_deletion() {
     // Delete the neighbor.
     r.game.delete_permanent_with_effects(neighbor);
 
-    // Fragment is OPTIONAL → an outer accept dialog MAY be installed for
-    // the carrier even when the subject is the neighbor. If so, drain it by
-    // either accepting (closure self-scope-checks and no-ops) or declining.
-    // We choose ACCEPT to exercise the closure — its body must self-scope
-    // and refrain from setting an outcome.
-    if r.game.pending_selection.is_some() {
-        // Try accepting first. If the closure's self-scope guard is correct,
-        // accept → closure no-op → original neighbor deletion proceeds.
-        let pending = r.game.pending_selection.as_ref().unwrap();
-        let player = pending.selecting_player;
-        let action = if pending.valid_action_ids.contains(&REPLACEMENT_ACCEPT) {
-            REPLACEMENT_ACCEPT
-        } else {
-            PASS
-        };
-        r.game.resolve_selection(player, action).expect("drain dialog");
-    }
-
-    // After draining: no further selection should be pending. The body's
-    // self-scope guard MUST have prevented any nested source-pick selection.
+    // Fragment is MANDATORY: the candidate-walk runs the body inline. The
+    // body's self-scope guard (`Some(subject) != me_perm`) early-returns
+    // without setting any outcome and without installing a selection, so
+    // no `pending_selection` exists after the deletion completes.
     assert!(
         r.game.pending_selection.is_none(),
         "Fragment closure must self-scope-no-op for a neighbor's deletion (no \

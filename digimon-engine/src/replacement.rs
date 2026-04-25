@@ -300,6 +300,15 @@ fn try_replace_inner(
     // PendingSelection and break the loop; when the selection resolves,
     // the callback writes `game.replacement_pending_outcome` and the caller
     // is responsible for re-entering if more candidates remain.
+    //
+    // A mandatory candidate may also park a nested selection (e.g.
+    // `Keyword::Fragment(N)`: pick N sources to trash). When that happens,
+    // `run_candidate_inner` populates `Game.parked_replacement` and yields
+    // — we break out of the candidate walk so the parked-replacement drain
+    // hook (`try_drain_parked_replacement_with_guard` in `effect_queue.rs`)
+    // commits the outcome after the user resolves the nested chain. Any
+    // remaining candidates are dropped, mirroring the optional-install break
+    // below; v1 supports at most one parked replacement per call chain.
     let mut acc_outcome = ReplacementOutcome::None;
     for cand in ordered {
         if cand.is_mandatory {
@@ -312,6 +321,11 @@ fn try_replace_inner(
             );
             if o != ReplacementOutcome::None {
                 acc_outcome = o;
+            }
+            if game.pending_selection.is_some() {
+                // Mandatory candidate parked a nested selection. Yield to
+                // the user; the drain hook commits when the chain unwinds.
+                return acc_outcome;
             }
         } else {
             install_optional_selection(
@@ -597,12 +611,6 @@ fn run_mandatory_candidate(
             subject,
             cause,
             original_destination,
-            // Mandatory dispatch: do NOT arm the parked-replacement post-process
-            // hook. The candidate-walk loop in `try_replace_impl` aggregates
-            // outcomes synchronously and has no draining caller. Phase C scope
-            // assumes mandatory processes never call `ctx.select_*` — see the
-            // debug_assert! in run_candidate_inner.
-            false,
         ),
         CandidateKind::PassiveCancel => {
             // Passive restriction modifiers always cancel. No effect closure
@@ -616,14 +624,14 @@ fn run_mandatory_candidate(
 /// Shared run-a-replacement-process body. Used by `run_mandatory_candidate`
 /// and by the optional-accept callback.
 ///
-/// `allow_park`: when `true`, if the process closure installed a
-/// `pending_selection` (via `ctx.select_*`), we snapshot a `ParkedReplacement`
-/// and return `ReplacementOutcome::None` so the optional-accept callback can
-/// yield without committing — the parked outcome is later drained by the
-/// post-callback hook. When `false` (mandatory dispatch), the parked-state
-/// machine is bypassed entirely; if a process unexpectedly installed a
-/// selection, that's an out-of-scope state for Phase C and we trip a
-/// `debug_assert!` to surface it.
+/// If the process closure installed a `pending_selection` (via
+/// `ctx.select_*`), we snapshot a `ParkedReplacement` and return
+/// `ReplacementOutcome::None` so the caller can yield without committing —
+/// the parked outcome is later drained by the post-callback hook. Both the
+/// mandatory candidate-walk in `try_replace_inner` and the optional-accept
+/// callback in `make_accept_callback` rely on this: the candidate-walk
+/// breaks out of its loop on `pending_selection.is_some()`, and the accept
+/// callback skips its eager-commit branch on `parked_replacement.is_some()`.
 fn run_candidate_inner(
     game: &mut crate::game::Game,
     card_id: &str,
@@ -634,7 +642,6 @@ fn run_candidate_inner(
     subject: ReplacementSubject,
     cause: ReplacementCause,
     original_destination: Option<Zone>,
-    allow_park: bool,
 ) -> ReplacementOutcome {
     let Some(effects) = game.effects_for_card(card_id, source_card) else {
         return ReplacementOutcome::None;
@@ -673,28 +680,13 @@ fn run_candidate_inner(
     //
     // Single-outstanding invariant: at most one parked replacement at a time.
     //
-    // Only the OPTIONAL dispatch path arms this hook (`allow_park == true`).
-    // The mandatory candidate-walk loop has no draining caller, so parking
-    // there would silently lose the outcome.
+    // Both mandatory and optional dispatch arm this hook. Mandatory parking
+    // (post-Phase-C-substrate-mandatory) lets keywords like `Fragment(N)`
+    // install a nested source-pick selection directly without an outer
+    // accept dialog, faithfully matching DCGO's `canNoSelect: () => false`.
+    // The candidate-walk in `try_replace_inner` breaks on `pending_selection
+    // .is_some()` after a mandatory candidate to mirror the optional yield.
     if game.pending_selection.is_some() {
-        if !allow_park {
-            // Mandatory replacement parked a selection — out of scope for
-            // Phase C. Today no mandatory card calls `ctx.select_*`; if a
-            // real card surfaces this in the future, escalate (extend the
-            // park-state machine to cover the mandatory loop, or rework the
-            // candidate to a synchronous shape). Returning
-            // `ReplacementOutcome::None` is the safest fallback — it falls
-            // through to the original event, matching the "no replacement
-            // occurred" behavior. Returning `outcome` could leak a partial
-            // value the closure wrote before yielding to the selection.
-            debug_assert!(
-                false,
-                "mandatory replacement installed a pending_selection — \
-                 Phase C scope assumes mandatory processes are synchronous; \
-                 if a real card surfaces this, escalate"
-            );
-            return ReplacementOutcome::None;
-        }
         debug_assert!(
             game.parked_replacement.is_none(),
             "nested replacement park; outer outcome would be lost. Phase C \
@@ -891,10 +883,6 @@ fn make_accept_callback(
             subject,
             cause,
             original_destination,
-            // Optional dispatch — arm the post-process park hook so that if
-            // the process closure calls `ctx.select_*`, we yield to the
-            // selection instead of committing eagerly.
-            true,
         );
 
         // Phase C §4.3: if the process parked a selection, leave
@@ -1091,6 +1079,11 @@ fn commit_permanent_deletion_no_replace(
         TriggerSource::Permanent(handle),
     );
     game.drain_effect_queue();
+
+    // TODO(phase-d-task-6-followup): mirror commit_permanent_deletion's
+    // pending_selection.is_some() defer-into-pending_deletion_resume guard
+    // here. Currently latent — no card mounts an OnDeletion-park trigger
+    // through this code path, but Fortitude (Task 8) might.
 
     if game
         .player(handle.player)
