@@ -964,9 +964,11 @@ impl Game {
     /// call-sites; the helpers' shape is identical so the split is
     /// mechanical.
     ///
-    /// Callers: selection filters in `effect_context::selections`. Future
-    /// Phase B work wires this into `delete_permanent_with_effects` /
-    /// return-to-hand / negative-DP `modifiers.add` paths.
+    /// Callers: `select_opponent_permanent` (selection-time gate, Phase A)
+    /// and the script-API mutation entry points on `EffectContext` (Phase B):
+    /// `delete_permanent`, `return_to_hand`, `return_to_deck`, `de_digivolve`,
+    /// `suspend`, and the negative-DP branches of `add_dp_modifier` /
+    /// `add_modifier`.
     pub fn progress_excludes(
         &self,
         target: PermanentHandle,
