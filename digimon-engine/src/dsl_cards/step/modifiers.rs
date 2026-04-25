@@ -36,15 +36,21 @@ pub fn try_run(
             let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier) else {
                 return true;
             };
-            // Phase 2c: binding-target only. Filter-target multi-targeting ships in 2d.
-            let target_binding = match target {
-                CompiledModifierTarget::Binding(b) => b,
-                CompiledModifierTarget::Filter(_) => return true,
-            };
-            if let Some(ResolvedBinding::Permanent(h)) =
-                resolve_binding_ref(target_binding, ctx, bindings)
-            {
-                ctx.add_modifier(h, modifier_ty, *value, expiry);
+            match target {
+                CompiledModifierTarget::Binding(b) => {
+                    if let Some(ResolvedBinding::Permanent(h)) =
+                        resolve_binding_ref(b, ctx, bindings)
+                    {
+                        ctx.add_modifier(h, modifier_ty, *value, expiry);
+                    }
+                }
+                CompiledModifierTarget::Filter(pred) => {
+                    // Phase 2d Task 8: scan battle-area, apply modifier to every match.
+                    let matches = crate::dsl_cards::step::permanent_scan::scan(ctx, pred);
+                    for h in matches {
+                        ctx.add_modifier(h, modifier_ty, *value, expiry);
+                    }
+                }
             }
             true
         }
