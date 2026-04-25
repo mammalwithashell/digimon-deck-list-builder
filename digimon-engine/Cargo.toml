@@ -105,3 +105,7 @@ path = "tests/effect_context/main.rs"
 [[test]]
 name = "keyword_phase_d"
 path = "tests/keyword_phase_d/main.rs"
+
+[[test]]
+name = "keyword_phase_e"
+path = "tests/keyword_phase_e/main.rs"
