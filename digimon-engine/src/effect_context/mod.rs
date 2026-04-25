@@ -356,6 +356,81 @@ impl<'a> EffectContext<'a> {
         )
     }
 
+    // ─── Replacement-process outcome-setters (Phase C §4.2) ──────────────
+
+    /// Cancel the parked leave-the-field event. The carrier stays on the
+    /// field; the original deletion / return / etc. is suppressed.
+    ///
+    /// Writes `ReplacementOutcome::Cancelled` to `Game.parked_replacement.outcome`.
+    /// Calling this outside a parked-replacement scope is a `debug_assert!`
+    /// panic in dev builds; release builds silently no-op.
+    ///
+    /// Typical use: inside a `select_*` callback that runs as the body of a
+    /// `WhenWouldBeDeleted` replacement-process closure (e.g., Save:
+    /// "you may pick a Tamer to slide under instead of being deleted").
+    pub fn cancel_leave(&mut self) {
+        debug_assert!(
+            self.game.parked_replacement.is_some(),
+            "cancel_leave called outside a replacement-process callback; \
+             the outcome would be silently dropped"
+        );
+        if let Some(parked) = self.game.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
+        }
+    }
+
+    /// Mark the parked replacement as custom-handled — the process body has
+    /// already mutated state and the original event should be skipped.
+    /// Distinct from `cancel_leave` only at the doc level; both result in
+    /// `commit_deferred_outcome` taking the no-op arm.
+    ///
+    /// Writes `ReplacementOutcome::CustomHandled` to the parked slot.
+    /// Calling this outside a parked-replacement scope is a `debug_assert!`
+    /// panic in dev builds; release builds silently no-op.
+    pub fn handle_replacement(&mut self) {
+        debug_assert!(
+            self.game.parked_replacement.is_some(),
+            "handle_replacement called outside a replacement-process callback"
+        );
+        if let Some(parked) = self.game.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::CustomHandled;
+        }
+    }
+
+    /// Redirect the parked event to a different zone (e.g., Trash → Deck for
+    /// Evade, Trash → Hand for return-to-hand replacement).
+    ///
+    /// Writes `ReplacementOutcome::Redirected(zone)` to the parked slot.
+    /// Honored by `commit_deferred_outcome`'s existing redirect arms.
+    /// Calling outside a parked-replacement scope is a `debug_assert!` panic
+    /// in dev builds; release builds silently no-op.
+    pub fn redirect_replacement(&mut self, zone: crate::enums::Zone) {
+        debug_assert!(
+            self.game.parked_replacement.is_some(),
+            "redirect_replacement called outside a replacement-process callback"
+        );
+        if let Some(parked) = self.game.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::Redirected(zone);
+        }
+    }
+
+    /// Substitute a different subject for the parked event. `commit_deferred_outcome`
+    /// recursively dispatches the original event against the substituted subject
+    /// (e.g., Decoy: replace deletion-target with self).
+    ///
+    /// Writes `ReplacementOutcome::Substituted(subject)` to the parked slot.
+    /// Calling outside a parked-replacement scope is a `debug_assert!` panic
+    /// in dev builds; release builds silently no-op.
+    pub fn substitute_replacement(&mut self, subject: crate::replacement::ReplacementSubject) {
+        debug_assert!(
+            self.game.parked_replacement.is_some(),
+            "substitute_replacement called outside a replacement-process callback"
+        );
+        if let Some(parked) = self.game.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::Substituted(subject);
+        }
+    }
+
     /// Reborrow this mut context as a read-only context — for condition
     /// closures, which take `&EffectReadContext`.
     pub fn as_read(&self) -> EffectReadContext<'_> {
@@ -945,14 +1020,238 @@ impl<'a> EffectContext<'a> {
         })
     }
 
+    /// Play `card` from its controller's trash into the battle area, **without
+    /// paying its memory cost** and **without suspending** the resulting
+    /// permanent. ETB triggers (`OnPlay` + `OnEnterFieldAnyone`) fire as normal.
+    ///
+    /// ## Why a thin alias is sufficient (audit finding — Phase D Task 3)
+    ///
+    /// `Game::play_from_trash_with_cost(player, index, CostDelta::Free)` already
+    /// covers all three requirements:
+    ///   - **Free**: `CostDelta::Free` resolves to 0 → `pay_memory(0)` is a
+    ///     no-op; memory is unchanged.
+    ///   - **Unsuspended**: `Permanent::new()` sets `is_suspended = false` by
+    ///     default; no extra flag needed.
+    ///   - **ETB active**: `fire_on_play` + `OnEnterFieldAnyone` run at the end
+    ///     of `play_from_trash_with_cost`, exactly as for hand plays.
+    ///
+    /// The only gap bridged here is the call-site convenience: callers hold a
+    /// `CardHandle` (stable across zone moves), not a positional `trash_index`.
+    /// This method locates the card in the controller's trash by handle.
+    ///
+    /// ## Panics
+    ///
+    /// Panics if `card` is not present in the controller's trash. This
+    /// represents a programming error — callers (e.g. the Fortitude auto-install
+    /// body) must ensure the card has been moved to trash before calling.
+    ///
+    /// DCGO parity: `Fortitude.cs:54-63`
+    ///   `PlayPermanentCards(payCost: false, isTapped: false,
+    ///    root: SelectCardEffect.Root.Trash, activateETB: true)`
+    ///
+    /// Used by: `<Fortitude>` keyword auto-install (Phase D Task 8).
+    pub fn play_from_trash_free_unsuspended(
+        &mut self,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        let controller = self.player;
+        let trash_index = self
+            .game
+            .player(controller)
+            .trash
+            .iter()
+            .position(|c| c.handle() == card)
+            .unwrap_or_else(|| {
+                panic!(
+                    "play_from_trash_free_unsuspended: card {:?} not found in \
+                     player {}'s trash",
+                    card, controller
+                )
+            });
+        let field_index = self.game.play_from_trash_with_cost(
+            controller,
+            trash_index,
+            crate::enums::CostDelta::Free,
+            PlaySource::ByEffect,
+        )?;
+        Some(PermanentHandle {
+            player: controller,
+            index: field_index as u8,
+        })
+    }
+
     /// Insert a card at the bottom of `target`'s digivolution stack. See
     /// `Game::place_as_bottom_source`.
+    ///
+    /// **Phase B Progress gate — intentionally omitted.** DCGO's primitive
+    /// `Permanent.AddDigivolutionCardsBottom` does not consult
+    /// `CanNotBeAffected` on the receiving permanent, and DCGO scripts that
+    /// place a source under an opponent's Digimon (e.g. EX10-059) do not
+    /// gate the target on Progress either. Adding a card under a stack is
+    /// not "affecting" the target in DCGO's semantics — the TopCard's
+    /// status is unchanged. Gating here would over-restrict relative to
+    /// DCGO and break parity with cards that intentionally route a source
+    /// under an opponent's Progress attacker.
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
     ) -> bool {
         self.game.place_as_bottom_source(source, target)
+    }
+
+    /// Move `card` from whatever zone it currently occupies to the **bottom**
+    /// of `target`'s digivolution stack (`card_sources[0]`).
+    ///
+    /// The card is located by scanning all zones of all players in the
+    /// following priority order:
+    ///   1. Each player's `hand`
+    ///   2. Each player's `trash`
+    ///   3. Each player's `deck`
+    ///   4. Each player's `security`
+    ///   5. Each player's `battle_area` card stacks (all permanents)
+    ///   6. Each player's `breeding_area` card stack
+    ///   7. The game-level `revealed_cards` transient pool
+    ///
+    /// This covers every realistic source for `<Save>` (self just moved to
+    /// trash during deletion) and `<Material Save N>` (cards are in another
+    /// permanent's `card_sources`). Opponent deck / security are included for
+    /// completeness but Save/MaterialSave callers will never route through
+    /// them in normal play. `revealed_cards` is included to handle cards that
+    /// are mid-reveal when a Save effect resolves.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `card` cannot be located in any zone — this represents a
+    /// programming error (passing an invalid or already-moved handle).
+    ///
+    /// Used by: `<Save>`, `<Material Save N>`.
+    pub fn place_card_under_permanent_bottom(
+        &mut self,
+        card: CardHandle,
+        target: PermanentHandle,
+    ) {
+        let taken = self.game.remove_card_from_any_zone(card)
+            .unwrap_or_else(|| panic!(
+                "place_card_under_permanent_bottom: card {:?} not found in any zone",
+                card
+            ));
+
+        let target_player = self.game.player_mut(target.player);
+        if (target.index as usize) >= target_player.battle_area.len() {
+            // Safe-fail: target permanent no longer exists; route to its
+            // controller's trash rather than dropping the card on the floor.
+            target_player.trash.push(taken);
+            return;
+        }
+        target_player.battle_area[target.index as usize].push_under(taken);
+    }
+
+    /// Trash the current top Digimon of `perm` and promote the next-highest
+    /// digivolution source to become the new visible top. The remainder of the
+    /// stack is preserved intact.
+    ///
+    /// **Caller MUST gate on `perm.card_sources.len() >= 2` before invoking.**
+    /// This primitive `debug_assert!`s that constraint and will panic in debug
+    /// builds if violated. Production callers (the ArmorPurge auto-install
+    /// body) gate before calling.
+    ///
+    /// After the call:
+    ///   - `perm.card_sources.len()` decreases by 1.
+    ///   - The previous `card_sources[last - 1]` entry (previously the
+    ///     next-highest source) is now `top_card()`.
+    ///   - The trashed top card is appended to `players[controller].trash`.
+    ///   - `EffectTiming::OnDigivolutionCardTrashed` is enqueued and drained
+    ///     so observers (e.g. Rocks-archetype source-trash listeners) see the
+    ///     trashed top. DCGO parity: `ArmorPurge.cs:65-78` —
+    ///     `StackSkillInfos(hashtable, EffectTiming.WhenTopCardTrashed)`.
+    ///
+    /// **Modifier note:** Modifiers in this engine are keyed by
+    /// `PermanentHandle` (the full permanent), not by individual
+    /// `CardSource`. Therefore, any modifiers currently attached to this
+    /// permanent handle remain valid for the new top card — no modifier
+    /// cleanup is performed here. This deviates from DCGO
+    /// `RemoveDigivolveRootEffect` (which removes inherited effects registered
+    /// by the trashed card specifically), but is the correct behavior for this
+    /// engine because inherited effects are script-driven, not stored as
+    /// `ModifierEntry` values.
+    ///
+    /// DCGO parity: `ArmorPurge.cs:50-65`
+    ///   `RemoveFromAllArea(topCard)` + `AddTrashCard(topCard)` +
+    ///   `RemoveDigivolveRootEffect(topCard, _permanent)`.
+    ///
+    /// Used by: `<Armor Purge>` keyword auto-install (Phase D Task 5).
+    pub fn armor_purge_top(&mut self, perm: PermanentHandle) {
+        let permanent = self
+            .game
+            .player_mut(perm.player)
+            .battle_area
+            .get_mut(perm.index as usize)
+            .expect("armor_purge_top: permanent handle is invalid");
+        debug_assert!(
+            permanent.card_sources.len() >= 2,
+            "armor_purge_top requires >= 1 source under the top card (stack len = {})",
+            permanent.card_sources.len()
+        );
+        let top = permanent
+            .card_sources
+            .pop()
+            .expect("len >= 2 invariant asserted above");
+        // The new top is now `permanent.card_sources.last()` automatically —
+        // no extra work needed (previous next-highest is now visible).
+        let controller = perm.player;
+        self.game.player_mut(controller).trash.push(top);
+        // Modifier cleanup: no per-card-source tracking exists in this engine;
+        // permanent-handle modifiers remain valid for the promoted top card.
+        // See doc comment above for the DCGO deviation note.
+
+        // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors the
+        // existing dispatch in `Game::return_to_hand` /
+        // `Game::return_to_deck` (game_actions.rs:1345-1357 / 1481-1493) for
+        // sources-below-top, and matches DCGO `ArmorPurge.cs:65-78` which
+        // re-stacks `EffectTiming.WhenTopCardTrashed` after the trash. We
+        // enqueue once per player so observers on either side of the field
+        // pick it up.
+        for pid in 0..self.game.players.len() {
+            self.game.enqueue_triggered(
+                crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+            );
+        }
+        self.game.drain_effect_queue();
+    }
+
+    /// Trash a specific digivolution source from a permanent.
+    ///
+    /// Used by:
+    /// - `<Fragment (N)>` keyword auto-install (Phase D Task 4) — picked sources
+    ///   are trashed as the cancel-deletion cost.
+    /// - `<Partition>` keyword auto-install (Phase D Task 9) — sources are
+    ///   moved out of the deleted permanent's stack.
+    /// - Hand-authored card scripts that "trash a digivolution card" as a cost
+    ///   or effect.
+    ///
+    /// The card is removed from `perm.card_sources` (anywhere in the stack —
+    /// not just the top — see `armor_purge_top` for the top-card-only variant)
+    /// and pushed to the controller's trash.
+    ///
+    /// Panics if `card` is not present in `perm.card_sources`. Token cards
+    /// (`is_token == true`) are still pushed to trash; the caller's gate is
+    /// responsible for any token-aware filtering.
+    pub fn trash_card_source(&mut self, perm: PermanentHandle, card: CardHandle) {
+        let permanent = self
+            .game
+            .player_mut(perm.player)
+            .battle_area
+            .get_mut(perm.index as usize)
+            .expect("trash_card_source: permanent not found");
+        let pos = permanent
+            .card_sources
+            .iter()
+            .position(|c| c.handle() == card)
+            .expect("trash_card_source: card not in this permanent's stack");
+        let removed = permanent.card_sources.remove(pos);
+        self.game.player_mut(perm.player).trash.push(removed);
     }
 
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.

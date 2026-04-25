@@ -24,6 +24,38 @@ _COLOR_NAME_MAP = {
 }
 
 
+def _parse_card_color_field(value):
+    """Normalize a JSON `card_color` field into `Optional[CardColor]`.
+
+    Accepts variant-name strings (``"Red"``, emitted by the ingest
+    pipeline for DNA/DigiXros costs) or raw int enum values (legacy
+    encoding, still used by top-level `card_colors`). ``None``, empty
+    string, and ``"NoColor"`` all map to ``None``.
+    """
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        key = value.lower()
+        if key == "nocolor":
+            return None
+        return _COLOR_NAME_MAP.get(key)
+    return CardColor(value)
+
+
+def _parse_dna_requirement_colors(req_data):
+    """Extract DnaRequirement.card_colors from a JSON requirement dict.
+
+    Prefers the current list form (``card_colors: ["Blue", "Purple"]``).
+    Falls back to the legacy scalar form (``card_color: "Blue"``) so
+    partially-regenerated cards.json files still load.
+    """
+    if 'card_colors' in req_data and req_data['card_colors']:
+        parsed = [_parse_card_color_field(c) for c in req_data['card_colors']]
+        return [c for c in parsed if c is not None]
+    legacy = _parse_card_color_field(req_data.get('card_color'))
+    return [legacy] if legacy is not None else []
+
+
 def parse_xros_req(xros_req: str) -> List[DnaCost]:
     """Parse the xros_req text from DigimonCard.io API into DnaCost objects.
 
@@ -95,7 +127,7 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
     if bare_name_match:
         return DnaRequirement(
             level=0,
-            card_color=None,
+            card_colors=[],
             name_contains=bare_name_match.group(1).strip(),
             text_contains="",
         )
@@ -122,20 +154,20 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
         logger.warning("No valid level found in DNA requirement: %r", text)
         return None
 
-    # Extract color(s): look for color names before 'Lv'
-    card_color = None
+    # Extract color(s): look for color names before 'Lv'. Multi-color
+    # ("Blue/Purple") is preserved as a list — all listed colors satisfy
+    # the half (slash reads as OR per printed card text).
+    card_colors: List[CardColor] = []
     color_text = text.split('Lv')[0].strip() if 'Lv' in text else ""
     if color_text:
-        # Handle multi-color like "Blue/Purple"
-        color_names = [c.strip().lower() for c in color_text.split('/')]
-        for cn in color_names:
-            if cn in _COLOR_NAME_MAP:
-                card_color = _COLOR_NAME_MAP[cn]
-                break  # Use the first color for matching
+        for cn in (c.strip().lower() for c in color_text.split('/')):
+            color = _COLOR_NAME_MAP.get(cn)
+            if color is not None and color not in card_colors:
+                card_colors.append(color)
 
     return DnaRequirement(
         level=level,
-        card_color=card_color,
+        card_colors=card_colors,
         name_contains=name_contains,
         text_contains=text_contains,
     )
@@ -374,8 +406,9 @@ class CardDatabase:
         self.initialized = True
 
     def load_cards(self):
-        module_dir = os.path.dirname(__file__)
-        json_path = os.path.join(module_dir, 'cards.json')
+        # Local import avoids a circular load through `digimon_gym.__init__`.
+        from digimon_gym.data_paths import CARDS_JSON
+        json_path = str(CARDS_JSON)
 
         if not os.path.exists(json_path):
             print(f"Warning: {json_path} not found.")
@@ -417,13 +450,15 @@ class CardDatabase:
                 req2_data = dc.get('requirement2', {})
                 req1 = DnaRequirement(
                     level=req1_data.get('level', 0),
-                    card_color=CardColor(req1_data['card_color']) if 'card_color' in req1_data and req1_data['card_color'] is not None else None,
+                    card_colors=_parse_dna_requirement_colors(req1_data),
                     name_contains=req1_data.get('name_contains', ''),
+                    text_contains=req1_data.get('text_contains', ''),
                 )
                 req2 = DnaRequirement(
                     level=req2_data.get('level', 0),
-                    card_color=CardColor(req2_data['card_color']) if 'card_color' in req2_data and req2_data['card_color'] is not None else None,
+                    card_colors=_parse_dna_requirement_colors(req2_data),
                     name_contains=req2_data.get('name_contains', ''),
+                    text_contains=req2_data.get('text_contains', ''),
                 )
                 entity.dna_costs.append(DnaCost(
                     requirement1=req1,
@@ -431,13 +466,40 @@ class CardDatabase:
                     memory_cost=dc.get('memory_cost', 0),
                 ))
 
-            # DNA costs from xros_req text (API format)
+            # DNA costs from xros_req text (API format; fallback when
+            # structured `dna_costs` is absent)
             xros_req = entry.get('xros_req', '')
             if xros_req and not entity.dna_costs:
                 entity.dna_costs = parse_xros_req(xros_req)
 
-            # DigiXros/Assembly costs from xros_req text
-            if xros_req:
+            # DigiXros/Assembly costs — prefer structured `digixros_costs`,
+            # fall back to raw `xros_req` parsing for hand-edited or legacy
+            # cards.json entries.
+            structured_digixros = entry.get('digixros_costs')
+            if structured_digixros:
+                for dxc in structured_digixros:
+                    elements = [
+                        DigiXrosElement(
+                            name_contains=el.get('name_contains', ''),
+                            trait_match=el.get('trait_match', ''),
+                            trait_alternatives=list(el.get('trait_alternatives', [])),
+                            level_max=el.get('level_max'),
+                            count=el.get('count', 1),
+                            is_digimon_only=el.get('is_digimon_only', True),
+                            color=_parse_card_color_field(el.get('color')),
+                        )
+                        for el in dxc.get('elements', [])
+                    ]
+                    entity.digixros_costs.append(DigiXrosCost(
+                        elements=elements,
+                        reduce_cost_per_card=dxc.get('reduce_cost_per_card', 0),
+                        max_materials=dxc.get('max_materials', -1),
+                        different_card_numbers=dxc.get('different_card_numbers', False),
+                        different_names=dxc.get('different_names', False),
+                        has_text=dxc.get('has_text', ''),
+                        source_zones=list(dxc.get('source_zones', ['hand', 'field'])),
+                    ))
+            elif xros_req:
                 digixros = parse_digixros_req(xros_req)
                 if digixros:
                     entity.digixros_costs = digixros

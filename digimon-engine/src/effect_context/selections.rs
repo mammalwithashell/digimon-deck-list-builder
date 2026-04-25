@@ -32,10 +32,27 @@ use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
 ///
 /// - `Hand`  — action IDs map to `PLAY_HAND_START + i` (range 0–29)
 /// - `Trash` — action IDs map to `TRASH_EFFECT_START + i` (range 1150–1194)
+/// - `Material(PermanentHandle)` — action IDs map to
+///   `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD + source_index`
+///   (range 2000–2167). Candidates are the digivolution *sources* of the
+///   named permanent — i.e., `card_sources[0..len-1]` — **excluding** the
+///   top card (`card_sources.last()`). This matches DCGO's `DigivolutionCards`
+///   which also excludes `TopCard`. Used by `Fragment(N)`, `ArmorPurge`, and
+///   `MaterialSave(N)`.
+///
+/// # Stack indexing convention
+/// `Permanent.card_sources` is a `Vec` where index 0 is the **bottom** card
+/// and `last()` is the **top** card (confirmed by `Permanent::top_card()`
+/// returning `card_sources.last()`). The `Material` variant therefore presents
+/// indices `0..len-1` as candidates; the top card at `index = len-1` is never
+/// included.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CountCappedZone {
     Hand,
     Trash,
+    /// Digivolution sources of `perm`, excluding the top card.
+    /// Action IDs: `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD + i`.
+    Material(crate::permanent::PermanentHandle),
 }
 
 impl<'a> EffectContext<'a> {
@@ -702,9 +719,14 @@ impl<'a> EffectContext<'a> {
     {
         debug_assert!(max <= 10, "select_count_capped_multi: max must be <= 10");
 
-        use crate::action::space::{HAND_MAIN_LIMIT, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT};
+        use crate::action::space::{HAND_MAIN_LIMIT, PLAY_HAND_START, SOURCES_PER_FIELD, SOURCE_SELECT_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT};
 
         // Collect valid candidates at install time using the filter.
+        //
+        // For Material: action IDs encode as
+        //   SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD + source_index
+        // The range_start here is the base for source_index 0 of this permanent.
+        // zone_len = number of sources excluding the top card (card_sources.len() - 1).
         let (zone_len, range_start) = match zone {
             CountCappedZone::Hand => {
                 let len = self.game.player(of_player).hand.len().min(HAND_MAIN_LIMIT);
@@ -713,6 +735,25 @@ impl<'a> EffectContext<'a> {
             CountCappedZone::Trash => {
                 let len = self.game.player(of_player).trash.len().min(TRASH_MAIN_LIMIT);
                 (len, TRASH_EFFECT_START)
+            }
+            CountCappedZone::Material(perm_handle) => {
+                let stack_len = self
+                    .game
+                    .player(perm_handle.player)
+                    .battle_area
+                    .get(perm_handle.index as usize)
+                    .map(|p| p.card_sources.len())
+                    .unwrap_or(0);
+                // Exclude top card: sources are indices 0..stack_len-1.
+                let source_count = stack_len.saturating_sub(1);
+                debug_assert!(
+                    source_count <= SOURCES_PER_FIELD as usize,
+                    "Material zone: source_count {} exceeds SOURCES_PER_FIELD {} for field_index {}",
+                    source_count, SOURCES_PER_FIELD, perm_handle.index
+                );
+                let base = SOURCE_SELECT_START
+                    + perm_handle.index as u16 * SOURCES_PER_FIELD;
+                (source_count, base)
             }
         };
 
@@ -723,6 +764,14 @@ impl<'a> EffectContext<'a> {
             let card_clone = match zone {
                 CountCappedZone::Hand => self.game.player(of_player).hand[i].clone(),
                 CountCappedZone::Trash => self.game.player(of_player).trash[i].clone(),
+                CountCappedZone::Material(perm_handle) => {
+                    // index i corresponds to card_sources[i] (0 = bottom, excludes top).
+                    self.game
+                        .player(perm_handle.player)
+                        .battle_area[perm_handle.index as usize]
+                        .card_sources[i]
+                        .clone()
+                }
             };
             if filter(self.game, &card_clone) {
                 candidate_indices.push(i);
@@ -1216,8 +1265,9 @@ fn install_permutation_step(
 /// `Arc<Mutex<Option<...>>>` so both closures can take ownership when fired.
 ///
 /// `candidate_indices` lists the zone indices still eligible (already-picked
-/// indices are removed after each step). `range_start` is `PLAY_HAND_START` for
-/// hand or `TRASH_EFFECT_START` for trash.
+/// indices are removed after each step). `range_start` is `PLAY_HAND_START`
+/// for hand, `TRASH_EFFECT_START` for trash, or
+/// `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD` for material.
 ///
 /// This is a free function (not an `EffectContext` method) so it can be called
 /// recursively from inside a `Box<dyn FnOnce>` without any `Arc`/self-reference.
@@ -1298,6 +1348,13 @@ fn install_count_capped_step(
             let card_handle = match zone {
                 CountCappedZone::Hand => game.player(of_player).hand[pick_zone_idx].handle(),
                 CountCappedZone::Trash => game.player(of_player).trash[pick_zone_idx].handle(),
+                CountCappedZone::Material(perm_handle) => {
+                    // pick_zone_idx is a card_sources index (0 = bottom; top excluded).
+                    game.player(perm_handle.player)
+                        .battle_area[perm_handle.index as usize]
+                        .card_sources[pick_zone_idx]
+                        .handle()
+                }
             };
 
             // Build new state for the next step.

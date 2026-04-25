@@ -38,7 +38,10 @@ class CardRegistry:
         Detects dict vs array format automatically.
         """
         if json_path is None:
-            json_path = os.path.join(os.path.dirname(__file__), "cards.json")
+            # Import locally to avoid a circular import (data_paths is a
+            # peer of the engine package).
+            from digimon_gym.data_paths import CARDS_JSON
+            json_path = str(CARDS_JSON)
 
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)

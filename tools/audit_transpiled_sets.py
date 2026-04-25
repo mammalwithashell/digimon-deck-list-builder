@@ -34,8 +34,9 @@ from tools.transpiler.validation import (
     validate_card,
 )
 
-# Paths
-CARDS_JSON = PROJECT_ROOT / "digimon_gym" / "engine" / "data" / "cards.json"
+from digimon_gym.data_paths import CARDS_JSON  # noqa: E402
+
+# Scripts still live alongside the Python engine.
 GENERATED_ROOT = PROJECT_ROOT / "digimon_gym" / "engine" / "data" / "scripts" / "generated"
 
 ALL_SETS = ["BT8", "BT10", "BT11", "BT15", "BT16", "BT19", "BT22", "EX5", "EX6", "EX8", "ST12"]

@@ -4,7 +4,9 @@
 //! `Effect`s at `effects()` time. Triggered clauses, identity, alt_paths,
 //! and raw_rust are skipped in Phase 1c (Phase 2 owns them).
 
+pub mod binding_ref;
 pub mod bindings;
+pub mod expiry_map;
 pub mod lower_aura;
 pub mod lower_cost_reduction;
 pub mod lower_delay;

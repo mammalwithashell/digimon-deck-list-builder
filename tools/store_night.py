@@ -28,10 +28,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-_DECK_LIBRARY_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "digimon_gym" / "engine" / "data" / "deck_library.json"
-)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH  # noqa: E402
 
 _SOURCE_PREFERENCE: Dict[str, int] = {
     "digilab": 3,

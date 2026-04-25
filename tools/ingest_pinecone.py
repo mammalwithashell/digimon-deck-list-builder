@@ -49,7 +49,9 @@ ENGINE_VALIDATION_DIR = REPO_ROOT / "digimon_gym" / "engine" / "validation"
 SCRIPTS_DIR = REPO_ROOT / "digimon_gym" / "engine" / "data" / "scripts"
 GENERATED_DIR = SCRIPTS_DIR / "generated"
 CSHARP_DIR = REPO_ROOT / "DCGO" / "Assets" / "Scripts" / "CardEffect"
-CARDS_JSON = REPO_ROOT / "digimon_gym" / "engine" / "data" / "cards.json"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+from digimon_gym.data_paths import CARDS_JSON  # noqa: E402
 FROZEN_MANIFEST = SCRIPTS_DIR / "_frozen_manifest.json"
 
 RULES_DOCS = [
@@ -344,7 +346,7 @@ def build_card_metadata_records() -> list[tuple[str, str, dict]]:
             "colors": colors,
             "level": level if level is not None else 0,
             "keywords": keywords,
-            "file_path": "digimon_gym/engine/data/cards.json",
+            "file_path": "data/cards.json",
         }))
 
     return records

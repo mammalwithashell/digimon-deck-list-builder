@@ -75,11 +75,19 @@ Underlying surfaces:
 │   ├── Cargo.toml                 # Depends on digimon-engine (path) + pyo3 + numpy
 │   ├── pyproject.toml             # maturin build backend, module name "digimon_engine"
 │   └── src/lib.rs                 # RustHeadlessGame class; Python player-ID convention (1/2 ↔ 0/1)
+├── data/                          # Shared game data — source of truth for both engines
+│   ├── cards.json                 # Full card metadata (~4085 cards)
+│   ├── card_overrides.json        # Hand-maintained corrections over API ingest
+│   ├── deck_library.json          # Scraped meta decklists
+│   ├── archetype_aliases.json     # Canonical archetype name map
+│   └── tested_cards.json          # Tested-cards allowlist (deck builder gate)
 ├── digimon_gym/
+│   ├── data_paths.py              # Canonical paths + env overrides for data/*
 │   ├── engine/                    # Headless game engine (shared by all services)
 │   │   ├── game/                  # Core rules: action decoder, mask, combat, effects, tensor
 │   │   ├── core/                  # Permanent, Player, CardSource
-│   │   ├── data/                  # cards.json, scripts/, card_registry, tensor_layout
+│   │   ├── data/                  # Python-side engine code + card scripts
+│   │   │   ├── card_database.py, card_registry.py, tensor_layout.py, ...
 │   │   │   └── scripts/           # Card effect scripts (frozen + generated/)
 │   │   ├── interfaces/            # CardEffect, Modifiers
 │   │   ├── validation/            # Digivolve validator, play validators

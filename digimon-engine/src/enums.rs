@@ -15,15 +15,23 @@ pub enum CardKind {
 }
 
 /// Card color.
+///
+/// Variant order mirrors Python's `CardColor` enum in
+/// `digimon_gym/engine/data/enums.py` so that `CardColor as u8` yields the
+/// same integer used in `cards.json::card_colors` and evo-cost entries.
+/// This lets callers cross-compare an enum value against the raw JSON int
+/// (see `policies/greedy.rs`). If you add, remove, or reorder variants
+/// here, also update `card_data.rs::parse_card_color`,
+/// `action/mask.rs::evo_color`, and `serialization.rs::color_to_python_int`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CardColor {
-    Red,
-    Blue,
-    Yellow,
-    Green,
-    Black,
-    Purple,
-    White,
+    Red = 0,
+    Blue = 1,
+    Yellow = 2,
+    Green = 3,
+    White = 4,
+    Black = 5,
+    Purple = 6,
 }
 
 /// Game phase — drives the state machine and action mask.

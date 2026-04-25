@@ -17,14 +17,18 @@ use crate::permanent::PermanentHandle;
 use crate::tensor::FIELD_SLOTS;
 
 pub(crate) fn evo_color(raw: u8) -> Option<CardColor> {
+    // Mirrors `card_data::parse_card_color` — the raw ints come from
+    // `cards.json::evo_costs[*].card_color`, which follows Python's
+    // `CardColor` enum (see `digimon_gym/engine/data/enums.py` and
+    // `tools/ingest_cards.py::COLOR_MAP`).
     match raw {
         0 => Some(CardColor::Red),
         1 => Some(CardColor::Blue),
         2 => Some(CardColor::Yellow),
         3 => Some(CardColor::Green),
-        4 => Some(CardColor::Black),
-        5 => Some(CardColor::Purple),
-        6 => Some(CardColor::White),
+        4 => Some(CardColor::White),
+        5 => Some(CardColor::Black),
+        6 => Some(CardColor::Purple),
         _ => None,
     }
 }

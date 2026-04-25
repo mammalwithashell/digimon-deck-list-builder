@@ -19,6 +19,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from digimon_gym.data_paths import DECK_LIBRARY
 from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.card_registry import CardRegistry
 from digimon_gym.engine.data.enums import CardKind
@@ -26,8 +27,7 @@ from digimon_gym.engine.data.enums import CardKind
 
 def load_archetype_cards(archetype_name: str) -> set[str]:
     """Load all unique card IDs across all decklists for an archetype."""
-    lib_path = Path(__file__).parent.parent / "digimon_gym" / "engine" / "data" / "deck_library.json"
-    with open(lib_path, "r", encoding="utf-8") as f:
+    with open(DECK_LIBRARY, "r", encoding="utf-8") as f:
         library = json.load(f)
     arch = library["archetypes"].get(archetype_name)
     if not arch or not arch.get("decklists"):

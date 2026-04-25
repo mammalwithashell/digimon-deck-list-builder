@@ -10,7 +10,7 @@ Scripts and modules for managing card data, transpiling C# scripts, running AI r
 
 **Script:** `tools/ingest_cards.py`
 
-Fetches card data from the digimoncard.io API and merges it into `digimon_gym/engine/data/cards.json`. This is the first step when adding a new set — it populates card metadata (name, colors, level, DP, evo costs, traits, effect text) before `build_registry.py` assigns stable indices.
+Fetches card data from the digimoncard.io API and merges it into `data/cards.json`. This is the first step when adding a new set — it populates card metadata (name, colors, level, DP, evo costs, traits, effect text) before `build_registry.py` assigns stable indices.
 
 ```bash
 # Ingest a single set by ID
@@ -58,7 +58,7 @@ python tools/build_registry.py --sets BT25 EX12
 
 - **Append-only indices**: existing card→index mappings are never changed. New cards get the next available index after the highest existing one.
 - **Reindex safety check**: detects if any card would be reassigned a different index (which would break trained RL agent weights). Aborts unless `--force` is used.
-- **Output**: `digimon_gym/engine/data/cards.json` — dict-format with `index` and `norm_id` fields per card.
+- **Output**: `data/cards.json` — dict-format with `index` and `norm_id` fields per card.
 - **Capacity**: 20,000 slots (indices 1–20000). Index 0 is reserved for padding/empty.
 
 ---
@@ -302,7 +302,7 @@ Exits non-zero if any expected namespace is empty or spot-check queries return n
 
 **Script:** `tools/meta_loader.py`
 
-Scrapes tournament decklists from multiple sources and builds `digimon_gym/engine/data/deck_library.json`. Sources include DigimonMeta.com, Egman Events, DigimonCard.io, and a DigiLab PostgreSQL database. Computes meta share and conversion rate from placement data.
+Scrapes tournament decklists from multiple sources and builds `data/deck_library.json`. Sources include DigimonMeta.com, Egman Events, DigimonCard.io, and a DigiLab PostgreSQL database. Computes meta share and conversion rate from placement data.
 
 ```bash
 python tools/meta_loader.py --scrape-digimonmeta URL   # Scrape BT24/EX11 decks

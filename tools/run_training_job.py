@@ -35,10 +35,8 @@ def _load_deck_from_file(path: str) -> List[str]:
 
 def _load_deck_from_library(deck_id: str) -> List[str]:
     """Fetch a specific deck by ID from deck_library.json."""
-    library_path = os.path.join(
-        os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "deck_library.json"
-    )
-    with open(library_path, encoding="utf-8") as f:
+    from digimon_gym.data_paths import DECK_LIBRARY
+    with open(DECK_LIBRARY, encoding="utf-8") as f:
         library = json.load(f)
     from digimon_gym.engine.data.deck_loader import parse_tts
     for arch_data in library.get("archetypes", {}).values():

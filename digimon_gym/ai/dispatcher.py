@@ -33,8 +33,9 @@ from digimon_gym.ai.prompts import (
 from digimon_gym.ai.retrieval import LocalRAGIndex
 
 
+from digimon_gym.data_paths import CARDS_JSON as CARDS_JSON_PATH
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CARDS_JSON_PATH = PROJECT_ROOT / "digimon_gym" / "engine" / "data" / "cards.json"
 SCRIPTS_ROOT = PROJECT_ROOT / "digimon_gym" / "engine" / "data" / "scripts"
 
 

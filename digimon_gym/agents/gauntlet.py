@@ -46,13 +46,13 @@ from digimon_gym.engine.data.deck_loader import parse_tts
 
 logger = logging.getLogger(__name__)
 
-DECK_LIBRARY_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "engine", "data", "deck_library.json"
+from digimon_gym.data_paths import (
+    ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH,
+    DECK_LIBRARY as _DECK_LIBRARY_PATH,
 )
 
-ARCHETYPE_ALIASES_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "engine", "data", "archetype_aliases.json"
-)
+DECK_LIBRARY_PATH = str(_DECK_LIBRARY_PATH)
+ARCHETYPE_ALIASES_PATH = str(_ARCHETYPE_ALIASES_PATH)
 
 
 def _load_alias_map() -> Dict[str, str]:

@@ -51,13 +51,18 @@ fn resolve_cards_path() -> PyResult<PathBuf> {
             return Ok(pb);
         }
     }
-    // Default: walk up from CWD looking for digimon_gym/engine/data/cards.json.
+    // Default: walk up from CWD looking for `data/cards.json`. The
+    // pre-2026 location (`digimon_gym/engine/data/cards.json`) is
+    // checked as a fallback so a stale checkout or partially-migrated
+    // environment still loads cleanly.
     let mut here = std::env::current_dir()
         .map_err(|e| PyRuntimeError::new_err(format!("cwd unavailable: {}", e)))?;
     for _ in 0..6 {
-        let candidate = here.join("digimon_gym/engine/data/cards.json");
-        if candidate.exists() {
-            return Ok(candidate);
+        for rel in &["data/cards.json", "digimon_gym/engine/data/cards.json"] {
+            let candidate = here.join(rel);
+            if candidate.exists() {
+                return Ok(candidate);
+            }
         }
         if !here.pop() {
             break;

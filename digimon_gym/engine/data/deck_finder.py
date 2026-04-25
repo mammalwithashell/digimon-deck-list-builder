@@ -11,12 +11,13 @@ import json
 import argparse
 import sys
 
+from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
 from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.enums import CardKind
 
-_DATA_DIR = Path(__file__).parent
-_MANIFEST_PATH = _DATA_DIR / "scripts" / "_frozen_manifest.json"
-_DECK_LIBRARY_PATH = _DATA_DIR / "deck_library.json"
+# Scripts still live alongside the Python engine.
+_ENGINE_DATA_DIR = Path(__file__).parent
+_MANIFEST_PATH = _ENGINE_DATA_DIR / "scripts" / "_frozen_manifest.json"
 
 
 @dataclass

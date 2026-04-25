@@ -28,7 +28,7 @@ DEFAULT_SOURCES = [
     PROJECT_ROOT / "TENSOR_SPEC.md",
     PROJECT_ROOT / "Digimon TCG resources",
     # Card Metadata
-    PROJECT_ROOT / "digimon_gym" / "engine" / "data" / "cards.json",
+    PROJECT_ROOT / "data" / "cards.json",
     # Engine API
     PROJECT_ROOT / "digimon_gym" / "engine" / "game.py",
     PROJECT_ROOT / "digimon_gym" / "engine" / "interfaces" / "card_effect.py",
@@ -375,9 +375,9 @@ def _is_transpiler_python(path: Path) -> bool:
 
 
 def _is_cards_json(path: Path) -> bool:
-    """Check if a file is specifically digimon_gym/engine/data/cards.json."""
+    """Check if a file is specifically data/cards.json."""
     normalized = str(path).replace("\\", "/")
-    return normalized.endswith("digimon_gym/engine/data/cards.json")
+    return normalized.endswith("data/cards.json")
 
 
 def build_local_index(

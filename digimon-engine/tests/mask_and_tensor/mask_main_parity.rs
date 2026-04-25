@@ -391,7 +391,7 @@ fn make_dna_digimon(
 fn req(level: u8, color: CardColor) -> DnaRequirement {
     DnaRequirement {
         level,
-        card_color: Some(color),
+        card_colors: vec![color],
         name_contains: String::new(),
         text_contains: String::new(),
     }
