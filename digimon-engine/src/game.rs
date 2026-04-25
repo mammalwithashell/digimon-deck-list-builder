@@ -1178,8 +1178,9 @@ impl Game {
         // slot order. Phase 7 Task 6 appends keyword-derived auto-install
         // replacements (Barrier / Evade / Fragment(N) / Decode) so cards
         // with those printed keywords get the matching WhenWouldBe* process
-        // without hand-authoring. Partition / ArmorPurge are intentionally
-        // deferred — see `crate::cards::keyword_effects` docstring.
+        // without hand-authoring. Phase D Tasks 4-9 (Fragment(N), ArmorPurge,
+        // Save, Decoy, Fortitude, Partition) are auto-installed. MaterialSave(N)
+        // is still pending (Phase D Task 10).
         let registry_effects = self.effect_registry.get(card_id).map(|impl_| impl_.effects(handle));
 
         // Look up CardData for this card_id. The vec scan is O(card_data_len)
