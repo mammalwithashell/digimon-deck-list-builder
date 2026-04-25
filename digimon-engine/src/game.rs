@@ -985,6 +985,27 @@ impl Game {
                 .has(target, crate::enums::ModifierType::ImmunityToOpponentEffects)
     }
 
+    /// Returns `true` when an effect is currently resolving AND its
+    /// controller is not `target`'s controller. The "opponent effect is
+    /// targeting me" predicate that drives Mephistomon-style OnDeletion
+    /// riders, Scapegoat eligibility (cause ≠ OwnEffect), and the
+    /// `was_deleted_by_opponent` accessor.
+    ///
+    /// Returns `false` when:
+    ///   - no effect is currently resolving (`effect_source_player == None`),
+    ///   - the resolving effect's controller equals `target.player`.
+    ///
+    /// Phase B §B5.
+    pub fn opponent_sourced_mutation(
+        &self,
+        target: crate::permanent::PermanentHandle,
+    ) -> bool {
+        match self.effect_source_player {
+            Some(src) => src != target.player,
+            None => false,
+        }
+    }
+
     /// Sum the net security-attack modifier contributed by native printed
     /// `<Security A. +N>` and `<Security A. -N>` keywords on `target`.
     /// Called by `resolve_player_security_loop` alongside the existing
@@ -1442,5 +1463,28 @@ mod current_attacker_tests {
             r.game.progress_excludes(plain, Some(1)),
             "modifier-granted Progress should gate the same"
         );
+    }
+
+    #[test]
+    fn opponent_sourced_mutation_only_when_effect_source_differs() {
+        let mut r = DebugRunner::builder()
+            .add_card(card("A"))
+            .add_card(card("B"))
+            .start();
+        let a = r.place_on_field(0, "A", None);
+        let _b = r.place_on_field(1, "B", None);
+
+        // No effect resolving → false.
+        assert!(!r.game.opponent_sourced_mutation(a));
+
+        // Own effect resolving → false.
+        r.game.set_effect_source_player_for_test(Some(0));
+        assert!(!r.game.opponent_sourced_mutation(a));
+
+        // Opponent effect resolving → true.
+        r.game.set_effect_source_player_for_test(Some(1));
+        assert!(r.game.opponent_sourced_mutation(a));
+
+        r.game.set_effect_source_player_for_test(None);
     }
 }
