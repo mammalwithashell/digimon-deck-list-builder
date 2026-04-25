@@ -374,6 +374,61 @@ fn single_outstanding_park_panics_on_double_install() {
 }
 
 #[test]
+fn synchronous_outcome_preserved_when_process_also_parks() {
+    // A process that calls rctx.cancel() AND rctx.effect.select_*(...) should
+    // preserve the synchronous Cancelled outcome as the parked default.
+    // If the user's nested callback doesn't override, the deletion stays
+    // cancelled (rctx.cancel was honored, not silently dropped).
+
+    struct CancelThenParkCard;
+    impl CardEffect for CancelThenParkCard {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::when_would_be_deleted(card)
+                .name("CANCEL-THEN-PARK")
+                .optional()
+                .replacement_process(|rctx| {
+                    rctx.cancel(); // synchronous outcome — preserve as parked default
+                    rctx.effect.select_own_permanent(
+                        "pick anyone",
+                        false,
+                        |_g, _h| true,
+                        |_ctx, _picked| {
+                            // Don't override outcome — parked default should be Cancelled
+                        },
+                    );
+                })
+                .build()]
+        }
+    }
+
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("CANCEL-THEN-PARK"))
+        .add_card(fighter("OTHER"))
+        .start();
+    r.register_effect("CANCEL-THEN-PARK", Arc::new(CancelThenParkCard));
+    let parker = r.place_on_field(0, "CANCEL-THEN-PARK", None);
+    let _other = r.place_on_field(0, "OTHER", None);
+
+    r.game.delete_permanent_with_effects(parker);
+    use digimon_engine::action::space::REPLACEMENT_ACCEPT;
+    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept");
+
+    let pending = r.game.pending_selection.as_ref().unwrap();
+    let action = pending.valid_action_ids[0];
+    let player = pending.selecting_player;
+    r.game.resolve_selection(player, action).expect("pick");
+
+    // Synchronous Cancelled outcome should have been preserved as parked default.
+    // The empty inner callback didn't override, so deletion should be cancelled.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        2,
+        "synchronous rctx.cancel() should be preserved as parked outcome default; \
+         empty nested callback shouldn't drop it"
+    );
+}
+
+#[test]
 fn cancel_leave_outside_parked_scope_panics_in_dev() {
     let mut r = DebugRunner::builder().add_card(fighter("X")).start();
     let _ = r.place_on_field(0, "X", None);

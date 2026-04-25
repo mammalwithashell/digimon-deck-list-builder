@@ -255,6 +255,30 @@ All four panic in dev builds when called outside a parked-replacement scope
 that don't install a nested selection use the existing `rctx.cancel() /
 handled() / redirect_to() / substitute()` methods on `ReplacementContext`.
 
+### Two parallel APIs
+
+There are two outcome-setting APIs depending on whether the
+replacement-process closure parks a player selection or runs synchronously:
+
+| Outcome | Synchronous (`rctx.*` on `ReplacementContext`) | Parked (`ctx.*_replacement` on `EffectContext`) |
+|---|---|---|
+| Cancelled | `rctx.cancel()` | `ctx.cancel_leave()` |
+| CustomHandled | `rctx.handled()` | `ctx.handle_replacement()` |
+| Redirected(zone) | `rctx.redirect_to(zone)` | `ctx.redirect_replacement(zone)` |
+| Substituted(subject) | `rctx.substitute(subject)` | `ctx.substitute_replacement(subject)` |
+
+The synchronous API runs inside the `replacement_process` closure body itself
+(no nested selection). The parked API runs inside the user's `select_*`
+callback after the closure parks a selection — `ctx` here is a fresh
+`EffectContext` keyed to the same source.
+
+**Mixing the two APIs in one body is supported but uses last-write-wins
+semantics.** Calling `rctx.cancel()` before `ctx.select_*(...)` sets the
+synchronous outcome as the parked default; the user's nested callback can
+override it via `ctx.*_replacement` calls. If the nested callback doesn't
+set an outcome, the synchronous default takes effect. This is useful for
+"cancel by default; redirect on player choice" patterns.
+
 ---
 
 ## 4. Handles

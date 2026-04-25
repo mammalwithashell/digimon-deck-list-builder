@@ -709,7 +709,12 @@ fn run_candidate_inner(
             source_card,
             source_permanent,
             controller,
-            outcome: ReplacementOutcome::None,
+            // Preserve any synchronous outcome the process set before parking
+            // (e.g. `rctx.cancel()` followed by `rctx.effect.select_*`). The
+            // user's nested callback can override via `ctx.*_replacement` (last
+            // write wins on parked.outcome); if it doesn't, the synchronous
+            // outcome takes effect on commit.
+            outcome,
         });
         // Caller (e.g. make_accept_callback) checks pending_selection.is_some()
         // and yields without committing — the parked outcome will be drained
