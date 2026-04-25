@@ -25,6 +25,7 @@ use pyo3::wrap_pyfunction;
 
 use ::digimon_engine::card_data::CardData;
 use ::digimon_engine::deck_tools;
+use ::digimon_engine::enums::{CardKind as RustCardKind, GamePhase as RustGamePhase};
 use ::digimon_engine::events::GameEvent;
 use ::digimon_engine::rules::CardRestriction;
 use ::digimon_engine::HeadlessRunner;
@@ -77,6 +78,91 @@ fn resolve_cards_path() -> PyResult<PathBuf> {
     ))
 }
 
+/// Python-visible mirror of the Rust `CardKind` enum. Variants match
+/// `digimon_gym.engine.data.enums.CardKind` plus `Token` (Rust-only
+/// today; included so `From<RustCardKind>` is total).
+#[pyclass(module = "digimon_engine", name = "CardKind", eq, eq_int)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum CardKind {
+    Digimon,
+    Tamer,
+    Option,
+    DigiEgg,
+    Token,
+}
+
+impl From<RustCardKind> for CardKind {
+    fn from(k: RustCardKind) -> Self {
+        match k {
+            RustCardKind::Digimon => CardKind::Digimon,
+            RustCardKind::Tamer => CardKind::Tamer,
+            RustCardKind::Option => CardKind::Option,
+            RustCardKind::DigiEgg => CardKind::DigiEgg,
+            RustCardKind::Token => CardKind::Token,
+        }
+    }
+}
+
+/// Python-visible mirror of the Rust `GamePhase` enum. Variant names
+/// match the **Python** convention (Start, End, SelectEffectChoice)
+/// rather than the Rust internal names (Unsuspend, EndTurn, EffectChoice)
+/// so callers post-Phase 3 cutover keep their existing identifiers.
+#[pyclass(module = "digimon_engine", name = "GamePhase", eq, eq_int)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum GamePhase {
+    Mulligan,
+    Start,
+    Draw,
+    Breeding,
+    Main,
+    End,
+    SelectTarget,
+    SelectMaterial,
+    SelectTrash,
+    SelectSource,
+    SelectHand,
+    SelectReveal,
+    SelectSecurity,
+    SelectEffectChoice,
+    BlockTiming,
+    CounterTiming,
+    AllianceTiming,
+    EndOfTurnAction,
+    GameOver,
+    SelectUnion,
+    SelectPermutation,
+    SelectBudgeted,
+}
+
+impl From<RustGamePhase> for GamePhase {
+    fn from(p: RustGamePhase) -> Self {
+        match p {
+            RustGamePhase::Mulligan => GamePhase::Mulligan,
+            RustGamePhase::Unsuspend => GamePhase::Start,
+            RustGamePhase::Draw => GamePhase::Draw,
+            RustGamePhase::Breeding => GamePhase::Breeding,
+            RustGamePhase::Main => GamePhase::Main,
+            RustGamePhase::EndTurn => GamePhase::End,
+            RustGamePhase::SelectTarget => GamePhase::SelectTarget,
+            RustGamePhase::SelectMaterial => GamePhase::SelectMaterial,
+            RustGamePhase::SelectTrash => GamePhase::SelectTrash,
+            RustGamePhase::SelectSource => GamePhase::SelectSource,
+            RustGamePhase::SelectHand => GamePhase::SelectHand,
+            RustGamePhase::SelectReveal => GamePhase::SelectReveal,
+            RustGamePhase::SelectSecurity => GamePhase::SelectSecurity,
+            RustGamePhase::EffectChoice => GamePhase::SelectEffectChoice,
+            RustGamePhase::BlockTiming => GamePhase::BlockTiming,
+            RustGamePhase::CounterTiming => GamePhase::CounterTiming,
+            RustGamePhase::AllianceTiming => GamePhase::AllianceTiming,
+            RustGamePhase::EndOfTurnAction => GamePhase::EndOfTurnAction,
+            RustGamePhase::GameOver => GamePhase::GameOver,
+            RustGamePhase::SelectUnion => GamePhase::SelectUnion,
+            RustGamePhase::SelectPermutation => GamePhase::SelectPermutation,
+            RustGamePhase::SelectBudgeted => GamePhase::SelectBudgeted,
+        }
+    }
+}
+
 /// Python-visible per-card metadata wrapper. Mirror of the subset of
 /// `card_data::CardData` that callers need at the Python layer (the
 /// full struct contains effect text and DSL-only fields the bindings
@@ -88,10 +174,9 @@ pub struct PyCard {
     pub card_id: String,
     #[pyo3(get)]
     pub card_name: String,
-    /// String form of the Rust `CardKind` enum (e.g. "Digimon", "Tamer",
-    /// "Option", "DigiEgg"). Replaced with a typed enum in Task 5.
+    /// Typed enum matching `digimon_engine.CardKind`.
     #[pyo3(get)]
-    pub card_kind: String,
+    pub card_kind: CardKind,
     #[pyo3(get)]
     pub level: Option<u8>,
     #[pyo3(get)]
@@ -116,7 +201,7 @@ impl PyCard {
         Self {
             card_id: card.card_id.clone(),
             card_name: card.card_name.clone(),
-            card_kind: format!("{:?}", card.card_kind),
+            card_kind: CardKind::from(card.card_kind),
             level: card.level,
             dp: card.dp,
             play_cost: card.play_cost,
@@ -593,5 +678,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyCardRestriction>()?;
     m.add_function(wrap_pyfunction!(restricted_list, m)?)?;
     m.add_function(wrap_pyfunction!(expand_deck_dict, m)?)?;
+    m.add_class::<CardKind>()?;
+    m.add_class::<GamePhase>()?;
     Ok(())
 }

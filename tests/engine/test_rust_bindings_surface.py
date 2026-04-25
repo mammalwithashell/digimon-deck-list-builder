@@ -143,3 +143,42 @@ class TestExpandDeckDict:
         from digimon_engine import expand_deck_dict
         out = expand_deck_dict({"BT1-001": 0})
         assert out == []
+
+
+class TestEnums:
+    def test_card_kind_variants_distinct(self):
+        from digimon_engine import CardKind
+        assert CardKind.Digimon != CardKind.Tamer
+        assert CardKind.Option != CardKind.DigiEgg
+        assert CardKind.Token != CardKind.Digimon
+
+    def test_card_kind_pycard_returns_typed(self):
+        from digimon_engine import CardDatabase, CardKind
+        db = CardDatabase()
+        # BT1-001 is a DigiEgg (Yokomon's egg form)
+        card = db.get_card("BT1-001")
+        assert card is not None
+        assert card.card_kind == CardKind.DigiEgg
+        # Sanity: also check a known non-egg card if present in db
+        agumon = db.get_card("BT1-010")
+        if agumon is not None:
+            # BT1-010 is Agumon (Rookie Digimon)
+            assert agumon.card_kind == CardKind.Digimon
+
+    def test_game_phase_python_names_present(self):
+        from digimon_engine import GamePhase
+        # Python-side names callers will use post-Phase 3 cutover
+        assert GamePhase.Start is not None
+        assert GamePhase.End is not None
+        assert GamePhase.SelectEffectChoice is not None
+        assert GamePhase.Mulligan is not None
+        assert GamePhase.SelectTarget is not None
+
+    def test_game_phase_pairwise_distinct(self):
+        from digimon_engine import GamePhase
+        # Spot-check that representative variants are not aliases of one another.
+        assert GamePhase.Start != GamePhase.Draw
+        assert GamePhase.Main != GamePhase.End
+        assert GamePhase.SelectTarget != GamePhase.SelectMaterial
+        assert GamePhase.BlockTiming != GamePhase.CounterTiming
+        assert GamePhase.SelectEffectChoice != GamePhase.SelectTarget
