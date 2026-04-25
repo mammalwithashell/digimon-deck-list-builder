@@ -183,11 +183,14 @@ Seven PRs, each ships green. The repo reorg is its own phase to keep the rename 
 
 ### Phase 1 — Delete the transpiler
 
-- Remove `tools/transpiler/` and any tests in `tests/tools/` that exercise it.
-- Remove `/implement-set` skill steps that invoke the transpiler. If the skill becomes empty, delete it; otherwise leave a note that script generation is no longer in scope.
-- Update `docs/TOOLS.md` to drop the transpiler section.
+- Remove `tools/transpiler/` and `tools/audit_transpiled_sets.py`.
+- Remove `digimon_gym/ai/transpiler_audit.py`.
+- Strip transpiler call sites and the `script_engine_transpiler` scope from `digimon_gym/ai/{set_run_orchestrator,autofix_apply,retrieval}.py`. The AI pipeline scaffolding (`worker`, `dispatcher`, `client`, `prompts`, `git_adapter`, `issue_resolution`, `pattern_learner`, `batch_orchestrator`, `contracts`, plus `AISetRun*` DB models and the `admin_ai` router) is **kept** for future repurposing toward user error reports against Rust scripts. The pipeline may be non-functional in alpha — accepted.
+- Delete transpiler-coupled tests in `tests/ai_pipeline/` (`test_transpiler_scoring.py`, `test_retranspile_integration.py`, `test_set_run_retranspile.py`, `test_prompts_llm_transpile.py`). Strip transpiler assertions from the kept `tests/ai_pipeline/` files.
+- Delete the `.claude/skills/implement-set/` skill.
+- Update `docs/TOOLS.md` and `docs/ARCHITECTURE.md` to drop the transpiler section.
 
-**Standalone, low-risk. No callers in production code.**
+**Standalone, low-risk. No callers in production code outside the dormant AI pipeline.**
 
 ### Phase 2 — Expand `digimon-engine-py` bindings
 
