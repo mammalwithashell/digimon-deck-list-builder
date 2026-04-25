@@ -137,11 +137,22 @@ Unblocks alpha testing and prevents more cards from being scripted against the i
 
 ### Phase C — Nested-selection-in-replacement substrate (§4.2)
 
-- **C1. Lift Task 3 limitation.** Implement parked-deletion re-drive. Store a `DeletionIntent { handle, cause, replacements_fired: SmallSet<EffectId> }` on `Game`; replace the current "early-return, caller re-drives" contract with an engine-managed continuation.
-- **C2. Author-facing API.** Document the `ctx.select_<whatever>().then(|h| { ctx.<do_thing>; ctx.cancel_leave(); })` builder pattern for selection-bearing replacements. Verify it composes cleanly inside `WhenWouldBeDeleted` closures.
-- **C3. Regression coverage.** Existing Barrier / Evade / Decode behavioral tests must still pass unchanged. Barrier-then-Evade ordering must not double-fire Barrier.
+✅ Landed 2026-04-25 on `claude/gracious-ptolemy-744e69`. Engine-only
+substrate — DSL Phase 3 will consume it later. See
+[Phase C sub-spec](2026-04-25-keyword-parity-phase-c-design.md).
 
-**Exit criteria.** Selection-bearing replacements can be authored without ad-hoc park-and-resume plumbing in each card. A worked example (Save or Decoy) passes end-to-end against a hand-written test card.
+Deliverables shipped:
+- `Game.parked_replacement: Option<ParkedReplacement>` slot
+- `EffectContext::cancel_leave / handle_replacement / redirect_replacement / substitute_replacement`
+- Dispatcher post-process + post-callback hooks
+- End-to-end test cards: Save (3 tests), Fragment(2) (2 tests), Decoy
+- Regression coverage: Barrier, Evade
+
+Spec deviations:
+- DSL Phase 3 (`lower_replacement.rs` body wiring + new step verbs) deferred —
+  Phase D's hand-rolled keyword auto-installs consume the substrate directly.
+- Single-outstanding-park invariant; if a real card surfaces nested-park,
+  escalate to a Vec-stack.
 
 ### Phase D — Alpha-tier keyword wire-ups (depends on B + C)
 

@@ -221,6 +221,40 @@ Effect::on_deletion(card)
 
 The slot is populated by `Game::current_deletion_cause`, set by the deletion fire-site for the duration of the OnDeletion drain and cleared once the queue is empty. See `digimon-engine/tests/combat/deletion_cause_observer.rs` for the canonical regression.
 
+### Replacement-process outcome-setters
+
+Inside a `WhenWouldBe*` replacement-process closure, after installing a
+nested player selection via `ctx.select_*`, the user's callback body
+sets the replacement outcome via one of these methods:
+
+- **`ctx.cancel_leave()`** — Cancel the original event (Save, Fragment).
+  ```rust
+  ctx.cancel_leave();
+  ```
+
+- **`ctx.handle_replacement()`** — Mark as custom-handled (process body
+  has already mutated state; original event should be skipped).
+  ```rust
+  ctx.handle_replacement();
+  ```
+
+- **`ctx.redirect_replacement(zone)`** — Redirect to a different zone
+  (Evade-style redirect to deck bottom).
+  ```rust
+  ctx.redirect_replacement(Zone::Deck);
+  ```
+
+- **`ctx.substitute_replacement(subject)`** — Substitute a different
+  subject for the parked event (Decoy redirects ally-deletion to self).
+  ```rust
+  ctx.substitute_replacement(ReplacementSubject::Permanent(decoy_self));
+  ```
+
+All four panic in dev builds when called outside a parked-replacement scope
+(`Game.parked_replacement.is_none()`). Synchronous replacement processes
+that don't install a nested selection use the existing `rctx.cancel() /
+handled() / redirect_to() / substitute()` methods on `ReplacementContext`.
+
 ---
 
 ## 4. Handles

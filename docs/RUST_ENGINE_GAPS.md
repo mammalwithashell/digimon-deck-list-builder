@@ -129,6 +129,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Workaround:** None — BLOCKED. Observer-style `OnLeaveField` cannot undo the transition.
 - **Related:** None.
 
+**RESOLVED 2026-04-25 (Phase C):** nested-selection-in-replacement substrate landed via `Game.parked_replacement` + `EffectContext` outcome-setters (`cancel_leave` / `handle_replacement` / `redirect_replacement` / `substitute_replacement`). Phase D auto-installs (Save, Decoy, Fortitude, Fragment, ArmorPurge, Partition) can now be authored. See [`docs/superpowers/specs/2026-04-25-keyword-parity-phase-c-design.md`](../superpowers/specs/2026-04-25-keyword-parity-phase-c-design.md).
+
 ### Selection: multi-select with aggregate-sum constraint (and count-capped sibling)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18)
