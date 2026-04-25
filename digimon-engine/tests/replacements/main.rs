@@ -6,6 +6,7 @@ mod enum_and_context;
 mod native_keywords;
 mod nested_select_decoy;
 mod nested_select_fragment;
+mod nested_select_regression;
 mod nested_select_save;
 mod nested_select_substrate;
 mod passive_modifier_migration;
