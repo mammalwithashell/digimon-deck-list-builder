@@ -449,3 +449,17 @@ pub fn classify_parsed(card_ids: Vec<String>) -> ParsedDeck {
         warnings,
     }
 }
+
+/// Expand a `{card_id -> count}` map into a flat list of card IDs.
+/// Mirrors Python `deck_loader.expand_deck_dict`. Iteration order over
+/// the map is unspecified; callers that care about order should sort
+/// the returned vec themselves.
+pub fn expand_deck_dict(counts: &HashMap<String, u32>) -> Vec<String> {
+    let mut out = Vec::with_capacity(counts.values().map(|c| *c as usize).sum());
+    for (card_id, count) in counts {
+        for _ in 0..*count {
+            out.push(card_id.clone());
+        }
+    }
+    out
+}

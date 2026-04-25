@@ -26,6 +26,7 @@ use pyo3::wrap_pyfunction;
 use ::digimon_engine::card_data::CardData;
 use ::digimon_engine::deck_tools;
 use ::digimon_engine::events::GameEvent;
+use ::digimon_engine::rules::CardRestriction;
 use ::digimon_engine::HeadlessRunner;
 
 /// Lazy-loaded card database. Loading the ~4000-card JSON is slow and
@@ -173,6 +174,37 @@ fn validate_deck(card_ids: Vec<String>) -> PyDeckValidationResult {
 #[pyfunction]
 fn out_of_set_cards(card_ids: Vec<String>) -> Vec<String> {
     deck_tools::out_of_set_cards(card_ids.iter().cloned()).into_iter().collect()
+}
+
+/// Python-visible wrapper around `rules::CardRestriction`.
+#[pyclass(module = "digimon_engine", name = "PyCardRestriction")]
+#[derive(Clone)]
+pub struct PyCardRestriction {
+    /// `card_id -> max copies allowed` (0 = banned, 1 = restricted to 1).
+    #[pyo3(get)]
+    pub card_limits: HashMap<String, u8>,
+    /// List of `(group_a, group_b)` mutual-exclusivity pairs.
+    #[pyo3(get)]
+    pub choice_groups: Vec<(Vec<String>, Vec<String>)>,
+}
+
+impl From<CardRestriction> for PyCardRestriction {
+    fn from(r: CardRestriction) -> Self {
+        Self {
+            card_limits: r.card_limits.into_iter().collect(),
+            choice_groups: r.choice_groups,
+        }
+    }
+}
+
+#[pyfunction]
+fn restricted_list() -> PyCardRestriction {
+    CardRestriction::official_eng().into()
+}
+
+#[pyfunction]
+fn expand_deck_dict(counts: HashMap<String, u32>) -> Vec<String> {
+    deck_tools::expand_deck_dict(&counts)
 }
 
 /// Python-visible wrapper around the static cards.json database.
@@ -558,5 +590,8 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(summarize_deck, m)?)?;
     m.add_function(wrap_pyfunction!(validate_deck, m)?)?;
     m.add_function(wrap_pyfunction!(out_of_set_cards, m)?)?;
+    m.add_class::<PyCardRestriction>()?;
+    m.add_function(wrap_pyfunction!(restricted_list, m)?)?;
+    m.add_function(wrap_pyfunction!(expand_deck_dict, m)?)?;
     Ok(())
 }

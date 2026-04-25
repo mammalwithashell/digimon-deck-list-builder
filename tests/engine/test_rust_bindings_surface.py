@@ -107,3 +107,39 @@ class TestDeckTools:
         # Duplicates collapse — matches Python's first-seen semantics.
         bad = out_of_set_cards(["ZZ99-999", "ZZ99-999"])
         assert bad.count("ZZ99-999") == 1
+
+
+class TestRestrictedList:
+    def test_restricted_list_shape(self):
+        from digimon_engine import restricted_list
+        rl = restricted_list()
+        assert hasattr(rl, "card_limits")
+        assert hasattr(rl, "choice_groups")
+        assert isinstance(rl.card_limits, dict)
+        assert isinstance(rl.choice_groups, list)
+
+    def test_restricted_list_known_entries(self):
+        from digimon_engine import restricted_list
+        rl = restricted_list()
+        # Known banned entries from the official ENG list
+        assert rl.card_limits.get("BT2-090") == 0  # Matt Ishida (banned)
+        # Known restricted-to-1 entries
+        assert rl.card_limits.get("BT1-090") == 1
+        # Choice groups exist
+        assert len(rl.choice_groups) >= 1
+
+
+class TestExpandDeckDict:
+    def test_expand_basic(self):
+        from digimon_engine import expand_deck_dict
+        out = expand_deck_dict({"BT1-001": 3, "BT1-002": 1})
+        assert sorted(out) == sorted(["BT1-001", "BT1-001", "BT1-001", "BT1-002"])
+
+    def test_expand_empty(self):
+        from digimon_engine import expand_deck_dict
+        assert expand_deck_dict({}) == []
+
+    def test_expand_zero_count(self):
+        from digimon_engine import expand_deck_dict
+        out = expand_deck_dict({"BT1-001": 0})
+        assert out == []
