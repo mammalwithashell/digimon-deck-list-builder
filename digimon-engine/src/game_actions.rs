@@ -1776,11 +1776,12 @@ impl Game {
     ///   4. Each player's `security`
     ///   5. Each player's `battle_area` permanent card stacks (all sources)
     ///   6. Each player's `breeding_area` card stack
+    ///   7. The game-level `revealed_cards` transient pool
     ///
     /// Used by `EffectContext::place_card_under_permanent_bottom` to locate
     /// cards before tucking them under a permanent regardless of which zone
     /// they currently live in.
-    pub fn remove_card_from_any_zone(
+    pub(crate) fn remove_card_from_any_zone(
         &mut self,
         handle: crate::card_source::CardHandle,
     ) -> Option<crate::card_source::CardSource> {
@@ -1827,6 +1828,11 @@ impl Game {
                     );
                 }
             }
+        }
+
+        // --- revealed_cards transient pool ---
+        if let Some(pos) = self.revealed_cards.iter().position(|c| c.handle() == handle) {
+            return Some(self.revealed_cards.remove(pos));
         }
 
         None

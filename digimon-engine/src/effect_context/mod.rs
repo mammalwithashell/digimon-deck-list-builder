@@ -1041,12 +1041,14 @@ impl<'a> EffectContext<'a> {
     ///   4. Each player's `security`
     ///   5. Each player's `battle_area` card stacks (all permanents)
     ///   6. Each player's `breeding_area` card stack
+    ///   7. The game-level `revealed_cards` transient pool
     ///
     /// This covers every realistic source for `<Save>` (self just moved to
     /// trash during deletion) and `<Material Save N>` (cards are in another
     /// permanent's `card_sources`). Opponent deck / security are included for
     /// completeness but Save/MaterialSave callers will never route through
-    /// them in normal play.
+    /// them in normal play. `revealed_cards` is included to handle cards that
+    /// are mid-reveal when a Save effect resolves.
     ///
     /// # Panics
     ///
