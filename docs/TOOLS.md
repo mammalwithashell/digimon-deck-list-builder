@@ -1,6 +1,6 @@
 # Tools Reference
 
-Scripts and modules for managing card data, transpiling C# scripts, running AI reviews, and building/deploying the engine.
+Scripts and modules for managing card data, running AI reviews, and building/deploying the engine.
 
 ---
 
@@ -100,79 +100,9 @@ After training, the script prints a spot-check showing each sampled card and its
 
 ---
 
-## 2. Transpiler
+## 2. Script Promotion
 
-### 2.1 Transpile CLI
-
-**Script:** `tools/transpile_dcgo.py`
-
-Transpiles DCGO C# card effect scripts into Python `CardScript` files compatible with the digimon_gym engine. Reads `.cs` files from a DCGO-Card-Scripts directory and writes Python equivalents to an output directory.
-
-```bash
-python tools/transpile_dcgo.py <DCGO_DIR> <OUTPUT_DIR>
-
-# Examples
-python tools/transpile_dcgo.py /tmp/dcgo-scripts/CardEffect/BT14 digimon_gym/engine/data/scripts/bt14
-python tools/transpile_dcgo.py /tmp/dcgo-scripts/CardEffect/BT24 digimon_gym/engine/data/scripts/bt24
-```
-
-The C# source files live at `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` (using underscores, e.g. `BT17_001.cs`).
-
-### 2.2 Transpiler Package
-
-**Package:** `tools/transpiler/`
-
-The transpiler is a full Python package invoked by `transpile_dcgo.py`. Key modules:
-
-| Module | Purpose |
-|---|---|
-| `cli.py` | CLI entry point and argument handling |
-| `models.py` | Data models for C# AST nodes and output scripts |
-| `extractors.py` | C# AST parsing — extracts timing, conditions, actions |
-| `generators.py` | Python code generation from extracted AST nodes |
-| `patterns.py` | Regex/keyword patterns for C# → Python mapping |
-| `scoring.py` | Faithfulness scoring weights and heuristics |
-| `validation.py` | Forward/reverse/timing issue detection |
-| `known_complex_cards.json` | Cards excluded from threshold checks (beyond transpiler capability) |
-
----
-
-## 3. Script Audit & Promotion
-
-### 3.1 Audit Transpiled Sets
-
-**Script:** `tools/audit_transpiled_sets.py`
-
-Audits generated card scripts for faithfulness to official card text. Validates each script against card metadata from `cards.json` (or the digimoncard.io API) and produces markdown and JSON reports in `tools/audit_reports/`.
-
-```bash
-python tools/audit_transpiled_sets.py --sets BT22,EX5,EX6
-python tools/audit_transpiled_sets.py --sets ALL --json
-python tools/audit_transpiled_sets.py --sets BT22 --use-api --threshold 0.8
-```
-
-| Argument | Default | Description |
-|---|---|---|
-| `--sets` | required | Comma-separated set IDs or `ALL` |
-| `--json` | off | Also write JSON report alongside markdown |
-| `--use-api` | off | Fetch card text from digimoncard.io (fallback if not in cards.json) |
-| `--threshold` | 0.8 | Faithfulness score threshold for flagging cards |
-| `--output-dir` | `tools/audit_reports/` | Directory for report files |
-
-**Scoring weights:**
-
-| Component | Weight | Meaning |
-|---|---:|---|
-| Effects ratio | 0.40 | Script has same number of effect blocks as API text |
-| Actions ratio | 0.30 | Script has sufficient engine action calls |
-| Forward match | 0.20 | API-mentioned keywords/timings present in script |
-| Coroutine coverage | 0.10 | All effect blocks have coroutine callbacks |
-
-Cards in `tools/transpiler/known_complex_cards.json` are excluded from threshold failure counts.
-
----
-
-### 3.2 Promote Script
+### 2.1 Promote Script
 
 **Script:** `tools/promote_script.py`
 
@@ -190,7 +120,7 @@ On success, prints the promotion result as JSON (frozen path, hash). The script 
 
 ---
 
-### 3.3 Check Frozen Integrity
+### 2.2 Check Frozen Integrity
 
 **Script:** `tools/check_frozen_integrity.py`
 
@@ -204,9 +134,9 @@ Exits non-zero if any frozen file has been modified, is missing, or is present w
 
 ---
 
-## 4. AI Review Pipeline
+## 3. AI Review Pipeline
 
-### 4.1 Build Review Batches
+### 3.1 Build Review Batches
 
 **Script:** `tools/build_review_batches.py`
 
@@ -222,7 +152,7 @@ Default sets: `EX10, BT13, EX11, BT23, BT21, BT24`. Output plan is written to `d
 
 ---
 
-### 4.2 Queue Review Batches
+### 3.2 Queue Review Batches
 
 **Script:** `tools/queue_review_batches.py`
 
@@ -252,9 +182,9 @@ python tools/queue_review_batches.py --plan data/review/plan.json --max-tasks 10
 
 ---
 
-## 5. Pinecone Vector DB
+## 4. Pinecone Vector DB
 
-### 5.1 Ingest Pinecone
+### 4.1 Ingest Pinecone
 
 **Script:** `tools/ingest_pinecone.py`
 
@@ -280,7 +210,7 @@ python tools/ingest_pinecone.py --all --dry-run                # Preview counts
 
 ---
 
-### 5.2 Verify Pinecone
+### 4.2 Verify Pinecone
 
 **Script:** `tools/verify_pinecone.py`
 
@@ -296,9 +226,9 @@ Exits non-zero if any expected namespace is empty or spot-check queries return n
 
 ---
 
-## 6. Meta Analysis
+## 5. Meta Analysis
 
-### 6.1 Meta Loader
+### 5.1 Meta Loader
 
 **Script:** `tools/meta_loader.py`
 
@@ -319,7 +249,7 @@ The `--build` step deduplicates decklists, groups them into archetypes, and comp
 
 ---
 
-### 6.2 Rank Archetypes
+### 5.2 Rank Archetypes
 
 **Script:** `tools/rank_archetypes.py`
 
@@ -340,7 +270,7 @@ Output columns: archetype name, meta_share, number of decklists, unique card cou
 
 ---
 
-### 6.3 Resolve Deck
+### 5.3 Resolve Deck
 
 **Module:** `tools/resolve_deck.py`
 
@@ -378,7 +308,7 @@ python tools/resolve_deck.py --list-archetypes --min-share 0.01  # Filter by met
 
 ---
 
-### 6.4 Store Night Recommender
+### 5.4 Store Night Recommender
 
 **Script:** `tools/store_night.py`
 
@@ -447,7 +377,7 @@ python tools/store_night.py --store "The Card Haven" \
 
 ---
 
-### 6.5 Decklist Analysis
+### 5.5 Decklist Analysis
 
 **Module:** `tools/decklist_analysis.py`
 
@@ -489,7 +419,7 @@ trends = compute_card_trends(records, periods=3)
 
 ---
 
-### 6.6 DigiLab Client
+### 5.6 DigiLab Client
 
 **Module:** `digimon_gym/digilab_client.py`
 
@@ -517,9 +447,9 @@ Pure psycopg2 queries against the DigiLab PostgreSQL database. Standalone — no
 
 ---
 
-## 7. Model Export & Build
+## 6. Model Export & Build
 
-### 7.1 ONNX Export
+### 6.1 ONNX Export
 
 **Script:** `tools/export_onnx.py`
 
@@ -539,7 +469,7 @@ Newly-exported models reach desktop users by being published to the admin model 
 
 ---
 
-### 7.2 Desktop Build
+### 6.2 Desktop Build
 
 The desktop app is **Python-free** — there is no sidecar binary to build. Gameplay, ONNX inference, and deck tooling are statically linked into the Tauri executable via the embedded `digimon-engine` crate.
 
@@ -552,7 +482,7 @@ The installer contains only the Rust binary + frontend assets + icons. Trained A
 
 ---
 
-### 7.3 Training Smoke Test
+### 6.3 Training Smoke Test
 
 **Script:** `tools/train_smoke_test.py`
 
@@ -566,11 +496,11 @@ Requires `stable-baselines3` and `sb3-contrib`.
 
 ---
 
-## 8. Engine Modules
+## 7. Engine Modules
 
 These modules live inside the engine and are used at runtime as well as by the tools above.
 
-### 8.1 Card Feature Vectorizer
+### 7.1 Card Feature Vectorizer
 
 **Module:** `digimon_gym/engine/data/card_features.py`
 
@@ -600,7 +530,7 @@ features = vectorizer.vectorize_all()  # shape: (max_index+1, 112)
 
 ---
 
-### 8.2 Card Registry
+### 7.2 Card Registry
 
 **Module:** `digimon_gym/engine/data/card_registry.py`
 
@@ -621,7 +551,7 @@ Runtime lookup from card ID strings (e.g. `"BT1-001"`) to integer indices used i
 
 ---
 
-### 8.3 Tensor Layout Map
+### 7.3 Tensor Layout Map
 
 **Module:** `digimon_gym/engine/data/tensor_layout.py`
 
@@ -655,7 +585,7 @@ scalars = observations[:, SCALAR_POSITIONS]             # (batch, 855)
 
 ---
 
-## 9. New Card Set Workflow
+## 8. New Card Set Workflow
 
 When a new Digimon TCG set releases, follow these steps:
 
@@ -675,52 +605,29 @@ python tools/build_registry.py --sets BT26
 
 New cards get append-only indices. Existing indices are preserved, so old trained agents remain valid.
 
-### Step 3: Transpile C# Scripts
+### Step 3: Implement Card Effects in Rust
+
+Card scripts are now hand-written Rust `CardEffect` implementations under `digimon-engine/src/cards/`. Use the `/batch-implement-cards-rust` skill to dispatch the TDD pipeline against the new set, or `/assess-archetype-rust` to pre-flight the engine primitives the set will require.
 
 ```bash
-python tools/transpile_dcgo.py /path/to/DCGO/CardEffect/BT26 digimon_gym/engine/data/scripts/generated/bt26
+# Optional pre-flight: see which engine primitives the set needs
+/assess-archetype-rust BT26
+
+# TDD-driven hand-implementation in batches
+/batch-implement-cards-rust BT26
 ```
 
-Generates Python CardScript files from DCGO C# sources.
+The C# files at `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` remain available as the behavioral source of truth.
 
-### Step 4: Audit Generated Scripts
-
-```bash
-python tools/audit_transpiled_sets.py --sets BT26
-```
-
-Reports faithfulness scores and flags cards below the 0.8 threshold. Reports are written to `tools/audit_reports/`.
-
-### Step 5: Queue AI Review (Optional)
-
-```bash
-python tools/build_review_batches.py --sets BT26 --output data/review/bt26_plan.json
-python tools/queue_review_batches.py --plan data/review/bt26_plan.json --token $TOKEN
-```
-
-Queues `review_batch` AI tasks for the new set via the admin API.
-
-### Step 6: Promote Reviewed Scripts
-
-```bash
-python tools/promote_script.py \
-  --card-id BT26-001 \
-  --set-id BT26 \
-  --module-name bt26_001 \
-  --expected-generated-hash <sha256>
-```
-
-Moves approved scripts to the frozen lane and updates `_frozen_manifest.json`.
-
-### Step 7: Verify Frozen Integrity
+### Step 4: Verify Frozen Integrity (Python sunset only)
 
 ```bash
 python tools/check_frozen_integrity.py
 ```
 
-CI guard — confirms all frozen scripts match their manifest hashes.
+Only relevant if Python card scripts were touched. The Python script lane is being sunset alongside the Rust engine migration.
 
-### Step 8: Regenerate Warm-Start Embeddings (Optional)
+### Step 5: Regenerate Warm-Start Embeddings (Optional)
 
 ```bash
 python -m tools.train_card_autoencoder
@@ -728,7 +635,7 @@ python -m tools.train_card_autoencoder
 
 Retrains the autoencoder on all cards including the new set. Produces updated `card_embeddings.npy` for warm-starting future training runs.
 
-### Step 9: Update Pinecone Index (Optional)
+### Step 6: Update Pinecone Index (Optional)
 
 ```bash
 python tools/ingest_pinecone.py --namespace card-scripts --set bt26
@@ -737,7 +644,7 @@ python tools/ingest_pinecone.py --namespace card-metadata
 
 Makes the new scripts and card metadata searchable by sub-agents.
 
-### Step 10: Train New Pilot
+### Step 7: Train New Pilot
 
 ```bash
 python -m digimon_gym.agents.pilot_training --timesteps 500000
@@ -751,7 +658,7 @@ Old pilots still work — their saved model checkpoint contains the `nn.Embeddin
 
 ---
 
-## 10. Archive
+## 9. Archive
 
 **Directory:** `tools/archive/`
 
