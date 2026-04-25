@@ -93,7 +93,7 @@ pub struct Game {
     /// RNG for shuffling and random effects.
     pub rng: StdRng,
     /// Counter for assigning unique card instance indices.
-    next_card_index: u16,
+    pub(crate) next_card_index: u16,
     /// Players still owing a mulligan decision, in order. Empty once mulligan
     /// is finalized. Driven by `accept_mulligan`; see §1.6 in RUST_PYTHON_PARITY.
     pub mulligan_pending: Vec<PlayerId>,
