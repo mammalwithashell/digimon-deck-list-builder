@@ -46,5 +46,8 @@ fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedBinding> {
         BindingValue::HandIndex(i) => Some(ResolvedBinding::HandIndex(i)),
         BindingValue::TrashIndex(i) => Some(ResolvedBinding::TrashIndex(i)),
         BindingValue::Literal(v) => Some(ResolvedBinding::Literal(v)),
+        // Phase 2d Task 2 will add list-typed ResolvedBinding variants;
+        // until then, list-typed bindings can't be resolved through this fn.
+        BindingValue::PermanentList(_) | BindingValue::CardList(_) => None,
     }
 }
