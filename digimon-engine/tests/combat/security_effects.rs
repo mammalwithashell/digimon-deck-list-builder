@@ -340,6 +340,8 @@ fn two_security_effects_same_source_auto_fire_in_order() {
     let mut r = DebugRunner::builder()
         .add_card(attacker())
         .add_card(option("TEST-028"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"])
         .security(1, &["TEST-028"])
         .start();
 
