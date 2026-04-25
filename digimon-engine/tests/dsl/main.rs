@@ -39,3 +39,7 @@ mod phase2b_continuation;
 mod phase2b_zone_moves;
 mod phase2b_zone_moves_extra;
 mod phase2b_end_to_end;
+mod phase2c_permanent_mutations;
+mod phase2c_modifiers;
+mod phase2c_control_flow;
+mod phase2c_end_to_end;
