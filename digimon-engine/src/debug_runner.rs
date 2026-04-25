@@ -444,6 +444,11 @@ impl DebugRunnerBuilder {
             }
         }
 
+        // Persist the advanced counter so that any post-build allocation
+        // (tokens, orphan handles, etc.) via `game.next_card_index()` returns
+        // fresh indices that don't alias the builder-seeded cards.
+        game.advance_card_index_to(next_card_index);
+
         // Replace the registry if the user supplied one.
         if let Some(reg) = self.registry.take() {
             game.effect_registry = reg;
