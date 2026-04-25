@@ -262,3 +262,129 @@ fn post_callback_hook_drains_parked_and_commits_outcome() {
     );
     assert!(r.game.pending_selection.is_none(), "no leftover selection");
 }
+
+#[test]
+fn default_none_when_callback_skips_outcome() {
+    // A replacement process that installs a select_* but the user's callback
+    // never calls any outcome-setter — parked.outcome stays None, so the
+    // original event proceeds normally.
+
+    struct NoOutcomeCard;
+    impl CardEffect for NoOutcomeCard {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::when_would_be_deleted(card)
+                .name("NO-OUTCOME")
+                .optional()
+                .replacement_process(|rctx| {
+                    rctx.effect.select_own_permanent(
+                        "pick anyone",
+                        false,
+                        |_g, _h| true,
+                        |_ctx, _picked| {
+                            // No outcome-setter call — outcome stays None.
+                        },
+                    );
+                })
+                .build()]
+        }
+    }
+
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("NO-OUTCOME"))
+        .add_card(fighter("X"))
+        .start();
+    r.register_effect("NO-OUTCOME", Arc::new(NoOutcomeCard));
+    let parker = r.place_on_field(0, "NO-OUTCOME", None);
+    let _x = r.place_on_field(0, "X", None);
+
+    r.game.delete_permanent_with_effects(parker);
+    use digimon_engine::action::space::REPLACEMENT_ACCEPT;
+    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept");
+    let pending = r.game.pending_selection.as_ref().unwrap();
+    let action = pending.valid_action_ids[0];
+    let player = pending.selecting_player;
+    r.game.resolve_selection(player, action).expect("pick");
+
+    // outcome was None → original deletion proceeds → parker is gone.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "parker should have been deleted (outcome=None defaults to original event)"
+    );
+}
+
+#[test]
+fn last_write_wins_on_multiple_outcome_setters() {
+    let mut r = DebugRunner::builder().add_card(fighter("X")).start();
+    let target = r.place_on_field(0, "X", None);
+
+    install_parked(&mut r.game, target);
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.cancel_leave();
+        ctx.redirect_replacement(Zone::Hand);
+    }
+
+    let outcome = r.game.parked_replacement_outcome_for_test().expect("slot still set");
+    assert_eq!(
+        outcome,
+        ReplacementOutcome::Redirected(Zone::Hand),
+        "last write should win"
+    );
+}
+
+#[test]
+#[should_panic(expected = "nested replacement park")]
+fn single_outstanding_park_panics_on_double_install() {
+    // Manually install parked_replacement, then trigger a second install via
+    // the dispatcher post-process hook — should panic in dev builds.
+
+    struct DoubleParkCard;
+    impl CardEffect for DoubleParkCard {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::when_would_be_deleted(card)
+                .name("DOUBLE-PARK")
+                .optional()
+                .replacement_process(|rctx| {
+                    rctx.effect.select_own_permanent(
+                        "x", false, |_g, _h| true, |_ctx, _p| {},
+                    );
+                })
+                .build()]
+        }
+    }
+
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("DOUBLE-PARK"))
+        .add_card(fighter("X"))
+        .start();
+    r.register_effect("DOUBLE-PARK", Arc::new(DoubleParkCard));
+    let parker = r.place_on_field(0, "DOUBLE-PARK", None);
+    let other = r.place_on_field(0, "X", None);
+
+    // Pre-install parked_replacement so the dispatcher hook sees an existing slot.
+    install_parked(&mut r.game, other);
+
+    r.game.delete_permanent_with_effects(parker);
+    use digimon_engine::action::space::REPLACEMENT_ACCEPT;
+    // The accept-callback runs run_candidate_inner which hits the post-process
+    // hook with parked_replacement already Some(_) → debug_assert! fires.
+    let _ = r.game.resolve_selection(0, REPLACEMENT_ACCEPT);
+}
+
+#[test]
+fn cancel_leave_outside_parked_scope_panics_in_dev() {
+    let mut r = DebugRunner::builder().add_card(fighter("X")).start();
+    let _ = r.place_on_field(0, "X", None);
+
+    // No parked_replacement installed — ctx.cancel_leave() should panic in dev.
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.cancel_leave();
+    }));
+    assert!(
+        result.is_err(),
+        "cancel_leave outside parked scope should debug_assert!"
+    );
+}
