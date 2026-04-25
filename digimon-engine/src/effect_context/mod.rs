@@ -1020,6 +1020,66 @@ impl<'a> EffectContext<'a> {
         })
     }
 
+    /// Play `card` from its controller's trash into the battle area, **without
+    /// paying its memory cost** and **without suspending** the resulting
+    /// permanent. ETB triggers (`OnPlay` + `OnEnterFieldAnyone`) fire as normal.
+    ///
+    /// ## Why a thin alias is sufficient (audit finding — Phase D Task 3)
+    ///
+    /// `Game::play_from_trash_with_cost(player, index, CostDelta::Free)` already
+    /// covers all three requirements:
+    ///   - **Free**: `CostDelta::Free` resolves to 0 → `pay_memory(0)` is a
+    ///     no-op; memory is unchanged.
+    ///   - **Unsuspended**: `Permanent::new()` sets `is_suspended = false` by
+    ///     default; no extra flag needed.
+    ///   - **ETB active**: `fire_on_play` + `OnEnterFieldAnyone` run at the end
+    ///     of `play_from_trash_with_cost`, exactly as for hand plays.
+    ///
+    /// The only gap bridged here is the call-site convenience: callers hold a
+    /// `CardHandle` (stable across zone moves), not a positional `trash_index`.
+    /// This method locates the card in the controller's trash by handle.
+    ///
+    /// ## Panics
+    ///
+    /// Panics if `card` is not present in the controller's trash. This
+    /// represents a programming error — callers (e.g. the Fortitude auto-install
+    /// body) must ensure the card has been moved to trash before calling.
+    ///
+    /// DCGO parity: `Fortitude.cs:54-63`
+    ///   `PlayPermanentCards(payCost: false, isTapped: false,
+    ///    root: SelectCardEffect.Root.Trash, activateETB: true)`
+    ///
+    /// Used by: `<Fortitude>` keyword auto-install (Phase D Task 8).
+    pub fn play_from_trash_free_unsuspended(
+        &mut self,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        let controller = self.player;
+        let trash_index = self
+            .game
+            .player(controller)
+            .trash
+            .iter()
+            .position(|c| c.handle() == card)
+            .unwrap_or_else(|| {
+                panic!(
+                    "play_from_trash_free_unsuspended: card {:?} not found in \
+                     player {}'s trash",
+                    card, controller
+                )
+            });
+        let field_index = self.game.play_from_trash_with_cost(
+            controller,
+            trash_index,
+            crate::enums::CostDelta::Free,
+            PlaySource::ByEffect,
+        )?;
+        Some(PermanentHandle {
+            player: controller,
+            index: field_index as u8,
+        })
+    }
+
     /// Insert a card at the bottom of `target`'s digivolution stack. See
     /// `Game::place_as_bottom_source`.
     pub fn place_as_bottom_source(

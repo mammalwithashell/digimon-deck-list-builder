@@ -7,3 +7,4 @@
 mod armor_purge_top;
 mod material_zone_select;
 mod place_under_permanent;
+mod play_from_trash;
