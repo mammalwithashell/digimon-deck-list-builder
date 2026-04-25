@@ -316,6 +316,8 @@ pub fn parse_printed_keywords(
                 ("Vortex", Keyword::Vortex),
                 ("Collision", Keyword::Collision),
                 ("Progress", Keyword::Progress),
+                ("Retaliation", Keyword::Retaliation),
+                ("Scapegoat", Keyword::Scapegoat),
             ] {
                 if trimmed.starts_with(prefix) {
                     push_unique(kw, &mut found);
@@ -476,5 +478,17 @@ mod tests {
         assert_eq!(CardColor::White as u8, 4);
         assert_eq!(CardColor::Black as u8, 5);
         assert_eq!(CardColor::Purple as u8, 6);
+    }
+
+    #[test]
+    fn parse_retaliation_and_scapegoat() {
+        use crate::enums::Keyword;
+        let kws = parse_printed_keywords(
+            "＜Retaliation＞ ＜Scapegoat＞",
+            "",
+            "",
+        );
+        assert!(kws.contains(&Keyword::Retaliation), "should parse <Retaliation>");
+        assert!(kws.contains(&Keyword::Scapegoat), "should parse <Scapegoat>");
     }
 }

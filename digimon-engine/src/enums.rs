@@ -311,6 +311,20 @@ pub enum Keyword {
     /// `SecuritySkill` effects do not fire on reveal. Consumed by the
     /// `SecuritySkillDrain` arm of `drive_security_resolution` (§2.5c).
     Progress,
+
+    /// DCGO `Retaliation` — when this Digimon is deleted other than by an
+    /// effect (Battle, SecurityCheck, Cost), delete the opposing combatant.
+    /// Wire-up Phase E §E1 — auto-installed `OnDeletion` trigger that
+    /// reads `ctx.battle_opponent_of(self)` to find the winner.
+    /// RULES_CONTEXT 16-30 (verify exact rule number against the manual).
+    Retaliation,
+
+    /// DCGO `Scapegoat` — when this Digimon would be deleted by anything
+    /// other than its own controller's effect, optionally delete another of
+    /// the controller's permanents to cancel the deletion. Wire-up Phase E
+    /// §E2 — auto-installed `WhenWouldBeDeleted` substitute replacement.
+    /// RULES_CONTEXT 16-31.
+    Scapegoat,
 }
 
 /// Zone where a card can exist.
