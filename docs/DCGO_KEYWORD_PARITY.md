@@ -34,7 +34,7 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Fragment(N) | Trash N sources from own stack to cancel deletion | 🟣 | Enum variant + printed parse work; consumer returns empty Vec — blocked on nested-select-in-replacement |
 | ArmorPurge | Trash 1 digivolution source as active skill | 🟣 | Same deferral as Fragment |
 | Partition | Split stack by 2 color/trait groups, play one from each on leave | 🟣 | Same deferral |
-| Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | ✅ | (Phase B: gated at ctx.delete_permanent / return_to_hand / return_to_deck / de_digivolve / suspend / negative DP) Wrong SecuritySkill gate reverted in Phase A; selection-filter exclusion landed Phase A §A1 via `Game::progress_excludes`. Mutation-site coverage closed in Phase B. |
+| Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | 🟢 | Gated at all `ctx.*` mutation entry points; `add_modifier` short-circuits unconditionally on `progress_excludes(target, Some(self.player))` — see §Progress below |
 | SecurityAttackPlus(N) | Adds N security attacks to the Digimon | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
 | SecurityAttackMinus(N) | Same shape, negative delta | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
 | DeDigivolve(N) | Active skill — remove N top digivolution cards from target | 🔴 | Parsed, unconsumed. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` landed in Phase 10, but native printed form isn't wired to auto-emit the effect |
@@ -60,6 +60,37 @@ Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re
 **Source-attribution model.** Gates apply at the `EffectContext` layer where the source controller is statically known via `self.player`; Game-level fire-sites stay agnostic so rule-driven mutations (own-sourced deletes, security-check redirects, cost trash) flow through unchanged. Observers consume cause via the new `ctx.deletion_cause()` / `ctx.was_deleted_by_effect()` / `ctx.was_deleted_by_opponent()` accessors (Phase B §B5).
 
 See the spec at [superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md) §5 Phase A/B for the full plan.
+
+### Progress — gate scope (Phase B + Phase E prep)
+
+The gate is consumed at the script-API mutation entry points in
+`digimon-engine/src/effect_context/mod.rs`. As of the Phase E preparatory
+broadening, the suppressed mutation set is:
+
+- `ctx.delete_permanent`
+- `ctx.return_to_hand`
+- `ctx.return_to_deck`
+- `ctx.de_digivolve`
+- `ctx.suspend`
+- `ctx.add_modifier` / `ctx.add_dp_modifier` — every `ModifierType` variant,
+  every value (positive or negative), DCGO-faithful and hostility-blind.
+  Mirrors DCGO's `targetPermanent.TopCard.CanNotBeAffected(activateClass)`
+  check that every `GiveEffectToPermanent/*.cs` helper performs.
+
+Out-of-scope at the gate (deliberate):
+
+- **Player-scoped flood gates** — install on `Player`, not `Permanent`,
+  and don't reach `add_modifier`. (Examples: `DrawBlock`, `MemoryBlock`,
+  `CannotPlayDigimonByEffect`.)
+- **Attack-target redirection** — goes through `ctx.redirect_attack`,
+  not a `ModifierType`. Tracked separately for Phase E proper if a
+  redirect-on-Progress-carrier interaction surfaces.
+- **Rule-driven mutations** — battle damage, cost-paid trash, EOT
+  expiry. `progress_excludes` returns `false` when source is `None`.
+
+The gate's predicate is exactly DCGO's: target is the current Progress
+attacker AND source is the opposite player. No hostility classification,
+no sign check.
 
 ### Blast keyword variant is dead code
 
