@@ -281,6 +281,200 @@ set an outcome, the synchronous default takes effect. This is useful for
 
 ---
 
+### Selection-bearing keyword authoring pattern (Phase D pattern)
+
+This pattern is for card scripts that need a replacement window that **parks
+a player selection** before the replacement outcome is committed. It was
+first exercised by the Phase D keyword auto-installs (`Fragment`, `Save`,
+`Decoy`, `Partition`, `MaterialSave`). Use it when:
+
+- The effect text reads "you may / must …" and the "what to do" requires a
+  player choice (e.g. "place it under one of your Tamers"), AND
+- That choice happens *inside* a `WhenWouldBe*` or `OnDeletion` window (not
+  a plain `OnPlay`/`WhenDigivolving` trigger).
+
+For the underlying substrate that makes this possible, see
+[`docs/superpowers/specs/2026-04-25-keyword-parity-phase-c-design.md`](superpowers/specs/2026-04-25-keyword-parity-phase-c-design.md).
+
+#### The four building blocks
+
+| Building block | Purpose |
+|---|---|
+| `.optional()` on the `Effect` builder | Parks the outer accept/decline dialog before the closure runs. Required when the effect body calls a `ctx.select_*` primitive; omitting it trips a `debug_assert!` in the substrate (a mandatory process must not install a nested selection). |
+| Self-scope guard in the closure body | `WhenWouldBeDeleted` fires for ALL battle-area permanents' deletions. The body must check `rctx.effect.source_permanent == Some(subject)` and early-return for neighbors. |
+| Gate check — early return without parking | Use `.condition(|ctx| ...)` to prevent the outer accept dialog from appearing when the pre-condition fails (e.g. insufficient sources). Failing a `.condition` skips the entire candidate, so no dialog, no parked selection. |
+| Parked outcome-setter inside the callback | After the selection resolves, call exactly one of `ctx.cancel_leave()`, `ctx.handle_replacement()`, `ctx.redirect_replacement(zone)`, or `ctx.substitute_replacement(subject)` to write the outcome. These panic in dev builds if called outside a parked-replacement scope. |
+
+#### Worked example — Save auto-install body
+
+Save's auto-install (in `digimon-engine/src/cards/keyword_effects.rs`) is the
+canonical example of an **optional** selection-bearing OnDeletion trigger.
+Annotated line-by-line:
+
+```rust
+// Save is mounted as an OnDeletion *trigger*, not a WhenWouldBeDeleted
+// *replacement*. DCGO `Save.cs` is a post-deletion trigger: deletion commits
+// first, Save then plucks the card out of trash and tucks it under a Tamer.
+// This means OnDeletion / OnAnyDeletion observers (e.g. Fortitude) still
+// fire normally on the deletion, matching DCGO semantics. A WhenWouldBeDeleted
+// replacement with cancel_leave() would suppress those observers.
+Keyword::Save => vec![Effect::on_deletion(card)
+    .name("<Save>")
+    // No `.optional()` here — OnDeletion triggers don't carry the outer
+    // accept dialog that WhenWouldBeDeleted does. The nested ctx.select_own_permanent
+    // below uses is_optional=true as the player's "may" hook instead.
+    .process(|ctx| {
+        // OnDeletion is keyed on the carrier's permanent handle via
+        // TriggerSource::Permanent(handle) — `enqueue_from_permanent` only
+        // enumerates effects on the specific deleted permanent, so this trigger
+        // is naturally self-scoped. No subject-mismatch guard required.
+        let Some(subject) = ctx.source_permanent else {
+            return; // Defensive — OnDeletion always carries source_permanent.
+        };
+        let owner = subject.player;
+
+        // Snapshot the carrier's top-card handle. Deletion is paused on this
+        // trigger; the card is still in the carrier's card_sources at this point.
+        // We capture the handle (Copy) so the callback closure can use it after
+        // the selection resolves.
+        let self_card = match ctx
+            .game
+            .player(owner)
+            .battle_area
+            .get(subject.index as usize)
+        {
+            Some(p) => p.top_card().handle(),
+            None => return,
+        };
+
+        // Park the optional Tamer-pick.
+        //   is_optional=true  — PASS = "decline Save"; deletion proceeds normally.
+        //   filter closure    — restricts candidates to own Tamers only (same
+        //                       controller + is_tamer check, matching DCGO's
+        //                       `customMessageArrayTemplate(CanSelectTamer:true)`).
+        //   callback          — runs after the player confirms a pick; indices are
+        //                       still stable here because the deferred delete_permanent
+        //                       hasn't run yet.
+        //
+        // If the filter yields zero candidates (no own Tamers on field), select_own_permanent
+        // no-ops silently — the OnDeletion drain unwinds with no pending_selection; the
+        // deletion continues to natural finalization on the same call frame.
+        ctx.select_own_permanent(
+            "you may place this card under one of your Tamers",
+            /*is_optional=*/ true,
+            move |g, h| {
+                if h.player != owner { return false; }
+                let p = match g.players[h.player as usize].battle_area.get(h.index as usize) {
+                    Some(p) => p,
+                    None => return false,
+                };
+                p.is_tamer(&g.card_data)
+            },
+            move |ctx, tamer| {
+                // Lift the saved top card off the carrier and place it at the
+                // bottom of the chosen Tamer's stack. Indices are stable: the
+                // deferred delete_permanent hasn't run yet.
+                //
+                // After this callback returns, resolve_generic_selection calls
+                // resume_pending_deletion, which removes the now-empty-stacked
+                // carrier from battle_area and fires OnAnyDeletion — Fortitude
+                // observers see the deletion as expected.
+                ctx.place_card_under_permanent_bottom(self_card, tamer);
+                // Save does NOT call ctx.cancel_leave() — deletion fully commits;
+                // Save just intercepts the top card out of the carrier before it
+                // falls into trash. Contrast with Fragment / ArmorPurge, which
+                // DO call ctx.cancel_leave() and keep the carrier on field.
+            },
+        );
+    })
+    .build()],
+```
+
+#### When to use `.optional()` vs not
+
+| Scenario | Pattern |
+|---|---|
+| `WhenWouldBe*` replacement with nested selection ("you may pick a Tamer") | Use `.optional()` on the `Effect` builder — this is mandatory for parked selections inside a replacement window. The substrate `debug_assert!` in `run_candidate_inner` will trip if a non-optional process installs a `pending_selection`. |
+| `OnDeletion` trigger with nested selection (Save) | Do NOT use `.optional()` — OnDeletion triggers don't carry the outer accept dialog. Use `is_optional=true` on the inner `select_*` call as the "may" hook. |
+| Mandatory replacement with no nested selection (ArmorPurge) | Do NOT use `.optional()` — use `rctx.cancel()` / `rctx.handled()` / `rctx.substitute()` synchronously inside the `replacement_process` closure. No `pending_selection` is parked; the outcome is set in-place. |
+| Optional replacement with no nested selection (Evade, Barrier) | Use `.optional()` — the outer accept dialog fires and `rctx.redirect_to()` / `rctx.handled()` runs synchronously inside the accepted process closure. |
+
+#### Gate check pattern — preventing the outer dialog when the pre-condition fails
+
+Use `.condition(|ctx| ...)` to gate on pre-conditions at candidate-collection
+time. If the condition returns `false`, the candidate is skipped entirely —
+no outer accept dialog is presented to the player.
+
+```rust
+Keyword::Fragment(n) => vec![Effect::when_would_be_deleted(card)
+    .name(&format!("<Fragment ({n})>"))
+    // Gate: carrier must have ≥N sources under the top. Evaluated at
+    // candidate-collection time with source_permanent set to the carrier.
+    .condition(move |ctx| {
+        let Some(perm) = ctx.source_permanent() else { return false; };
+        perm.card_sources.len() >= (n as usize) + 1
+    })
+    .replacement_process(move |rctx| {
+        // Self-scope guard — prevent firing on a neighbor's deletion.
+        // collect_candidates walks ALL battle-area permanents; without
+        // this guard, a Fragment carrier on index 0 would intercept
+        // the deletion of index 1 or 2.
+        let me_perm = rctx.effect.source_permanent;
+        let subject = match rctx.subject {
+            ReplacementSubject::Permanent(h) => h,
+            _ => return,
+        };
+        if Some(subject) != me_perm { return; }
+
+        // Re-check the gate at process time (belt-and-suspenders: a
+        // stack-mutating earlier replacement in the same chain could have
+        // shrunk the stack between collection and process).
+        let n_usize = n as usize;
+        // ... (re-read stack_len from live game state, return if < n+1) ...
+
+        // Park the mandatory source-pick. is_optional_zero=false matches
+        // DCGO Fragment.cs:38 `canNoSelect: () => false`.
+        rctx.effect.select_count_capped_multi(
+            subject.player,
+            CountCappedZone::Material(subject),
+            n,
+            "trash N digivolution cards",
+            /*is_optional_zero=*/ false,
+            |_g, _src| true,
+            move |ctx, picks| {
+                for handle in picks {
+                    ctx.trash_card_source(subject, handle);
+                }
+                // Cancel the deletion — carrier survives.
+                ctx.cancel_leave();
+            },
+        );
+    })
+    .build()],
+```
+
+#### When NOT to use the auto-install
+
+The keyword auto-install (`keyword_to_auto_effect`) provides a permissive
+default for each keyword. Some cards need custom selection filters that the
+auto-install cannot encode:
+
+- **Color-filtered Decoy** (e.g. "Decoy: Black") — auto-install offers any
+  ally Digimon; per-card text restricts by color. Override via a hand-rolled
+  `CardEffect` with an explicit color filter on the `rctx.subject` permanent.
+- **DigiXros-source MaterialSave** — auto-install offers any own source;
+  per-card text may restrict to sources that were DigiXros materials.
+- **Color-grouped Partition** — auto-install offers any 2 sources; printed
+  text often specifies two color-grouped picks (`firstSources` / `secondSources`
+  in DCGO `Partition.cs`). Override via hand-rolled to apply per-group logic.
+
+To override: set the card's `effect_class_name` in `cards.json` to a
+hand-rolled struct in `digimon-engine/src/cards/<set>/<card_id>.rs`. The
+auto-install is skipped when `CardEffectRegistry` has a hand-rolled entry
+for that `card_id` (the registry entry wins).
+
+---
+
 ## 4. Handles
 
 - `CardHandle(u16)` — identifies a specific card instance by its unique `card_index`. Copy. Used in effect closures so they can be captured cheaply.
@@ -916,7 +1110,7 @@ Cause-filter semantics: `.opponent_only()` sets `cause_filter = Some(OpponentEff
 
 `<Barrier>`, `<Evade>`, and `<Decode>` ship out-of-the-box via printed-keyword auto-install at `effects_for_card` time — no hand-authored `CardEffect` script required. Put the keyword in `CardData::keywords` and the engine installs the matching replacement.
 
-**Deferred from v1:** `<Partition>`, `<ArmorPurge>`, `<Fragment(N)>` parse into `Keyword` variants but don't auto-install — each needs a nested `PendingSelection::Source` *inside* the replacement window, an uncharted combination. Scripts can still install these manually via `Effect::when_would_be_deleted(card).optional().replacement_process(…)`.
+**Phase D (2026-04-25):** `<Fragment(N)>`, `<ArmorPurge>`, `<Save>`, `<Decoy>`, `<Fortitude>`, `<Partition>`, and `<MaterialSave(N)>` now auto-install alongside Barrier/Evade/Decode. Cards declaring only these keywords need zero hand-rolled `CardEffect` code. See the "Selection-bearing keyword authoring pattern" section above for the template and `digimon-engine/src/cards/keyword_effects.rs` for the canonical implementations.
 
 ### Worked example — a hand-authored Barrier-flavored effect
 
@@ -960,7 +1154,7 @@ impl CardEffect for MyBarrier {
 
 ### Phase 7 v1 constraints
 
-1. **Partition / ArmorPurge / Fragment(N)** parse but don't auto-install — nested `PendingSelection::Source` inside a replacement is not yet supported.
+1. **Partition / ArmorPurge / Fragment(N)** — resolved in Phase D (2026-04-25); all seven alpha-tier selection-bearing keywords now auto-install. See the "Selection-bearing keyword authoring pattern" section for the template.
 2. **Optional replacements for `Card` / `Player` subjects** silently no-op on the commit path — the `commit_deferred_outcome` helper is Permanent-only in v1, guarded by `debug_assert!`. This is unreachable today; documented to flag it if a future fire-site ships a Card/Player optional replacement.
 3. **Multi-replacement `TriggerOrder` prompts** are not emitted when both sides have >1 candidates. v1 runs candidates in collection order (own-first, opp-second) and the last non-None outcome wins.
 4. **`ACTION_SPACE_SIZE` unchanged at 2168.** `REPLACEMENT_ACCEPT` reuses the existing `EffectChoice` action range (specifically the HAND_EFFECT slot 59) and `PASS` (62) serves as decline, so no tensor/mask regression.
