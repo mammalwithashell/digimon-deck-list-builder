@@ -236,12 +236,12 @@ fn opponent_effect_negative_dp_does_not_apply_to_progress_attacker() {
 }
 
 #[test]
-fn opponent_effect_positive_dp_still_applies_to_progress_attacker() {
-    // Sanity check: Progress only excludes opponent effects that target the
-    // carrier negatively (matching DCGO's CanNotAffectedClass semantics for
-    // hostile effects). A positive DP buff from an opponent effect — rare but
-    // possible via card text like "Your opponent's Digimon gets +1000 DP" —
-    // still applies.
+fn opponent_effect_positive_dp_does_not_apply_to_progress_attacker() {
+    // DCGO-faithful: Progress.cs's SkillCondition is `IsOpponentEffect(...)` —
+    // a pure source-side check. CanNotBeAffected gates regardless of sign,
+    // including positive DP grants. Flipped from the Phase B precedent that
+    // let positive buffs through; see plan
+    // docs/superpowers/plans/2026-04-24-progress-gate-broaden-modifier-scope.md.
     use digimon_engine::enums::{Expiry, ModifierType};
     let (mut r, progress, _opp) = setup_progress_attacker();
     r.game.set_effect_source_player_for_test(Some(1));
@@ -251,7 +251,12 @@ fn opponent_effect_positive_dp_still_applies_to_progress_attacker() {
     }
     r.game.set_effect_source_player_for_test(None);
     let dp_sum = r.game.modifiers.sum(progress, ModifierType::ChangeDp);
-    assert_eq!(dp_sum, 1000, "positive DP buffs are not gated by Progress");
+    assert_eq!(
+        dp_sum, 0,
+        "Progress attacker must not receive opponent-effect +DP modifier; \
+         got accumulated ChangeDp = {}",
+        dp_sum
+    );
 }
 
 #[test]
