@@ -1096,10 +1096,12 @@ impl Game {
     /// mechanical.
     ///
     /// Callers: `select_opponent_permanent` (selection-time gate, Phase A)
-    /// and the script-API mutation entry points on `EffectContext` (Phase B):
-    /// `delete_permanent`, `return_to_hand`, `return_to_deck`, `de_digivolve`,
-    /// `suspend`, and the negative-DP branches of `add_dp_modifier` /
-    /// `add_modifier`.
+    /// and the script-API mutation entry points on `EffectContext` (Phase B,
+    /// broadened in Phase E prep): `delete_permanent`, `return_to_hand`,
+    /// `return_to_deck`, `de_digivolve`, `suspend`, and `add_modifier` /
+    /// `add_dp_modifier`. The `add_modifier` site is unconditional — every
+    /// `ModifierType` and every value (positive, negative, or zero) is gated,
+    /// matching DCGO's `CanNotAffected` semantics literally.
     pub fn progress_excludes(
         &self,
         target: PermanentHandle,

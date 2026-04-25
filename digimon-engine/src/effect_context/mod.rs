@@ -1315,21 +1315,8 @@ impl<'a> EffectContext<'a> {
     // ─── Modifier registration ────────────────────────────────────────
 
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
-        // Phase B §B4: negative DP from opponent effects is gated by Progress.
-        // Positive grants are not gated — see `progress_excludes` doc and the
-        // `opponent_effect_positive_dp_still_applies_to_progress_attacker` test.
-        if value < 0 && self.game.progress_excludes(target, Some(self.player)) {
-            return;
-        }
-        self.game.modifiers.add(
-            target,
-            ModifierEntry::simple(
-                ModifierType::ChangeDp,
-                value,
-                expiry,
-                self.player,
-            ),
-        );
+        // Single source of truth for the gate lives in `add_modifier`.
+        self.add_modifier(target, ModifierType::ChangeDp, value, expiry);
     }
 
     pub fn add_modifier(
@@ -1339,14 +1326,14 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
-        // Phase B §B4: route ChangeDp through the same negative-DP Progress
-        // gate as `add_dp_modifier`. Other modifier types are not gated here
-        // (cross-check against DCGO before extending the gate to additional
-        // ModifierType variants).
-        if modifier == ModifierType::ChangeDp
-            && value < 0
-            && self.game.progress_excludes(target, Some(self.player))
-        {
+        // DCGO-faithful Progress gate. `progress_excludes` returns `true` iff
+        // the target is the current Progress attacker, the source is the
+        // opposite player, and the keyword/granted-modifier is live.
+        // Equivalent to DCGO's `targetPermanent.TopCard.CanNotBeAffected(...)`
+        // check that every `GiveEffectToPermanent/*.cs` helper performs.
+        // Hostility-blind and sign-blind by design — see plan
+        // docs/superpowers/plans/2026-04-24-progress-gate-broaden-modifier-scope.md.
+        if self.game.progress_excludes(target, Some(self.player)) {
             return;
         }
         self.game.modifiers.add(

@@ -34,7 +34,7 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Fragment(N) | Trash N sources from own stack to cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; mandatory replacement via `CountCappedZone::Material` source-pick + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/fragment_n.rs`. |
 | ArmorPurge | Trash current top Digimon, promote next source as new top, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; mandatory replacement via `ctx.armor_purge_top` primitive + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/armor_purge.rs`. |
 | Partition | On leave-field (not battle/own-effect): pick + play 2 cards from own sources free+unsuspended | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with cause filter (`!Battle && !OwnEffect`), 2-pick source selection. See `keyword_effects.rs` and `tests/keyword_phase_d/partition.rs`. |
-| Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | ✅ | (Phase B: gated at ctx.delete_permanent / return_to_hand / return_to_deck / de_digivolve / suspend / negative DP) Wrong SecuritySkill gate reverted in Phase A; selection-filter exclusion landed Phase A §A1 via `Game::progress_excludes`. Mutation-site coverage closed in Phase B. |
+| Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | ✅ | Gated at all `ctx.*` mutation entry points; `add_modifier` short-circuits unconditionally on `progress_excludes(target, Some(self.player))` (Phase B + Phase E prep — see §Progress below). |
 | SecurityAttackPlus(N) | Adds N security attacks to the Digimon | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
 | SecurityAttackMinus(N) | Same shape, negative delta | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
 | DeDigivolve(N) | Active skill — remove N top digivolution cards from target | 🔴 | Parsed, unconsumed. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` landed in Phase 10, but native printed form isn't wired to auto-emit the effect |
@@ -55,13 +55,46 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 
 ### Progress — wrong site entirely
 
-Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re-introduced, and `Game::progress_excludes` now gates `select_opponent_permanent`. Phase B (2026-04-24) closed the mutation-site coverage: `ctx.delete_permanent`, `ctx.return_to_hand`, `ctx.return_to_deck`, `ctx.de_digivolve` (including the `amount=Some(N)` N-pop variant), `ctx.suspend`, and the negative-DP path through `ctx.add_dp_modifier` / `ctx.add_modifier` are all now hard-gated.
+Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re-introduced, and `Game::progress_excludes` now gates `select_opponent_permanent`. Phase B (2026-04-24) closed the mutation-site coverage: `ctx.delete_permanent`, `ctx.return_to_hand`, `ctx.return_to_deck`, `ctx.de_digivolve` (including the `amount=Some(N)` N-pop variant), `ctx.suspend`, and `ctx.add_dp_modifier` / `ctx.add_modifier` are all now hard-gated (the modifier path was subsequently broadened in Phase E prep — see § Progress — gate scope).
 
 **Source-attribution model.** Gates apply at the `EffectContext` layer where the source controller is statically known via `self.player`; Game-level fire-sites stay agnostic so rule-driven mutations (own-sourced deletes, security-check redirects, cost trash) flow through unchanged. Observers consume cause via the new `ctx.deletion_cause()` / `ctx.was_deleted_by_effect()` / `ctx.was_deleted_by_opponent()` accessors (Phase B §B5).
 
 See the spec at [superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md) §5 Phase A/B for the full plan.
 
 **`place_as_bottom_source` — reviewed, no gate.** Phase B's final code review flagged `EffectContext::place_as_bottom_source` as a candidate site. Verdict after cross-checking DCGO: not gated. DCGO's primitive [`Permanent.AddDigivolutionCardsBottom`](../DCGO/Assets/Scripts/Script/Permanent.cs#L1104) has no internal `CanNotBeAffected` check, and DCGO scripts that intentionally place a source under an opponent's Digimon (e.g. [EX10-059](../DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_059.cs#L218)) do not filter the target on `CanNotBeAffected` either. Adding a card under a stack is not "affecting" the target in DCGO's semantics — the TopCard's status is unchanged. Gating in Rust would over-restrict relative to DCGO. The decision is documented inline at [`effect_context/mod.rs::place_as_bottom_source`](../digimon-engine/src/effect_context/mod.rs).
+
+### Progress — gate scope (Phase B + Phase E prep)
+
+The gate is consumed at the script-API mutation entry points in
+`digimon-engine/src/effect_context/mod.rs`. As of the Phase E preparatory
+broadening, the suppressed mutation set is:
+
+- `ctx.delete_permanent`
+- `ctx.return_to_hand`
+- `ctx.return_to_deck`
+- `ctx.de_digivolve`
+- `ctx.suspend`
+- `ctx.add_modifier` / `ctx.add_dp_modifier` — every `ModifierType` variant,
+  every value (positive or negative), DCGO-faithful and hostility-blind.
+  Mirrors DCGO's `targetPermanent.TopCard.CanNotBeAffected(activateClass)`
+  check that every `GiveEffectToPermanent/*.cs` helper performs.
+
+Out-of-scope at the gate (deliberate):
+
+- **Player-scoped flood gates** — install on `Player`, not `Permanent`,
+  and don't reach `add_modifier`. (Examples: `DrawBlock`, `MemoryBlock`,
+  `CannotPlayDigimonByEffect`.)
+- **Attack-target redirection** — goes through `ctx.redirect_attack`,
+  not a `ModifierType`. Tracked separately for Phase E proper if a
+  redirect-on-Progress-carrier interaction surfaces.
+- **Rule-driven mutations** — battle damage, cost-paid trash, EOT
+  expiry. `progress_excludes` returns `false` when source is `None`.
+- **`ctx.place_as_bottom_source`** — see the preceding paragraph for the
+  cross-checked rationale.
+
+The gate's predicate is exactly DCGO's: target is the current Progress
+attacker AND source is the opposite player. No hostility classification,
+no sign check.
 
 ### Blast keyword variant is dead code
 
