@@ -597,6 +597,12 @@ fn run_mandatory_candidate(
             subject,
             cause,
             original_destination,
+            // Mandatory dispatch: do NOT arm the parked-replacement post-process
+            // hook. The candidate-walk loop in `try_replace_impl` aggregates
+            // outcomes synchronously and has no draining caller. Phase C scope
+            // assumes mandatory processes never call `ctx.select_*` — see the
+            // debug_assert! in run_candidate_inner.
+            false,
         ),
         CandidateKind::PassiveCancel => {
             // Passive restriction modifiers always cancel. No effect closure
@@ -609,6 +615,15 @@ fn run_mandatory_candidate(
 
 /// Shared run-a-replacement-process body. Used by `run_mandatory_candidate`
 /// and by the optional-accept callback.
+///
+/// `allow_park`: when `true`, if the process closure installed a
+/// `pending_selection` (via `ctx.select_*`), we snapshot a `ParkedReplacement`
+/// and return `ReplacementOutcome::None` so the optional-accept callback can
+/// yield without committing — the parked outcome is later drained by the
+/// post-callback hook. When `false` (mandatory dispatch), the parked-state
+/// machine is bypassed entirely; if a process unexpectedly installed a
+/// selection, that's an out-of-scope state for Phase C and we trip a
+/// `debug_assert!` to surface it.
 fn run_candidate_inner(
     game: &mut crate::game::Game,
     card_id: &str,
@@ -619,6 +634,7 @@ fn run_candidate_inner(
     subject: ReplacementSubject,
     cause: ReplacementCause,
     original_destination: Option<Zone>,
+    allow_park: bool,
 ) -> ReplacementOutcome {
     let Some(effects) = game.effects_for_card(card_id, source_card) else {
         return ReplacementOutcome::None;
@@ -656,7 +672,29 @@ fn run_candidate_inner(
     // resolve_generic_selection can drain the slot via commit_deferred_outcome.
     //
     // Single-outstanding invariant: at most one parked replacement at a time.
+    //
+    // Only the OPTIONAL dispatch path arms this hook (`allow_park == true`).
+    // The mandatory candidate-walk loop has no draining caller, so parking
+    // there would silently lose the outcome.
     if game.pending_selection.is_some() {
+        if !allow_park {
+            // Mandatory replacement parked a selection — out of scope for
+            // Phase C. Today no mandatory card calls `ctx.select_*`; if a
+            // real card surfaces this in the future, escalate (extend the
+            // park-state machine to cover the mandatory loop, or rework the
+            // candidate to a synchronous shape). Returning
+            // `ReplacementOutcome::None` is the safest fallback — it falls
+            // through to the original event, matching the "no replacement
+            // occurred" behavior. Returning `outcome` could leak a partial
+            // value the closure wrote before yielding to the selection.
+            debug_assert!(
+                false,
+                "mandatory replacement installed a pending_selection — \
+                 Phase C scope assumes mandatory processes are synchronous; \
+                 if a real card surfaces this, escalate"
+            );
+            return ReplacementOutcome::None;
+        }
         debug_assert!(
             game.parked_replacement.is_none(),
             "nested replacement park; outer outcome would be lost. Phase C \
@@ -811,16 +849,26 @@ fn make_accept_callback(
             subject,
             cause,
             original_destination,
+            // Optional dispatch — arm the post-process park hook so that if
+            // the process closure calls `ctx.select_*`, we yield to the
+            // selection instead of committing eagerly.
+            true,
         );
-        game.replacement_pending_outcome = Some(outcome);
 
-        // Phase C §4.3: if the process parked a selection (parked_replacement
-        // is now Some(_)), skip immediate commit — the post-callback hook in
-        // resolve_generic_selection will drain the slot after the user's
-        // select_* callback runs.
+        // Phase C §4.3: if the process parked a selection, leave
+        // `replacement_pending_outcome` UNSET — the post-callback drain hook
+        // (Task 7) reads `parked_replacement.outcome` instead. Writing
+        // `Some(outcome)` here (where `outcome == ReplacementOutcome::None`
+        // because the post-process hook returned `None`) would leak a stale
+        // value that other consumers (e.g. `OptionResolutionPhase::Disposing`
+        // in `effect_queue.rs`, which `take()`s the slot and treats `None`
+        // as "decline → original event proceeds") misinterpret.
+        // Order matters: parked-check BEFORE the slot write.
         if game.parked_replacement.is_some() {
             return;
         }
+
+        game.replacement_pending_outcome = Some(outcome);
 
         // §7.5: mark this as a callback-commit continuation so the fired-set
         // from the original call chain survives the zone-mover re-entry.
