@@ -379,6 +379,24 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Mark the parked replacement as custom-handled — the process body has
+    /// already mutated state and the original event should be skipped.
+    /// Distinct from `cancel_leave` only at the doc level; both result in
+    /// `commit_deferred_outcome` taking the no-op arm.
+    ///
+    /// Writes `ReplacementOutcome::CustomHandled` to the parked slot.
+    /// Calling this outside a parked-replacement scope is a `debug_assert!`
+    /// panic in dev builds; release builds silently no-op.
+    pub fn handle_replacement(&mut self) {
+        debug_assert!(
+            self.game.parked_replacement.is_some(),
+            "handle_replacement called outside a replacement-process callback"
+        );
+        if let Some(parked) = self.game.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::CustomHandled;
+        }
+    }
+
     /// Reborrow this mut context as a read-only context — for condition
     /// closures, which take `&EffectReadContext`.
     pub fn as_read(&self) -> EffectReadContext<'_> {
