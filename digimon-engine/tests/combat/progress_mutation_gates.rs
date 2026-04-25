@@ -253,3 +253,51 @@ fn opponent_effect_positive_dp_still_applies_to_progress_attacker() {
     let dp_sum = r.game.modifiers.sum(progress, ModifierType::ChangeDp);
     assert_eq!(dp_sum, 1000, "positive DP buffs are not gated by Progress");
 }
+
+#[test]
+fn own_effect_delete_still_removes_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(0));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.delete_permanent(progress);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        0,
+        "own-sourced delete must still apply to a Progress attacker"
+    );
+}
+
+#[test]
+fn own_effect_negative_dp_still_applies_to_progress_attacker() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(0));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.add_dp_modifier(progress, -1000, Expiry::EndOfTurn);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert_eq!(
+        r.game.modifiers.sum(progress, ModifierType::ChangeDp),
+        -1000,
+        "own-sourced -DP must still apply to Progress carrier"
+    );
+}
+
+#[test]
+fn rule_driven_delete_still_removes_progress_attacker() {
+    // No EffectContext, no script-API mutation — direct Game-level call
+    // simulates a rule-driven cleanup (e.g. cost-payment cascade). Source is
+    // None; progress_excludes returns false; deletion proceeds.
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    // effect_source_player stays None.
+    r.game.delete_permanent_with_effects(progress);
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        0,
+        "rule-driven (None-source) delete must still remove Progress attacker"
+    );
+}
