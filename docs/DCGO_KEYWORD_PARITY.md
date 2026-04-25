@@ -31,12 +31,12 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Barrier | Trash top deck card to cancel own deletion | ✅ | Auto-install `WhenWouldBeDeleted` in `cards/keyword_effects.rs:49` |
 | Evade | Send self to deck bottom instead of trash on deletion | ✅ | Auto-install `WhenWouldBeDeleted` in `cards/keyword_effects.rs:77` |
 | Decode | Return self to own hand instead of opp deck/hand | ✅ | Auto-install two `WhenWouldBeReturnedTo*` replacements in `cards/keyword_effects.rs:103` |
-| Fragment(N) | Trash N sources from own stack to cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; mandatory replacement via `CountCappedZone::Material` source-pick + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/fragment_n.rs`. |
-| ArmorPurge | Trash current top Digimon, promote next source as new top, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; mandatory replacement via `ctx.armor_purge_top` primitive + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/armor_purge.rs`. |
+| Fragment(N) | Trash N sources from own stack to cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; **optional** replacement via `CountCappedZone::Material` source-pick + `ctx.cancel_leave`. (Initial Phase D implementation was mandatory per DCGO `Fragment.cs:38` `canNoSelect: () => false`; flipped to optional 2026-04-25 — see commit `e85cb823`.) See `keyword_effects.rs` and `tests/keyword_phase_d/fragment_n.rs`. |
+| ArmorPurge | Trash current top Digimon, promote next source as new top, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; **optional** replacement via `ctx.armor_purge_top` primitive + `ctx.cancel_leave`. (Optionality flipped 2026-04-25 — see commit `bbd976fa`.) See `keyword_effects.rs` and `tests/keyword_phase_d/armor_purge.rs`. |
 | Partition | On leave-field (not battle/own-effect): pick + play 2 cards from own sources free+unsuspended | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with cause filter (`!Battle && !OwnEffect`), 2-pick source selection. See `keyword_effects.rs` and `tests/keyword_phase_d/partition.rs`. |
 | Progress | `CanNotAffectedClass` on attacker during attack, filtered `IsOpponentEffect` + top-card-only | ✅ | (Phase B: gated at ctx.delete_permanent / return_to_hand / return_to_deck / de_digivolve / suspend / negative DP) Wrong SecuritySkill gate reverted in Phase A; selection-filter exclusion landed Phase A §A1 via `Game::progress_excludes`. Mutation-site coverage closed in Phase B. |
-| SecurityAttackPlus(N) | Adds N security attacks to the Digimon | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
-| SecurityAttackMinus(N) | Same shape, negative delta | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). |
+| SecurityAttackPlus(N) | Adds N security attacks to the Digimon | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). No `keyword_to_auto_effect` entry needed — keyword is queried directly at the resolution site, not emitted as a declarative effect. |
+| SecurityAttackMinus(N) | Same shape, negative delta | ✅ | Consumed at `resolve_player_security_loop` via `Game::security_attack_keyword_bonus` alongside `ModifierType::SecurityAttackChange` (Phase A §A3). No `keyword_to_auto_effect` entry needed — keyword is queried directly at the resolution site, not emitted as a declarative effect. |
 | DeDigivolve(N) | Active skill — remove N top digivolution cards from target | 🔴 | Parsed, unconsumed. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` landed in Phase 10, but native printed form isn't wired to auto-emit the effect |
 | DrawX(N) | "Draw N" on Option cards | 🔴 | Parsed, unconsumed |
 | Save | Place self under own Tamer as bottom source, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; optional `WhenWouldBeDeleted` replacement, Tamer pick + `ctx.place_card_under_permanent_bottom` + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/save.rs`. |
@@ -80,19 +80,16 @@ Rust's `ModifierType` enum has `GrantBarrier` in the slot where `GrantFortitude`
 
 Since no Fortitude card grants the keyword via modifier yet, the simplest fix is to drop the granted form for Fortitude entirely; when a real card needs it, add a proper `GrantFortitude` variant.
 
-### SecurityAttackPlus / Minus parametric not wired
+### SecurityAttackPlus / Minus — resolved Phase A §A3
 
-`Effect.security_attack_change` is a real field consumed by `resolve_player_security_loop` via the `SecurityAttackChange` modifier sum, but the native keyword parse of `<Security A. +2>` does not auto-emit a matching effect. A card with printed `<Security A. +2>` parses its keyword but doesn't get +2 security attacks unless a `CardEffect` script also emits the modifier by hand.
-
-**Fix:** extend `cards/keyword_effects.rs::keyword_to_auto_effect` to return a declarative effect emitting `SecurityAttackChange` with value `N` for `Keyword::SecurityAttackPlus(N)` / `Keyword::SecurityAttackMinus(-N)`.
+Resolved 2026-04-24. `Game::security_attack_keyword_bonus` sums printed `Keyword::SecurityAttackPlus(N)` / `Keyword::SecurityAttackMinus(N)` at `resolve_player_security_loop` alongside the existing `ModifierType::SecurityAttackChange` modifier sum. This follows the "query keyword directly at consumption site" pattern used for Blocker / Rush / Jamming — no `keyword_to_auto_effect` entry is required, and `Effect.security_attack_change` remains the granted-modifier path for cards that want to add or remove security attacks dynamically.
 
 ### Parametric auto-install gap (generalized)
 
-The same "parsed but no auto-install" pattern applies to:
+The "parsed but no auto-install" pattern still applies to:
 
-- `DeDigivolve(N)` — no auto-emit of a main-phase active skill.
-- `DrawX(N)` — no auto-emit of a `[Main]` draw effect.
-- `Security A. ±N` — covered above.
+- `DeDigivolve(N)` — no auto-emit of a main-phase active skill. Script-level helper `ctx.de_digivolve(_, _, amount=Some(N))` exists, but the native printed form does not auto-emit. (Phase E §E3.)
+- `DrawX(N)` — no auto-emit of a `[Main]` draw effect. (Phase E §E4.)
 
 Fix shape is uniform: extend `keyword_to_auto_effect` to emit a matching declarative or active-skill `Effect` when the keyword is parametric and native-printed.
 
