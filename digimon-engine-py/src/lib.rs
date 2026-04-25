@@ -73,6 +73,83 @@ fn resolve_cards_path() -> PyResult<PathBuf> {
     ))
 }
 
+/// Python-visible per-card metadata wrapper. Mirror of the subset of
+/// `card_data::CardData` that callers need at the Python layer (the
+/// full struct contains effect text and DSL-only fields the bindings
+/// don't expose). Returned by `CardDatabase::get_card`.
+#[pyclass(module = "digimon_engine", name = "PyCard")]
+#[derive(Clone)]
+pub struct PyCard {
+    #[pyo3(get)]
+    pub card_id: String,
+    #[pyo3(get)]
+    pub card_name: String,
+    /// String form of the Rust `CardKind` enum (e.g. "Digimon", "Tamer",
+    /// "Option", "DigiEgg"). Replaced with a typed enum in Task 5.
+    #[pyo3(get)]
+    pub card_kind: String,
+    #[pyo3(get)]
+    pub level: Option<u8>,
+    #[pyo3(get)]
+    pub dp: Option<i32>,
+    #[pyo3(get)]
+    pub play_cost: u16,
+    /// String form of each `CardColor` (e.g. "Red", "Blue", ...).
+    #[pyo3(get)]
+    pub colors: Vec<String>,
+    #[pyo3(get)]
+    pub traits: Vec<String>,
+    #[pyo3(get)]
+    pub effect_text: String,
+    #[pyo3(get)]
+    pub inherited_text: String,
+    #[pyo3(get)]
+    pub security_text: String,
+}
+
+impl PyCard {
+    fn from_card_data(card: &CardData) -> Self {
+        Self {
+            card_id: card.card_id.clone(),
+            card_name: card.card_name.clone(),
+            card_kind: format!("{:?}", card.card_kind),
+            level: card.level,
+            dp: card.dp,
+            play_cost: card.play_cost,
+            colors: card.colors.iter().map(|c| format!("{:?}", c)).collect(),
+            traits: card.traits.clone(),
+            effect_text: card.effect_text.clone(),
+            inherited_text: card.inherited_text.clone(),
+            security_text: card.security_text.clone(),
+        }
+    }
+}
+
+/// Python-visible wrapper around the static cards.json database.
+#[pyclass(module = "digimon_engine", name = "CardDatabase")]
+pub struct CardDatabase {}
+
+#[pymethods]
+impl CardDatabase {
+    #[new]
+    fn new() -> PyResult<Self> {
+        // Touch the static loader so construction surfaces a clear error
+        // (rather than deferring it to the first lookup).
+        let _ = card_db()?;
+        Ok(Self {})
+    }
+
+    fn get_card(&self, card_id: &str) -> PyResult<Option<PyCard>> {
+        let db = card_db()?;
+        Ok(db.get(card_id).map(PyCard::from_card_data))
+    }
+
+    fn count(&self) -> PyResult<usize> {
+        let db = card_db()?;
+        Ok(db.len())
+    }
+}
+
 /// RL-shaped game runner. Mirrors `HeadlessGame`'s public surface.
 #[pyclass(module = "digimon_engine", name = "RustHeadlessGame")]
 pub struct RustHeadlessGame {
@@ -422,5 +499,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
 #[pymodule]
 fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RustHeadlessGame>()?;
+    m.add_class::<CardDatabase>()?;
+    m.add_class::<PyCard>()?;
     Ok(())
 }
