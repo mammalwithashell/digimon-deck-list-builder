@@ -360,6 +360,14 @@ fn get_models_dir() -> PathBuf {
     deck_tools::get_models_dir()
 }
 
+#[pyfunction]
+fn load_implemented_card_ids() -> std::collections::HashSet<String> {
+    ::digimon_engine::cards::build_registry()
+        .registered_card_ids()
+        .into_iter()
+        .collect()
+}
+
 /// Python-visible wrapper around the static cards.json database.
 #[pyclass(module = "digimon_engine", name = "CardDatabase")]
 pub struct CardDatabase {}
@@ -754,5 +762,6 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add("REGISTRY_CAPACITY", REGISTRY_CAPACITY)?;
     m.add("EMBEDDING_DIM", EMBEDDING_DIM)?;
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
+    m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     Ok(())
 }

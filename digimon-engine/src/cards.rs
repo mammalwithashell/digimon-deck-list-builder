@@ -46,6 +46,14 @@ impl CardEffectRegistry {
         self.effects.get(card_id).cloned()
     }
 
+    /// Return all card IDs that have a registered effect implementation.
+    /// Mirrors the Python `load_implemented_card_ids` helper that read
+    /// `_frozen_manifest.json`; the Rust source of truth is the registry
+    /// itself rather than an external manifest.
+    pub fn registered_card_ids(&self) -> Vec<String> {
+        self.effects.keys().cloned().collect()
+    }
+
     pub fn len(&self) -> usize {
         self.effects.len()
     }

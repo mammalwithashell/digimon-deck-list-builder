@@ -258,3 +258,17 @@ class TestGetModelsDir:
         from digimon_engine import get_models_dir
         d = get_models_dir()
         assert str(d) == str(tmp_path)
+
+
+class TestLoadImplementedCardIds:
+    def test_returns_set(self):
+        from digimon_engine import load_implemented_card_ids
+        ids = load_implemented_card_ids()
+        assert isinstance(ids, set)
+        # Test cards (TEST-001..022) are always registered
+        assert any(s.startswith("TEST-") for s in ids)
+
+    def test_unknown_not_in_set(self):
+        from digimon_engine import load_implemented_card_ids
+        ids = load_implemented_card_ids()
+        assert "ZZ99-999" not in ids
