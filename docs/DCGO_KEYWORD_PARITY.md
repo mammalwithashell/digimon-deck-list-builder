@@ -76,6 +76,8 @@ The 2026-04-24 `§2.5c` commit wires Progress at the wrong site — the `Securit
 
 This is semantically equivalent to widening `CannotBeAffected` / `CannotBeSelectedByEffect` semantics to fire implicitly for a Progress-and-attacking permanent against opponent-sourced mutations.
 
+**`place_as_bottom_source` — reviewed, no gate.** Phase B's final code review flagged `EffectContext::place_as_bottom_source` as a candidate site. Verdict after cross-checking DCGO: not gated. DCGO's primitive [`Permanent.AddDigivolutionCardsBottom`](../DCGO/Assets/Scripts/Script/Permanent.cs#L1104) has no internal `CanNotBeAffected` check, and DCGO scripts that intentionally place a source under an opponent's Digimon (e.g. [EX10-059](../DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_059.cs#L218)) do not filter the target on `CanNotBeAffected` either. Adding a card under a stack is not "affecting" the target in DCGO's semantics — the TopCard's status is unchanged. Gating in Rust would over-restrict relative to DCGO. The decision is documented inline at [`effect_context/mod.rs::place_as_bottom_source`](../digimon-engine/src/effect_context/mod.rs).
+
 Python has the same SecuritySkill-skip bug at [`player.py:614-617`](../digimon_gym/engine/core/player.py#L614). Fixing Rust here diverges from Python behavior but matches DCGO and the printed rules. Note this deliberate divergence in `docs/RUST_PYTHON_PARITY.md` when the fix lands.
 
 ### Jamming — scope too narrow
