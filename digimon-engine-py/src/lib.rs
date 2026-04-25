@@ -1,8 +1,21 @@
 //! PyO3 bindings for `digimon-engine`.
 //!
-//! Exposes `RustHeadlessGame`, a 1:1 mirror of Python's
-//! `digimon_gym.engine.runners.headless_game.HeadlessGame`. `DigimonEnv`
-//! swaps between the two via the `DIGIMON_BACKEND` env var.
+//! Exposes:
+//! - `RustHeadlessGame` — 1:1 mirror of Python's
+//!   `digimon_gym.engine.runners.headless_game.HeadlessGame`. Used by
+//!   `DigimonEnv` (RL gym) and the server's game lifecycle.
+//! - `CardDatabase` / `PyCard` — static cards.json loader and per-card
+//!   metadata wrapper.
+//! - `parse_deck`, `parse_tts`, `parse_text`, `summarize_deck`,
+//!   `validate_deck`, `out_of_set_cards`, `expand_deck_dict`,
+//!   `restricted_list` — deck parsing, validation, and configuration.
+//! - `CardKind`, `GamePhase` — engine enums (variant names match Python).
+//! - `load_tested_cards`, `is_card_tested` — alpha tested-cards allowlist.
+//! - `CardRegistry`, `REGISTRY_CAPACITY`, `EMBEDDING_DIM` — stable
+//!   card-index registry for tensor encoding.
+//! - `get_models_dir` — ONNX models directory resolver.
+//! - `load_implemented_card_ids` — set of card IDs with registered Rust
+//!   `CardEffect` implementations.
 //!
 //! Conventions:
 //! - Deck ids are `list[str]`. DigiEggs are auto-routed into each player's
