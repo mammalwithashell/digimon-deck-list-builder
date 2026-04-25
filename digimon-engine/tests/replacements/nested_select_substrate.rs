@@ -105,3 +105,24 @@ fn redirect_replacement_writes_redirected_outcome_to_parked_slot() {
         "redirect_replacement(Hand) should write Redirected(Hand) to parked slot"
     );
 }
+
+#[test]
+fn substitute_replacement_writes_substituted_outcome_to_parked_slot() {
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("X"))
+        .add_card(fighter("Y"))
+        .start();
+    let target = r.place_on_field(0, "X", None);
+    let other = r.place_on_field(0, "Y", None);
+    install_parked(&mut r.game, target);
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.substitute_replacement(ReplacementSubject::Permanent(other));
+    }
+    let outcome = r.game.parked_replacement_outcome_for_test().expect("slot still set");
+    assert_eq!(
+        outcome,
+        ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)),
+        "substitute_replacement should write Substituted(other) to parked slot"
+    );
+}

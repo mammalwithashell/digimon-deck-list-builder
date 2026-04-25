@@ -414,6 +414,23 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Substitute a different subject for the parked event. `commit_deferred_outcome`
+    /// recursively dispatches the original event against the substituted subject
+    /// (e.g., Decoy: replace deletion-target with self).
+    ///
+    /// Writes `ReplacementOutcome::Substituted(subject)` to the parked slot.
+    /// Calling outside a parked-replacement scope is a `debug_assert!` panic
+    /// in dev builds; release builds silently no-op.
+    pub fn substitute_replacement(&mut self, subject: crate::replacement::ReplacementSubject) {
+        debug_assert!(
+            self.game.parked_replacement.is_some(),
+            "substitute_replacement called outside a replacement-process callback"
+        );
+        if let Some(parked) = self.game.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::Substituted(subject);
+        }
+    }
+
     /// Reborrow this mut context as a read-only context — for condition
     /// closures, which take `&EffectReadContext`.
     pub fn as_read(&self) -> EffectReadContext<'_> {
