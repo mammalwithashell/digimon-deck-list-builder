@@ -909,6 +909,81 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
+        // Phase E §E1 — printed Retaliation: "When this Digimon is deleted
+        // in battle, delete the battled opponent's Digimon." DCGO
+        // `Retaliation.cs`. RULES_CONTEXT 16-12 (Trigger-type, Mandatory).
+        //
+        // ## Cause filter
+        //
+        //   - `deletion_cause() == Some(Battle)` only — RULES_CONTEXT 16-12
+        //     specifies battle deletion. Effect, SecurityCheck, and Cost
+        //     causes do NOT trigger Retaliation.
+        //
+        // ## Target identification
+        //
+        // `ctx.battle_opponent_of(self)` reads the live `Game.pending_attack`
+        // (set in `combat::resolve_battle` and not cleared until after
+        // `delete_permanent_with_cause` returns) and returns the opposing
+        // combatant — i.e., the battle winner, since the loser is the one
+        // calling this OnDeletion observer. Returns None for direct-player
+        // attacks (no Digimon target) and for non-combatants.
+        //
+        // ## Mandatory semantics
+        //
+        // No "may" clause (RULES_CONTEXT 16-12). The trigger fires
+        // unconditionally when the Battle cause gate passes; no
+        // `.optional()` call on the builder.
+        //
+        // ## Self-scope
+        //
+        // The `OnDeletion` enqueue path keys on `TriggerSource::Permanent(h)`
+        // — natural self-scoping (a neighbor's deletion doesn't fire
+        // Retaliation on this carrier). The `source_permanent` guard in
+        // the body is belt-and-suspenders.
+        //
+        // ## Mutual destruction (RULES_CONTEXT 16-12-4 multi-instance hint)
+        //
+        // When both combatants have Retaliation and tie in DP, both die in
+        // battle (`combat::resolve_battle::MutualDestruction` path). The
+        // defender's Retaliation fires first; it deletes the attacker. The
+        // attacker's Retaliation then fires, but `battle_opponent_of` may
+        // still return `Some(defender)` since `pending_attack` remains live.
+        // The guard `battle_area.get(winner.index).is_none()` prevents
+        // double-delete on an already-departed permanent — silent no-op
+        // rather than routing through a deletion that would be a no-op at
+        // `finalize_permanent_deletion` but incurs unnecessary work.
+        Keyword::Retaliation => vec![Effect::on_deletion(card)
+            .name("<Retaliation>")
+            .process(|ctx| {
+                use crate::replacement::ReplacementCause;
+                // Cause gate: Battle only.
+                if !matches!(ctx.deletion_cause(), Some(ReplacementCause::Battle)) {
+                    return;
+                }
+                let Some(me) = ctx.source_permanent else {
+                    return;
+                };
+                let Some(winner) = ctx.battle_opponent_of(me) else {
+                    return;
+                };
+                // Mutual-destruction guard: in a tied-DP battle, the attacker
+                // may already have been deleted (by the defender's Retaliation
+                // firing first) by the time this side's Retaliation runs.
+                // Use a `battle_area` slot check rather than `handle_valid`
+                // (which is module-private to `combat`).
+                if ctx
+                    .game
+                    .player(winner.player)
+                    .battle_area
+                    .get(winner.index as usize)
+                    .is_none()
+                {
+                    return;
+                }
+                ctx.delete_permanent(winner);
+            })
+            .build()],
+
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),
     }
