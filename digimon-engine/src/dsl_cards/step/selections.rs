@@ -172,6 +172,23 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectOrderedPermutation { items, bind_as, prompt, .. } => {
+            use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
+            let item_list = match resolve_binding_ref(items, ctx, &bindings) {
+                Some(ResolvedBinding::CardList(v)) => v,
+                // Missing binding or wrong type: silent no-op.
+                _ => return false,
+            };
+            install_select_ordered_permutation(
+                ctx,
+                item_list,
+                bind_as.clone(),
+                prompt.clone(),
+                tail.to_vec(),
+                bindings,
+            );
+            true
+        }
         _ => false,
     }
 }
@@ -450,6 +467,29 @@ fn install_select_material(
                 {
                     b.insert_card(name, card.handle());
                 }
+            }
+            run_steps(&tail, cb_ctx, &mut b);
+            drain_dsl_outer_tail(cb_ctx);
+        },
+    );
+}
+
+fn install_select_ordered_permutation(
+    ctx: &mut EffectContext<'_>,
+    items: Vec<crate::card_source::CardHandle>,
+    bind_as: Option<String>,
+    prompt: String,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+) {
+    let tail = Arc::new(tail);
+    ctx.select_ordered_permutation(
+        items,
+        &prompt,
+        move |cb_ctx, ordered| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_card_list(name, ordered);
             }
             run_steps(&tail, cb_ctx, &mut b);
             drain_dsl_outer_tail(cb_ctx);
