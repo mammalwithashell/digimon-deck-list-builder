@@ -93,6 +93,12 @@ The variants are parsed (so deck-builder validation, RL action masking, and hand
 
 This closes the "parametric auto-install gap" — the original framing assumed bare printings existed; they don't.
 
+### Scapegoat outer-dialog UX — substrate gap
+
+Phase E §E2 left a known divergence from DCGO. With `.optional()` set at builder time, the outer "may" accept dialog parks even when the cause filter would reject (`OwnEffect` cause) and even when there are zero candidates for the inner pick. PASS proceeds correctly so end-state matches DCGO, but the UX shows a spurious dialog.
+
+The fix lives in `replacement.rs::try_replace_inner` — the candidate-condition `EffectReadContext` does not currently carry `cause`, so a `.condition(...)`-gated form is unavailable in Phase E scope. Promote Scapegoat to a `.condition`-gated `WhenWouldBeDeleted` once the substrate threads `cause` into the candidate filter (and apply the same treatment to the no-candidate suppression — DCGO's `CanActivateScapegoat` pre-filters both).
+
 ## Missing-keyword backfill priorities
 
 Ordered by archetype relevance to the alpha scope (Royal Knights, Jesmon GX, Rocks, Medusamon, Dark Masters):
