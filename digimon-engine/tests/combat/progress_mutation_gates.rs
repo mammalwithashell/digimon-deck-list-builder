@@ -215,3 +215,41 @@ fn opponent_effect_suspend_does_not_suspend_progress_attacker() {
         "Progress attacker must not be suspended by opponent effect"
     );
 }
+
+#[test]
+fn opponent_effect_negative_dp_does_not_apply_to_progress_attacker() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        ctx.add_dp_modifier(progress, -3000, Expiry::EndOfTurn);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    let dp_sum = r.game.modifiers.sum(progress, ModifierType::ChangeDp);
+    assert_eq!(
+        dp_sum, 0,
+        "Progress attacker must not receive opponent-effect -DP modifier; \
+         got accumulated ChangeDp = {}",
+        dp_sum
+    );
+}
+
+#[test]
+fn opponent_effect_positive_dp_still_applies_to_progress_attacker() {
+    // Sanity check: Progress only excludes opponent effects that target the
+    // carrier negatively (matching DCGO's CanNotAffectedClass semantics for
+    // hostile effects). A positive DP buff from an opponent effect — rare but
+    // possible via card text like "Your opponent's Digimon gets +1000 DP" —
+    // still applies.
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1);
+        ctx.add_dp_modifier(progress, 1000, Expiry::EndOfTurn);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    let dp_sum = r.game.modifiers.sum(progress, ModifierType::ChangeDp);
+    assert_eq!(dp_sum, 1000, "positive DP buffs are not gated by Progress");
+}

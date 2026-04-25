@@ -933,6 +933,12 @@ impl<'a> EffectContext<'a> {
     // ─── Modifier registration ────────────────────────────────────────
 
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
+        // Phase B §B4: negative DP from opponent effects is gated by Progress.
+        // Positive grants are not gated — see `progress_excludes` doc and the
+        // `opponent_effect_positive_dp_still_applies_to_progress_attacker` test.
+        if value < 0 && self.game.progress_excludes(target, Some(self.player)) {
+            return;
+        }
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(
@@ -951,6 +957,16 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
+        // Phase B §B4: route ChangeDp through the same negative-DP Progress
+        // gate as `add_dp_modifier`. Other modifier types are not gated here
+        // (cross-check against DCGO before extending the gate to additional
+        // ModifierType variants).
+        if modifier == ModifierType::ChangeDp
+            && value < 0
+            && self.game.progress_excludes(target, Some(self.player))
+        {
+            return;
+        }
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(
