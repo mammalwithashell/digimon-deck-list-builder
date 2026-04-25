@@ -12,7 +12,7 @@
 //! printed rules ("you may"). Declining the optional selection leaves the
 //! original event (deletion / return-to-deck) to proceed normally. The
 //! optional auto-installs (Phase 7 + Phase D so far): Barrier, Evade, Decode,
-//! Save. Mandatory ones: Fragment(N), Armor Purge.
+//! Save, Decoy. Mandatory ones: Fragment(N), Armor Purge.
 //!
 //! ## Deferred: Partition
 //!
@@ -428,6 +428,80 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         ctx.place_card_under_permanent_bottom(self_card, tamer);
                     },
                 );
+            })
+            .build()],
+
+        // Phase D Task 7 — printed Decoy: "When one of your other [Digimon]
+        // would be deleted, you may delete this Digimon instead." DCGO
+        // `Decoy.cs:24-69`.
+        //
+        // Optional ('may'): the controller may decline by PASSing the outer
+        // accept dialog. Synchronous outcome — the body does not park a
+        // nested selection; on accept, `rctx.substitute(...)` runs in-place
+        // and the dispatcher commits via the `Substituted` arm.
+        //
+        // Filters (in body, not condition):
+        //   1. `subject != me_perm` — never self-redirect (would loop on
+        //      the substituted deletion firing Decoy again).
+        //   2. `subject.player == me_perm.player` — same controller only;
+        //      do NOT protect opponent permanents.
+        //   3. Subject's top card must be a Digimon (DCGO restricts to
+        //      `[Digimon]`-typed allies, not Tamers).
+        //
+        // Note on UX: the outer optional dialog is parked at candidate-
+        // collection time, BEFORE the body runs. So when the body's filter
+        // would reject (subject==self, cross-controller, or non-Digimon),
+        // the dialog still appears. On accept, the body falls through
+        // without setting an outcome and the original deletion proceeds.
+        // This matches the Phase C `nested_select_decoy.rs` precedent and
+        // is acceptable for v1; cards needing finer pre-dialog filtering
+        // (e.g. printed "Decoy: Black" color filter) override via a
+        // hand-rolled `CardEffect`.
+        //
+        // Color/parameter filtering is NOT in scope here — `Keyword::Decoy`
+        // is parsed un-parameterized (`card_data.rs:314`). The auto-install
+        // offers any same-controller Digimon. Per-card-text restrictions
+        // (e.g. "Decoy: Black") are applied by hand-rolled overrides.
+        Keyword::Decoy => vec![Effect::when_would_be_deleted(card)
+            .name("<Decoy>")
+            .optional()
+            .replacement_process(|rctx| {
+                // Self-scope guard: never substitute self for self
+                // (infinite-loop prevention).
+                let me_perm = match rctx.effect.source_permanent {
+                    Some(h) => h,
+                    None => return,
+                };
+                let subject = match rctx.subject {
+                    ReplacementSubject::Permanent(h) => h,
+                    _ => return,
+                };
+                if subject == me_perm {
+                    return;
+                }
+                // Same-controller filter: Decoy only protects ally
+                // Digimon, never opponent permanents.
+                if subject.player != me_perm.player {
+                    return;
+                }
+                // Subject must be a Digimon (DCGO `Decoy.cs` predicate
+                // restricts to `[Digimon]` typed permanents).
+                let game = &*rctx.effect.game;
+                let Some(subject_perm) = game
+                    .players
+                    .get(subject.player as usize)
+                    .and_then(|p| p.battle_area.get(subject.index as usize))
+                else {
+                    return;
+                };
+                if !subject_perm.is_digimon(&game.card_data) {
+                    return;
+                }
+
+                // Substitute: redirect deletion to self. Synchronous; the
+                // dispatcher's `Substituted` commit arm handles the
+                // re-deletion of the carrier in place of the ally.
+                rctx.substitute(ReplacementSubject::Permanent(me_perm));
             })
             .build()],
 
