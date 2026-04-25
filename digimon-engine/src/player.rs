@@ -176,11 +176,29 @@ impl Player {
     }
 
     /// Remove a permanent from the battle area and send all its cards to trash.
+    ///
+    /// Tolerates an empty `card_sources`: a permanent whose stack was fully
+    /// drained mid-deletion (e.g. printed `<Save>` lifted the top card
+    /// under a Tamer before the deferred finalizer ran) has nothing left
+    /// to trash; the slot is simply removed.
     pub fn delete_permanent(&mut self, field_index: usize) {
         if field_index >= self.battle_area.len() {
             return;
         }
         let perm = self.battle_area.remove(field_index);
+        // Empty-stack guard: nothing to inspect (no top card to check
+        // for token semantic), nothing to trash. Just drop the slot.
+        if perm.card_sources.is_empty() {
+            // Linked cards still need to flow to trash so they don't
+            // leak — but in practice a permanent with no top will have
+            // had its linked cards already drained by the surrounding
+            // deletion-finalizer. Defensive parity with the non-empty
+            // branch below.
+            for card in perm.linked_cards {
+                self.trash.push(card);
+            }
+            return;
+        }
         // Token semantic: remove from game. Drop the whole stack on the
         // floor — no trash entry, no zone ever again. Parity with
         // Python's `player.py::delete_permanent` is_token branch.

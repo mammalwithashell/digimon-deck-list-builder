@@ -2305,6 +2305,19 @@ impl Game {
     /// Core deletion body (OnDeletion → remove → modifier cleanup →
     /// OnAnyDeletion) — shared between the direct fallthrough and the
     /// defensive branches of `delete_permanent_with_cause`.
+    ///
+    /// **Phase D Task 6 — deferred completion.** If an `OnDeletion`-timed
+    /// effect parks a `pending_selection` (e.g. printed `<Save>` asks
+    /// the controller to pick a Tamer), the rest of the deletion sequence
+    /// (linked-card cascade, `Player::delete_permanent`, modifier cleanup,
+    /// `OnAnyDeletion`) MUST defer until that selection resolves —
+    /// otherwise the synchronous `delete_permanent` would shift later
+    /// permanents' indices, invalidating the parked selection's
+    /// `valid_action_ids`. Detected via `pending_selection.is_some()`
+    /// after the OnDeletion drain; the deferred state is parked in
+    /// `Game.pending_deletion_resume` and resumed by
+    /// `resolve_generic_selection`'s post-callback hook (calls
+    /// `resume_pending_deletion`).
     fn commit_permanent_deletion(&mut self, handle: PermanentHandle) {
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDeletion,
@@ -2312,6 +2325,32 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        // Phase D Task 6: an OnDeletion handler installed a player choice
+        // (e.g. printed Save). Park the rest of the deletion sequence to be
+        // finalized after the selection resolves; running synchronously
+        // here would shift later permanents' indices and invalidate the
+        // parked selection.
+        if self.pending_selection.is_some() {
+            debug_assert!(
+                self.pending_deletion_resume.is_none(),
+                "nested deferred deletion not supported (single-outstanding invariant)"
+            );
+            self.pending_deletion_resume = Some(handle);
+            return;
+        }
+
+        self.finalize_permanent_deletion(handle);
+    }
+
+    /// Run the post-OnDeletion-drain portion of a permanent's deletion:
+    /// linked-card cascade, `Player::delete_permanent`, modifier cleanup,
+    /// `OnAnyDeletion` enqueue + drain.
+    ///
+    /// Split out from `commit_permanent_deletion` so the deferred-completion
+    /// path (Phase D Task 6) can resume from the same point after a parked
+    /// selection resolves. See `commit_permanent_deletion` for the rationale
+    /// behind the split.
+    fn finalize_permanent_deletion(&mut self, handle: PermanentHandle) {
         // Phase 8 Task 4: drain any linked cards BEFORE removing the
         // permanent so the OnLinkedCardTrashed observer sees the host still
         // in place (as required by the Appmon-trait card text). Each linked
@@ -2386,6 +2425,24 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+    }
+
+    /// Resume a deletion that was deferred by `commit_permanent_deletion`
+    /// when an `OnDeletion` handler parked a `pending_selection`. Called by
+    /// `effect_queue::resolve_generic_selection` after the parked selection
+    /// resolves and the post-callback drain returns without re-parking.
+    ///
+    /// Reads + clears `Game.pending_deletion_resume` and runs
+    /// `finalize_permanent_deletion` against the saved handle. If a fresh
+    /// selection is parked during finalization (e.g. an `OnAnyDeletion`
+    /// observer asks for a target), `pending_deletion_resume` stays cleared
+    /// — the new selection drives the resume of its OWN drain through the
+    /// effect queue, not through this hook.
+    pub(crate) fn resume_pending_deletion(&mut self) {
+        let Some(handle) = self.pending_deletion_resume.take() else {
+            return;
+        };
+        self.finalize_permanent_deletion(handle);
     }
 
 }

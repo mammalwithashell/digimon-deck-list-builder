@@ -242,6 +242,26 @@ pub struct Game {
     /// resolver finishes the Option play. Spec §5.2.
     #[doc(hidden)]
     pub(crate) in_counter_window: bool,
+
+    /// Phase D Task 6 — deferred-deletion finalizer. Set when an
+    /// `OnDeletion`-timed effect (such as the printed `<Save>` keyword
+    /// auto-install) parks a `pending_selection` mid-deletion. Cleared by
+    /// `resume_pending_deletion` after the parked selection's callback
+    /// resolves and the effect queue drains.
+    ///
+    /// While set, no further deletions can begin (the carrier slot is in an
+    /// indeterminate state — its top card is mid-flight to trash, and the
+    /// surrounding `commit_permanent_deletion` is paused waiting on the
+    /// player's choice). This is enforced by an early-out in
+    /// `delete_permanent_with_cause` (debug-asserted).
+    ///
+    /// **Single-outstanding invariant.** Deletions don't nest in practice
+    /// (the only way a second deletion could fire mid-Save would be a
+    /// replacement-driven side-effect, which can't happen under a parked
+    /// selection). If this assumption ever breaks, replace the field with
+    /// a stack.
+    #[doc(hidden)]
+    pub(crate) pending_deletion_resume: Option<crate::permanent::PermanentHandle>,
 }
 
 impl Game {
@@ -377,6 +397,7 @@ impl Game {
             current_deletion_cause: None,
             parked_replacement: None,
             in_counter_window: false,
+            pending_deletion_resume: None,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it

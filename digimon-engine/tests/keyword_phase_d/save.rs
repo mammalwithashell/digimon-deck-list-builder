@@ -1,22 +1,32 @@
 //! Phase D Task 6 — `Keyword::Save` auto-install behavioral tests.
 //!
 //! A card declaring ONLY `keywords: vec![Keyword::Save]` (no hand-rolled
-//! `CardEffect`) must, on `WhenWouldBeDeleted`:
-//!   1. Park an OUTER optional accept dialog ("you may save"). On ACCEPT, an
-//!      INNER selection is parked over the controller's own Tamers; the
-//!      controller picks a Tamer; the carrier's top card is moved to the
-//!      bottom of that Tamer's stack and the original deletion is cancelled.
-//!   2. On DECLINE of the outer dialog: original deletion proceeds normally,
-//!      no Tamer mutation.
-//!   3. With NO own Tamers on field: the outer accept dialog still installs
-//!      (Phase C does not pre-filter on inner-filter emptiness). On ACCEPT,
-//!      the inner `select_own_permanent` sees zero candidates and silently
-//!      no-ops (no `pending_selection` installed); the user callback never
-//!      runs; outcome stays `None`; original deletion proceeds.
+//! `CardEffect`) installs an `OnDeletion` trigger that mirrors DCGO
+//! `Save.cs:24-65`'s **post-deletion** semantics:
 //!
-//! Mirrors DCGO `Save.cs:24-65`.
+//!   - Save fires AFTER the carrier has been deleted normally; its top card
+//!     has already moved to the controller's trash with the rest of the
+//!     digi-source stack.
+//!   - The handler parks an OPTIONAL Tamer-pick selection
+//!     (`is_optional=true`). PASS = "decline Save" — saved card stays in
+//!     trash with the digi-sources.
+//!   - On Tamer pick, `place_card_under_permanent_bottom` retrieves the
+//!     saved card from trash via `remove_card_from_any_zone` and tucks it
+//!     under the chosen Tamer.
+//!   - With no own Tamers on field, the Tamer-pick has no candidates and
+//!     `select_own_permanent` no-ops silently — handler returns; deletion
+//!     has already completed naturally.
+//!
+//! ## Why post-deletion (not `WhenWouldBeDeleted` replacement)
+//!
+//! DCGO `Save.cs` requires `IsTopCardInTrashOnDeletion` (top has already
+//! moved to trash) and **never** sets `willBeRemoveField = false`. Modeling
+//! Save as a replacement that calls `cancel_leave()` would suppress
+//! `OnDeletion` / `OnAnyDeletion` observers (e.g. Phase D Task 8 Fortitude),
+//! which is a hard parity bug. See `keyword_effects.rs::Keyword::Save` for
+//! the full rationale.
 
-use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
@@ -108,10 +118,24 @@ fn push_source_card(r: &mut DebugRunner, player: u8, field_index: usize, card_id
         .push(card);
 }
 
-// ─── Test 1: accept + pick → tucked under Tamer, deletion cancelled ─────────
+// ─── Test 1: pick a Tamer → saved card moves from trash to under Tamer ──────
 
+/// DCGO parity: Save fires as an OnDeletion trigger and parks an optional
+/// Tamer-pick. The deletion's post-OnDeletion finalization (linked-card
+/// drain, `delete_permanent`, `OnAnyDeletion`) is deferred via the
+/// `pending_deletion_resume` substrate hook so the parked selection's
+/// `valid_action_ids` (encoded against current field indices) stay valid
+/// until the user resolves. After the Tamer-pick resolves:
+///   1. The handler moves the saved top card from the carrier's stack
+///      under the chosen Tamer.
+///   2. The deferred finalizer runs: the carrier (now without its top)
+///      has its remaining digi-sources trashed and is removed from the
+///      battle area.
+///   3. `OnAnyDeletion` observers fire normally — Save did NOT cancel
+///      the deletion, so cards like Phase D Task 8 Fortitude will
+///      observe the event as expected.
 #[test]
-fn save_accept_picks_tamer_and_cancels_deletion() {
+fn save_accept_places_card_under_tamer_post_deletion() {
     let mut r = DebugRunner::builder()
         .add_card(save_card("SAVE-D"))
         .add_card(tamer_card("TAMER"))
@@ -120,54 +144,55 @@ fn save_accept_picks_tamer_and_cancels_deletion() {
     let saved = r.place_on_field(0, "SAVE-D", None);
     let _t = r.place_on_field(0, "TAMER", None);
 
-    // Snapshot tamer's pre-Save stack length.
-    let tamer_stack_before = r.game.players[0].battle_area[1].card_sources.len();
+    let tamer_field_index = 1usize;
+    let tamer_stack_before = r.game.players[0].battle_area[tamer_field_index]
+        .card_sources
+        .len();
 
     r.game.delete_permanent_with_effects(saved);
 
-    // Outer optional-accept dialog should be installed by `.optional()`.
+    // Mid-deletion: the Save handler parked the optional Tamer-pick and
+    // the rest of `commit_permanent_deletion` was deferred. Both the
+    // carrier AND the Tamer are still on field — this is the substrate
+    // change that lets the parked selection's frozen `valid_action_ids`
+    // map cleanly back to live permanents.
     {
+        assert_eq!(
+            r.game.players[0].battle_area.len(),
+            2,
+            "carrier + Tamer both still on field while Tamer-pick is parked \
+             (deletion is deferred via pending_deletion_resume)"
+        );
         let pending = r
             .game
             .pending_selection
             .as_ref()
-            .expect("Save's outer optional-accept dialog must be installed");
+            .expect("Tamer-pick selection must be parked");
         assert_eq!(pending.selecting_player, 0);
+        assert!(
+            pending.is_optional,
+            "Tamer-pick is optional (PASS = decline Save)"
+        );
     }
 
-    // Accept the optional-replacement.
-    r.game
-        .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept Save");
+    // Pick the Tamer (originally and still at index 1 — no shift yet).
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    r.game.resolve_selection(0, action).expect("pick Tamer");
 
-    // Inner Tamer pick is up; pick the only Tamer.
-    {
-        let pending = r
-            .game
-            .pending_selection
-            .as_ref()
-            .expect("inner Tamer-select must be installed after accept");
-        let action = pending.valid_action_ids[0];
-        let player = pending.selecting_player;
-        r.game.resolve_selection(player, action).expect("pick Tamer");
-    }
-
-    // The carrier-permanent ceases to exist as a separate permanent — its
-    // top card (SAVE-D) was tucked under the Tamer; only the Tamer remains
-    // in battle area.
+    // After resolution: the saved card is under the Tamer, and the
+    // carrier was finalized (removed from battle_area). Only the Tamer
+    // remains on field.
     assert_eq!(
         r.game.players[0].battle_area.len(),
         1,
-        "carrier removed from battle_area (top card tucked under Tamer); \
-         only the Tamer remains"
+        "carrier finalized (removed) after the parked selection resolved"
     );
     let surviving = &r.game.players[0].battle_area[0];
     assert_eq!(
         surviving.top_card().card_id(&r.game.card_data),
         "TAMER",
-        "the surviving battle-area permanent is the Tamer (SAVE-D was tucked beneath it)"
+        "the surviving battle-area permanent is the Tamer"
     );
-    // Tamer gained one card under it: SAVE-D should now be at index 0 (bottom).
     assert_eq!(
         surviving.card_sources.len(),
         tamer_stack_before + 1,
@@ -178,19 +203,24 @@ fn save_accept_picks_tamer_and_cancels_deletion() {
         "SAVE-D",
         "SAVE-D was placed at the BOTTOM of the Tamer's stack (index 0)"
     );
-
-    // SAVE-D should NOT be in trash (cancel_leave fired).
+    // SAVE-D is NOT in trash — it was placed under the Tamer.
     assert!(
         !r.game.players[0]
             .trash
             .iter()
             .any(|c| c.card_id(&r.game.card_data) == "SAVE-D"),
-        "SAVE-D must not have been trashed when Save cancelled the deletion"
+        "SAVE-D is no longer in trash — it was retrieved and placed under the Tamer"
     );
+    // The deferred finalizer ran — `pending_deletion_resume` is cleared.
+    // (Indirectly verified: a fresh deletion would panic on the
+    // single-outstanding `debug_assert!` if the slot were still set.)
 }
 
-// ─── Test 2: outer decline → original deletion proceeds ─────────────────────
+// ─── Test 2: PASS → saved card stays in trash; deletion already happened ────
 
+/// Decline path: the user passes on the optional Tamer-pick. Save did
+/// nothing; the carrier was deleted normally and its top card stays in
+/// trash with the digi-sources.
 #[test]
 fn save_decline_proceeds_with_deletion() {
     let mut r = DebugRunner::builder()
@@ -205,19 +235,23 @@ fn save_decline_proceeds_with_deletion() {
 
     r.game.delete_permanent_with_effects(saved);
 
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("optional Tamer-pick must be parked");
     assert!(
-        r.game.pending_selection.is_some(),
-        "outer optional-accept dialog must be installed"
+        pending.is_optional,
+        "the Tamer-pick selection is optional — PASS declines Save"
     );
 
-    // Decline the optional-replacement (PASS).
     r.game.resolve_selection(0, PASS).expect("decline Save");
 
-    // Original deletion proceeded → SAVE-D is gone, only the Tamer remains.
+    // Carrier was deleted normally; only the Tamer remains.
     assert_eq!(
         r.game.players[0].battle_area.len(),
         1,
-        "decline → original deletion → SAVE-D is gone, only the Tamer remains"
+        "carrier deleted normally; only the Tamer remains"
     );
     assert_eq!(
         r.game.players[0].battle_area[0]
@@ -231,26 +265,24 @@ fn save_decline_proceeds_with_deletion() {
         tamer_stack_before,
         "Tamer stack must NOT mutate when Save was declined"
     );
-    // SAVE-D should be in trash (normal deletion).
+    // SAVE-D stays in trash (declined Save means the post-deletion retrieval
+    // never ran).
     assert!(
         r.game.players[0]
             .trash
             .iter()
             .any(|c| c.card_id(&r.game.card_data) == "SAVE-D"),
-        "SAVE-D went to trash via normal deletion"
+        "SAVE-D stays in trash when Save was declined"
     );
 }
 
-// ─── Test 3: no own Tamers → original deletion proceeds ─────────────────────
+// ─── Test 3: no own Tamers → handler returns silently; deletion ran ─────────
 
 #[test]
 fn save_with_no_tamers_does_not_protect() {
-    // No Tamer on field → the candidate filter for the inner select is empty.
-    // The outer optional-accept still installs (Phase C does not pre-filter
-    // on inner-filter emptiness — that's a Phase D auto-install authoring
-    // concern). On accept, the inner `select_own_permanent` sees zero
-    // candidates and silently no-ops; the user callback never runs; outcome
-    // stays None; original deletion proceeds.
+    // No Tamer on field → the candidate filter for `select_own_permanent`
+    // yields zero matches; the helper returns without parking any prompt.
+    // Save's handler returns immediately. Carrier was deleted normally.
     let mut r = DebugRunner::builder()
         .add_card(save_card("SAVE-D"))
         .start();
@@ -259,29 +291,24 @@ fn save_with_no_tamers_does_not_protect() {
 
     r.game.delete_permanent_with_effects(saved);
 
-    // Outer accept dialog still installs.
+    // No selection was parked — Save had no Tamer candidates.
     assert!(
-        r.game.pending_selection.is_some(),
-        "outer optional-accept dialog must still be installed"
+        r.game.pending_selection.is_none(),
+        "no Tamer candidates → no selection parked"
     );
 
-    r.game
-        .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept (but no Tamers exist)");
-
-    // Inner select had no candidates → no PendingSelection installed; user
-    // callback never ran; outcome stayed None → original deletion proceeded.
+    // Carrier was deleted normally.
     assert_eq!(
         r.game.players[0].battle_area.len(),
         0,
-        "empty Tamer filter → outcome=None → original deletion proceeds"
+        "carrier deleted; no Tamer to save it under"
     );
     assert!(
         r.game.players[0]
             .trash
             .iter()
             .any(|c| c.card_id(&r.game.card_data) == "SAVE-D"),
-        "SAVE-D went to trash via normal deletion"
+        "SAVE-D is in trash via normal deletion"
     );
 }
 
@@ -305,23 +332,18 @@ fn save_does_not_offer_opponent_tamers() {
 
     r.game.delete_permanent_with_effects(saved);
 
-    // Outer accept dialog installs.
+    // Player 0 has zero own Tamers, so `select_own_permanent`'s filter
+    // yields no candidates and no prompt is parked. Carrier was deleted
+    // normally.
     assert!(
-        r.game.pending_selection.is_some(),
-        "outer optional-accept dialog must install"
+        r.game.pending_selection.is_none(),
+        "no own-Tamer candidates → no selection parked"
     );
 
-    r.game
-        .resolve_selection(0, REPLACEMENT_ACCEPT)
-        .expect("accept Save");
-
-    // Inner select is over OWN Tamers only — controller has zero own Tamers,
-    // so the inner select has no candidates. Same outcome as test 3: original
-    // deletion proceeds.
     assert_eq!(
         r.game.players[0].battle_area.len(),
         0,
-        "no own Tamers → outcome=None → original deletion proceeds"
+        "carrier deleted normally — opponent's Tamer is not eligible"
     );
     // Opponent's Tamer stack must be unchanged.
     assert_eq!(
@@ -334,6 +356,6 @@ fn save_does_not_offer_opponent_tamers() {
             .trash
             .iter()
             .any(|c| c.card_id(&r.game.card_data) == "SAVE-D"),
-        "SAVE-D went to trash via normal deletion"
+        "SAVE-D is in trash via normal deletion"
     );
 }

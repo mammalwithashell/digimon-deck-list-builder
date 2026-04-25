@@ -293,38 +293,93 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // you may place it at the bottom of one of your Tamers. If you do, it
         // isn't deleted." DCGO `Save.cs:24-65`.
         //
-        // Optional outer accept ("you may"). On accept, an inner own-Tamer
-        // selection is parked; the controller picks a Tamer; the carrier's
-        // top card is moved to the bottom of that Tamer's stack and the
-        // original deletion is cancelled. On decline OR when no own Tamers
-        // exist (inner select sees zero candidates), original deletion
-        // proceeds.
+        // ## Why this is an OnDeletion trigger, not a WhenWouldBeDeleted
+        // ## replacement
         //
-        // DCGO filter: `customMessageArrayTemplate(CanSelectDigimon: false,
+        // DCGO `Save.cs` mounts as a **post-deletion** trigger:
+        // `CanActivateSave` requires `IsTopCardInTrashOnDeletion` (the top
+        // has already moved to trash), and the body retrieves the
+        // now-trashed card and tucks it under a Tamer. Save **never** sets
+        // `willBeRemoveField = false` (compare `ArmorPurge.cs:63` which
+        // DOES). Deletion proceeds normally; Save just plucks the top out
+        // of trash.
+        //
+        // Modeling Save as a `WhenWouldBeDeleted` replacement that calls
+        // `cancel_leave()` is semantically wrong:
+        //   1. **OnDeletion / OnAnyDeletion observers don't fire.** Cards
+        //      like Fortitude (Phase D Task 8) listen for "when an ally is
+        //      deleted" and would miss a Save'd deletion. DCGO's Fortitude
+        //      DOES fire on Save'd cards because the deletion fully
+        //      committed before Save retrieved the card.
+        //   2. **Save can re-arm.** A cancelled deletion leaves the
+        //      carrier on field; the next deletion attempt fires Save
+        //      again. DCGO can't because the carrier is gone.
+        //   3. **Manual stack-drain duplicates engine deletion logic.**
+        //
+        // ## Mechanics in the Rust engine
+        //
+        // `Effect::on_deletion(card)` fires from
+        // `commit_permanent_deletion` BEFORE `Player::delete_permanent`
+        // runs. At fire time the carrier is still in `battle_area`, so we
+        // snapshot the top-card handle and park an OPTIONAL Tamer-pick
+        // (`is_optional=true`; PASS = "decline Save").
+        //
+        // **Substrate hook (Task 6).** When the OnDeletion drain pauses on
+        // a parked selection, `commit_permanent_deletion` defers the rest
+        // of the deletion sequence (linked-card cascade,
+        // `Player::delete_permanent`, modifier cleanup, `OnAnyDeletion`)
+        // by stashing the carrier handle in `Game.pending_deletion_resume`
+        // and returning. This avoids the synchronous mid-stream
+        // `delete_permanent` that would otherwise shift later permanents'
+        // indices and invalidate the parked selection's
+        // `valid_action_ids`. The resume hook in
+        // `effect_queue::resolve_generic_selection` calls
+        // `Game::resume_pending_deletion` after the parked selection's
+        // callback resolves and the post-callback drain settles —
+        // running `finalize_permanent_deletion` to close out the deletion.
+        //
+        // The Save callback runs FIRST (before the resume hook), while
+        // indices are still stable: it lifts the top card off the carrier
+        // via `place_card_under_permanent_bottom` (zone-walker finds it
+        // in the carrier's `card_sources`) and inserts it at the bottom
+        // of the chosen Tamer's stack. The carrier's stack is then empty;
+        // the resume hook's `delete_permanent` tolerates an empty stack
+        // (see `Player::delete_permanent`) and removes the now-empty
+        // carrier slot. `OnAnyDeletion` then fires — Fortitude observers
+        // will see the Save'd carrier's deletion as expected.
+        //
+        // PASS / no-Tamer paths: handler returns without parking the
+        // Tamer-pick; the OnDeletion drain unwinds with no
+        // `pending_selection` set; `commit_permanent_deletion` continues
+        // synchronously through `delete_permanent` (carrier + sources to
+        // trash) and `OnAnyDeletion` fires immediately.
+        //
+        // ## DCGO filter
+        //
+        // `customMessageArrayTemplate(CanSelectDigimon: false,
         // CanSelectTamer: true)` against own permanents. The inner filter
-        // here checks `is_tamer` AND same-controller (`select_own_permanent`
-        // does NOT auto-filter by owner — the candidate-walk enumerates
-        // every battle-area permanent in the field; the closure restricts
-        // to the carrier's owner).
-        Keyword::Save => vec![Effect::when_would_be_deleted(card)
+        // here restricts to (a) same controller as the carrier and (b)
+        // Tamer kind. `select_own_permanent` does not auto-scope by owner
+        // — the closure must.
+        Keyword::Save => vec![Effect::on_deletion(card)
             .name("<Save>")
-            .optional()
-            .replacement_process(|rctx| {
-                // Self-scope guard.
-                let me_perm = rctx.effect.source_permanent;
-                let subject = match rctx.subject {
-                    ReplacementSubject::Permanent(h) => h,
-                    _ => return,
-                };
-                if Some(subject) != me_perm {
+            .process(|ctx| {
+                // OnDeletion is keyed on the carrier's permanent handle —
+                // `enqueue_from_permanent` only enumerates effects on the
+                // specific deleted permanent, so this trigger is naturally
+                // self-scoped (no `subject != me` guard required as in
+                // the replacement-window mounting).
+                let Some(subject) = ctx.source_permanent else {
+                    // Defensive — OnDeletion always carries source_permanent.
                     return;
-                }
-
-                // Snapshot the carrier's identity for the inner callback.
-                // The carrier's top card is what gets tucked under the Tamer.
+                };
                 let owner = subject.player;
-                let self_card = match rctx
-                    .effect
+
+                // Snapshot the carrier's top-card handle. The card hasn't
+                // moved to trash yet (deletion is paused on this trigger);
+                // when the callback fires, the card is still in the
+                // carrier's `card_sources`.
+                let self_card = match ctx
                     .game
                     .player(owner)
                     .battle_area
@@ -334,16 +389,16 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     None => return,
                 };
 
-                // Park the inner Tamer-pick. `select_own_permanent`'s filter
-                // is `Fn(&Game, PermanentHandle) -> bool`; we restrict to
-                // (a) same controller as the carrier and (b) Tamer kind. The
-                // candidate-walk enumerates BOTH players' battle areas via
-                // `OwnField`'s install path, so the controller check is
-                // load-bearing — without it, opponent Tamers would be
-                // candidates.
-                rctx.effect.select_own_permanent(
-                    "place this card under one of your Tamers",
-                    /*is_optional=*/ false,
+                // Park the optional Tamer-pick. `is_optional=true` admits
+                // PASS as "decline Save". `select_own_permanent` no-ops
+                // silently when the candidate filter yields zero matches
+                // (no own Tamers) — handler returns; the OnDeletion drain
+                // unwinds with no `pending_selection` set;
+                // `commit_permanent_deletion` continues to natural
+                // finalization on the same call frame.
+                ctx.select_own_permanent(
+                    "you may place this card under one of your Tamers",
+                    /*is_optional=*/ true,
                     move |g, h| {
                         if h.player != owner {
                             return false;
@@ -358,62 +413,19 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         p.is_tamer(&g.card_data)
                     },
                     move |ctx, tamer| {
-                        // Move the carrier's top card under the Tamer. The
-                        // primitive removes it from the carrier's
-                        // `card_sources` and inserts at index 0 of the
-                        // Tamer's stack.
-                        ctx.place_card_under_permanent_bottom(self_card, tamer);
-
-                        // After the move the carrier's stack may now be
-                        // empty (or contain only digivolution sources whose
-                        // top is gone). Cancel the original deletion (no
-                        // OnDeletion side effects) and explicitly remove the
-                        // carrier permanent from `battle_area`. Any
-                        // remaining `card_sources` (the carrier's own
-                        // digivolution sources) are routed to the
-                        // controller's trash, which is the natural fate when
-                        // a permanent's top card moves elsewhere — DCGO's
-                        // `Save.cs` similarly leaves the underlying sources
-                        // in trash because the carrier ceases to exist as a
-                        // separate permanent.
+                        // Lift the saved top card off the carrier and
+                        // place it at the bottom of the chosen Tamer's
+                        // stack. Indices are stable here: the deferred
+                        // `delete_permanent` hasn't run yet; both the
+                        // carrier and the Tamer are still on field.
                         //
-                        // `tamer.index` may be in the same battle_area as
-                        // the carrier; locate the carrier by its handle
-                        // (which has not been recycled — the index reflects
-                        // its slot at park time) and bail out gracefully if
-                        // it has already been cleaned up.
-                        if (subject.index as usize)
-                            < ctx.game.player(subject.player).battle_area.len()
-                        {
-                            // Move the carrier's remaining card_sources to
-                            // the controller's trash (these were the
-                            // carrier's digivolution sources beneath the
-                            // saved top, which has already been moved).
-                            let drained: Vec<_> = ctx
-                                .game
-                                .player_mut(subject.player)
-                                .battle_area[subject.index as usize]
-                                .card_sources
-                                .drain(..)
-                                .collect();
-                            ctx.game.player_mut(subject.player).trash.extend(drained);
-                            // Remove the now-empty carrier slot. NOTE: any
-                            // PermanentHandle indices >= subject.index in
-                            // the same battle_area shift down by 1 after
-                            // this remove. The `tamer` handle stored in
-                            // this closure could be invalidated if the
-                            // tamer was at a higher index than the carrier
-                            // in player 0's battle_area. The actual move
-                            // operation has already completed using that
-                            // handle, so no further use is made of it
-                            // post-remove — safe.
-                            ctx.game
-                                .player_mut(subject.player)
-                                .battle_area
-                                .remove(subject.index as usize);
-                        }
-
-                        ctx.cancel_leave();
+                        // After this returns, `resolve_generic_selection`
+                        // calls `resume_pending_deletion`, which removes
+                        // the (now empty-stacked) carrier from
+                        // `battle_area` and fires `OnAnyDeletion` — so
+                        // observers like Fortitude will see the
+                        // deletion event.
+                        ctx.place_card_under_permanent_bottom(self_card, tamer);
                     },
                 );
             })

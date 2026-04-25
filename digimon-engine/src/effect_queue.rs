@@ -708,6 +708,19 @@ impl Game {
         if self.pending_selection.is_none() {
             self.drain_effect_queue();
         }
+
+        // Phase D Task 6: a deferred deletion (e.g. printed `<Save>` parked a
+        // mid-OnDeletion Tamer-pick) resumes here once the parked selection
+        // resolves AND the post-callback drain settled without re-parking.
+        // `resume_pending_deletion` is a no-op when no deferral is parked.
+        // Skip when the post-callback drain itself parked a new selection
+        // (e.g. an OnAnyDeletion observer asking for a target) — the new
+        // selection drives the resume of its own drain through this same
+        // hook on its eventual resolution.
+        if self.pending_selection.is_none() {
+            self.resume_pending_deletion();
+        }
+
         // After any post-callback draining, re-enter the security state
         // machine if a check is mid-resolve (RUST_PYTHON_PARITY §2.5j).
         // Idempotent when `security_resolution.is_none()`; safe to call
