@@ -201,3 +201,45 @@ class TestTestedCards:
         tested = load_tested_cards()
         sample = next(iter(tested))
         assert is_card_tested(sample) is True
+
+
+class TestCardRegistry:
+    def test_capacity_constant(self):
+        from digimon_engine import REGISTRY_CAPACITY
+        assert REGISTRY_CAPACITY == 20_000
+
+    def test_embedding_dim_constant(self):
+        from digimon_engine import EMBEDDING_DIM
+        assert EMBEDDING_DIM == 16
+
+    def test_construct(self):
+        from digimon_engine import CardRegistry
+        reg = CardRegistry()
+        # The registry should at minimum have some entries
+        assert reg.count() > 0
+
+    def test_index_of_known_card(self):
+        from digimon_engine import CardRegistry
+        reg = CardRegistry()
+        idx = reg.index_of("BT1-001")
+        assert idx is not None
+        assert idx > 0
+
+    def test_index_of_unknown_card_returns_none(self):
+        from digimon_engine import CardRegistry
+        reg = CardRegistry()
+        assert reg.index_of("ZZ99-999") is None
+
+    def test_id_of_round_trips(self):
+        from digimon_engine import CardRegistry
+        reg = CardRegistry()
+        idx = reg.index_of("BT1-001")
+        assert idx is not None
+        assert reg.id_of(idx) == "BT1-001"
+
+    def test_norm_id_within_unit_interval(self):
+        from digimon_engine import CardRegistry, REGISTRY_CAPACITY
+        reg = CardRegistry()
+        norm = reg.norm_id_of("BT1-001")
+        assert 0.0 < norm <= 1.0
+        assert abs(norm * REGISTRY_CAPACITY - reg.index_of("BT1-001")) < 0.5

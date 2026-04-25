@@ -24,11 +24,19 @@ use serde_json::Value;
 use pyo3::wrap_pyfunction;
 
 use ::digimon_engine::card_data::CardData;
+use ::digimon_engine::card_registry::{CardRegistry as RustCardRegistry, REGISTRY_CAPACITY};
 use ::digimon_engine::deck_tools;
 use ::digimon_engine::enums::{CardKind as RustCardKind, GamePhase as RustGamePhase};
 use ::digimon_engine::events::GameEvent;
 use ::digimon_engine::rules::CardRestriction;
 use ::digimon_engine::HeadlessRunner;
+
+/// Embedding dimension for the warm-start card embedding table. Mirrors
+/// the Python `digimon_gym.engine.data.card_registry.EMBEDDING_DIM`
+/// constant. The Rust crate doesn't carry this value internally — the
+/// tensor module bakes the dim into per-tensor offsets — so we expose
+/// the canonical value here for callers that need it.
+const EMBEDDING_DIM: u32 = 16;
 
 /// Lazy-loaded card database. Loading the ~4000-card JSON is slow and
 /// allocation-heavy; sharing a single parsed copy across runners cuts
@@ -300,6 +308,51 @@ fn load_tested_cards() -> std::collections::HashSet<String> {
 #[pyfunction]
 fn is_card_tested(card_id: &str) -> bool {
     deck_tools::is_card_tested(card_id)
+}
+
+/// Python-visible wrapper around the Rust `CardRegistry`.
+#[pyclass(module = "digimon_engine", name = "CardRegistry")]
+pub struct CardRegistry {
+    inner: RustCardRegistry,
+}
+
+#[pymethods]
+impl CardRegistry {
+    /// Construct from the static cards.json database. Mirrors what the
+    /// Python `CardRegistry` does at module-import time.
+    #[new]
+    fn new() -> PyResult<Self> {
+        let db = card_db()?;
+        Ok(Self {
+            inner: RustCardRegistry::from_cards(db),
+        })
+    }
+
+    /// Stable integer index for `card_id`, or `None` if unknown.
+    /// (The underlying Rust API returns `0` for unknown — the Python
+    /// wrapper translates to `Option` for ergonomics.)
+    fn index_of(&self, card_id: &str) -> Option<u16> {
+        let idx = self.inner.get_index(card_id);
+        if idx == 0 {
+            None
+        } else {
+            Some(idx)
+        }
+    }
+
+    /// Normalized ID = index / REGISTRY_CAPACITY. `0.0` for unknown.
+    fn norm_id_of(&self, card_id: &str) -> f32 {
+        self.inner.get_norm_id(card_id)
+    }
+
+    /// Reverse lookup: card ID for a given integer index.
+    fn id_of(&self, index: u16) -> Option<String> {
+        self.inner.get_id(index).map(|s| s.to_string())
+    }
+
+    fn count(&self) -> usize {
+        self.inner.count()
+    }
 }
 
 /// Python-visible wrapper around the static cards.json database.
@@ -692,5 +745,8 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<GamePhase>()?;
     m.add_function(wrap_pyfunction!(load_tested_cards, m)?)?;
     m.add_function(wrap_pyfunction!(is_card_tested, m)?)?;
+    m.add_class::<CardRegistry>()?;
+    m.add("REGISTRY_CAPACITY", REGISTRY_CAPACITY)?;
+    m.add("EMBEDDING_DIM", EMBEDDING_DIM)?;
     Ok(())
 }
