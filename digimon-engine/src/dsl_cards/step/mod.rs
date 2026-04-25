@@ -8,6 +8,7 @@ pub mod draw;
 pub mod memory;
 pub mod modifiers;
 pub mod permanent_mutations;
+pub mod permanent_scan;
 pub mod selections;
 pub mod zone_moves;
 
