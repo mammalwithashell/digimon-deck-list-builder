@@ -757,34 +757,15 @@ class AISetRunOrchestrator:
         threshold: float,
         cs_dir: str | None = None,
     ) -> list[AISetRunItem]:
-        """Compute transpile scores for all items. Synchronous, no LLM calls."""
-        from tools.transpiler.scoring import score_card
-        from tools.transpiler.validation import validate_card
+        """Compute transpile scores for all items.
 
-        from digimon_gym.data_paths import CARDS_JSON as cards_json_path
-        card_db = json.loads(cards_json_path.read_text(encoding="utf-8")) if cards_json_path.exists() else {}
-
+        The C#->Python transpiler was removed; scoring is no longer meaningful
+        here. Pipeline kept structurally for future repurposing toward user
+        error reports against Rust scripts. Every item gets a zero score so
+        downstream code paths that branch on the score behave deterministically.
+        """
         for item in items:
-            gen_path = GENERATED_SCRIPTS_ROOT / item.set_id / f"{item.module_name}.py"
-            if not gen_path.exists():
-                item.transpile_score = 0.0
-                continue
-
-            card_meta = card_db.get(item.card_id, {})
-            script_text = gen_path.read_text(encoding="utf-8")
-            vr = validate_card(item.card_id, card_meta, script_text)
-
-            # Attempt to load EffectBlocks if C# source available
-            effects = []
-            if cs_dir:
-                cs_path = self._find_cs_file(cs_dir, item.module_name)
-                if cs_path:
-                    from tools.transpiler.extractors import parse_cs_file
-                    _, effects = parse_cs_file(str(cs_path))
-
-            result = score_card(item.card_id, effects, vr, card_meta, threshold=threshold)
-            item.transpile_score = result.score
-
+            item.transpile_score = 0.0
         return items
 
     @staticmethod
@@ -793,7 +774,6 @@ class AISetRunOrchestrator:
         cs_dir_path = Path(cs_dir)
         if not cs_dir_path.exists():
             return None
-        # Try exact match and common patterns
         for pattern in [f"{module_name}.cs", f"{module_name.upper()}.cs"]:
             candidates = list(cs_dir_path.glob(f"**/{pattern}"))
             if candidates:
