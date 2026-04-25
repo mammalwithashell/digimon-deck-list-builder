@@ -292,6 +292,16 @@ fn expand_deck_dict(counts: HashMap<String, u32>) -> Vec<String> {
     deck_tools::expand_deck_dict(&counts)
 }
 
+#[pyfunction]
+fn load_tested_cards() -> std::collections::HashSet<String> {
+    deck_tools::tested_cards_set().clone()
+}
+
+#[pyfunction]
+fn is_card_tested(card_id: &str) -> bool {
+    deck_tools::is_card_tested(card_id)
+}
+
 /// Python-visible wrapper around the static cards.json database.
 #[pyclass(module = "digimon_engine", name = "CardDatabase")]
 pub struct CardDatabase {}
@@ -680,5 +690,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(expand_deck_dict, m)?)?;
     m.add_class::<CardKind>()?;
     m.add_class::<GamePhase>()?;
+    m.add_function(wrap_pyfunction!(load_tested_cards, m)?)?;
+    m.add_function(wrap_pyfunction!(is_card_tested, m)?)?;
     Ok(())
 }

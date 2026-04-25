@@ -182,3 +182,22 @@ class TestEnums:
         assert GamePhase.SelectTarget != GamePhase.SelectMaterial
         assert GamePhase.BlockTiming != GamePhase.CounterTiming
         assert GamePhase.SelectEffectChoice != GamePhase.SelectTarget
+
+
+class TestTestedCards:
+    def test_load_tested_cards_returns_set(self):
+        from digimon_engine import load_tested_cards
+        tested = load_tested_cards()
+        assert isinstance(tested, set)
+        # The alpha allowlist is non-trivial
+        assert len(tested) > 100
+
+    def test_is_card_tested_unknown_returns_false(self):
+        from digimon_engine import is_card_tested
+        assert is_card_tested("ZZ99-999") is False
+
+    def test_is_card_tested_consistent_with_set(self):
+        from digimon_engine import is_card_tested, load_tested_cards
+        tested = load_tested_cards()
+        sample = next(iter(tested))
+        assert is_card_tested(sample) is True
