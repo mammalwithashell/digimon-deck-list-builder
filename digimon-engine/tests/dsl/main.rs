@@ -51,3 +51,4 @@ mod phase2d_per_selected;
 mod phase2d_run_steps_propagation;
 mod phase2d_select_count_capped_multi;
 mod phase2e_select_effect_choice;
+mod phase2e_select_reveal;

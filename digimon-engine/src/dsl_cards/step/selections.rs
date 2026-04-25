@@ -102,6 +102,17 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectReveal { of: _, bind_as, prompt, optional, .. } => {
+            install_select_reveal(
+                ctx,
+                bind_as.clone(),
+                prompt.clone(),
+                *optional,
+                tail.to_vec(),
+                bindings,
+            );
+            true
+        }
         _ => false,
     }
 }
@@ -275,6 +286,37 @@ fn install_select_effect_choice(
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail captured by run_steps when
             // this selection was installed inside a control-flow body.
+            drain_dsl_outer_tail(cb_ctx);
+        },
+    );
+}
+
+fn install_select_reveal(
+    ctx: &mut EffectContext<'_>,
+    bind_as: Option<String>,
+    prompt: String,
+    optional: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+) {
+    let tail = Arc::new(tail);
+    ctx.select_reveal(
+        &prompt,
+        optional,
+        |_game, _idx| true, // Phase 2b precedent: accept-all filter.
+        move |cb_ctx, idx| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                // Resolve the picked reveal index into a stable CardHandle.
+                if let Some(card) = cb_ctx.game.revealed_cards.get(idx) {
+                    b.insert_card(name, card.handle());
+                }
+                // If the index has gone stale (the reveal pile mutated mid-
+                // resolution — currently impossible but defensive), silently
+                // skip the binding; downstream verbs that consume it no-op
+                // per the 2b/2c missing-binding convention.
+            }
+            run_steps(&tail, cb_ctx, &mut b);
             drain_dsl_outer_tail(cb_ctx);
         },
     );
