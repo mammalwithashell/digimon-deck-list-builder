@@ -474,6 +474,12 @@ impl<'a> EffectContext<'a> {
         stop_at_level: Option<u8>,
         amount: Option<u8>,
     ) -> u8 {
+        // Phase B §B4: opponent-sourced de-digivolve on a Progress attacker
+        // is suppressed before any replacement window opens.
+        if self.game.progress_excludes(target, Some(self.player)) {
+            return 0;
+        }
+
         use crate::enums::EffectTiming;
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
 
