@@ -30,6 +30,7 @@
 
 use crate::card_source::CardHandle;
 use crate::effect::Effect;
+use crate::effect_context::CountCappedZone;
 use crate::enums::{Keyword, Zone};
 use crate::replacement::ReplacementSubject;
 
@@ -88,8 +89,111 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
-        // TODO(phase-7-followup): Fragment(N) needs nested PendingSelection::Source for source-pick; deferred alongside Partition/ArmorPurge until the nested-selection-inside-replacement infrastructure lands. Per CLAUDE.md rule 17 no-approximations, parse-only is preferred over auto-trash-top-of-deck.
-        Keyword::Fragment(_) => Vec::new(),
+        // Phase D Task 4 — printed Fragment(N): "When this Digimon would be
+        // deleted, you may trash N of its digivolution cards. If you do, it
+        // isn't deleted." DCGO `Fragment.cs:23-77`.
+        //
+        // Gate: `card_sources.len() >= N + 1` (top + at least N sources).
+        // When the gate fails, the auto-install body returns early without
+        // parking and the original deletion proceeds.
+        //
+        // Authoring note (deviation from DCGO mandatory semantics): the
+        // Phase C parked-replacement substrate only supports nested
+        // selections inside an OPTIONAL replacement-process. Mandatory
+        // replacements that install a `pending_selection` trip a
+        // `debug_assert!` in `run_candidate_inner`. Therefore the auto-install
+        // is wired with `.optional()` (an outer accept dialog) — declining
+        // is functionally equivalent to "couldn't pay the trash cost," which
+        // matches printed Fragment text for cards that fail the gate but is
+        // looser than DCGO's `canNoSelect: () => false` for cards that pass
+        // the gate. Tracked as a deviation in the Phase D landing block.
+        Keyword::Fragment(n) => vec![Effect::when_would_be_deleted(card)
+            .name(&format!("<Fragment ({n})>"))
+            .optional()
+            // Gate on stack size at candidate-collection time so the outer
+            // accept dialog is suppressed when there aren't enough sources to
+            // pay the trash cost. DCGO `Fragment.cs:23` `CanReplace` checks
+            // `DigivolutionCards.Count >= N` (DCGO `DigivolutionCards`
+            // excludes the top card), which translates to
+            // `card_sources.len() >= N + 1` here.
+            //
+            // The condition is evaluated inside `collect_candidates` with
+            // `source_permanent` set to the carrier — so we read the stack
+            // size off `source_permanent()`. Subject-mismatch self-scoping
+            // can't be done here (the condition signature has no subject
+            // parameter); the closure body handles that.
+            .condition(move |ctx| {
+                let Some(perm) = ctx.source_permanent() else {
+                    return false;
+                };
+                perm.card_sources.len() >= (n as usize) + 1
+            })
+            .replacement_process(move |rctx| {
+                // Self-scope guard: only fire on the carrier's own deletion.
+                // The candidate-walk in `collect_candidates` pushes this
+                // effect for every battle-area permanent's deletion whose
+                // top-card-effects match this timing, so the body must
+                // self-scope to avoid running for a neighbor's deletion.
+                let me_perm = rctx.effect.source_permanent;
+                let subject = match rctx.subject {
+                    ReplacementSubject::Permanent(h) => h,
+                    _ => return,
+                };
+                if Some(subject) != me_perm {
+                    return;
+                }
+
+                // Re-check the gate at process time. `condition` already
+                // gated candidate inclusion, but a stack-mutating earlier
+                // replacement in the same chain could have shrunk the stack
+                // between collection and process. Belt-and-suspenders.
+                let n_usize = n as usize;
+                let stack_len = rctx
+                    .effect
+                    .game
+                    .player(subject.player)
+                    .battle_area
+                    .get(subject.index as usize)
+                    .map(|p| p.card_sources.len())
+                    .unwrap_or(0);
+                if stack_len < n_usize + 1 {
+                    return;
+                }
+
+                // Park: select exactly N sources from the carrier's stack to
+                // trash. Mandatory once the outer-optional-accept fires
+                // (`is_optional_zero=false`).
+                let controller = subject.player;
+                rctx.effect.select_count_capped_multi(
+                    controller,
+                    CountCappedZone::Material(subject),
+                    n,
+                    "trash N digivolution cards",
+                    /*is_optional_zero=*/ false,
+                    |_g, _src| true,
+                    move |ctx, picks| {
+                        // Trash each picked source from the carrier's stack
+                        // into the controller's trash.
+                        // `remove_card_from_any_zone` walks all zones; for
+                        // picks coming out of `CountCappedZone::Material`,
+                        // the cards are still physically in the carrier's
+                        // `card_sources`.
+                        for handle in picks {
+                            if let Some(taken) =
+                                ctx.game.remove_card_from_any_zone(handle)
+                            {
+                                ctx.game.players[controller as usize]
+                                    .trash
+                                    .push(taken);
+                            }
+                        }
+                        // Cancel the original deletion — carrier survives
+                        // with its remaining sources + top.
+                        ctx.cancel_leave();
+                    },
+                );
+            })
+            .build()],
 
         // Printed Decode: "When this Digimon would be returned to your
         // opponent's deck/hand, you may return it to your hand instead."

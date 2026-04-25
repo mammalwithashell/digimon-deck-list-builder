@@ -101,3 +101,7 @@ required-features = ["dsl-yaml-loader"]
 [[test]]
 name = "effect_context"
 path = "tests/effect_context/main.rs"
+
+[[test]]
+name = "keyword_phase_d"
+path = "tests/keyword_phase_d/main.rs"
