@@ -221,6 +221,20 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) current_deletion_cause: Option<crate::replacement::ReplacementCause>,
 
+    /// Parked replacement state when a `WhenWouldBe*` replacement-process
+    /// closure installs a nested player selection. Set by the dispatcher's
+    /// post-process hook in `replacement::run_candidate_inner`; drained by
+    /// `effect_queue::resolve_generic_selection` after the user's callback
+    /// runs. `None` outside a parked-replacement scope.
+    ///
+    /// **Single-outstanding invariant:** at most one slot occupied at a time;
+    /// the dispatcher `debug_assert!`s on duplicate install.
+    ///
+    /// **Coexistence with `dsl_outer_tail`** (Phase 2d): independent slots for
+    /// independent concerns. Phase C §4.1.
+    #[doc(hidden)]
+    pub(crate) parked_replacement: Option<crate::replacement::ParkedReplacement>,
+
     /// Phase 9 Task 3 — set to `true` while a hand Counter Option is
     /// resolving through `play_option_from_hand`. Consumed by
     /// `play_option_core` to fire CounterEffect timing on the played
@@ -361,6 +375,7 @@ impl Game {
             in_replacement_commit: false,
             effect_source_player: None,
             current_deletion_cause: None,
+            parked_replacement: None,
             in_counter_window: false,
         };
 

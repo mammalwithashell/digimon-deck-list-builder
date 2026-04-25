@@ -94,6 +94,37 @@ impl<'g> ReplacementContext<'g> {
     }
 }
 
+/// Captures the replacement-context state needed to resume a process closure
+/// after a nested player selection. Set by the dispatcher's post-process hook
+/// in `run_candidate_inner` when the process closure parks a `PendingSelection`;
+/// drained by `try_drain_parked_replacement_with_guard` in
+/// `effect_queue::resolve_generic_selection` after the user's callback runs.
+///
+/// **Single-outstanding invariant:** at most one parked replacement at a time.
+/// The post-process hook `debug_assert!`s on entry. If a real card surfaces a
+/// nested-park (callback's body itself fires another deletion that parks),
+/// escalate to a follow-up plan that converts the slot to a `Vec`-stack.
+///
+/// **Coexistence with `Game.dsl_outer_tail`** (Phase 2d): independent slots
+/// for independent concerns. Both can be `Some(_)` simultaneously; cross-
+/// references are at each field's doc comment.
+///
+/// Phase C §4.1.
+#[derive(Debug)]
+pub(crate) struct ParkedReplacement {
+    pub subject: ReplacementSubject,
+    pub cause: ReplacementCause,
+    pub original_destination: Option<Zone>,
+    pub source_card: CardHandle,
+    pub source_permanent: Option<PermanentHandle>,
+    pub controller: PlayerId,
+    /// Outcome the in-flight callback writes via `EffectContext::cancel_leave()`
+    /// etc. Read by the dispatcher post-callback hook after the user closure
+    /// returns. Defaults to `ReplacementOutcome::None` — original event proceeds
+    /// when no outcome-setter is called.
+    pub outcome: ReplacementOutcome,
+}
+
 // ─── Dispatcher ────────────────────────────────────────────────────
 
 /// Controller of the subject for layering purposes.
