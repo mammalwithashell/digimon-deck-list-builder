@@ -21,7 +21,10 @@
 //! replacement. MaterialSave(N) is a `[Main]` active skill (neither a replacement
 //! nor a deletion trigger) — see §Active-skill keywords below.
 //!
-//! Out-of-scope deferred: Execute, Iceclad, MindLink, Training (Phase F).
+//! Phase F so far: Execute (Task 3 — auto-installed `EndOfYourTurn`
+//! optional grant + `EndOfAttack` self-delete observer). Iceclad is
+//! consumed at the combat resolver (no auto-install). MindLink and
+//! Training remain out-of-scope deferred.
 //!
 //! Intentionally NOT auto-installed (per Phase E cards.json survey — zero
 //! bare printings; auto-install would double-fire alongside hand-rolled
@@ -76,7 +79,8 @@
 use crate::card_source::CardHandle;
 use crate::effect::Effect;
 use crate::effect_context::CountCappedZone;
-use crate::enums::{EffectTiming, Keyword, Zone};
+use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
+use crate::modifiers::ModifierEntry;
 use crate::replacement::ReplacementSubject;
 
 /// Map a printed keyword to zero-or-more synthesized `Effect`s that install
@@ -1120,6 +1124,172 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 );
             })
             .build()],
+
+        // Phase F Task 3 — printed Execute: "At end of your turn, this
+        // Digimon may attack — including unsuspended Digimon — and when
+        // the attack ends it is deleted." DCGO `Execute.cs:18-87`.
+        // RULES_CONTEXT 16-37 (Trigger-type, Optional).
+        //
+        // ## Two-effect install
+        //
+        // 1. `EndOfYourTurn` triggered effect, `.optional()`. On accept,
+        //    grants `MayAttack` + `CanAttackUnsuspended` modifiers on
+        //    self with `Expiry::EndOfTurn`. The end-of-turn-attack flow
+        //    in `game_phases::end_turn` reads `has_end_of_turn_keywords`,
+        //    sees the `MayAttack` modifier, and parks the phase in
+        //    `EndOfTurnAction` so the player can spend the granted
+        //    attack via the §4.6 attack mask. The
+        //    `CanAttackUnsuspended` half widens that mask to also offer
+        //    unsuspended-target attack bits — equivalent to DCGO's
+        //    `CanAttackTargetDefendingPermanentClass` with
+        //    `defenderCondition: !defender.IsSuspended`.
+        //
+        // 2. `EndOfAttack` observer. Self-deletes the carrier with
+        //    `ReplacementCause::OwnEffect` when the attack ends — gated
+        //    on `pa.attacker == me` so it only fires for attacks the
+        //    Execute carrier itself initiated, not for other attacks
+        //    that resolve while it's on field. Cause = OwnEffect
+        //    matches the keyword being the carrier's own triggered
+        //    effect (cf. Retaliation's same cause-labeling rationale).
+        //
+        // ## Optionality (RULES_CONTEXT 16-37: Optional)
+        //
+        // The outer `.optional()` accept dialog represents the printed
+        // "may". Declining (PASS) skips the entire body — no modifiers,
+        // no attack window. The `EndOfAttack` observer is always
+        // installed (it's a separate Effect on every Execute carrier),
+        // but its body short-circuits when no attack is in flight or
+        // when the Execute carrier was not the attacker, so a declined
+        // trigger never triggers a self-delete. DCGO arrives at the
+        // same outcome via `UntilEndAttackEffects` only firing when
+        // `SelectAttackEffect` actually runs.
+        //
+        // ## Self-scope
+        //
+        // The `EndOfYourTurn` enqueue path in
+        // `enqueue_from_permanent` keys on the carrier's permanent
+        // handle, so the trigger fires per-carrier (a sibling
+        // permanent's EndOfYourTurn does not trigger this Execute).
+        // The `EndOfAttack` observer additionally checks
+        // `pa.attacker == me` so it only fires for the carrier's own
+        // attack, not for any other end-of-attack on the same field.
+        Keyword::Execute => vec![
+            // (1) EndOfYourTurn — grant attack modifiers unconditionally.
+            //
+            // ## Where the "may" lives
+            //
+            // RULES_CONTEXT 16-37 / DCGO `Execute.cs` describe an
+            // optional trigger: the player may decline the entire
+            // sequence at the OnEndYourTurn dialog, and on decline no
+            // modifiers / attack / self-delete happen.
+            //
+            // The Rust engine's effect-queue drainer auto-fires single
+            // optional triggers without a dedicated may-dialog (see
+            // `effect_queue::drain_effect_queue`, single-trigger fast
+            // path). And nesting an inner `select_own_permanent` as a
+            // makeshift may-prompt doesn't help: when the inner select
+            // parks, control returns to `Game::end_turn` BEFORE the
+            // modifiers land, so `has_end_of_turn_keywords` finds
+            // nothing to park for and the phase rotates straight
+            // through. By the time the player accepts the inner pick
+            // and the modifiers land, the EOT-action phase window has
+            // already passed.
+            //
+            // We therefore push the "may" decision down to the EOT-
+            // action phase itself, which already exposes PASS as the
+            // standard exit. The modifier grant is unconditional in
+            // the EndOfYourTurn body; the player either uses the
+            // granted attack (via the §4.6 mask) or PASSes the
+            // EOT-action phase to decline. PASS skips the attack —
+            // the `EndOfAttack` self-delete observer is gated on
+            // `pa.attacker == me`, which never holds when no attack
+            // initiates, so a declined Execute leaves the carrier on
+            // field. Modifiers carry `Expiry::EndOfTurn` so they
+            // expire cleanly on the eventual turn rotation.
+            //
+            // Observable parity with DCGO:
+            //   - Accept + attack: modifiers granted, attack runs,
+            //     carrier deletes via EndOfAttack observer.
+            //   - Decline (PASS at EOT-action): no attack, no
+            //     self-delete, modifiers expire. Identical
+            //     observable outcome to DCGO's "decline OnEndYourTurn
+            //     trigger" path — `UntilEndAttackEffects` only fires
+            //     when a SelectAttackEffect actually runs in DCGO,
+            //     and the EndOfAttack observer here only fires when
+            //     `pending_attack` actually carries this carrier as
+            //     the attacker.
+            Effect::end_of_your_turn(card)
+                .name("<Execute>")
+                .process(|ctx| {
+                    let Some(me) = ctx.source_permanent else {
+                        return;
+                    };
+                    let owner = me.player;
+                    // Grant MayAttack — drives `has_end_of_turn_keywords`
+                    // to park the phase in EOT-action and the §4.6 mask
+                    // emitter to surface attack bits for this permanent.
+                    ctx.game.modifiers.add(
+                        me,
+                        ModifierEntry::simple(
+                            ModifierType::MayAttack,
+                            1,
+                            Expiry::EndOfTurn,
+                            owner,
+                        ),
+                    );
+                    // Grant CanAttackUnsuspended — widens the §4.6 mask
+                    // to include unsuspended-target attack bits, matching
+                    // DCGO's `defenderCondition: !defender.IsSuspended`.
+                    ctx.game.modifiers.add(
+                        me,
+                        ModifierEntry::simple(
+                            ModifierType::CanAttackUnsuspended,
+                            1,
+                            Expiry::EndOfTurn,
+                            owner,
+                        ),
+                    );
+                })
+                .build(),
+
+            // (2) EndOfAttack — self-delete when the carrier was the
+            //     attacker of the just-resolved attack.
+            Effect::end_of_attack(card)
+                .name("<Execute> self-delete")
+                .process(|ctx| {
+                    use crate::replacement::ReplacementCause;
+                    let Some(me) = ctx.source_permanent else {
+                        return;
+                    };
+                    // Gate: only fire on the Execute carrier's own
+                    // attack. EndOfAttack is a global timing — it
+                    // would otherwise fire for any attack while the
+                    // carrier sits on the field, e.g. an attack
+                    // initiated next turn by some other Digimon.
+                    let attacker_is_me = ctx
+                        .game
+                        .pending_attack
+                        .as_ref()
+                        .map(|pa| pa.attacker == me)
+                        .unwrap_or(false);
+                    if !attacker_is_me {
+                        return;
+                    }
+                    // Cause = OwnEffect — the deletion is driven by the
+                    // carrier's own triggered keyword, not by combat
+                    // resolution or any opponent effect. Matches the
+                    // labeling pattern Retaliation uses (see
+                    // `Keyword::Retaliation` arm above) and is
+                    // accurate per DCGO `Execute.cs:74-83` (the
+                    // `DeleteSelfEffect` is the carrier's own
+                    // queued ICardEffect, not a battle outcome).
+                    ctx.game.delete_permanent_with_cause(
+                        me,
+                        ReplacementCause::OwnEffect,
+                    );
+                })
+                .build(),
+        ],
 
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),
