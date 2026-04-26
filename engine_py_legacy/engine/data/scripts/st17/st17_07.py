@@ -59,13 +59,13 @@ class ST17_07(CardScript):
                 player, on_de_digivolve,
                 filter_fn=lambda p: p.is_digimon, is_optional=False)
             # Check for green Tamer
-            from digimon_gym.engine.data.enums import CardColor
+            from engine_py_legacy.engine.data.enums import CardColor
             has_green_tamer = any(
                 p.is_tamer and CardColor.Green in getattr(p.top_card, 'card_colors', [])
                 for p in player.battle_area
             )
             if has_green_tamer and perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_DESTROYED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_opponent_turn')
@@ -114,13 +114,13 @@ class ST17_07(CardScript):
                 player, on_de_digivolve,
                 filter_fn=lambda p: p.is_digimon, is_optional=False)
             # Check for green Tamer
-            from digimon_gym.engine.data.enums import CardColor
+            from engine_py_legacy.engine.data.enums import CardColor
             has_green_tamer = any(
                 p.is_tamer and CardColor.Green in getattr(p.top_card, 'card_colors', [])
                 for p in player.battle_area
             )
             if has_green_tamer and perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_DESTROYED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_opponent_turn')

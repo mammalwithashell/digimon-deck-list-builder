@@ -44,7 +44,7 @@ class BT21_007(CardScript):
                 traits = getattr(c, 'card_traits', []) or []
                 return any('Reptile' in t or 'Dragonkin' in t for t in traits)
 
-            from digimon_gym.engine.game.constants import SEL_TRASH_START
+            from engine_py_legacy.engine.game.constants import SEL_TRASH_START
             valid = [SEL_TRASH_START + i for i, c in enumerate(player.trash_cards) if trait_filter(c)]
             if not valid:
                 return

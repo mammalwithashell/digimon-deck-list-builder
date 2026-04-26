@@ -95,7 +95,7 @@ class EX1_065(CardScript):
             own_perm = card.permanent_of_this_card() if card else None
             if not own_perm:
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             game.register_modifier(
                 own_perm,
                 ModifierType.GRANT_BLOCKER,

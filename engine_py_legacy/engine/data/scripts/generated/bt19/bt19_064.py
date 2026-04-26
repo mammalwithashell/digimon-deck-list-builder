@@ -69,7 +69,7 @@ class BT19_064(CardScript):
                 perm.grant_keyword('_is_blocker')
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_turn')
@@ -103,7 +103,7 @@ class BT19_064(CardScript):
                 perm.grant_keyword('_is_blocker')
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_turn')

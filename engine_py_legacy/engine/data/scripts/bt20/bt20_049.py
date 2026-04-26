@@ -40,7 +40,7 @@ class BT20_049(CardScript):
             # Attack restriction via modifier system
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def target_filter(p):
                 return p.is_digimon
             def on_restrict(target_perm):
@@ -54,7 +54,7 @@ class BT20_049(CardScript):
             # Prevent target from attacking
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def on_restrict(target_perm):
                 game.register_modifier(
                     ModifierType.CANNOT_ATTACK, target_perm,
@@ -91,7 +91,7 @@ class BT20_049(CardScript):
             # Attack restriction via modifier system
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def target_filter(p):
                 return p.is_digimon
             def on_restrict(target_perm):
@@ -105,7 +105,7 @@ class BT20_049(CardScript):
             # Prevent target from attacking
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def on_restrict(target_perm):
                 game.register_modifier(
                     ModifierType.CANNOT_ATTACK, target_perm,

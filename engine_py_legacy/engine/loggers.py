@@ -7,7 +7,7 @@ EventLogger extends VerboseLogger with structured GameEvent support.
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any
 
-from digimon_gym.engine.events import GameEvent
+from engine_py_legacy.engine.events import GameEvent
 
 
 class IGameLogger(ABC):

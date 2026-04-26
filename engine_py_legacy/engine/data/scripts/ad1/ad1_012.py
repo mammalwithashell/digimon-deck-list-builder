@@ -302,7 +302,7 @@ class AD1_012(CardScript):
             perm = card.permanent_of_this_card()
             if not (player and game and perm):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             game.register_modifier(
                 perm,
                 ModifierType.CANNOT_SWITCH_ATTACK_TARGET,

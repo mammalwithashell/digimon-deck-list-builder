@@ -5,10 +5,10 @@ from typing import List, Optional, Dict, Any, Callable
 import time
 import numpy as np
 
-from digimon_gym.engine.runners.base_runner import BaseGameRunner
-from digimon_gym.engine.loggers import EventLogger
-from digimon_gym.engine.data.enums import PlayerType
-from digimon_gym.engine.recording import GameRecorder
+from engine_py_legacy.engine.runners.base_runner import BaseGameRunner
+from engine_py_legacy.engine.loggers import EventLogger
+from engine_py_legacy.engine.data.enums import PlayerType
+from engine_py_legacy.engine.recording import GameRecorder
 
 ACTION_PASS_TURN = 62
 

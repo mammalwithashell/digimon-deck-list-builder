@@ -187,7 +187,7 @@ class BT23_059(CardScript):
             _shared_state['unsuspend_used_turn'] = game.turn_count
             self_perm.unsuspend()
             # Grant immunity from opponent's Digimon effects for the turn
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             game.register_modifier(
                 self_perm, ModifierType.CANNOT_BE_AFFECTED,
                 condition=lambda p, c, sp=self_perm: p is sp,

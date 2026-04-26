@@ -108,7 +108,7 @@ class BT24_040(CardScript):
                         _frozen = []
 
                         def on_freeze(t):
-                            from digimon_gym.engine.interfaces.modifiers import ModifierType
+                            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                             # CANNOT_SUSPEND scoped to this specific permanent
                             game.register_modifier(
                                 t, ModifierType.CANNOT_SUSPEND,

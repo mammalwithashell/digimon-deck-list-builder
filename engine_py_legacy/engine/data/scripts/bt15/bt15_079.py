@@ -84,7 +84,7 @@ class BT15_079(CardScript):
             perm = ctx.get('permanent')
             if not (player and game and perm):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType, ModifierEntry
 
             def restrict_condition(target_perm, mod_ctx):
                 # Only restrict THIS permanent

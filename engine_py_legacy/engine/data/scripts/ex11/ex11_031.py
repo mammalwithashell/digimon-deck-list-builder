@@ -68,7 +68,7 @@ class EX11_031(CardScript):
             # Prevent target from unsuspending
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def on_freeze(target_perm):
                 game.register_modifier(
                     ModifierType.CANNOT_UNSUSPEND, target_perm,
@@ -115,7 +115,7 @@ class EX11_031(CardScript):
             # Prevent target from unsuspending
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def on_freeze(target_perm):
                 game.register_modifier(
                     ModifierType.CANNOT_UNSUSPEND, target_perm,

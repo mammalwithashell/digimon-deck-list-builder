@@ -60,7 +60,7 @@ class BT4_072(CardScript):
 
             # Give 1 own Digimon +2000 DP until end of opponent's next turn
             def on_target(target_perm):
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     target_perm, ModifierType.CHANGE_DP,
                     value_fn=lambda current, target, c: current + 2000,

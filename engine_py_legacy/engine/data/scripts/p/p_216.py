@@ -90,7 +90,7 @@ class P_216(CardScript):
 
                 # Apply CANNOT_DIGIVOLVE to the played Digimon
                 # C# ref: CanNotDigivolveClass attached to the played permanent
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     played_perm, ModifierType.CANNOT_DIGIVOLVE,
                     value_fn=lambda: True, expiry='end_of_turn')

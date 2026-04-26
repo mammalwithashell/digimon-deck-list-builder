@@ -69,7 +69,7 @@ class BT13_075(CardScript):
                     return (any('X Antibody' in t for t in traits) or
                             any('Royal Knight' in t for t in traits))
 
-                from digimon_gym.engine.game.constants import SEL_TRASH_START
+                from engine_py_legacy.engine.game.constants import SEL_TRASH_START
                 valid = [SEL_TRASH_START + i for i, c in enumerate(player.trash_cards) if trash_filter(c)]
                 if not valid:
                     return
@@ -82,7 +82,7 @@ class BT13_075(CardScript):
                     perm.add_card_source_bottom(chosen)
 
                     # Step 2: Apply CANNOT_ATTACK to ALL opponent Digimon with play cost >= 10
-                    from digimon_gym.engine.interfaces.modifiers import ModifierType
+                    from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                     enemy = player.enemy
                     if not enemy:
                         return

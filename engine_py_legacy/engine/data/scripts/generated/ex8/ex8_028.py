@@ -122,7 +122,7 @@ class EX8_028(CardScript):
                 player, on_put_security, filter_fn=target_filter, is_optional=True)
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_turn')
@@ -174,7 +174,7 @@ class EX8_028(CardScript):
                 player, on_put_security, filter_fn=target_filter, is_optional=True)
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_turn')

@@ -111,7 +111,7 @@ class P_221(CardScript):
             # Host target-equality guard on the modifier itself so queries
             # only affect Chaosmon, not other permanents.
             host_perm = perm
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             game.register_modifier(
                 host_perm,
                 ModifierType.CANNOT_BE_AFFECTED,
@@ -195,7 +195,7 @@ def _process_minus_10000_dp(card: 'CardSource', ctx: Dict[str, Any]):
     if not has_target:
         return
 
-    from digimon_gym.engine.interfaces.modifiers import ModifierType
+    from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
     def target_filter(p):
         return p.is_digimon

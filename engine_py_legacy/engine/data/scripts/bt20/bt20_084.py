@@ -91,7 +91,7 @@ class BT20_084(CardScript):
             def target_filter(p):
                 return p.is_digimon or p.is_tamer
             def on_target(target_perm):
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     target_perm, ModifierType.CANNOT_SUSPEND,
                     expiry='end_of_opponent_turn')
@@ -130,7 +130,7 @@ class BT20_084(CardScript):
             def target_filter(p):
                 return p.is_digimon or p.is_tamer
             def on_target(target_perm):
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     target_perm, ModifierType.CANNOT_SUSPEND,
                     expiry='end_of_opponent_turn')

@@ -84,7 +84,7 @@ class BT24_028(CardScript):
                     player.hand_cards.remove(selected)
                 perm.add_card_source_bottom(selected)
                 # Grant Blocker and cannot-be-deleted-by-battle until opponent's turn ends
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.GRANT_BLOCKER,
                     value_fn=lambda: True, expiry='end_of_opponent_turn')

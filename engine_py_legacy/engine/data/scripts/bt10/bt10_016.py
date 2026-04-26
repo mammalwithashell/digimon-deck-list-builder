@@ -72,7 +72,7 @@ class BT10_016(CardScript):
                 for p in player.battle_area if p is not perm
             )
             if has_jesmon_evo or has_sistermon_in_play:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 for p in player.battle_area:
                     if p.is_digimon:
                         # CAN_ATTACK_UNSUSPENDED

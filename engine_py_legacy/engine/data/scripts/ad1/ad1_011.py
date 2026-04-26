@@ -115,7 +115,7 @@ class AD1_011(CardScript):
             if not (player and game and perm):
                 return
 
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
             # Step 1: Can't be deleted in battle until opponent's turn ends
             game.register_modifier(

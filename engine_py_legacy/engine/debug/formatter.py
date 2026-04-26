@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from digimon_gym.engine.game import Game
-    from digimon_gym.engine.runners.debug_runner import (
+    from engine_py_legacy.engine.game import Game
+    from engine_py_legacy.engine.runners.debug_runner import (
         ActionResult, FieldSlot, StateSnapshot,
     )
 

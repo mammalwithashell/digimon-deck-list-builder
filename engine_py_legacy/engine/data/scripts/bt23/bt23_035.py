@@ -65,7 +65,7 @@ class BT23_035(CardScript):
             # Effect: all opponent Digimon get -6000 DP for the turn via modifier
             enemy = player.enemy if player else None
             if enemy and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 for p in enemy.battle_area:
                     if p.is_digimon:
                         game.register_modifier(
@@ -158,7 +158,7 @@ class BT23_035(CardScript):
             if my_perm is None:
                 return
             # Grant Security Attack +1 until your turn ends
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             game.register_modifier(
                 my_perm, ModifierType.CHANGE_SECURITY_ATTACK,
                 value_fn=lambda current, target, ctx2: current + 1,

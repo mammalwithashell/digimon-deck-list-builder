@@ -47,7 +47,7 @@ class BT13_007(CardScript):
             breeding_perm = ctx.get("permanent")
             if not (player and game and breeding_perm):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType, ModifierEntry
             # Register a SINGLE global CANNOT_DIGIVOLVE modifier.
             # The condition dynamically checks any target permanent for ownership,
             # breeding state, and turn state — matching C#'s continuous

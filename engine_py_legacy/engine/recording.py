@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from digimon_gym.engine.game import Game
+    from engine_py_legacy.engine.game import Game
 
 
 @dataclass

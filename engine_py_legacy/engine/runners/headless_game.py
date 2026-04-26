@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Callable
 import numpy as np
 
-from digimon_gym.engine.runners.base_runner import BaseGameRunner
-from digimon_gym.engine.loggers import SilentLogger, VerboseLogger
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.runners.base_runner import BaseGameRunner
+from engine_py_legacy.engine.loggers import SilentLogger, VerboseLogger
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 class HeadlessGame(BaseGameRunner):
@@ -26,7 +26,7 @@ class HeadlessGame(BaseGameRunner):
                  record_tensors: bool = False):
         recorder = None
         if record_actions or record_tensors:
-            from digimon_gym.engine.recording import GameRecorder
+            from engine_py_legacy.engine.recording import GameRecorder
             recorder = GameRecorder(record_tensors=record_tensors)
 
         logger = VerboseLogger() if verbose else SilentLogger()

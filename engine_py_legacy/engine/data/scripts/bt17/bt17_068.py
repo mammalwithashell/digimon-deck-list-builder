@@ -192,8 +192,8 @@ class BT17_068(CardScript):
             if not perm:
                 return
 
-            from digimon_gym.engine.game.constants import SEL_TRASH_START
-            from digimon_gym.engine.data.enums import GamePhase as GP
+            from engine_py_legacy.engine.game.constants import SEL_TRASH_START
+            from engine_py_legacy.engine.data.enums import GamePhase as GP
 
             valid = [SEL_TRASH_START + i for i, tc in enumerate(player.trash_cards)
                      if _is_dark_masters_text_lv5_or_lower(tc)]
@@ -208,7 +208,7 @@ class BT17_068(CardScript):
                 player.trash_cards.remove(target)
                 perm.add_card_source_bottom(target)
                 # Grant +2000 DP for the turn
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.CHANGE_DP,
                     value_fn=lambda dp, t, c: dp + 2000,

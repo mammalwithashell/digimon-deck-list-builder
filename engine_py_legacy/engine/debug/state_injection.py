@@ -10,14 +10,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field as dataclass_field
 from typing import TYPE_CHECKING, List, Optional
 
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.core.permanent import Permanent
+from engine_py_legacy.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.core.permanent import Permanent
 
 if TYPE_CHECKING:
-    from digimon_gym.engine.game import Game
-    from digimon_gym.engine.core.card_source import CardSource
-    from digimon_gym.engine.core.player import Player
+    from engine_py_legacy.engine.game import Game
+    from engine_py_legacy.engine.core.card_source import CardSource
+    from engine_py_legacy.engine.core.player import Player
 
 
 def _get_player(game: Game, player_id: int) -> Player:
@@ -239,7 +239,7 @@ def bulk_setup(game: Game, config: BulkSetupConfig) -> dict:
     Returns:
         Summary dict with counts of items placed per zone.
     """
-    from digimon_gym.engine.data.enums import GamePhase
+    from engine_py_legacy.engine.data.enums import GamePhase
 
     summary = {"player1": {}, "player2": {}}
 

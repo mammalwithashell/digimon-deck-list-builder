@@ -4,7 +4,7 @@ Loads a YAML scenario file, creates a DebugRunner with the specified setup,
 executes actions, and evaluates assertions against the final game state.
 
 Usage:
-    from digimon_gym.engine.runners.scenario_runner import ScenarioRunner
+    from engine_py_legacy.engine.runners.scenario_runner import ScenarioRunner
 
     result = ScenarioRunner.from_yaml("qa/scenarios/my-test.yaml").run()
     print(result.passed, result.summary)
@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from digimon_gym.engine.runners.debug_runner import DebugRunner, ActionResult
+from engine_py_legacy.engine.runners.debug_runner import DebugRunner, ActionResult
 
 
 # ── Result dataclasses ───────────────────────────────────────────────────
@@ -399,7 +399,7 @@ class ScenarioRunner:
         actions = self.scenario.get("actions", [])
 
         # Auto-advance past breeding phase if first action is a Main phase action
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         if (actions and runner.game.current_phase == GamePhase.Breeding):
             pass_action = runner.find_action("Pass breeding")
             if pass_action is not None:

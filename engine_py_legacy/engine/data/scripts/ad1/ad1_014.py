@@ -150,7 +150,7 @@ class AD1_014(CardScript):
                     return (p.is_digimon or p.is_tamer) and p not in _frozen
 
                 def on_freeze(target_perm):
-                    from digimon_gym.engine.interfaces.modifiers import ModifierType
+                    from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
                         target_perm, ModifierType.CANNOT_SUSPEND,
                         condition=lambda target, ctx, fp=target_perm: target is fp,
@@ -317,7 +317,7 @@ class AD1_014(CardScript):
                 return p.is_digimon or p.is_tamer
 
             def on_freeze(target_perm):
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     target_perm, ModifierType.CANNOT_SUSPEND,
                     condition=lambda target, ctx, fp=target_perm: target is fp,

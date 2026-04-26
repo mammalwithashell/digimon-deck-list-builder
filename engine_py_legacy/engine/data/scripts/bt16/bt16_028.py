@@ -65,7 +65,7 @@ class BT16_028(CardScript):
             if not (player and game):
                 return
 
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
             # Step 1: Select 1 opponent Digimon or Tamer → apply cannot-unsuspend
             # Step 2 is chained inside on_freeze so the selections don't

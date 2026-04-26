@@ -68,13 +68,13 @@ class BT23_057(CardScript):
             def select_next_trash_card():
                 if remaining[0] <= 0:
                     return
-                from digimon_gym.engine.game.constants import SEL_TRASH_START
+                from engine_py_legacy.engine.game.constants import SEL_TRASH_START
                 valid = [SEL_TRASH_START + i for i, c in enumerate(player.trash_cards) if name_filter(c)]
                 if not valid:
                     return
 
                 def on_trash_selected(action_id: int):
-                    from digimon_gym.engine.game.constants import SEL_TRASH_START
+                    from engine_py_legacy.engine.game.constants import SEL_TRASH_START
                     idx = action_id - SEL_TRASH_START
                     if not (0 <= idx < len(player.trash_cards)):
                         return

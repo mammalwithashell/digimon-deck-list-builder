@@ -5,7 +5,7 @@ Provides state injection, structured action execution, state snapshots,
 and human-readable output via the formatter module.
 
 Usage:
-    from digimon_gym.engine.runners.debug_runner import DebugRunner
+    from engine_py_legacy.engine.runners.debug_runner import DebugRunner
 
     runner = DebugRunner(deck1_ids, deck2_ids)
     runner.place_on_field(2, ["ST1-03"])  # target on opponent field
@@ -22,14 +22,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from digimon_gym.engine.game import Game
-from digimon_gym.engine.loggers import EventLogger
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.enums import GamePhase
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.core.player import Player
-from digimon_gym.engine.debug.state_injection import (
+from engine_py_legacy.engine.game import Game
+from engine_py_legacy.engine.loggers import EventLogger
+from engine_py_legacy.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.enums import GamePhase
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.player import Player
+from engine_py_legacy.engine.debug.state_injection import (
     place_on_field as _place_on_field,
     place_in_breeding as _place_in_breeding,
     inject_card as _inject_card,
@@ -243,7 +243,7 @@ class DebugRunner:
         events = self._logger.get_events()
 
         # Import formatter lazily to avoid circular imports
-        from digimon_gym.engine.debug.formatter import format_diff
+        from engine_py_legacy.engine.debug.formatter import format_diff
         diff_summary = format_diff(before, after)
 
         return ActionResult(
@@ -358,12 +358,12 @@ class DebugRunner:
 
     def board(self) -> str:
         """Return formatted board state string."""
-        from digimon_gym.engine.debug.formatter import format_board
+        from engine_py_legacy.engine.debug.formatter import format_board
         return format_board(self.game, self.snapshot())
 
     def board_with_actions(self) -> str:
         """Return formatted board state + available actions."""
-        from digimon_gym.engine.debug.formatter import format_board, format_actions
+        from engine_py_legacy.engine.debug.formatter import format_board, format_actions
         board = format_board(self.game, self.snapshot())
         acts = format_actions(self.actions())
         return f"{board}\n{acts}"

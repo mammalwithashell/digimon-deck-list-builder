@@ -90,7 +90,7 @@ class BT16_102(CardScript):
             # Grant +3000 DP
             perm.change_dp(3000)
             # Grant effect immunity until end of opponent's turn
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             game.register_modifier(
                 ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
                 value_fn=lambda: True, expiry='end_of_opponent_turn')

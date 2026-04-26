@@ -12,8 +12,8 @@ import argparse
 import sys
 
 from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.enums import CardKind
+from engine_py_legacy.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.enums import CardKind
 
 # Scripts still live alongside the Python engine.
 _ENGINE_DATA_DIR = Path(__file__).parent

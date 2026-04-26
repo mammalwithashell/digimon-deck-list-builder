@@ -135,7 +135,7 @@ class ST18_10(CardScript):
                 if pa.attacker is not perm_now:
                     return False
                 target = pa.original_target
-                from digimon_gym.engine.core.player import Player as _Player
+                from engine_py_legacy.engine.core.player import Player as _Player
                 if isinstance(target, _Player):
                     return False
                 if not getattr(target, 'is_digimon', False):

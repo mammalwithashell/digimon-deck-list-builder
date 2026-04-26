@@ -5,7 +5,7 @@ card-index positions (for nn.Embedding lookup) and scalar positions.
 All values are derived from the constants in game.py.
 """
 
-from digimon_gym.engine.game import (
+from engine_py_legacy.engine.game import (
     FIELD_SLOTS, MAX_HAND, MAX_TRASH, MAX_SECURITY, MAX_SOURCES,
     MAX_REVEALED, SLOT_SIZE, SOURCE_ENTRY_SIZE, TENSOR_SIZE,
     _GLOBAL, _MY_BATTLE, _OPP_BATTLE, _MY_HAND, _OPP_HAND,

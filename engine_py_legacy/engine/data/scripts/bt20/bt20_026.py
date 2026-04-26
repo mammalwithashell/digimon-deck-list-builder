@@ -67,7 +67,7 @@ class BT20_026(CardScript):
                 player, on_bounce, filter_fn=target_filter, is_optional=False)
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_turn')
@@ -111,7 +111,7 @@ class BT20_026(CardScript):
                 player, on_bounce, filter_fn=target_filter, is_optional=False)
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_turn')

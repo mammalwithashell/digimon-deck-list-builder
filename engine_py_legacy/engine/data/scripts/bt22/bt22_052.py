@@ -59,7 +59,7 @@ class BT22_052(CardScript):
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
             # Then grant Blocker to all Lv3+ Digimon until opponent's turn ends
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             for p in list(player.battle_area):
                 if not p.is_digimon:
                     continue

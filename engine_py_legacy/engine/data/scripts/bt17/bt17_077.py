@@ -166,7 +166,7 @@ class BT17_077(CardScript):
 
                 # Step 3: If any returned card is white Lv.7, gain 3 memory
                 def _is_white_lv7(c) -> bool:
-                    from digimon_gym.engine.data.enums import CardColor
+                    from engine_py_legacy.engine.data.enums import CardColor
                     colors = getattr(c, 'card_colors', []) or []
                     level = getattr(c, 'level', None)
                     return level == 7 and CardColor.White in colors

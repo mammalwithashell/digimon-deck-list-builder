@@ -73,7 +73,7 @@ class BT22_059(CardScript):
                 perm.grant_keyword('_is_cannot_return_to_hand')
             # Prevent return to hand/deck via modifier system
             if perm and game and has_support:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.CANNOT_RETURN_TO_HAND,
                     value_fn=lambda: True, expiry='end_of_turn')
@@ -129,7 +129,7 @@ class BT22_059(CardScript):
                 perm.grant_keyword('_is_cannot_return_to_hand')
             # Prevent return to hand/deck via modifier system
             if perm and game and has_support:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.CANNOT_RETURN_TO_HAND,
                     value_fn=lambda: True, expiry='end_of_turn')

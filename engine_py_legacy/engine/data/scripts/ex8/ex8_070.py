@@ -46,9 +46,9 @@ class EX8_070(CardScript):
             if not (player and game):
                 return
 
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            from digimon_gym.engine.data.enums import GamePhase
-            from digimon_gym.engine.game.constants import SOURCES_PER_FIELD, ACTION_SPACE_SIZE
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.data.enums import GamePhase
+            from engine_py_legacy.engine.game.constants import SOURCES_PER_FIELD, ACTION_SPACE_SIZE
 
             def target_filter(p):
                 if not p.is_digimon:

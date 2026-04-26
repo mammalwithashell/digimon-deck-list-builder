@@ -4,13 +4,13 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING, List, Optional
 
-from digimon_gym.engine.game import Game
-from digimon_gym.engine.loggers import IGameLogger, SilentLogger
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.game import Game
+from engine_py_legacy.engine.loggers import IGameLogger, SilentLogger
+from engine_py_legacy.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.card_registry import CardRegistry
 
 if TYPE_CHECKING:
-    from digimon_gym.engine.recording import GameRecorder
+    from engine_py_legacy.engine.recording import GameRecorder
 
 
 class BaseGameRunner(ABC):

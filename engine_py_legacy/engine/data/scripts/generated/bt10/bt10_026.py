@@ -54,7 +54,7 @@ class BT10_026(CardScript):
             # Prevent target from blocking
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def on_restrict(target_perm):
                 game.register_modifier(
                     ModifierType.CANNOT_BLOCK, target_perm,
@@ -94,7 +94,7 @@ class BT10_026(CardScript):
             # Prevent target from blocking
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def on_restrict(target_perm):
                 game.register_modifier(
                     ModifierType.CANNOT_BLOCK, target_perm,

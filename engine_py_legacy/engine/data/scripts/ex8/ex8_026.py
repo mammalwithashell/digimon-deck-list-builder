@@ -141,7 +141,7 @@ class EX8_026(CardScript):
             my_perm = card.permanent_of_this_card() if card else None
             if not my_perm:
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
             # Condition: active when owner has 1+ memory AND target is
             # an opponent's Digimon (not our own)

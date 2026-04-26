@@ -210,7 +210,7 @@ class EX9_074(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.CHANGE_DP,
                     value_fn=lambda: 1000 * len(_get_digi_colors(perm)),

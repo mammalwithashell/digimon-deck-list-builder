@@ -72,7 +72,7 @@ class BT20_060(CardScript):
                 game = ctx.get('game')
                 if not (player and game):
                     return
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
                 enemy = player.enemy
                 if not enemy:

@@ -83,7 +83,7 @@ class EX8_073(CardScript):
                 if not (player and game and perm):
                     return
 
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
                 # This Digimon gets +4000 DP until end of opponent's turn
                 game.register_modifier(
@@ -230,7 +230,7 @@ class EX8_073(CardScript):
             if not (player and game and perm):
                 return
 
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
             enemy_ref = player.enemy
 

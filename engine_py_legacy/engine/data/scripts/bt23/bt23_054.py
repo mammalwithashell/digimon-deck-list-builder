@@ -81,7 +81,7 @@ class BT23_054(CardScript):
                 return
 
             def on_select(selected_perm):
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     selected_perm, ModifierType.CANNOT_RETURN_TO_HAND,
                     value_fn=lambda: True, expiry='end_of_opponent_turn')

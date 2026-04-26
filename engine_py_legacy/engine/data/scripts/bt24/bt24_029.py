@@ -82,7 +82,7 @@ class BT24_029(CardScript):
                 if selected not in perm.card_sources:
                     return
                 def on_target(target):
-                    from digimon_gym.engine.interfaces.modifiers import ModifierType
+                    from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
                         target, ModifierType.CANNOT_SUSPEND,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')
@@ -151,7 +151,7 @@ class BT24_029(CardScript):
                 if selected not in perm.card_sources:
                     return
                 def on_target(target):
-                    from digimon_gym.engine.interfaces.modifiers import ModifierType
+                    from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
                         target, ModifierType.CANNOT_SUSPEND,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')

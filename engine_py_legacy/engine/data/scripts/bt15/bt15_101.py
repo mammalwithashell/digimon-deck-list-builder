@@ -153,7 +153,7 @@ class BT15_101(CardScript):
             if not targets:
                 return
 
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
             count = min(3, len(targets))
             for i in range(count):

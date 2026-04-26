@@ -532,7 +532,7 @@ class CardDatabase:
              set_id = parts[0].lower()
              module_name = script_name.lower()
 
-             prefix = "digimon_gym.engine.data.scripts"
+             prefix = "engine_py_legacy.engine.data.scripts"
              module_path = f"{prefix}.{set_id}.{module_name}"
              try:
                  module = importlib.import_module(module_path)

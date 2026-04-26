@@ -82,7 +82,7 @@ class EX11_045(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
             # Step 2: 1 opponent's Digimon or Tamer can't digivolve until their turn ends
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def cannot_digi_filter(p):
                 return p.is_digimon or p.is_tamer
             def on_cannot_digivolve(target_perm):

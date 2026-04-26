@@ -77,7 +77,7 @@ class BT24_050(CardScript):
             # Prevent target from unsuspending
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def on_freeze(target_perm):
                 game.register_modifier(
                     target_perm, ModifierType.CANNOT_UNSUSPEND,
@@ -86,7 +86,7 @@ class BT24_050(CardScript):
                 player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
                     value_fn=lambda: True, expiry='end_of_turn')
@@ -127,7 +127,7 @@ class BT24_050(CardScript):
             # Prevent target from unsuspending
             if not (player and game):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             def on_freeze(target_perm):
                 game.register_modifier(
                     target_perm, ModifierType.CANNOT_UNSUSPEND,
@@ -136,7 +136,7 @@ class BT24_050(CardScript):
                 player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
                     value_fn=lambda: True, expiry='end_of_turn')

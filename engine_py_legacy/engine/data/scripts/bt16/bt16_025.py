@@ -97,7 +97,7 @@ class BT16_025(CardScript):
             if not is_dna:
                 return
 
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
             for opp_perm in list(enemy.battle_area):
                 if opp_perm.is_digimon:

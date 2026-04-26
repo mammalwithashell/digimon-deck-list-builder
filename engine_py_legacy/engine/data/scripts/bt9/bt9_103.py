@@ -22,7 +22,7 @@ class BT9_103(CardScript):
 
         def _apply_main_effect(player, game):
             """Shared logic for [Main] and [Security] — apply both restrictions."""
-            from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType, ModifierEntry
             enemy = player.enemy
             if not enemy:
                 return

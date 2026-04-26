@@ -81,7 +81,7 @@ class BT16_026(CardScript):
                 # cannot suspend until end of their turn.
                 # DCGO DigivolutionCards = cards below top, so Count <= 1 means
                 # card_sources length <= 2 (top + at most 1 under).
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 for p in enemy.battle_area:
                     if p.is_digimon and len(p.card_sources) - 1 <= 1:
                         game.register_modifier(

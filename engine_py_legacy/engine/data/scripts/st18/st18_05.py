@@ -79,7 +79,7 @@ class ST18_05(CardScript):
                 return False
 
             def on_grant(target_perm):
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CHANGE_DP, target_perm,
                     value_fn=lambda: 3000,

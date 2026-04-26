@@ -76,7 +76,7 @@ class BT13_088(CardScript):
             # Grant cannot attack
             perm.grant_keyword('_is_cannot_attack')
             # Grant effect immunity via modifier system
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             game.register_modifier(
                 perm, ModifierType.CANNOT_BE_AFFECTED,
                 value_fn=lambda: True, expiry='end_of_opponent_turn')
@@ -112,7 +112,7 @@ class BT13_088(CardScript):
                 perm.grant_keyword('_is_cannot_attack')
             # Grant effect immunity via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
                     value_fn=lambda: True, expiry='end_of_turn')

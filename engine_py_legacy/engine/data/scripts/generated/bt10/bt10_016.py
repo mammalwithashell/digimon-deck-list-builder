@@ -59,7 +59,7 @@ class BT10_016(CardScript):
                 player, 'hand', play_filter, free=True, is_optional=True)
             # Can attack unsuspended Digimon via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
                     value_fn=lambda: True, expiry='persistent')

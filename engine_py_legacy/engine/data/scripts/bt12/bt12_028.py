@@ -61,7 +61,7 @@ class BT12_028(CardScript):
             if not is_dna:
                 return
 
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
             def _no_digi_cards(p):
                 return p.is_digimon and p.has_no_digivolution_cards

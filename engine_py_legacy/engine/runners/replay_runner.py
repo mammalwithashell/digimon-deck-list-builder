@@ -14,12 +14,12 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from digimon_gym.engine.game import Game, ACTION_SPACE_SIZE, TENSOR_SIZE
-from digimon_gym.engine.loggers import IGameLogger, SilentLogger
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.enums import GamePhase
-from digimon_gym.engine.recording import ReplayStepResult
+from engine_py_legacy.engine.game import Game, ACTION_SPACE_SIZE, TENSOR_SIZE
+from engine_py_legacy.engine.loggers import IGameLogger, SilentLogger
+from engine_py_legacy.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.enums import GamePhase
+from engine_py_legacy.engine.recording import ReplayStepResult
 
 
 class ReplayRunner:

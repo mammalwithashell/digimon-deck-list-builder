@@ -108,7 +108,7 @@ class BT20_037(CardScript):
             if perm:
                 perm.grant_keyword('_is_cannot_unsuspend_player')
 
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             enemy = player.enemy if player else None
             if enemy and game:
                 for opp_perm in list(enemy.battle_area or []):

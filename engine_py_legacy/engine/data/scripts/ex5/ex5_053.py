@@ -74,7 +74,7 @@ class EX5_053(CardScript):
                 player, 'hand', play_filter, free=True, is_optional=True)
             # Skip battle with Security Digimon via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.DONT_BATTLE_SECURITY_DIGIMON, perm,
                     value_fn=lambda: True, expiry='end_of_attack')

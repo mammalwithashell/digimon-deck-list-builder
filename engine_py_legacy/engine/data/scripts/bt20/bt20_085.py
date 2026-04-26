@@ -134,7 +134,7 @@ class BT20_085(CardScript):
 
             # 1 of your Digimon with [Vortex Warriors] trait gets +2000 DP
             # until the end of their (opponent's) turn.
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
             def on_select_vortex(target_perm):
                 game.register_modifier(

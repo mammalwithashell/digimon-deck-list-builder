@@ -114,7 +114,7 @@ class BT24_023(CardScript):
 
                     def on_stun(target_perm):
                         if target_perm and game:
-                            from digimon_gym.engine.interfaces.modifiers import ModifierType
+                            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                             game.register_modifier(
                                 target_perm, ModifierType.CANNOT_SUSPEND,
                                 value_fn=lambda: True, expiry='end_of_opponent_turn')

@@ -47,7 +47,7 @@ class ST22_13(CardScript):
         # --- Helper: grant +3000 DP for the turn on a permanent ---
         def _grant_dp(perm_now, game_obj):
             if perm_now and game_obj:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game_obj.register_modifier(
                     perm_now,
                     ModifierType.CHANGE_DP,

@@ -166,7 +166,7 @@ class BT19_101(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.CANNOT_BE_AFFECTED,
                     value_fn=lambda: True, expiry='permanent')
@@ -198,7 +198,7 @@ class BT19_101(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     perm, ModifierType.CANNOT_SUSPEND,
                     value_fn=lambda: True, expiry='permanent')

@@ -38,7 +38,7 @@ class ST12_08(CardScript):
             pass  # descriptive-tagged: add_temp_effect
             # Can attack unsuspended Digimon via modifier system
             if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
                     value_fn=lambda: True, expiry='persistent')
