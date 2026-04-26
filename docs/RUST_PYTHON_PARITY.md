@@ -1013,3 +1013,13 @@ by Phase 3 into `CardData.keywords`; verified by
 `tests/keyword_parsing.rs`). Phase 9's Raid retarget rider uses
 `Game::has_keyword(pa.attacker, Keyword::Raid)` which honors both
 native-printed AND modifier-granted Raid. No parity gap.
+
+---
+
+## Phase 3 residue (callers still on Python engine)
+
+These imports survived the Phase 3 cutover because the Rust counterpart
+isn't in `digimon_engine` yet. Each entry is a checklist: when the
+binding lands, remove the Python import and the row.
+
+(filled in Task 11 of the Phase 3 plan once all Phase 3 migrations land)
