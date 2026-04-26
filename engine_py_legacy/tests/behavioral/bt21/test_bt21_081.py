@@ -30,7 +30,7 @@ class TestBT21081OwenDreadnought:
         runner.place_on_field(2, ["ST1-03"])
         runner.set_phase("Main")
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase)
 
         snap = runner.snapshot()
@@ -44,7 +44,7 @@ class TestBT21081OwenDreadnought:
         runner.place_on_field(2, ["BT21-081"])  # Tamer, not Digimon
         runner.set_phase("Main")
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase)
 
         snap = runner.snapshot()
@@ -58,7 +58,7 @@ class TestBT21081OwenDreadnought:
         runner.place_on_field(2, ["ST1-03"])
         runner.set_phase("Main")
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase)
 
         snap = runner.snapshot()
@@ -85,7 +85,7 @@ class TestBT21081OwenDreadnought:
         assert owen_card is not None
 
         effects = owen_card.effect_list(None)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         eot_effect = None
         for eff in effects:
             if eff.timing == EffectTiming.OnEndTurn:
@@ -114,7 +114,7 @@ class TestBT21081OwenDreadnought:
         assert owen_card is not None
 
         effects = owen_card.effect_list(None)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         eot_effect = None
         for eff in effects:
             if eff.timing == EffectTiming.OnEndTurn:

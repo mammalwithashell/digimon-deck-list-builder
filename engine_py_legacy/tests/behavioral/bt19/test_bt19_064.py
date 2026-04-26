@@ -303,7 +303,7 @@ class TestBT19064JustimonBlitzArm:
         assert perm is not None
 
         # Should still be selectable by opponent effects (no immunity)
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         can_select = game.modifiers.can_be_selected_by_effect(perm)
         assert can_select, (
             "Blitz Arm should NOT have effect immunity. "

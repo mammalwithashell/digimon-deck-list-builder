@@ -15,8 +15,8 @@ C# reference behavior:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.game.constants import (
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.game.constants import (
     SEL_MY_FIELD_START, SEL_OPP_FIELD_START,
 )
 
@@ -29,8 +29,8 @@ class TestEX3072MegiddoFlameEffectStructure:
     """Structural tests for EX3-072 effect definitions."""
 
     def _get_effects(self, runner):
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         cs = db.create_card_source("EX3-072", runner.game.player1)
@@ -58,8 +58,8 @@ class TestEX3072MegiddoFlameMainEffect:
 
     def _trigger_option_skill(self, runner):
         """Directly invoke the OptionSkill process callback."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         player = runner.game.player1
@@ -294,8 +294,8 @@ class TestEX3072MegiddoFlameSecurityEffect:
 
     def _trigger_security_skill(self, runner):
         """Directly invoke the SecuritySkill process callback."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         player = runner.game.player1
@@ -310,7 +310,7 @@ class TestEX3072MegiddoFlameSecurityEffect:
 
     def test_security_plays_guilmon_from_trash(self, debug_runner):
         """Should allow playing a Guilmon from trash for free."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
         game = runner.game
 

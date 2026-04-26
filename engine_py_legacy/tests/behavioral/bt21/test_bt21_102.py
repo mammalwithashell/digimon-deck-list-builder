@@ -8,7 +8,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -205,7 +205,7 @@ class TestBT21102TaiKamiya:
         game = runner.game
         player = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT21-102", player)
         effects = cs.effect_list(None)

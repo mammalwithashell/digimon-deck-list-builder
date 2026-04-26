@@ -93,9 +93,9 @@ class TestEX1021MetalGarurumon:
         game = runner.game
         player = game.player1
         # Check that the effect uses player.add_memory by inspecting the script
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX1-021", player)
         effects = cs.effect_list(None)

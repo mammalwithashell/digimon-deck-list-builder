@@ -220,7 +220,7 @@ class TestEX7027Chaperomon:
         p1 = runner.game.player1
 
         # Verify the inherited effect has is_optional=True
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         effects = perm.effect_list(EffectTiming.WhenPermanentWouldBeDeleted)
         prevent_effects = [e for e in effects if "Prevent" in (e.effect_name or "")
                           or "prevent" in (e.effect_description or "").lower()]

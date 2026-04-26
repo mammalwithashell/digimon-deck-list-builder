@@ -9,7 +9,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -49,7 +49,7 @@ class TestP130OnPlayMoveFromBreeding:
 
     def test_on_play_optional(self, debug_runner):
         """The On Play move is optional (you may)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-130")
         effects = cs.effect_list(None)
@@ -166,7 +166,7 @@ class TestP130SecurityPlay:
 
     def test_has_security_effect(self, debug_runner):
         """Should have a security play effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-130")
         effects = cs.effect_list(None)

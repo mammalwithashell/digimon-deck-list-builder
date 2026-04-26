@@ -27,7 +27,7 @@ class TestEX9068Analogman:
         runner.place_on_field(1, ["EX9-068"])
 
         # Simulate start of turn by directly calling execute_effects
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartTurn, {})
 
         assert runner.game.memory == 3, (
@@ -41,7 +41,7 @@ class TestEX9068Analogman:
 
         runner.place_on_field(1, ["EX9-068"])
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartTurn, {})
 
         assert runner.game.memory == 3, (
@@ -55,7 +55,7 @@ class TestEX9068Analogman:
 
         runner.place_on_field(1, ["EX9-068"])
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartTurn, {})
 
         assert runner.game.memory == 5, (
@@ -353,8 +353,8 @@ class TestEX9068Analogman:
 
     def test_security_effect_exists(self, debug_runner):
         """[Security] effect should exist and be marked as security."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.core.card_source import CardSource
         db = CardDatabase()
         script = db.get_script("EX9-068")
         cs = CardSource()
@@ -369,8 +369,8 @@ class TestEX9068Analogman:
 
         The C# reference uses EqualsTraits() which does exact matching.
         """
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.core.card_source import CardSource
         db = CardDatabase()
         script = db.get_script("EX9-068")
 

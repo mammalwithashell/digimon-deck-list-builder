@@ -23,8 +23,8 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.interfaces.modifiers import ModifierType
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Card IDs used in tests

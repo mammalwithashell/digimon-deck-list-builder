@@ -26,7 +26,7 @@ Key faithfulness points:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Card IDs
 BT16_040 = "BT16-040"           # Card under test (Wormmon, Lv.3 Green)

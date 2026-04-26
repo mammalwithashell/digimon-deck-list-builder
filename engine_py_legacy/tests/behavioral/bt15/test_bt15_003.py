@@ -14,8 +14,8 @@ DCGO C# reference:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.game.constants import SEL_EFFECT_CHOICE_START
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.game.constants import SEL_EFFECT_CHOICE_START
 
 
 def _get_inherited_wa_effect(perm):

@@ -25,7 +25,7 @@ Key cards used:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 ANGEMON_DECK = (
@@ -66,7 +66,7 @@ class TestBT23_027Angemon:
     def test_has_at_least_two_barrier_effects(self, debug_runner):
         """BT23-027 must register TWO barrier effects — self + inherited (separate instances)."""
         runner = debug_runner(deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-027", runner.game.player1)
 
@@ -83,7 +83,7 @@ class TestBT23_027Angemon:
     def test_inherited_barrier_exists_and_flagged(self, debug_runner):
         """One of the barrier effects must have is_inherited_effect = True."""
         runner = debug_runner(deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-027", runner.game.player1)
 
@@ -105,7 +105,7 @@ class TestBT23_027Angemon:
     def test_inherited_and_self_barriers_are_distinct_instances(self, debug_runner):
         """The two barrier effects must be two separate ICardEffect objects."""
         runner = debug_runner(deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-027", runner.game.player1)
 
@@ -174,7 +174,7 @@ class TestBT23_027Angemon:
     def test_has_on_play_effect(self, debug_runner):
         """BT23-027 must have exactly 1 On Play effect at OnEnterFieldAnyone."""
         runner = debug_runner(deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-027", runner.game.player1)
 
@@ -186,7 +186,7 @@ class TestBT23_027Angemon:
     def test_has_when_digivolving_effect(self, debug_runner):
         """BT23-027 must have exactly 1 When Digivolving effect."""
         runner = debug_runner(deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-027", runner.game.player1)
 
@@ -200,7 +200,7 @@ class TestBT23_027Angemon:
     def test_on_play_and_when_digivolving_are_distinct_instances(self, debug_runner):
         """On Play and When Digivolving must be SEPARATE ICardEffect instances."""
         runner = debug_runner(deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-027", runner.game.player1)
 
@@ -463,10 +463,10 @@ class TestBT23_027Angemon:
         runner = debug_runner(
             deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=10
         )
-        from digimon_gym.engine.validation.digivolve_validator import (
+        from engine_py_legacy.engine.validation.digivolve_validator import (
             _check_alt_digivolve, get_alt_digi_cost,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         base_perm = runner.place_on_field(1, ["BT1-048"])  # Patamon Lv.3
@@ -487,10 +487,10 @@ class TestBT23_027Angemon:
         runner = debug_runner(
             deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=10
         )
-        from digimon_gym.engine.validation.digivolve_validator import (
+        from engine_py_legacy.engine.validation.digivolve_validator import (
             _check_alt_digivolve, get_alt_digi_cost,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Lv.3 Digimon with CS trait (not Patamon)
@@ -509,8 +509,8 @@ class TestBT23_027Angemon:
         runner = debug_runner(
             deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=10
         )
-        from digimon_gym.engine.validation.digivolve_validator import _check_alt_digivolve
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.validation.digivolve_validator import _check_alt_digivolve
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # ST1-03 Agumon is Lv.3 Red without CS trait and not named "Patamon"
@@ -530,7 +530,7 @@ class TestBT23_027Angemon:
         runner = debug_runner(
             deck1=ANGEMON_DECK, deck2=ANGEMON_DECK, initial_memory=5
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # Create a card not on the field
         card = db.create_card_source("BT23-027", runner.game.player1)

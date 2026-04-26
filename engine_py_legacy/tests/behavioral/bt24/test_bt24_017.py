@@ -22,7 +22,7 @@ Clause decomposition:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Minimal deck: all Medusamon (Lv.6, cost 11, Red)
 MEDUSA_DECK = ["BT24-017"] * 4 + ["ST1-08"] * 46  # Garudamon Lv.5 Red as filler

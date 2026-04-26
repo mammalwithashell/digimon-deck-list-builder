@@ -24,7 +24,7 @@ Clauses:
 
 import pytest
 
-from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ Inherited Effect:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # --- Helper card IDs ---
@@ -35,7 +35,7 @@ def _setup_runner(debug_runner, top_cards):
     )
     # Inject desired cards on top of library
     p1 = runner.game.player1
-    from digimon_gym.engine.data.card_database import CardDatabase
+    from engine_py_legacy.engine.data.card_database import CardDatabase
     db = CardDatabase()
     for card_id in reversed(top_cards):
         cs = db.create_card_source(card_id, p1)

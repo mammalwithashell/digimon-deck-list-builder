@@ -22,8 +22,8 @@ Test flow:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.game.constants import SEL_TRASH_START
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
 
 # Minimal decks for testing
@@ -40,8 +40,8 @@ class TestEX11005DigivolveFromTrash:
         runner = debug_runner(
             deck1=YAAMON_DECK, deck2=YAAMON_DECK, initial_memory=10
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.core.permanent import Permanent
 
         db = CardDatabase()
         p1 = runner.game.player1
@@ -160,7 +160,7 @@ class TestEX11005DigivolveFromTrash:
         p1.trash_cards.clear()
 
         # Add a non-qualifying Digimon to trash (BT1-009 Monodramon = Mini Dragon)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         non_dragon = db.create_card_source("BT1-009", p1)
         p1.trash_cards.append(non_dragon)
@@ -233,8 +233,8 @@ class TestEX11005TrashFromHand:
         runner = debug_runner(
             deck1=YAAMON_DECK, deck2=YAAMON_DECK, initial_memory=10
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.core.permanent import Permanent
 
         db = CardDatabase()
         p1 = runner.game.player1
@@ -298,8 +298,8 @@ class TestEX11005TrashFromHand:
         runner = debug_runner(
             deck1=YAAMON_DECK, deck2=YAAMON_DECK, initial_memory=10
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.core.permanent import Permanent
 
         db = CardDatabase()
         p1 = runner.game.player1
@@ -339,8 +339,8 @@ class TestEX11005CostReduction:
         runner = debug_runner(
             deck1=YAAMON_DECK, deck2=YAAMON_DECK, initial_memory=10
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.core.permanent import Permanent
 
         db = CardDatabase()
         p1 = runner.game.player1
@@ -378,10 +378,10 @@ class TestEX11005InheritedOnly:
 
     def test_is_inherited_effect(self, debug_runner):
         """The effect should be marked as inherited."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         cs = db.create_card_source("EX11-005", None)
@@ -399,8 +399,8 @@ class TestEX11005InheritedOnly:
         runner = debug_runner(
             deck1=YAAMON_DECK, deck2=YAAMON_DECK, initial_memory=10
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.core.permanent import Permanent
 
         db = CardDatabase()
         p1 = runner.game.player1

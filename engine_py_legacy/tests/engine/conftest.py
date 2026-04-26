@@ -1,7 +1,7 @@
 """Engine test conftest — fixtures for unit tests that use bare make_card() objects."""
 
 import pytest
-from digimon_gym.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.card_registry import CardRegistry
 
 
 @pytest.fixture

@@ -12,7 +12,7 @@ Alt-digi: Lv.6 w/[Gallantmon] in name: Cost 4
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -25,8 +25,8 @@ class TestBT17018GallantmonCrimsonMode:
         """Alt-digi should use _alt_digi_name = 'Gallantmon' (not _alt_digi_name_filter)."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -47,9 +47,9 @@ class TestBT17018GallantmonCrimsonMode:
         """A Lv.6 Gallantmon on field should be a valid alt-digi base."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.validation.digivolve_validator import _check_alt_digivolve
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.validation.digivolve_validator import _check_alt_digivolve
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -183,8 +183,8 @@ class TestBT17018GallantmonCrimsonMode:
         """Blast Digivolve flag should be present."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 

@@ -19,7 +19,7 @@ Key behaviors (from C# reference):
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Simple deck with Orochimon + filler

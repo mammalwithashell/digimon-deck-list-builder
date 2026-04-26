@@ -11,8 +11,8 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.card_database import CardDatabase
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────

@@ -13,7 +13,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # Helpers
@@ -424,7 +424,7 @@ class TestBT17068Effect3InheritedWhenAttacking:
         dp_before = perm.dp
 
         # Mock selection to pick the Scorpiomon from trash
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         scorpiomon_idx = None
         for i, tc in enumerate(p1.trash_cards):
             if tc.c_entity_base and tc.c_entity_base.card_id == SCORPIOMON:

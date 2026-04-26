@@ -10,7 +10,7 @@ Inherited Effect: ALL of the above (Blocker, On Play delete, All Turns de-digivo
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -202,7 +202,7 @@ class TestBT23077SistermonCiel:
 
         # The selection phase should now be active — select the opponent's permanent
         # SEL_OPP_FIELD_START = 114, opponent's first field slot = 114
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         opp_idx = game.player2.battle_area.index(opp_perm)
         runner.execute(SEL_OPP_FIELD_START + opp_idx)
 

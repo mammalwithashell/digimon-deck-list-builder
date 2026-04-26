@@ -6,11 +6,11 @@ with correct metadata.
 
 import pytest
 
-from digimon_gym.engine.game import Game
-from digimon_gym.engine.loggers import EventLogger
-from digimon_gym.engine.data.enums import GamePhase, CardKind, CardColor, AttackResolution
+from engine_py_legacy.engine.game import Game
+from engine_py_legacy.engine.loggers import EventLogger
+from engine_py_legacy.engine.data.enums import GamePhase, CardKind, CardColor, AttackResolution
 
-from tests.helpers.game_builder import GameBuilder, make_card, make_permanent
+from engine_py_legacy.tests.helpers.game_builder import GameBuilder, make_card, make_permanent
 
 
 class TestSecurityRevealEvent:

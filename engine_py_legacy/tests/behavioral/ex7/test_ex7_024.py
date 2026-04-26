@@ -8,7 +8,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 SHOEMON = "EX7-024"        # Card under test (Lv.3, Puppet/LIBERATOR)
@@ -59,7 +59,7 @@ class TestEX7024_Effect0_DigivolveCostReduction:
         assert len(cost_effects) == 1
 
         # Create a mock card_source with Puppet trait
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         puppet_card = db.create_card_source(PUPPET_LV4, runner.game.player1)
 
@@ -81,7 +81,7 @@ class TestEX7024_Effect0_DigivolveCostReduction:
         cost_effects = [e for e in effects if getattr(e, 'cost_reduction', 0) > 0]
         assert len(cost_effects) == 1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         non_puppet_card = db.create_card_source(NON_PUPPET_LV4, runner.game.player1)
 
@@ -103,7 +103,7 @@ class TestEX7024_Effect0_DigivolveCostReduction:
         cost_effects = [e for e in effects if getattr(e, 'cost_reduction', 0) > 0]
         assert len(cost_effects) == 1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         puppet_card = db.create_card_source(PUPPET_LV4, runner.game.player1)
 

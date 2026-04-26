@@ -24,7 +24,7 @@ Key faithfulness points tested (from C# reference):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # Card IDs
 EX10_069 = "EX10-069"          # Card under test (Option)
@@ -47,7 +47,7 @@ class TestEX10069MainEffect:
     def test_has_option_skill_effect(self, debug_runner):
         """Should have an OptionSkill timing effect."""
         runner = debug_runner(initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(EX10_069, runner.game.player1)
         effects = cs.effect_list(None)
@@ -57,7 +57,7 @@ class TestEX10069MainEffect:
     def test_has_delay_marker(self, debug_runner):
         """Should have a _is_delay effect so the option stays on the field."""
         runner = debug_runner(initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(EX10_069, runner.game.player1)
         effects = cs.effect_list(None)
@@ -476,7 +476,7 @@ class TestEX10069SecurityEffect:
     def test_has_security_effect(self, debug_runner):
         """Should have a SecuritySkill timing effect."""
         runner = debug_runner(initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(EX10_069, runner.game.player1)
         effects = cs.effect_list(None)
@@ -486,7 +486,7 @@ class TestEX10069SecurityEffect:
     def test_security_effect_plays_sunarizamon_or_close(self, debug_runner):
         """Security effect should replay the Main effect (play Sunarizamon/Close)."""
         runner = debug_runner(initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(EX10_069, runner.game.player1)
         effects = cs.effect_list(None)

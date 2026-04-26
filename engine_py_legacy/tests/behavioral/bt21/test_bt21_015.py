@@ -9,7 +9,7 @@ Inherited Effect:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -99,7 +99,7 @@ class TestBT21015Cyclonemon:
         runner = debug_runner(initial_memory=8)
 
         # Place a weak Digimon on opponent's field
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         weak_target = make_permanent(card_id="TEST-001", name="WeakMon", dp=3000, level=3)
         game = runner.game
         game.player2.battle_area.append(weak_target)
@@ -147,7 +147,7 @@ class TestBT21015Cyclonemon:
         """When Digivolving delete filter should match Digimon with DP <= 4000."""
         runner = debug_runner(initial_memory=8)
 
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         weak = make_permanent(card_id="TEST-002", name="WeakMon", dp=4000, level=3)
         game = runner.game
         game.player2.battle_area.append(weak)

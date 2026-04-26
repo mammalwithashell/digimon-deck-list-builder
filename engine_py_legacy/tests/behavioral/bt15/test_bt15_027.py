@@ -15,7 +15,7 @@ C# reference (BT15_027.cs):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -148,7 +148,7 @@ class TestBT15027Scorpiomon:
         )
 
         # Find the sacrifice Digimon in the selection (not "Decline")
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
         # sacrifice is at index 1 in battle_area (Scorpiomon=0, Gabumon=1)
         sacrifice_action = SEL_MY_FIELD_START + 1  # Select Gabumon to delete
         legal = runner.action_mask()
@@ -246,7 +246,7 @@ class TestBT15027Scorpiomon:
         runner.game.execute_effects(EffectTiming.OnEndTurn)
 
         # Explicitly select the sacrifice target (not Decline)
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
         sacrifice_action = SEL_MY_FIELD_START + 1  # Gabumon
         runner.execute(sacrifice_action)
         runner.auto_resolve(max_steps=10)

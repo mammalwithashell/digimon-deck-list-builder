@@ -110,7 +110,7 @@ class TestEX1066OnPlay:
         runner.inject_card(1, EX1_066, "hand")
 
         # Replace top 3 library cards with Tamers (non-Digimon) by injecting
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # Clear the library and rebuild with 3 tamers on top + filler below
         lib_backup = list(game.player1.library_cards)
@@ -154,7 +154,7 @@ class TestEX1066OnPlay:
 
         # Clear the library and inject just 1 Digimon card
         game.player1.library_cards.clear()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(ST1_03, game.player1)
         game.player1.library_cards.append(cs)
@@ -448,8 +448,8 @@ class TestEX1066Security:
             deck2=FILLER,
         )
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
         db = CardDatabase()
         cs = db.create_card_source(EX1_066, game.player1)
         all_effects = cs.effect_list(None)
@@ -467,7 +467,7 @@ class TestEX1066Security:
         game = runner.game
 
         # Create a card source for EX1-066 and put it in security
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(EX1_066, game.player1)
         game.player1.security_cards.append(cs)
@@ -475,7 +475,7 @@ class TestEX1066Security:
         field_before = len(game.player1.battle_area)
 
         # Simulate the security effect firing
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         all_effects = cs.effect_list(None)
         sec_effects = [e for e in all_effects if e.timing == EffectTiming.SecuritySkill]
         assert len(sec_effects) >= 1

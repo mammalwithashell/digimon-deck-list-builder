@@ -18,8 +18,8 @@ Key behaviors to test:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 def _trigger_on_play_effects(perm, game, player):

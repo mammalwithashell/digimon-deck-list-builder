@@ -26,7 +26,7 @@ Key faithfulness checks:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 @pytest.mark.behavioral
@@ -69,7 +69,7 @@ class TestEX5016Lunamon:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-016", runner.game.player1)
         effect = self._get_alt_digi_effect(cs)
@@ -82,7 +82,7 @@ class TestEX5016Lunamon:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-016", runner.game.player1)
         effect = self._get_alt_digi_effect(cs)
@@ -99,7 +99,7 @@ class TestEX5016Lunamon:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-016", runner.game.player1)
         effect = self._get_alt_digi_effect(cs)
@@ -133,7 +133,7 @@ class TestEX5016Lunamon:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-016", runner.game.player1)
         effect = self._get_alt_digi_effect(cs)
@@ -255,7 +255,7 @@ class TestEX5016Lunamon:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-016", runner.game.player1)
         effect = self._get_inherited_main_effect(cs)
@@ -268,7 +268,7 @@ class TestEX5016Lunamon:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-016", runner.game.player1)
         effect = self._get_inherited_main_effect(cs)
@@ -281,7 +281,7 @@ class TestEX5016Lunamon:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-016", runner.game.player1)
         effect = self._get_inherited_main_effect(cs)
@@ -353,7 +353,7 @@ class TestEX5016Lunamon:
         # But wait -- the inherited effect comes from EX5-016 which is on top here
         # For inherited effects to be active, EX5-016 must be UNDER top card
         # Let's add another card on top
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Re-do: put Lunamon under a Night Claw Digimon

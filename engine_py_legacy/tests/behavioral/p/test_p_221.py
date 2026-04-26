@@ -30,8 +30,8 @@ from __future__ import annotations
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 CHAOSMON = "P-221"
@@ -352,7 +352,7 @@ class TestP221MinusDP:
         self._invoke_wd_minus_dp(runner, chaosmon)
 
         # After invocation, there should be a target selection pending
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             f"Effect should open SelectTarget phase to choose 1 opp Digimon, "
             f"got {game.current_phase.name}"
@@ -460,7 +460,7 @@ class TestP221MinusDP:
         game = runner.game
         self._invoke_wa_minus_dp(runner, chaosmon)
 
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             f"[WA] should open SelectTarget, got {game.current_phase.name}"
         )

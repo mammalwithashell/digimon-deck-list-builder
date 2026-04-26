@@ -10,7 +10,7 @@ Inherited: Reboot
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 GIGADRAMON = "BT15-062"
 METALSEADRAMON = "BT15-031"  # Lv.6 Dark Masters, Cyborg

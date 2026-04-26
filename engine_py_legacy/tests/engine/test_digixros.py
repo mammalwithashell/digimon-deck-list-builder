@@ -3,16 +3,16 @@
 Covers: parser, material validator, play flow, action mask, Assembly (trash).
 """
 import pytest
-from digimon_gym.engine.data.card_database import CardDatabase, parse_digixros_req
-from digimon_gym.engine.data.evo_cost import DigiXrosCost, DigiXrosElement
-from digimon_gym.engine.data.enums import GamePhase, EffectTiming
-from digimon_gym.engine.game import Game
-from digimon_gym.engine.game.action_mask import build_action_mask
-from digimon_gym.engine.game.constants import (
+from engine_py_legacy.engine.data.card_database import CardDatabase, parse_digixros_req
+from engine_py_legacy.engine.data.evo_cost import DigiXrosCost, DigiXrosElement
+from engine_py_legacy.engine.data.enums import GamePhase, EffectTiming
+from engine_py_legacy.engine.game import Game
+from engine_py_legacy.engine.game.action_mask import build_action_mask
+from engine_py_legacy.engine.game.constants import (
     SEL_HAND_START, SEL_MY_FIELD_START, SEL_TRASH_START,
 )
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.validation.digixros_validator import (
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.validation.digixros_validator import (
     get_valid_digixros_materials, has_any_digixros_material,
 )
 
@@ -138,7 +138,7 @@ class TestParseDigiXrosReq:
         result = parse_digixros_req(text)
         assert len(result) == 1
         xc = result[0]
-        from digimon_gym.engine.data.enums import CardColor
+        from engine_py_legacy.engine.data.enums import CardColor
         assert xc.elements[0].color == CardColor.Blue
         assert xc.elements[0].name_contains == "Greymon"
 
@@ -487,7 +487,7 @@ class TestDigiXrosPlayFlow:
 
 
 def _make_player():
-    from digimon_gym.engine.core.player import Player
+    from engine_py_legacy.engine.core.player import Player
     return Player()
 
 

@@ -11,22 +11,22 @@ Covers:
 
 import pytest
 
-from digimon_gym.engine.game import Game, ACTION_SPACE_SIZE, FIELD_SLOTS
-from digimon_gym.engine.data.enums import (
+from engine_py_legacy.engine.game import Game, ACTION_SPACE_SIZE, FIELD_SLOTS
+from engine_py_legacy.engine.data.enums import (
     GamePhase, CardKind, CardColor, EffectTiming,
 )
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.evo_cost import EvoCost, DnaCost, DnaRequirement
-from digimon_gym.engine.core.player import Player
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.core.card_source import CardSource
-from digimon_gym.engine.core.entity_base import CEntity_Base
-from digimon_gym.engine.validation.digivolve_validator import (
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.evo_cost import EvoCost, DnaCost, DnaRequirement
+from engine_py_legacy.engine.core.player import Player
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.validation.digivolve_validator import (
     can_dna_digivolve, has_valid_dna_targets,
     get_valid_dna_first_targets, get_valid_dna_second_targets,
     get_dna_stacking_order,
 )
-from digimon_gym.engine.data.card_database import parse_xros_req
+from engine_py_legacy.engine.data.card_database import parse_xros_req
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -225,7 +225,7 @@ class TestXrosReqParser:
         """
         import json as _json
         from tools.ingest_cards import _dna_cost_to_json
-        from digimon_gym.engine.data.card_database import _parse_card_color_field
+        from engine_py_legacy.engine.data.card_database import _parse_card_color_field
 
         source = parse_xros_req("[DNA Digivolve] Blue Lv.4 + Green Lv.4: Cost 2")
         serialized = [_dna_cost_to_json(dc) for dc in source]
@@ -277,7 +277,7 @@ class TestXrosReqParser:
         Guards against breaking users mid-migration when the backfill
         hasn't run yet or a downstream tool produced the old shape.
         """
-        from digimon_gym.engine.data.card_database import _parse_dna_requirement_colors
+        from engine_py_legacy.engine.data.card_database import _parse_dna_requirement_colors
 
         # New schema: list form wins.
         assert _parse_dna_requirement_colors({"card_colors": ["Blue", "Purple"]}) == [
@@ -981,7 +981,7 @@ class TestBT16Paildramon:
 
     def test_paildramon_also_has_normal_evo(self):
         """Paildramon can also normal-digivolve onto a Blue or Green Lv4."""
-        from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+        from engine_py_legacy.engine.validation.digivolve_validator import can_digivolve
         paildramon = make_paildramon()
 
         blue_lv4 = Permanent([make_card(name="BlueMon", level=4, colors=[CardColor.Blue])])

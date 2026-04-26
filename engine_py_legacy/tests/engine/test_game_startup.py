@@ -10,10 +10,10 @@ import pytest
 import numpy as np
 
 from digimon_gym.digimon_gym import greedy_policy
-from digimon_gym.engine.runners.headless_game import HeadlessGame
-from digimon_gym.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.engine.data.enums import GamePhase, PlayerType
-from digimon_gym.engine.game import ACTION_SPACE_SIZE
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from engine_py_legacy.engine.data.enums import GamePhase, PlayerType
+from engine_py_legacy.engine.game import ACTION_SPACE_SIZE
 
 
 # ─── Constants ──────────────────────────────────────────────────────

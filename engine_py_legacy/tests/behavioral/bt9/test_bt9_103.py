@@ -18,8 +18,8 @@ Key behaviors:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType, ModifierEntry
 
 
 @pytest.mark.behavioral
@@ -31,7 +31,7 @@ class TestBT9103Kongou:
         game = runner.game
         player = game.player1 if player_id == 1 else game.player2
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT9-103", player)
         effects = cs.effect_list(None)
@@ -237,7 +237,7 @@ class TestBT9103Kongou:
         perm = runner.place_on_field(2, ["ST1-09"])
         perm.turn_played = -1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT9-103", player)
         effects = cs.effect_list(None)

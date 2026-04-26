@@ -135,7 +135,7 @@ class TestBT24012Dimetromon:
         before_mem = runner.game.memory
 
         # Simulate opponent losing security
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         opp = runner.game.player2
         assert len(opp.security_cards) >= 1
         lost = opp.security_cards.pop(0)
@@ -162,7 +162,7 @@ class TestBT24012Dimetromon:
         before_mem = runner.game.memory
 
         # Player 1 (the card owner) loses security
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         p1 = runner.game.player1
         assert len(p1.security_cards) >= 1
         lost = p1.security_cards.pop(0)
@@ -194,7 +194,7 @@ class TestBT24012Dimetromon:
         before_mem = runner.game.memory
 
         # Opponent loses security on their own turn
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         opp = runner.game.player2
         assert len(opp.security_cards) >= 1
         lost = opp.security_cards.pop(0)
@@ -222,7 +222,7 @@ class TestBT24012Dimetromon:
         runner.set_phase("Main")
         before_mem = runner.game.memory
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         # First security loss — should trigger
         opp = runner.game.player2

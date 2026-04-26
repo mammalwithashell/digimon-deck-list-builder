@@ -10,7 +10,7 @@ Inherited: [Opponent's Turn] This Digimon gets +2000 DP.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral

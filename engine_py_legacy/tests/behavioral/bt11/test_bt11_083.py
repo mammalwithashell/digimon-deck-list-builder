@@ -95,7 +95,7 @@ class TestBT11_083Clause1WhenDigivolving:
     def _resolve_sequence(self, runner, max_steps=20):
         """Resolve pending selections by always picking a real choice
         (skipping the optional-pass action 62) until back to Main/Breeding/End."""
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         for _ in range(max_steps):
             if runner.game.game_over:
                 break
@@ -304,7 +304,7 @@ class TestBT11_083Clause2OnceMemoryPlus1:
         # (Mirei's [Start of Your Turn] gains memory next turn, not now).
         # BT11-083's trigger is the only memory delta beyond cost.
         # Cost of Mirei (BT11-094) — look it up:
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         mirei_cs = db.create_card_source(BT11_094, runner.game.player1)
         mirei_cost = mirei_cs.get_cost_itself
@@ -513,7 +513,7 @@ class TestBT11_083InheritedEffectShape:
             initial_memory=0,
         )
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(BT11_083, runner.game.player1)
         effects = cs.effect_list(None)

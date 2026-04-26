@@ -13,7 +13,7 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -24,7 +24,7 @@ class TestP105PhysicalTraining:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Main effect should have OptionSkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-105")
         effects = cs.effect_list(None)
@@ -33,7 +33,7 @@ class TestP105PhysicalTraining:
 
     def test_has_delay_marker(self, debug_runner):
         """Should have a delay marker effect (_is_delay=True)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-105")
         effects = cs.effect_list(None)
@@ -42,7 +42,7 @@ class TestP105PhysicalTraining:
 
     def test_has_security_effect(self, debug_runner):
         """Should have a security effect to place in battle area."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-105")
         effects = cs.effect_list(None)
@@ -77,7 +77,7 @@ class TestP105PhysicalTraining:
 
     def test_main_filter_any_yellow_card(self, debug_runner):
         """Reveal filter should accept ANY yellow card (Digimon, Tamer, or Option)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Yellow Digimon -- should pass
@@ -166,7 +166,7 @@ class TestP105PhysicalTraining:
         runner.execute(delay_action)
 
         # After delay, should enter SelectTarget for picking which Digimon
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert runner.game.current_phase == GamePhase.SelectTarget, (
             "Should enter SelectTarget to pick a Digimon"
         )
@@ -262,7 +262,7 @@ class TestP105PhysicalTraining:
 
     def test_delay_digivolve_filter_only_yellow_digimon(self, debug_runner):
         """Delay digivolve should only allow digivolving into yellow Digimon cards."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Yellow Digimon -- should be valid digivolve target
@@ -279,7 +279,7 @@ class TestP105PhysicalTraining:
 
     def test_security_places_in_battle_area(self, debug_runner):
         """[Security] should place this card in the battle area (as delay)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-105")
         effects = cs.effect_list(None)

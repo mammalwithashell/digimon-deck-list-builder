@@ -10,20 +10,20 @@ Covers:
 
 import pytest
 
-from digimon_gym.engine.game import (
+from engine_py_legacy.engine.game import (
     Game, ACTION_SPACE_SIZE, FIELD_SLOTS,
 )
-from digimon_gym.engine.data.enums import (
+from engine_py_legacy.engine.data.enums import (
     GamePhase, CardKind, CardColor, EffectTiming,
 )
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.evo_cost import EvoCost
-from digimon_gym.engine.core.player import Player
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.core.card_source import CardSource
-from digimon_gym.engine.core.entity_base import CEntity_Base
-from digimon_gym.engine.interfaces.card_effect import ICardEffect
-from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.evo_cost import EvoCost
+from engine_py_legacy.engine.core.player import Player
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
+from engine_py_legacy.engine.validation.digivolve_validator import can_digivolve
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────

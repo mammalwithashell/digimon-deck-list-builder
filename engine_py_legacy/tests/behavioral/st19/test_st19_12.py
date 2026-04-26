@@ -11,7 +11,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -99,7 +99,7 @@ class TestST19_12Cendrillmon:
 
     def test_when_digivolving_tokens_are_yellow(self, debug_runner):
         """Familiar Tokens should be Yellow Digimon with 3000 DP."""
-        from digimon_gym.engine.data.enums import CardColor
+        from engine_py_legacy.engine.data.enums import CardColor
         runner = debug_runner(initial_memory=5)
         perm = runner.place_on_field(1, ["ST19-09", "ST19-12"])
 
@@ -148,7 +148,7 @@ class TestST19_12Cendrillmon:
     def test_when_digivolving_limited_by_field_slots(self, debug_runner):
         """If only 1 field slot is available, only 1 token should be played
         (effect_play_token handles the cap internally)."""
-        from digimon_gym.engine.game.constants import FIELD_SLOTS
+        from engine_py_legacy.engine.game.constants import FIELD_SLOTS
         runner = debug_runner(initial_memory=5)
 
         game = runner.game
@@ -185,7 +185,7 @@ class TestST19_12Cendrillmon:
 
     def test_when_digivolving_condition_fails_field_full(self, debug_runner):
         """If the field is completely full, condition should fail."""
-        from digimon_gym.engine.game.constants import FIELD_SLOTS
+        from engine_py_legacy.engine.game.constants import FIELD_SLOTS
         runner = debug_runner(initial_memory=5)
 
         game = runner.game

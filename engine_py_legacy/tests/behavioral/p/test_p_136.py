@@ -8,7 +8,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -293,8 +293,8 @@ class TestP136Security:
         runner = debug_runner(initial_memory=3)
 
         # Create a card source to inspect effects
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         cs = db.create_card_source("P-136", runner.game.player1)
@@ -312,8 +312,8 @@ class TestP136Security:
         """Security effect must have an on_process_callback to play the card."""
         runner = debug_runner(initial_memory=3)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         cs = db.create_card_source("P-136", runner.game.player1)

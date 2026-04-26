@@ -25,8 +25,8 @@ Faithfulness clauses tested:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
 
 
 ODINS_BREATH = "BT13-106"
@@ -42,7 +42,7 @@ PATAMON = "BT14-033"      # Lv.3 Yellow Digimon — used to satisfy Option colou
 
 def _get_odins_breath_effects():
     """Instantiate a BT13-106 CardSource and return its effects list."""
-    from digimon_gym.engine.data.card_database import CardDatabase
+    from engine_py_legacy.engine.data.card_database import CardDatabase
     db = CardDatabase()
     cs = db.create_card_source(ODINS_BREATH)
     assert cs is not None, "Failed to create BT13-106 card source"
@@ -385,10 +385,10 @@ class TestBT13106DPExpiry:
     def test_dp_modifier_uses_end_of_opponent_turn_expiry(self):
         """The DP modifier registered by the Main effect must have expiry
         'end_of_opponent_turn' (NOT 'permanent' or 'end_of_turn')."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.game import Game
-        from digimon_gym.engine.loggers import EventLogger
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.game import Game
+        from engine_py_legacy.engine.loggers import EventLogger
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
         db = CardDatabase()
         logger = EventLogger()
@@ -401,7 +401,7 @@ class TestBT13106DPExpiry:
                                       for _ in range(10)]
         # Give p2 a target digimon on field
         target_cs = db.create_card_source(BIRDRAMON, game.player2)
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.core.permanent import Permanent
         target_perm = Permanent([target_cs])
         target_perm._owner_game = game
         game.player2.battle_area.append(target_perm)
@@ -590,7 +590,7 @@ class TestBT13106SecurityEffect:
         # with a side-effect that fires SecuritySkill. Since we want the test
         # to be robust without full attack orchestration, call the security
         # effect process directly — mirroring the security_attack() dispatch.
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         sec_card = runner.game.player2.security_cards[0]
         sec_effects = [
             e for e in sec_card.effect_list(EffectTiming.SecuritySkill)

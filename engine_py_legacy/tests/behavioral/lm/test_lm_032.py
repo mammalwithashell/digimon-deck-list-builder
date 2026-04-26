@@ -18,7 +18,7 @@ Identical structure to LM-030 Green Scramble but filtered for purple.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 # Helper IDs:
@@ -35,7 +35,7 @@ class TestLM032MainEffect:
 
     def test_main_effect_exists(self, debug_runner):
         """LM-032 should have an OptionSkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-032")
         effects = cs.effect_list(None)
@@ -63,7 +63,7 @@ class TestLM032MainEffect:
 
     def test_main_field_filter_purple_only(self, debug_runner):
         """Field filter should only allow purple Digimon."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-032")
         effects = cs.effect_list(None)
@@ -103,7 +103,7 @@ class TestLM032DelayEffect:
 
     def test_delay_marker_exists(self, debug_runner):
         """LM-032 should have a delay marker effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-032")
         effects = cs.effect_list(None)
@@ -112,7 +112,7 @@ class TestLM032DelayEffect:
 
     def test_delay_trigger_exists(self, debug_runner):
         """Should have an OnStartTurn effect for the delay body."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-032")
         effects = cs.effect_list(None)
@@ -178,7 +178,7 @@ class TestLM032SecurityEffect:
 
     def test_security_effect_exists(self, debug_runner):
         """LM-032 should have a SecuritySkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-032")
         effects = cs.effect_list(None)
@@ -188,7 +188,7 @@ class TestLM032SecurityEffect:
 
     def test_security_adds_to_hand(self, debug_runner):
         """Security effect should add LM-032 to the hand after play."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-032")
         effects = cs.effect_list(None)
@@ -208,7 +208,7 @@ class TestLM032SecurityEffect:
     def test_security_filter_purple_only(self, debug_runner):
         """Security play filter should require purple Digimon."""
         # Verify the card itself is purple
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-032")
         assert CardColor.Purple in cs.c_entity_base.card_colors, (
@@ -217,7 +217,7 @@ class TestLM032SecurityEffect:
 
     def test_security_filter_dp_threshold(self, debug_runner):
         """Security play filter: DP must be 2000 or less."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Purple Lv3 with low DP -- should be accepted

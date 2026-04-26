@@ -14,7 +14,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 @pytest.mark.behavioral

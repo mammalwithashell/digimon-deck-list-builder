@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 REPPAMON = "BT22-034"
@@ -311,7 +311,7 @@ class TestBT22034Reppamon:
         on_play.on_process_callback(ctx)
 
         # Engine should now be in a SelectEffectChoice phase for the branch
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert runner.game.current_phase == GamePhase.SelectEffectChoice, (
             f"Branch choice should be exposed, got phase "
             f"{runner.game.current_phase}"
@@ -340,11 +340,11 @@ class TestBT22034Reppamon:
         on_play.on_process_callback(ctx)
 
         # Pick branch 1 (trash top sec, -6000 DP)
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert runner.game.current_phase == GamePhase.SelectEffectChoice
 
         # Constants for effect-choice action range
-        from digimon_gym.engine.game.constants import SEL_EFFECT_CHOICE_START
+        from engine_py_legacy.engine.game.constants import SEL_EFFECT_CHOICE_START
         runner.execute(SEL_EFFECT_CHOICE_START + 1)
         runner.auto_resolve(max_steps=10)
 
@@ -526,7 +526,7 @@ class TestBT22034Reppamon:
     def test_no_stubbed_security_pop(self, debug_runner):
         """The script must use trash_security_card, not raw list pop."""
         import inspect
-        from digimon_gym.engine.data.scripts.bt22 import bt22_034
+        from engine_py_legacy.engine.data.scripts.bt22 import bt22_034
         src = inspect.getsource(bt22_034)
         # No direct security list mutation should remain
         assert "security_cards.pop(" not in src, (

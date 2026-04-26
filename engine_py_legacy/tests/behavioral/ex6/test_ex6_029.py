@@ -29,7 +29,7 @@ C# reference (DCGO/Assets/Scripts/CardEffect/EX6/Yellow/EX6_029.cs):
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 def _resolve_with_first_non_decline(runner, max_steps: int = 10):

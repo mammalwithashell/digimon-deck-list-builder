@@ -6,7 +6,7 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -46,7 +46,7 @@ class TestST213HammerSpark:
             initial_memory=3,
         )
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST2-13", game.player1)
         effects = cs.effect_list(None)
@@ -65,7 +65,7 @@ class TestST213HammerSpark:
         # but player.add_memory respects ICannotAddMemoryEffect modifier
         # Scripts should prefer player.add_memory for consistency
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST2-13", game.player1)
         effects = cs.effect_list(None)

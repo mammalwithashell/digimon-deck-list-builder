@@ -10,7 +10,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase, CardColor
 
 
 @pytest.mark.behavioral
@@ -151,7 +151,7 @@ class TestBT15079Piedmon:
 
     def _trigger_main_phase_effects(self, runner):
         """Helper: trigger OnStartMainPhase effects to register modifiers."""
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase)
 
     def test_digivolve_restriction_blocks_non_white(self, debug_runner):
@@ -181,13 +181,13 @@ class TestBT15079Piedmon:
         assert piedmon_slot is not None
 
         # Verify BT13-092 can normally digivolve onto Piedmon (color/level match)
-        from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+        from engine_py_legacy.engine.validation.digivolve_validator import can_digivolve
         hand_card = runner.game.player1.hand_cards[-1]
         assert can_digivolve(hand_card, perm), (
             "BT13-092 should normally be able to digivolve onto purple Lv.6")
 
         # But the restriction should block it in the action mask
-        from digimon_gym.engine.game.constants import FIELDS_PER_HAND
+        from engine_py_legacy.engine.game.constants import FIELDS_PER_HAND
         hand_idx = len(runner.game.player1.hand_cards) - 1  # Last injected card
         digi_action_id = 400 + hand_idx * FIELDS_PER_HAND + piedmon_slot
         mask = runner.game.get_action_mask(1)
@@ -207,7 +207,7 @@ class TestBT15079Piedmon:
         self._trigger_main_phase_effects(runner)
 
         # Verify the CANNOT_DIGIVOLVE modifier is registered
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
         # For a non-white hand card, modifier should be active (blocking)
         runner.inject_card(1, "BT13-092", "hand")  # Purple Lv.7
@@ -233,7 +233,7 @@ class TestBT15079Piedmon:
         # Trigger OnStartMainPhase to register the digivolve restriction modifier
         self._trigger_main_phase_effects(runner)
 
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
         runner.inject_card(1, "BT13-092", "hand")
         purple_card = runner.game.player1.hand_cards[-1]

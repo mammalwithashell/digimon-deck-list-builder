@@ -30,8 +30,8 @@ Key behaviors verified:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.game.constants import SOURCES_PER_FIELD, SEL_TRASH_START
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.game.constants import SOURCES_PER_FIELD, SEL_TRASH_START
 
 
 # Filler deck for DebugRunner (never used directly; state injection replaces)

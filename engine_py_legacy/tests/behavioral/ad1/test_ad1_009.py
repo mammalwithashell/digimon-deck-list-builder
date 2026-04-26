@@ -90,9 +90,9 @@ class TestAD1009AltDigi:
     def test_alt_digi_effects_have_correct_attributes(self, debug_runner):
         """Alt-digi effects should have correct level, cost, and name/trait."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
-        from digimon_gym.engine.core.card_source import CardSource
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         entity = db.cards.get(BLITZGREYMON)
         cs = CardSource()
@@ -154,7 +154,7 @@ class TestAD1009OnPlayDeDigivolve:
         runner.auto_resolve()
 
         # Find BlitzGreymon on field
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         blitz_perm = next(
             (p for p in game.player1.battle_area if p.top_card and
              p.top_card.card_id == BLITZGREYMON), None)
@@ -215,7 +215,7 @@ class TestAD1009GarurumonImmunity:
         runner.auto_resolve()
 
         # Garurumon should have immunity
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_immunity = game.modifiers.has_modifier(
             garu_perm, ModifierType.CANNOT_BE_AFFECTED)
         assert has_immunity, (
@@ -237,7 +237,7 @@ class TestAD1009GarurumonImmunity:
         runner.auto_resolve()
 
         # BlitzGreymon should still have immunity
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         blitz_perm = next(
             (p for p in game.player1.battle_area if p.top_card and
              p.top_card.card_id == BLITZGREYMON), None)
@@ -255,7 +255,7 @@ class TestAD1009EndOfTurn:
     def test_eot_effect_exists(self, debug_runner):
         """BlitzGreymon should have an OnEndTurn effect."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         perm = runner.place_on_field(1, [BLITZGREYMON])
         effects = perm.top_card.effect_list(EffectTiming.OnEndTurn)
         eot_effects = [e for e in effects if e.timing == EffectTiming.OnEndTurn]
@@ -320,7 +320,7 @@ class TestAD1009EndOfTurn:
     def test_eot_condition_requires_own_turn(self, debug_runner):
         """End of Turn effect condition should check it's the owner's turn."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         perm = runner.place_on_field(1, [BLITZGREYMON])
         effects = perm.top_card.effect_list(EffectTiming.OnEndTurn)
         eot_effects = [e for e in effects if e.timing == EffectTiming.OnEndTurn]
@@ -338,9 +338,9 @@ class TestAD1009Inherited:
     def test_inherited_security_attack_plus_1(self, debug_runner):
         """Inherited effect should grant Security A. +1."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
-        from digimon_gym.engine.core.card_source import CardSource
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         entity = db.cards.get(BLITZGREYMON)
         assert entity is not None

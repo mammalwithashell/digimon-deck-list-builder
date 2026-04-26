@@ -23,7 +23,7 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 def _resolve_prefer_select(runner, max_steps=20):

@@ -12,7 +12,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -221,7 +221,7 @@ class TestEX9024Inherited:
         inh = inherited_effects[0]
 
         # Set up pending attack so force_end_attack has something to end
-        from digimon_gym.engine.game.constants import PendingAttack
+        from engine_py_legacy.engine.game.constants import PendingAttack
         game.pending_attack = PendingAttack(
             attacker=attacker,
             original_target=game.player1,

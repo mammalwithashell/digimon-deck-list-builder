@@ -20,7 +20,7 @@ Key cards used in test setups:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 MUMMYMON = "EX10-051"
@@ -337,7 +337,7 @@ class TestEX10051OnDeletionPlayTamer:
     def test_on_deletion_valid_indices_include_myotismon_tamer(self, debug_runner):
         """The trash index for a valid Myotismon-text Tamer must be in the
         pending selection's valid_indices."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(initial_memory=0)
         perm = runner.place_on_field(1, [MUMMYMON])
@@ -359,7 +359,7 @@ class TestEX10051OnDeletionPlayTamer:
 
     def test_on_deletion_excludes_non_myotismon_tamers(self, debug_runner):
         """Tamers without 'Myotismon' in their text must NOT be offered."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(initial_memory=0)
         perm = runner.place_on_field(1, [MUMMYMON])
@@ -381,7 +381,7 @@ class TestEX10051OnDeletionPlayTamer:
     def test_on_deletion_excludes_non_tamer_cards(self, debug_runner):
         """Non-Tamer cards in trash must NOT be offered (even if they have
         'Myotismon' in their text)."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(initial_memory=0)
         perm = runner.place_on_field(1, [MUMMYMON])
@@ -404,7 +404,7 @@ class TestEX10051OnDeletionPlayTamer:
             self, debug_runner):
         """A candidate with the same card name as an existing Tamer must NOT
         be offered. BT8-093 and EX10-065 are both named 'Yukio Oikawa'."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(initial_memory=0)
         # Put Yukio Oikawa (BT8-093) as an existing Tamer on field
@@ -441,7 +441,7 @@ class TestEX10051OnDeletionPlayTamer:
     def test_on_deletion_plays_selected_tamer_for_free(self, debug_runner):
         """Executing the pending selection should actually play the Tamer to
         the field without paying its cost."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(initial_memory=0)
         perm = runner.place_on_field(1, [MUMMYMON])
@@ -504,7 +504,7 @@ class TestEX10051DCGOParity:
         """The script's on_trashed callback must call player.trash_from_hand
         so that OnDiscardHand timing fires (DCGO IDiscardHand)."""
         import inspect
-        from digimon_gym.engine.data.scripts.ex10.ex10_051 import EX10_051
+        from engine_py_legacy.engine.data.scripts.ex10.ex10_051 import EX10_051
         source = inspect.getsource(EX10_051)
         assert 'trash_from_hand' in source, (
             "C1 should use player.trash_from_hand so OnDiscardHand fires.")
@@ -513,7 +513,7 @@ class TestEX10051DCGOParity:
         """De-digivolved cards must go to the target permanent's owner trash,
         not to a hardcoded reference to player.enemy."""
         import inspect
-        from digimon_gym.engine.data.scripts.ex10.ex10_051 import EX10_051
+        from engine_py_legacy.engine.data.scripts.ex10.ex10_051 import EX10_051
         source = inspect.getsource(EX10_051)
         assert 'target_perm.owner' in source or 'target_owner' in source, (
             "De-digivolved cards should route via target_perm.owner.")
@@ -522,7 +522,7 @@ class TestEX10051DCGOParity:
         """The same-name exclusion must scan ALL battle-area permanents,
         mirroring DCGO's GetBattleAreaPermanents() which returns every slot."""
         import inspect
-        from digimon_gym.engine.data.scripts.ex10.ex10_051 import EX10_051
+        from engine_py_legacy.engine.data.scripts.ex10.ex10_051 import EX10_051
         source = inspect.getsource(EX10_051)
         # Must not gate by is_tamer when building the name set
         assert 'is_tamer and p.top_card' not in source, (

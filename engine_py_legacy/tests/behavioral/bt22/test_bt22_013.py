@@ -18,7 +18,7 @@ C# reference: EqualsCardName("Agumon"), EqualsCardName("Nokia Shiramine"),
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Card IDs used in tests:
@@ -68,7 +68,7 @@ class TestBT22013AltDigi:
                     digi_action = aid
                     break
         # Check the digivolve action mask directly
-        from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+        from engine_py_legacy.engine.validation.digivolve_validator import can_digivolve
         card = runner.game.player1.hand_cards[-1]
         assert can_digivolve(card, perm), (
             "MetalGreymon (Lv.5, has Greymon in name) should be a valid alt-digi target"
@@ -81,7 +81,7 @@ class TestBT22013AltDigi:
         perm = runner.place_on_field(1, ["BT22-023"])
         runner.inject_card(1, "BT22-013", "hand")
 
-        from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+        from engine_py_legacy.engine.validation.digivolve_validator import can_digivolve
         card = runner.game.player1.hand_cards[-1]
         assert can_digivolve(card, perm), (
             "AeroVeedramon (Lv.5, CS trait) should be a valid alt-digi target"
@@ -95,7 +95,7 @@ class TestBT22013AltDigi:
         perm = runner.place_on_field(1, ["BT1-040"])
         runner.inject_card(1, "BT22-013", "hand")
 
-        from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+        from engine_py_legacy.engine.validation.digivolve_validator import can_digivolve
         card = runner.game.player1.hand_cards[-1]
         assert not can_digivolve(card, perm), (
             "WereGarurumon (Lv.5, Garurumon name, no CS) should NOT be a valid alt-digi target for BT22-013"

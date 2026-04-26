@@ -4,15 +4,15 @@ import pytest
 import numpy as np
 
 from digimon_gym.digimon_gym import greedy_policy
-from digimon_gym.engine.runners.headless_game import HeadlessGame
-from digimon_gym.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.engine.data.enums import GamePhase, PlayerType, CardKind, CardColor
-from digimon_gym.engine.data.evo_cost import EvoCost
-from digimon_gym.engine.core.card_source import CardSource
-from digimon_gym.engine.core.entity_base import CEntity_Base
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.game import ACTION_SPACE_SIZE, TENSOR_SIZE
-from digimon_gym.engine.game import Game
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from engine_py_legacy.engine.data.enums import GamePhase, PlayerType, CardKind, CardColor
+from engine_py_legacy.engine.data.evo_cost import EvoCost
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.game import ACTION_SPACE_SIZE, TENSOR_SIZE
+from engine_py_legacy.engine.game import Game
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -408,7 +408,7 @@ class TestInteractiveGame:
 
         sleep_calls = []
         monkeypatch.setattr(
-            "digimon_gym.engine.runners.interactive_game.time.sleep",
+            "engine_py_legacy.engine.runners.interactive_game.time.sleep",
             lambda seconds: sleep_calls.append(seconds),
         )
 

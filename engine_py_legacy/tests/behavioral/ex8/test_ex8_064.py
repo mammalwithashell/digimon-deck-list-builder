@@ -38,9 +38,9 @@ Key behaviors verified:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.interfaces.modifiers import ModifierType
-from digimon_gym.engine.game.constants import (
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.game.constants import (
     SEL_TRASH_START,
     SEL_OPP_FIELD_START,
 )

@@ -19,7 +19,7 @@ Clauses tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ---- Helper deck ----
@@ -44,7 +44,7 @@ class TestST615MainEffect:
 
     def test_main_effect_has_option_skill_timing(self, debug_runner):
         """Effect 0 should have OptionSkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15")
         effects = cs.effect_list(None)
@@ -53,7 +53,7 @@ class TestST615MainEffect:
 
     def test_main_effect_is_optional(self, debug_runner):
         """Effect 0 should be optional ('You may')."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15")
         effects = cs.effect_list(None)
@@ -229,7 +229,7 @@ class TestST615SecurityEffect:
 
     def test_security_effect_has_security_timing(self, debug_runner):
         """Effect 1 should have SecuritySkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15")
         effects = cs.effect_list(None)
@@ -238,7 +238,7 @@ class TestST615SecurityEffect:
 
     def test_security_effect_is_security_effect(self, debug_runner):
         """Security effect should have is_security_effect = True."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15")
         effects = cs.effect_list(None)
@@ -247,7 +247,7 @@ class TestST615SecurityEffect:
 
     def test_security_effect_is_not_optional(self, debug_runner):
         """Security effect deletion should NOT be optional."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15")
         effects = cs.effect_list(None)
@@ -261,7 +261,7 @@ class TestST615SecurityEffect:
         runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
         opp_perm = runner.place_on_field(2, ["ST1-03"])  # Agumon Lv3
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15", runner.game.player1)
         effects = cs.effect_list(None)
@@ -285,7 +285,7 @@ class TestST615SecurityEffect:
         runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
         runner.place_on_field(2, ["ST6-09"])  # Kyukimon Lv5
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15", runner.game.player1)
         effects = cs.effect_list(None)
@@ -308,7 +308,7 @@ class TestST615SecurityEffect:
         # P1 has NO Digimon on field
         runner.place_on_field(2, ["ST1-03"])  # Opponent Agumon Lv3
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15", runner.game.player1)
         effects = cs.effect_list(None)
@@ -330,7 +330,7 @@ class TestST615SecurityEffect:
         runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
         runner.place_on_field(2, ["ST1-03"])  # Single Agumon Lv3
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST6-15", runner.game.player1)
         effects = cs.effect_list(None)
@@ -344,7 +344,7 @@ class TestST615SecurityEffect:
         # The engine's effect_select_opponent_permanent with is_optional=False
         # should request a selection phase, not auto-select
         # After process, game should be in SelectTarget phase waiting for selection
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         if runner.game.current_phase == GamePhase.SelectTarget:
             # Good - selection phase was entered (not auto-selected)
             # Now resolve it

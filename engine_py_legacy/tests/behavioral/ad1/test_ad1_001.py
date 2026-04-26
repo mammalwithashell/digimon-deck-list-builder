@@ -24,7 +24,7 @@ Clause breakdown:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # Padding cards for deck construction

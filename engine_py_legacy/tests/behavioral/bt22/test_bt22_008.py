@@ -9,7 +9,7 @@ Alt-digi: [Koromon] or Lv.2 w/[CS] trait: Cost 0
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Use Dracomon (ST1-04) as filler to avoid "Agumon" name collision
 FILLER_DECK = ["ST1-04"] * 50
@@ -93,7 +93,7 @@ class TestBT22008OnPlay:
     def test_on_play_returns_greymon_from_trash(self, debug_runner):
         """Playing BT22-008 should allow selecting a Greymon-name Digimon
         from trash to add to hand."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
         game = runner.game
@@ -160,7 +160,7 @@ class TestBT22008OnPlay:
     def test_on_play_only_digimon_cards(self, debug_runner):
         """The effect only returns Digimon cards, not Option/Tamer cards
         even if they contain 'Greymon' in name."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
         game = runner.game

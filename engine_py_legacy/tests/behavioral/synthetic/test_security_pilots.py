@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from digimon_gym.engine.debug.state_injection import clear_zone as _cz
+from engine_py_legacy.engine.debug.state_injection import clear_zone as _cz
 
 TEST_020 = "TEST-020"
 TEST_021 = "TEST-021"
@@ -141,8 +141,8 @@ class TestPilotScriptRegistration:
 
     @pytest.mark.parametrize("card_id", [TEST_020, TEST_021, TEST_022])
     def test_registers_security_skill_effect(self, card_id):
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         db = CardDatabase()
         cs = db.create_card_source(card_id)

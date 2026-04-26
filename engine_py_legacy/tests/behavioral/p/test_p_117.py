@@ -26,7 +26,7 @@ Clauses tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # --- Test card IDs ---
@@ -53,7 +53,7 @@ class TestP117DigivolutionCostReduction:
     def test_correct_timing_is_when_would_digivolve(self, debug_runner):
         """C0-a: The cost reduction effect must use WhenWouldDigivolve timing,
         not BeforePayCost (which is for play cost only)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(VEEMON)
         effects = cs.effect_list(None)
@@ -213,7 +213,7 @@ class TestP117DigivolutionCostReduction:
         # Actually OPT on source means the same P-117 card can only reduce once per turn.
         # Since the card is consumed by the first digivolve, OPT is effectively
         # enforced by the card leaving play. This test verifies the hash is set correctly.
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(VEEMON)
         effects = cs.effect_list(None)
@@ -236,7 +236,7 @@ class TestP117InheritedWhenAttacking:
 
     def test_correct_timing_is_on_use_attack(self, debug_runner):
         """C1-a: The inherited effect should use OnUseAttack timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(VEEMON)
         effects = cs.effect_list(None)
@@ -336,7 +336,7 @@ class TestP117InheritedWhenAttacking:
         # that hand didn't increase from the inherited effect.
         # A cleaner check: the inherited condition should return False.
         # Let's just verify the condition logic directly.
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(VEEMON)
         effects = cs.effect_list(None)
@@ -372,7 +372,7 @@ class TestP117FreeTrait:
     def test_free_trait_detected_via_attribute_eng(self, debug_runner):
         """The Free trait is in attribute_eng, not type_eng. Scripts must
         check the correct field."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         exveemon = db.create_card_source(EXVEEMON)
         # Free should be in attribute_eng

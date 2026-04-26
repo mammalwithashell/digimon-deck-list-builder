@@ -10,8 +10,8 @@ Identical mechanic to BT9-047 Pomumon.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 FILLER_DECK = ["BT9-033"] * 50
@@ -83,7 +83,7 @@ class TestBT9033Pillomon:
         })
 
         # Now check _is_effect_play_blocked for a Digimon card
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         digimon_cs = db.create_card_source("ST1-03", game.player1)  # Agumon
 
@@ -115,7 +115,7 @@ class TestBT9033Pillomon:
         })
 
         # Check that a Tamer play is NOT blocked
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         tamer_cs = db.create_card_source("ST1-12", game.player1)  # Tamer
 
@@ -128,8 +128,8 @@ class TestBT9033Pillomon:
         """The effect condition should require Pillomon to be on the field."""
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -177,7 +177,7 @@ class TestBT9033Pillomon:
         game = runner.game
         self._fire_on_play(game, perm)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # BT1-001 Yokomon is a Digi-Egg
         egg_cs = db.create_card_source("BT1-001", game.player1)
@@ -197,7 +197,7 @@ class TestBT9033Pillomon:
         game = runner.game
         self._fire_on_play(game, perm)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         option_cs = db.create_card_source("ST1-13", game.player1)  # Mini Flame
         assert option_cs.is_option, (
@@ -221,7 +221,7 @@ class TestBT9033Pillomon:
         game = runner.game
         self._fire_on_play(game, perm)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         digimon_cs = db.create_card_source("ST1-03", game.player1)  # Agumon
 
@@ -250,7 +250,7 @@ class TestBT9033Pillomon:
         game = runner.game
         self._fire_on_play(game, perm)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # Create a Digimon CardSource owned by player 2 — opponent of Pillomon.
         opp_digimon_cs = db.create_card_source("ST1-03", game.player2)

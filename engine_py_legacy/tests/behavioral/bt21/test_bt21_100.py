@@ -13,7 +13,7 @@ While you have [Takato Matsuki], you can ignore this card's color requirements.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 CARD_ID = "BT21-100"
@@ -340,7 +340,7 @@ class TestBT21100DelayDigivolve:
 
     def test_digivolve_guilmon_into_growlmon_from_trash(self, debug_runner):
         """Guilmon can digivolve into Growlmon from trash without paying cost."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         runner = debug_runner(initial_memory=5)
         game = runner.game
         player = game.player1
@@ -395,7 +395,7 @@ class TestBT21100DelayDigivolve:
 
     def test_digivolve_into_gallantmon_from_trash(self, debug_runner):
         """Growlmon can digivolve into Gallantmon from trash."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         runner = debug_runner(initial_memory=5)
         game = runner.game
         player = game.player1
@@ -494,7 +494,7 @@ class TestBT21100DelayDigivolve:
 
         # The delay triggers and trashes the option; digivolve selection should
         # be optional. Check that the effect has is_optional flag.
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(CARD_ID, player)
         all_effects = cs.effect_list(EffectTiming.NoTiming)
@@ -513,7 +513,7 @@ class TestBT21100SecurityEffect:
         game = runner.game
         player = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(CARD_ID, player)
 
@@ -541,7 +541,7 @@ class TestBT21100SecurityEffect:
         game = runner.game
         player = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(CARD_ID, player)
 

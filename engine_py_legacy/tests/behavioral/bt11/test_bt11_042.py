@@ -28,7 +28,7 @@ Clauses:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ── Card IDs under test ─────────────────────────────────────────────────
@@ -161,7 +161,7 @@ class TestBT11042WhenDigivolving:
         ps = runner.game.pending_selection
         assert ps is not None, "Effect should open a security selection"
         # valid_indices should NOT include the non-Angel filler card
-        from digimon_gym.engine.game.effects import SEL_MY_SECURITY_START
+        from engine_py_legacy.engine.game.effects import SEL_MY_SECURITY_START
         valid_indices = set(ps.valid_indices)
         # Find Agumon index in security
         sec = runner.game.player1.security_cards
@@ -189,7 +189,7 @@ class TestBT11042WhenDigivolving:
         wd.on_process_callback(ctx)
 
         ps = runner.game.pending_selection
-        from digimon_gym.engine.game.effects import SEL_MY_SECURITY_START
+        from engine_py_legacy.engine.game.effects import SEL_MY_SECURITY_START
         valid_indices = set(ps.valid_indices) if ps else set()
         archangel_idx = runner.game.player1.security_cards.index(archangel)
         assert (SEL_MY_SECURITY_START + archangel_idx) in valid_indices, (
@@ -210,7 +210,7 @@ class TestBT11042WhenDigivolving:
         wd.on_process_callback(ctx)
 
         ps = runner.game.pending_selection
-        from digimon_gym.engine.game.effects import SEL_MY_SECURITY_START
+        from engine_py_legacy.engine.game.effects import SEL_MY_SECURITY_START
         valid_indices = set(ps.valid_indices) if ps else set()
         lady_idx = runner.game.player1.security_cards.index(lady)
         assert (SEL_MY_SECURITY_START + lady_idx) in valid_indices, (
@@ -235,7 +235,7 @@ class TestBT11042WhenDigivolving:
         ps = runner.game.pending_selection
         # All non-Angel => no pending selection OR empty valid indices
         if ps is not None:
-            from digimon_gym.engine.game.effects import SEL_MY_SECURITY_START
+            from engine_py_legacy.engine.game.effects import SEL_MY_SECURITY_START
             # All valid indices must correspond to *zero* valid security cards
             assert len(ps.valid_indices) == 0, (
                 f"Expected zero valid targets, got {ps.valid_indices}"

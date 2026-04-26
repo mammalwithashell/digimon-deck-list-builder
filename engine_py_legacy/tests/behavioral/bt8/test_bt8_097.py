@@ -10,8 +10,8 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 @pytest.mark.behavioral
@@ -52,7 +52,7 @@ class TestBT8097CrimsonBlaze:
 
     def test_cost_reduction_leak_guard(self, debug_runner):
         """BeforePayCost should only apply to THIS card (leak guard)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         runner = debug_runner(initial_memory=10)
         runner.set_phase("Main")
@@ -117,7 +117,7 @@ class TestBT8097CrimsonBlaze:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Should have OptionSkill timing for the Main effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT8-097")
         effects = cs.effect_list(None)
@@ -283,7 +283,7 @@ class TestBT8097CrimsonBlaze:
         assert len(entries) >= 1, "Should have CANNOT_PLAY_BY_EFFECT modifier"
 
         entry = entries[0]
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Should block Digimon
@@ -338,7 +338,7 @@ class TestBT8097CrimsonBlaze:
 
     def test_security_activates_main_effects(self, debug_runner):
         """Security effect should have a process callback that invokes main logic."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT8-097")
         effects = cs.effect_list(None)
@@ -358,7 +358,7 @@ class TestBT8097CrimsonBlaze:
         runner.place_on_field(2, ["ST1-03"])  # 2000 DP
         runner.place_on_field(2, ["ST1-11"])  # 12000 DP
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT8-097", runner.game.player1)
         effects = cs.effect_list(None)
@@ -381,7 +381,7 @@ class TestBT8097CrimsonBlaze:
         """Security process should also register the CANNOT_PLAY_BY_EFFECT modifier."""
         runner = debug_runner(initial_memory=10)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT8-097", runner.game.player1)
         effects = cs.effect_list(None)

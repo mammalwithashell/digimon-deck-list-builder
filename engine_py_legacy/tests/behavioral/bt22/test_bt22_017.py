@@ -10,7 +10,7 @@ Alt-digi: [Tsunomon] or Lv.2 w/[CS] trait: Cost 0
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Use Dracomon (ST1-04) as filler to avoid "Gabumon" name collision
 FILLER_DECK = ["ST1-04"] * 50
@@ -123,7 +123,7 @@ class TestBT22017OnPlay:
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
 
         # Verify our card_text assumptions
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         wargreymon = db.create_card_source("BT22-013", None)
         omnimon = db.create_card_source("BT22-015", None)
@@ -166,7 +166,7 @@ class TestBT22017OnPlay:
         game = runner.game
 
         # Check the effect's is_optional flag directly
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-017", game.player1)
         effects = cs.effect_list(None)

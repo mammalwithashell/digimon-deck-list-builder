@@ -14,7 +14,7 @@ Inherited effect:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -31,7 +31,7 @@ class TestEX5015GabumonXAntibody:
 
         # Verify the script has On Play and When Digivolving effects
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-015", game.player1)
         effects = cs.effect_list(None)
@@ -64,7 +64,7 @@ class TestEX5015GabumonXAntibody:
 
         # Verify by checking effect structure
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-015", game.player1)
         effects = cs.effect_list(None)
@@ -83,7 +83,7 @@ class TestEX5015GabumonXAntibody:
         )
 
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-015", game.player1)
         effects = cs.effect_list(None)
@@ -130,7 +130,7 @@ class TestEX5015GabumonXAntibody:
         # NOT: select an opponent permanent and return it to deck bottom (current bug)
 
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX5-015", game.player1)
         effects = cs.effect_list(None)

@@ -19,7 +19,7 @@ C# reference: P_216.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # Minimal decks. BT15-031 is MetalSeadramon (Dark Masters trait, Lv.6, Digimon).
@@ -34,8 +34,8 @@ class TestP216Blocker:
 
     def test_blocker_effect_present(self):
         """P-216 should have a Blocker effect (non-inherited)."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -58,8 +58,8 @@ class TestP216InheritedBlocker:
 
     def test_inherited_blocker_effect_present(self):
         """P-216 should have an inherited Blocker effect."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -214,7 +214,7 @@ class TestP216OnPlay:
 
         perm = dm_on_field[0]
         # Check CANNOT_DIGIVOLVE modifier
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_cannot_digi = game.modifiers.has_modifier(
             perm, ModifierType.CANNOT_DIGIVOLVE
         )
@@ -318,7 +318,7 @@ class TestP216OnDeletion:
         perm = runner.place_on_field(1, ["P-216"])
 
         # Add face-up Dark Masters card to security
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         dm_card = db.create_card_source("BT15-031", p1)
         p1.add_to_security_face_up(dm_card)
@@ -397,7 +397,7 @@ class TestP216OnDeletion:
         perm = runner.place_on_field(1, ["P-216"])
 
         # Add face-up Dark Masters card to security
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         dm_card = db.create_card_source("BT15-031", p1)
         p1.add_to_security_face_up(dm_card)
@@ -450,7 +450,7 @@ class TestP216OnDeletion:
         perm = runner.place_on_field(1, ["P-216"])
 
         # Add face-up Dark Masters card to security
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         dm_card = db.create_card_source("BT15-031", p1)
         p1.add_to_security_face_up(dm_card)
@@ -484,7 +484,7 @@ class TestP216OnDeletion:
         perm = runner.place_on_field(1, ["P-216"])
 
         # Add face-up EX10-072 (Spiral Mountain, Option, Dark Masters trait)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         opt_card = db.create_card_source("EX10-072", p1)
         p1.add_to_security_face_up(opt_card)

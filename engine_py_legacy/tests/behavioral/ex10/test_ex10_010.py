@@ -11,7 +11,7 @@ Inherited: Ace Overflow <-4>
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 def _trigger_on_play_effects(runner, perm):

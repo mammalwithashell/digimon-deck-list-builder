@@ -9,7 +9,7 @@ Inherited: [All Turns] This Digimon gets +1000 DP.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 DECK = ["BT4-072"] * 4 + ["BT2-056"] * 4 + ["ST5-05"] * 20 + ["BT2-052"] * 22
@@ -132,7 +132,7 @@ class TestBT4072Gogmamon:
         """Inherited [All Turns] +1000 DP should be a permanent dp_modifier."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT4-072", runner.game.player1)
         effects = card.effect_list(None)
@@ -154,7 +154,7 @@ class TestBT4072Gogmamon:
         # Gogmamon (Lv.5, 7000 DP base) + inherited from self won't apply
         # (inherited effects only apply from under the top card)
         # Let's stack something on top
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         top_card = db.create_card_source("BT2-060", runner.game.player1)  # Megadramon Lv.5
         base_dp_megadramon = top_card.base_dp

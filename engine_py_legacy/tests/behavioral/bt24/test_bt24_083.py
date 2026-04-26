@@ -10,7 +10,7 @@ them to the hand. Return the rest to the bottom of the deck.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # BT24-031 Elecmon: Lv.3, 1000 DP, TS trait — valid play target for Start of Turn
 HIROKO_DECK = ["BT24-083"] * 4 + ["BT24-031"] * 46

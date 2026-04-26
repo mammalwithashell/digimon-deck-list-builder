@@ -7,7 +7,7 @@ Inherited: [When Attacking] If you have a blue Digimon in play, <Draw 1>.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral

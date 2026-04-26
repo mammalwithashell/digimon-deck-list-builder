@@ -25,7 +25,7 @@ Clause analysis:
 
 import pytest
 
-from digimon_gym.engine.data.enums import CardColor
+from engine_py_legacy.engine.data.enums import CardColor
 
 
 # === Card IDs ===
@@ -512,7 +512,7 @@ class TestST10_15_SecurityEffect:
 
         # Simulate security trigger: get the script via CardDatabase and invoke
         # the security effect's process callback directly
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         db = CardDatabase()
         card_source = db.create_card_source(DARKNESS_WAVE, player)

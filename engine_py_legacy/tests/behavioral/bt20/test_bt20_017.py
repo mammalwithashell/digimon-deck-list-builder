@@ -17,7 +17,7 @@ Clause breakdown:
 
 import pytest
 
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 @pytest.mark.behavioral
@@ -221,7 +221,7 @@ class TestBT20017Jesmon:
     def test_then_may_attack_uses_may_attack_modifier(self, debug_runner):
         """After delete, the selected Digimon should get MAY_ATTACK modifier,
         not FORCE_ATTACK."""
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
         runner = debug_runner(initial_memory=15)
         runner.place_on_field(1, ["BT20-017"])
@@ -316,7 +316,7 @@ class TestBT20017Jesmon:
             f"Got: {snap.phase}")
 
         # No Digimon should have MAY_ATTACK
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         for perm in runner.game.player1.battle_area:
             assert not runner.game.modifiers.has_modifier(perm, ModifierType.MAY_ATTACK), (
                 "No Digimon should have MAY_ATTACK when delete was skipped (Then semantics)")

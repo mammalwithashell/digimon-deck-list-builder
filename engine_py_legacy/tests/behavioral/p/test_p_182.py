@@ -8,7 +8,7 @@ Security A. +1, Blocker.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -23,7 +23,7 @@ class TestP182WarGreymon:
             initial_memory=10,
         )
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-182", game.player1)
         effects = cs.effect_list(None)
@@ -38,7 +38,7 @@ class TestP182WarGreymon:
             initial_memory=10,
         )
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-182", game.player1)
         effects = cs.effect_list(None)
@@ -60,7 +60,7 @@ class TestP182WarGreymon:
         runner.place_on_field(2, ["ST1-07"])  # ST1-07 has some DP
 
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-182", game.player1)
         effects = cs.effect_list(None)
@@ -79,7 +79,7 @@ class TestP182WarGreymon:
         )
 
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-182", game.player1)
         effects = cs.effect_list(None)
@@ -113,11 +113,11 @@ class TestP182WarGreymon:
 
         # Verify the deletion filter checks DP
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-182", game.player1)
         effects = cs.effect_list(None)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         when_digi = [e for e in effects
                      if e.timing == EffectTiming.OnEnterFieldAnyone
                      and getattr(e, 'is_when_digivolving', False)]

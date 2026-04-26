@@ -22,7 +22,7 @@ Clause decomposition:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Use ST1-03 (Agumon Lv.3) as filler, BT6-082 (Sistermon Blanc, Lv.3 Puppet) for trash play target
@@ -110,7 +110,7 @@ class TestEX11023WhenDigivolving:
 
         ps = runner.game.pending_selection
         assert ps is not None, "Should have pending selection"
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         opp_targets = [v for v in ps.valid_indices if v >= SEL_OPP_FIELD_START]
         assert len(opp_targets) == 1, (
             f"Should have exactly 1 valid target (Lv.3 only), got {len(opp_targets)}"
@@ -317,7 +317,7 @@ class TestEX11023DeletionObserver:
         # Select the Puppet card from trash (not Decline)
         ps = runner.game.pending_selection
         assert ps is not None, "Should have pending selection"
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         trash_targets = [v for v in ps.valid_indices if v >= SEL_TRASH_START]
         assert len(trash_targets) >= 1, "Should have trash targets"
         runner.execute(trash_targets[0])
@@ -353,7 +353,7 @@ class TestEX11023DeletionObserver:
 
         # Select the Puppet card from trash
         ps = runner.game.pending_selection
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         trash_targets = [v for v in ps.valid_indices if v >= SEL_TRASH_START]
         assert len(trash_targets) >= 1, "Should have trash targets"
         runner.execute(trash_targets[0])
@@ -429,7 +429,7 @@ class TestEX11023DeletionObserver:
         snap = runner.snapshot()
         if snap.phase == "SelectTarget":
             ps = runner.game.pending_selection
-            from digimon_gym.engine.game.constants import SEL_TRASH_START
+            from engine_py_legacy.engine.game.constants import SEL_TRASH_START
             trash_targets = [v for v in ps.valid_indices if v >= SEL_TRASH_START]
             if trash_targets:
                 runner.execute(trash_targets[0])
@@ -498,7 +498,7 @@ class TestEX11023DeletionObserver:
         if snap.phase == "SelectTarget":
             ps = runner.game.pending_selection
             assert ps is not None
-            from digimon_gym.engine.game.constants import SEL_TRASH_START
+            from engine_py_legacy.engine.game.constants import SEL_TRASH_START
             trash_targets = [v for v in ps.valid_indices if v >= SEL_TRASH_START]
             # Only BT6-082 should be valid (Lv.3 Puppet)
             assert len(trash_targets) == 1, (

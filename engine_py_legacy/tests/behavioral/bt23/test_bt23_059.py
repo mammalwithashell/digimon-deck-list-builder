@@ -15,7 +15,7 @@ Alt Digivolve:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 DECK = ["BT23-059"] * 4 + ["BT22-099"] * 4 + ["BT22-017"] * 10 + ["ST5-05"] * 16 + ["BT2-052"] * 16
@@ -31,7 +31,7 @@ class TestBT23059JustimonBlitzArm:
         """Should have Blocker keyword."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-059", runner.game.player1)
         effects = card.effect_list(None)
@@ -45,7 +45,7 @@ class TestBT23059JustimonBlitzArm:
         """Should have alt-digi from Justimon: Accel Arm or Critical Arm for cost 1."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-059", runner.game.player1)
         effects = card.effect_list(EffectTiming.NoTiming)
@@ -62,7 +62,7 @@ class TestBT23059JustimonBlitzArm:
         restricts to CS trait Digimon."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-059", runner.game.player1)
         effects = card.effect_list(EffectTiming.NoTiming)
@@ -77,8 +77,8 @@ class TestBT23059JustimonBlitzArm:
         """Validator should accept CS Lv.5 and reject non-CS Lv.5 for cost 3 alt-digi."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.validation.digivolve_validator import _check_alt_digivolve
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.validation.digivolve_validator import _check_alt_digivolve
         db = CardDatabase()
         card = db.create_card_source("BT23-059", runner.game.player1)
 
@@ -98,7 +98,7 @@ class TestBT23059JustimonBlitzArm:
         """Should have OnEnterFieldAnyone effect with is_on_play."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-059", runner.game.player1)
         effects = card.effect_list(None)
@@ -111,7 +111,7 @@ class TestBT23059JustimonBlitzArm:
         """Should have OnEnterFieldAnyone effect with is_when_digivolving."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-059", runner.game.player1)
         effects = card.effect_list(None)
@@ -124,7 +124,7 @@ class TestBT23059JustimonBlitzArm:
         """Should have OnUseAttack effect with is_on_attack."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-059", runner.game.player1)
         effects = card.effect_list(None)

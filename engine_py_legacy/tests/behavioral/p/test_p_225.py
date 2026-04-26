@@ -29,7 +29,7 @@ C# reference: DCGO/Assets/Scripts/CardEffect/P/White/P_225.cs
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # ── Card IDs used in these tests ────────────────────────────────────────
@@ -244,8 +244,8 @@ class TestP225Delay:
     # ── Effect-structure static checks ────────────────────────────────
 
     def test_delay_marker_exists(self):
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -256,8 +256,8 @@ class TestP225Delay:
         assert len(delay_effects) >= 1, "P-225 should have a _is_delay marker effect."
 
     def test_delay_callback_follows_delay_marker(self):
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -279,8 +279,8 @@ class TestP225Delay:
     def test_delay_callback_not_field_main(self):
         """The delay callback must not also be flagged as _is_field_main
         (that would create a duplicate action via the field-main slot)."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -527,8 +527,8 @@ class TestP225Security:
     """C4: Security — place this card in the battle area."""
 
     def test_security_effect_has_correct_timing(self):
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -555,7 +555,7 @@ class TestP225Security:
         runner.clear_zone(2, "security")
         runner.inject_card(2, P225, "security_top")
 
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "StrongAttacker", dp=12000)
         game.player1.battle_area.append(attacker)
 
@@ -580,8 +580,8 @@ class TestP225Security:
 @pytest.mark.behavioral
 class TestP225EffectStructure:
     def test_has_option_skill_main_effect(self):
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -601,8 +601,8 @@ class TestP225EffectStructure:
         """The CardSource must carry a dynamic _match_color_requirement_fn
         so the action mask can re-evaluate the bypass condition each tick.
         """
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()

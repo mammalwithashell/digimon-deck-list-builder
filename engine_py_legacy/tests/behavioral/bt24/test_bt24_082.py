@@ -14,7 +14,7 @@ Security Effect [Security] Play this card without paying the cost.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # BT1-010 Agumon: Lv3 Red Reptile, 2000 DP
 # BT21-017 Dimetromon: Lv4 Red Reptile, 4000 DP, digi from Lv3 Red for 2
@@ -99,7 +99,7 @@ class TestBT24082OwenDreadnought:
         game.execute_effects(EffectTiming.OnStartMainPhase)
 
         # First selection: pick Owen from hand (action 0 = first hand card)
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, \
             f"Should be in SelectTarget for Owen play, got {game.current_phase}"
         owen_action = runner.find_action("Owen Dreadnought")

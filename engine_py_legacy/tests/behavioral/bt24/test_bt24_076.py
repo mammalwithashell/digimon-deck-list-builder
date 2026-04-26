@@ -18,7 +18,7 @@ Clause breakdown:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Card IDs used in tests
@@ -388,7 +388,7 @@ class TestBT24076InheritedOnDeletion:
         })
 
         # Selection phase should offer the Dark Dragon from trash
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             "Should be in selection phase for trash play")
         legal = runner.action_mask()

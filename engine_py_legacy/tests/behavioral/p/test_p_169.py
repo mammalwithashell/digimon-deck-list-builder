@@ -31,7 +31,7 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 # Card IDs
 P_169 = "P-169"             # Card under test (Close, Tamer, Black)
@@ -87,8 +87,8 @@ class TestP169StartOfMainPhase:
         _setup_security(runner)
 
         # Verify the start-of-main-phase effect exists with correct timing
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
         db = CardDatabase()
         cs = db.create_card_source(P_169, runner.game.player1)
         effects = cs.effect_list(None)
@@ -118,7 +118,7 @@ class TestP169StartOfMainPhase:
         # Verify condition returns False when opponent has no Digimon
         cs = tamer_perm.card_sources[0]
         effects = cs.effect_list(None)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         main_effects = [
             e for e in effects
             if e.timing == EffectTiming.OnStartMainPhase
@@ -240,7 +240,7 @@ class TestP169DigiCardTrashTrigger:
 
         if runner.game.current_phase == GamePhase.SelectTrash:
             # Select the Golemon from trash
-            from digimon_gym.engine.game.constants import SEL_TRASH_START
+            from engine_py_legacy.engine.game.constants import SEL_TRASH_START
             golemon_idx = None
             for i, card in enumerate(runner.game.player1.trash_cards):
                 if card.c_entity_base and card.c_entity_base.card_id == GOLEMON:
@@ -417,7 +417,7 @@ class TestP169DigiCardTrashTrigger:
         _trigger_digi_card_trash(runner, rock_perm)
 
         # Resolve through optional effect acceptance until SelectTrash
-        from digimon_gym.engine.game.constants import SEL_TRASH_START, SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START, SEL_MY_FIELD_START
 
         max_steps = 15
         for _ in range(max_steps):
@@ -484,8 +484,8 @@ class TestP169Security:
 
     def test_security_effect_exists(self, debug_runner):
         """C2-a: P-169 should have a SecuritySkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
         db = CardDatabase()
         cs = db.create_card_source(P_169)
         effects = cs.effect_list(None)

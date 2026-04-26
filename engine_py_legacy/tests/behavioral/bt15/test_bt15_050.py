@@ -16,7 +16,7 @@ Key issues tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # --- Helpers ---
@@ -99,7 +99,7 @@ class TestBT15050OnPlayReveal:
         # Clear hand, put known cards on top of library
         p1.hand_cards.clear()
         p1.library_cards.clear()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # Set up library: Lv6, Lv6, Lv3, Lv3, then padding
         top_cards = ["BT15-052", "BT15-031", "ST1-03", "ST1-03"]
@@ -144,7 +144,7 @@ class TestBT15050OnPlayReveal:
 
         p1.hand_cards.clear()
         p1.library_cards.clear()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # All Lv3 (none qualify) - all should go to bottom
         for _ in range(10):
@@ -316,7 +316,7 @@ class TestBT15050EndOfTurnBreedingPlay:
         # a) Not offer the play at all (breeding check before deletion), OR
         # b) Offer deletion but then not offer play (breeding check after deletion)
         # In both cases, resolve all remaining selections
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         while game.current_phase not in (GamePhase.Main, GamePhase.Breeding, GamePhase.End):
             legal = runner.action_mask()
             if not legal:
@@ -403,7 +403,7 @@ class TestBT15050EndOfTurnBreedingPlay:
         })
 
         # Resolve all selections (pick non-decline to allow deletion)
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         while game.current_phase not in (GamePhase.Main, GamePhase.Breeding, GamePhase.End):
             legal = runner.action_mask()
             if not legal:

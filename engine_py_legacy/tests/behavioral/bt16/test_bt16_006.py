@@ -13,7 +13,7 @@ Key behaviors per C# reference (DCGO BT16_006.cs):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # BT16-006 is a Lv.2 DigiEgg, so we need a filler deck with some copies
@@ -132,7 +132,7 @@ class TestBT16006Cupimon:
 
         # At this point, if the engine enters a selection phase,
         # memory should NOT have changed yet (it's pending selection)
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         if game.current_phase in (GamePhase.SelectHand,):
             assert game.memory == memory_before, (
                 f"Memory should not change before hand card selection! "

@@ -17,7 +17,7 @@ Issues being tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 # --- Test card IDs ---
@@ -278,7 +278,7 @@ class TestP215ProtectionTargetSelection:
         runner.auto_resolve()
 
         # After full resolution, check modifiers on field Digimon
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         game = runner.game
         player = game.player1
 
@@ -407,7 +407,7 @@ class TestP215InheritedBlocker:
 
     def test_inherited_blocker_flag(self, debug_runner):
         """The inherited effect should set _is_blocker = True."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(ICEMON)
         effects = cs.effect_list(None)

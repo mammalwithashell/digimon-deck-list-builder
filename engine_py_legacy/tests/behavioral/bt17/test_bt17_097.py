@@ -32,7 +32,7 @@ the type/trait field.
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ── Helper deck ─────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ class TestBT17097MainEffect:
 
     def test_main_effect_exists(self, debug_runner):
         """BT17-097 should have an OptionSkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT17-097")
         effects = cs.effect_list(None)
@@ -80,7 +80,7 @@ class TestBT17097MainEffect:
         """
         runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # BT12-028 Paildramon is Lv5 with Free attribute
@@ -161,7 +161,7 @@ class TestBT17097MainEffect:
 
     def test_main_rejects_lv4_free(self, debug_runner):
         """Hand filter should reject Free Digimon below Lv5."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # ExVeemon is Lv4 + Free — should be rejected
@@ -203,7 +203,7 @@ class TestBT17097DelayEffect:
 
     def test_delay_marker_exists(self, debug_runner):
         """BT17-097 should have a delay marker effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT17-097")
         effects = cs.effect_list(None)
@@ -212,7 +212,7 @@ class TestBT17097DelayEffect:
 
     def test_delay_trigger_exists(self, debug_runner):
         """Should have a WhenPermanentWouldBeDeleted trigger effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT17-097")
         effects = cs.effect_list(None)
@@ -411,7 +411,7 @@ class TestBT17097SecurityEffect:
 
     def test_security_effect_exists(self, debug_runner):
         """BT17-097 should have a SecuritySkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT17-097")
         effects = cs.effect_list(None)
@@ -421,7 +421,7 @@ class TestBT17097SecurityEffect:
 
     def test_security_filter_matches_davis(self, debug_runner):
         """Security filter should match 'Davis Motomiya' tamer cards."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         davis = db.create_card_source("BT3-093")
@@ -431,7 +431,7 @@ class TestBT17097SecurityEffect:
 
     def test_security_filter_matches_ken(self, debug_runner):
         """Security filter should match 'Ken Ichijoji' tamer cards."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         ken = db.create_card_source("BT3-094")
@@ -441,7 +441,7 @@ class TestBT17097SecurityEffect:
 
     def test_security_filter_matches_combined_tamer(self, debug_runner):
         """Security filter should match 'Davis Motomiya & Ken Ichijoji' tamer."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         combined = db.create_card_source("BT17-084")

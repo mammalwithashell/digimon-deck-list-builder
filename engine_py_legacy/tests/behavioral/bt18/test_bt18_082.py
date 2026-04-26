@@ -26,7 +26,7 @@ Key faithfulness points tested:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 LUCEMON_CM = "BT18-082"     # Lucemon: Chaos Mode (Lv.5 target)
@@ -279,7 +279,7 @@ class TestBT18082OnPlayOpponentDeletes:
 
     def test_on_play_opponent_targets_are_only_own(self, debug_runner):
         """Valid indices in pending selection only point to P2's own battle_area."""
-        from digimon_gym.engine.game.constants import (
+        from engine_py_legacy.engine.game.constants import (
             SEL_MY_FIELD_START, SEL_OPP_FIELD_START,
         )
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=10)

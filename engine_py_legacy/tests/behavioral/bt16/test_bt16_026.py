@@ -26,8 +26,8 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.interfaces.modifiers import ModifierType
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Card IDs used in tests
@@ -519,9 +519,9 @@ class TestBT16026AceOverflow:
 
     def test_ace_overflow_inherited_effect(self, debug_runner):
         """Should have Ace Overflow <-4> inherited effect."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         runner = debug_runner(initial_memory=10)

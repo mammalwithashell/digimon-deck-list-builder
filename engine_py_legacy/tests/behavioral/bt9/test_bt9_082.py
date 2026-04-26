@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Card IDs used in tests
@@ -104,8 +104,8 @@ class TestBT9082EffectStructure:
             deck2=FILLER,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         cs = db.create_card_source(BT9_082, runner.game.player1)
@@ -117,8 +117,8 @@ class TestBT9082EffectStructure:
     def test_on_deletion_is_optional(self, debug_runner):
         """The [On Deletion] 'you may' clause must be marked optional."""
         runner = debug_runner(deck1=[BT9_082] * 4 + FILLER, deck2=FILLER)
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         cs = db.create_card_source(BT9_082, runner.game.player1)
@@ -236,7 +236,7 @@ class TestBT9082DnaMassDelete:
 
         self._fire_wd(runner, ordinemon)
         # Script must have entered selection phase for the mandatory Lv6+ target.
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             f"Lv6+ deletion must be a player choice (SelectTarget phase); "
             f"got {game.current_phase}"
@@ -360,7 +360,7 @@ class TestBT9082DnaMassDelete:
         Grants CANNOT_BE_DESTROYED to one of two Lv5- opponents and expects
         recovery = 1 (only the unprotected one is deleted).
         """
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
         runner = debug_runner(
             deck1=[BT9_082] * 4 + FILLER,
@@ -455,8 +455,8 @@ class TestBT9082OnDeletionCondition:
             deck2=FILLER,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -506,8 +506,8 @@ class TestBT9082OnDeletionCondition:
             deck2=FILLER,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -541,8 +541,8 @@ class TestBT9082OnDeletionProcess:
             deck2=FILLER,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -598,8 +598,8 @@ class TestBT9082OnDeletionProcess:
             deck2=FILLER,
             initial_memory=0,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 

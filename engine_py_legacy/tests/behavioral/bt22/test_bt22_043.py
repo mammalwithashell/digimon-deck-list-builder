@@ -12,7 +12,7 @@ Card text:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 TERRIERMON = "BT22-043"
@@ -74,7 +74,7 @@ class TestBT22043AltDigivolve:
 
     def test_alt_digi_effect_present(self, make_runner):
         runner = make_runner()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(TERRIERMON, runner.game.player1)
         effects = cs.effect_list(EffectTiming.NoTiming)
@@ -92,8 +92,8 @@ class TestBT22043AltDigivolve:
     def test_alt_digi_matches_lv2_cs_base(self, make_runner):
         """Validator should accept a Lv.2 [CS] base as a valid alt-digi source."""
         runner = make_runner()
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.validation.digivolve_validator import _check_alt_digivolve
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.validation.digivolve_validator import _check_alt_digivolve
 
         db = CardDatabase()
         terriermon = db.create_card_source(TERRIERMON, runner.game.player1)
@@ -134,7 +134,7 @@ class TestBT22043C1_PlayCsTamer:
         perm = runner.place_on_field(1, [TERRIERMON])
         runner.inject_card(1, CS_TAMER_3, "hand")  # need a CS Tamer in hand
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         added = db.create_card_source(CS_LV4, runner.game.player1)
         assert added.is_digimon and 'CS' in added.card_traits
@@ -154,7 +154,7 @@ class TestBT22043C1_PlayCsTamer:
         perm = runner.place_on_field(1, [TERRIERMON])
         runner.inject_card(1, CS_TAMER_3, "hand")
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         added = db.create_card_source(PLAIN_DIGIMON, runner.game.player1)
         assert 'CS' not in (added.card_traits or [])
@@ -176,7 +176,7 @@ class TestBT22043C1_PlayCsTamer:
         other_perm = runner.place_on_field(1, [CS_LV4])
         runner.inject_card(1, CS_TAMER_3, "hand")
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         added = db.create_card_source(CS_LV3, runner.game.player1)
 
@@ -201,7 +201,7 @@ class TestBT22043C1_PlayCsTamer:
         runner.game.player1.is_my_turn = False
         runner.game.player2.is_my_turn = True
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         added = db.create_card_source(CS_LV3, runner.game.player1)
 
@@ -224,7 +224,7 @@ class TestBT22043C1_PlayCsTamer:
         runner.place_on_field(1, [CS_TAMER_3])
         runner.inject_card(1, CS_TAMER_4, "hand")
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         added = db.create_card_source(CS_LV3, runner.game.player1)
 
@@ -246,7 +246,7 @@ class TestBT22043C1_PlayCsTamer:
         runner.place_on_field(1, [CS_TAMER_3])
         runner.inject_card(1, CS_TAMER_4, "hand")
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         added = db.create_card_source(CS_LV3, runner.game.player1)
 
@@ -266,7 +266,7 @@ class TestBT22043C1_PlayCsTamer:
         perm = runner.place_on_field(1, [TERRIERMON])
         runner.inject_card(1, PLAIN_TAMER, "hand")  # NOT CS
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         added = db.create_card_source(CS_LV3, runner.game.player1)
 
@@ -287,7 +287,7 @@ class TestBT22043C1_PlayCsTamer:
         perm = runner.place_on_field(1, [TERRIERMON])
         runner.inject_card(1, CS_TAMER_3, "hand")
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         added = db.create_card_source(CS_TAMER_3, runner.game.player1)  # Tamer, not Digimon
         assert added.is_tamer and not added.is_digimon

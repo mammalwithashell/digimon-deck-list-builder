@@ -9,7 +9,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 FILLER_DECK = ["BT2-067"] * 50  # Purple Lv.3
@@ -25,8 +25,8 @@ class TestBT5106DemonicDisaster:
         """Main effect should use OptionSkill timing."""
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -41,8 +41,8 @@ class TestBT5106DemonicDisaster:
         """The delete+unsuspend effect should be optional."""
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -72,7 +72,7 @@ class TestBT5106DemonicDisaster:
         game = runner.game
         player = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT5-106", player)
         effects = cs.effect_list(None)
@@ -88,7 +88,7 @@ class TestBT5106DemonicDisaster:
         })
 
         # Game should now be in SelectTarget phase for choosing which Digimon to delete
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             f"Should be in SelectTarget after process callback, got {game.current_phase}"
         )
@@ -125,8 +125,8 @@ class TestBT5106DemonicDisaster:
         """Should have a SecuritySkill effect."""
         runner = debug_runner(deck1=FILLER_DECK, deck2=FILLER_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 

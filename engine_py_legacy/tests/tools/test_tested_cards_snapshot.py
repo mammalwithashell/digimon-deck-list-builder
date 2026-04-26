@@ -54,7 +54,7 @@ def test_snapshot_is_fresh():
 
 def test_loader_matches_snapshot():
     """The engine loader reads the same data the snapshot contains."""
-    from digimon_gym.engine.data.tested_cards import load_tested_cards
+    from engine_py_legacy.engine.data.tested_cards import load_tested_cards
 
     load_tested_cards.cache_clear()  # fresh read
     loaded = load_tested_cards()
@@ -63,7 +63,7 @@ def test_loader_matches_snapshot():
 
 
 def test_out_of_set_cards_dedups_and_preserves_order():
-    from digimon_gym.engine.data.tested_cards import (
+    from engine_py_legacy.engine.data.tested_cards import (
         load_tested_cards,
         out_of_set_cards,
     )

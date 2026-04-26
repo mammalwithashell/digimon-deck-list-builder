@@ -6,8 +6,8 @@ Digimon with 3000 DP or less.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
-from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+from engine_py_legacy.engine.data.enums import GamePhase
+from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
 
 
 @pytest.mark.behavioral

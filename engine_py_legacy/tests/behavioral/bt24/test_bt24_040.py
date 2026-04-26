@@ -81,7 +81,7 @@ class TestBT24040Venusmon:
         game = runner.game
         enemy = game.player2
         # At least one opponent permanent should NOT have CANNOT_SUSPEND
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         unfrozen_count = sum(
             1 for p in enemy.battle_area
             if p.is_digimon and not game.modifiers.has_modifier(p, ModifierType.CANNOT_SUSPEND)
@@ -99,8 +99,8 @@ class TestBT24040Venusmon:
 
         # Manually register DISABLE_EFFECT the way Venusmon does (post-fix)
         game = runner.game
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
-        from digimon_gym.engine.interfaces.card_effect import ICardEffect
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
 
         game.register_modifier(
             opp_perm, ModifierType.DISABLE_EFFECT,

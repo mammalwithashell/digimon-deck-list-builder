@@ -25,7 +25,7 @@ Clause decomposition:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 FILLER = ["ST1-03"] * 50
@@ -124,7 +124,7 @@ class TestEX11012WhenDigivolving:
         ps = runner.game.pending_selection
         assert ps is not None, "Should have pending selection"
         # Count valid actions -- should only have 1 valid target (+ 0 for pass if optional)
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         opp_targets = [v for v in ps.valid_indices if v >= SEL_OPP_FIELD_START]
         assert len(opp_targets) == 1, (
             f"Should have exactly 1 valid target (low DP), got {len(opp_targets)}"
@@ -146,7 +146,7 @@ class TestEX11012WhenDigivolving:
         # Select the opponent Digimon to delete
         snap = runner.snapshot()
         if snap.phase == "SelectTarget":
-            from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+            from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
             ps = runner.game.pending_selection
             opp_targets = [v for v in ps.valid_indices if v >= SEL_OPP_FIELD_START]
             if opp_targets:

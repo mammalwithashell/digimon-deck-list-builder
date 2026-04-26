@@ -58,7 +58,7 @@ class TestBT20021JesmonGX:
         p1_hand_before = len(snap_before.p1_hand)
 
         # Trigger On Play effects — requires played_card = top card for matching
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {
             "permanent": perm,
             "played_card": perm.top_card,
@@ -104,7 +104,7 @@ class TestBT20021JesmonGX:
         p1_trash_before = len(snap_before.p1_trash)
         p2_field_before = len(snap_before.p2_field)
 
-        from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+        from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
         runner.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {
             "permanent": perm,
             "played_card": perm.top_card,
@@ -158,7 +158,7 @@ class TestBT20021JesmonGX:
         snap_before = runner.snapshot()
         p2_field_before = len(snap_before.p2_field)
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {
             "permanent": perm,
             "played_card": perm.top_card,
@@ -192,7 +192,7 @@ class TestBT20021JesmonGX:
         runner.place_on_field(2, ["ST1-03"])
 
         # Fire On Play timing first
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {
             "permanent": perm,
             "played_card": perm.top_card,
@@ -239,7 +239,7 @@ class TestBT20021JesmonGX:
         assert perm.is_suspended, "Should be suspended before attack"
 
         # Fire When Attacking timing
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnUseAttack, {
             "attacker": perm,
             "permanent": perm,
@@ -270,7 +270,7 @@ class TestBT20021JesmonGX:
         snap_before = runner.snapshot()
         p2_sec_before = snap_before.p2_security_count
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnUseAttack, {
             "attacker": perm,
             "permanent": perm,
@@ -306,7 +306,7 @@ class TestBT20021JesmonGX:
         snap_before = runner.snapshot()
         p2_sec_before = snap_before.p2_security_count
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnUseAttack, {
             "attacker": perm,
             "permanent": perm,
@@ -340,7 +340,7 @@ class TestBT20021JesmonGX:
         snap_before = runner.snapshot()
         p2_sec_before = snap_before.p2_security_count
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnUseAttack, {
             "attacker": perm,
             "permanent": perm,
@@ -373,7 +373,7 @@ class TestBT20021JesmonGX:
         snap_before = runner.snapshot()
         p2_sec_before = snap_before.p2_security_count
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnUseAttack, {
             "attacker": perm,
             "permanent": perm,
@@ -403,7 +403,7 @@ class TestBT20021JesmonGX:
         for _ in range(3):
             runner.inject_card(2, "ST1-03", "security_top")
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         # Track if OnLoseSecurity fires
         security_lost_events = []
@@ -448,7 +448,7 @@ class TestBT20021JesmonGX:
         # Record the top security card identity before trashing
         top_sec_id = runner.game.player2.security_cards[0].c_entity_base.card_id
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnUseAttack, {
             "attacker": perm,
             "permanent": perm,
@@ -490,7 +490,7 @@ class TestBT20021JesmonGX:
 
         snap_before = runner.snapshot()
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnUseAttack, {
             "attacker": perm,
             "permanent": perm,
@@ -512,9 +512,9 @@ class TestBT20021JesmonGX:
 
     def test_ace_overflow_inherited_effect_present(self, debug_runner):
         """The script should declare an Ace Overflow inherited effect."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         runner = debug_runner(initial_memory=10)
@@ -560,7 +560,7 @@ class TestBT20021JesmonGX:
 
         snap_before = runner.snapshot()
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {
             "permanent": perm,
             "played_card": perm.top_card,
@@ -602,7 +602,7 @@ class TestBT20021JesmonGX:
 
         snap_before = runner.snapshot()
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         # Fire When Digivolving — requires WhenDigivolving timing + digivolved_permanent
         runner.game.execute_effects(EffectTiming.WhenDigivolving, {
             "permanent": perm,
@@ -633,7 +633,7 @@ class TestBT20021JesmonGX:
         # Opponent target (needed for the effect to complete)
         runner.place_on_field(2, ["ST1-03"])
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {
             "permanent": perm,
             "played_card": perm.top_card,

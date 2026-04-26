@@ -14,7 +14,7 @@ DNA: Lv.6 w/ [Greymon] + Lv.6 w/ [Garurumon], cost 0
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -235,7 +235,7 @@ class TestBT22015Omnimon:
         runner.auto_resolve()
 
         # Check MAY_ATTACK modifier is registered
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_may_attack = game.modifiers.has_modifier(perm, ModifierType.MAY_ATTACK)
         assert has_may_attack, (
             "After When Digivolving resolves, Omnimon should have MAY_ATTACK modifier"

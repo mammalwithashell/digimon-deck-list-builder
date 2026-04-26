@@ -9,7 +9,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 @pytest.mark.behavioral
@@ -218,7 +218,7 @@ class TestBT3093DavisMotomiya:
         blue_filter = reveal_calls[0]['passes'][0][0]
 
         # Create test card sources
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         blue_digimon = db.create_card_source("BT3-021", runner.game.player1)  # Veemon (Blue)
         red_digimon = db.create_card_source("BT1-010", runner.game.player1)  # Agumon (Red)
@@ -251,7 +251,7 @@ class TestBT3093DavisMotomiya:
 
         green_filter = reveal_calls[0]['passes'][1][0]
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         green_digimon = db.create_card_source("BT3-047", runner.game.player1)  # Wormmon (Green)
         blue_digimon = db.create_card_source("BT3-021", runner.game.player1)  # Veemon (Blue)

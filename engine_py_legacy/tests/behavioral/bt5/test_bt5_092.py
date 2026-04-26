@@ -10,7 +10,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -187,7 +187,7 @@ class TestBT5092NokiaShiramine:
                 break
 
         # Should be False because Nokia is suspended
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         greymon_cs = db.create_card_source("AD1-001", player)  # Greymon
         result = cost_effect.can_use_condition({
@@ -203,7 +203,7 @@ class TestBT5092NokiaShiramine:
         player = game.player1
 
         # Verify the security effect exists
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         nokia_cs = db.create_card_source("BT5-092", player)
         effects = nokia_cs.effect_list(None)

@@ -10,8 +10,8 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
-from digimon_gym.engine.game.constants import SEL_TRASH_START
+from engine_py_legacy.engine.data.enums import GamePhase
+from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
 # Filler deck uses a non-Mineral/non-Rock card to avoid interference.
 # ST1-04 Dracomon (Lv.3, Dragon trait) is a safe choice.

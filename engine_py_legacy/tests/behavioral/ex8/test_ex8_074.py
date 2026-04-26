@@ -21,8 +21,8 @@ C# reference:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.game.constants import SEL_MY_FIELD_START, SEL_OPP_FIELD_START
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START, SEL_OPP_FIELD_START
 
 # Use ST1-03 (Biyomon Lv3 1000DP) as filler Digimon
 # ST1-06 (Birdramon Lv4 4000DP) as mid-level
@@ -422,7 +422,7 @@ class TestEX8074MedievalGallantmon:
                      and e.max_count_per_turn == 1][0]
 
         # Place a Tamer
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.core.permanent import Permanent
         tamer_perm = runner.place_on_field(1, ["BT1-085"])  # Tai Kamiya Tamer
 
         ctx_tamer = {

@@ -24,7 +24,7 @@ Key cards used:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 SALAMON = "ST10-02"

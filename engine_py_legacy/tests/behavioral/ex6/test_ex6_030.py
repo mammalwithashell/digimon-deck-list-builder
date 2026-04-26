@@ -44,8 +44,8 @@ Clauses tested:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.game.constants import SEL_MY_SECURITY_START
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.game.constants import SEL_MY_SECURITY_START
 
 
 EX6_030 = "EX6-030"              # Dominimon (card under test)
@@ -423,7 +423,7 @@ class TestEX6030WhenDigivolving:
         runner = debug_runner(initial_memory=10)
         # DON'T place on field — card is in hand/library
         # Get effect from a created card source
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(EX6_030)
         effects = cs.effect_list(None)
@@ -815,7 +815,7 @@ class TestEX6030PreventLeaving:
         """Must return False if Dominimon itself is not on field."""
         runner = debug_runner(initial_memory=10)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(EX6_030)
         effects = cs.effect_list(None)

@@ -7,7 +7,7 @@ automatic pytest discovery.
 import pytest
 from pathlib import Path
 
-from digimon_gym.engine.runners.scenario_runner import ScenarioRunner
+from engine_py_legacy.engine.runners.scenario_runner import ScenarioRunner
 
 SCENARIO_DIR = Path(__file__).parent.parent / "scenarios"
 

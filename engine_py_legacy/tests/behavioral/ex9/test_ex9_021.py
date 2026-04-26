@@ -194,7 +194,7 @@ class TestEX9021OmnimonAlterS:
                 break
 
         if omnimon_perm is not None:
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             has_immunity = game.modifiers.has_modifier(
                 omnimon_perm, ModifierType.CANNOT_BE_AFFECTED
             )
@@ -226,7 +226,7 @@ class TestEX9021OmnimonAlterS:
                 break
 
         assert omnimon_perm is not None, "Omnimon should be on field"
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_immunity = game.modifiers.has_modifier(
             omnimon_perm, ModifierType.CANNOT_BE_AFFECTED
         )
@@ -440,7 +440,7 @@ class TestEX9021OmnimonAlterS:
 
     def test_script_has_correct_effect_timings(self, debug_runner):
         """Verify the script registers effects with correct timings."""
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(deck1=_make_deck(), deck2=_make_deck(), initial_memory=10)
 
         perm = runner.place_on_field(1, ["EX9-021"])
@@ -482,7 +482,7 @@ class TestEX9021OmnimonAlterS:
 
     def test_end_of_attack_is_optional(self, debug_runner):
         """End of Attack effect should be marked as optional."""
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(deck1=_make_deck(), deck2=_make_deck(), initial_memory=10)
 
         perm = runner.place_on_field(1, ["EX9-021"])
@@ -497,7 +497,7 @@ class TestEX9021OmnimonAlterS:
 
     def test_when_digivolving_is_mandatory(self, debug_runner):
         """When Digivolving effect should NOT be optional (mandatory activation)."""
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(deck1=_make_deck(), deck2=_make_deck(), initial_memory=10)
 
         perm = runner.place_on_field(1, ["EX9-021"])

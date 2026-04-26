@@ -9,7 +9,7 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -86,7 +86,7 @@ class TestP035RedMemoryBoost:
         # (the engine should gate this via turn_played check)
         # If found, the engine allows it -- which is a known pattern difference
         # We just verify the Delay marker exists
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-035")
         effects = cs.effect_list(None)
@@ -95,7 +95,7 @@ class TestP035RedMemoryBoost:
 
     def test_has_security_effect(self, debug_runner):
         """Should have a security effect to place in battle area."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-035")
         effects = cs.effect_list(None)
@@ -105,7 +105,7 @@ class TestP035RedMemoryBoost:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Should have OptionSkill timing for the Main reveal effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-035")
         effects = cs.effect_list(None)
@@ -114,7 +114,7 @@ class TestP035RedMemoryBoost:
 
     def test_reveal_filter_only_accepts_red_digimon(self, debug_runner):
         """The reveal filter should only match red Digimon cards."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Red Digimon

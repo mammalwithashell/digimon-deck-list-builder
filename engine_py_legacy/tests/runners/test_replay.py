@@ -7,11 +7,11 @@ import numpy as np
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from digimon_gym.engine.recording import GameRecorder, ReplayStepResult
-from digimon_gym.engine.runners.headless_game import HeadlessGame
-from digimon_gym.engine.runners.replay_runner import ReplayRunner
-from digimon_gym.engine.data.enums import GamePhase
-from digimon_gym.engine.game import TENSOR_SIZE, ACTION_SPACE_SIZE
+from engine_py_legacy.engine.recording import GameRecorder, ReplayStepResult
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.replay_runner import ReplayRunner
+from engine_py_legacy.engine.data.enums import GamePhase
+from engine_py_legacy.engine.game import TENSOR_SIZE, ACTION_SPACE_SIZE
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import Base
 

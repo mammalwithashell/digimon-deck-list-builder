@@ -20,7 +20,7 @@ Key verification:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # BT22-004 Wanyamon: Lv.2 DigiEgg, Green, [Lesser, CS]
@@ -245,7 +245,7 @@ class TestBT22004Process:
         )
         valid = game.pending_selection.valid_indices
         # Verify that the valid indices point to Gargomon in hand (and NOT the non-CS)
-        from digimon_gym.engine.game.constants import SEL_HAND_START
+        from engine_py_legacy.engine.game.constants import SEL_HAND_START
         valid_cards = []
         for idx in valid:
             if idx >= SEL_HAND_START:
@@ -379,7 +379,7 @@ class TestBT22004EndToEnd:
 
         # Simulate an "effect places a CS Digimon card in this Digimon's stack".
         # Create a CS card source (e.g. another CS Lv3 card) and add it to perm.
-        from digimon_gym.engine.debug.state_injection import _create_card
+        from engine_py_legacy.engine.debug.state_injection import _create_card
         cs_placed = _create_card(CS_DIGI_L3_GREEN, game.player1)
         perm.add_card_source(cs_placed)
 
@@ -405,7 +405,7 @@ class TestBT22004EndToEnd:
         game.player1.is_my_turn = True
         game.player2.is_my_turn = False
 
-        from digimon_gym.engine.debug.state_injection import _create_card
+        from engine_py_legacy.engine.debug.state_injection import _create_card
         cs_placed = _create_card(CS_DIGI_L3_GREEN, game.player1)
         perm_b.add_card_source(cs_placed)
 
@@ -428,7 +428,7 @@ class TestBT22004EndToEnd:
         assert trig is not None
         trig.record_activation()  # Simulate it already fired this turn
 
-        from digimon_gym.engine.debug.state_injection import _create_card
+        from engine_py_legacy.engine.debug.state_injection import _create_card
         cs_placed = _create_card(CS_DIGI_L3_GREEN, game.player1)
         perm.add_card_source(cs_placed)
 

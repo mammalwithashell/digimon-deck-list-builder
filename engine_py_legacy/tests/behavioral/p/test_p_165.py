@@ -15,7 +15,7 @@ C# reference: P_165.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase, CardColor
 
 
 # Minimal deck for DebugRunner
@@ -42,7 +42,7 @@ class TestP165ShoeShoemonSecurity:
         # Ensure attacker has enough DP to beat P-165 (4000 DP)
         # ST1-03 has 2000 DP; place a higher-DP attacker
         runner.game.player1.battle_area.remove(attacker)
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "StrongAttacker", dp=8000)
         game.player1.battle_area.append(attacker)
 
@@ -76,7 +76,7 @@ class TestP165ShoeShoemonSecurity:
         runner.clear_zone(2, "security")
         sec_card = runner.inject_card(2, "P-165", "security_top")
 
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "StrongAttacker", dp=8000)
         game.player1.battle_area.append(attacker)
 
@@ -100,8 +100,8 @@ class TestP165ShoeShoemonSecurity:
         runner.inject_card(2, "P-165", "security_top")
 
         # Weak attacker with DP < 4000
-        from tests.helpers.game_builder import make_permanent
-        from digimon_gym.engine.data.enums import AttackResolution
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.engine.data.enums import AttackResolution
         weak_attacker = make_permanent("WEAK-001", "WeakAttacker", dp=3000)
         game.player1.battle_area.append(weak_attacker)
 
@@ -269,12 +269,12 @@ class TestP165ShoeShoemonBarrier:
 
     def test_barrier_is_inherited(self):
         """P-165's Barrier should be marked as inherited effect."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.card_source import CardSource
         cs = db.create_card_source("P-165", None)
         effects = cs.effect_list(EffectTiming.NoTiming)
 

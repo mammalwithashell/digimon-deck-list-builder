@@ -10,7 +10,7 @@ Card text:
 
 import pytest
 
-from digimon_gym.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.card_registry import CardRegistry
 
 
 # Minimal decks — EX7-063 + filler for both players
@@ -46,7 +46,7 @@ class TestEX7063Effect0StartOfMainPhase:
 
         # Trigger start of main phase by passing turn and coming back
         # Simpler: directly fire the timing
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase, {
             'player': runner.game.player1,
             'game': runner.game,
@@ -72,7 +72,7 @@ class TestEX7063Effect0StartOfMainPhase:
 
         before_memory = runner.game.memory
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase, {
             'player': runner.game.player1,
             'game': runner.game,
@@ -101,7 +101,7 @@ class TestEX7063Effect0StartOfMainPhase:
 
         before_memory = runner.game.memory
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase, {
             'player': runner.game.player1,
             'game': runner.game,
@@ -262,8 +262,8 @@ class TestEX7063SecurityEffect:
     def test_security_effect_has_security_timing(self, debug_runner):
         """The security effect should use SecuritySkill timing."""
         CardRegistry.ensure_initialized()
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         db = CardDatabase()
         cs = db.create_card_source(TAMER_ID)

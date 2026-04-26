@@ -271,7 +271,7 @@ class TestBT17081TaiAndMatt:
         runner.set_phase("Main")
 
         # security_top inserts at index 0 (front)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         card = runner.game.player1.security_cards[0]
         assert card.c_entity_base.card_id == "BT17-081", (
             f"Top security should be BT17-081, got {card.c_entity_base.card_id}")

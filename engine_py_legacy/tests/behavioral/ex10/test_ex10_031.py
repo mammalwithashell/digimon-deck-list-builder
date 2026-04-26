@@ -23,8 +23,8 @@ Key cards used:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ class TestEX10031AltDigi:
 
     def test_alt_digi_accepts_skullknightmon_lv4(self, debug_runner):
         """Alt-digi validator should accept Lv.4 Knightmon source."""
-        from digimon_gym.engine.validation.digivolve_validator import (
+        from engine_py_legacy.engine.validation.digivolve_validator import (
             _check_alt_digivolve
         )
         runner = debug_runner()
@@ -146,7 +146,7 @@ class TestEX10031AltDigi:
 
     def test_alt_digi_rejects_non_knightmon(self, debug_runner):
         """Alt-digi should reject a Lv.4 Digimon without 'Knightmon' in text."""
-        from digimon_gym.engine.validation.digivolve_validator import (
+        from engine_py_legacy.engine.validation.digivolve_validator import (
             _check_alt_digivolve
         )
         runner = debug_runner()
@@ -164,7 +164,7 @@ class TestEX10031AltDigi:
 
     def test_alt_digi_rejects_wrong_level(self, debug_runner):
         """Alt-digi should reject a Lv.5 Digimon even if it contains 'Knightmon'."""
-        from digimon_gym.engine.validation.digivolve_validator import (
+        from engine_py_legacy.engine.validation.digivolve_validator import (
             _check_alt_digivolve
         )
         runner = debug_runner()
@@ -538,7 +538,7 @@ class TestEX10031InheritedRedirect:
         runner.game.player2.is_my_turn = True
         attacker.is_suspended = False
         # Manually set up a pending attack (player target)
-        from digimon_gym.engine.game.constants import PendingAttack
+        from engine_py_legacy.engine.game.constants import PendingAttack
         runner.game.pending_attack = PendingAttack(
             attacker=attacker,
             original_target=runner.game.player1,

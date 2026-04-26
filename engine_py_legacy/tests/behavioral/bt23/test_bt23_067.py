@@ -20,7 +20,7 @@ exactly).
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 def _deck():
@@ -311,7 +311,7 @@ class TestBT23067OnPlayAndDigivolve:
         if ps is not None:
             # The opponent's Lv.5 perm index is 0. Its action_id would be
             # SEL_OPP_FIELD_START + 0. It must NOT be in valid_indices.
-            from digimon_gym.engine.game.actions import SEL_OPP_FIELD_START
+            from engine_py_legacy.engine.game.actions import SEL_OPP_FIELD_START
             assert (SEL_OPP_FIELD_START + 0) not in ps.valid_indices, (
                 "Lv.5 opponent Digimon must not be targetable"
             )

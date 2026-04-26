@@ -12,7 +12,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 @pytest.mark.behavioral
@@ -25,7 +25,7 @@ class TestBT16088CodyTK:
         """Script module should import without error."""
         import importlib
         mod = importlib.import_module(
-            "digimon_gym.engine.data.scripts.bt16.bt16_088")
+            "engine_py_legacy.engine.data.scripts.bt16.bt16_088")
         assert hasattr(mod, "BT16_088")
 
     # ── Security Effect ──────────────────────────────────────────────

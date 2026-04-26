@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import pytest
 
-from digimon_gym.engine.data.enums import CardColor, EffectTiming
+from engine_py_legacy.engine.data.enums import CardColor, EffectTiming
 
 
 # ── Deck helpers ────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ class TestLM035ColorBypass:
 
     def test_match_color_requirement_fn_exists(self, debug_runner):
         """LM-035 should set _match_color_requirement_fn for dynamic partial bypass."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-035")
         # Trigger effect_list so the script runs and sets the fn
@@ -157,7 +157,7 @@ class TestLM035MainEffect:
 
     def test_main_effect_timing(self, debug_runner):
         """Main effect must use OptionSkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-035")
         effects = cs.effect_list(None)
@@ -366,7 +366,7 @@ class TestLM035DelayEffect:
 
     def test_delay_marker_exists(self, debug_runner):
         """LM-035 must have a delay marker effect with _is_delay=True."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-035")
         effects = cs.effect_list(None)
@@ -375,7 +375,7 @@ class TestLM035DelayEffect:
 
     def test_delay_effect_has_callback(self, debug_runner):
         """The effect following the delay marker should have a process callback."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-035")
         effects = cs.effect_list(None)
@@ -449,7 +449,7 @@ class TestLM035DelayEffect:
         callback, so the condition must not reject based on a missing permanent
         (BT22-099 / LM-030 discovery).
         """
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=3)
@@ -494,7 +494,7 @@ class TestLM035SecurityEffect:
 
     def test_security_effect_exists(self, debug_runner):
         """Must have SecuritySkill effect flagged as security effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-035")
         effects = cs.effect_list(None)
@@ -507,7 +507,7 @@ class TestLM035SecurityEffect:
     def test_security_effect_uses_effect_play_from_security(self, debug_runner):
         """The process callback must use game.effect_play_from_security."""
         import inspect
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-035")
         effects = cs.effect_list(None)

@@ -11,7 +11,7 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -37,7 +37,7 @@ class TestP103OffenseTraining:
 
     def test_has_delay_marker(self, debug_runner):
         """Should have a delay marker effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-103")
         effects = cs.effect_list(None)
@@ -46,7 +46,7 @@ class TestP103OffenseTraining:
 
     def test_delay_digivolve_with_cost_reduction(self, debug_runner):
         """Delay effect should trigger digivolve into red Digimon from hand with cost -2."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-103")
         effects = cs.effect_list(None)
@@ -60,7 +60,7 @@ class TestP103OffenseTraining:
 
     def test_has_security_effect(self, debug_runner):
         """Should have a security effect to place in battle area."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-103")
         effects = cs.effect_list(None)
@@ -70,7 +70,7 @@ class TestP103OffenseTraining:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Should have OptionSkill timing for the Main reveal effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-103")
         effects = cs.effect_list(None)
@@ -79,7 +79,7 @@ class TestP103OffenseTraining:
 
     def test_reveal_filter_accepts_any_red_card(self, debug_runner):
         """The reveal filter should match any red card (not just Digimon)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Red Digimon

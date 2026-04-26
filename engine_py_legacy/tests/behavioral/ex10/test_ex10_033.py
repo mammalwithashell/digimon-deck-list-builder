@@ -13,7 +13,7 @@ card trashed.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # Reusable card IDs
@@ -206,7 +206,7 @@ class TestEX10033PlaceFromTrash:
         assert landramon_idx is not None, "Landramon should be in trash"
 
         # Execute the selection (SEL_TRASH_START + index)
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         action_id = SEL_TRASH_START + landramon_idx
         game.decode_action(action_id, game.current_player_id)
 
@@ -251,7 +251,7 @@ class TestEX10033PlaceFromTrash:
         })
 
         # Select all 3 iteratively
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         for pick in range(3):
             assert game.current_phase == GamePhase.SelectTrash, \
                 f"Pick {pick+1}: Should be in SelectTrash, got {game.current_phase}"
@@ -294,7 +294,7 @@ class TestEX10033PlaceFromTrash:
         })
 
         # Select 1 card, then decline
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         assert game.current_phase == GamePhase.SelectTrash
         trash_actions = [a for a in runner.action_mask() if SEL_TRASH_START <= a <= 179]
         game.decode_action(trash_actions[0], game.current_player_id)
@@ -334,7 +334,7 @@ class TestEX10033PlaceFromTrash:
         })
 
         assert game.current_phase == GamePhase.SelectTrash
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         # Check which trash indices are valid
         legal = runner.action_mask()
@@ -547,7 +547,7 @@ class TestEX10033CostReduce:
         source_actions = [a for a in legal if 2000 <= a < 2168]
 
         # Decode field indices from the actions
-        from digimon_gym.engine.game.constants import SOURCES_PER_FIELD
+        from engine_py_legacy.engine.game.constants import SOURCES_PER_FIELD
         field_indices = set()
         for a in source_actions:
             normalized = a - 2000
@@ -579,7 +579,7 @@ class TestEX10033CostReduce:
         legal = runner.action_mask()
         source_actions = [a for a in legal if 2000 <= a < 2168]
 
-        from digimon_gym.engine.game.constants import SOURCES_PER_FIELD
+        from engine_py_legacy.engine.game.constants import SOURCES_PER_FIELD
         for a in source_actions:
             normalized = a - 2000
             field_idx = normalized // SOURCES_PER_FIELD

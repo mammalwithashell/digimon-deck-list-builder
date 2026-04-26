@@ -14,7 +14,7 @@ Inherited: [Security] If this card was face-up, you may play 1 level 5 or lower
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -268,7 +268,7 @@ class TestEX10057Piedmon:
         card = perm.top_card
 
         # Add a purple card to security as face-up
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         purple_card = db.create_card_source("EX10-057", p1)
         p1.security_cards.append(purple_card)

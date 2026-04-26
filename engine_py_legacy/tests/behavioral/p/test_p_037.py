@@ -11,7 +11,7 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -22,7 +22,7 @@ class TestP037YellowMemoryBoost:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Main effect should have OptionSkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-037")
         effects = cs.effect_list(None)
@@ -31,7 +31,7 @@ class TestP037YellowMemoryBoost:
 
     def test_has_delay_marker(self, debug_runner):
         """Should have a delay marker effect (_is_delay=True)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-037")
         effects = cs.effect_list(None)
@@ -40,7 +40,7 @@ class TestP037YellowMemoryBoost:
 
     def test_has_security_effect(self, debug_runner):
         """Should have a security effect to place in battle area."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-037")
         effects = cs.effect_list(None)
@@ -79,7 +79,7 @@ class TestP037YellowMemoryBoost:
 
     def test_main_filter_only_yellow_digimon(self, debug_runner):
         """Reveal filter should only accept yellow Digimon (not any yellow card)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Yellow Digimon -- should pass
@@ -169,7 +169,7 @@ class TestP037YellowMemoryBoost:
 
     def test_security_places_in_battle_area(self, debug_runner):
         """[Security] should place this card in the battle area (as delay)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-037")
         effects = cs.effect_list(None)

@@ -111,7 +111,7 @@ class TestBT13102OnPlayDecline:
         runner.execute(action)
 
         # Opponent selects the Tamer to trash (SEL_HAND_START + 0 = action 0)
-        from digimon_gym.engine.game.constants import SEL_HAND_START
+        from engine_py_legacy.engine.game.constants import SEL_HAND_START
         trash_action = SEL_HAND_START + 0
         legal = runner.action_mask()
         assert trash_action in legal, (
@@ -153,7 +153,7 @@ class TestBT13102OnPlayDecline:
         runner.execute(action)
 
         # Opponent selects the Option to trash
-        from digimon_gym.engine.game.constants import SEL_HAND_START
+        from engine_py_legacy.engine.game.constants import SEL_HAND_START
         trash_action = SEL_HAND_START + 0
         legal = runner.action_mask()
         assert trash_action in legal, (
@@ -217,7 +217,7 @@ def _simulate_effect_play(game, player, card):
     This directly places the card on the field and fires OnEnterFieldAnyone
     with is_effect_play=True, mimicking what the engine does for effect plays.
     """
-    from digimon_gym.engine.data.enums import EffectTiming
+    from engine_py_legacy.engine.data.enums import EffectTiming
     played_perm = player.play_card_from_source(card, pay_cost=False)
     game.execute_effects(
         EffectTiming.OnEnterFieldAnyone,
@@ -296,7 +296,7 @@ class TestBT13102OpponentTurnEffectPlay:
 
         # Simulate a NORMAL play (not by effect) — fire OnEnterFieldAnyone
         # WITHOUT is_effect_play
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         game = runner.game
         p2 = game.player2
         target_card = p2.hand_cards[-1]

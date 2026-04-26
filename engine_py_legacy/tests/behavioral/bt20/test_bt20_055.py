@@ -21,7 +21,7 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 INVISIMON = "BT20-055"
 AGUMON = "ST1-03"       # Lv.3 Red, DP 2000
@@ -38,7 +38,7 @@ class TestBT20055SecurityPlay:
         runner = debug_runner(
             deck1=[INVISIMON] * 4 + [AGUMON] * 46, deck2=FILLER, initial_memory=5
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(INVISIMON, runner.game.player1)
         effects = cs.effect_list(None)
@@ -55,7 +55,7 @@ class TestBT20055SecurityPlay:
         runner = debug_runner(
             deck1=[INVISIMON] * 4 + [AGUMON] * 46, deck2=FILLER, initial_memory=5
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(INVISIMON, runner.game.player1)
 
@@ -88,7 +88,7 @@ class TestBT20055SecurityPlay:
             deck1=[INVISIMON] * 4 + [AGUMON] * 46, deck2=FILLER,
             initial_memory=5, first_player=2,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(INVISIMON, runner.game.player1)
 
@@ -113,7 +113,7 @@ class TestBT20055SecurityPlay:
             deck1=[INVISIMON] * 4 + [AGUMON] * 46, deck2=FILLER,
             initial_memory=5, first_player=2,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(INVISIMON, runner.game.player1)
 

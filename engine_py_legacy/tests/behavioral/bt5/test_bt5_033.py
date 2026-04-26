@@ -16,9 +16,9 @@ These tests exercise the full digivolve cost pipeline end-to-end through
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
-from digimon_gym.engine.interfaces.card_effect import ICardEffect
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
 
 
 def _set_turn(game, turn_pid: int) -> None:
@@ -116,7 +116,7 @@ class TestBT5033Cutemon:
         """Effect condition should be False when the card is not on the field."""
         runner = debug_runner(initial_memory=5)
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT5-033", game.player1)
         effects = cs.effect_list(None)
@@ -162,7 +162,7 @@ class TestBT5033Cutemon:
 
         # Put BT5-037 Gladimon (cost 2 from Lv.3 Yellow) in P2's hand and
         # digivolve from Kotemon into Gladimon.
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         gladimon = db.create_card_source("BT5-037", game.player2)
         game.player2.hand_cards.append(gladimon)
@@ -187,7 +187,7 @@ class TestBT5033Cutemon:
         _inject_top_card_cost_reduction(base.top_card, 2)
 
         # P2 digivolves Kotemon into Gladimon (cost 2) on P2's turn.
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         gladimon = db.create_card_source("BT5-037", game.player2)
         game.player2.hand_cards.append(gladimon)
@@ -213,7 +213,7 @@ class TestBT5033Cutemon:
         base = runner.place_on_field(1, ["BT5-034"])
         _inject_top_card_cost_reduction(base.top_card, 2)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         gladimon = db.create_card_source("BT5-037", game.player1)
         game.player1.hand_cards.append(gladimon)
@@ -251,7 +251,7 @@ class TestBT5033Cutemon:
             expiry="permanent",
         )
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         gladimon = db.create_card_source("BT5-037", game.player2)
         game.player2.hand_cards.append(gladimon)
@@ -281,7 +281,7 @@ class TestBT5033Cutemon:
             expiry="permanent",
         )
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         gladimon = db.create_card_source("BT5-037", game.player2)
         game.player2.hand_cards.append(gladimon)
@@ -316,7 +316,7 @@ class TestBT5033Cutemon:
         base = runner.place_on_field(2, ["BT5-034"])
         _inject_top_card_cost_reduction(base.top_card, 2)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         gladimon = db.create_card_source("BT5-037", game.player2)
         game.player2.hand_cards.append(gladimon)

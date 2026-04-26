@@ -4,7 +4,7 @@ import json
 import pytest
 from collections import Counter
 
-from digimon_gym.engine.data.deck_loader import (
+from engine_py_legacy.engine.data.deck_loader import (
     RE_CARD_ID,
     CardRestriction,
     DeckValidationResult,
@@ -16,7 +16,7 @@ from digimon_gym.engine.data.deck_loader import (
     summarize_deck,
     validate_deck,
 )
-from digimon_gym.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.card_database import CardDatabase
 
 
 # ─── Fixtures ────────────────────────────────────────────────────────

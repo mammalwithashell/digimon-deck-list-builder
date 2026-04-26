@@ -12,7 +12,7 @@ C# ref: DCGO/Assets/Scripts/CardEffect/BT22/Green/BT22_046.cs
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # ST1-04 Dracomon as filler (Blue, unrelated) — avoids name / trait collisions

@@ -15,8 +15,8 @@ Recovery +1 only if the delete did NOT actually remove a Digimon.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
-from digimon_gym.engine.game.constants import (
+from engine_py_legacy.engine.data.enums import GamePhase
+from engine_py_legacy.engine.game.constants import (
     SEL_MY_FIELD_START, SEL_OPP_FIELD_START,
 )
 

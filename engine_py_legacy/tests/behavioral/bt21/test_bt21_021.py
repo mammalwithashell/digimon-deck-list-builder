@@ -18,7 +18,7 @@ Alt Digivolve:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 DECK = ["BT21-021"] * 4 + ["BT10-007"] * 10 + ["BT10-018"] * 10 + ["BT5-009"] * 10 + ["BT10-003"] * 10 + ["BT21-013"] * 6
@@ -34,7 +34,7 @@ class TestBT21021OmniShoutmon:
         """Should be able to digivolve from [Shoutmon] for cost 4."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT21-021", runner.game.player1)
         effects = card.effect_list(EffectTiming.NoTiming)
@@ -52,7 +52,7 @@ class TestBT21021OmniShoutmon:
         both Xros Heart and Hero."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT21-021", runner.game.player1)
         effects = card.effect_list(EffectTiming.NoTiming)
@@ -65,7 +65,7 @@ class TestBT21021OmniShoutmon:
         # Must accept both Xros Heart and Hero via _alt_digi_condition_fn
         # Test with a Xros Heart Lv.4 permanent
         xh_perm = runner.place_on_field(1, ["BT10-009"])  # Shoutmon X4, Xros Heart Lv.4
-        from digimon_gym.engine.validation.digivolve_validator import _check_alt_digivolve
+        from engine_py_legacy.engine.validation.digivolve_validator import _check_alt_digivolve
         assert _check_alt_digivolve(card, xh_perm), \
             "Should accept Xros Heart Lv.4 for alt-digi"
 
@@ -127,8 +127,8 @@ class TestBT21021OmniShoutmon:
         assert play_calls[0]['is_optional'] is True
 
         # Check the filter function
-        from digimon_gym.engine.core.card_source import CardSource
-        from digimon_gym.engine.core.entity_base import CEntity_Base
+        from engine_py_legacy.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.entity_base import CEntity_Base
 
         def _make_card(traits):
             e = CEntity_Base()
@@ -208,7 +208,7 @@ class TestBT21021OmniShoutmon:
         """Inherited Rush should only activate when the top card has [Xros Heart] trait."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT21-021", runner.game.player1)
         effects = card.effect_list(None)
@@ -223,7 +223,7 @@ class TestBT21021OmniShoutmon:
         """Should have a static effect declaring this card is also treated as [Shoutmon]."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT21-021", runner.game.player1)
         effects = card.effect_list(None)

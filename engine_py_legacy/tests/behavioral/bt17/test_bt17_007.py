@@ -14,7 +14,7 @@ C# reference notes:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -206,7 +206,7 @@ class TestBT17007Agumon:
         # Also verify: if we manually set is_digimon=False on this card source,
         # the filter should STILL accept it (per C# reference).
         # Save original kind and restore in finally to avoid corrupting shared entity.
-        from digimon_gym.engine.data.enums import CardKind
+        from engine_py_legacy.engine.data.enums import CardKind
         orig_kind = greymon_card.c_entity_base.card_kind
         try:
             greymon_card.c_entity_base.card_kind = CardKind.Option  # fake it as Option

@@ -23,7 +23,7 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 # Card IDs used in tests

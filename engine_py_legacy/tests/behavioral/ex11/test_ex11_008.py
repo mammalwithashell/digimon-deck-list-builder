@@ -14,7 +14,7 @@ Critical bugs being validated:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 ELIZAMON_DECK = ["EX11-008"] * 50
@@ -119,9 +119,9 @@ class TestEX11008OnPlay:
         runner = debug_runner(deck1=ELIZAMON_DECK, deck2=ELIZAMON_DECK, initial_memory=10)
 
         # Place a non-Reptile/non-Dragonkin on field (use a generic test card)
-        from tests.helpers.game_builder import make_card
-        from digimon_gym.engine.core.permanent import Permanent
-        from digimon_gym.engine.core.entity_base import CEntity_Base
+        from engine_py_legacy.tests.helpers.game_builder import make_card
+        from engine_py_legacy.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.core.entity_base import CEntity_Base
 
         # Create a Digimon without Reptile/Dragonkin traits
         entity = CEntity_Base()
@@ -134,7 +134,7 @@ class TestEX11008OnPlay:
         entity.card_colors = [0]
         entity.type_eng = ["Machine"]  # Not Reptile or Dragonkin
 
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.card_source import CardSource
         cs = CardSource()
         cs.set_base_data(entity, runner.game.player1)
         non_reptile_perm = Permanent([cs])
@@ -168,7 +168,7 @@ class TestEX11008InheritedLoseSecurity:
 
         # Place a Digimon with Elizamon as inherited source (digivolve stack)
         # We need a Lv.4+ digimon with Elizamon underneath for inherited effect
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Create Elizamon card source for inheritance
@@ -177,7 +177,7 @@ class TestEX11008InheritedLoseSecurity:
         # Use another Elizamon as simplification - place two in stack
         top_cs = db.create_card_source("EX11-008", runner.game.player1)
 
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.core.permanent import Permanent
         perm = Permanent([elizamon_cs, top_cs])  # bottom=elizamon, top=another
         runner.game.player1.battle_area.append(perm)
 
@@ -213,14 +213,14 @@ class TestEX11008InheritedLoseSecurity:
         This validates the opponent check (event_player must be enemy)."""
         runner = debug_runner(deck1=ELIZAMON_DECK, deck2=ELIZAMON_DECK, initial_memory=10)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Create Elizamon inherited stack on player 1's field
         elizamon_cs = db.create_card_source("EX11-008", runner.game.player1)
         top_cs = db.create_card_source("EX11-008", runner.game.player1)
 
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.core.permanent import Permanent
         perm = Permanent([elizamon_cs, top_cs])
         runner.game.player1.battle_area.append(perm)
 
@@ -254,13 +254,13 @@ class TestEX11008InheritedLoseSecurity:
         """Inherited should only fire once per turn."""
         runner = debug_runner(deck1=ELIZAMON_DECK, deck2=ELIZAMON_DECK, initial_memory=10)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         elizamon_cs = db.create_card_source("EX11-008", runner.game.player1)
         top_cs = db.create_card_source("EX11-008", runner.game.player1)
 
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.core.permanent import Permanent
         perm = Permanent([elizamon_cs, top_cs])
         runner.game.player1.battle_area.append(perm)
 

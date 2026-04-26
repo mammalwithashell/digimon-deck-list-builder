@@ -15,7 +15,7 @@ Inherited: [Security] If this card was face-up, you may play 1 level 5 or lower
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral

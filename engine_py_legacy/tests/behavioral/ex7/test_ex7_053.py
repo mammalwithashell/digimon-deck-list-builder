@@ -9,7 +9,7 @@ Card text:
 
 import pytest
 
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 # Card IDs
@@ -262,7 +262,7 @@ class TestEX7053TraitMatching:
         runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
 
         # Create card sources to test trait filter
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         evil_card = db.create_card_source(EVIL_DIGIMON, runner.game.player1)
@@ -274,7 +274,7 @@ class TestEX7053TraitMatching:
 
     def test_trait_filter_exact_dark_dragon(self, debug_runner):
         """Trait filter should match 'Dark Dragon' exactly."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         deck = _build_deck([EYESMON_SM] * 4)
         runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
         db = CardDatabase()
@@ -287,7 +287,7 @@ class TestEX7053TraitMatching:
 
     def test_trait_filter_exact_evil_dragon(self, debug_runner):
         """Trait filter should match 'Evil Dragon' exactly."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         deck = _build_deck([EYESMON_SM] * 4)
         runner = debug_runner(deck1=deck, deck2=deck, initial_memory=10)
         db = CardDatabase()

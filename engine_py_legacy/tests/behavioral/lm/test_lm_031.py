@@ -23,7 +23,7 @@ Key cards used:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ── Deck helpers ──────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ class TestLM031Effects:
     """Verify LM-031 has the correct effect structure."""
 
     def test_has_option_skill(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-031")
         effects = cs.effect_list(None)
@@ -53,7 +53,7 @@ class TestLM031Effects:
         assert len(main_effects) >= 1, "Should have OptionSkill effect"
 
     def test_has_delay_marker(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-031")
         effects = cs.effect_list(None)
@@ -61,7 +61,7 @@ class TestLM031Effects:
         assert len(delay_effects) >= 1, "Should have a delay marker effect"
 
     def test_has_start_turn_delay(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-031")
         effects = cs.effect_list(None)
@@ -69,7 +69,7 @@ class TestLM031Effects:
         assert len(start_turn) >= 1, "Should have OnStartTurn timing for delay"
 
     def test_has_security_skill(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-031")
         effects = cs.effect_list(None)
@@ -353,7 +353,7 @@ class TestLM031SecurityEffect:
 
     def test_security_adds_to_hand(self):
         """Security process should add LM-031 to the hand."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-031")
         effects = cs.effect_list(None)
@@ -374,8 +374,8 @@ class TestLM031SecurityEffect:
 
     def test_security_play_filter_rejects_non_black(self):
         """Security play filter should reject non-black Digimon."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import CardColor
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import CardColor
         db = CardDatabase()
         agumon = db.create_card_source("ST1-03")
         assert CardColor.Black not in agumon.c_entity_base.card_colors, (
@@ -384,15 +384,15 @@ class TestLM031SecurityEffect:
 
     def test_security_play_filter_rejects_high_dp(self):
         """Security play filter should reject Digimon with DP > 2000."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         greymon = db.create_card_source("BT2-057")
         assert greymon.c_entity_base.dp == 4000, "BT2-057 should have 4000 DP"
 
     def test_security_play_filter_accepts_low_dp_black(self):
         """Security play filter should accept black Digimon with DP <= 2000."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import CardColor
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import CardColor
         db = CardDatabase()
         chuu = db.create_card_source("BT12-060")
         assert CardColor.Black in chuu.c_entity_base.card_colors

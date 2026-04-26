@@ -23,7 +23,7 @@ class TestBT3002DemiVeemon:
 
     def test_effect_is_inherited(self, debug_runner):
         """BT3-002's effect should be marked as inherited."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT3-002")
         effects = cs.effect_list(None)

@@ -23,7 +23,7 @@ class TestEX4060WhenDigivolving:
 
     def _trigger_digivolve(self, runner, perm):
         """Trigger the WhenDigivolving effect on a permanent."""
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(
             EffectTiming.WhenDigivolving,
             {"digivolved_permanent": perm},

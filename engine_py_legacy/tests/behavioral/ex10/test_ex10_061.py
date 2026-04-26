@@ -24,7 +24,7 @@ Key cards used in tests:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase, EffectTiming
+from engine_py_legacy.engine.data.enums import GamePhase, EffectTiming
 
 # Deck with Apocalymon + 4 different Dark Masters + filler
 DM_DECK = (

@@ -15,7 +15,7 @@ Key issues being fixed:
 """
 
 import pytest
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 def _get_grant_blocker_entries(game):
@@ -136,14 +136,14 @@ class TestBT22029Shoemon:
 
     def test_inherited_timing_is_on_ally_attack(self, debug_runner):
         """Inherited effect should use OnAllyAttack timing (32), not OnUseAttack."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         db = CardDatabase()
         script = db.get_script("BT22-029")
         assert script is not None, "BT22-029 script should be registered"
 
-        from tests.helpers.game_builder import make_card
+        from engine_py_legacy.tests.helpers.game_builder import make_card
         card = make_card(card_id="BT22-029", level=3)
         effects = script.get_card_effects(card)
 
@@ -154,13 +154,13 @@ class TestBT22029Shoemon:
 
     def test_inherited_once_per_turn(self, debug_runner):
         """Inherited [When Attacking] should be limited to once per turn."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         db = CardDatabase()
         script = db.get_script("BT22-029")
         assert script is not None
 
-        from tests.helpers.game_builder import make_card
+        from engine_py_legacy.tests.helpers.game_builder import make_card
         card = make_card(card_id="BT22-029", level=3)
         effects = script.get_card_effects(card)
 

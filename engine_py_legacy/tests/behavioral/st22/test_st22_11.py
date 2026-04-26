@@ -12,7 +12,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -71,7 +71,7 @@ class TestST2211SecurityEffect:
 
     def test_has_security_effect(self, debug_runner):
         """Should have a security effect with SecuritySkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST22-11")
         effects = cs.effect_list(None)
@@ -82,7 +82,7 @@ class TestST2211SecurityEffect:
 
     def test_security_has_de_digivolve(self, debug_runner):
         """Security effect should have a process callback for De-Digivolve."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST22-11")
         effects = cs.effect_list(None)
@@ -100,7 +100,7 @@ class TestST2211MainEffect:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Should have an OptionSkill timing effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST22-11")
         effects = cs.effect_list(None)
@@ -144,7 +144,7 @@ class TestST2211LinkRequirement:
 
     def test_has_link_effect(self, debug_runner):
         """Should have a link inherited effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST22-11")
         effects = cs.effect_list(None)

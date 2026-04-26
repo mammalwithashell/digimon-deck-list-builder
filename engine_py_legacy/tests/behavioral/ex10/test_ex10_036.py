@@ -15,7 +15,7 @@ Alt-digi: While you have [Close], [Proganomon]: Cost 6
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -437,7 +437,7 @@ class TestEX10036Magneticdramon:
         # The valid indices should be SEL_TRASH_START + trash_index
         ps = game.pending_selection
         assert ps is not None, "Should have pending selection"
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
         for idx in ps.valid_indices:
             assert idx >= SEL_TRASH_START, \
                 f"Valid index {idx} should be >= SEL_TRASH_START ({SEL_TRASH_START})"

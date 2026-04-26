@@ -15,7 +15,7 @@ C# reference:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # Card IDs
 UKKOMON = "BT16-082"

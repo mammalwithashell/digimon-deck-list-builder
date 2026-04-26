@@ -29,7 +29,7 @@ Clauses tested:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ── Helper deck ─────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ class TestLM030MainEffect:
 
     def test_main_effect_exists(self, debug_runner):
         """LM-030 should have an OptionSkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-030")
         effects = cs.effect_list(None)
@@ -168,7 +168,7 @@ class TestLM030DelayEffect:
 
     def test_delay_marker_exists(self, debug_runner):
         """LM-030 should have a delay marker effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-030")
         effects = cs.effect_list(None)
@@ -177,7 +177,7 @@ class TestLM030DelayEffect:
 
     def test_delay_trigger_exists(self, debug_runner):
         """Should have an OnStartTurn effect for the delay body."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-030")
         effects = cs.effect_list(None)
@@ -336,7 +336,7 @@ class TestLM030SecurityEffect:
 
     def test_security_effect_exists(self, debug_runner):
         """LM-030 should have a SecuritySkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-030")
         effects = cs.effect_list(None)
@@ -346,7 +346,7 @@ class TestLM030SecurityEffect:
 
     def test_security_play_filter_rejects_high_dp(self, debug_runner):
         """Security play filter should reject Digimon with DP > 2000."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Goblimon has DP 3000 — should be rejected
@@ -363,8 +363,8 @@ class TestLM030SecurityEffect:
 
     def test_security_play_filter_rejects_non_green(self, debug_runner):
         """Security play filter should reject non-green Digimon."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import CardColor
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import CardColor
         db = CardDatabase()
 
         agumon = db.create_card_source("ST1-03")
@@ -372,7 +372,7 @@ class TestLM030SecurityEffect:
 
     def test_security_adds_to_hand(self, debug_runner):
         """Security effect should add LM-030 to the hand after play."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("LM-030")
         effects = cs.effect_list(None)

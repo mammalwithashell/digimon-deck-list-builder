@@ -11,8 +11,8 @@ Card text:
 
 import pytest
 
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Card IDs
 NIDHOGGMON_ID = "EX7-060"       # Lv.6 Purple Dark Dragon, cost 11
@@ -365,7 +365,7 @@ class TestEX7060OnDeletion:
     def test_on_deletion_trait_exact_match(self, debug_runner):
         """Trait matching should be exact, not substring (C# uses EqualsTraits)."""
         CardRegistry.ensure_initialized()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Verify Dark Dragon Lv4 has exactly 'Dark Dragon' as a trait

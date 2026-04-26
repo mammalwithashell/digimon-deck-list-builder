@@ -6,12 +6,12 @@ and that the SilentLogger path doesn't break.
 
 import pytest
 
-from digimon_gym.engine.game import Game
-from digimon_gym.engine.events import GameEvent
-from digimon_gym.engine.loggers import EventLogger, SilentLogger
-from digimon_gym.engine.data.enums import GamePhase, CardKind, CardColor
+from engine_py_legacy.engine.game import Game
+from engine_py_legacy.engine.events import GameEvent
+from engine_py_legacy.engine.loggers import EventLogger, SilentLogger
+from engine_py_legacy.engine.data.enums import GamePhase, CardKind, CardColor
 
-from tests.helpers.game_builder import GameBuilder, make_card, make_permanent
+from engine_py_legacy.tests.helpers.game_builder import GameBuilder, make_card, make_permanent
 
 
 class TestEventEmission:
@@ -42,8 +42,8 @@ class TestEventEmission:
 
     def test_effect_activate_event(self):
         """_log_effect_activation should emit an effect_activate event."""
-        from digimon_gym.engine.interfaces.card_effect import ICardEffect
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         logger = EventLogger()
         game = Game(logger=logger)

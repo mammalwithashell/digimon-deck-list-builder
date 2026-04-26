@@ -17,7 +17,7 @@ Security Effect [Security] If this card was face-up, you may play 1 level 5
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -301,7 +301,7 @@ class TestEX10035Machinedramon:
         effects = card.effect_list(None)
 
         # Should either register a CANNOT_DIGIVOLVE modifier or have some restriction
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
         # Fire any static/declarative effects
         for e in effects:

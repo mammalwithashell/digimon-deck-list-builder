@@ -26,7 +26,7 @@ Key cards used:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 MASTEMON_DECK = ["BT23-102"] * 4 + ["BT23-031"] * 10 + ["BT23-067"] * 10 + ["BT1-048"] * 26
@@ -77,10 +77,10 @@ class TestBT23_102Mastemon:
     def test_alt_digi_matches_cs_lv5(self, debug_runner):
         """Alt-digi requirement should match any Lv.5 Digimon with CS trait."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=15)
-        from digimon_gym.engine.validation.digivolve_validator import (
+        from engine_py_legacy.engine.validation.digivolve_validator import (
             _check_alt_digivolve, get_alt_digi_cost,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Place a Lv.5 w/CS trait Angewomon on the field
@@ -95,10 +95,10 @@ class TestBT23_102Mastemon:
     def test_alt_digi_matches_cs_lv5_purple(self, debug_runner):
         """Alt-digi should match a purple CS Lv.5 (LadyDevimon)."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=15)
-        from digimon_gym.engine.validation.digivolve_validator import (
+        from engine_py_legacy.engine.validation.digivolve_validator import (
             _check_alt_digivolve, get_alt_digi_cost,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         base_perm = runner.place_on_field(1, ["BT23-067"])  # LadyDevimon CS
@@ -112,8 +112,8 @@ class TestBT23_102Mastemon:
     def test_alt_digi_rejects_lv5_without_cs(self, debug_runner):
         """Alt-digi should NOT match a Lv.5 Yellow Digimon without CS trait."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=15)
-        from digimon_gym.engine.validation.digivolve_validator import _check_alt_digivolve
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.validation.digivolve_validator import _check_alt_digivolve
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # BT1-060 MagnaAngemon: Lv.5 yellow, no CS trait
@@ -126,8 +126,8 @@ class TestBT23_102Mastemon:
     def test_alt_digi_rejects_wrong_level(self, debug_runner):
         """Alt-digi should NOT match a Lv.4 card even with CS trait."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=15)
-        from digimon_gym.engine.validation.digivolve_validator import _check_alt_digivolve
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.validation.digivolve_validator import _check_alt_digivolve
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # BT23-077 Sistermon Ciel is Lv.4, but this won't have CS either — just use it
@@ -145,7 +145,7 @@ class TestBT23_102Mastemon:
     def test_dna_digivolve_requirements_parsed(self, debug_runner):
         """DNA digivolve requirements should be parsed from xros_req."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-102", runner.game.player1)
 
@@ -163,8 +163,8 @@ class TestBT23_102Mastemon:
     def test_dna_digivolve_matches_angewomon_plus_ladydevimon(self, debug_runner):
         """DNA digivolve should accept Angewomon (Yellow Lv.5) + LadyDevimon (Purple Lv.5)."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.validation.digivolve_validator import can_dna_digivolve
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.validation.digivolve_validator import can_dna_digivolve
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         ange_perm = runner.place_on_field(1, ["BT23-031"])  # Yellow Lv.5
@@ -181,7 +181,7 @@ class TestBT23_102Mastemon:
     def test_when_digivolving_effect_exists(self, debug_runner):
         """Should have an OnEnterFieldAnyone effect with is_when_digivolving."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-102", runner.game.player1)
         effects = card.effect_list(None)
@@ -445,7 +445,7 @@ class TestBT23_102Mastemon:
     def test_on_lose_security_effect_exists(self, debug_runner):
         """Should have an OnLoseSecurity OPT effect."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-102", runner.game.player1)
         effects = card.effect_list(None)
@@ -482,7 +482,7 @@ class TestBT23_102Mastemon:
         })
 
         # Selection phase — pick Angewomon
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
         target_idx = game.player1.battle_area.index(target_perm)
         runner.execute(SEL_MY_FIELD_START + target_idx)
 
@@ -517,7 +517,7 @@ class TestBT23_102Mastemon:
         })
 
         # Both Mastemon (Digimon) and digi_perm should be valid; tamer should not
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
         pending = game.pending_selection
         assert pending is not None, "Should have a pending selection"
         valid_ids = set(pending.valid_indices)
@@ -533,7 +533,7 @@ class TestBT23_102Mastemon:
     def test_on_lose_security_shared_hash_for_opt(self, debug_runner):
         """The OPT effect should set a unique hash string for counter tracking."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-102", runner.game.player1)
         effects = card.effect_list(None)
@@ -546,7 +546,7 @@ class TestBT23_102Mastemon:
     def test_on_lose_security_is_optional(self, debug_runner):
         """The effect should be marked optional (you MAY place)."""
         runner = debug_runner(deck1=MASTEMON_DECK, deck2=MASTEMON_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-102", runner.game.player1)
         effects = card.effect_list(None)

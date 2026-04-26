@@ -15,9 +15,9 @@ Pattern reference: BT3-061 Chuumon (identical effect text, different color).
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.card_effect import ICardEffect
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 def _trigger_tapirmon_on_play(runner, perm):

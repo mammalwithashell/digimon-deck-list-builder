@@ -17,7 +17,7 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # Card IDs
 EX8_046 = "EX8-046"        # Card under test (Gotsumon, Lv.3 Black, Rock trait)

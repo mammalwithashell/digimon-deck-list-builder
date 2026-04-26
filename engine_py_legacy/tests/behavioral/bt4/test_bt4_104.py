@@ -5,7 +5,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -16,7 +16,7 @@ class TestBT4104BlindingRay:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Should expose an OptionSkill [Main] effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT4-104")
         effects = cs.effect_list(None)
@@ -28,7 +28,7 @@ class TestBT4104BlindingRay:
 
     def test_no_inherited_effects(self, debug_runner):
         """BT4-104 is a pure Option with no inherited text."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT4-104")
         effects = cs.effect_list(None)
@@ -40,7 +40,7 @@ class TestBT4104BlindingRay:
     def test_condition_true_with_security(self, debug_runner):
         """can_use_condition should be True when security stack is non-empty."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT4-104", runner.game.player1)
         effects = cs.effect_list(None)
@@ -57,7 +57,7 @@ class TestBT4104BlindingRay:
         game = runner.game
         p1 = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT4-104", p1)
         effects = cs.effect_list(None)
@@ -94,7 +94,7 @@ class TestBT4104BlindingRay:
         game = runner.game
         p1 = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT4-104", p1)
         effects = cs.effect_list(None)
@@ -134,7 +134,7 @@ class TestBT4104BlindingRay:
         p1._fire_timing = _spy
 
         try:
-            from digimon_gym.engine.data.card_database import CardDatabase
+            from engine_py_legacy.engine.data.card_database import CardDatabase
             db = CardDatabase()
             cs = db.create_card_source("BT4-104", p1)
             effects = cs.effect_list(None)
@@ -179,7 +179,7 @@ class TestBT4104BlindingRay:
         p1.add_memory = _mem_spy
 
         try:
-            from digimon_gym.engine.data.card_database import CardDatabase
+            from engine_py_legacy.engine.data.card_database import CardDatabase
             db = CardDatabase()
             cs = db.create_card_source("BT4-104", p1)
             effects = cs.effect_list(None)
@@ -208,7 +208,7 @@ class TestBT4104BlindingRay:
         p1.security_cards.clear()
         p1.face_up_security.clear()
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT4-104", p1)
         effects = cs.effect_list(None)

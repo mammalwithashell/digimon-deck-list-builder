@@ -15,7 +15,7 @@ Security Effect:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 CARD_ID = "BT21-093"
@@ -296,7 +296,7 @@ class TestBT21093RagingSerpentine:
         runner = debug_runner(initial_memory=5)
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(CARD_ID, game.player2)
         effects = cs.effect_list(EffectTiming.SecuritySkill)

@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ── Card IDs used in tests ──────────────────────────────────────────
@@ -69,8 +69,8 @@ class TestBT11094Invariants:
     """Static invariants on the BT11-094 script definition."""
 
     def _get_effects(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         cs = db.create_card_source(MIREI, None)
@@ -493,8 +493,8 @@ class TestBT11094Security:
     """[Security] Play this card without paying the cost."""
 
     def test_security_effect_registered(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         cs = db.create_card_source(MIREI, None)

@@ -126,7 +126,7 @@ class TestAD1014MetalGarurumon:
         runner.auto_resolve()
 
         # Check that CANNOT_SUSPEND modifier was applied to at least 1 opponent permanent
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         game = runner.game
         frozen_count = sum(
             1 for p in game.player2.battle_area
@@ -159,7 +159,7 @@ class TestAD1014MetalGarurumon:
         runner.auto_resolve()
 
         # No tamers -> 0 colors -> 0 freeze
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         game = runner.game
         frozen_count = sum(
             1 for p in game.player2.battle_area
@@ -195,7 +195,7 @@ class TestAD1014MetalGarurumon:
         runner.execute(action)
         runner.auto_resolve()
 
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         game = runner.game
         frozen_count = sum(
             1 for p in game.player2.battle_area
@@ -224,7 +224,7 @@ class TestAD1014MetalGarurumon:
         # Manually mark the OPT hash as used for the current turn
         # by finding effects with the hash and recording activation
         for source in perm.card_sources:
-            from digimon_gym.engine.data.enums import EffectTiming
+            from engine_py_legacy.engine.data.enums import EffectTiming
             for effect in source.effect_list(EffectTiming.NoTiming):
                 h = getattr(effect, '_hash_string', None)
                 if h == "AD1_014_OP_WD_WA":
@@ -320,7 +320,7 @@ class TestAD1014MetalGarurumon:
         runner.auto_resolve()
 
         # Check CANNOT_SUSPEND on opponent
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         game = runner.game
         frozen_count = sum(
             1 for p in game.player2.battle_area
@@ -350,7 +350,7 @@ class TestAD1014MetalGarurumon:
             runner.execute(action)
             runner.auto_resolve()
 
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         game = runner.game
         frozen_count = sum(
             1 for p in game.player2.battle_area
@@ -390,12 +390,12 @@ class TestAD1014MetalGarurumon:
         # AD1-011 Paildramon is Lv5 but need ADVENTURE trait
         # Let's check if it has the trait; if not, we need a different card
         # For now just verify the alt-digi effect attributes exist
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         script = db.get_script("AD1-014")
         assert script is not None, "AD1-014 script should be loaded"
 
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.card_source import CardSource
         cs = CardSource()
         cs.c_entity_base = db.get_card("AD1-014")
         effects = script.get_card_effects(cs)

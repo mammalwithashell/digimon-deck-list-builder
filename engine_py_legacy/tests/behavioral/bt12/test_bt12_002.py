@@ -248,7 +248,7 @@ class TestBT12002InheritedDraw:
         )
 
         # Check that the effect has is_inherited_effect = True
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(BT12_002, runner.game.player1)
         effects = cs.effect_list(None)

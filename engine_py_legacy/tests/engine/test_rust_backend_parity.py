@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from digimon_gym.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
 
 pytest.importorskip("digimon_engine")
 from digimon_engine import RustHeadlessGame  # noqa: E402
@@ -79,7 +79,7 @@ def test_env_swap_via_backend_env_var(monkeypatch):
 
 def test_to_ui_json_top_level_keys_match():
     py, rs = _build()
-    from digimon_gym.engine.game.serialization import to_ui_json
+    from engine_py_legacy.engine.game.serialization import to_ui_json
     py_ui = to_ui_json(py.game)
     rs_ui = rs.to_ui_json()
     assert set(rs_ui.keys()) == set(py_ui.keys()), (
@@ -98,7 +98,7 @@ def test_to_ui_json_player_ids_use_python_convention():
 
 def test_player_ui_data_key_set_matches():
     py, rs = _build()
-    from digimon_gym.engine.game.serialization import to_ui_json
+    from engine_py_legacy.engine.game.serialization import to_ui_json
     py_ui = to_ui_json(py.game)
     rs_ui = rs.to_ui_json()
     assert set(rs_ui["player1"].keys()) == set(py_ui["player1"].keys()), (

@@ -21,8 +21,8 @@ C# Reference: DCGO/Assets/Scripts/CardEffect/BT13/White/BT13_007.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 # -- Helpers -------------------------------------------------------------------
@@ -699,7 +699,7 @@ class TestBT13007AbsorbEffect:
         game = runner.game
 
         # Register a test modifier on the RK perm
-        from digimon_gym.engine.interfaces.modifiers import ModifierEntry
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierEntry
         test_mod = ModifierEntry(
             modifier_type=ModifierType.CHANGE_DP,
             condition=None,
@@ -756,7 +756,7 @@ class TestBT13007InheritedEffect:
         mem_effect = mem_effects[0]
 
         # Create a mock RK Option card source for condition check
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         rk_option = db.create_card_source("BT10-110", game.player1)  # Seiken Meppa
         assert rk_option is not None
@@ -802,7 +802,7 @@ class TestBT13007InheritedEffect:
         mem_effect = mem_effects[0]
 
         # Use a non-RK option (find one)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         non_rk_option = db.create_card_source("ST1-16", game.player1)  # Gaia Force (not RK)
         assert non_rk_option is not None
@@ -836,7 +836,7 @@ class TestBT13007InheritedEffect:
         mem_effect = mem_effects[0]
 
         # Use a RK Digimon (not an Option)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         rk_digimon = db.create_card_source("BT2-020", game.player1)  # Gallantmon (Digimon)
         assert rk_digimon is not None
@@ -892,7 +892,7 @@ class TestBT13007InheritedEffect:
         assert len(mem_effects) >= 1
         mem_effect = mem_effects[0]
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         rk_option = db.create_card_source("BT10-110", game.player1)
 

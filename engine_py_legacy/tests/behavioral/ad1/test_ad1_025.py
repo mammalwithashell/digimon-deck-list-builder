@@ -138,7 +138,7 @@ class TestAD1025OnPlayWhenDigivolving:
         perm = runner.place_on_field(1, ["AD1-004", "AD1-025"])  # 1 digi-card under
 
         # Fire on-play effects manually to simulate play/digivolve trigger
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(
             EffectTiming.OnEnterFieldAnyone,
             {"played_card": perm.top_card})

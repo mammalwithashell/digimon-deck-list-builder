@@ -146,7 +146,7 @@ class TestBT24102Homeros:
         # Find the End of Turn effect (effect2)
         eot_effect = None
         for eff in effects:
-            from digimon_gym.engine.data.enums import EffectTiming
+            from engine_py_legacy.engine.data.enums import EffectTiming
             if eff.timing == EffectTiming.OnEndTurn:
                 eot_effect = eff
                 break
@@ -182,7 +182,7 @@ class TestBT24102Homeros:
         effects = homeros_card.effect_list(None)
         eot_effect = None
         for eff in effects:
-            from digimon_gym.engine.data.enums import EffectTiming
+            from engine_py_legacy.engine.data.enums import EffectTiming
             if eff.timing == EffectTiming.OnEndTurn:
                 eot_effect = eff
                 break

@@ -378,7 +378,7 @@ class TestBT22094CostReduction:
                 break
         assert yuugo_perm is not None
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         before_pay_effects = [
             e for e in yuugo_perm.effect_list(EffectTiming.NoTiming)
             if getattr(e, 'timing', None) == EffectTiming.BeforePayCost
@@ -423,7 +423,7 @@ class TestBT22094CostReduction:
                 break
         assert yuugo_perm is not None
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         before_pay_effects = [
             e for e in yuugo_perm.effect_list(EffectTiming.NoTiming)
             if getattr(e, 'timing', None) == EffectTiming.BeforePayCost
@@ -452,7 +452,7 @@ class TestBT22094CostReduction:
                 break
         assert yuugo_perm is not None
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         before_pay_effects = [
             e for e in yuugo_perm.effect_list(EffectTiming.NoTiming)
             if getattr(e, 'timing', None) == EffectTiming.BeforePayCost

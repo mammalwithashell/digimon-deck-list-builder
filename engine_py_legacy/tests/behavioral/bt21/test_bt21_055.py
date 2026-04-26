@@ -10,7 +10,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # Clean filler decks
 FILLER_DECK = ["ST1-03"] * 50
@@ -120,8 +120,8 @@ class TestBT21055DigivolveCostReduction:
         wwd = [e for e in effects if e.timing == EffectTiming.WhenWouldDigivolve][0]
 
         # Build context similar to what Player.digivolve uses
-        from digimon_gym.engine.core.card_source import CardSource
-        from digimon_gym.engine.core.entity_base import CEntity_Base
+        from engine_py_legacy.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.entity_base import CEntity_Base
         e = CEntity_Base()
         e.type_eng = ["Mineral"]
         mineral_card = CardSource()

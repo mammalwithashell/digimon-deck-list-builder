@@ -10,7 +10,7 @@ Alt-digi: Lv.4 w/<Save> in text or w/[Hero] trait: Cost 3
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -123,6 +123,6 @@ class TestBT21072ArresterdraSuperiorMode:
         })
 
         # Check CAN_ATTACK_UNSUSPENDED modifier exists
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_unsuspended = game.modifiers.has_modifier(perm, ModifierType.CAN_ATTACK_UNSUSPENDED)
         assert has_unsuspended, "Should have CAN_ATTACK_UNSUSPENDED modifier after When Digivolving"

@@ -11,7 +11,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -261,14 +261,14 @@ class TestBT22088ArisaKinosaki:
 
     def test_security_effect_is_marked(self, debug_runner):
         """Security effect should have is_security_effect and SecuritySkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.core.card_source import CardSource
 
         db = CardDatabase()
         cs = CardSource()
         cs.c_entity_base = db.get_card("BT22-088")
 
-        from digimon_gym.engine.data.scripts.bt22.bt22_088 import BT22_088
+        from engine_py_legacy.engine.data.scripts.bt22.bt22_088 import BT22_088
         script = BT22_088()
         effects = script.get_card_effects(cs)
         security_effects = [e for e in effects if getattr(e, 'is_security_effect', False)]

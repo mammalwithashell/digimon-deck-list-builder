@@ -145,7 +145,7 @@ class TestEX4073OmnimonAlterB:
 
         # Verify via direct effect inspection
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX4-073", game.player1)
         effects = cs.effect_list(None)

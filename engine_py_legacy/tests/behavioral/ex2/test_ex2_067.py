@@ -9,7 +9,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -20,7 +20,7 @@ class TestEX2067FireBall:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Script should have an OptionSkill effect for the [Main] ability."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-067")
         effects = cs.effect_list(None)
@@ -29,7 +29,7 @@ class TestEX2067FireBall:
 
     def test_has_security_skill_timing(self, debug_runner):
         """Script should have a SecuritySkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-067")
         effects = cs.effect_list(None)
@@ -183,7 +183,7 @@ class TestEX2067FireBall:
 
     def test_security_effect_is_flagged(self, debug_runner):
         """Security effect should be flagged as a security effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-067")
         effects = cs.effect_list(None)
@@ -196,7 +196,7 @@ class TestEX2067FireBall:
         """Security effect should delete low-DP Digimon (same as Main)."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-067", runner.game.player1)
         effects = cs.effect_list(None)
@@ -219,7 +219,7 @@ class TestEX2067FireBall:
         """Security effect should draw 2 if no valid targets."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-067", runner.game.player1)
         effects = cs.effect_list(None)
@@ -248,8 +248,8 @@ class TestEX2067FireBall:
         runner.place_on_field(1, ["ST1-07"])  # Red Greymon for color req
 
         # Use GameBuilder to create a Digimon with exactly 3000 DP
-        from tests.helpers.game_builder import make_card, make_permanent
-        from digimon_gym.engine.data.enums import CardKind, CardColor
+        from engine_py_legacy.tests.helpers.game_builder import make_card, make_permanent
+        from engine_py_legacy.engine.data.enums import CardKind, CardColor
         perm_3000 = make_permanent(
             card_id="TEST-3K", name="3000DPMon",
             dp=3000, level=3, kind=CardKind.Digimon,

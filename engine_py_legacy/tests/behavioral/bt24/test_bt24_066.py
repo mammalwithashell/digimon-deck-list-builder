@@ -24,7 +24,7 @@ Key faithfulness points:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Card IDs used in tests
 BT24_066 = "BT24-066"      # Card under test (Guilmon, Lv.3 Purple)

@@ -29,7 +29,7 @@ Clauses:
 """
 
 import pytest
-from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
 
 
 # BT2-077 Kimeramon: Lv.5 Purple Digimon, Composite trait

@@ -23,7 +23,7 @@ class TestBT24085DanYukiKananYuki:
         runner.place_on_field(1, ["BT24-085"])
         runner.set_phase("Main")
         # Manually fire start-of-main effects
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase)
         snap = runner.snapshot()
         assert snap.memory == 5, f"Expected memory 5, got {snap.memory}"
@@ -33,7 +33,7 @@ class TestBT24085DanYukiKananYuki:
         runner = debug_runner(initial_memory=5)
         runner.place_on_field(1, ["BT24-085"])
         runner.set_phase("Main")
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnStartMainPhase)
         snap = runner.snapshot()
         assert snap.memory == 5, f"Expected memory 5 (unchanged), got {snap.memory}"
@@ -48,7 +48,7 @@ class TestBT24085DanYukiKananYuki:
         runner.inject_card(1, "BT24-090", "hand")  # TS Option cost 3
         runner.set_phase("Main")
         # Memory is 3 (positive) — opponent has -3 — gate should block
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner.game.execute_effects(EffectTiming.OnEndTurn)
         # Tamer should NOT be suspended (effect didn't fire)
         snap = runner.snapshot()

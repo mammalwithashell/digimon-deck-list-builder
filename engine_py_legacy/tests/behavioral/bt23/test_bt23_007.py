@@ -6,7 +6,7 @@ Inherited: Link Requirements [Link] [Appmon] trait: Cost 1
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -54,7 +54,7 @@ class TestBT23007SecurityPlay:
         game = runner.game
         player = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT23-007", player)
         player.security_cards.append(cs)
@@ -81,7 +81,7 @@ class TestBT23007SecurityPlay:
         game = runner.game
         player = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT23-007", player)
         player.security_cards.append(cs)

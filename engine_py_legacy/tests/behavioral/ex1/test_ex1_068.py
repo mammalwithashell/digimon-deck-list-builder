@@ -22,12 +22,12 @@ class TestEX1068IceWall:
         )
         # Verify the script has a SecuritySkill effect that gains 2 memory
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX1-068", game.player1)
         effects = cs.effect_list(None)
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         sec_effects = [e for e in effects if e.timing == EffectTiming.SecuritySkill]
         assert len(sec_effects) >= 1, "Should have at least 1 SecuritySkill effect"
 

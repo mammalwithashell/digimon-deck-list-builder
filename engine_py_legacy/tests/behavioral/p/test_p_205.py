@@ -24,7 +24,7 @@ C# reference: P_205.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # Minimal decks for DebugRunner
@@ -237,8 +237,8 @@ class TestP205Delay:
 
     def test_delay_marker_exists(self):
         """P-205 should have _is_delay = True on one of its effects."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -253,8 +253,8 @@ class TestP205Delay:
     def test_delay_callback_follows_delay_marker(self):
         """The effect immediately after the _is_delay marker should have
         a process callback (the delayed effect)."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -417,7 +417,7 @@ class TestP205Delay:
 
         # Step through selections manually (auto_resolve picks Decline first)
         # Step 1: Select the DemiDevimon to delete (not Decline)
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget
         legal = runner.action_mask()
         select_perm = [a for a in legal if a != 62]  # skip Decline
@@ -466,7 +466,7 @@ class TestP205Delay:
         runner.execute(delay_action)
 
         # Step through selections manually
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         if game.current_phase == GamePhase.SelectTarget:
             legal = runner.action_mask()
             select_perm = [a for a in legal if a != 62]
@@ -510,7 +510,7 @@ class TestP205Delay:
         runner.execute(delay_action)
 
         # Step 1: Select DemiDevimon to delete (not decline)
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         if game.current_phase == GamePhase.SelectTarget:
             legal = runner.action_mask()
             select_perm = [a for a in legal if a != 62]
@@ -537,8 +537,8 @@ class TestP205Delay:
         """The delay callback effect should NOT have _is_field_main = True.
         The delay mechanism has its own action slot; _is_field_main would
         cause a duplicate action."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -564,8 +564,8 @@ class TestP205Security:
 
     def test_security_effect_has_correct_timing(self):
         """P-205 security effect should have SecuritySkill timing."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -601,7 +601,7 @@ class TestP205Security:
 
         lib_before = len(p2.library_cards)
 
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "StrongAttacker", dp=12000)
         game.player1.battle_area.append(attacker)
 
@@ -626,7 +626,7 @@ class TestP205Security:
         runner.clear_zone(2, "security")
         runner.inject_card(2, "P-205", "security_top")
 
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "StrongAttacker", dp=12000)
         game.player1.battle_area.append(attacker)
 
@@ -653,8 +653,8 @@ class TestP205EffectStructure:
     def test_has_five_effects(self):
         """P-205 should have exactly 5 effects:
         0: color bypass, 1: main, 2: delay marker, 3: delay callback, 4: security."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -667,8 +667,8 @@ class TestP205EffectStructure:
 
     def test_main_effect_has_option_skill_timing(self):
         """P-205 Main effect should have OptionSkill timing."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()

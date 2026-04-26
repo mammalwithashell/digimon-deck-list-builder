@@ -3,12 +3,12 @@
 from __future__ import annotations
 from typing import List, Optional
 
-from digimon_gym.engine.game import Game
-from digimon_gym.engine.loggers import EventLogger
-from digimon_gym.engine.data.enums import GamePhase, CardKind, CardColor
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.core.card_source import CardSource
-from digimon_gym.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.game import Game
+from engine_py_legacy.engine.loggers import EventLogger
+from engine_py_legacy.engine.data.enums import GamePhase, CardKind, CardColor
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
 
 
 def make_card(

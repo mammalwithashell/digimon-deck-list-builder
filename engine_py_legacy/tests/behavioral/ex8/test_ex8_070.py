@@ -20,7 +20,7 @@ Note: place_on_field takes card IDs bottom-to-top, so
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Egg-free deck so the game starts directly in Main phase (no Breeding).
 _FILLER_DECK = ["ST1-03"] * 50

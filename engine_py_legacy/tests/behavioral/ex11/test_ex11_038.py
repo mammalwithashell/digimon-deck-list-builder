@@ -17,7 +17,7 @@ Key faithfulness issues being validated:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase, EffectTiming
+from engine_py_legacy.engine.data.enums import GamePhase, EffectTiming
 
 
 # Deck with Sunarizamon + Mineral/Rock support cards
@@ -30,7 +30,7 @@ def _find_source_action(runner, card_id):
     for action_id, desc in actions.items():
         if action_id >= 2000 and action_id < 2168:
             # Decode: field_idx = (action_id - 2000) // 12, source_idx = (action_id - 2000) % 12
-            from digimon_gym.engine.game.constants import SOURCES_PER_FIELD
+            from engine_py_legacy.engine.game.constants import SOURCES_PER_FIELD
             field_idx = (action_id - 2000) // SOURCES_PER_FIELD
             source_idx = (action_id - 2000) % SOURCES_PER_FIELD
             player = runner.game.player1

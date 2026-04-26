@@ -13,7 +13,7 @@ Alt-digi: Digivolve from Lv.3 [CS] Digimon for cost 2.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 def _get_effects(perm):

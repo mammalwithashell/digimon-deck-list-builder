@@ -25,7 +25,7 @@ Key faithfulness points tested:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # ── Card IDs under test ─────────────────────────────────────────────────
 
@@ -253,7 +253,7 @@ class TestBT11080DevimonConditionalKeywords:
         )
 
         # Create a card source but do not place on field
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(BT11_080, runner.game.player1)
         # Put a yellow permanent on field to satisfy the yellow condition
@@ -356,7 +356,7 @@ class TestBT11080RetaliationIntegration:
         # Attack Coredramon — Devimon (5000) vs Coredramon (6000): Devimon
         # loses, Retaliation kills Coredramon. Use direct _resolve_battle
         # to skip counter/block timing for unit-test isolation.
-        from digimon_gym.engine.game.constants import PendingAttack
+        from engine_py_legacy.engine.game.constants import PendingAttack
         devimon.is_attacking = True
         runner.game.pending_attack = PendingAttack(
             attacker=devimon,
@@ -393,7 +393,7 @@ class TestBT11080RetaliationIntegration:
             "No yellow in play — Devimon should not have Retaliation"
         )
 
-        from digimon_gym.engine.game.constants import PendingAttack
+        from engine_py_legacy.engine.game.constants import PendingAttack
         devimon.is_attacking = True
         runner.game.pending_attack = PendingAttack(
             attacker=devimon,

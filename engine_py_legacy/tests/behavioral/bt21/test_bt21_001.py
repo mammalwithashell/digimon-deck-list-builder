@@ -8,7 +8,7 @@ cost reduced by 1.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -222,8 +222,8 @@ class TestBT21001Gigimon:
 
         # Create test card sources
         # CardSource.card_traits is a property returning c_entity_base.type_eng
-        from digimon_gym.engine.core.card_source import CardSource
-        from digimon_gym.engine.core.entity_base import CEntity_Base
+        from engine_py_legacy.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.entity_base import CEntity_Base
 
         def _make_card_with_traits(traits):
             e = CEntity_Base()

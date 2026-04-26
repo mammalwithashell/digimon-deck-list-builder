@@ -14,7 +14,7 @@ Key cards for test setups:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 # Digivolution stack: bottom-to-top order per place_on_field convention.
@@ -31,7 +31,7 @@ STACK_4_QUALIFYING = ["EX10-003", "BT2-054", "BT4-065", "BT4-066", "BT4-066"]
 
 def _get_inherited_effect(perm):
     """Find the EX10-003 inherited 'end attack' effect on a permanent."""
-    from digimon_gym.engine.data.enums import EffectTiming
+    from engine_py_legacy.engine.data.enums import EffectTiming
     for eff in perm.effect_list(EffectTiming.NoTiming):
         if eff.is_inherited_effect and 'EX10-003' in eff.effect_name:
             return eff
@@ -59,7 +59,7 @@ class TestEX10003Tumblemon:
         execute_effects(OnAllyAttack) scans both battle areas in combat.py
         _start_attack; OnUseAttack only fires for the attacker itself.
         """
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(initial_memory=0)
         perm = runner.place_on_field(1, STACK_3_QUALIFYING)
         eff = _get_inherited_effect(perm)
@@ -193,7 +193,7 @@ class TestEX10003Tumblemon:
         game.player2.is_my_turn = False
 
         # Set up a pending attack so force_end_attack has something to end
-        from digimon_gym.engine.game.constants import PendingAttack
+        from engine_py_legacy.engine.game.constants import PendingAttack
         attacker = runner.place_on_field(1, ["ST1-03"])
         game.pending_attack = PendingAttack(
             attacker=attacker,
@@ -216,7 +216,7 @@ class TestEX10003Tumblemon:
         eff.on_process_callback(ctx)
 
         # Find field index and compute base for source actions
-        from digimon_gym.engine.game.constants import SOURCES_PER_FIELD
+        from engine_py_legacy.engine.game.constants import SOURCES_PER_FIELD
         field_idx = game.player2.battle_area.index(perm)
         base = 2000 + field_idx * SOURCES_PER_FIELD
 
@@ -254,7 +254,7 @@ class TestEX10003Tumblemon:
         game.player1.is_my_turn = True
         game.player2.is_my_turn = False
 
-        from digimon_gym.engine.game.constants import PendingAttack
+        from engine_py_legacy.engine.game.constants import PendingAttack
         attacker = runner.place_on_field(1, ["ST1-03"])
         game.pending_attack = PendingAttack(
             attacker=attacker,
@@ -282,7 +282,7 @@ class TestEX10003Tumblemon:
         """The script must NOT use perm.card_sources.remove() directly.
         It should use request_selection + player-driven source selection."""
         import inspect
-        from digimon_gym.engine.data.scripts.ex10.ex10_003 import EX10_003
+        from engine_py_legacy.engine.data.scripts.ex10.ex10_003 import EX10_003
 
         source = inspect.getsource(EX10_003)
         # Should not have direct list removal (anti-pattern from old code)
@@ -323,7 +323,7 @@ class TestEX10003Tumblemon:
     def test_full_attack_flow_ends_attack(self, debug_runner):
         """Integration test: opponent attacks, effect fires via execute_effects(OnAllyAttack),
         player selects 3 sources, attack is ended via force_end_attack()."""
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(initial_memory=0)
         perm = runner.place_on_field(2, STACK_3_QUALIFYING)
         game = runner.game
@@ -333,7 +333,7 @@ class TestEX10003Tumblemon:
         game.player1.is_my_turn = True
         game.player2.is_my_turn = False
 
-        from digimon_gym.engine.game.constants import PendingAttack
+        from engine_py_legacy.engine.game.constants import PendingAttack
         attacker = runner.place_on_field(1, ["ST1-03"])
         game.pending_attack = PendingAttack(
             attacker=attacker,
@@ -393,7 +393,7 @@ class TestEX10003Tumblemon:
         assert game.pending_selection is not None
         valid = game.pending_selection.valid_indices
 
-        from digimon_gym.engine.game.constants import SOURCES_PER_FIELD
+        from engine_py_legacy.engine.game.constants import SOURCES_PER_FIELD
         field_idx = game.player2.battle_area.index(perm)
         base = 2000 + field_idx * SOURCES_PER_FIELD
 

@@ -16,7 +16,7 @@ C# reference: DCGO/Assets/Scripts/CardEffect/BT14/Yellow/BT14_003.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral

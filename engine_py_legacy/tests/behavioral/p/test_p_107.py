@@ -13,7 +13,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import CardColor, EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import CardColor, EffectTiming, GamePhase
 
 
 # Card IDs used in tests
@@ -31,7 +31,7 @@ class TestP107OptionSkill:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Should have an OptionSkill effect for the main reveal effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P107)
         effects = cs.effect_list(None)
@@ -109,7 +109,7 @@ class TestP107OptionSkill:
 
     def test_reveal_filter_accepts_any_black_card(self, debug_runner):
         """The reveal filter should match any black card, not just Digimon."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         black_digi = db.create_card_source(BLK_ROOKIE)
@@ -129,7 +129,7 @@ class TestP107DelayMarker:
 
     def test_has_delay_marker(self, debug_runner):
         """Should have a delay marker effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P107)
         effects = cs.effect_list(None)
@@ -138,7 +138,7 @@ class TestP107DelayMarker:
 
     def test_delay_callback_has_field_main(self, debug_runner):
         """The delay callback effect should have OnDeclaration timing and _is_field_main."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P107)
         effects = cs.effect_list(None)
@@ -229,7 +229,7 @@ class TestP107DelayDigivolve:
 
     def test_delay_digivolve_with_cost_reduction(self, debug_runner):
         """Delay digivolve should reduce the cost by 2."""
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START, SEL_HAND_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START, SEL_HAND_START
         runner = debug_runner(initial_memory=10, skip_shuffle=True)
         # Place P-107 directly on field (turn_played=-1 so delay is usable)
         runner.place_on_field(1, [P107], turn_played=-1)
@@ -299,7 +299,7 @@ class TestP107DelayDigivolve:
 
     def test_delay_only_offers_black_digimon_from_hand(self, debug_runner):
         """Delay digivolve filter should only accept black Digimon cards from hand."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Verify test card properties
@@ -318,7 +318,7 @@ class TestP107SecurityEffect:
 
     def test_has_security_effect(self, debug_runner):
         """Should have a security effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P107)
         effects = cs.effect_list(None)
@@ -330,7 +330,7 @@ class TestP107SecurityEffect:
 
     def test_security_effect_has_callback(self, debug_runner):
         """Security effect should have a process callback to place in battle area."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P107)
         effects = cs.effect_list(None)
@@ -343,7 +343,7 @@ class TestP107SecurityEffect:
 
     def test_security_effect_timing(self, debug_runner):
         """Security effect should use SecuritySkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P107)
         effects = cs.effect_list(None)

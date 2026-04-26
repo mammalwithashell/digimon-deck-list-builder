@@ -3,20 +3,20 @@
 import pytest
 
 import numpy as np
-from digimon_gym.engine.game import (
+from engine_py_legacy.engine.game import (
     Game, TENSOR_SIZE, ACTION_SPACE_SIZE, FIELD_SLOTS, SLOT_SIZE,
     MAX_HAND, MAX_TRASH, MAX_SECURITY, MAX_SOURCES,
     SOURCE_ENTRY_SIZE, BREEDING_SLOT, SECURITY_TARGET,
     TARGETS_PER_ATTACKER, FIELDS_PER_HAND,
 )
-from digimon_gym.engine.data.enums import GamePhase, CardKind, CardColor
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.evo_cost import EvoCost
-from digimon_gym.engine.core.player import Player
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.core.card_source import CardSource
-from digimon_gym.engine.core.entity_base import CEntity_Base
-from digimon_gym.engine.interfaces.card_effect import ICardEffect
+from engine_py_legacy.engine.data.enums import GamePhase, CardKind, CardColor
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.evo_cost import EvoCost
+from engine_py_legacy.engine.core.player import Player
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────

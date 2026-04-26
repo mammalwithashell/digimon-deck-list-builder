@@ -29,7 +29,7 @@ Key cards used:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 _DECK = ["BT22-099"] * 4 + ["BT22-017"] * 20 + ["BT1-009"] * 26
@@ -40,7 +40,7 @@ class TestBT22099EffectShape:
     """Verify BT22-099 has the correct effect structure."""
 
     def test_has_option_skill(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-099")
         effects = cs.effect_list(None)
@@ -48,7 +48,7 @@ class TestBT22099EffectShape:
         assert len(main_effects) == 1, "Should have exactly 1 OptionSkill effect"
 
     def test_has_delay_marker(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-099")
         effects = cs.effect_list(None)
@@ -56,7 +56,7 @@ class TestBT22099EffectShape:
         assert len(delay_effects) == 1, "Should have exactly 1 Delay marker effect"
 
     def test_has_delay_on_declaration(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-099")
         effects = cs.effect_list(None)
@@ -68,7 +68,7 @@ class TestBT22099EffectShape:
     def test_has_security_effect_with_callback(self):
         """Security effect must have an on_process_callback that places the
         card in the battle area — not just a description."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-099")
         effects = cs.effect_list(None)
@@ -135,7 +135,7 @@ class TestBT22099ColorBypass:
         runner.place_on_field(1, ["BT22-017"])  # CS Digimon
         # Instantiate an unrelated option in hand
         runner.inject_card(1, "BT22-099", "hand")
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # Use another option and check its color req is not affected
         other = db.create_card_source("BT22-100", runner.game.player1)
@@ -152,7 +152,7 @@ class TestBT22099MainEffect:
 
     def _setup_reveal(self, runner, top_cards):
         """Place specific cards on top of P1 library (top-first)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         p1 = runner.game.player1
         for cid in reversed(top_cards):
@@ -329,7 +329,7 @@ class TestBT22099DelayEffect:
         # (We allow the field-main field effect but not the Delay effectIdx=1)
         # Easier check: build mask and verify the delay slot is not set.
         mask = game.get_action_mask(game.current_player_id)
-        from digimon_gym.engine.game.action_decoder import EFFECTS_PER_PERM
+        from engine_py_legacy.engine.game.action_decoder import EFFECTS_PER_PERM
         # Find BT22-099's perm slot
         for idx, perm in enumerate(game.player1.battle_area):
             if perm.top_card and perm.top_card.c_entity_base.card_id == "BT22-099":
@@ -358,7 +358,7 @@ class TestBT22099SecurityEffect:
         runner.inject_card(2, "BT22-099", "security_top")
 
         # Create an attacker on P1 field
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "Attacker", dp=12000)
         game.player1.battle_area.append(attacker)
 
@@ -389,7 +389,7 @@ class TestBT22099SecurityEffect:
         runner.clear_zone(2, "security")
         runner.inject_card(2, "BT22-099", "security_top")
 
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "Attacker", dp=12000)
         game.player1.battle_area.append(attacker)
 

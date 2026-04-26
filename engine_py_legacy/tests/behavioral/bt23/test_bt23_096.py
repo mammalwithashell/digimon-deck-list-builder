@@ -22,7 +22,7 @@ Key cards used:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 HAMMER_DECK = (
@@ -134,7 +134,7 @@ class TestBT23096CometHammer:
         runner = debug_runner(
             deck1=HAMMER_DECK, deck2=HAMMER_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-096", runner.game.player1)
         effects = card.effect_list(None)
@@ -159,7 +159,7 @@ class TestBT23096CometHammer:
             2, ["BT22-017", "BT22-010", "BT22-017", "BT22-010", "BT22-010"])
         stack_len_before = len(tall_stack.card_sources)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         hammer = db.create_card_source("BT23-096", game.player1)
 
@@ -177,7 +177,7 @@ class TestBT23096CometHammer:
         valid_ids = list(game.pending_selection.valid_indices)
         assert len(valid_ids) >= 1
         # Find the action id for our tall stack.
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         tall_idx = game.player2.battle_area.index(tall_stack)
         target_action = SEL_OPP_FIELD_START + tall_idx
         assert target_action in valid_ids
@@ -204,7 +204,7 @@ class TestBT23096CometHammer:
         assert len(short.card_sources) == 1
         assert short.top_card.level == 3
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         hammer = db.create_card_source("BT23-096", game.player1)
         option_effect = next(
@@ -215,7 +215,7 @@ class TestBT23096CometHammer:
         })
 
         # Pick the short stack.
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         target_action = SEL_OPP_FIELD_START + 0
         game.decode_action(target_action, game.player1.player_id)
 
@@ -236,7 +236,7 @@ class TestBT23096CometHammer:
 
         # Clear p1 hand and give them ONLY the option card at index 0.
         game.player1.hand_cards.clear()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         hammer = db.create_card_source("BT23-096", game.player1)
         game.player1.hand_cards.append(hammer)
@@ -263,7 +263,7 @@ class TestBT23096CometHammer:
         assert len(game.player2.battle_area) == 0
 
         game.player1.hand_cards.clear()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         hammer = db.create_card_source("BT23-096", game.player1)
         game.player1.hand_cards.append(hammer)
@@ -463,7 +463,7 @@ class TestBT23096CometHammer:
         # A pending selection for de-digivolve should be active.
         assert game.pending_selection is not None
         # Resolve by picking the opponent target.
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         tgt_idx = game.player2.battle_area.index(target)
         game.decode_action(
             SEL_OPP_FIELD_START + tgt_idx, game.player1.player_id)
@@ -477,7 +477,7 @@ class TestBT23096CometHammer:
         runner = debug_runner(
             deck1=HAMMER_DECK, deck2=HAMMER_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-096", runner.game.player1)
 
@@ -495,7 +495,7 @@ class TestBT23096CometHammer:
         runner = debug_runner(
             deck1=HAMMER_DECK, deck2=HAMMER_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-096", runner.game.player1)
         effects = card.effect_list(None)
@@ -513,7 +513,7 @@ class TestBT23096CometHammer:
             deck1=HAMMER_DECK, deck2=HAMMER_DECK, initial_memory=5)
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-096", game.player1)
 
@@ -548,7 +548,7 @@ class TestBT23096CometHammer:
             2, ["BT22-017", "BT22-010", "BT22-017", "BT22-010", "BT22-010"])
         stack_before = len(target.card_sources)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-096", game.player1)
 
@@ -563,7 +563,7 @@ class TestBT23096CometHammer:
 
         # A pending selection for de-digivolve should be active.
         assert game.pending_selection is not None
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         tgt_idx = game.player2.battle_area.index(target)
         game.decode_action(
             SEL_OPP_FIELD_START + tgt_idx, game.player1.player_id)
@@ -610,7 +610,7 @@ class TestBT23096CometHammer:
         the _match_color_requirement_fn property, not an ICardEffect.)"""
         runner = debug_runner(
             deck1=HAMMER_DECK, deck2=HAMMER_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-096", runner.game.player1)
         effects = card.effect_list(None)

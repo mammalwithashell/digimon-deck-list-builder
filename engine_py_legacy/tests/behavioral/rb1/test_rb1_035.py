@@ -15,7 +15,7 @@ Clause breakdown:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 FILLER = ["ST1-02"] * 40
@@ -82,7 +82,7 @@ class TestRB1035StartOfTurn:
                 break
         assert hokuto_card is not None, "Should find Hokuto on field"
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         start_turn_effects = [
             eff for eff in hokuto_card.effect_list(EffectTiming.OnStartTurn)
             if eff.can_use_condition

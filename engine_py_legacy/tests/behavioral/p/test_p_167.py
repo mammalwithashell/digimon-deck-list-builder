@@ -12,7 +12,7 @@ Inherited: When effects trash this card from digivolution cards of a [Mineral] o
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # --- Card IDs ---
@@ -160,8 +160,8 @@ class TestP167WhenDigivolving:
         # effect_select_own_permanent enters SelectTarget phase.
         # Explicitly select the permanent (action 100 = SEL_MY_FIELD_START + 0)
         # rather than auto_resolve which would decline the optional selection.
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, \
             f"Should be in SelectTarget phase, got {game.current_phase}"
         game.decode_action(SEL_MY_FIELD_START + 0, game.current_player_id)

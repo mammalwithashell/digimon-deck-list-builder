@@ -10,7 +10,7 @@ Inherited: [Your Turn] This Digimon gets +2000 DP.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 @pytest.mark.behavioral
@@ -60,7 +60,7 @@ class TestBT21013WhenDigivolving:
         })
 
         # Should enter a selection phase with valid options including the Hybrid card
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             "Should enter SelectTarget phase for choosing a Hybrid/Hero Digimon"
         )
@@ -88,7 +88,7 @@ class TestBT21013WhenDigivolving:
             'permanent': perm,
         })
 
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             "Should enter SelectTarget phase for Hero-trait Digimon"
         )
@@ -116,7 +116,7 @@ class TestBT21013WhenDigivolving:
             'permanent': perm,
         })
 
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             "Should enter SelectTarget phase for Hybrid Digimon from trash"
         )
@@ -146,7 +146,7 @@ class TestBT21013WhenDigivolving:
             'permanent': perm,
         })
 
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         # With no valid targets, should NOT enter selection phase
         assert game.current_phase != GamePhase.SelectTarget, (
             "Should not enter selection when no Hybrid/Hero Digimon available"
@@ -247,7 +247,7 @@ class TestBT21013WhenDigivolving:
         })
 
         # First selection: pick the card from hand
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget
 
         # Select first available card
@@ -318,7 +318,7 @@ class TestBT21013WhenAttacking:
         })
 
         # Should enter selection for digivolve
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectTarget, (
             "Should offer red Lv.5 Digimon for digivolve"
         )
@@ -343,7 +343,7 @@ class TestBT21013WhenAttacking:
             'permanent': perm,
         })
 
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase != GamePhase.SelectTarget, (
             "Should not offer non-red/non-Lv.5 Digimon for digivolve"
         )

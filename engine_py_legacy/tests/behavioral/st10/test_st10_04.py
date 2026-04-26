@@ -31,7 +31,7 @@ Test cards:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # === Card IDs ===
@@ -331,7 +331,7 @@ class TestST10_04_DigivolveCostReduction:
         eff = self._get_cost_effect(perm)
 
         # Create an Angewomon (Archangel) card as the digivolve target
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         angewomon_cs = db.create_card_source(ANGEWOMON, player)
 
@@ -350,7 +350,7 @@ class TestST10_04_DigivolveCostReduction:
         perm = runner.place_on_field(1, [GATOMON])
         eff = self._get_cost_effect(perm)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         lady_cs = db.create_card_source(LADYDEVIMON, player)
 
@@ -369,7 +369,7 @@ class TestST10_04_DigivolveCostReduction:
         perm = runner.place_on_field(1, [GATOMON])
         eff = self._get_cost_effect(perm)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # Mastemon has trait "Angel" - NOT "Archangel" or "Fallen Angel"
         mastemon_cs = db.create_card_source(MASTEMON, player)
@@ -389,7 +389,7 @@ class TestST10_04_DigivolveCostReduction:
         perm = runner.place_on_field(1, [GATOMON])
         eff = self._get_cost_effect(perm)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         angewomon_cs = db.create_card_source(ANGEWOMON, player)
 
@@ -420,7 +420,7 @@ class TestST10_04_DigivolveCostReduction:
         assert len(cost_effects) == 1
         eff = cost_effects[0]
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         angewomon_cs = db.create_card_source(ANGEWOMON, player)
 
@@ -438,7 +438,7 @@ class TestST10_04_DigivolveCostReduction:
         # Place Gatomon on field. Angewomon (Yellow Lv.5) evo cost from Yellow Lv.4 = 3 memory.
         perm = runner.place_on_field(1, [GATOMON])
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         angewomon_cs = db.create_card_source(ANGEWOMON, player)
 
@@ -562,7 +562,7 @@ class TestST10_04_ScriptImportability:
 
     def test_script_loads(self):
         """Script module imports without errors and exposes class ST10_04."""
-        from digimon_gym.engine.data.scripts.st10.st10_04 import ST10_04
+        from engine_py_legacy.engine.data.scripts.st10.st10_04 import ST10_04
         assert ST10_04 is not None
 
     def test_script_has_three_top_level_effects(self, debug_runner):

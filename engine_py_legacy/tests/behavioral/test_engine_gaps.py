@@ -11,17 +11,17 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers.game_builder import make_card
+from engine_py_legacy.tests.helpers.game_builder import make_card
 
-from digimon_gym.engine.game import Game
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.core.player import Player
-from digimon_gym.engine.core.card_source import CardSource
-from digimon_gym.engine.core.entity_base import CEntity_Base
-from digimon_gym.engine.data.enums import GamePhase, EffectTiming, CardColor, CardKind
-from digimon_gym.engine.interfaces.modifiers import ModifierType
-from digimon_gym.engine.game.action_mask import build_action_mask
-from digimon_gym.engine.game.constants import SECURITY_TARGET, TARGETS_PER_ATTACKER
+from engine_py_legacy.engine.game import Game
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.player import Player
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.data.enums import GamePhase, EffectTiming, CardColor, CardKind
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.game.action_mask import build_action_mask
+from engine_py_legacy.engine.game.constants import SECURITY_TARGET, TARGETS_PER_ATTACKER
 
 
 def make_game():

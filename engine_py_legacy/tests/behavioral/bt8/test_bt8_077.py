@@ -34,12 +34,12 @@ class TestBT8077EffectShape:
 
     def test_script_imports_ok(self):
         """The script module should import cleanly."""
-        from digimon_gym.engine.data.scripts.bt8 import bt8_077
+        from engine_py_legacy.engine.data.scripts.bt8 import bt8_077
         assert hasattr(bt8_077, 'BT8_077')
 
     def test_has_rush_and_retaliation_effects(self, debug_runner):
         """Two effect instances: rush (non-inherited) + retaliation (inherited)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         runner = debug_runner(initial_memory=10)
         db = CardDatabase()
         cs = db.create_card_source(BLACKGATOMON, runner.game.player1)
@@ -55,7 +55,7 @@ class TestBT8077EffectShape:
 
     def test_rush_effect_is_not_inherited(self, debug_runner):
         """Rush is the card's main (above-line) effect — NOT inherited."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         runner = debug_runner(initial_memory=10)
         db = CardDatabase()
         cs = db.create_card_source(BLACKGATOMON, runner.game.player1)
@@ -66,7 +66,7 @@ class TestBT8077EffectShape:
 
     def test_retaliation_effect_is_inherited(self, debug_runner):
         """Retaliation is the below-line effect — MUST be inherited."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         runner = debug_runner(initial_memory=10)
         db = CardDatabase()
         cs = db.create_card_source(BLACKGATOMON, runner.game.player1)
@@ -77,7 +77,7 @@ class TestBT8077EffectShape:
 
     def test_rush_and_retaliation_are_separate_instances(self, debug_runner):
         """Two effects must be distinct ICardEffect instances, not the same object."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         runner = debug_runner(initial_memory=10)
         db = CardDatabase()
         cs = db.create_card_source(BLACKGATOMON, runner.game.player1)
@@ -147,7 +147,7 @@ class TestBT8077NoExtraEffects:
 
     def test_effect_count_is_exactly_two(self, debug_runner):
         """Two effects only: Rush and Retaliation."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         runner = debug_runner(initial_memory=10)
         db = CardDatabase()
         cs = db.create_card_source(BLACKGATOMON, runner.game.player1)
@@ -157,7 +157,7 @@ class TestBT8077NoExtraEffects:
 
     def test_no_on_play_effect(self, debug_runner):
         """Rush is a static keyword — there should be no is_on_play effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         runner = debug_runner(initial_memory=10)
         db = CardDatabase()
         cs = db.create_card_source(BLACKGATOMON, runner.game.player1)
@@ -168,7 +168,7 @@ class TestBT8077NoExtraEffects:
 
     def test_no_security_effect(self, debug_runner):
         """BT8-077 has no [Security] text."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         runner = debug_runner(initial_memory=10)
         db = CardDatabase()
         cs = db.create_card_source(BLACKGATOMON, runner.game.player1)
@@ -179,8 +179,8 @@ class TestBT8077NoExtraEffects:
 
     def test_no_before_pay_cost(self, debug_runner):
         """BT8-077 has no cost-reduction effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(initial_memory=10)
         db = CardDatabase()
         cs = db.create_card_source(BLACKGATOMON, runner.game.player1)

@@ -8,7 +8,7 @@ Alt-digi: From [Veemon] for cost 2
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -232,7 +232,7 @@ class TestBT21_037Lighdramon:
         runner.auto_resolve()
 
         # Check modifier registry for the DP modifier
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         dp_mods = game.modifiers._modifiers.get(ModifierType.CHANGE_DP, [])
         lighdramon_mods = [m for m in dp_mods if m.source_permanent is perm]
         assert lighdramon_mods, "Should have a CHANGE_DP modifier registered"

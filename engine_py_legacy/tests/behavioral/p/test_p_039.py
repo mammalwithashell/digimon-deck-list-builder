@@ -22,7 +22,7 @@ Key cards used:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 _DECK = ["P-039"] * 4 + ["BT5-061"] * 4 + ["ST1-03"] * 42
@@ -33,7 +33,7 @@ class TestP039Effects:
     """Verify P-039 has the correct effect structure."""
 
     def test_has_option_skill(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-039")
         effects = cs.effect_list(None)
@@ -41,7 +41,7 @@ class TestP039Effects:
         assert len(main_effects) >= 1, "Should have OptionSkill effect"
 
     def test_has_delay_marker(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-039")
         effects = cs.effect_list(None)
@@ -49,7 +49,7 @@ class TestP039Effects:
         assert len(delay_effects) >= 1, "Should have a delay marker effect"
 
     def test_has_delay_on_declaration(self):
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-039")
         effects = cs.effect_list(None)
@@ -59,7 +59,7 @@ class TestP039Effects:
     def test_has_security_effect(self):
         """P-039 must have a SecuritySkill effect that places it in the battle area.
         C# ref: CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)"""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-039")
         effects = cs.effect_list(None)
@@ -106,7 +106,7 @@ class TestP039MainReveal:
         runner.inject_card(1, "P-039", "hand")
 
         # Set up library top 4: 1 black Digimon + 3 red (non-selectable)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         black_dig = db.create_card_source("BT5-061", p1)  # Black Digimon
         red_dig = db.create_card_source("ST1-03", p1)
@@ -169,7 +169,7 @@ class TestP039DelayEffect:
 
     def test_delay_marker_is_delay(self):
         """Verify delay effect has _is_delay flag."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-039")
         effects = cs.effect_list(None)
@@ -193,7 +193,7 @@ class TestP039SecurityEffect:
         runner.clear_zone(2, "security")
         runner.inject_card(2, "P-039", "security_top")
 
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "StrongAttacker", dp=12000)
         game.player1.battle_area.append(attacker)
 

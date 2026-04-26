@@ -38,7 +38,7 @@ Key faithfulness points:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Card IDs used in tests
@@ -139,7 +139,7 @@ class TestEX6074Clause1Condition:
         effect = _find_onplay_effect(tamer.top_card)
 
         # Simulate playing a Holy Beast Digimon (Gatomon)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         gatomon = CardDatabase().create_card_source(GATOMON_HOLY_BEAST, game.player1)
         ctx = self._build_ctx(game, tamer, gatomon, game.player1)
 
@@ -154,7 +154,7 @@ class TestEX6074Clause1Condition:
         tamer = runner.place_on_field(1, [EX6_074])
         effect = _find_onplay_effect(tamer.top_card)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         magnaangemon = CardDatabase().create_card_source(MAGNAANGEMON_ARCHANGEL, game.player1)
         ctx = self._build_ctx(game, tamer, magnaangemon, game.player1)
 
@@ -169,7 +169,7 @@ class TestEX6074Clause1Condition:
         tamer = runner.place_on_field(1, [EX6_074])
         effect = _find_onplay_effect(tamer.top_card)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         devimon = CardDatabase().create_card_source(DEVIMON_FALLEN_ANGEL, game.player1)
         ctx = self._build_ctx(game, tamer, devimon, game.player1)
 
@@ -184,7 +184,7 @@ class TestEX6074Clause1Condition:
         tamer = runner.place_on_field(1, [EX6_074])
         effect = _find_onplay_effect(tamer.top_card)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         agumon = CardDatabase().create_card_source(AGUMON_GENERIC, game.player1)
         ctx = self._build_ctx(game, tamer, agumon, game.player1)
 
@@ -199,7 +199,7 @@ class TestEX6074Clause1Condition:
         tamer = runner.place_on_field(1, [EX6_074])
         effect = _find_onplay_effect(tamer.top_card)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         gatomon = CardDatabase().create_card_source(GATOMON_HOLY_BEAST, game.player2)
         # event_player is the opponent, not the tamer owner
         ctx = self._build_ctx(game, tamer, gatomon, game.player2)
@@ -219,7 +219,7 @@ class TestEX6074Clause1Condition:
         game.player1.is_my_turn = False
         game.player2.is_my_turn = True
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         gatomon = CardDatabase().create_card_source(GATOMON_HOLY_BEAST, game.player1)
         ctx = self._build_ctx(game, tamer, gatomon, game.player1)
 
@@ -236,7 +236,7 @@ class TestEX6074Clause1Condition:
         tamer_card = game.player1.hand_cards[-1]
         effect = _find_onplay_effect(tamer_card)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         gatomon = CardDatabase().create_card_source(GATOMON_HOLY_BEAST, game.player1)
         ctx = {
             'game': game,
@@ -259,7 +259,7 @@ class TestEX6074Clause1Condition:
         tamer = runner.place_on_field(1, [EX6_074], is_suspended=True)
         effect = _find_onplay_effect(tamer.top_card)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         gatomon = CardDatabase().create_card_source(GATOMON_HOLY_BEAST, game.player1)
         ctx = self._build_ctx(game, tamer, gatomon, game.player1)
 
@@ -382,7 +382,7 @@ class TestEX6074Clause1Process:
         assert game.pending_selection is not None, (
             "Expected a target-selection after process"
         )
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
         # Pick the first available own-field target (the Gatomon)
         target_action = SEL_MY_FIELD_START + 1  # idx 1 = Gatomon (0 is tamer)
         game.decode_action(target_action, 0)
@@ -432,13 +432,13 @@ class TestEX6074Clause1Process:
         effect.on_process_callback(ctx)
 
         # Pick a target to actually invoke the inner effect_digivolve_from_hand
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
         game.decode_action(SEL_MY_FIELD_START + 1, 0)  # Gatomon at idx 1
 
         filter_fn = captured.get('filter_fn')
         assert filter_fn is not None, "Filter function should have been captured"
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         angewomon = db.create_card_source(ANGEWOMON, game.player1)
         ladydevimon = db.create_card_source(LADYDEVIMON, game.player1)

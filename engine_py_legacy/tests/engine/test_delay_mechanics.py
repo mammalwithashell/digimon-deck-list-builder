@@ -10,15 +10,15 @@ Covers:
 
 import pytest
 
-from digimon_gym.engine.game import Game, ACTION_SPACE_SIZE
-from digimon_gym.engine.data.enums import (
+from engine_py_legacy.engine.game import Game, ACTION_SPACE_SIZE
+from engine_py_legacy.engine.data.enums import (
     GamePhase, CardKind, CardColor, EffectTiming, AttackResolution,
 )
-from digimon_gym.engine.core.player import Player
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.core.card_source import CardSource
-from digimon_gym.engine.core.entity_base import CEntity_Base
-from digimon_gym.engine.interfaces.card_effect import ICardEffect
+from engine_py_legacy.engine.core.player import Player
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
 
 
 # ─── Mock Helpers ─────────────────────────────────────────────────────

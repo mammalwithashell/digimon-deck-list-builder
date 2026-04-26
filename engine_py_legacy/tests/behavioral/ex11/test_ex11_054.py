@@ -61,7 +61,7 @@ class TestEX11054OwenDreadnought:
         assert game.memory <= 2, f"Memory should be <= 2, got {game.memory}"
 
         # Trigger start of turn effects
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         game.turn_player = p1
         p1.is_my_turn = True
         game.execute_effects(EffectTiming.OnStartTurn)
@@ -84,7 +84,7 @@ class TestEX11054OwenDreadnought:
         p1.is_my_turn = True
 
         # Fire OnStartMainPhase — should NOT set memory to 3
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         game.execute_effects(EffectTiming.OnStartMainPhase)
 
         assert game.memory == 1, \
@@ -103,7 +103,7 @@ class TestEX11054OwenDreadnought:
         game.turn_player = p1
         p1.is_my_turn = True
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         game.execute_effects(EffectTiming.OnStartTurn)
 
         assert game.memory == 5, \
@@ -311,7 +311,7 @@ class TestEX11054OwenDreadnought:
         p1 = game.player1
 
         # Check the effects registered for Owen
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         effects = owen_perm.effect_list(EffectTiming.OnEnterFieldAnyone)
         owen_effects = [e for e in effects if 'EX11-054' in (e.effect_name or '')]
 

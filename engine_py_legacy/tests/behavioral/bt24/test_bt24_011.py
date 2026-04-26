@@ -133,8 +133,8 @@ class TestBT24011Cyclonemon:
         # BT1-009 Monodramon is Lv.3 Red but has NO TS trait
         runner.place_on_field(1, ["BT1-009"], turn_played=-1)
 
-        from digimon_gym.engine.validation.digivolve_validator import _check_alt_digivolve
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.validation.digivolve_validator import _check_alt_digivolve
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         db = CardDatabase()
         cyclonemon_cs = db.create_card_source("BT24-011", runner.game.player1)

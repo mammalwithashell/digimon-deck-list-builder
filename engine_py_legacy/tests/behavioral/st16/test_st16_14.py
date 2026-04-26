@@ -20,7 +20,7 @@ C# reference: DCGO/Assets/Scripts/CardEffect/ST16/Purple/ST16_14.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -327,7 +327,7 @@ class TestST1614SecurityEffect:
         """Should have a SecuritySkill effect."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST16-14", runner.game.player1)
         effects = cs.effect_list(None)
@@ -342,7 +342,7 @@ class TestST1614SecurityEffect:
         """Security effect must have is_security_effect = True."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST16-14", runner.game.player1)
         effects = cs.effect_list(None)

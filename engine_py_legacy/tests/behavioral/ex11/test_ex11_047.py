@@ -10,7 +10,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 _FILLER_DECK = ["ST1-02"] * 50
 
@@ -98,7 +98,7 @@ class TestEX11047SoYMPTrashAndGainMemory:
         game.execute_effects(EffectTiming.OnStartMainPhase)
 
         # Should be in selection phase (not auto-resolved, no decline)
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         if game.current_phase == GamePhase.SelectHand:
             # Check that the decline action (62) is NOT available
             legal = runner.action_mask()

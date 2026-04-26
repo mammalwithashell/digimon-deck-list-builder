@@ -26,7 +26,7 @@ Key faithfulness points:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 EX6_053 = "EX6-053"          # LadyDevimon Lv.5 Purple (Fallen Angel)
@@ -45,7 +45,7 @@ FILLER_DECK = [ST1_03] * 4 + [ST1_02] * 50
 
 def _get_effects(runner, card_id: str):
     """Return the cached effect list for a freshly-created CardSource."""
-    from digimon_gym.engine.data.card_database import CardDatabase
+    from engine_py_legacy.engine.data.card_database import CardDatabase
     db = CardDatabase()
     cs = db.create_card_source(card_id, runner.game.player1)
     return cs, cs.effect_list(EffectTiming.NoTiming)
@@ -286,7 +286,7 @@ class TestEX6053OnPlayLogic:
         )
         # Put Mirei in trash; no Mirei on field
         p1 = runner.game.player1
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         mirei_cs = db.create_card_source(EX6_074, p1)
         # Also put a random non-Mirei card in trash
@@ -322,7 +322,7 @@ class TestEX6053OnPlayLogic:
         # (level is None) — so valid list would be EMPTY and Mirei wouldn't be playable.
         # Instead, the fixed version must filter by name containing "Mirei Mikagura".
         # To assert this, check that the pending selection includes the Mirei trash index.
-        import digimon_gym.engine.game.constants as const
+        import engine_py_legacy.engine.game.constants as const
         SEL_TRASH_START = getattr(const, 'SEL_TRASH_START', None)
         if SEL_TRASH_START is None:
             SEL_TRASH_START = 130

@@ -10,7 +10,7 @@ When you would play this card, reduce its memory cost by 3 for each
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -32,8 +32,8 @@ class TestBT9112DeathXmon:
         game = runner.game
 
         # Get the BeforePayCost effect from BT9-112
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -55,8 +55,8 @@ class TestBT9112DeathXmon:
         """BeforePayCost condition should only apply to THIS card (leak guard)."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -93,7 +93,7 @@ class TestBT9112DeathXmon:
 
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT9-112", game.player1)
 
@@ -134,7 +134,7 @@ class TestBT9112DeathXmon:
 
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT9-112", game.player1)
         game.player1.hand_cards.append(cs)
@@ -156,7 +156,7 @@ class TestBT9112DeathXmon:
         runner = debug_runner(initial_memory=20)
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT9-112", game.player1)
         game.player1.hand_cards.append(cs)

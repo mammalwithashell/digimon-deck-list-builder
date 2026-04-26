@@ -5,7 +5,7 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -98,7 +98,7 @@ class TestBT1090GravityCrush:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Script should register an OptionSkill effect for the Main ability."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT1-090")
         effects = cs.effect_list(None)
@@ -107,7 +107,7 @@ class TestBT1090GravityCrush:
 
     def test_has_end_of_turn_timing(self, debug_runner):
         """Script should register an OnEndTurn effect for the memory loss."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT1-090")
         effects = cs.effect_list(None)

@@ -17,8 +17,8 @@ so tests validate CANNOT_DIGIVOLVE per faithful implementation policy.
 
 import pytest
 
-from digimon_gym.engine.data.enums import GamePhase
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import GamePhase
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 # Card IDs
 METALLICDRAMON = "EX7-049"   # Card under test (Lv.6 Black Sky Dragon)
@@ -464,7 +464,7 @@ class TestEX7049WhenLeaveField:
 
     def test_effect_is_optional(self, debug_runner):
         """'you may play' means the effect is optional."""
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(initial_memory=5)
 
         perm = runner.place_on_field(1, [METALLICDRAMON])

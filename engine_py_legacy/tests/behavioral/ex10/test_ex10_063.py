@@ -13,7 +13,7 @@ Security Effect: Play this card without paying the cost.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 FILLER = ["ST1-03"] * 40  # Agumon filler for decks

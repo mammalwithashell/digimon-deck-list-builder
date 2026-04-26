@@ -8,7 +8,7 @@ Security Effect [Security] Play this card without paying the cost.
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # Card references:
 # ST1-03 Agumon: Red, Lv3, DP 2000 (filler)

@@ -14,8 +14,8 @@ Inherited: Ace Overflow <-4>
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.game.constants import SEL_TRASH_START
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
 # Use Dracomon (ST1-04) as filler
 FILLER_DECK = ["ST1-04"] * 50

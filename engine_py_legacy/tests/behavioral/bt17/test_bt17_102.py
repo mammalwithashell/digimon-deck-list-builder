@@ -14,7 +14,7 @@ Alt-digi: Lv.3 w/[Agumon] in name: Cost 2
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral

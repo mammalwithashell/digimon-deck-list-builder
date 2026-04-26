@@ -7,7 +7,7 @@ with 6000 DP or less to the bottom of its owner's deck.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral

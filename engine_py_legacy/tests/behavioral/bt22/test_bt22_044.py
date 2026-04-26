@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ── Card IDs used by tests ───────────────────────────────────────────────
@@ -183,7 +183,7 @@ class TestBT22044C1MemoryGain:
         palmon_perm = runner.place_on_field(1, [PALMON])
 
         # Build a fresh CS Digimon CardSource and add it to Palmon's stack
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs_digi = db.create_card_source(CS_DIGIMON_LV3, game.player1)
 
@@ -203,7 +203,7 @@ class TestBT22044C1MemoryGain:
         game = runner.game
         palmon_perm = runner.place_on_field(1, [PALMON])
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         non_cs = db.create_card_source(NO_CS_DIGIMON_LV3, game.player1)
 
@@ -226,7 +226,7 @@ class TestBT22044C1MemoryGain:
         # A separate, unrelated Digimon
         other_perm = runner.place_on_field(1, [NO_CS_DIGIMON_LV3])
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs_digi = db.create_card_source(CS_DIGIMON_LV3, game.player1)
 
@@ -248,7 +248,7 @@ class TestBT22044C1MemoryGain:
         game = runner.game
         palmon_perm = runner.place_on_field(1, [PALMON])
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         mem_before = game.memory
@@ -277,7 +277,7 @@ class TestBT22044C1MemoryGain:
         game.player1.is_my_turn = False
         game.player2.is_my_turn = True
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs_digi = db.create_card_source(CS_DIGIMON_LV3, game.player1)
 

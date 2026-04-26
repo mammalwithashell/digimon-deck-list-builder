@@ -12,8 +12,8 @@ Alt-digi: Lv.5 w/[ADVENTURE]/[Hero] trait: Cost 3
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 @pytest.mark.behavioral

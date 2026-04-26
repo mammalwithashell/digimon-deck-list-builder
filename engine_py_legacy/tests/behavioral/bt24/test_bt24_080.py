@@ -11,7 +11,7 @@ This card is also treated as [ChaosGallantmon].
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # EX7-056 Orochimon: Lv5 Purple Dark Dragon, 8000 DP (valid digivolve target)
 # BT21-077 Regulusmon: Lv5 Purple/Red Evil Dragon, 9000 DP (valid digivolve target)
@@ -253,7 +253,7 @@ class TestBT24080Megidramon:
 
     def test_trash_eot_is_optional(self, debug_runner):
         """The trash EOT digivolve should be optional (may digivolve)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT24-080")
         effects = cs.effect_list(None)
@@ -416,7 +416,7 @@ class TestBT24080Megidramon:
 
     def test_effect_count(self, debug_runner):
         """Megidramon should have the expected number of effects."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT24-080")
         effects = cs.effect_list(None)
@@ -434,7 +434,7 @@ class TestBT24080Megidramon:
 
     def test_no_inherited_effects(self, debug_runner):
         """Megidramon has no inherited effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT24-080")
         effects = cs.effect_list(None)

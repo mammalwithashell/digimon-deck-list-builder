@@ -231,7 +231,7 @@ class TestST9_06WhenDigivolving:
         # Check that the effect is declared as optional
         card = perm.top_card  # This is Paildramon currently, but we want to check ST9-06's effect
         # We need to check ST9-06's effect attributes directly
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(ST9_06, runner.game.player1)
         effects = cs.effect_list(None)

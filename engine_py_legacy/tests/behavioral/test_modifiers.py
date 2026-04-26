@@ -13,12 +13,12 @@ Tests cover:
 
 import pytest
 
-from digimon_gym.engine.game import Game
-from digimon_gym.engine.loggers import EventLogger
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.data.enums import GamePhase, CardKind, CardColor
-from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
-from tests.helpers.game_builder import make_card, make_permanent, GameBuilder
+from engine_py_legacy.engine.game import Game
+from engine_py_legacy.engine.loggers import EventLogger
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.data.enums import GamePhase, CardKind, CardColor
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType, ModifierEntry
+from engine_py_legacy.tests.helpers.game_builder import make_card, make_permanent, GameBuilder
 
 
 class TestChangeSecurityAttack:

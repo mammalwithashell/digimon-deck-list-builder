@@ -11,21 +11,21 @@ Covers:
 
 import pytest
 
-from digimon_gym.engine.game import (
+from engine_py_legacy.engine.game import (
     Game, PendingAttack, PendingSelection,
     ACTION_SPACE_SIZE, FIELD_SLOTS,
 )
-from digimon_gym.engine.data.enums import (
+from engine_py_legacy.engine.data.enums import (
     GamePhase, CardKind, CardColor, EffectTiming, AttackResolution,
 )
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.evo_cost import EvoCost
-from digimon_gym.engine.core.player import Player
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.core.card_source import CardSource
-from digimon_gym.engine.core.entity_base import CEntity_Base
-from digimon_gym.engine.interfaces.card_effect import ICardEffect
-from digimon_gym.engine.loggers import VerboseLogger
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.evo_cost import EvoCost
+from engine_py_legacy.engine.core.player import Player
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
+from engine_py_legacy.engine.loggers import VerboseLogger
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -579,7 +579,7 @@ class TestSelectionFramework:
 
     def test_trash_selection_validates_index(self):
         """Trash selection decoder validates against trash size."""
-        from digimon_gym.engine.game import SEL_TRASH_START
+        from engine_py_legacy.engine.game import SEL_TRASH_START
         game = setup_game_at_phase(GamePhase.Main)
         # Add 3 cards to trash
         for i in range(3):
@@ -957,7 +957,7 @@ class TestHandMainMask:
             card_id="HM-001", name="HandMainMon", effects=[hm_effect], owner=p1)
         p1.hand_cards.append(card)
 
-        from digimon_gym.engine.game.action_mask import build_action_mask
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
         mask = build_action_mask(game, 1)
         assert mask[30] == 1.0, "Action 30 (hand idx 0) should be masked on"
 
@@ -970,7 +970,7 @@ class TestHandMainMask:
             card_id="HM-002", name="HandMainMon", effects=[hm_effect], owner=p1)
         p1.hand_cards.append(card)
 
-        from digimon_gym.engine.game.action_mask import build_action_mask
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
         mask = build_action_mask(game, 1)
         assert mask[30] == 0.0, "Action 30 should be masked off when condition fails"
 
@@ -986,7 +986,7 @@ class TestHandMainMask:
             card_id="HM-003", name="HandMainMon", effects=[hm_effect], owner=p1)
         p1.hand_cards.append(hm_card)
 
-        from digimon_gym.engine.game.action_mask import build_action_mask
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
         mask = build_action_mask(game, 1)
         assert mask[30] == 0.0, "Normal card at idx 0 should NOT have hand-main action"
         assert mask[31] == 1.0, "Hand-main card at idx 1 should have action 31 masked on"
@@ -1000,7 +1000,7 @@ class TestHandMainMask:
             card_id="HM-004", name="HandMainMon", effects=[hm_effect], owner=p1)
         p1.hand_cards.append(card)
 
-        from digimon_gym.engine.game.action_mask import build_action_mask
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
         mask = build_action_mask(game, 1)
         assert mask[30] == 0.0, "Hand-main should not be masked on in Breeding phase"
 

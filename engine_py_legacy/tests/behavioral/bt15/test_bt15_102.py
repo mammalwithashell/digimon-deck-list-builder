@@ -19,7 +19,7 @@ Key implementation notes:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # Dark Masters trait cards for testing:
@@ -354,7 +354,7 @@ class TestBT15102Apocalymon:
 
         # Place Apocalymon with 2 Lv.6 DM cards as digi sources
         perm = runner.place_on_field(1, ["BT15-102"])
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs1 = db.create_card_source("BT15-031", runner.game.player1)  # Lv.6
         cs2 = db.create_card_source("BT15-052", runner.game.player1)  # Lv.6
@@ -386,7 +386,7 @@ class TestBT15102Apocalymon:
 
         # Place Apocalymon with 1 Lv.6 and 1 Lv.4 card
         perm = runner.place_on_field(1, ["BT15-102"])
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs1 = db.create_card_source("BT15-031", runner.game.player1)  # Lv.6
         cs2 = db.create_card_source("ST1-07", runner.game.player1)    # Lv.4

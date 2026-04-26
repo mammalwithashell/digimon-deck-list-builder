@@ -31,7 +31,7 @@ Card reference:
 
 import pytest
 
-from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START, SEL_MY_FIELD_START
+from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START, SEL_MY_FIELD_START
 
 
 # Filler deck: enough cards for both players
@@ -199,7 +199,7 @@ class TestCresGarurumonBounceLowest:
         perm = runner.place_on_field(1, ["AD1-012"], turn_played=-1)
 
         # Verify the shared hash is used on the WA effect
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         all_effects = perm.effect_list(EffectTiming.OnUseAttack)
         wa_effects = [e for e in all_effects
                       if "AD1-012" in getattr(e, 'effect_name', '')
@@ -341,7 +341,7 @@ class TestCresGarurumonOpponentTurnEffect:
         perm = runner.place_on_field(1, ["AD1-012"], turn_played=-1)
 
         # Check that the effect's condition returns False on own turn
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         effects = perm.effect_list(EffectTiming.OnTappedAnyone)
         redirect_effects = [e for e in effects
                             if getattr(e, 'hash_string', '') == "Redirect_AD1_012"]

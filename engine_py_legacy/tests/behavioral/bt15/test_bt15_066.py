@@ -10,7 +10,7 @@ Inherited: <Reboot>
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 # Minimal decks for DebugRunner — just need filler cards

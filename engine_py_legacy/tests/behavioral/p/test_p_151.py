@@ -11,7 +11,7 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -20,7 +20,7 @@ class TestP151DigimonLiberator:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Should have OptionSkill timing for the Main reveal effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-151")
         effects = cs.effect_list(None)
@@ -29,7 +29,7 @@ class TestP151DigimonLiberator:
 
     def test_has_security_effect(self, debug_runner):
         """Should have a security effect that activates Main effects."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-151")
         effects = cs.effect_list(None)
@@ -88,7 +88,7 @@ class TestP151DigimonLiberator:
 
     def test_security_effect_has_security_skill_timing(self, debug_runner):
         """Security effect should use SecuritySkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-151")
         effects = cs.effect_list(None)

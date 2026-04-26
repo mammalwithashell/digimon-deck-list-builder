@@ -19,8 +19,8 @@ Key cards used:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.validation.digivolve_validator import can_digivolve
 
 
 GREYMON_DECK = (
@@ -44,7 +44,7 @@ class TestBT23008Greymon:
         agumon_perm = runner.place_on_field(1, ["BT1-010"])
 
         # Create BT23-008 card source for validation
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         greymon = db.create_card_source("BT23-008", runner.game.player1)
 
@@ -58,7 +58,7 @@ class TestBT23008Greymon:
         # Place a Lv.3 CS Digimon that is NOT Agumon
         cs_perm = runner.place_on_field(1, ["BT22-017"])  # Gabumon, CS
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         greymon = db.create_card_source("BT23-008", runner.game.player1)
 
@@ -74,7 +74,7 @@ class TestBT23008Greymon:
         # Place a Lv.3 non-Agumon, non-CS Digimon
         mono_perm = runner.place_on_field(1, ["BT1-009"])  # Monodramon, Lv.3 Red, no CS
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         greymon = db.create_card_source("BT23-008", runner.game.player1)
 
@@ -102,7 +102,7 @@ class TestBT23008Greymon:
         """Greymon should have the Raid keyword."""
         runner = debug_runner(deck1=GREYMON_DECK, deck2=GREYMON_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-008", runner.game.player1)
         effects = card.effect_list(None)
@@ -203,7 +203,7 @@ class TestBT23008Greymon:
         """Inherited effect should give +2000 DP during your turn."""
         runner = debug_runner(deck1=GREYMON_DECK, deck2=GREYMON_DECK, initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("BT23-008", runner.game.player1)
         effects = card.effect_list(None)

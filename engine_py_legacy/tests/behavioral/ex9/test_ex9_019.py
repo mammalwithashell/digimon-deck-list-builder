@@ -40,7 +40,7 @@ class TestEX9019WereGarurumonSagittariusMode:
         runner.execute(action)
 
         # Should be in SelectTarget phase for mandatory CANNOT_SUSPEND selection
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         game = runner.game
         assert game.current_phase == GamePhase.SelectTarget, (
             f"Should be in SelectTarget phase, got {game.current_phase}"
@@ -53,7 +53,7 @@ class TestEX9019WereGarurumonSagittariusMode:
 
         # Verify: exactly 1 opponent permanent has CANNOT_SUSPEND
         enemy = game.player2
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         frozen_count = sum(
             1 for p in enemy.battle_area
             if game.modifiers.has_modifier(p, ModifierType.CANNOT_SUSPEND)
@@ -80,7 +80,7 @@ class TestEX9019WereGarurumonSagittariusMode:
 
         game = runner.game
         enemy = game.player2
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         frozen_count = sum(
             1 for p in enemy.battle_area
             if game.modifiers.has_modifier(p, ModifierType.CANNOT_SUSPEND)
@@ -127,7 +127,7 @@ class TestEX9019WereGarurumonSagittariusMode:
 
         game = runner.game
         enemy = game.player2
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         frozen_count = sum(
             1 for p in enemy.battle_area
             if game.modifiers.has_modifier(p, ModifierType.CANNOT_SUSPEND)
@@ -352,7 +352,7 @@ class TestEX9019WereGarurumonSagittariusMode:
 
         # The hash "WA_EX9-019" ensures once per turn
         # This test verifies the hash is set (engine enforces OPT)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         game = runner.game
         p1_perm = game.player1.battle_area[0]
         found_hash = False
@@ -469,7 +469,7 @@ class TestEX9019WereGarurumonSagittariusMode:
 
         game = runner.game
         enemy = game.player2
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         assert any(
             game.modifiers.has_modifier(p, ModifierType.CANNOT_SUSPEND)
             for p in enemy.battle_area

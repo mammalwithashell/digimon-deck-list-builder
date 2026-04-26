@@ -5,7 +5,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -14,7 +14,7 @@ class TestBT8071CannotReduceCost:
 
     def test_has_declarative_blocks_cost_reduction_effect(self, debug_runner):
         """Script should expose a declarative NoTiming effect that blocks cost reduction."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT8-071")
         effects = cs.effect_list(None)
@@ -120,7 +120,7 @@ class TestBT8071CannotReduceCost:
 
     def test_condition_false_when_not_on_field(self, debug_runner):
         """Field-presence gate: effect condition returns False from hand."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT8-071")
         effects = cs.effect_list(None)

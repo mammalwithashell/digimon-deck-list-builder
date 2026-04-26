@@ -10,7 +10,7 @@ Card text (from cards.json):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -19,7 +19,7 @@ class TestST2208OffensivePlugInV:
 
     def test_security_deletes_lowest_dp(self, debug_runner):
         """Security effect should delete opponent's Digimon with the lowest DP."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST22-08")
         effects = cs.effect_list(None)
@@ -32,7 +32,7 @@ class TestST2208OffensivePlugInV:
 
     def test_has_option_skill_timing(self, debug_runner):
         """Should have OptionSkill timing for the Main effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST22-08")
         effects = cs.effect_list(None)
@@ -41,7 +41,7 @@ class TestST2208OffensivePlugInV:
 
     def test_has_security_skill_timing(self, debug_runner):
         """Security effect should use SecuritySkill timing."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST22-08")
         effects = cs.effect_list(None)

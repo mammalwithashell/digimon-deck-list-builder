@@ -36,8 +36,8 @@ Clauses tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 # --- Test card IDs ---
@@ -381,7 +381,7 @@ class TestBT22031InheritedCSCostReduction:
     def test_inherited_timing_is_when_would_digivolve(self, debug_runner):
         """I-1: The inherited cost reduction effect must use WhenWouldDigivolve
         timing (not BeforePayCost, which is for play cost)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(GOLD_NUMEMON)
         effects = cs.effect_list(None)

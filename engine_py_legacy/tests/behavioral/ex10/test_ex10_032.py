@@ -25,7 +25,7 @@ Key cards used (place_on_field is bottom-to-top):
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 def _resolve_accepting(runner, max_steps=20):

@@ -27,8 +27,8 @@ Key behaviors verified:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 # Card IDs used in tests:

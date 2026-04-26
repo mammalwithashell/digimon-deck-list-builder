@@ -12,7 +12,7 @@ Note: C# also has Security Attack +1 inherited (ChangeSelfSAttackStaticEffect).
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -163,7 +163,7 @@ class TestEX9013BlitzGreymon:
         })
 
         # Should have FORCE_ATTACK on the selected target
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_force = game.modifiers.has_modifier(target, ModifierType.FORCE_ATTACK)
         assert has_force, "Selected Digimon should have FORCE_ATTACK modifier"
 

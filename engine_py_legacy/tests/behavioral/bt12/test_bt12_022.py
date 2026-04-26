@@ -23,7 +23,7 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Card IDs
 BT12_022 = "BT12-022"          # Card under test (ExVeemon, Lv.4 Blue, Free attr)
@@ -136,7 +136,7 @@ class TestBT12022DnaMemory:
         perm = runner.place_on_field(1, [BT12_022])
 
         # Get the WhenDigivolving effect from BT12-022
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
 
         top = perm.top_card

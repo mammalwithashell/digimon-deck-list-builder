@@ -11,7 +11,7 @@ Alt-digi: Lv.5 w/[CS] trait: Cost 3
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -26,8 +26,8 @@ class TestBT23014Gallantmon:
         runner = debug_runner(initial_memory=5)
 
         # Get the alt-digi effect from BT23-014
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
         db = CardDatabase()
 
@@ -158,7 +158,7 @@ class TestBT23014Gallantmon:
         ]
         assert len(floodgate) >= 1, "Should have On Play floodgate effect"
 
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
         # Count CANNOT_PLAY_CARD entries before
         entries_before = len(game.modifiers._modifiers.get(ModifierType.CANNOT_PLAY_CARD, []))

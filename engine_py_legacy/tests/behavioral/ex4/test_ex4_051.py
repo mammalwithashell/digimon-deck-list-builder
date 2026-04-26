@@ -16,7 +16,7 @@ Alt-digi: [MetalGreymon] Cost 3
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 FILLER_DECK = ["ST1-03"] * 50
 

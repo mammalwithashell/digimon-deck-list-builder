@@ -14,7 +14,7 @@ bottom of the deck. Then, place this card in the battle area.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # BT1-045 Tsukaimon: Yellow Lv3 Digimon (for option color requirement)

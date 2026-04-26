@@ -135,7 +135,7 @@ class TestST19_05OnDeletion:
         # Check that only the Puppet card (ST19-02) is in the valid actions
         actions = runner.actions()
         # Count how many hand selection actions are available
-        from digimon_gym.engine.game.constants import SEL_HAND_START
+        from engine_py_legacy.engine.game.constants import SEL_HAND_START
         hand_actions = {aid: desc for aid, desc in actions.items()
                         if aid >= SEL_HAND_START and aid < SEL_HAND_START + 50}
 
@@ -201,7 +201,7 @@ class TestST19_05OnDeletion:
         if runner.game.current_phase.name == "SelectHand":
             legal = runner.action_mask()
             # Pick first non-pass action (should be the Puppet card)
-            from digimon_gym.engine.game.constants import SEL_HAND_START
+            from engine_py_legacy.engine.game.constants import SEL_HAND_START
             puppet_actions = [a for a in legal if a >= SEL_HAND_START]
             if puppet_actions:
                 runner.execute(puppet_actions[0])

@@ -11,7 +11,7 @@ Inherited Effect:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -80,7 +80,7 @@ class TestST19_08SecurityEffect:
         sec_eff = [e for e in effects if e.is_security_effect][0]
 
         # Create a non-LIBERATOR card to test filter
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # ST1-03 Agumon is a basic card without LIBERATOR trait
         non_lib_card = db.create_card_source("ST1-03", runner.game.player1)
@@ -97,7 +97,7 @@ class TestST19_08SecurityEffect:
         runner = debug_runner(initial_memory=5)
 
         # ST19-08 itself is LIBERATOR but cost 6
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         expensive_card = db.create_card_source("ST19-08", runner.game.player1)
         assert expensive_card is not None
@@ -111,7 +111,7 @@ class TestST19_08SecurityEffect:
         """Filter should accept LIBERATOR cards with cost <= 4."""
         runner = debug_runner(initial_memory=5)
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # ST19-03 Shoemon is LIBERATOR with cost 3
         valid_card = db.create_card_source("ST19-03", runner.game.player1)
@@ -198,7 +198,7 @@ class TestST19_08InheritedSecurityDP:
         runner = debug_runner(initial_memory=5)
 
         # Create a card source NOT on the field
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         card = db.create_card_source("ST19-08", runner.game.player1)
 

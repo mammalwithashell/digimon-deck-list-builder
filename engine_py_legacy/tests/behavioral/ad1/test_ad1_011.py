@@ -27,7 +27,7 @@ Card reference:
 
 import pytest
 
-from digimon_gym.engine.game.constants import (
+from engine_py_legacy.engine.game.constants import (
     SEL_OPP_FIELD_START,
     SEL_MY_FIELD_START,
     SEL_HAND_START,
@@ -68,7 +68,7 @@ class TestPaildramonPartition:
         perm = runner.place_on_field(1, ["AD1-011"], turn_played=-1)
 
         # Check that the partition flag is present on at least one effect
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         all_effects = []
         for cs in perm.card_sources:
             all_effects.extend(cs.effect_list(EffectTiming.NoTiming))
@@ -88,7 +88,7 @@ class TestPaildramonPartition:
         # Place AD1-011 under a Lv.6 to test inherited
         perm = runner.place_on_field(1, ["AD1-011", "ST2-10"], turn_played=-1)
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         all_effects = []
         for cs in perm.card_sources:
             all_effects.extend(cs.effect_list(EffectTiming.NoTiming))
@@ -195,7 +195,7 @@ class TestPaildramonWhenDigivolving:
         assert len(paildramon_on_field) >= 1, "Paildramon should be on field"
 
         # Check the CANNOT_BE_DESTROYED_BY_BATTLE modifier is active
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         perm = runner.game.player1.battle_area[paildramon_on_field[0].slot]
         has_mod = runner.game.modifiers.has_modifier(
             perm, ModifierType.CANNOT_BE_DESTROYED_BY_BATTLE
@@ -241,7 +241,7 @@ class TestPaildramonWhenDigivolving:
         )
 
         # Check CANNOT_SWITCH_ATTACK_TARGET modifier
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         perm = runner.game.player1.battle_area[paildramon_on_field[0].slot]
         has_mod = runner.game.modifiers.has_modifier(
             perm, ModifierType.CANNOT_SWITCH_ATTACK_TARGET
@@ -270,7 +270,7 @@ class TestPaildramonWhenDigivolving:
         paildramon_on_field = [s for s in snap.p1_field if s.card_id == "AD1-011"]
         assert len(paildramon_on_field) >= 1
 
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         perm = runner.game.player1.battle_area[paildramon_on_field[0].slot]
         has_target_lock = runner.game.modifiers.has_modifier(
             perm, ModifierType.CANNOT_SWITCH_ATTACK_TARGET

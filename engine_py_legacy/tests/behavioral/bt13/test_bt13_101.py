@@ -9,7 +9,7 @@ Security Effect: [Security] Play this card without paying the cost.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -149,7 +149,7 @@ class TestBT13101MikiKurosakiMegumiShirakawa:
 
         # Create a mock played_card with Black+Yellow colors
         # BT13-035 PawnChessmon is Black/Yellow Digimon
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         pawnchessmon_cs = db.create_card_source("BT13-035", game.player1)
 
@@ -177,7 +177,7 @@ class TestBT13101MikiKurosakiMegumiShirakawa:
         observer = observer_effects[1]
 
         # ST1-03 Agumon is Red only
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         agumon_cs = db.create_card_source("ST1-03", game.player1)
 
@@ -203,7 +203,7 @@ class TestBT13101MikiKurosakiMegumiShirakawa:
         ]
         observer = observer_effects[1]
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         pawnchessmon_cs = db.create_card_source("BT13-035", game.player1)
 

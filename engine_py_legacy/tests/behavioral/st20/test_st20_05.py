@@ -19,8 +19,8 @@ C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Yellow/ST20_05.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 # Minimal deck for DebugRunner
@@ -182,7 +182,7 @@ class TestST2005Security:
         runner.inject_card(2, "ST20-05", "security_top")
 
         # Weak attacker so ST20-05 (4000 DP) wins the battle and p2 doesn't lose the game
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         weak_attacker = make_permanent("WEAK-001", "WeakAttacker", dp=3000)
         game.player1.battle_area.append(weak_attacker)
 
@@ -214,7 +214,7 @@ class TestST2005Security:
         runner.clear_zone(2, "security")
         runner.inject_card(2, "ST20-05", "security_top")
 
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         weak_attacker = make_permanent("WEAK-001", "WeakAttacker", dp=3000)
         game.player1.battle_area.append(weak_attacker)
 

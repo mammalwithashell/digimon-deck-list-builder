@@ -25,8 +25,8 @@ Key faithfulness points tested:
 
 import pytest
 
-from digimon_gym.engine.game.constants import SEL_MY_SECURITY_START
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.game.constants import SEL_MY_SECURITY_START
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 # Card IDs

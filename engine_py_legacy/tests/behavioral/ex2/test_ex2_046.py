@@ -26,7 +26,7 @@ Key faithfulness checks:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 @pytest.mark.behavioral
@@ -76,7 +76,7 @@ class TestEX2046ADR02Searcher:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-046", runner.game.player1)
         effect = self._get_cost_reduction_effect(cs)
@@ -101,7 +101,7 @@ class TestEX2046ADR02Searcher:
         effect = self._get_cost_reduction_effect(perm.top_card)
 
         # Simulate another card being played -- should NOT reduce
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         other_card = db.create_card_source("ST1-03", game.player1)
         result = effect.can_use_condition({'card_source': other_card})
@@ -229,7 +229,7 @@ class TestEX2046ADR02Searcher:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-046", runner.game.player1)
         effect = self._get_on_play_effect(cs)
@@ -268,7 +268,7 @@ class TestEX2046ADR02Searcher:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-046", runner.game.player1)
         effect = self._get_inherited_dp_effect(cs)
@@ -281,7 +281,7 @@ class TestEX2046ADR02Searcher:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-046", runner.game.player1)
         effect = self._get_inherited_dp_effect(cs)
@@ -294,7 +294,7 @@ class TestEX2046ADR02Searcher:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-046", runner.game.player1)
         effect = self._get_inherited_dp_effect(cs)
@@ -327,7 +327,7 @@ class TestEX2046ADR02Searcher:
 
         # The inherited ADR-02 DP aura should NOT buff non-D-Reaper Digimon
         # Check the _dp_permanent_condition filter exists
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         adr02_cs = db.create_card_source("EX2-046", game.player1)
         effect = self._get_inherited_dp_effect(adr02_cs)
@@ -350,7 +350,7 @@ class TestEX2046ADR02Searcher:
 
         dreaper_perm = runner.place_on_field(1, ["EX2-047"])
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         adr02_cs = db.create_card_source("EX2-046", game.player1)
         effect = self._get_inherited_dp_effect(adr02_cs)
@@ -371,7 +371,7 @@ class TestEX2046ADR02Searcher:
 
         non_dreaper_perm = runner.place_on_field(1, ["ST1-03"])
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         adr02_cs = db.create_card_source("EX2-046", game.player1)
         effect = self._get_inherited_dp_effect(adr02_cs)
@@ -391,7 +391,7 @@ class TestEX2046ADR02Searcher:
             deck2=["ST1-03"] * 4 + ["ST1-02"] * 46,
             initial_memory=5,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX2-046", runner.game.player1)
         effect = self._get_inherited_dp_effect(cs)

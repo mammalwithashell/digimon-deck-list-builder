@@ -9,7 +9,7 @@ Alt-digi: [Gabumon] in name or Lv.3 w/[TS] trait: Cost 2
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 GARURUMON_DECK = ["BT24-046"] * 50
 

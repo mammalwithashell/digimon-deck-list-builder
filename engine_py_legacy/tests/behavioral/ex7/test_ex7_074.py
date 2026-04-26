@@ -213,7 +213,7 @@ class TestEX7074MainReveal:
         runner.execute(action)
 
         # After playing, should be in a SelectReveal phase
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert runner.game.current_phase == GamePhase.SelectReveal, (
             f"Should be in SelectReveal phase. Phase: {runner.game.current_phase}"
         )
@@ -246,7 +246,7 @@ class TestEX7074MainDigivolve:
 
     def test_digivolve_from_hand_with_cost_reduction(self, debug_runner):
         """After reveal, should digivolve a Digimon from hand with cost -4."""
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
 
         runner = debug_runner(initial_memory=10)
         player = runner.game.player1
@@ -406,7 +406,7 @@ class TestEX7074SecurityEffect:
     def test_security_has_security_timing(self, debug_runner):
         """Security effect should use SecuritySkill timing."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         card = runner.inject_card(1, CARD_ID, "hand")
         effects = card.effect_list(None)
@@ -620,7 +620,7 @@ class TestEX7074SecurityEffect:
         sec_eff.on_process_callback(ctx)
 
         # Check that there's a decline option available
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         if runner.game.current_phase in (
             GamePhase.SelectTarget, GamePhase.SelectReveal,
             GamePhase.SelectHand, GamePhase.SelectTrash,

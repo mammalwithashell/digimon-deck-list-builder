@@ -11,7 +11,7 @@ cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral

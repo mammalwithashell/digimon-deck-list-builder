@@ -8,7 +8,7 @@ Inherited Effect: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 # Minimal deck filler (50 cards) that avoids Puppet/BT22 conflicts
 _FILLER = ["ST1-05"] * 50

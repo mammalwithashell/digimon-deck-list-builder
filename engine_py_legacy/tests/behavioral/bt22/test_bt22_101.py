@@ -22,7 +22,7 @@ Key cards used for tests:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 def _find_effect(perm, name_substring):
@@ -82,7 +82,7 @@ class TestBT22101KyokoKuremi:
         """Condition should fail when Kyoko is not on the field."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=0)
         # Don't place on field — card exists only in library
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-101", runner.game.player1)
         runner.game.player1.hand_cards.append(cs)
@@ -373,7 +373,7 @@ class TestBT22101KyokoKuremi:
             # No selection started → no valid targets → correct behavior
             return
         # Derive the hand indices offered
-        from digimon_gym.engine.game.effects import SEL_HAND_START
+        from engine_py_legacy.engine.game.effects import SEL_HAND_START
         valid = sel.valid_indices
         hand_indices = [v - SEL_HAND_START for v in valid if v >= SEL_HAND_START]
         offered_cards = [
@@ -403,7 +403,7 @@ class TestBT22101KyokoKuremi:
         assert sel is not None, (
             "A selection should have been requested (valid Alphamon in hand)"
         )
-        from digimon_gym.engine.game.effects import SEL_HAND_START
+        from engine_py_legacy.engine.game.effects import SEL_HAND_START
         valid = sel.valid_indices
         hand_indices = [v - SEL_HAND_START for v in valid if v >= SEL_HAND_START]
         offered = [game.player1.hand_cards[i] for i in hand_indices
@@ -420,7 +420,7 @@ class TestBT22101KyokoKuremi:
     def test_c4_security_effect_flag(self, debug_runner):
         """Effect must have is_security_effect=True."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=10)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-101", runner.game.player1)
         sec_effs = [e for e in cs.effect_list(None)
@@ -430,7 +430,7 @@ class TestBT22101KyokoKuremi:
     def test_c4_security_effect_has_process_callback(self, debug_runner):
         """Security effect must have a process callback (not inert)."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=10)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-101", runner.game.player1)
         sec_effs = [e for e in cs.effect_list(None)
@@ -443,7 +443,7 @@ class TestBT22101KyokoKuremi:
         """When security effect's process fires, the tamer is put onto the field."""
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=10)
         game = runner.game
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT22-101", game.player1)
         game.player1.security_cards.insert(0, cs)

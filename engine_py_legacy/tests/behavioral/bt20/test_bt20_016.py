@@ -9,7 +9,7 @@ Inherited: <Security A. +1>
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -137,7 +137,7 @@ class TestBT20016Paildramon:
         })
 
         # FORCE_ATTACK should be on Paildramon (perm), not on the selected target
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_force_attack = game.modifiers.has_modifier(perm, ModifierType.FORCE_ATTACK)
         assert has_force_attack, "FORCE_ATTACK should be on Paildramon itself"
 

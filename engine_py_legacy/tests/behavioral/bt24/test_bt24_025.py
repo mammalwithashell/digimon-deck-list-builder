@@ -10,7 +10,7 @@ Inherited: <Jamming>
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -59,7 +59,7 @@ class TestBT24025Shellmon:
 
         # Verify no digivolve selection phase triggered
         game = runner.game
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase != GamePhase.SelectTarget, (
             "Unsuspending a non-TS Digimon should not trigger Shellmon's digivolve effect"
         )
@@ -77,7 +77,7 @@ class TestBT24025Shellmon:
         shellmon_perm.unsuspend()
 
         game = runner.game
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase != GamePhase.SelectTarget, (
             "Shellmon unsuspending itself should not trigger its own digivolve effect"
         )

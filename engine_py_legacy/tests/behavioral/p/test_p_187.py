@@ -15,7 +15,7 @@ C# reference: DCGO/Assets/Scripts/CardEffect/P/Purple/P_187.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 def _resolve_selections(runner, max_steps: int = 20) -> None:
@@ -250,7 +250,7 @@ class TestP187DnaPlaceSecurity:
         sel = runner.game.pending_selection
         assert sel is not None
         # Build set of permanents corresponding to valid_indices
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
         my_battle = runner.game.player1.battle_area
         targets = []
         for idx in sel.valid_indices:
@@ -281,7 +281,7 @@ class TestP187DnaPlaceSecurity:
 
         sel = runner.game.pending_selection
         assert sel is not None
-        from digimon_gym.engine.game.constants import SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_FIELD_START
         my_battle = runner.game.player1.battle_area
         targets = []
         for idx in sel.valid_indices:
@@ -602,7 +602,7 @@ class TestP187ErrorChecklist:
 
     def test_battle_area_not_field_cards(self):
         """Item #16: script must not reference player.field_cards."""
-        import digimon_gym.engine.data.scripts.p.p_187 as mod
+        import engine_py_legacy.engine.data.scripts.p.p_187 as mod
         import inspect
         src = inspect.getsource(mod)
         assert "field_cards" not in src, (
@@ -610,4 +610,4 @@ class TestP187ErrorChecklist:
 
     def test_importable(self):
         """Script must import cleanly."""
-        from digimon_gym.engine.data.scripts.p.p_187 import P_187  # noqa: F401
+        from engine_py_legacy.engine.data.scripts.p.p_187 import P_187  # noqa: F401

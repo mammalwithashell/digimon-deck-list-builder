@@ -12,7 +12,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -220,7 +220,7 @@ class TestP156FuturePotential:
 
     def test_has_security_effect(self, debug_runner):
         """P-156 should have a SecuritySkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-156")
         effects = cs.effect_list(None)
@@ -233,7 +233,7 @@ class TestP156FuturePotential:
 
     def test_security_play_tamer_from_hand(self, debug_runner):
         """Security effect: play 1 Tamer from hand free, then add P-156 to hand."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-156")
         effects = cs.effect_list(None)
@@ -245,7 +245,7 @@ class TestP156FuturePotential:
 
     def test_has_option_skill_timing(self, debug_runner):
         """P-156 should have OptionSkill timing for the Main effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-156")
         effects = cs.effect_list(None)

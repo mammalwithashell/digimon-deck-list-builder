@@ -10,7 +10,7 @@ from, gain 1 memory.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 # Minimal decks for testing (need at least 50 cards for game start)
 DECK_WITH_BT24_008 = ["BT24-008"] * 4 + ["ST1-03"] * 46

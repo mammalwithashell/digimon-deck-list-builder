@@ -12,7 +12,7 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +309,7 @@ class TestEX8050InheritedRedirect:
         game.redirect_attack = mock_redirect
 
         # Set up a fake pending attack so redirect_attack doesn't bail
-        from digimon_gym.engine.game.constants import PendingAttack
+        from engine_py_legacy.engine.game.constants import PendingAttack
         attacker_perm = runner.place_on_field(2, ["ST1-03"])
         game.pending_attack = PendingAttack(
             attacker=attacker_perm, original_target=None, effective_target=None)

@@ -5,8 +5,8 @@ Card text:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 @pytest.mark.behavioral
@@ -15,7 +15,7 @@ class TestST1308CannotReduceCost:
 
     def test_has_declarative_effect(self, debug_runner):
         """Should have a declarative effect with NoTiming."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("ST13-08")
         effects = cs.effect_list(None)

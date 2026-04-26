@@ -23,7 +23,7 @@ C# reference: DCGO/Assets/Scripts/CardEffect/P/White/P_206.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase, CardColor
 
 
 # Card IDs used by tests
@@ -45,8 +45,8 @@ class TestP206Structure:
 
     def test_color_requirement_unconditionally_bypassed(self):
         """P-206 sets _match_color_requirement = False (unconditional bypass)."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -64,8 +64,8 @@ class TestP206Structure:
 
     def test_has_option_skill_main_effect(self):
         """P-206 should have an OptionSkill timing effect for [Main]."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -82,8 +82,8 @@ class TestP206Structure:
 
     def test_has_delay_marker(self):
         """P-206 should have a _is_delay marker effect (enables place-in-BA)."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -97,8 +97,8 @@ class TestP206Structure:
 
     def test_delay_callback_follows_delay_marker(self):
         """The effect immediately after _is_delay must have a process callback."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -127,8 +127,8 @@ class TestP206Structure:
         it would be reachable via effectIdx=2 as well, creating a duplicate
         action that fires the effect without trashing the Option.
         """
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -145,8 +145,8 @@ class TestP206Structure:
 
     def test_has_security_effect(self):
         """P-206 should have a SecuritySkill effect with callback."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -220,10 +220,10 @@ class TestP206MainReveal:
     def test_main_effect_uses_reveal_multi_with_two_passes(self):
         """The OptionSkill effect should call effect_reveal_and_select_multi
         with 2 filter passes (Digimon + Tamer)."""
-        from digimon_gym.engine.data.card_registry import CardRegistry
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.game import Game
-        from digimon_gym.engine.loggers import EventLogger
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.game import Game
+        from engine_py_legacy.engine.loggers import EventLogger
 
         CardRegistry.ensure_initialized()
         db = CardDatabase()
@@ -294,7 +294,7 @@ class TestP206MainReveal:
         # Stack deck top with Digimon, Tamer, Digimon (all filler)
         # Clear library first and inject known cards
         runner.clear_zone(1, "library")
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         top1 = db.create_card_source(ST1_03, p1)   # Digimon
         top2 = db.create_card_source(ST1_12, p1)   # Tamer
@@ -351,7 +351,7 @@ class TestP206MainReveal:
 
         # Stack deck top: Digimon, Tamer, EXTRA Digimon (unused)
         runner.clear_zone(1, "library")
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         p1.library_cards.append(db.create_card_source(ST1_03, p1))   # Digimon (selected)
         p1.library_cards.append(db.create_card_source(ST1_12, p1))   # Tamer (selected)
@@ -586,7 +586,7 @@ class TestP206Delay:
         filter_fn = captured[0]
 
         # ST1-12 Tai Kamiya is a Red Tamer — should match Red Digimon on field
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         red_tamer = db.create_card_source(ST1_12, game.player1)
         assert filter_fn(red_tamer) is True, (
@@ -640,7 +640,7 @@ class TestP206Delay:
         filter_fn = captured[0]
 
         # With no Digimon on field, no Tamer should pass the color filter
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         red_tamer = db.create_card_source(ST1_12, game.player1)
         assert filter_fn(red_tamer) is False, (
@@ -661,7 +661,7 @@ class TestP206Security:
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P_206, game.player2)
         effects = cs.effect_list(EffectTiming.NoTiming)
@@ -702,7 +702,7 @@ class TestP206Security:
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P_206, game.player2)
         effects = cs.effect_list(EffectTiming.NoTiming)
@@ -742,7 +742,7 @@ class TestP206Security:
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P_206, game.player2)
         effects = cs.effect_list(EffectTiming.NoTiming)
@@ -786,7 +786,7 @@ class TestP206Security:
         runner = debug_runner(deck1=DECK, deck2=DECK, initial_memory=5)
         game = runner.game
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(P_206, game.player2)
         effects = cs.effect_list(EffectTiming.NoTiming)
@@ -845,7 +845,7 @@ class TestP206Security:
         runner.inject_card(2, P_206, "security_top")
 
         # Use an attacker strong enough to deal security damage
-        from tests.helpers.game_builder import make_permanent
+        from engine_py_legacy.tests.helpers.game_builder import make_permanent
         attacker = make_permanent("ATK-001", "StrongAttacker", dp=12000)
         game.player1.battle_area.append(attacker)
 

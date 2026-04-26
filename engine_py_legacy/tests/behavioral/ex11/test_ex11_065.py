@@ -27,7 +27,7 @@ Key faithfulness points tested:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 # Card IDs
 EX11_065 = "EX11-065"       # Close (Tamer under test)

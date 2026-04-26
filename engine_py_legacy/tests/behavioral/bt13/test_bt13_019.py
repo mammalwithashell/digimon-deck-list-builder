@@ -22,7 +22,7 @@ Key faithfulness points tested:
 
 import pytest
 
-from digimon_gym.engine.game.constants import SEL_TRASH_START, SEL_EFFECT_CHOICE_START
+from engine_py_legacy.engine.game.constants import SEL_TRASH_START, SEL_EFFECT_CHOICE_START
 
 
 # --- Card IDs used in tests ---

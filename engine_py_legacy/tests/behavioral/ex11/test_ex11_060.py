@@ -19,9 +19,9 @@ Key behaviors:
 
 import pytest
 
-from digimon_gym.engine.runners.debug_runner import DebugRunner
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.enums import GamePhase, EffectTiming
+from engine_py_legacy.engine.runners.debug_runner import DebugRunner
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.enums import GamePhase, EffectTiming
 
 
 # ---- Helpers ----

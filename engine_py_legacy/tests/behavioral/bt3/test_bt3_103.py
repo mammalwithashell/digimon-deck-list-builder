@@ -16,7 +16,7 @@ Clauses tested:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming, CardColor
+from engine_py_legacy.engine.data.enums import EffectTiming, CardColor
 
 
 # ── Helper deck ─────────────────────────────────────────────────────────
@@ -44,7 +44,7 @@ class TestBT3103MainEffect:
 
     def test_main_effect_exists(self, debug_runner):
         """BT3-103 should have an OptionSkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT3-103")
         effects = cs.effect_list(None)
@@ -62,7 +62,7 @@ class TestBT3103MainEffect:
 
         # The option should not be playable because condition check needs
         # unsuspended Digimon
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT3-103", runner.game.player1)
         effects = cs.effect_list(None)
@@ -79,7 +79,7 @@ class TestBT3103MainEffect:
         runner.inject_card(1, "BT3-103", "hand")
         runner.set_phase("Main")
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT3-103", runner.game.player1)
         effects = cs.effect_list(None)
@@ -177,7 +177,7 @@ class TestBT3103MainEffect:
         player1 = game.player1
 
         # Check that CHANGE_DIGIVOLUTION_COST modifiers are present
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_mod = False
         for perm in player1.battle_area:
             if perm.is_digimon:
@@ -193,7 +193,7 @@ class TestBT3103SecurityEffect:
 
     def test_security_effect_exists(self, debug_runner):
         """BT3-103 should have a SecuritySkill effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT3-103")
         effects = cs.effect_list(None)
@@ -203,7 +203,7 @@ class TestBT3103SecurityEffect:
 
     def test_security_adds_to_hand(self, debug_runner):
         """Security effect should add BT3-103 to the hand."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("BT3-103")
         effects = cs.effect_list(None)

@@ -108,7 +108,7 @@ class TestEX11022OnPlayWhenDigivolving:
         # The selection offers trash card (action 130+) and Decline (62).
         # auto_resolve picks first legal which is Decline, so manually pick
         # the trash card selection action.
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert runner.game.current_phase == GamePhase.SelectTarget, (
             f"Should be in SelectTarget phase, got {runner.game.current_phase}")
         # Find the non-decline action (the trash selection)

@@ -11,10 +11,10 @@ Card text:
 
 import pytest
 
-from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # ── Card IDs ────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ def _get_observer_effect(card_id):
     CardRegistry.ensure_initialized()
     db = CardDatabase()
     script = db.get_script(card_id)
-    from digimon_gym.engine.core.card_source import CardSource
+    from engine_py_legacy.engine.core.card_source import CardSource
     cs = CardSource()
     effects = script.get_card_effects(cs)
     for e in effects:
@@ -395,7 +395,7 @@ class TestBT22093SecurityPlay:
         CardRegistry.ensure_initialized()
         db = CardDatabase()
         script = db.get_script(AMI)
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.card_source import CardSource
         cs = CardSource()
         effects = script.get_card_effects(cs)
         security_effects = [e for e in effects if getattr(e, 'is_security_effect', False)]

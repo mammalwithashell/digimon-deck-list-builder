@@ -21,7 +21,7 @@ Key behaviors:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 KOROMON_DECK = ["BT14-001"] * 5 + ["ST1-03"] * 45

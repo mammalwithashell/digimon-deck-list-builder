@@ -18,7 +18,7 @@ C# Reference: BT7_107.cs
 
 import pytest
 
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 # Minimal decks: filler with the card under test
 FILLER_DECK = ["BT2-067"] * 50  # DemiDevimon (Purple Digimon, Lv.3, cost 2)
@@ -625,7 +625,7 @@ class TestBT7107CallingFromTheDarkness:
         assert bt7_card is not None, "Should find BT7-107 in trash"
 
         # Find and trigger the security effect
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         effects = bt7_card.effect_list(EffectTiming.SecuritySkill)
         security_effects = [e for e in effects if getattr(e, 'is_security_effect', False)]
         assert len(security_effects) == 1, (

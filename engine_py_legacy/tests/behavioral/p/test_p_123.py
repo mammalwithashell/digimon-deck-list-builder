@@ -14,7 +14,7 @@ Key clauses:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 @pytest.mark.behavioral
@@ -23,7 +23,7 @@ class TestP123Ukkomon:
 
     def _inject_digitama(self, runner, player_id, card_id):
         """Helper to inject a digi-egg into the digitama library."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         player = runner.game.player1 if player_id == 1 else runner.game.player2
         db = CardDatabase()
         cs = db.create_card_source(card_id, player)
@@ -110,7 +110,7 @@ class TestP123Ukkomon:
         assert runner.game.current_phase == GamePhase.SelectEffectChoice
 
         # Pick second option ("No, skip") — action 1001
-        from digimon_gym.engine.game.constants import SEL_EFFECT_CHOICE_START
+        from engine_py_legacy.engine.game.constants import SEL_EFFECT_CHOICE_START
         decline_action = SEL_EFFECT_CHOICE_START + 1
         runner.execute(decline_action)
         runner.auto_resolve()
@@ -297,7 +297,7 @@ class TestP123Ukkomon:
 
     def test_effect_has_correct_timing(self, debug_runner):
         """P-123 should have exactly one OnMove effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-123")
         effects = cs.effect_list(None)
@@ -307,7 +307,7 @@ class TestP123Ukkomon:
 
     def test_effect_has_once_per_turn(self, debug_runner):
         """The OnMove effect should have max_count_per_turn = 1."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("P-123")
         effects = cs.effect_list(None)

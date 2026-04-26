@@ -23,7 +23,7 @@ C# reference:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
@@ -375,7 +375,7 @@ class TestEX11069DigivolveFromTrash:
 
     def test_digivolve_cost_reduced_by_1(self, debug_runner):
         """Digivolving should use the digivolution cost minus 1."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(initial_memory=10)
         runner.set_phase("Main")
@@ -592,7 +592,7 @@ class TestEX11069EndOfTurnRecover:
 
     def test_returns_qualifying_card_from_trash(self, debug_runner):
         """Should return a qualifying trait card from trash to hand."""
-        from digimon_gym.engine.game.constants import SEL_TRASH_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START
 
         runner = debug_runner(initial_memory=5)
         runner.set_phase("Main")

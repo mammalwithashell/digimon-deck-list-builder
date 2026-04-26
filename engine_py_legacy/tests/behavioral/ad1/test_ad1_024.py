@@ -32,7 +32,7 @@ class TestAD1024Keywords:
 
     def test_has_security_attack_plus_1(self, debug_runner):
         """Imperialdramon FM should have Security Attack +1."""
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(initial_memory=5)
         perm = runner.place_on_field(1, ["AD1-024"])
 
@@ -178,7 +178,7 @@ class TestAD1024WhenDigivolvingWhenAttacking:
         We verify this by checking that the OPT counter is consumed after
         digivolving, so the When Attacking effect's condition returns False.
         """
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         runner = debug_runner(initial_memory=10)
 
         # Opponent field: three Digimon so after WD removes one, two remain
@@ -256,7 +256,7 @@ class TestAD1024AllTurns:
 
     def test_triggers_on_own_digimon_play(self, debug_runner):
         """When you play a Digimon, may suspend 1 opp Digimon + unsuspend self."""
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         runner = debug_runner(initial_memory=20)
 
         # Place Imperialdramon FM on field (suspended to test unsuspend)
@@ -339,10 +339,10 @@ class TestAD1024AllTurns:
 
     def test_triggers_on_opponent_digimon_play(self, debug_runner):
         """When opponent plays a Digimon, the All Turns effect should fire."""
-        from digimon_gym.engine.data.enums import EffectTiming
-        from digimon_gym.engine.core.permanent import Permanent
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.game.constants import SEL_OPP_FIELD_START
+        from engine_py_legacy.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.game.constants import SEL_OPP_FIELD_START
         runner = debug_runner(initial_memory=5)
 
         # Place Imperialdramon FM on P1's field (suspended to test unsuspend)

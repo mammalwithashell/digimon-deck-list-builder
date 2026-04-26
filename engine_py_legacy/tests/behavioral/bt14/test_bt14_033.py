@@ -32,7 +32,7 @@ Key faithfulness points tested:
 
 import pytest
 import random
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 PATAMON = "BT14-033"       # This card
 ANGEMON = "BT1-055"        # Yellow Vaccine Lv.4 (valid digivolve target)
@@ -150,7 +150,7 @@ class TestBT14033PatamonMainEffect:
         # Exactly 1 valid target: the Angemon (Yellow + Vaccine)
         # Patamon in security is Yellow but Data (not Vaccine), Agumon is Red.
         valid = ps.valid_indices
-        from digimon_gym.engine.game.constants import SEL_MY_SECURITY_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_SECURITY_START
         expected = []
         for i, sc in enumerate(game.player1.security_cards):
             if (sc.c_entity_base and sc.c_entity_base.card_id == ANGEMON):
@@ -200,7 +200,7 @@ class TestBT14033PatamonMainEffect:
         assert ps is not None, "Should have pending selection"
         # Pick Angemon (find its index)
         target_action = None
-        from digimon_gym.engine.game.constants import SEL_MY_SECURITY_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_SECURITY_START
         for i, sc in enumerate(game.player1.security_cards):
             if sc.c_entity_base and sc.c_entity_base.card_id == ANGEMON:
                 target_action = SEL_MY_SECURITY_START + i
@@ -327,7 +327,7 @@ class TestBT14033PatamonMainEffect:
         card = perm.top_card
         eff = _find_effect(card, EffectTiming.OnStartMainPhase)
 
-        import digimon_gym.engine.data.scripts.bt14.bt14_033 as mod
+        import engine_py_legacy.engine.data.scripts.bt14.bt14_033 as mod
         original = mod.random.shuffle
         mod.random.shuffle = tracking_shuffle
         try:
@@ -340,7 +340,7 @@ class TestBT14033PatamonMainEffect:
             ps = game.pending_selection
             assert ps is not None
             # Pick Angemon
-            from digimon_gym.engine.game.constants import SEL_MY_SECURITY_START
+            from engine_py_legacy.engine.game.constants import SEL_MY_SECURITY_START
             for i, sc in enumerate(game.player1.security_cards):
                 if sc.c_entity_base and sc.c_entity_base.card_id == ANGEMON:
                     ps.callback(SEL_MY_SECURITY_START + i)
@@ -432,7 +432,7 @@ class TestBT14033PatamonMainEffect:
         # Pick Angemon from security
         ps = game.pending_selection
         assert ps is not None
-        from digimon_gym.engine.game.constants import SEL_MY_SECURITY_START, SEL_HAND_START
+        from engine_py_legacy.engine.game.constants import SEL_MY_SECURITY_START, SEL_HAND_START
         for i, sc in enumerate(game.player1.security_cards):
             if sc.c_entity_base and sc.c_entity_base.card_id == ANGEMON:
                 ps.callback(SEL_MY_SECURITY_START + i)
@@ -484,7 +484,7 @@ class TestBT14033PatamonMainEffect:
             'card': card,
         })
         ps = game.pending_selection
-        from digimon_gym.engine.game.constants import (
+        from engine_py_legacy.engine.game.constants import (
             SEL_MY_SECURITY_START, SEL_HAND_START,
         )
         for i, sc in enumerate(game.player1.security_cards):

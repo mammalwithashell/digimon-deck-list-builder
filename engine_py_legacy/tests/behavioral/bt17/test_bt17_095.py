@@ -15,7 +15,7 @@ Card text:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # ---------- helper deck -------------------------------------------------
@@ -127,7 +127,7 @@ class TestBT17095MainEffect:
         game = runner.game
         player1 = game.player1
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         agumon_cs = db.create_card_source("ST1-03", player1)

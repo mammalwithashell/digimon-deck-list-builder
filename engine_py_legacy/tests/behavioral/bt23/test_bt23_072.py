@@ -14,7 +14,7 @@ from its digivolution cards without paying the cost.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────

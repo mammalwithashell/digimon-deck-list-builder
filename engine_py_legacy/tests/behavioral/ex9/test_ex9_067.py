@@ -310,10 +310,10 @@ class TestEX9067MiraiKinosaki:
         # The observer fires through _fire_digivolve_observers which calls
         # the process callback directly. Since it's optional in the C# ref
         # (canNoSelect: true), verify the effect is marked optional.
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         script = db.get_script("EX9-067")
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.card_source import CardSource
         cs = CardSource()
         effects = script.get_card_effects(cs)
         # Effect 1 is the digivolve observer
@@ -327,10 +327,10 @@ class TestEX9067MiraiKinosaki:
 
     def test_digivolve_observer_does_not_fire_via_when_digivolving(self, debug_runner):
         """The observer should NOT have is_when_digivolving=True (it's an observer, not a self-digivolve effect)."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         script = db.get_script("EX9-067")
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.card_source import CardSource
         cs = CardSource()
         effects = script.get_card_effects(cs)
         observer_effect = effects[1]
@@ -385,11 +385,11 @@ class TestEX9067MiraiKinosaki:
     def test_security_play_free(self, debug_runner):
         """[Security] Should play this card without paying the cost."""
         # Security effects are standard pattern; just verify the effect exists
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
         db = CardDatabase()
         script = db.get_script("EX9-067")
-        from digimon_gym.engine.core.card_source import CardSource
+        from engine_py_legacy.engine.core.card_source import CardSource
         cs = CardSource()
         effects = script.get_card_effects(cs)
         security_effects = [e for e in effects if getattr(e, 'is_security_effect', False)]

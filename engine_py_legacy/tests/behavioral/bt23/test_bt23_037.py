@@ -17,8 +17,8 @@ C# ref: DCGO/Assets/Scripts/CardEffect/BT23/Green/BT23_037.cs
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 @pytest.mark.behavioral
@@ -95,7 +95,7 @@ class TestBT23037TentomonClause1CostReduction:
         runner.game.player1.is_my_turn = True
         runner.game.player2.is_my_turn = False
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # CS target → True
@@ -177,7 +177,7 @@ class TestBT23037TentomonClause1CostReduction:
         cost_eff = cost_effects[0]
 
         # Fetch a CS-trait Lv.4 card source to supply as context['card_source']
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         kabuterimon = db.create_card_source("BT23-041", runner.game.player2)
         assert kabuterimon is not None
@@ -309,7 +309,7 @@ class TestBT23037TentomonClause2InheritedAttack:
         })
 
         # Engine should offer the optional selection
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert runner.game.current_phase in (
             GamePhase.SelectTarget, GamePhase.Main
         ), (
@@ -464,7 +464,7 @@ class TestBT23037TentomonClause2InheritedAttack:
 
         # Since no valid Hudie card is in hand, no selection should be offered
         # → we should still be in Main phase (not SelectTarget)
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert runner.game.current_phase == GamePhase.Main, (
             f"No Hudie in hand → no selection. "
             f"Got phase {runner.game.current_phase}"
@@ -492,7 +492,7 @@ class TestBT23037TentomonClause2InheritedAttack:
 
         # Build a mock card with cost 6 and Hudie trait — use BT23-041 (cost 5)
         # to verify it passes, and a real cost-6 Hudie if available.
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # BT23-041 is cost 5 (boundary) — should PASS

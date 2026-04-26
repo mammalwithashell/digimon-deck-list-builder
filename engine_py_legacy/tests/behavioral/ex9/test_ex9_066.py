@@ -453,9 +453,9 @@ class TestEX9066Security:
         runner.set_phase("Main")
 
         # Verify the card has a security effect by checking the script's effects
-        from digimon_gym.engine.data.card_registry import CardRegistry
+        from engine_py_legacy.engine.data.card_registry import CardRegistry
         CardRegistry.ensure_initialized()
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source("EX9-066", runner.game.player1)
         assert cs is not None, "Should be able to create EX9-066 card source"

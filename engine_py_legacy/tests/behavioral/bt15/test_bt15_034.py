@@ -25,8 +25,8 @@ Verified properties:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase, CardColor
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase, CardColor
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 SALAMON = "BT15-034"
@@ -237,7 +237,7 @@ class TestBT15034MainEffectProcessBranch2OrFewer:
         assert ps is not None
 
         # Valid selections must all be the yellow Vaccine card only
-        from digimon_gym.engine.game.constants import SEL_HAND_START
+        from engine_py_legacy.engine.game.constants import SEL_HAND_START
         valid_cards = []
         for v in ps.valid_indices:
             idx = v - SEL_HAND_START
@@ -552,7 +552,7 @@ class TestBT15034InheritedLoseSecurityProcess:
         assert game.current_phase == GamePhase.SelectTarget
         ps = game.pending_selection
         # Selected indices must all correspond to opponent Digimon
-        from digimon_gym.engine.game import Game as _G  # noqa
+        from engine_py_legacy.engine.game import Game as _G  # noqa
         # Simpler: advance one step and check outcomes
         game.decode_action(ps.valid_indices[0], game.current_player_id)
         runner.auto_resolve(max_steps=3)

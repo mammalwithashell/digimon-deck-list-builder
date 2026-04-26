@@ -14,7 +14,7 @@ Note: EX2-007 is a DigiEgg (card_kind=3) with DP 15000.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 @pytest.mark.behavioral
@@ -329,7 +329,7 @@ class TestEX2007MotherDReaper:
         runner.game.player2.is_my_turn = True
 
         # Create a D-Reaper card context
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         dreaper_card = db.create_card_source("EX2-047", runner.game.player1)
         result = cost_effect.can_use_condition({'card_source': dreaper_card})
@@ -357,7 +357,7 @@ class TestEX2007MotherDReaper:
         cost_effect = self._get_cost_reduction_effect(perm)
 
         # Non-D-Reaper card should not trigger
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         non_dreaper = db.create_card_source("ST1-03", runner.game.player1)
         result = cost_effect.can_use_condition({'card_source': non_dreaper})

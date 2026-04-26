@@ -264,7 +264,7 @@ class TestBT7032InheritedGainMemory:
             initial_memory=0,
         )
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(BT7_032, runner.game.player1)
         effects = cs.effect_list(None)
@@ -285,7 +285,7 @@ class TestBT7032InheritedGainMemory:
             initial_memory=0,
         )
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(BT7_032, runner.game.player1)
         effects = cs.effect_list(None)
@@ -371,7 +371,7 @@ class TestBT7032InheritedGainMemory:
         # higher-level action API (which requires full turn-player setup)
         # and directly fire the OnUseAttack timing with P2's Reppamon as the
         # attacker. If the gating is correct, P1's BT7-032 will NOT activate.
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         p2_attacker = runner.game.player2.battle_area[0]
 
         # Capture the OPT state of the BT7-032 inherited effect before/after.
@@ -410,7 +410,7 @@ class TestBT7032Metadata:
             deck1=[BT7_032] * 4 + [AGUMON_ST1] * 46,
             deck2=FILLER,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(BT7_032, runner.game.player1)
         effects = cs.effect_list(None)
@@ -430,7 +430,7 @@ class TestBT7032Metadata:
             deck1=[BT7_032] * 4 + [AGUMON_ST1] * 46,
             deck2=FILLER,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(BT7_032, runner.game.player1)
         effects = cs.effect_list(None)
@@ -452,8 +452,8 @@ class TestBT7032Metadata:
             deck1=[BT7_032] * 4 + [AGUMON_ST1] * 46,
             deck2=FILLER,
         )
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.enums import EffectTiming
         db = CardDatabase()
         cs = db.create_card_source(BT7_032, runner.game.player1)
         effects = cs.effect_list(None)

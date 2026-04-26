@@ -7,17 +7,17 @@ import numpy as np
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from digimon_gym.engine.recording import (
+from engine_py_legacy.engine.recording import (
     GameRecorder,
     InitialState,
     PlayerInitialState,
     RecordedAction,
     TensorSnapshot,
 )
-from digimon_gym.engine.runners.headless_game import HeadlessGame
-from digimon_gym.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.engine.data.enums import GamePhase, PlayerType
-from digimon_gym.engine.game import ACTION_SPACE_SIZE, TENSOR_SIZE
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from engine_py_legacy.engine.data.enums import GamePhase, PlayerType
+from engine_py_legacy.engine.game import ACTION_SPACE_SIZE, TENSOR_SIZE
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import Base
 

@@ -21,8 +21,8 @@ Decomposition:
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.interfaces.modifiers import ModifierType
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.interfaces.modifiers import ModifierType
 
 
 BT10_042 = "BT10-042"          # Venusmon (Lv.6, Yellow, test target)
@@ -374,7 +374,7 @@ class TestBT10042C2_OpponentTurn_StaticRestrictions:
         game.opponent_player = game.player1
 
         # Build a fake WD effect object
-        from digimon_gym.engine.interfaces.card_effect import ICardEffect
+        from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
         fake_wd_effect = ICardEffect()
         fake_wd_effect.is_when_digivolving = True
 
@@ -411,7 +411,7 @@ class TestBT10042C2_OpponentTurn_StaticRestrictions:
         game.turn_player = game.player2
         game.opponent_player = game.player1
 
-        from digimon_gym.engine.interfaces.card_effect import ICardEffect
+        from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
         fake_wa_effect = ICardEffect()
         fake_wa_effect.is_on_attack = True
 
@@ -447,7 +447,7 @@ class TestBT10042C2_OpponentTurn_StaticRestrictions:
         game.turn_player = game.player2
         game.opponent_player = game.player1
 
-        from digimon_gym.engine.interfaces.card_effect import ICardEffect
+        from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
         neutral_effect = ICardEffect()
         neutral_effect.is_on_play = True  # NOT WA, NOT WD
 
@@ -478,7 +478,7 @@ class TestBT10042C2_OpponentTurn_StaticRestrictions:
         game.turn_player = game.player2
         game.opponent_player = game.player1
 
-        from digimon_gym.engine.interfaces.card_effect import ICardEffect
+        from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
         fake_wd = ICardEffect()
         fake_wd.is_when_digivolving = True
 
@@ -508,7 +508,7 @@ class TestBT10042C2_OpponentTurn_StaticRestrictions:
         game.turn_player = game.player2
         game.opponent_player = game.player1
 
-        from digimon_gym.engine.interfaces.card_effect import ICardEffect
+        from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
         fake_wd = ICardEffect()
         fake_wd.is_when_digivolving = True
 
@@ -526,9 +526,9 @@ class TestBT10042_EngineWiringCannotAttackTarget:
     def test_action_mask_excludes_blocked_attack(self, debug_runner):
         """When CANNOT_ATTACK_TARGET blocks opp's Agumon from attacking Venusmon,
         the action mask during opp turn should not allow that specific pairing."""
-        from digimon_gym.engine.game.action_mask import build_action_mask
-        from digimon_gym.engine.game.constants import TARGETS_PER_ATTACKER
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
+        from engine_py_legacy.engine.game.constants import TARGETS_PER_ATTACKER
+        from engine_py_legacy.engine.data.enums import GamePhase
 
         runner = debug_runner(initial_memory=10)
         opp = runner.place_on_field(2, [AGUMON_ST1], turn_played=-1)
@@ -570,9 +570,9 @@ class TestBT10042_EngineWiringCannotAttackTarget:
 
     def test_action_mask_allows_attack_without_sa_changes(self, debug_runner):
         """Baseline: without SA changes, opp Agumon can attack the suspended Venusmon."""
-        from digimon_gym.engine.game.action_mask import build_action_mask
-        from digimon_gym.engine.game.constants import TARGETS_PER_ATTACKER
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
+        from engine_py_legacy.engine.game.constants import TARGETS_PER_ATTACKER
+        from engine_py_legacy.engine.data.enums import GamePhase
 
         runner = debug_runner(initial_memory=10)
         opp = runner.place_on_field(2, [AGUMON_ST1], turn_played=-1)

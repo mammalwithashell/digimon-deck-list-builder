@@ -15,7 +15,7 @@ C# reference behavior:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming, GamePhase
+from engine_py_legacy.engine.data.enums import EffectTiming, GamePhase
 
 
 # Build a deck with ST19-04 and enough Puppet cards for testing

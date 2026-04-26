@@ -245,7 +245,7 @@ class TestBT23013Jesmon:
         assert play is not None, f"Should be able to play Agumon. Actions: {runner.actions()}"
         runner.execute(play)
 
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_may_attack = runner.game.modifiers.has_modifier(
             jesmon_perm, ModifierType.MAY_ATTACK)
         assert has_may_attack, (
@@ -265,7 +265,7 @@ class TestBT23013Jesmon:
             runner.execute(play)
             runner.auto_resolve()
 
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_may_attack = runner.game.modifiers.has_modifier(
             jesmon_perm, ModifierType.MAY_ATTACK)
         assert not has_may_attack, (
@@ -326,7 +326,7 @@ class TestBT23013Jesmon:
 
         runner.game.effect_play_token(runner.game.player1, 'atho_rene_por')
 
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_may_attack = runner.game.modifiers.has_modifier(
             jesmon_perm, ModifierType.MAY_ATTACK)
         assert has_may_attack, (
@@ -351,7 +351,7 @@ class TestBT23013Jesmon:
         snap = runner.snapshot()
         if snap.memory < 0:
             # Jesmon should have MAY_ATTACK and end phase should park at EOT
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from engine_py_legacy.engine.interfaces.modifiers import ModifierType
             has_may_attack = runner.game.modifiers.has_modifier(
                 jesmon_perm, ModifierType.MAY_ATTACK)
             assert has_may_attack, (
@@ -389,7 +389,7 @@ class TestBT23013Jesmon:
         assert jesmon_slot is not None
 
         jesmon_perm = runner.game.player1.battle_area[jesmon_slot.slot]
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        from engine_py_legacy.engine.interfaces.modifiers import ModifierType
         has_may_attack = runner.game.modifiers.has_modifier(
             jesmon_perm, ModifierType.MAY_ATTACK)
         assert not has_may_attack, (

@@ -32,9 +32,9 @@ Key cards for tests:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+from engine_py_legacy.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.validation.digivolve_validator import can_digivolve
 
 
 # ── Helper deck ────────────────────────────────────────────────────────
@@ -319,7 +319,7 @@ class TestBT23_031Angewomon:
 
         # Inject directly onto field via hand -> play is complex; use
         # place_on_field helper equivalent: create a permanent manually.
-        from digimon_gym.engine.core.permanent import Permanent
+        from engine_py_legacy.engine.core.permanent import Permanent
         perm = Permanent([xa])
         perm._owner_game = runner.game
         runner.game.player1.battle_area.append(perm)

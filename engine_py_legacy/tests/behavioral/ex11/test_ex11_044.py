@@ -82,7 +82,7 @@ class TestEX11044TrashAndDelete:
             runner.execute(opt_action)
 
         # Now the game should be in a SelectSource phase for picking digivolution cards
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         assert game.current_phase == GamePhase.SelectSource, \
             f"Expected SelectSource phase for digivolution card selection, got {game.current_phase.name}"
 
@@ -247,7 +247,7 @@ class TestEX11044TrashAndDelete:
         timing_fired = [False]
         original_execute_effects = game.execute_effects
 
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         def patched_execute_effects(timing, context=None):
             if timing == EffectTiming.OnDigivolutionCardDiscarded:
                 timing_fired[0] = True
@@ -299,7 +299,7 @@ class TestEX11044PlaceFromTrash:
         # Process the attack and effect triggering
         # We need to check that at some point during resolution,
         # a SelectTrash phase appears for the place-from-trash effect
-        from digimon_gym.engine.data.enums import GamePhase
+        from engine_py_legacy.engine.data.enums import GamePhase
         found_trash_selection = False
         for _ in range(30):
             if game.game_over:
@@ -406,7 +406,7 @@ class TestEX11044PlaceFromTrash:
         runner.place_on_field(2, ["BT1-019"])
 
         # Check that the effect is marked optional
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         effects = perm.effect_list(EffectTiming.OnDigivolutionCardDiscarded)
         place_effects = [e for e in effects if 'EX11-044' in (e.effect_name or '') and 'Place' in (e.effect_name or '')]
         for eff in place_effects:
@@ -435,7 +435,7 @@ class TestEX11044Keywords:
         perm = runner.place_on_field(1, ["EX11-044"])
         assert perm.has_keyword('_is_fragment'), "Pyramidimon should have Fragment"
         # Check fragment count
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
         effects = perm.effect_list(EffectTiming.NoTiming)
         fragment_effects = [e for e in effects if getattr(e, '_is_fragment', False)]
         assert fragment_effects, "Should have Fragment effect"

@@ -19,7 +19,7 @@ Key cards used:
 """
 
 import pytest
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Deck with Mirei and various targets
@@ -96,7 +96,7 @@ class TestBT22089MireiMikagura:
         # Directly test the filter logic by extracting it from the process
         # We'll simulate: only BT22-017 (Gabumon, Digimon, CS, cost 3) in hand
         # This should NOT be a valid target (it's a Digimon with cost 3)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         gabumon = db.create_card_source("BT22-017", game.player1)
 
@@ -115,7 +115,7 @@ class TestBT22089MireiMikagura:
         game = runner.game
 
         # BT22-089 itself is named Mirei Mikagura but costs 3 -- should be rejected
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         mirei_low = db.create_card_source("BT22-089", game.player1)
         assert mirei_low.get_cost_itself < 4, "BT22-089 cost should be 3 (< 4)"
@@ -222,7 +222,7 @@ class TestBT22089MireiMikagura:
         game = runner.game
         game.player1.hand_cards.clear()
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         # BT1-009 Monodramon has traits ['Mini Dragon'] -> no C2 match
         monodramon = db.create_card_source("BT1-009", game.player1)
@@ -242,7 +242,7 @@ class TestBT22089MireiMikagura:
 
     def test_on_play_condition_accepts_each_target_trait(self, debug_runner):
         """All five C2 target traits should satisfy the condition independently."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
 
         # Each card tests one trait family
@@ -275,7 +275,7 @@ class TestBT22089MireiMikagura:
         game = runner.game
         game.player1.hand_cards.clear()
 
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         kudamon = db.create_card_source("BT1-046", game.player1)  # Holy Beast
         game.player1.hand_cards.append(kudamon)
@@ -308,7 +308,7 @@ class TestBT22089MireiMikagura:
         SecuritySkill timing, is_security_effect=True, and a process
         callback that invokes effect_play_from_security."""
         runner = debug_runner(deck1=MIREI_DECK, deck2=MIREI_DECK, initial_memory=5)
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         mirei = db.create_card_source("BT22-089", runner.game.player1)
 
@@ -330,7 +330,7 @@ class TestBT22089MireiMikagura:
 
         # Simulate the security-skill process directly: fetch the effect from
         # a security-zone CardSource and invoke it (this mirrors Player.attack()).
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         mirei = db.create_card_source("BT22-089", player)
         player.security_cards.insert(0, mirei)

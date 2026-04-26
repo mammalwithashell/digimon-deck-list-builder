@@ -10,7 +10,7 @@ cost of 4 or less.
 """
 
 import pytest
-from digimon_gym.engine.data.enums import GamePhase
+from engine_py_legacy.engine.data.enums import GamePhase
 
 
 @pytest.mark.behavioral
@@ -48,7 +48,7 @@ class TestEX10025Sunarizamon:
         assert game.current_phase == GamePhase.SelectTrash
 
         # Select the first Mineral/Rock card from trash (action 130 = trash index 0)
-        from digimon_gym.engine.game.constants import SEL_TRASH_START, SEL_MY_FIELD_START
+        from engine_py_legacy.engine.game.constants import SEL_TRASH_START, SEL_MY_FIELD_START
         legal = runner.action_mask()
         trash_actions = [a for a in legal if a >= SEL_TRASH_START]
         assert len(trash_actions) >= 1, "Should have at least 1 trash card to select"
@@ -225,7 +225,7 @@ class TestEX10025Sunarizamon:
         """The inherited effect should have OnDigivolutionCardDiscarded timing
         and is_inherited_effect = True."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         # Place EX10-025 as a digivolution source under a Mineral Digimon
         perm = runner.place_on_field(1, ["EX10-025", "EX10-032"])
@@ -245,7 +245,7 @@ class TestEX10025Sunarizamon:
         """Inherited condition: the parent permanent must have Mineral or Rock trait.
         Should return False for a non-Mineral/Rock parent."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         # Place EX10-025 under a non-Mineral/Rock Digimon
         perm = runner.place_on_field(1, ["EX10-025", "ST1-03"])
@@ -274,7 +274,7 @@ class TestEX10025Sunarizamon:
     def test_inherited_condition_passes_for_mineral_parent(self, debug_runner):
         """Inherited condition: should return True for a Mineral parent."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         # Place EX10-025 under a Mineral Digimon (EX10-032 Proganomon)
         perm = runner.place_on_field(1, ["EX10-025", "EX10-032"])
@@ -302,7 +302,7 @@ class TestEX10025Sunarizamon:
     def test_inherited_condition_passes_for_rock_parent(self, debug_runner):
         """Inherited condition: should return True for a Rock parent."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         # BT2-054 Gotsumon has Rock trait
         perm = runner.place_on_field(1, ["EX10-025", "BT2-054"])
@@ -330,7 +330,7 @@ class TestEX10025Sunarizamon:
     def test_inherited_condition_requires_this_card_in_trashed(self, debug_runner):
         """Inherited condition: should fail if this card is not in the trashed_cards list."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         perm = runner.place_on_field(1, ["EX10-025", "EX10-032"])
 
@@ -360,7 +360,7 @@ class TestEX10025Sunarizamon:
         """Inherited effect: delete target should only include opponent Digimon
         with play cost 4 or less."""
         runner = debug_runner(initial_memory=10)
-        from digimon_gym.engine.data.enums import EffectTiming
+        from engine_py_legacy.engine.data.enums import EffectTiming
 
         perm = runner.place_on_field(1, ["EX10-025", "EX10-032"])
 

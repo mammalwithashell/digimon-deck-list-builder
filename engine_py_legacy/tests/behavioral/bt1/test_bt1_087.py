@@ -10,7 +10,7 @@ Security Effect [Security] Play this card without paying the cost.
 
 import pytest
 
-from digimon_gym.engine.data.enums import EffectTiming
+from engine_py_legacy.engine.data.enums import EffectTiming
 
 
 # Card references:
@@ -177,7 +177,7 @@ class TestBT1087TKTakaishi:
         game = runner.game
 
         # Clear current security, inject only non-yellow cards (Red)
-        from digimon_gym.engine.debug.state_injection import clear_zone as _cz
+        from engine_py_legacy.engine.debug.state_injection import clear_zone as _cz
         _cz(game, 1, "security")
         for _ in range(5):
             runner.inject_card(1, RED_DIGIMON, "security_bottom")
@@ -210,7 +210,7 @@ class TestBT1087TKTakaishi:
         game = runner.game
 
         # Clear security and stack a Yellow card on top
-        from digimon_gym.engine.debug.state_injection import clear_zone as _cz
+        from engine_py_legacy.engine.debug.state_injection import clear_zone as _cz
         _cz(game, 1, "security")
         runner.inject_card(1, YELLOW_DIGIMON, "security_top")  # picks this
         # Add filler so auto_resolve picks the first legal (top)
@@ -245,7 +245,7 @@ class TestBT1087TKTakaishi:
         game = runner.game
 
         # Clear security and put ONLY a Red card (non-yellow)
-        from digimon_gym.engine.debug.state_injection import clear_zone as _cz
+        from engine_py_legacy.engine.debug.state_injection import clear_zone as _cz
         _cz(game, 1, "security")
         runner.inject_card(1, RED_DIGIMON, "security_top")
         runner.inject_card(1, RED_DIGIMON, "security_bottom")
@@ -278,7 +278,7 @@ class TestBT1087TKTakaishi:
         game = runner.game
 
         # Clear security; inject only one card so we know which one gets picked.
-        from digimon_gym.engine.debug.state_injection import clear_zone as _cz
+        from engine_py_legacy.engine.debug.state_injection import clear_zone as _cz
         _cz(game, 1, "security")
         runner.inject_card(1, YELLOW_DIGIMON, "security_top")
 
@@ -306,7 +306,7 @@ class TestBT1087TKTakaishi:
         runner = debug_runner(deck1=TK_DECK, deck2=TK_DECK, initial_memory=10)
         game = runner.game
 
-        from digimon_gym.engine.debug.state_injection import clear_zone as _cz
+        from engine_py_legacy.engine.debug.state_injection import clear_zone as _cz
         _cz(game, 1, "security")
 
         runner.inject_card(1, TK_TAKAISHI, "hand")
@@ -334,7 +334,7 @@ class TestBT1087TKTakaishi:
         runner.place_on_field(1, [RED_DIGIMON])  # filler attacker (will be set up below)
 
         # Inject T.K. into P2's security top
-        from digimon_gym.engine.debug.state_injection import clear_zone as _cz
+        from engine_py_legacy.engine.debug.state_injection import clear_zone as _cz
         _cz(game, 2, "security")
         runner.inject_card(2, TK_TAKAISHI, "security_top")
 
@@ -367,7 +367,7 @@ class TestBT1087TKTakaishi:
         game = runner.game
 
         runner.place_on_field(1, [RED_DIGIMON])
-        from digimon_gym.engine.debug.state_injection import clear_zone as _cz
+        from engine_py_legacy.engine.debug.state_injection import clear_zone as _cz
         _cz(game, 2, "security")
         runner.inject_card(2, TK_TAKAISHI, "security_top")
 
@@ -387,7 +387,7 @@ class TestBT1087TKTakaishi:
 
     def test_script_registers_on_start_turn_effect(self):
         """Script should register an OnStartTurn effect for the memory gate."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(TK_TAKAISHI)
         effects = cs.effect_list(None)
@@ -402,7 +402,7 @@ class TestBT1087TKTakaishi:
 
     def test_script_registers_on_play_effect(self):
         """Script should register an OnEnterFieldAnyone / is_on_play effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(TK_TAKAISHI)
         effects = cs.effect_list(None)
@@ -411,7 +411,7 @@ class TestBT1087TKTakaishi:
 
     def test_script_registers_security_effect(self):
         """Script should register a [Security] effect."""
-        from digimon_gym.engine.data.card_database import CardDatabase
+        from engine_py_legacy.engine.data.card_database import CardDatabase
         db = CardDatabase()
         cs = db.create_card_source(TK_TAKAISHI)
         effects = cs.effect_list(None)
