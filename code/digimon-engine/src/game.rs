@@ -433,12 +433,6 @@ impl Game {
             card_data_store.push(def.to_card_data());
         }
 
-        let mut effect_registry = build_registry();
-        #[cfg(feature = "dsl-yaml-loader")]
-        if let Ok(dsl_registry) = crate::dsl_registry::from_embedded() {
-            crate::dsl_cards::register_dsl_cards(&mut effect_registry, &dsl_registry);
-        }
-
         let mut game = Self {
             rules,
             players,
@@ -452,7 +446,7 @@ impl Game {
             winner: None,
             card_data: card_data_store,
             modifiers: ModifierRegistry::new(),
-            effect_registry,
+            effect_registry: build_registry(),
             token_registry,
             rng,
             next_card_index,

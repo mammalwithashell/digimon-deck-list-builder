@@ -2,8 +2,9 @@ use digimon_dsl::compiled::{CompiledBindingCompare, CompiledCardKind, CompiledPr
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
-use digimon_engine::dsl_cards::predicate::eval_predicate_with_bindings;
-use digimon_engine::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use digimon_engine::dsl_cards::predicate::{
+    eval_predicate, eval_predicate_with_bindings, PredicateSubject,
+};
 use digimon_engine::effect_context::EffectReadContext;
 
 fn fresh_runner() -> DebugRunner {
@@ -19,6 +20,28 @@ fn fresh_runner() -> DebugRunner {
 fn any_card_handle(runner: &DebugRunner) -> CardHandle {
     // Player 0's hand is populated in fresh_runner().
     runner.game.players[0].hand[0].handle()
+}
+
+fn compare_binding(name: &str) -> CompiledBindingCompare {
+    CompiledBindingCompare::Binding(name.to_string())
+}
+
+fn compare_literal(value: i64) -> CompiledBindingCompare {
+    CompiledBindingCompare::Literal(value)
+}
+
+fn equals(values: Vec<CompiledBindingCompare>) -> CompiledPredicate {
+    CompiledPredicate {
+        equals: Some(values),
+        ..Default::default()
+    }
+}
+
+fn not_equals(values: Vec<CompiledBindingCompare>) -> CompiledPredicate {
+    CompiledPredicate {
+        not_equals: Some(values),
+        ..Default::default()
+    }
 }
 
 #[test]
@@ -76,20 +99,19 @@ fn your_turn_predicate_reads_game_state() {
 }
 
 #[test]
-fn equals_predicate_reads_literal_bindings() {
+fn equals_passes_when_all_referenced_values_match_and_fails_when_any_differ() {
     let runner = fresh_runner();
     let card = any_card_handle(&runner);
     let game = &runner.game;
     let rctx = EffectReadContext::new(game, card, None, 0);
-    let pred = CompiledPredicate {
-        equals: Some(vec![
-            CompiledBindingCompare::Binding("branch".to_string()),
-            CompiledBindingCompare::Literal(1),
-        ]),
-        ..Default::default()
-    };
+    let pred = equals(vec![
+        compare_binding("branch"),
+        compare_binding("expected"),
+        compare_literal(1),
+    ]);
     let mut bindings = Bindings::new();
     bindings.insert_literal("branch", 1);
+    bindings.insert_literal("expected", 1);
 
     assert!(eval_predicate_with_bindings(
         &pred,
@@ -98,9 +120,131 @@ fn equals_predicate_reads_literal_bindings() {
         Some(&bindings),
     ));
 
-    bindings.insert_literal("branch", 0);
+    bindings.insert_literal("expected", 2);
     assert!(!eval_predicate_with_bindings(
         &pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+}
+
+#[test]
+fn not_equals_is_inverse_for_two_present_values() {
+    let runner = fresh_runner();
+    let card = any_card_handle(&runner);
+    let game = &runner.game;
+    let rctx = EffectReadContext::new(game, card, None, 0);
+    let pred_equals = equals(vec![compare_binding("branch"), compare_literal(1)]);
+    let pred_not_equals = not_equals(vec![compare_binding("branch"), compare_literal(1)]);
+    let mut bindings = Bindings::new();
+
+    bindings.insert_literal("branch", 1);
+    assert!(eval_predicate_with_bindings(
+        &pred_equals,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &pred_not_equals,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+
+    bindings.insert_literal("branch", 0);
+    assert!(!eval_predicate_with_bindings(
+        &pred_equals,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+    assert!(eval_predicate_with_bindings(
+        &pred_not_equals,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+}
+
+#[test]
+fn missing_binding_makes_equals_and_not_equals_false() {
+    let runner = fresh_runner();
+    let card = any_card_handle(&runner);
+    let game = &runner.game;
+    let rctx = EffectReadContext::new(game, card, None, 0);
+    let pred_equals = equals(vec![compare_binding("branch"), compare_binding("expected")]);
+    let pred_not_equals = not_equals(vec![compare_binding("branch"), compare_binding("expected")]);
+    let mut bindings = Bindings::new();
+    bindings.insert_literal("branch", 1);
+
+    assert!(!eval_predicate_with_bindings(
+        &pred_equals,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &pred_not_equals,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+}
+
+#[test]
+fn binding_comparisons_flow_through_compound_predicates() {
+    let runner = fresh_runner();
+    let card = any_card_handle(&runner);
+    let game = &runner.game;
+    let rctx = EffectReadContext::new(game, card, None, 0);
+    let equal_branch = equals(vec![compare_binding("branch"), compare_literal(1)]);
+    let different_mode = not_equals(vec![compare_binding("mode"), compare_literal(0)]);
+    let all_pred = CompiledPredicate {
+        all_of: vec![equal_branch.clone(), different_mode.clone()],
+        ..Default::default()
+    };
+    let any_pred = CompiledPredicate {
+        any_of: vec![equal_branch.clone(), different_mode.clone()],
+        ..Default::default()
+    };
+    let none_pred = CompiledPredicate {
+        none_of: vec![different_mode],
+        ..Default::default()
+    };
+    let mut bindings = Bindings::new();
+    bindings.insert_literal("branch", 1);
+    bindings.insert_literal("mode", 2);
+
+    assert!(eval_predicate_with_bindings(
+        &all_pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+    assert!(eval_predicate_with_bindings(
+        &any_pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+
+    bindings.insert_literal("mode", 0);
+    assert!(!eval_predicate_with_bindings(
+        &all_pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+    assert!(eval_predicate_with_bindings(
+        &any_pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+    assert!(eval_predicate_with_bindings(
+        &none_pred,
         &rctx,
         PredicateSubject::None,
         Some(&bindings),
@@ -330,6 +474,69 @@ fn all_permanents_passes_when_all_match() {
         ..Default::default()
     };
     assert!(eval_predicate(&pred, &rctx, PredicateSubject::None));
+}
+
+#[test]
+fn binding_comparisons_flow_through_permanent_existentials() {
+    let mut runner = fresh_runner();
+    runner.place_on_field(0, "TEST-A", Some(0));
+    runner.place_on_field(0, "TEST-B", Some(0));
+    let card = any_card_handle(&runner);
+    let game = &runner.game;
+    let rctx = EffectReadContext::new(game, card, None, 0);
+    let inner = CompiledPredicate {
+        all_of: vec![
+            CompiledPredicate {
+                kind: Some(CompiledCardKind::Digimon),
+                ..Default::default()
+            },
+            equals(vec![compare_binding("branch"), compare_literal(1)]),
+        ],
+        ..Default::default()
+    };
+    let any_pred = CompiledPredicate {
+        any_permanent: Some(Box::new(CompiledExistential {
+            of: CompiledPlayerRef::You,
+            predicate: inner.clone(),
+        })),
+        ..Default::default()
+    };
+    let all_pred = CompiledPredicate {
+        all_permanents: Some(Box::new(CompiledExistential {
+            of: CompiledPlayerRef::You,
+            predicate: inner,
+        })),
+        ..Default::default()
+    };
+    let mut bindings = Bindings::new();
+    bindings.insert_literal("branch", 1);
+
+    assert!(eval_predicate_with_bindings(
+        &any_pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+    assert!(eval_predicate_with_bindings(
+        &all_pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+
+    bindings.insert_literal("branch", 0);
+    assert!(!eval_predicate_with_bindings(
+        &any_pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &all_pred,
+        &rctx,
+        PredicateSubject::None,
+        Some(&bindings),
+    ));
 }
 
 #[test]
