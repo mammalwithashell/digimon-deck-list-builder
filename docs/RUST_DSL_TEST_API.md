@@ -15,7 +15,7 @@ The `/batch-implement-cards-rust-dsl` skill cites this document directly. Every 
 ## 1. Project layout
 
 ```
-digimon-engine/
+code/digimon-engine/
 ├── cards/<set>/<card_id>.yaml          # Production DSL card specs (canonical)
 ├── cards/_examples/                    # Hand-curated YAML fixtures used in docs
 ├── src/
@@ -70,7 +70,7 @@ mod tokens;
 
 ### Production YAML location
 
-Production card specs live at `digimon-engine/cards/<set>/<card_id>.yaml`. The pack build (`build.rs`) bundles them into `OUT_DIR/cards.pack`, which `dsl_registry::from_embedded()` loads at runtime. Tests using `runner.dsl_card("BT15-003")` resolve through the embedded pack — they read the same spec the shipping engine reads.
+Production card specs live at `code/digimon-engine/cards/<set>/<card_id>.yaml`. The pack build (`build.rs`) bundles them into `OUT_DIR/cards.pack`, which `dsl_registry::from_embedded()` loads at runtime. Tests using `runner.dsl_card("BT15-003")` resolve through the embedded pack — they read the same spec the shipping engine reads.
 
 ---
 
@@ -168,7 +168,7 @@ let mut runner = DebugRunner::builder()
 | `runner.event_checkpoint()` **(spec)** → `usize` | Capture the current event-log length for later slicing. |
 | `runner.events_of_kind(kind)` **(spec)** → `Vec<&GameEvent>` | All events matching a discriminant (e.g. `OnDiscardSecurity`). |
 
-The `GameEvent` type already exists in `digimon-engine/src/events.rs`; the helpers above are thin views over `Game::event_log`.
+The `GameEvent` type already exists in `code/digimon-engine/src/events.rs`; the helpers above are thin views over `Game::event_log`.
 
 ---
 
@@ -186,7 +186,7 @@ All required:
 
 - `data/deck_library.json` — every meta decklist scraped to date.
 - `data/cards.json` — full card metadata for filtering by trait / level / cost.
-- `digimon_gym/engine/data/scripts/` — Python ground-truth implementations.
+- `code/engine_py_legacy/engine/data/scripts/` — Python ground-truth implementations.
 - `DCGO/Assets/Scripts/CardEffect/` — C# behavioral reference.
 - `qa/archetype-qa/INDEX.md` and the per-archetype QA docs for the **17 launch archetypes** (Chaos Control, Medusamon, Dark Masters, TS Jupitermon, Royal Knights, DNA Omnimon, Jesmon, Puppets, Hudiemon, TS Neptunemon, Millenniummon, ExMaquinamon, Galacticmon, Zephagamon, BG Imperial, Rocks, TS Olympos). Verdict tables surface canonical examples per pattern.
 - `qa/archetype-qa/engine-gaps.md` — exclude any card depending on an unclosed gap.
@@ -908,7 +908,7 @@ fn ex11_027_when_removed_picked_card_moves_to_hand() { /* execute_action; assert
 
 ### Step 3 — Author the YAML
 
-`digimon-engine/cards/ex11/EX11-027.yaml`:
+`code/digimon-engine/cards/ex11/EX11-027.yaml`:
 
 ```yaml
 card: EX11-027
@@ -951,13 +951,13 @@ cargo test --test cards_behavioral -- ex11_027
 Tests fail. Make each pass by:
 
 1. Verifying the YAML compiles (`cargo test --test dsl -- --ignored ex11_027` if a parser test exists).
-2. Adding any missing DSL verbs to `digimon-dsl/` if `cargo test --test dsl loader` reports unknown step (this is the rare case — the verbs above all exist in Phase 2b).
+2. Adding any missing DSL verbs to `code/digimon-dsl/` if `cargo test --test dsl loader` reports unknown step (this is the rare case — the verbs above all exist in Phase 2b).
 3. If a verb is missing entirely and lands an engine gap, file it under `qa/archetype-qa/engine-gaps.md` and `#[ignore = "pending: <gap-id>"]` the affected test until the gap closes.
 
 ### Step 5 — Verify no regression
 
 ```bash
-cargo test --manifest-path digimon-engine/Cargo.toml
+cargo test --manifest-path code/digimon-engine/Cargo.toml
 ```
 
 Full suite must stay green. `cargo test --test cards_behavioral` runs only the per-card binary.
@@ -966,7 +966,7 @@ Full suite must stay green. `cargo test --test cards_behavioral` runs only the p
 
 ## 13. Appendix: Python → Rust test idiom map
 
-For anyone porting a test from `tests/behavioral/btXX/test_btXX_NNN.py`. Listed by what the Python test does, then the Rust equivalent.
+For anyone porting a test from `code/engine_py_legacy/tests/behavioral/btXX/test_btXX_NNN.py`. Listed by what the Python test does, then the Rust equivalent.
 
 | Python | Rust |
 |---|---|

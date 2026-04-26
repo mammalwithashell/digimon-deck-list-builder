@@ -4,7 +4,7 @@
 
 **Goal:** Implement the DebugRunner helpers spec'd in `docs/RUST_DSL_TEST_API.md` §3 so per-card DSL tests can be written.
 
-**Architecture:** Extend `digimon-engine/src/debug_runner.rs` with new methods and `DebugRunnerBuilder` verbs. Add a small public accessor on `Game` for non-draining event-log access. Helpers are thin views over existing engine APIs (`Game::resolve_selection`, `Game::pending_selection`, `CardRegistry::lookup`, `DslCardEffect`); no new state machines.
+**Architecture:** Extend `code/digimon-engine/src/debug_runner.rs` with new methods and `DebugRunnerBuilder` verbs. Add a small public accessor on `Game` for non-draining event-log access. Helpers are thin views over existing engine APIs (`Game::resolve_selection`, `Game::pending_selection`, `CardRegistry::lookup`, `DslCardEffect`); no new state machines.
 
 **Tech Stack:** Rust 2021, `digimon-engine` crate, `digimon-dsl` crate (path dep), `serde_yml` for inline YAML parsing.
 
@@ -16,9 +16,9 @@
 
 | File | Responsibility |
 |---|---|
-| `digimon-engine/src/game.rs` | Add `pub fn events(&self) -> &[GameEvent]`. One-line accessor; non-draining read. |
-| `digimon-engine/src/debug_runner.rs` | All new runner methods and builder verbs. Single file owns the test harness surface. |
-| `digimon-engine/tests/debug_runner_dsl.rs` | New integration test file covering every new helper. Existing `debug_runner.rs` `#[cfg(test)] mod tests` covers in-module unit tests. |
+| `code/digimon-engine/src/game.rs` | Add `pub fn events(&self) -> &[GameEvent]`. One-line accessor; non-draining read. |
+| `code/digimon-engine/src/debug_runner.rs` | All new runner methods and builder verbs. Single file owns the test harness surface. |
+| `code/digimon-engine/tests/debug_runner_dsl.rs` | New integration test file covering every new helper. Existing `debug_runner.rs` `#[cfg(test)] mod tests` covers in-module unit tests. |
 | `docs/RUST_DSL_TEST_API.md` | Strip **(spec)** markers in §3 once helpers exist. |
 
 `DebugRunner` struct gains:
@@ -40,13 +40,13 @@ Tasks 1–6 deliver test-driving primitives (events, pending selection, action s
 ### Task 1: Add `Game::events()` accessor
 
 **Files:**
-- Modify: `digimon-engine/src/game.rs:611` (within the "Event accumulator" section, just above `next_event_seq`)
+- Modify: `code/digimon-engine/src/game.rs:611` (within the "Event accumulator" section, just above `next_event_seq`)
 
 **Why:** `Game::drain_events` removes events from the buffer. The DebugRunner's checkpoint helpers (Task 2) need a non-draining read so test code can capture a checkpoint, do work, and slice events emitted since the checkpoint.
 
 - [ ] **Step 1: Add the failing test**
 
-Add to `digimon-engine/src/debug_runner.rs` at the end of the existing `#[cfg(test)] mod tests` block:
+Add to `code/digimon-engine/src/debug_runner.rs` at the end of the existing `#[cfg(test)] mod tests` block:
 
 ```rust
 #[test]
@@ -71,14 +71,14 @@ fn game_events_accessor_returns_emitted_events_without_draining() {
 - [ ] **Step 2: Run the test — expect failure**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml debug_runner::tests::game_events_accessor_returns_emitted_events_without_draining
+cargo test --manifest-path code/digimon-engine/Cargo.toml debug_runner::tests::game_events_accessor_returns_emitted_events_without_draining
 ```
 
 Expected: compilation error `no method named events found for struct Game`.
 
 - [ ] **Step 3: Implement the accessor**
 
-In `digimon-engine/src/game.rs`, in the "Event accumulator" section just above `pub fn next_event_seq`:
+In `code/digimon-engine/src/game.rs`, in the "Event accumulator" section just above `pub fn next_event_seq`:
 
 ```rust
 /// Borrow the accumulated event log without draining. Tests use this
@@ -92,7 +92,7 @@ pub fn events(&self) -> &[crate::events::GameEvent] {
 - [ ] **Step 4: Run the test — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml debug_runner::tests::game_events_accessor_returns_emitted_events_without_draining
+cargo test --manifest-path code/digimon-engine/Cargo.toml debug_runner::tests::game_events_accessor_returns_emitted_events_without_draining
 ```
 
 Expected: PASS.
@@ -100,7 +100,7 @@ Expected: PASS.
 - [ ] **Step 5: Run the full engine suite to confirm no regression**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml
+cargo test --manifest-path code/digimon-engine/Cargo.toml
 ```
 
 Expected: all tests pass.
@@ -108,7 +108,7 @@ Expected: all tests pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add digimon-engine/src/game.rs digimon-engine/src/debug_runner.rs
+git add code/digimon-engine/src/game.rs code/digimon-engine/src/debug_runner.rs
 git commit -m "engine: add Game::events() non-draining accessor for runner helpers"
 ```
 
@@ -117,12 +117,12 @@ git commit -m "engine: add Game::events() non-draining accessor for runner helpe
 ### Task 2: Event-log helpers on DebugRunner
 
 **Files:**
-- Modify: `digimon-engine/src/debug_runner.rs` (add three methods to the `impl DebugRunner` block, just before the existing `// ─── Builder for DebugRunner.` separator at the closing of the impl)
-- Create: `digimon-engine/tests/debug_runner_dsl.rs` (new integration-test file)
+- Modify: `code/digimon-engine/src/debug_runner.rs` (add three methods to the `impl DebugRunner` block, just before the existing `// ─── Builder for DebugRunner.` separator at the closing of the impl)
+- Create: `code/digimon-engine/tests/debug_runner_dsl.rs` (new integration-test file)
 
 - [ ] **Step 1: Create the failing integration test**
 
-Create `digimon-engine/tests/debug_runner_dsl.rs`:
+Create `code/digimon-engine/tests/debug_runner_dsl.rs`:
 
 ```rust
 //! Integration tests for DSL-aware DebugRunner helpers.
@@ -197,14 +197,14 @@ fn events_of_kind_filters_by_predicate() {
 - [ ] **Step 2: Run the failing test**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl
 ```
 
 Expected: compile error `no method named event_checkpoint found for struct DebugRunner`.
 
 - [ ] **Step 3: Implement the helpers**
 
-In `digimon-engine/src/debug_runner.rs`, inside `impl DebugRunner`, just before the closing `}` of the impl block (after `pub fn perm_handle`):
+In `code/digimon-engine/src/debug_runner.rs`, inside `impl DebugRunner`, just before the closing `}` of the impl block (after `pub fn perm_handle`):
 
 ```rust
 // ─── Event log helpers (see docs/RUST_DSL_TEST_API.md §3) ─────────
@@ -243,7 +243,7 @@ where
 - [ ] **Step 4: Run the tests — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl
 ```
 
 Expected: PASS for both tests.
@@ -251,7 +251,7 @@ Expected: PASS for both tests.
 - [ ] **Step 5: Run the full engine suite**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml
+cargo test --manifest-path code/digimon-engine/Cargo.toml
 ```
 
 Expected: all tests pass.
@@ -259,7 +259,7 @@ Expected: all tests pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add digimon-engine/src/debug_runner.rs digimon-engine/tests/debug_runner_dsl.rs
+git add code/digimon-engine/src/debug_runner.rs code/digimon-engine/tests/debug_runner_dsl.rs
 git commit -m "runner: add event-log checkpoint and slice helpers"
 ```
 
@@ -268,14 +268,14 @@ git commit -m "runner: add event-log checkpoint and slice helpers"
 ### Task 3: Pending-selection read accessors
 
 **Files:**
-- Modify: `digimon-engine/src/debug_runner.rs` (add five methods to `impl DebugRunner`)
-- Modify: `digimon-engine/tests/debug_runner_dsl.rs` (add tests)
+- Modify: `code/digimon-engine/src/debug_runner.rs` (add five methods to `impl DebugRunner`)
+- Modify: `code/digimon-engine/tests/debug_runner_dsl.rs` (add tests)
 
 **Why:** §3 of the doc lists `pending_selection`, `pending_selection_view`, `pending_kind`, `pending_is_optional`, `pending_action_count`. All are read-only views over `Game::pending_selection`.
 
 - [ ] **Step 1: Add the failing tests**
 
-Append to `digimon-engine/tests/debug_runner_dsl.rs`:
+Append to `code/digimon-engine/tests/debug_runner_dsl.rs`:
 
 ```rust
 use digimon_engine::selection::SelectionKind;
@@ -340,14 +340,14 @@ fn pending_selection_accessors_reflect_installed_selection() {
 - [ ] **Step 2: Run the failing tests**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl pending_selection
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl pending_selection
 ```
 
 Expected: compile errors for missing methods.
 
 - [ ] **Step 3: Implement the accessors**
 
-In `digimon-engine/src/debug_runner.rs`, after the event-log helpers from Task 2:
+In `code/digimon-engine/src/debug_runner.rs`, after the event-log helpers from Task 2:
 
 ```rust
 // ─── Pending selection accessors (see docs/RUST_DSL_TEST_API.md §3) ─
@@ -391,7 +391,7 @@ pub fn pending_action_count(&self) -> usize {
 - [ ] **Step 4: Run the tests — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl pending_selection
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl pending_selection
 ```
 
 Expected: PASS.
@@ -399,7 +399,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add digimon-engine/src/debug_runner.rs digimon-engine/tests/debug_runner_dsl.rs
+git add code/digimon-engine/src/debug_runner.rs code/digimon-engine/tests/debug_runner_dsl.rs
 git commit -m "runner: add pending-selection read accessors"
 ```
 
@@ -408,14 +408,14 @@ git commit -m "runner: add pending-selection read accessors"
 ### Task 4: `execute_action`
 
 **Files:**
-- Modify: `digimon-engine/src/debug_runner.rs` (one method)
-- Modify: `digimon-engine/tests/debug_runner_dsl.rs` (one test)
+- Modify: `code/digimon-engine/src/debug_runner.rs` (one method)
+- Modify: `code/digimon-engine/tests/debug_runner_dsl.rs` (one test)
 
 **Why:** Wraps `Game::resolve_selection` with the `selecting_player` already known to the runner. Tests no longer have to look up the player every time they submit an action.
 
 - [ ] **Step 1: Add the failing test**
 
-Append to `digimon-engine/tests/debug_runner_dsl.rs`:
+Append to `code/digimon-engine/tests/debug_runner_dsl.rs`:
 
 ```rust
 #[test]
@@ -462,14 +462,14 @@ fn execute_action_resolves_pending_selection() {
 - [ ] **Step 2: Run the test — expect failure**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl execute_action
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl execute_action
 ```
 
 Expected: compile error.
 
 - [ ] **Step 3: Implement `execute_action`**
 
-In `digimon-engine/src/debug_runner.rs`, after `pending_action_count`:
+In `code/digimon-engine/src/debug_runner.rs`, after `pending_action_count`:
 
 ```rust
 // ─── Action submission ────────────────────────────────────────────
@@ -494,7 +494,7 @@ pub fn execute_action(
 - [ ] **Step 4: Run the test — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl execute_action
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl execute_action
 ```
 
 Expected: PASS.
@@ -502,7 +502,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add digimon-engine/src/debug_runner.rs digimon-engine/tests/debug_runner_dsl.rs
+git add code/digimon-engine/src/debug_runner.rs code/digimon-engine/tests/debug_runner_dsl.rs
 git commit -m "runner: add execute_action wrapper over Game::resolve_selection"
 ```
 
@@ -511,14 +511,14 @@ git commit -m "runner: add execute_action wrapper over Game::resolve_selection"
 ### Task 5: `auto_resolve`
 
 **Files:**
-- Modify: `digimon-engine/src/debug_runner.rs` (one method)
-- Modify: `digimon-engine/tests/debug_runner_dsl.rs` (one test)
+- Modify: `code/digimon-engine/src/debug_runner.rs` (one method)
+- Modify: `code/digimon-engine/tests/debug_runner_dsl.rs` (one test)
 
 **Why:** Mirror of Python `runner.auto_resolve()`. Picks the first legal action at every prompt until no `pending_selection` remains. Used when the test asserts end-state aggregates rather than branch-specific behavior.
 
 - [ ] **Step 1: Add the failing test**
 
-Append to `digimon-engine/tests/debug_runner_dsl.rs`:
+Append to `code/digimon-engine/tests/debug_runner_dsl.rs`:
 
 ```rust
 #[test]
@@ -627,14 +627,14 @@ fn auto_resolve_passes_when_optional_and_no_actions() {
 - [ ] **Step 2: Run the failing tests**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl auto_resolve
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl auto_resolve
 ```
 
 Expected: compile error.
 
 - [ ] **Step 3: Implement `auto_resolve`**
 
-In `digimon-engine/src/debug_runner.rs`, after `execute_action`:
+In `code/digimon-engine/src/debug_runner.rs`, after `execute_action`:
 
 ```rust
 /// Drive every pending selection by submitting the first legal action
@@ -681,7 +681,7 @@ pub fn auto_resolve(&mut self) {
 - [ ] **Step 4: Run the tests — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl auto_resolve
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl auto_resolve
 ```
 
 Expected: PASS for both tests.
@@ -689,7 +689,7 @@ Expected: PASS for both tests.
 - [ ] **Step 5: Run the full engine suite**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml
+cargo test --manifest-path code/digimon-engine/Cargo.toml
 ```
 
 Expected: all tests pass.
@@ -697,7 +697,7 @@ Expected: all tests pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add digimon-engine/src/debug_runner.rs digimon-engine/tests/debug_runner_dsl.rs
+git add code/digimon-engine/src/debug_runner.rs code/digimon-engine/tests/debug_runner_dsl.rs
 git commit -m "runner: add auto_resolve to drain chained selections"
 ```
 
@@ -706,14 +706,14 @@ git commit -m "runner: add auto_resolve to drain chained selections"
 ### Task 6: `execute_branch`
 
 **Files:**
-- Modify: `digimon-engine/src/debug_runner.rs` (one method)
-- Modify: `digimon-engine/tests/debug_runner_dsl.rs` (one test)
+- Modify: `code/digimon-engine/src/debug_runner.rs` (one method)
+- Modify: `code/digimon-engine/tests/debug_runner_dsl.rs` (one test)
 
 **Why:** Convenience wrapper for `EffectChoice` selections — converts a label index into the underlying action ID, so test code reads `r.execute_branch(0)` instead of fishing the action ID out of `effect_choices`.
 
 - [ ] **Step 1: Add the failing test**
 
-Append to `digimon-engine/tests/debug_runner_dsl.rs`:
+Append to `code/digimon-engine/tests/debug_runner_dsl.rs`:
 
 ```rust
 #[test]
@@ -772,14 +772,14 @@ fn execute_branch_errors_when_no_effect_choice_selection() {
 - [ ] **Step 2: Run the failing tests**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl execute_branch
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl execute_branch
 ```
 
 Expected: compile error.
 
 - [ ] **Step 3: Implement `execute_branch`**
 
-In `digimon-engine/src/debug_runner.rs`, after `auto_resolve`:
+In `code/digimon-engine/src/debug_runner.rs`, after `auto_resolve`:
 
 ```rust
 /// Submit the action ID matching `effect_choices[label_index]`. Only
@@ -811,7 +811,7 @@ pub fn execute_branch(
 - [ ] **Step 4: Run the tests — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl execute_branch
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl execute_branch
 ```
 
 Expected: PASS.
@@ -819,7 +819,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add digimon-engine/src/debug_runner.rs digimon-engine/tests/debug_runner_dsl.rs
+git add code/digimon-engine/src/debug_runner.rs code/digimon-engine/tests/debug_runner_dsl.rs
 git commit -m "runner: add execute_branch convenience for EffectChoice"
 ```
 
@@ -828,14 +828,14 @@ git commit -m "runner: add execute_branch convenience for EffectChoice"
 ### Task 7: `compiled_card` storage and accessors
 
 **Files:**
-- Modify: `digimon-engine/src/debug_runner.rs` — add `compiled_cards` field on both `DebugRunner` and `DebugRunnerBuilder`, thread through `build_inner`, add accessors.
-- Modify: `digimon-engine/tests/debug_runner_dsl.rs` — test that loading a known card surfaces its `CompiledCard`.
+- Modify: `code/digimon-engine/src/debug_runner.rs` — add `compiled_cards` field on both `DebugRunner` and `DebugRunnerBuilder`, thread through `build_inner`, add accessors.
+- Modify: `code/digimon-engine/tests/debug_runner_dsl.rs` — test that loading a known card surfaces its `CompiledCard`.
 
 **Why:** Tasks 8 and 9 need a place to store compiled-card pointers so structural assertions (clause count, kinds, OPT flags) can run against them.
 
 - [ ] **Step 1: Add the failing test**
 
-Append to `digimon-engine/tests/debug_runner_dsl.rs`:
+Append to `code/digimon-engine/tests/debug_runner_dsl.rs`:
 
 ```rust
 use digimon_dsl::compiled::{CompiledCard, CompiledClause};
@@ -881,14 +881,14 @@ effects:
 - [ ] **Step 2: Run the failing test**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl compiled_card
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl compiled_card
 ```
 
 Expected: compile error — `compiled_card` and `insert_compiled_card` don't exist.
 
 - [ ] **Step 3: Add the field and accessors**
 
-In `digimon-engine/src/debug_runner.rs`:
+In `code/digimon-engine/src/debug_runner.rs`:
 
 a) Update the imports at the top of the file to include the new types:
 
@@ -1008,7 +1008,7 @@ DebugRunner {
 - [ ] **Step 4: Run the test — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl compiled_card
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl compiled_card
 ```
 
 Expected: PASS.
@@ -1016,7 +1016,7 @@ Expected: PASS.
 - [ ] **Step 5: Run the full engine suite**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml
+cargo test --manifest-path code/digimon-engine/Cargo.toml
 ```
 
 Expected: all tests pass.
@@ -1024,7 +1024,7 @@ Expected: all tests pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add digimon-engine/src/debug_runner.rs digimon-engine/tests/debug_runner_dsl.rs
+git add code/digimon-engine/src/debug_runner.rs code/digimon-engine/tests/debug_runner_dsl.rs
 git commit -m "runner: store CompiledCard refs and add compiled_card / dsl_clause accessors"
 ```
 
@@ -1033,8 +1033,8 @@ git commit -m "runner: store CompiledCard refs and add compiled_card / dsl_claus
 ### Task 8: `from_dsl_yaml` builder verb + `CompiledCard → CardData` adapter
 
 **Files:**
-- Modify: `digimon-engine/src/debug_runner.rs` — add `card_data_from_compiled` private helper + `from_dsl_yaml` builder verb.
-- Modify: `digimon-engine/tests/debug_runner_dsl.rs` — integration test that loads a card from inline YAML and plays it.
+- Modify: `code/digimon-engine/src/debug_runner.rs` — add `card_data_from_compiled` private helper + `from_dsl_yaml` builder verb.
+- Modify: `code/digimon-engine/tests/debug_runner_dsl.rs` — integration test that loads a card from inline YAML and plays it.
 
 **Why:** Inline-YAML loading is the path used by DSL infra tests and "tweaked-spec" tests. Implements before `dsl_card` (Task 9) because `dsl_card` is the same code path with the lookup swapped for `CardRegistry::lookup`.
 
@@ -1042,7 +1042,7 @@ git commit -m "runner: store CompiledCard refs and add compiled_card / dsl_claus
 
 - [ ] **Step 1: Add the failing test**
 
-Append to `digimon-engine/tests/debug_runner_dsl.rs`:
+Append to `code/digimon-engine/tests/debug_runner_dsl.rs`:
 
 ```rust
 #[test]
@@ -1085,14 +1085,14 @@ effects:
 - [ ] **Step 2: Run the failing test**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl from_dsl_yaml
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl from_dsl_yaml
 ```
 
 Expected: compile error — `from_dsl_yaml` does not exist.
 
 - [ ] **Step 3: Add the `card_data_from_compiled` helper**
 
-Add to the bottom of `digimon-engine/src/debug_runner.rs`, after the existing `make_test_egg` function:
+Add to the bottom of `code/digimon-engine/src/debug_runner.rs`, after the existing `make_test_egg` function:
 
 ```rust
 /// Adapter: derive a `CardData` from a `CompiledCard` for runner setup.
@@ -1187,7 +1187,7 @@ pub fn from_dsl_yaml(mut self, yaml: &str) -> Result<Self, String> {
 - [ ] **Step 5: Run the test — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl from_dsl_yaml
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl from_dsl_yaml
 ```
 
 Expected: PASS.
@@ -1195,7 +1195,7 @@ Expected: PASS.
 - [ ] **Step 6: Run the full engine suite**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml
+cargo test --manifest-path code/digimon-engine/Cargo.toml
 ```
 
 Expected: all tests pass.
@@ -1203,7 +1203,7 @@ Expected: all tests pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add digimon-engine/src/debug_runner.rs digimon-engine/tests/debug_runner_dsl.rs
+git add code/digimon-engine/src/debug_runner.rs code/digimon-engine/tests/debug_runner_dsl.rs
 git commit -m "runner: add from_dsl_yaml builder verb + CardData adapter"
 ```
 
@@ -1212,18 +1212,18 @@ git commit -m "runner: add from_dsl_yaml builder verb + CardData adapter"
 ### Task 9: `dsl_card` builder verb (load by ID from embedded pack)
 
 **Files:**
-- Modify: `digimon-engine/src/debug_runner.rs` — add `embedded_registry` lazy singleton + `dsl_card` builder verb.
-- Modify: `digimon-engine/tests/debug_runner_dsl.rs` — load a real card from the embedded pack and assert structural shape.
+- Modify: `code/digimon-engine/src/debug_runner.rs` — add `embedded_registry` lazy singleton + `dsl_card` builder verb.
+- Modify: `code/digimon-engine/tests/debug_runner_dsl.rs` — load a real card from the embedded pack and assert structural shape.
 
 **Why:** This is the per-card-test default path: `runner.builder().dsl_card("BT15-003")` resolves through the embedded pack so tests follow the shipping spec.
 
-The embedded pack is built from `digimon-engine/cards/_examples/` via `build.rs` and exposed by `dsl_registry::from_embedded()`. Existing `_examples` fixtures (BT13-007, BT17-015, ST2-13, BT22-084, etc.) are valid test targets.
+The embedded pack is built from `code/digimon-engine/cards/_examples/` via `build.rs` and exposed by `dsl_registry::from_embedded()`. Existing `_examples` fixtures (BT13-007, BT17-015, ST2-13, BT22-084, etc.) are valid test targets.
 
 The `dsl-yaml-loader` feature must be enabled for `register_dsl_cards` in `build_registry`. This builder verb does its own registration (not relying on `register_dsl_cards`), so it works regardless of feature flag. The pack itself is always built — `cards.pack` exists in `OUT_DIR` whether or not the feature is on.
 
 - [ ] **Step 1: Add the failing test**
 
-Append to `digimon-engine/tests/debug_runner_dsl.rs`:
+Append to `code/digimon-engine/tests/debug_runner_dsl.rs`:
 
 ```rust
 #[test]
@@ -1251,14 +1251,14 @@ fn dsl_card_errors_on_unknown_card_id() {
 - [ ] **Step 2: Run the failing tests**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl dsl_card
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl dsl_card
 ```
 
 Expected: compile error.
 
 - [ ] **Step 3: Add the embedded-registry singleton**
 
-In `digimon-engine/src/debug_runner.rs`, near the top after the existing `use` statements:
+In `code/digimon-engine/src/debug_runner.rs`, near the top after the existing `use` statements:
 
 ```rust
 use std::sync::OnceLock;
@@ -1309,7 +1309,7 @@ pub fn dsl_card(mut self, card_id: &str) -> Result<Self, String> {
 - [ ] **Step 5: Run the tests — expect pass**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl dsl_card
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl dsl_card
 ```
 
 Expected: PASS for both tests.
@@ -1317,7 +1317,7 @@ Expected: PASS for both tests.
 - [ ] **Step 6: Run the full engine suite**
 
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml
+cargo test --manifest-path code/digimon-engine/Cargo.toml
 ```
 
 Expected: all tests pass.
@@ -1325,7 +1325,7 @@ Expected: all tests pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add digimon-engine/src/debug_runner.rs digimon-engine/tests/debug_runner_dsl.rs
+git add code/digimon-engine/src/debug_runner.rs code/digimon-engine/tests/debug_runner_dsl.rs
 git commit -m "runner: add dsl_card builder verb (load by ID from embedded pack)"
 ```
 
@@ -1407,8 +1407,8 @@ git commit -m "docs(dsl-test-api): strip (spec) markers now that runner helpers 
 
 After Task 10 lands:
 
-1. `cargo test --manifest-path digimon-engine/Cargo.toml --test debug_runner_dsl` runs all 10+ integration tests green.
-2. `cargo test --manifest-path digimon-engine/Cargo.toml` (full engine suite) stays green.
+1. `cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl` runs all 10+ integration tests green.
+2. `cargo test --manifest-path code/digimon-engine/Cargo.toml` (full engine suite) stays green.
 3. Every helper listed in `docs/RUST_DSL_TEST_API.md` §3 has a corresponding method on `DebugRunner` or `DebugRunnerBuilder`.
 4. No `**(spec)**` markers remain in `docs/RUST_DSL_TEST_API.md`.
 5. The first per-card behavioral test (e.g. `tests/cards_behavioral/bt15/bt15_003.rs`, deferred to a later plan) can compile against this surface without further runner changes.
@@ -1418,4 +1418,4 @@ After Task 10 lands:
 - Per-card behavioral tests under `tests/cards_behavioral/<set>/<card_id>.rs`. Those are authored by the forthcoming `/batch-implement-cards-rust-dsl` skill against the helpers this plan delivers.
 - The example card pool research task (`qa/dsl-test-pool.md`). That is a separate sub-agent dispatch.
 - Mechanic-level test patterns (combat, keyword, replacement). Same — separate work.
-- Production card YAMLs at `digimon-engine/cards/<set>/<card_id>.yaml`. The pack still loads from `cards/_examples/`; the move to `cards/<set>/` happens when production-card authoring begins.
+- Production card YAMLs at `code/digimon-engine/cards/<set>/<card_id>.yaml`. The pack still loads from `cards/_examples/`; the move to `cards/<set>/` happens when production-card authoring begins.
