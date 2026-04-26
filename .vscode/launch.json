@@ -7,7 +7,7 @@
       "request": "launch",
       "module": "uvicorn",
       "args": [
-        "digimon_gym.api:app",
+        "server.api:app",
         "--port",
         "8000"
       ],
