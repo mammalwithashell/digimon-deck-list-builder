@@ -353,6 +353,8 @@ pub struct Game {
     /// `scheduled_effects::fire_scheduled_for_timing` whose `when:` matches.
     /// Task 2 wires the drain into observer-fire boundaries (turn end, etc.).
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
+    /// Continuation for a scheduled-effect drain paused by a DSL selection.
+    pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
 }
 
 impl Game {
@@ -495,6 +497,7 @@ impl Game {
             pending_post_deletion_replays: Vec::new(),
             dsl_outer_tail: None,
             scheduled_effects: Vec::new(),
+            scheduled_drain_tail: None,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it

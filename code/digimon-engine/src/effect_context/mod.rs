@@ -317,6 +317,7 @@ impl<'a> EffectContext<'a> {
             source_permanent: self.source_permanent,
             controller: self.player,
             captured_bindings,
+            scheduled_at_turn: self.game.turn_count,
         };
         self.game.scheduled_effects.push(entry);
     }

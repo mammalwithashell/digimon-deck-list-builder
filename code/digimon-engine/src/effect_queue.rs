@@ -766,6 +766,10 @@ impl Game {
             crate::replacement::try_drain_parked_replacement_with_guard(self);
         }
 
+        if self.pending_selection.is_none() {
+            crate::scheduled_effects::resume_scheduled_drain(self);
+        }
+
         // If the callback parked a fresh selection, leave the drainer alone.
         // Otherwise resume — this covers both the normal post-callback case
         // and the `TriggerOrder` "continue picking the next bundle entry"

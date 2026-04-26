@@ -26,6 +26,11 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        crate::scheduled_effects::fire_scheduled_for_timing(
+            self,
+            EffectTiming::UntilNextUnsuspend,
+        );
+
         // Reset per-turn state
         self.player_mut(tp).new_turn();
 
@@ -210,6 +215,10 @@ impl Game {
         crate::scheduled_effects::fire_scheduled_for_timing(
             self,
             EffectTiming::EndOfOpponentsTurn,
+        );
+        crate::scheduled_effects::fire_scheduled_for_timing(
+            self,
+            EffectTiming::EndOfOpponentsNextTurn,
         );
 
         // Advance turn
@@ -465,6 +474,10 @@ impl Game {
         crate::scheduled_effects::fire_scheduled_for_timing(
             self,
             EffectTiming::EndOfYourTurn,
+        );
+        crate::scheduled_effects::fire_scheduled_for_timing(
+            self,
+            EffectTiming::EndOfYourNextTurn,
         );
     }
 
