@@ -1605,6 +1605,47 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   placement steps can target opponent zones. Defers to 2f2+: formula
   values in `add_modifier`, `AsSelectingPlayer` override-persistence,
   `ScheduleDelayed`.
+- **2f2** (landed 2026-04-26) — formula values in `add_dp_modifier` /
+  `add_modifier`. New IR shape `CompiledModifierValue { Literal(i32) |
+  Formula(CompiledFormula) }` replaces the bare `value: i32` field on
+  both step variants. YAML accepts either a bare int (`value: 3000`) or
+  a `{ formula: ... }` block via `serde(untagged)` `ModifierValueSpec`,
+  reusing `alt_path::FormulaCost` for the wrapper. Runtime evaluator
+  lives at `code/digimon-engine/src/dsl_cards/formula_eval.rs` —
+  signature `evaluate(&CompiledFormula, &EffectContext, target:
+  PermanentHandle) -> i32`. `target` is mandatory because per-selectors
+  (`StackSize` / `MaterialCount` / `DigivolutionColorCount`) resolve
+  against the bound or matched permanent; `AllyCount` resolves against
+  the target's player; aggregates (`LowestDp` / `HighestDp` /
+  `LowestLevel` / `HighestLevel`) scope to `ctx.player`'s battle area.
+  Filter-target `add_modifier` evaluates the formula **per match**
+  inside the scan loop, never hoisted (load-bearing for Susanoomon-style
+  "+X DP per material on this Digimon" semantics — pinned by
+  `add_modifier_filter_target_formula_evaluated_per_match`'s
+  `assert_ne!` on two permanents with different stack sizes). The
+  modifier-value pipeline is **i32 end-to-end**
+  (`formula_eval::evaluate` → `EffectContext::add_modifier` →
+  `ModifierEntry.value` → `ModifierRegistry::sum`); no narrowing today.
+  The `add_dp_modifier_formula_large_value_passes_through` test pins
+  the contract with `Literal(40000)` (above i16::MAX) and is the
+  tripwire if a future engine change narrows the type — saturation
+  goes in `step/modifiers.rs::resolve_modifier_value` if it ever
+  becomes necessary. Defensive convention: degenerate formula inputs
+  (FloorDiv arity != 2, divide by zero, missing target, empty
+  aggregate set) return `0` rather than panic; `RawRust(name)` and
+  `CardCountInZone` are Phase 3 placeholders that return `0`.
+  Debug-build `eprintln!` warnings emit on the two card-author-bug
+  branches (`RawRust` unregistered, `FloorDiv` wrong arity). A
+  compile-time `const _: () = assert!((CardColor::Purple as u8) < 8)`
+  guards the `DigivolutionColorCount` `u8` bitmask. Tracked
+  follow-ups: wire `RawRust` formula dispatch through
+  `RawRustRegistry`; widen `CompiledPerSelector::CardCountInZone`
+  with a `CompiledZone` payload; consider opponent / universal scope
+  for `CompiledAggregateSelector`; widen `lookup_modifier_type` to
+  expose value-bearing names (`ChangeDp` etc.) for filter-target
+  numeric modifiers; extend `AddDpModifier` to accept
+  `CompiledModifierTarget::Filter` (binding-only today). Defers to
+  2f3+: `AsSelectingPlayer` override-persistence, `ScheduleDelayed`.
 
 ### 7.4 Phase 3 — Advanced clauses
 
