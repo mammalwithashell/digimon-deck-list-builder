@@ -20,6 +20,12 @@ pub struct CardSource {
     pub is_token: bool,
     /// "Also treated as" names granted by effects.
     pub also_treated_as: Vec<String>,
+    /// `true` when this source was placed face-down (DCGO `IsFlipped` analog
+    /// for digivolution-stack sources). Set only by `<Training>` (Phase F
+    /// Task 6); `false` for all other sources. Consulted by `<Mind Link>`'s
+    /// "no Tamer source" filter (DCGO `MindLink.cs:25` — face-down Tamer
+    /// sources do NOT count). Out of scope for face-up reveal mechanics.
+    pub face_down: bool,
 }
 
 impl CardSource {
@@ -31,6 +37,7 @@ impl CardSource {
             card_index,
             is_token: false,
             also_treated_as: Vec::new(),
+            face_down: false,
         }
     }
 
@@ -42,6 +49,7 @@ impl CardSource {
             card_index,
             is_token: true,
             also_treated_as: Vec::new(),
+            face_down: false,
         }
     }
 

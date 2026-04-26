@@ -202,7 +202,29 @@ printed keywords now require zero hand-rolled `CardEffect` code. See
 - Source-card Fortitude (DCGO `CardStack.Contains(card)` covers Fortitude on a digi source under another top; Phase D scope is top-card carriers only).
 - DSL Phase 3 wiring of replacement bodies (Phase C deferred; Phase D's hand-rolled keyword auto-installs consume substrate directly).
 
-### Phase E — Missing-from-enum backfill
+### Phase E — Missing-from-enum backfill ✅ landed 2026-04-25 on `claude/vigorous-elgamal-453703`
+
+**Deliverables shipped:**
+
+- **E1 Retaliation:** enum variant + parser + auto-install + 4 behavioral tests. `OnDeletion` trigger gated on `deletion_cause() == Battle`, deletes opposing combatant via new `ctx.battle_opponent_of` accessor. Mutual-destruction guarded via slot-empty check before cascade delete. (Commits `544d070e`, `7e974c28`.)
+
+- **E2 Scapegoat:** enum variant + parser + auto-install + 4 behavioral tests. `WhenWouldBeDeleted` optional substitute replacement gated on `cause != OwnEffect`. Parks own-permanent pick (same-controller, non-self) → sync substitute. (Commits `74f098d1`, `a795a9dc`.)
+
+- **Task 3 prerequisite (`battle_opponent_of` accessor):** read-only and mutable variants on `EffectReadContext` / `EffectContext`. Reads live `Game.pending_attack` and returns the opposing combatant for OnDeletion observers fired during battle resolution. (Commits `c4c68c84`, `5357d4a5`.)
+
+**Spec deviations:**
+
+1. **E3 DeDigivolve(N) and E4 DrawX(N) auto-installs intentionally NOT shipped.** A cards.json survey found zero bare printings — both keywords always pair with explicit effect text and timing tags (160 cards for DeDigivolve, 452 for DrawX). Auto-installing a generic `MainOnField` / `OnPlay` skill would double-fire alongside every card's hand-rolled action. Variants remain parsed; no `keyword_to_auto_effect` arm added. Status flag in the parity doc is ⚪ (parsed, no auto-install — intentional). The original "Parametric auto-install gap" framing assumed bare printings existed; they don't.
+
+2. **Retaliation cascade-delete cause = `OwnEffect` (not `Battle`).** `EffectContext::delete_permanent`'s `infer_deletion_cause()` returns `Battle` while `pending_attack` is live, which is misleading for Retaliation's cascade (we're firing the keyword's own effect, not initiating a new battle). Fixed in commit `7e974c28` to call `ctx.game.delete_permanent_with_cause(winner, ReplacementCause::OwnEffect)` explicitly.
+
+3. **Scapegoat outer-dialog UX divergence from DCGO.** With `.optional()` set at builder time and the candidate condition `EffectReadContext` not threading `cause`, the outer "may" dialog parks even on `OwnEffect` deletions (where DCGO's `CanActivateScapegoat` would suppress it). PASS proceeds correctly — end state matches DCGO. Cause-aware candidate filter tracked at `replacement.rs::try_replace_inner` for a future substrate phase.
+
+**No new substrate added.** Phase E was consumer-side wiring only — `battle_opponent_of` is a thin read-only accessor over `Game.pending_attack`. Phase B/C/D substrate (parked replacements, `pending_post_deletion_replays`, `was_deleted_by_effect`, deletion-cause threading) was reused as-is.
+
+---
+
+*Original Phase E spec (pre-landing):*
 
 Enum variants + auto-installs for alpha-relevant missing keywords. Ordering follows §"Missing-keyword backfill priorities" in the parity doc.
 
@@ -211,7 +233,45 @@ Enum variants + auto-installs for alpha-relevant missing keywords. Ordering foll
 - **E3. DeDigivolve(N) printed-form auto-install.** Existing `Keyword::DeDigivolve(N)` variant gets an active-skill auto-emit via `keyword_to_auto_effect`. Consumes the existing `ctx.de_digivolve(_, _, amount=Some(N))` helper.
 - **E4. DrawX(N) printed-form auto-install.** `[Main]` active-skill draw for Option cards.
 
-### Phase F — Remaining keyword backfill (lower archetype blast radius)
+### Phase F — Remaining keyword backfill ✅ landed 2026-04-25 on `claude/vigorous-elgamal-453703`
+
+**Deliverables shipped:**
+
+- **F1 Execute:** enum variant + parser + `EndOfYourTurn` auto-install + `EndOfAttack` self-delete observer + 3 behavioral tests. Modifier-grant cost-payment in `process` (substrate: `pay_cost_fn` is queue-only, the synchronous `[Main]` activation path doesn't invoke it). The printed "may" surfaces at the EOT-action PASS exit, not at the EndOfYourTurn trigger — the Rust effect-queue drainer auto-fires single optional triggers without parking a dialog (`effect_queue::drain_effect_queue`); observable end states match DCGO on accept and decline. (Commit `cb6b2ad0` + doc-clarification `ba63cc99`.)
+
+- **F2 Iceclad:** enum variant + parser + `combat::resolve_battle` Iceclad branch (digivolution-card-count compare, security exception preserved via the separate `resolve_player_security_loop` path) + 4 behavioral tests. No `keyword_to_auto_effect` arm — consumed directly at the resolver site. (Commit `8bd5f580`.)
+
+- **F3 MindLink:** enum variant + parser + `MainOnField` Tamer auto-install + new `EffectContext::attach_tamer_to_digimon` primitive (replicates DCGO `IPlacePermanentToDigivolutionCards` + `DiscardEvoRoots` with proper modifier registry cleanup, post-removal index shift, and `OnDigivolutionCardTrashed` / `OnLinkedCardTrashed` triggers) + new `face_down: bool` on `CardSource` + `Permanent::has_non_facedown_tamer_source` filter + 4 behavioral tests. (Commit `4736ef96` + trigger-firing fix `b429e136`.)
+
+- **F4 Training:** enum variant + parser + `MainOnField` auto-install (battle area + breeding area) + new `EffectContext::training_place_deck_top_under_self_face_down` primitive + breeding-area `[Main]` dispatch substrate (`Game::activate_breeding_main_training` + `mask.rs` Training-restricted emitter at slot 14, action_id 1142, no new constants needed) + 4 behavioral tests. Cost-payment also lives in `process` rather than `pay_cost_fn` for the same queue-only-hook reason as Execute. Direct field mutation for suspend (the standard `EffectContext::suspend` only locates battle-area perms). (Commit `9afc3370`.)
+
+- **Scapegoat UX fix (substrate carry-over from Phase E):** new `replacement_condition: Option<EffectReplacementConditionFn>` field on `Effect` + `.replacement_condition(...)` builder + `replacement::collect_candidates` cause threading. Scapegoat re-mounted to gate on `cause != OwnEffect` AND ≥1 substitute candidate (matches DCGO `CanActivateScapegoat`). Closes the Phase E "outer-dialog UX divergence" deviation. (Commit `10ca36b8`.)
+
+**Substrate additions:**
+
+- `Effect.replacement_condition: Option<EffectReplacementConditionFn>` + `.replacement_condition()` builder + `replacement::collect_candidates` cause threading.
+- `CardSource.face_down: bool` (defaults `false`; only `<Training>` writes it; consulted by `<Mind Link>`'s filter).
+- `Permanent::has_non_facedown_tamer_source` helper.
+- `EffectContext::attach_tamer_to_digimon`, `EffectContext::training_place_deck_top_under_self_face_down` primitives.
+- `Game::activate_breeding_main_training` + Training-only mask emitter at slot 14 in the existing FIELD_EFFECT range.
+
+**Spec deviations:**
+
+- **Execute optionality surface:** plan suggested an `.optional()` accept dialog at the `EndOfYourTurn` trigger; reality required the printed "may" to surface at EOT-action PASS exit because the effect-queue drainer auto-fires single optional triggers and inner select-own-permanent parks too late (after `Game::end_turn`'s end-of-turn-keyword-window check). Observable end states match DCGO; the modifier grants are mask-only (no autonomous side-effects) so the dialog-surface adaptation has no behavior leak.
+
+- **Cost-payment placement (Execute, Training):** plan suggested `pay_cost_fn`; reality required `process`-side cost because `pay_cost_fn` only fires on queue-driven triggers, not the synchronous `[Main]` activation path. Documented in both arms.
+
+- **Direct suspend mutation (Training):** plan implied using `EffectContext::suspend`; reality required direct field mutation because `Game::suspend` only locates permanents in `battle_area`, leaving breeding-area carriers silently un-suspended. Documented in the keyword arm.
+
+- **Mask emitter for breeding-area Training reads keyword directly from `card_data`** (not `Game::has_keyword`) because `has_keyword` short-circuits on `battle_area` lookup. Out-of-scope follow-up if a future `ModifierType::GrantTraining` ships.
+
+- **Type-alias name:** plan suggested `ReplacementConditionFn` for the new effect-side type; reality required `EffectReplacementConditionFn` to disambiguate from an existing identically-named-but-differently-shaped type alias in `replacement.rs`. Both are now documented.
+
+- **`MindLink` token filter** included (DCGO `!permanent.IsToken`) — plan didn't explicitly call this out but DCGO has it.
+
+---
+
+*Original Phase F spec (pre-landing):*
 
 Lower priority than A-E but in scope. Each needs a new enum variant plus the specific primitives called out below.
 

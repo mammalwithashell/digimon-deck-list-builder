@@ -184,6 +184,37 @@ impl<'a> EffectReadContext<'a> {
             Some(crate::replacement::ReplacementCause::OpponentEffect)
         )
     }
+
+    /// Identify the opposing combatant in the currently-resolving battle.
+    ///
+    /// Returns `Some(opponent_handle)` when `Game.pending_attack` is live
+    /// AND the supplied `self_handle` matches one side of the battle:
+    ///   - `self_handle == attacker` → returns the defender
+    ///   - `self_handle == effective_target.as_digimon()` → returns the attacker
+    ///   - otherwise (no pending battle, or self is not a combatant) → `None`
+    ///
+    /// Used by Retaliation (Phase E §E1) to identify the battle winner from
+    /// inside an `OnDeletion` handler — the loser is mid-deletion (calling
+    /// the handler) and the winner is the other side of the pending attack.
+    /// Direct player attacks (`AttackTarget::Player`) return `None` because
+    /// there is no opposing Digimon.
+    pub fn battle_opponent_of(
+        &self,
+        self_handle: PermanentHandle,
+    ) -> Option<PermanentHandle> {
+        let pa = self.game.pending_attack.as_ref()?;
+        let defender = match pa.effective_target {
+            crate::AttackTarget::Digimon(h) => Some(h),
+            crate::AttackTarget::Player(_) => None,
+        }?;
+        if self_handle == pa.attacker {
+            Some(defender)
+        } else if self_handle == defender {
+            Some(pa.attacker)
+        } else {
+            None
+        }
+    }
 }
 
 /// The context passed to every effect's `process` closure.
@@ -354,6 +385,25 @@ impl<'a> EffectContext<'a> {
             self.game.current_deletion_cause,
             Some(crate::replacement::ReplacementCause::OpponentEffect)
         )
+    }
+
+    /// See [`EffectReadContext::battle_opponent_of`].
+    pub fn battle_opponent_of(
+        &self,
+        self_handle: PermanentHandle,
+    ) -> Option<PermanentHandle> {
+        let pa = self.game.pending_attack.as_ref()?;
+        let defender = match pa.effective_target {
+            crate::AttackTarget::Digimon(h) => Some(h),
+            crate::AttackTarget::Player(_) => None,
+        }?;
+        if self_handle == pa.attacker {
+            Some(defender)
+        } else if self_handle == defender {
+            Some(pa.attacker)
+        } else {
+            None
+        }
     }
 
     // ─── Replacement-process outcome-setters (Phase C §4.2) ──────────────
@@ -1157,6 +1207,151 @@ impl<'a> EffectContext<'a> {
         target_player.battle_area[target.index as usize].push_under(taken);
     }
 
+    /// Place `tamer`'s top card at the bottom of `digimon`'s digivolution
+    /// stack, replicating DCGO `MindLink.cs:71-79`:
+    /// `IPlacePermanentToDigivolutionCards(new[] { tamer, selectedDigimon })`.
+    ///
+    /// The Tamer permanent itself is removed from battle area; its top
+    /// CardSource becomes the new bottom of the target Digimon's stack.
+    /// The face-down flag is NOT set (MindLink places face-up).
+    ///
+    /// ## DCGO parity (CardController.cs:3011-3061)
+    ///
+    /// `IPlacePermanentToDigivolutionCards.PlacePermanentToDigivolutionCards`
+    /// takes `cardSource = DigivolutionPermanent.TopCard` (just the top),
+    /// calls `DiscardEvoRoots()` on the rest of the stack (sending those
+    /// sources to trash), removes the source permanent from field, then
+    /// calls `getDigivolutionPermanent.AddDigivolutionCardsBottom(...)` to
+    /// tuck the top card under the target.
+    ///
+    /// ## Index-stability strategy
+    ///
+    /// Removing `tamer` from `battle_area` shifts every higher-indexed
+    /// permanent down by one. To keep the `digimon` handle valid we
+    /// resolve `digimon`'s slot AFTER the removal (adjusting if it was
+    /// past `tamer.index`). Both must share the same controller (DCGO
+    /// `IsPermanentExistsOnOwnerBattleArea`); we assert that, since the
+    /// MindLink filter already enforces it.
+    ///
+    /// ## Modifier cleanup
+    ///
+    /// `Game.modifiers.clear_permanent(tamer)` and
+    /// `expire_player_on_permanent_leave(tamer)` are invoked before the
+    /// removal, mirroring `Game::return_to_deck`'s and the deletion
+    /// finalize's cleanup pattern. Player-scoped modifiers sourced from
+    /// the Tamer (e.g., printed memory-gain effects) expire here.
+    ///
+    /// ## Source-stack handling
+    ///
+    /// Sources below the top of the Tamer's stack are routed to trash
+    /// (mirroring DCGO `DiscardEvoRoots` — sources can't ride the move).
+    /// Each such trash fires `OnDigivolutionCardTrashed` per player and
+    /// drains the queue, mirroring `Game::return_to_deck`'s leave-field
+    /// path. Linked cards on the Tamer (Tamers can host Option cards via
+    /// `<Linked>`) are likewise trashed; if any were present, a single
+    /// `OnLinkedCardTrashed` is fired per player and drained, mirroring
+    /// `Game::finalize_permanent_deletion`'s linked-cascade pattern.
+    ///
+    /// Used by: `<Mind Link>` keyword auto-install (Phase F Task 5).
+    pub fn attach_tamer_to_digimon(
+        &mut self,
+        tamer: PermanentHandle,
+        digimon: PermanentHandle,
+    ) {
+        // Validate: shared controller (MindLink targets own permanents).
+        // Promoted to `assert_eq!` so the precondition is enforced in
+        // release builds too — this is a public primitive, and a release
+        // caller violating it would silently misroute trash and target
+        // lookup rather than panicking.
+        assert_eq!(
+            tamer.player, digimon.player,
+            "attach_tamer_to_digimon: tamer and target must share a controller"
+        );
+        let controller = tamer.player;
+
+        // Bounds check the tamer slot.
+        let tamer_idx = tamer.index as usize;
+        if tamer_idx >= self.game.player(controller).battle_area.len() {
+            return;
+        }
+
+        // Cleanup tamer-scoped modifiers BEFORE removal (modifier registry
+        // is keyed on PermanentHandle, which becomes invalid after the
+        // index shift caused by `Vec::remove`).
+        self.game.modifiers.clear_permanent(tamer);
+        self.game
+            .modifiers
+            .expire_player_on_permanent_leave(tamer);
+
+        // Remove the Tamer permanent from battle area. This shifts indices
+        // for all higher-indexed permanents on the same player down by 1.
+        let mut tamer_perm = self
+            .game
+            .player_mut(controller)
+            .battle_area
+            .remove(tamer_idx);
+
+        // Trash any sources below the top (DCGO DiscardEvoRoots). The top
+        // is the card that rides under the target.
+        let Some(top) = tamer_perm.card_sources.pop() else {
+            return;
+        };
+        // Below-top sources go to trash. Linked Option cards (Tamers can
+        // host them via `<Linked>`) likewise go to trash — they cannot
+        // ride the host into another permanent's digivolution stack.
+        //
+        // Mirror `Game::return_to_deck` (game_actions.rs:1497-1506): fire
+        // `OnDigivolutionCardTrashed` per source, per player, draining
+        // between each so observers see them one at a time.
+        for source in tamer_perm.card_sources.drain(..) {
+            self.game.player_mut(controller).trash.push(source);
+            for pid in 0..self.game.players.len() {
+                self.game.enqueue_triggered(
+                    crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.game.drain_effect_queue();
+        }
+        // Mirror `Game::finalize_permanent_deletion` (combat.rs:2429-2437):
+        // route all linked cards to trash, then fire a single
+        // `OnLinkedCardTrashed` per player if any were present.
+        let had_linked = !tamer_perm.linked_cards.is_empty();
+        for linked in tamer_perm.linked_cards.drain(..) {
+            self.game.player_mut(controller).trash.push(linked);
+        }
+        if had_linked {
+            for pid in 0..self.game.players.len() {
+                self.game.enqueue_triggered(
+                    crate::enums::EffectTiming::OnLinkedCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.game.drain_effect_queue();
+        }
+
+        // Resolve the target's NEW slot after the index shift. If the
+        // digimon was at a higher index than the removed tamer, its
+        // slot dropped by 1; otherwise it's unchanged.
+        let digimon_idx = if (digimon.index as usize) > tamer_idx {
+            (digimon.index as usize) - 1
+        } else {
+            digimon.index as usize
+        };
+
+        // Bounds check the (possibly shifted) target slot. If the target
+        // is gone, route the lifted top card to the controller's trash
+        // (safe-fail — same shape as `place_card_under_permanent_bottom`).
+        let target_player = self.game.player_mut(controller);
+        if digimon_idx >= target_player.battle_area.len() {
+            target_player.trash.push(top);
+            return;
+        }
+        // Insert at the bottom of the target's stack. `face_down` stays
+        // `false` (MindLink places face-up).
+        target_player.battle_area[digimon_idx].push_under(top);
+    }
+
     /// Trash the current top Digimon of `perm` and promote the next-highest
     /// digivolution source to become the new visible top. The remainder of the
     /// stack is preserved intact.
@@ -1229,6 +1424,63 @@ impl<'a> EffectContext<'a> {
             );
         }
         self.game.drain_effect_queue();
+    }
+
+    /// `<Training>` (Phase F §F4 / RULES_CONTEXT 16-40 / DCGO `Training.cs:30`)
+    /// helper: pop the controller's deck top and append it at the BOTTOM of
+    /// `perm`'s digivolution stack (`card_sources[0]`), marked face-down.
+    ///
+    /// Empty-deck case: silent no-op. The Rust port chooses safer behavior
+    /// than DCGO's `LibraryCards[0]` raw indexing — DCGO never reaches the
+    /// indexing line in practice because the `SetUpActivateClass` framework
+    /// only calls in once activation is committed; the Rust version accepts
+    /// the activation, pays the suspend cost in the calling effect, and
+    /// silently no-ops the card move when there's nothing to draw. Mirrors
+    /// the documented "no-op on empty source" pattern in `Player::draw`.
+    ///
+    /// `perm` may be either a battle-area or breeding-area permanent of
+    /// the controller; this helper does not enforce zone — the caller's
+    /// activation gate (carrier-not-suspended) handles eligibility. The
+    /// breeding-area branch is a separate `as_mut()` lookup since
+    /// `breeding_area: Option<Permanent>` is not in `battle_area`.
+    ///
+    /// The new source carries `face_down=true` (mirrors DCGO
+    /// `isFacedown: true`); face-down sources are filtered out of the
+    /// `<Mind Link>` "no Tamer source" gate (DCGO `MindLink.cs:25`
+    /// `!cardSource.IsFlipped`).
+    ///
+    /// Used by: `<Training>` keyword auto-install (Phase F Task 6).
+    pub fn training_place_deck_top_under_self_face_down(
+        &mut self,
+        perm: PermanentHandle,
+    ) {
+        // Pop the controller's deck top. Empty-deck case is a silent no-op.
+        let owner = perm.player;
+        let mut card = match self.game.player_mut(owner).deck.pop() {
+            Some(c) => c,
+            None => return,
+        };
+        // Mark face-down — DCGO `AddDigivolutionCardsBottom(..., isFacedown: true)`.
+        card.face_down = true;
+
+        // Locate the carrier in battle area; if it's not there, look in
+        // breeding area. (Breeding-area permanents never co-exist with a
+        // same-handle battle-area slot — `move_from_breeding` takes the
+        // Option, so the disjoint check holds.)
+        let player = self.game.player_mut(owner);
+        if let Some(p) = player.battle_area.get_mut(perm.index as usize) {
+            // Insert at bottom of stack (index 0).
+            p.card_sources.insert(0, card);
+            return;
+        }
+        if let Some(ref mut breeding) = player.breeding_area {
+            breeding.card_sources.insert(0, card);
+            return;
+        }
+        // Carrier no longer exists in either zone (defensive — the calling
+        // effect's `condition` gates on `source_permanent()`, which already
+        // requires the carrier to be live). Drop the card on the floor
+        // rather than misroute; in practice unreachable.
     }
 
     /// Trash a specific digivolution source from a permanent.

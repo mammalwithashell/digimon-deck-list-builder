@@ -1042,6 +1042,20 @@ impl Game {
     ///
     /// Mirrors Python's `_execute_field_main_effect`.
     pub fn activate_field_main(&mut self, player_id: PlayerId, field_index: usize) -> bool {
+        // Phase F Task 6 — breeding-area Training dispatch.
+        //
+        // `field_index == BREEDING_TARGET (=14)` routes to the breeding-area
+        // path. The mask only emits this bit for `<Training>`-bearing
+        // breeding-area carriers (RULES_CONTEXT 16-40 — only Training
+        // activates from breeding); the dispatcher here independently
+        // re-checks the gate (printed Training keyword on top + carrier not
+        // suspended) and runs only the `<Training>` effect (filtered by
+        // `effect.name == "<Training>"`) so a stale or hand-rolled
+        // `MainOnField` on the same card cannot leak through.
+        if field_index == crate::action::space::BREEDING_TARGET as usize {
+            return self.activate_breeding_main_training(player_id);
+        }
+
         // Snapshot per-source identity without holding the battle_area borrow
         // across the effect closure invocations (which need `&mut self`).
         let (perm_handle, sources) = {
@@ -1118,6 +1132,94 @@ impl Game {
                 }
                 return true;
             }
+        }
+        false
+    }
+
+    /// Phase F Task 6 — breeding-area Training dispatcher.
+    ///
+    /// Activates the `<Training>` `[Main]` effect on the controller's
+    /// breeding-area permanent. Restricted to the `<Training>` effect by
+    /// `effect.name == "<Training>"` so this dispatcher cannot leak any
+    /// other `MainOnField` effect from breeding (RULES_CONTEXT 16-40 —
+    /// only Training activates from breeding).
+    ///
+    /// Independent gate re-check (matches the mask emitter):
+    ///   1. Breeding-area permanent exists.
+    ///   2. Top card carries the printed `Keyword::Training`.
+    ///   3. Carrier is unsuspended.
+    ///
+    /// On success, the auto-installed `<Training>` body's `process` runs
+    /// with `source_permanent = Some(PermanentHandle { player, index: 14 })`.
+    /// The keyword's `process` mutates breeding-area state directly
+    /// (suspends the carrier; calls
+    /// `EffectContext::training_place_deck_top_under_self_face_down` which
+    /// inserts the new source into the breeding permanent when the carrier
+    /// is not in `battle_area`).
+    fn activate_breeding_main_training(&mut self, player_id: PlayerId) -> bool {
+        use crate::action::space::BREEDING_TARGET;
+        use crate::effect_context::EffectContext;
+        use crate::enums::{EffectTiming, Keyword};
+        use crate::permanent::PermanentHandle;
+
+        // Gate 1+2+3: breeding exists, top has Training, not suspended.
+        let (top_card_id, top_handle) = {
+            let Some(player) = self.players.get(player_id as usize) else {
+                return false;
+            };
+            let Some(breeding) = player.breeding_area.as_ref() else {
+                return false;
+            };
+            if breeding.is_suspended {
+                return false;
+            }
+            let top = breeding.top_card();
+            let top_data = &self.card_data[top.data_index];
+            if !top_data.keywords.contains(&Keyword::Training) {
+                return false;
+            }
+            (top.card_id(&self.card_data).to_string(), top.handle())
+        };
+
+        // Look up effects for the top card; we want only `<Training>`.
+        let effects = match self.effects_for_card(&top_card_id, top_handle) {
+            Some(e) => e,
+            None => return false,
+        };
+
+        let perm_handle = PermanentHandle {
+            player: player_id,
+            index: BREEDING_TARGET as u8,
+        };
+
+        for effect in &effects {
+            if effect.timing != EffectTiming::MainOnField {
+                continue;
+            }
+            if effect.inherited {
+                continue;
+            }
+            // Restrict to the `<Training>` keyword auto-effect — never leak
+            // a hand-rolled or unrelated MainOnField that happens to share
+            // the same card.
+            if effect.name != "<Training>" {
+                continue;
+            }
+            // Note: we deliberately skip `effect.condition` evaluation here
+            // — it would short-circuit on `source_permanent()` returning
+            // None for the breeding handle. The `is_suspended` gate above
+            // is the only thing the condition checks, and we've already
+            // re-verified it.
+            if let Some(process) = &effect.process {
+                let mut ctx = EffectContext::new(
+                    self,
+                    top_handle,
+                    Some(perm_handle),
+                    player_id,
+                );
+                process(&mut ctx);
+            }
+            return true;
         }
         false
     }

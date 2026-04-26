@@ -2141,14 +2141,50 @@ impl Game {
         let a_dp = self.effective_dp(attacker).unwrap_or(0);
         let d_dp = self.effective_dp(defender).unwrap_or(0);
 
-        let outcome = if a_dp > d_dp {
+        // Phase F §F2 — Iceclad (RULES_CONTEXT 16-34): when EITHER
+        // combatant has Iceclad in a Digimon-vs-Digimon battle, compare
+        // digivolution-card stack lengths (`card_sources.len()`) instead
+        // of DP. The security-battle exception is naturally honored:
+        // direct player attacks route through `resolve_player_security_loop`
+        // which compares DP at `SecurityPhase::BattleResolved` and never
+        // calls back into `resolve_battle`. Tie path is unchanged
+        // (mutual destruction).
+        //
+        // DCGO `Iceclad.cs` registers an `IcecladStaticEffect` consulted by
+        // the combat resolver — we collapse that registration into a
+        // direct `has_keyword` query at the resolver site since the swap
+        // is binary and the registry indirection adds nothing.
+        let iceclad_active = self.has_keyword(attacker, crate::enums::Keyword::Iceclad)
+            || self.has_keyword(defender, crate::enums::Keyword::Iceclad);
+
+        let (a_value, d_value) = if iceclad_active {
+            // `card_sources.len()` includes the top card itself. DCGO's
+            // `DigivolutionCards` excludes the top, but for comparison
+            // the offset cancels (both sides include the +1 top), so
+            // length is the correct compare metric.
+            let a_count = self.players[attacker.player as usize]
+                .battle_area
+                .get(attacker.index as usize)
+                .map(|p| p.card_sources.len() as i32)
+                .unwrap_or(0);
+            let d_count = self.players[defender.player as usize]
+                .battle_area
+                .get(defender.index as usize)
+                .map(|p| p.card_sources.len() as i32)
+                .unwrap_or(0);
+            (a_count, d_count)
+        } else {
+            (a_dp, d_dp)
+        };
+
+        let outcome = if a_value > d_value {
             // Attacker wins — defender is deleted.
             self.delete_permanent_with_cause(
                 defender,
                 crate::replacement::ReplacementCause::Battle,
             );
             AttackResult::AttackerWins
-        } else if a_dp < d_dp {
+        } else if a_value < d_value {
             // Defender wins — attacker is deleted.
             self.delete_permanent_with_cause(
                 attacker,

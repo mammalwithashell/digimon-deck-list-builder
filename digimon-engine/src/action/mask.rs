@@ -369,6 +369,52 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 }
             }
 
+            // Phase F Task 6 — Training-only breeding-area `[Main]` emitter.
+            //
+            // Surfaced at field index `BREEDING_TARGET (=14)`, sub-slot
+            // `FIELD_EFFECT_SLOT_FOR_MAIN (=2)` → action_id 1142. This bit
+            // is reserved for the breeding-area Training activation; no
+            // other `MainOnField` effect surfaces from breeding (RULES_CONTEXT
+            // 16-40 specifies that ONLY `<Training>` activates from breeding
+            // — surfacing all `MainOnField` effects from breeding would
+            // inadvertently expose Save/MaterialSave/MindLink from breeding
+            // too, which is wrong).
+            //
+            // Gate: same `CannotActivateMainEffects` short-circuit as the
+            // battle-area emitter, then check that the breeding-area
+            // permanent's top card carries `Keyword::Training` AND its
+            // `MainOnField` `<Training>` auto-effect's condition passes
+            // (`!perm.is_suspended`). Inherited Training (a Training source
+            // under a non-Training top) is intentionally not surfaced —
+            // matches DCGO `Training.cs:21` `card.PermanentOfThisCard()`
+            // which scopes to the top card's effect.
+            if !main_effects_blocked {
+                if let Some(ref breeding) = me.breeding_area {
+                    let top = breeding.top_card();
+                    // Read printed keyword directly from card_data — note that
+                    // `Game::has_keyword` would short-circuit on a `battle_area`
+                    // lookup and never reach the breeding-area permanent.
+                    let top_data = &game.card_data[top.data_index];
+                    if top_data.keywords.contains(&Keyword::Training)
+                        && !breeding.is_suspended
+                    {
+                        // Gate the bit ONLY on the printed keyword + suspension
+                        // — we deliberately don't run the `<Training>` effect's
+                        // own `condition` closure here because
+                        // `EffectReadContext::source_permanent()` resolves
+                        // via `battle_area`, which would silently return None
+                        // for a breeding-area carrier and short-circuit the
+                        // gate to false. The on-field condition
+                        // (`!perm.is_suspended`) is faithfully represented by
+                        // the inline check above.
+                        let bit = FIELD_EFFECT_START
+                            + BREEDING_TARGET * EFFECTS_PER_PERMANENT
+                            + FIELD_EFFECT_SLOT_FOR_MAIN;
+                        mask[bit as usize] = 1.0;
+                    }
+                }
+            }
+
             // Trash [Main] (bits 1150-1194). One bit per trash slot,
             // first-match-wins, mirroring `action_mask.py:216-225`.
             let trash_limit = me.trash.len().min(TRASH_MAIN_LIMIT);
