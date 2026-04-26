@@ -36,12 +36,14 @@ use serde_json::Value;
 
 use pyo3::wrap_pyfunction;
 
+use ::digimon_engine::action::space::ACTION_SPACE_SIZE;
 use ::digimon_engine::card_data::CardData;
 use ::digimon_engine::card_registry::{CardRegistry as RustCardRegistry, REGISTRY_CAPACITY};
 use ::digimon_engine::deck_tools;
 use ::digimon_engine::enums::{CardKind as RustCardKind, GamePhase as RustGamePhase};
 use ::digimon_engine::events::GameEvent;
 use ::digimon_engine::rules::CardRestriction;
+use ::digimon_engine::tensor::TENSOR_SIZE;
 use ::digimon_engine::HeadlessRunner;
 
 /// Embedding dimension for the warm-start card embedding table. Mirrors
@@ -776,5 +778,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add("EMBEDDING_DIM", EMBEDDING_DIM)?;
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
+    m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;
+    m.add("TENSOR_SIZE", TENSOR_SIZE)?;
     Ok(())
 }

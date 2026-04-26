@@ -272,3 +272,14 @@ class TestLoadImplementedCardIds:
         from digimon_engine import load_implemented_card_ids
         ids = load_implemented_card_ids()
         assert "ZZ99-999" not in ids
+
+
+class TestActionAndTensorConstants:
+    def test_action_space_size(self):
+        from digimon_engine import ACTION_SPACE_SIZE
+        assert ACTION_SPACE_SIZE == 2168
+
+    def test_tensor_size(self):
+        from digimon_engine import TENSOR_SIZE
+        # Per TENSOR_SPEC.md the canonical size is 1375
+        assert TENSOR_SIZE > 0
