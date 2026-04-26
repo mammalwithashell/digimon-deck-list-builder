@@ -1,0 +1,732 @@
+.launcher-screen {
+  --bg-0: #07080b;
+  --bg-1: #0c0e13;
+  --bg-2: #11141b;
+  --bg-3: #181c25;
+  --line: #1f2330;
+  --line-2: #2a3040;
+  --line-3: #353c50;
+  --ink-0: #f1f3f7;
+  --ink-1: #c4c9d4;
+  --ink-2: #858c9d;
+  --ink-3: #555c6d;
+  --player: #ff7a18;
+  --player-2: #ffb05a;
+  --player-glow: rgba(255, 122, 24, 0.55);
+  --good: #4cd497;
+  --warn: #ffb05a;
+  --display: 'Bebas Neue', Impact, sans-serif;
+  --body: 'Geist', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.launcher-screen,
+.launcher-screen * {
+  box-sizing: border-box;
+}
+
+.launcher-screen a {
+  color: inherit;
+}
+
+.launcher-frame {
+  width: 1100px;
+  max-width: 100%;
+  height: 720px;
+  background: var(--bg-0);
+  border: 1px solid var(--line-2);
+  display: grid;
+  grid-template-rows: 32px 1fr;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.launcher-titlebar {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.launcher-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.launcher-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.launcher-dot-red {
+  background: #ff5f57;
+}
+
+.launcher-dot-yellow {
+  background: #febc2e;
+}
+
+.launcher-dot-green {
+  background: #28c840;
+}
+
+.launcher-window-title {
+  flex: 1;
+  text-align: center;
+}
+
+.launcher-titlebar-right {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.launcher-pill-live,
+.launcher-pill-offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--line-2);
+}
+
+.launcher-pill-live {
+  color: var(--good);
+}
+
+.launcher-pill-offline {
+  color: var(--warn);
+}
+
+.launcher-pill-live::before,
+.launcher-pill-offline::before,
+.launcher-ok::before,
+.launcher-warn::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.launcher-body-area {
+  position: relative;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  overflow: hidden;
+}
+
+.launcher-body-area::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 25% 20%, rgba(58, 166, 255, 0.05), transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(255, 122, 24, 0.06), transparent 55%);
+  pointer-events: none;
+}
+
+.launcher-body-area::after {
+  content: '';
+  position: absolute;
+  left: 220px;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 122, 24, 0.3) 30%, rgba(255, 255, 255, 0.4) 50%, rgba(58, 166, 255, 0.3) 70%, transparent);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+.launcher-side {
+  background: var(--bg-1);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 2;
+}
+
+.launcher-brand {
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-decoration: none;
+}
+
+.launcher-brand-mark {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: #150900;
+  background: var(--player);
+  border: 1px solid var(--player);
+  box-shadow: 0 0 16px var(--player-glow);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.launcher-brand-name {
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--ink-0);
+  line-height: 1.05;
+}
+
+.launcher-brand-name small {
+  display: block;
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--ink-3);
+  letter-spacing: 0.16em;
+  margin-top: 2px;
+}
+
+.launcher-side-section {
+  padding: 16px 12px 6px;
+}
+
+.launcher-side-section h5 {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-3);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0 6px 8px;
+}
+
+.launcher-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  text-decoration: none;
+  margin-bottom: 2px;
+}
+
+.launcher-nav-item:hover {
+  color: var(--ink-0);
+  background: var(--bg-2);
+}
+
+.launcher-nav-item.active {
+  color: var(--ink-0);
+  background: var(--bg-2);
+  border-color: var(--line-2);
+  border-left: 2px solid var(--player);
+  padding-left: 9px;
+}
+
+.launcher-nav-item span {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--ink-3);
+}
+
+.launcher-side-foot {
+  margin-top: auto;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.launcher-side-foot div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.launcher-side-foot b {
+  color: var(--ink-1);
+  font-weight: 500;
+}
+
+.launcher-main {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+}
+
+.launcher-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.launcher-topbar span {
+  padding: 2px 6px;
+  border: 1px solid var(--line-2);
+  color: var(--player);
+}
+
+.launcher-user {
+  color: var(--ink-2);
+}
+
+.launcher-content {
+  padding: 36px 48px;
+  overflow-y: auto;
+  display: grid;
+  align-items: start;
+}
+
+.launcher-welcome {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.launcher-title {
+  font-family: var(--display);
+  font-size: 64px;
+  line-height: 0.88;
+  margin: 12px 0 6px;
+  color: var(--ink-0);
+  font-weight: 400;
+}
+
+.launcher-title em {
+  font-style: normal;
+  color: var(--player);
+  text-shadow: 0 0 24px var(--player-glow);
+}
+
+.launcher-tagline {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding-left: 12px;
+  border-left: 2px solid var(--player);
+  margin: 18px 0 28px;
+}
+
+.launcher-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.launcher-action {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px 18px;
+  align-items: center;
+  padding: 16px 20px 16px 18px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-1);
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  transition: all 0.15s;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.launcher-action:hover {
+  background: var(--bg-2);
+  border-color: var(--line-3);
+  transform: translateX(2px);
+}
+
+.launcher-action.primary {
+  background: linear-gradient(180deg, rgba(255, 122, 24, 0.1), rgba(255, 122, 24, 0.02));
+  border-color: var(--player);
+  box-shadow: 0 0 0 1px var(--player), 0 0 24px rgba(255, 122, 24, 0.18);
+}
+
+.launcher-action-label {
+  grid-column: 1 / -1;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-3);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.launcher-action.primary .launcher-action-label {
+  color: var(--player-2);
+}
+
+.launcher-action-name {
+  font-family: var(--display);
+  font-size: 28px;
+  color: var(--ink-0);
+  margin-top: -6px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.launcher-action-desc {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: -10px;
+}
+
+.launcher-action-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  border: 1px solid var(--line-2);
+  padding: 2px 6px;
+}
+
+.launcher-action.primary .launcher-action-meta {
+  color: var(--player-2);
+  border-color: var(--player);
+}
+
+.launcher-quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.launcher-quick a {
+  text-decoration: none;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--bg-1);
+  color: var(--ink-1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.launcher-quick a:hover {
+  background: var(--bg-2);
+  border-color: var(--line-2);
+  color: var(--ink-0);
+}
+
+.launcher-quick span {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.launcher-quick b {
+  font-family: var(--display);
+  font-size: 16px;
+  color: var(--ink-0);
+  font-weight: 400;
+}
+
+.launcher-deck-panel {
+  border: 1px solid var(--line-2);
+  background: var(--bg-1);
+  position: relative;
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+.launcher-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.launcher-panel-head h2 {
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--ink-0);
+  margin: 0;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.launcher-panel-head span {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--player);
+  letter-spacing: 0.12em;
+  text-align: right;
+}
+
+.launcher-deck-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.launcher-deck-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 12px 18px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.15s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.launcher-deck-row:hover {
+  background: var(--bg-2);
+}
+
+.launcher-deck-color {
+  width: 36px;
+  height: 50px;
+  position: relative;
+  border: 1px solid #20355a;
+  background: linear-gradient(160deg, #14243a, #060d1d);
+}
+
+.launcher-deck-color::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 5px);
+}
+
+.launcher-deck-color span {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  z-index: 1;
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--ink-0);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1px 3px;
+}
+
+.launcher-deck-info {
+  min-width: 0;
+}
+
+.launcher-deck-name {
+  font-family: var(--display);
+  font-size: 16px;
+  color: var(--ink-0);
+  font-weight: 400;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.launcher-deck-meta {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-3);
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.launcher-legal {
+  color: var(--good);
+}
+
+.launcher-draft {
+  color: var(--player-2);
+}
+
+.launcher-deck-stat {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  text-align: right;
+  letter-spacing: 0.06em;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.launcher-empty {
+  padding: 24px 18px;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.launcher-panel-foot {
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+}
+
+.launcher-btn {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 9px 12px;
+  background: transparent;
+  color: var(--ink-1);
+  border: 1px solid var(--line-2);
+  text-decoration: none;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+
+.launcher-btn:hover {
+  background: var(--bg-2);
+  border-color: var(--line-3);
+  color: var(--ink-0);
+}
+
+.launcher-btn.accent {
+  border-color: var(--player);
+  color: var(--player-2);
+}
+
+.launcher-news {
+  border: 1px solid var(--line);
+  background: var(--bg-1);
+  padding-bottom: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+  line-height: 1.55;
+}
+
+.launcher-news ul {
+  margin: 12px 18px;
+  padding-left: 18px;
+}
+
+.launcher-news li {
+  margin-bottom: 6px;
+}
+
+.launcher-news a {
+  color: var(--player-2);
+  display: inline-block;
+  margin: 0 18px;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--player);
+}
+
+.launcher-statusbar {
+  border-top: 1px solid var(--line);
+  padding: 8px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--bg-1);
+}
+
+.launcher-ok,
+.launcher-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.launcher-ok {
+  color: var(--good);
+}
+
+.launcher-warn {
+  color: var(--warn);
+}
+
+.launcher-screen {
+  min-height: 100vh;
+  background: #000;
+  color: var(--ink-1);
+  font-family: var(--body);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.launcher-content {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  gap: 24px;
+}
+
+.launcher-right-column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (max-width: 980px) {
+  .launcher-screen {
+    padding: 0;
+  }
+
+  .launcher-frame {
+    width: 100%;
+    min-height: 100vh;
+    height: auto;
+    border-radius: 0;
+  }
+
+  .launcher-body-area {
+    grid-template-columns: 180px 1fr;
+  }
+
+  .launcher-content {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .launcher-title {
+    font-size: 64px;
+  }
+}
