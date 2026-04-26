@@ -30,22 +30,26 @@
 //!   controller (excludes the target itself).
 //! - `DigivolutionColorCount` — distinct colors across all `CardSource`s
 //!   in the target's stack.
-//! - `CardCountInZone` — currently returns 0; the IR has no zone payload
-//!   yet (Task 1 reviewer flag). Phase 3 will widen the IR to carry the
-//!   zone discriminator.
+//! - `CardCountInZoneScoped` — number of cards in the selected zone for
+//!   the selected player scope. The legacy payload-less variant returns
+//!   0 for compatibility with older malformed compiled packs.
 //!
 //! ## Aggregate selector semantics
 //!
-//! - `LowestDp` / `HighestDp` — min / max effective DP across the
-//!   controller's battle area.
+//! - `LowestDp` / `HighestDp` — min / max effective DP across the selected
+//!   players' battle areas.
 //! - `LowestLevel` / `HighestLevel` — min / max top-card level across the
-//!   controller's battle area (permanents whose top card has no level —
-//!   e.g. a Tamer or Option permanent — are skipped).
+//!   selected players' battle areas (permanents whose top card has no level
+//!   — e.g. a Tamer or Option permanent — are skipped). The legacy
+//!   payload-less aggregate variant scans the controller for compatibility.
 
-use digimon_dsl::compiled::{CompiledAggregateSelector, CompiledFormula, CompiledPerSelector};
+use digimon_dsl::compiled::{
+    CompiledAggregateSelector, CompiledFormula, CompiledPerSelector, CompiledPlayerRef,
+    CompiledZone,
+};
 
 use crate::effect_context::EffectContext;
-use crate::enums::CardColor;
+use crate::enums::{CardColor, PlayerId};
 use crate::permanent::PermanentHandle;
 
 // Compile-time guard for the `DigivolutionColorCount` u8 bitmask in
@@ -63,13 +67,9 @@ const _: () = assert!(
 /// using `target` as the resolution point for per-selectors that
 /// reference a specific permanent (stack/material/color counts).
 ///
-/// Aggregate selectors ignore `target` and operate on the *controller's*
-/// (`ctx.player`) battle area.
-pub fn evaluate(
-    f: &CompiledFormula,
-    ctx: &EffectContext<'_>,
-    target: PermanentHandle,
-) -> i32 {
+/// Scoped aggregate selectors ignore `target` and operate on the selected
+/// players' battle areas.
+pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentHandle) -> i32 {
     match f {
         CompiledFormula::Literal(n) => *n,
         CompiledFormula::BasePerDelta { base, per, delta } => {
@@ -116,7 +116,10 @@ pub fn evaluate(
                 .min()
                 .unwrap_or(0)
         }
-        CompiledFormula::Aggregate(sel) => evaluate_aggregate(*sel, ctx),
+        CompiledFormula::Aggregate(sel) => evaluate_aggregate(*sel, CompiledPlayerRef::You, ctx),
+        CompiledFormula::AggregateScoped { selector, scope } => {
+            evaluate_aggregate(*selector, *scope, ctx)
+        }
         CompiledFormula::RawRust(name) => {
             // Phase 3 will wire raw_rust formula dispatch through
             // `digimon_dsl::raw_rust_registry::RawRustRegistry`. For
@@ -135,23 +138,18 @@ pub fn evaluate(
     }
 }
 
-fn evaluate_per(
-    sel: CompiledPerSelector,
-    ctx: &EffectContext<'_>,
-    target: PermanentHandle,
-) -> i32 {
-    let perm = match ctx
-        .game
-        .player(target.player)
-        .battle_area
-        .get(target.index as usize)
-    {
-        Some(p) => p,
-        None => return 0,
-    };
+fn evaluate_per(sel: CompiledPerSelector, ctx: &EffectContext<'_>, target: PermanentHandle) -> i32 {
     match sel {
-        CompiledPerSelector::StackSize => perm.card_sources.len() as i32,
+        CompiledPerSelector::StackSize => {
+            let Some(perm) = target_permanent(ctx, target) else {
+                return 0;
+            };
+            perm.card_sources.len() as i32
+        }
         CompiledPerSelector::MaterialCount => {
+            let Some(perm) = target_permanent(ctx, target) else {
+                return 0;
+            };
             // Materials are the digivolution sources beneath the top card.
             // saturating_sub guards the (impossible) zero-source permanent.
             perm.card_sources.len().saturating_sub(1) as i32
@@ -165,6 +163,9 @@ fn evaluate_per(
                 .saturating_sub(1) as i32
         }
         CompiledPerSelector::DigivolutionColorCount => {
+            let Some(perm) = target_permanent(ctx, target) else {
+                return 0;
+            };
             // Distinct colors across every CardSource in the stack.
             let data = &ctx.game.card_data;
             let mut seen: u8 = 0;
@@ -176,64 +177,105 @@ fn evaluate_per(
             seen.count_ones() as i32
         }
         CompiledPerSelector::CardCountInZone => {
-            // The current IR has no zone payload on this selector
-            // (Task 1 reviewer flag). Phase 3 widens the IR; for now,
-            // silent no-op rather than panic on a malformed pack.
+            // Legacy compiled packs had no zone/player payload. Keep the
+            // defensive no-op so old malformed packs do not crash.
             0
         }
+        CompiledPerSelector::CardCountInZoneScoped { zone, of } => players_for_ref(of, ctx)
+            .into_iter()
+            .map(|player| count_zone(zone, player, ctx))
+            .sum(),
     }
 }
 
-fn evaluate_aggregate(sel: CompiledAggregateSelector, ctx: &EffectContext<'_>) -> i32 {
-    let perms = &ctx.game.player(ctx.player).battle_area;
-    if perms.is_empty() {
-        return 0;
+fn target_permanent<'a>(
+    ctx: &'a EffectContext<'_>,
+    target: PermanentHandle,
+) -> Option<&'a crate::permanent::Permanent> {
+    ctx.game
+        .player(target.player)
+        .battle_area
+        .get(target.index as usize)
+}
+
+fn players_for_ref(of: CompiledPlayerRef, ctx: &EffectContext<'_>) -> Vec<PlayerId> {
+    match of {
+        CompiledPlayerRef::You => vec![ctx.player],
+        CompiledPlayerRef::Opponent => vec![ctx.opponent_id()],
+        CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
+        CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
     }
+}
+
+fn count_zone(zone: CompiledZone, player: PlayerId, ctx: &EffectContext<'_>) -> i32 {
+    let player_state = ctx.game.player(player);
+    let count = match zone {
+        CompiledZone::Hand => player_state.hand.len(),
+        CompiledZone::Deck => player_state.deck.len(),
+        CompiledZone::Trash => player_state.trash.len(),
+        CompiledZone::BattleArea => player_state.battle_area.len(),
+        CompiledZone::Security => player_state.security.len(),
+        CompiledZone::Breeding => usize::from(player_state.breeding_area.is_some()),
+        CompiledZone::DigiEggDeck => player_state.digitama_deck.len(),
+        CompiledZone::Reveal => ctx
+            .game
+            .revealed_cards
+            .iter()
+            .filter(|card| card.owner == player)
+            .count(),
+        CompiledZone::Material => {
+            let battle_materials = player_state
+                .battle_area
+                .iter()
+                .map(|perm| perm.card_sources.len().saturating_sub(1))
+                .sum::<usize>();
+            let breeding_materials = player_state
+                .breeding_area
+                .as_ref()
+                .map(|perm| perm.card_sources.len().saturating_sub(1))
+                .unwrap_or(0);
+            battle_materials + breeding_materials
+        }
+    };
+    count as i32
+}
+
+fn evaluate_aggregate(
+    sel: CompiledAggregateSelector,
+    scope: CompiledPlayerRef,
+    ctx: &EffectContext<'_>,
+) -> i32 {
     use CompiledAggregateSelector as A;
+    let values = players_for_ref(scope, ctx).into_iter().flat_map(|player| {
+        let len = ctx.game.player(player).battle_area.len();
+        (0..len).filter_map(move |index| aggregate_value(sel, player, index, ctx))
+    });
+
     match sel {
-        A::LowestDp => {
-            let mut acc: Option<i32> = None;
-            for (i, _) in perms.iter().enumerate() {
-                let h = PermanentHandle {
-                    player: ctx.player,
-                    index: i as u8,
-                };
-                if let Some(dp) = ctx.game.effective_dp(h) {
-                    acc = Some(match acc {
-                        Some(x) if x < dp => x,
-                        _ => dp,
-                    });
-                }
-            }
-            acc.unwrap_or(0)
-        }
-        A::HighestDp => {
-            let mut acc: Option<i32> = None;
-            for (i, _) in perms.iter().enumerate() {
-                let h = PermanentHandle {
-                    player: ctx.player,
-                    index: i as u8,
-                };
-                if let Some(dp) = ctx.game.effective_dp(h) {
-                    acc = Some(match acc {
-                        Some(x) if x > dp => x,
-                        _ => dp,
-                    });
-                }
-            }
-            acc.unwrap_or(0)
-        }
-        A::LowestLevel => perms
-            .iter()
-            .filter_map(|p| p.level(&ctx.game.card_data))
-            .min()
-            .map(|l| l as i32)
-            .unwrap_or(0),
-        A::HighestLevel => perms
-            .iter()
-            .filter_map(|p| p.level(&ctx.game.card_data))
-            .max()
-            .map(|l| l as i32)
-            .unwrap_or(0),
+        A::LowestDp | A::LowestLevel => values.min().unwrap_or(0),
+        A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
+    }
+}
+
+fn aggregate_value(
+    sel: CompiledAggregateSelector,
+    player: PlayerId,
+    index: usize,
+    ctx: &EffectContext<'_>,
+) -> Option<i32> {
+    use CompiledAggregateSelector as A;
+    let handle = PermanentHandle {
+        player,
+        index: index as u8,
+    };
+    match sel {
+        A::LowestDp | A::HighestDp => ctx.game.effective_dp(handle),
+        A::LowestLevel | A::HighestLevel => ctx
+            .game
+            .player(player)
+            .battle_area
+            .get(index)?
+            .level(&ctx.game.card_data)
+            .map(i32::from),
     }
 }
