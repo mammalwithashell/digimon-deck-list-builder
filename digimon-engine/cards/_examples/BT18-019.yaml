@@ -2,7 +2,7 @@ card: BT18-019
 name: Millenniummon
 kind: digimon
 level: 7
-color: [red, purple]
+color: [red, black]
 cost: 14
 dp: 14000
 traits: [Composite]
