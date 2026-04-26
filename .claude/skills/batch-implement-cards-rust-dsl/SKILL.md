@@ -706,3 +706,90 @@ For AUDIT-mode cards:
 ````
 
 ---
+
+### 4E. Merge and Wire (orchestrator)
+
+Steps in order:
+
+1. **Copy files out of worker worktrees into the main tree.** For each worker that did not return BLOCKED:
+   ```bash
+   cp <worktree>/code/digimon-engine/cards/<set>/<CARD_ID>.yaml \
+      code/digimon-engine/cards/<set>/<CARD_ID>.yaml
+   cp <worktree>/code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs \
+      code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs
+   ```
+   Reject worker output if it wrote files OUTSIDE the two expected paths. Re-dispatch once; on second drift, escalate.
+
+2. **Apply review fixes** for any `NEEDS-FIX` card. Each directive specifies file:line; apply verbatim.
+
+3. **Reconcile `code/digimon-engine/tests/cards_behavioral/<set>/mod.rs`.** The orchestrator pre-wired `mod <card_id_lower>;` lines in Phase 3a for every planned card in the run. After this batch's workers return:
+   - For any card with verdict BLOCKED that wrote no test file: remove that card's `mod <card_id_lower>;` line and delete the empty `<card_id_lower>.rs` placeholder.
+   - All other cards: leave the existing line in place — the worker filled in the file content.
+
+4. **Reconcile `code/digimon-engine/tests/cards_behavioral/main.rs`.** Same idea: if every card from a given set ended up BLOCKED with no test file written, remove the `mod <set>;` line and delete `<set>/mod.rs` (which is now empty). Otherwise leave it.
+
+5. **Run targeted batch tests:**
+
+   ```bash
+   cargo test --manifest-path code/digimon-engine/Cargo.toml \
+              --test cards_behavioral -- <set>
+   ```
+
+   On failure: dispatch ONE Sonnet "fix" agent with the failing output + the reviewer's directives (if any). Worktree-isolated. Allow it to modify only the same two file paths per card. Re-merge and re-run. If it still fails, escalate to the user with the failing output and exit. Do NOT loop.
+
+6. **Update `qa/qa-reports/validated_cards_dsl.json`.** Append one entry per processed card per the schema below in "validated_cards_dsl.json Schema". Bump `last_updated` to today's date.
+
+7. **Append batch summary to per-archetype QA artifact:**
+   - For archetype runs: `qa/archetype-qa/dsl/<archetype_slug>.md`. Create from the template below in "Per-Archetype QA Artifact Template" on first batch; append batch row to the per-card table on subsequent batches.
+   - For `--pool` runs: `qa/dsl-test-pool-progress.md`. Single accumulating file, last verdict per card wins.
+
+8. **Append gap entries** to the right trackers:
+   - `gap_kind: engine` → `qa/archetype-qa/engine-gaps.md`
+   - `gap_kind: dsl` → `qa/dsl-vocab-gaps.md`
+   - `gap_kind: hybrid` → both, with cross-references in each entry
+
+9. **Print the batch summary table to the user:**
+
+   ```
+   Batch <N> complete (<n>/<total> cards)
+   | Card ID   | Mode      | Verdict             | Review   | Tests | Notes |
+   | <CARD>    | IMPLEMENT | IMPLEMENTED         | APPROVED | 7/7   | <one-line> |
+   | <CARD>    | AUDIT     | AUDITED-OK          | APPROVED | 5/5   | |
+   | <CARD>    | IMPLEMENT | BLOCKED (engine)    | APPROVED | 0/0   | <gap summary> |
+
+   Running totals: IMPLEMENTED=<n> AUDITED-OK=<n> ... BLOCKED=<n>
+   ```
+
+10. **Auto-continue to next batch.** The user can interrupt between batches.
+
+---
+
+## Phase 5: Final Report
+
+After all batches complete:
+
+1. **Whole-archetype summary** — counts by verdict (IMPLEMENTED, PARTIAL, AUDITED-OK, AUDITED-MISSING-TESTS, AUDITED-DRIFT, BLOCKED-engine, BLOCKED-dsl, BLOCKED-hybrid, SKIPPED).
+
+2. **Per-card results table** — `Card ID | Name | Mode | Verdict | Review | Tests | Notes`.
+
+3. **Files created/modified, grouped by set.**
+
+4. **Blocked cards split into two sections:** engine-gap blocked cards (with affected clauses + suggested API) and DSL-vocab-gap blocked cards (with affected clauses + suggested verb + the engine API it lowers to).
+
+5. **Full-suite green check:**
+
+   ```bash
+   cargo test --manifest-path code/digimon-engine/Cargo.toml
+   ```
+
+   Must pass. If not, the skill has left the tree broken — escalate without auto-fixing. The per-batch fix round in 4E.5 is the only fix loop.
+
+6. **Finalize per-archetype QA artifact** from the template below ("Per-Archetype QA Artifact Template"). Path is `qa/archetype-qa/dsl/<archetype_slug>.md` for archetype runs, `qa/dsl-test-pool-progress.md` for `--pool` runs.
+
+---
+
+## Phase 6: Idempotency
+
+Re-running on the same archetype (or `--pool`) is safe: the `validated_cards_dsl.json` lookup in Phase 1c short-circuits cards with `IMPLEMENTED` or `AUDITED-OK` verdicts. Other verdicts (`PARTIAL`, `AUDITED-MISSING-TESTS`, `AUDITED-DRIFT`, `BLOCKED`) are re-attempted on the next run — the user is expected to address the underlying issue (engine gap closed, DSL vocab landed, drift triaged) before re-invocation.
+
+---
