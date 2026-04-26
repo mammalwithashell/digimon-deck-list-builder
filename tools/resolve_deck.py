@@ -30,7 +30,12 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
+from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH, CARDS_JSON as _CARDS_JSON_PATH
+from tools.xros_req_parser import (
+    XrosReqParseResult,
+    parse as _parse_xros_req,
+    render_alt_paths_yaml as _render_alt_paths_yaml,
+)
 from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.enums import CardKind
 
@@ -332,15 +337,6 @@ def resolve_archetype(
     )
 
 
-import json as _json
-
-from tools.xros_req_parser import (
-    XrosReqParseResult,
-    parse as _parse_xros_req,
-    render_alt_paths_yaml as _render_alt_paths_yaml,
-)
-
-_CARDS_JSON_PATH = _PROJECT_ROOT / "data" / "cards.json"
 _CARDS_JSON_CACHE: Optional[dict] = None
 
 
@@ -349,7 +345,7 @@ def _load_cards_json_raw() -> dict:
     global _CARDS_JSON_CACHE
     if _CARDS_JSON_CACHE is None:
         with open(_CARDS_JSON_PATH, "r", encoding="utf-8") as f:
-            _CARDS_JSON_CACHE = _json.load(f)
+            _CARDS_JSON_CACHE = json.load(f)
     return _CARDS_JSON_CACHE
 
 
@@ -369,7 +365,7 @@ def build_card_meta_md(card_id: str) -> tuple[str, XrosReqParseResult]:
     parse_result = _parse_xros_req(xros_req)
     alt_paths_yaml = _render_alt_paths_yaml(parse_result.parsed)
 
-    record_json = _json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False)
+    record_json = json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False)
 
     parts = [
         f"# {card_id} — {name}",
