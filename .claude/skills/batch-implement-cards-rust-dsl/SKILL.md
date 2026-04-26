@@ -532,3 +532,107 @@ Suggested DSL syntax: <YAML shape>
 ````
 
 ---
+
+#### 4C.2 Auditor prompt (AUDIT mode)
+
+AUDIT-mode workers always use `sonnet` (the `--implementer-model` flag does not affect them — auditing is a bounded task).
+
+````
+You are auditing an existing DSL YAML card spec for faithfulness against printed card text and DCGO C# behavioral reference. You may add missing behavioral tests but you must NOT modify the YAML — drift fixes are out of scope for v1 of this skill.
+
+# Your card
+
+{{CARD_METADATA_BLOCK}}
+
+## DCGO C# reference
+Path: {{CSHARP_PATH}}
+```
+{{CSHARP_BODY}}
+```
+
+## Existing YAML
+Path: `code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml`
+```yaml
+{{EXISTING_YAML_BODY}}
+```
+
+## Existing tests (if any)
+Path: `code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs`
+```rust
+{{EXISTING_TEST_BODY_OR_ABSENT}}
+```
+
+# Engine context pack
+
+## RUST_DSL_TEST_API.md (full)
+{{RUST_DSL_TEST_API_BODY}}
+
+## Skill positive-rules appendix
+{{SKILL_POSITIVE_RULES_APPENDIX}}
+
+# Source priority (for behavioral questions)
+
+1. Printed card text — authoritative.
+2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
+3. DCGO C# — implementation-detail tiebreaker only.
+
+Do NOT cite Python scripts.
+
+# Your task
+
+1. **Faithfulness diff.** Walk every clause in the printed text. For each, locate the corresponding section in the YAML. Identify any:
+   - Silently dropped clauses (printed text says it, YAML doesn't model it).
+   - Missing branches (printed text offers a choice the YAML reduces to one option).
+   - Optionality mismatches (printed text "you may"; YAML mandatory, or vice versa).
+   - Condition gaps (printed text "if X"; YAML unconditional, or wrong condition).
+   - OPT misses ([Once Per Turn] in text but YAML lacks `once_per_turn: true`).
+
+2. **Behavioral fidelity diff against DCGO C#.** For nuances printed text doesn't pin down (e.g., processing order of an interaction, exact target eligibility), confirm the YAML matches DCGO. Per CLAUDE.md source priority, DCGO is a tiebreaker — printed text wins on disagreements. Note any printed-vs-DCGO disagreement explicitly.
+
+3. **Test coverage inventory.** Compare the existing test file (if any) against the test API §5 expected coverage:
+   - Section 1: structural assertions present? Cover every clause's scope/timing/optional/once_per_turn?
+   - Section 2: each condition has BOTH positive AND negative test?
+   - Section 3: each clause has at least one integrated behavioral test (driven through `play`/`attack`/`end_turn`)?
+   - Section 4: cost-firing clauses have event-log assertions?
+   - Section 5: OPT clauses have an explicit lockout test?
+
+4. **Emit verdict:**
+   - `AUDITED-OK` — YAML faithful, tests cover §5 expectations.
+   - `AUDITED-MISSING-TESTS` — YAML faithful, but tests are incomplete. Add the missing tests; emit the new file.
+   - `AUDITED-DRIFT` — YAML disagrees with printed text or DCGO. Emit a unified diff proposal but do NOT modify the YAML.
+   - `BLOCKED` — same diagnosis criteria as the implementer (gap_kind required).
+
+# Output format
+
+```
+## {{CARD_ID}} — {{CARD_NAME}} — AUDIT
+
+### Verdict: AUDITED-OK | AUDITED-MISSING-TESTS | AUDITED-DRIFT | BLOCKED
+### Gap kind (if BLOCKED): engine | dsl | hybrid
+
+### Faithfulness diff (if AUDITED-DRIFT or AUDITED-OK with notes)
+Clause 1 (<timing>): "<printed text>"
+  YAML says: <what's there>
+  Should say: <correction>
+  Source: printed text | DCGO C# line N
+
+(Repeat per drifted clause. If AUDITED-OK, this section may be empty or note "no drift detected.")
+
+### Test coverage inventory
+- Structural: <present | missing — list missing>
+- Condition gating: <present | missing — list>
+- Behavioral integrated: <present | missing — list>
+- Event-log (if applicable): <present | missing | n/a>
+- OPT lockout (if applicable): <present | missing | n/a>
+
+### Tests added (if AUDITED-MISSING-TESTS)
+- <test_fn_name_1>
+- <test_fn_name_2>
+
+### Files written/modified
+- code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs (added N tests, total now M)
+[YAML unchanged.]
+```
+````
+
+---
