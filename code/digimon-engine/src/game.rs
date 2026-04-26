@@ -122,7 +122,7 @@ pub struct Game {
     pub pending_attack: Option<PendingAttack>,
     /// Transient state for an in-progress security check. Set by
     /// `resolve_security_card` before firing `SecuritySkill` effects and
-    /// cleared afterward. `EffectContext::play_from_security` inspects and
+    /// cleared afterward. `EffectContext::play_pending_security` inspects and
     /// mutates this slot to keep the revealed card from being trashed.
     pub pending_security: Option<PendingSecurity>,
     /// Phase 8: in-flight Option card resolution. Set when an Option is

@@ -5,7 +5,7 @@
 //! wraps `&Game` for `condition` closures and tensor-time effect inspection.
 //! Both expose the same read-only query surface.
 //!
-//! **File layout.** Selection-prompt helpers (`select_*`, `play_from_security`,
+//! **File layout.** Selection-prompt helpers (`select_*`, `play_pending_security`,
 //! `mark_security_face_up`, plus the private `install_field_selection`
 //! shared implementation) live in `selections.rs` — they are numerous and
 //! will grow substantially as the gap-closing roadmap adds multi-select,

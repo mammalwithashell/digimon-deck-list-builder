@@ -1877,7 +1877,7 @@ impl Game {
                     // addressed alongside native keyword wiring (Task 6).
 
                     // Trash the revealed card unless an effect raised the
-                    // `played` bit via `EffectContext::play_from_security`.
+                    // `played` bit via `EffectContext::play_pending_security`.
                     // `security_resolution` stays alive across the observer
                     // drain so a selection installed by an observer can
                     // resume through `DisposeFinalize` (§2.5j residual).
