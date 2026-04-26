@@ -44,6 +44,18 @@ _RE_NAMED_TARGET_ONLY = re.compile(
     r"\s*\[([^\]]+)\]\s*:\s*Cost\s*(\d+)\s*$"
 )
 
+# "[App Fusion] [A] & [B] (& [C])*: Cost N"  — also covers DNA Digivolve `&`-lists
+_RE_AMP_MATERIALS = re.compile(
+    r"^\s*(\[(?:DNA Digivolve|App Fusion|Burst Digivolve)\])"
+    r"\s*((?:\[[^\]]+\]\s*&\s*)+\[[^\]]+\])"
+    r"\s*:\s*Cost\s*(\d+)\s*$"
+)
+
+# "DigiXros Requirements [Trait] [Name] x N"
+_RE_DIGIXROS_REQ = re.compile(
+    r"^\s*DigiXros Requirements\s*\[([^\]]+)\]\s*\[([^\]]+)\]\s*x\s*(\d+)\s*$"
+)
+
 
 @dataclass(frozen=True)
 class ParsedAltPath:
@@ -112,7 +124,34 @@ def _try_named_target_only(line: str) -> Optional[ParsedAltPath]:
     )
 
 
+def _try_amp_materials(line: str) -> Optional[ParsedAltPath]:
+    m = _RE_AMP_MATERIALS.match(line)
+    if not m:
+        return None
+    names = re.findall(r"\[([^\]]+)\]", m.group(2))
+    return ParsedAltPath(
+        kind=_MARKER_TO_KIND[m.group(1)],
+        from_=None,
+        materials=[{"name_is": n} for n in names],
+        cost=int(m.group(3)),
+    )
+
+
+def _try_digixros_requirements(line: str) -> Optional[ParsedAltPath]:
+    m = _RE_DIGIXROS_REQ.match(line)
+    if not m:
+        return None
+    return ParsedAltPath(
+        kind="digixros",
+        from_=None,
+        materials=[{"trait_has": m.group(1), "name_is": m.group(2), "count_eq": int(m.group(3))}],
+        cost=0,
+    )
+
+
 _PRODUCTIONS = (
+    _try_digixros_requirements,
+    _try_amp_materials,
     _try_lv_name_in_name,
     _try_lv_name_in_text,
     _try_lv_trait,

@@ -85,3 +85,48 @@ def test_multiline_xros_req_each_line_parsed_independently():
     assert len(result.parsed) == 2
     assert result.parsed[0].from_ == {"level_eq": 5, "name_contains": "Greymon"}
     assert result.parsed[1].from_ == {"level_eq": 5, "trait_has": "Hero"}
+
+
+def test_app_fusion_two_materials():
+    # AD1-005: "[App Fusion] [Globemon] & [Charismon]: Cost 0"
+    result = parse("[App Fusion] [Globemon] & [Charismon]: Cost 0")
+    assert result.unparsed_lines == []
+    assert result.parsed == [
+        ParsedAltPath(
+            kind="app_fusion",
+            from_=None,
+            materials=[{"name_is": "Globemon"}, {"name_is": "Charismon"}],
+            cost=0,
+        )
+    ]
+
+
+def test_app_fusion_three_materials():
+    result = parse("[App Fusion] [A] & [B] & [C]: Cost 1")
+    assert result.parsed[0].materials == [
+        {"name_is": "A"},
+        {"name_is": "B"},
+        {"name_is": "C"},
+    ]
+
+
+def test_digixros_requirements_simple():
+    # 24 lines like: "DigiXros Requirements [Xros Heart] [Greymon] x 2"
+    result = parse("DigiXros Requirements [Xros Heart] [Greymon] x 2")
+    assert result.unparsed_lines == []
+    assert result.parsed == [
+        ParsedAltPath(
+            kind="digixros",
+            from_=None,
+            materials=[{"trait_has": "Xros Heart", "name_is": "Greymon", "count_eq": 2}],
+            cost=0,
+        )
+    ]
+
+
+def test_descriptor_lines_are_unparsed():
+    # 62 lines: "Stack the 2 specified Digimon and digivolve unsuspended."
+    raw = "Stack the 2 specified Digimon and digivolve unsuspended."
+    result = parse(raw)
+    assert result.parsed == []
+    assert result.unparsed_lines == [raw]
