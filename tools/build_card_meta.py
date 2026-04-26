@@ -62,6 +62,36 @@ def _filter_by_set(card_ids: list[str], set_id: str) -> list[str]:
     return [c for c in card_ids if set_id_from_card_id(c) == target]
 
 
+def cmd_check(card_ids: list[str] | None = None) -> int:
+    """Rebuild every card to memory, compare against the on-disk tree.
+
+    Returns 0 if every file matches; 1 if any file is missing or differs.
+    Prints diffs to stderr.
+    """
+    ids = card_ids if card_ids is not None else _all_card_ids()
+    failures: list[str] = []
+    for cid in ids:
+        body, _ = build_card_meta_md(cid)
+        on_disk = CARD_META_ROOT / set_id_from_card_id(cid) / f"{cid}.md"
+        if not on_disk.exists():
+            failures.append(f"{cid}: missing on disk at {on_disk}")
+            continue
+        actual = on_disk.read_text(encoding="utf-8")
+        if actual != body:
+            failures.append(f"{cid}: contents differ from generator output")
+    if failures:
+        for f in failures:
+            print(f, file=sys.stderr)
+        print(
+            f"--check failed for {len(failures)}/{len(ids)} cards. "
+            "Run `python -m tools.build_card_meta` and commit the diff.",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"--check OK ({len(ids)} cards match on disk)")
+    return 0
+
+
 def cmd_build(args: argparse.Namespace) -> int:
     if args.card:
         ids = [args.card]
@@ -87,9 +117,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--coverage-check", action="store_true", help="assert coverage didn't regress")
     args = parser.parse_args(argv)
 
-    if args.check or args.coverage_check:
-        # Stubs until Task 7. Make them visible if accidentally invoked.
-        print("--check / --coverage-check not implemented yet (see Task 7)", file=sys.stderr)
+    if args.check:
+        return cmd_check()
+    if args.coverage_check:
+        print("--coverage-check not implemented yet (see Task 8)", file=sys.stderr)
         return 2
     return cmd_build(args)
 

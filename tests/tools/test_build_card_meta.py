@@ -37,3 +37,35 @@ def test_build_one_returns_parse_stats():
     assert cid == "BT17-007"
     assert n_parsed == 1
     assert n_unparsed == 0
+
+
+def test_check_mode_passes_when_tree_matches(tmp_path: Path, monkeypatch):
+    from tools import build_card_meta as m
+    # Point CARD_META_ROOT at a fresh tempdir, populate, then check.
+    monkeypatch.setattr(m, "CARD_META_ROOT", tmp_path)
+    m.write_card_meta("BT17-007", tmp_path)
+    m.write_card_meta("ST2-13", tmp_path)
+    rc = m.cmd_check(card_ids=["BT17-007", "ST2-13"])
+    assert rc == 0
+
+
+def test_check_mode_fails_on_mismatch(tmp_path: Path, monkeypatch, capsys):
+    from tools import build_card_meta as m
+    monkeypatch.setattr(m, "CARD_META_ROOT", tmp_path)
+    m.write_card_meta("BT17-007", tmp_path)
+    # Corrupt the file
+    out = tmp_path / "bt17" / "BT17-007.md"
+    out.write_text("STALE\n", encoding="utf-8", newline="\n")
+    rc = m.cmd_check(card_ids=["BT17-007"])
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "BT17-007" in captured.err
+
+
+def test_check_mode_fails_on_missing_file(tmp_path: Path, monkeypatch, capsys):
+    from tools import build_card_meta as m
+    monkeypatch.setattr(m, "CARD_META_ROOT", tmp_path)
+    rc = m.cmd_check(card_ids=["BT17-007"])
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "missing" in captured.err.lower() or "BT17-007" in captured.err
