@@ -1563,6 +1563,18 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   play / digivolve / placement steps, formula values in modifier
   `value` fields, and `distinct_by` enforcement on
   `SelectCountCappedMulti`.
+- **2e** (landed 2026-04-25) — remaining selection kinds
+  (`SelectEffectChoice`, `SelectReveal`, `SelectSecurity`,
+  `SelectMaterial`, `SelectUnionZone`, `SelectOrderedPermutation`) and
+  `distinct_by` enforcement on `SelectCountCappedMulti` (`CardNumber` /
+  `Level` / `Name`, with `Level` treating two `None`-level cards as
+  *different* — Tamers / Options never lock each other out).
+  `Bindings::insert_literal` helper added for `SelectEffectChoice`'s
+  branch-index binding. Defers to 2f+: `AsSelectingPlayer` (needs
+  override-persistence across selection callbacks — engine work),
+  play / digivolve / placement steps, formula values in `add_modifier`
+  `value`, and `ScheduleDelayed` (needs `ctx.schedule_delayed` engine
+  primitive).
 
 ### 7.4 Phase 3 — Advanced clauses
 
