@@ -100,7 +100,7 @@ def write_coverage_report(stats: list[tuple[str, int, int]]) -> Path:
     lines = [
         "# xros_req parser coverage",
         "",
-        f"Generated: {datetime.datetime.utcnow().isoformat(timespec='seconds')}Z",
+        f"Generated: {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
         "",
         f"- Total cards: {total}",
         f"- Fully parsed (incl. no xros_req): {cov['fully_parsed']}",
