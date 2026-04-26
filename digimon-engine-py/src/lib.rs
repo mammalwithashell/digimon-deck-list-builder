@@ -370,9 +370,16 @@ impl CardRegistry {
     }
 }
 
+/// Resolve the ONNX models directory. Returns a `pathlib.Path` so callers
+/// can use the `/` operator (PyO3 0.22's default `PathBuf` conversion
+/// produces `str`, which breaks `models_dir / "<file>"` patterns).
 #[pyfunction]
-fn get_models_dir() -> PathBuf {
-    deck_tools::get_models_dir()
+fn get_models_dir(py: Python) -> PyResult<PyObject> {
+    let path = deck_tools::get_models_dir();
+    let path_str = path.to_string_lossy().to_string();
+    let pathlib = py.import_bound("pathlib")?;
+    let path_class = pathlib.getattr("Path")?;
+    Ok(path_class.call1((path_str,))?.into_py(py))
 }
 
 #[pyfunction]
