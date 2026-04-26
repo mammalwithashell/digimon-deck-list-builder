@@ -1090,9 +1090,14 @@ impl Game {
     ///
     /// The pay-memory-bypass branch (`ignore_requirements && cost > 0`) is
     /// *not* present here — callers that need to bypass the affordability
-    /// floor must subtract from `self.memory` before calling. See
-    /// `EffectContext::effect_initiated_dna_digivolve` for the wrapper that
-    /// implements that branch.
+    /// floor must subtract from `self.memory` before calling (see
+    /// `Game::pay_memory_unchecked`). The two callers are:
+    /// - `EffectContext::effect_initiated_dna_digivolve` — engine-effect
+    ///   wrapper that handles the IR's `(cost, ignore_requirements)` shape
+    ///   and invokes the bypass branch when needed.
+    /// - `Game::initiate_dna_digivolve`'s stage-2 selection callback — the
+    ///   user-action path; passes the printed cost minus
+    ///   `BeforePayCost` reductions and never bypasses.
     ///
     /// `grant_digivolve_bonus`: if true, `hand_owner` draws 1 card after the
     /// merge but before triggers fire. The user-action path passes `true`
@@ -1145,7 +1150,7 @@ impl Game {
         {
             let perm_a =
                 &mut self.player_mut(target_a.player).battle_area[target_a_index_after];
-            perm_a.card_sources.extend(perm_b.card_sources.into_iter());
+            perm_a.card_sources.extend(perm_b.card_sources);
             perm_a.card_sources.push(new_top);
             perm_a.turn_digivolved = turn;
         }
