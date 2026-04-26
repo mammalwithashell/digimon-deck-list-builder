@@ -33,6 +33,7 @@ pub mod selection;
 pub mod effect_queue;
 pub mod scheduled_effects;
 pub mod dna_digivolve;
+pub mod trigger_context;
 pub mod debug_runner;
 pub mod runners;
 pub mod logger;
@@ -65,6 +66,7 @@ pub use recorder::{GameRecorder, InitialState, PlayerInitialState, RecordedActio
 pub use inference::{load_policy, InferenceError, OnnxLstmPolicy, OnnxMlpPolicy, OnnxPolicy};
 pub use policies::{greedy_action, GreedyPolicy, Policy, RandomPolicy};
 pub use crate::events::GameEvent;
+pub use trigger_context::TriggerContext;
 pub use selection::{
     AttackState, AttackTarget, DeclineCallback, EffectChoiceEntry, EffectQueue, PendingAttack,
     PendingSelection, PendingSelectionView, QueuedEffect, SelectionCallback, SelectionError,

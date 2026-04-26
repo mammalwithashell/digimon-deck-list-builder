@@ -17,6 +17,7 @@ use crate::selection::{
     SecurityResolutionState, SelectionError,
 };
 use crate::token_registry::TokenRegistry;
+use crate::trigger_context::TriggerContext;
 
 /// Reasons `Game::activate_overclock` can fail. Exposed so callers
 /// (Tauri commands, tests, Python bindings) can distinguish between
@@ -212,6 +213,13 @@ pub struct Game {
     /// security-check driver between drains).
     #[doc(hidden)]
     pub(crate) effect_source_player: Option<PlayerId>,
+
+    /// Runtime metadata for the trigger whose effect is currently resolving.
+    /// DSL event predicates and `event_target` / `event_card` bindings read
+    /// this slot. It is set by the effect-queue dispatcher around a queued
+    /// effect and restored afterward.
+    #[doc(hidden)]
+    pub current_trigger_context: Option<TriggerContext>,
 
     /// The cause of the deletion currently being observed by `OnDeletion`
     /// effects. Set by `commit_permanent_deletion` immediately before
@@ -478,6 +486,7 @@ impl Game {
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,
+            current_trigger_context: None,
             current_deletion_cause: None,
             parked_replacement: None,
             dsl_replacement_outcome: None,
