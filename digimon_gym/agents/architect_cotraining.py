@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 # Deck resolution (duplicated from architect_training to avoid circular imports)
 # ---------------------------------------------------------------------------
 
-from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
+from data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
 
 _SOURCE_PREFERENCE = {
     "digilab": 3,

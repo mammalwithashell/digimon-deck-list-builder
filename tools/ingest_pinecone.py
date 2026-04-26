@@ -51,7 +51,7 @@ GENERATED_DIR = SCRIPTS_DIR / "generated"
 CSHARP_DIR = REPO_ROOT / "DCGO" / "Assets" / "Scripts" / "CardEffect"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-from digimon_gym.data_paths import CARDS_JSON  # noqa: E402
+from data_paths import CARDS_JSON  # noqa: E402
 FROZEN_MANIFEST = SCRIPTS_DIR / "_frozen_manifest.json"
 
 RULES_DOCS = [

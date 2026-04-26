@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from digimon_gym.data_paths import TESTED_CARDS as OUTPUT_JSON
+from data_paths import TESTED_CARDS as OUTPUT_JSON
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BUILD_TOOL = REPO_ROOT / "tools" / "build_tested_cards.py"

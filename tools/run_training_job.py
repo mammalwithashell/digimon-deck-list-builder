@@ -35,7 +35,7 @@ def _load_deck_from_file(path: str) -> List[str]:
 
 def _load_deck_from_library(deck_id: str) -> List[str]:
     """Fetch a specific deck by ID from deck_library.json."""
-    from digimon_gym.data_paths import DECK_LIBRARY
+    from data_paths import DECK_LIBRARY
     with open(DECK_LIBRARY, encoding="utf-8") as f:
         library = json.load(f)
     from digimon_engine import parse_tts

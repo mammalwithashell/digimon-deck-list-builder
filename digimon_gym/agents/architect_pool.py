@@ -44,7 +44,7 @@ class CardConstraint:
     locked: bool = False
     locked_count: Optional[int] = None
 
-from digimon_gym.data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
+from data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
 
 
 class CandidatePool:

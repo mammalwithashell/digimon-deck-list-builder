@@ -36,7 +36,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from digimon_gym.data_paths import (
+from data_paths import (
     ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH,
     DECK_LIBRARY as _DECK_LIBRARY_PATH,
 )

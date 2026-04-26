@@ -8,7 +8,7 @@ Provides:
 import json
 import pytest
 
-from digimon_gym.data_paths import DECK_LIBRARY
+from data_paths import DECK_LIBRARY
 from engine_py_legacy.engine.data.card_registry import CardRegistry
 
 

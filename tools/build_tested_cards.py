@@ -34,7 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from digimon_gym.data_paths import CARDS_JSON, TESTED_CARDS as OUTPUT_JSON  # noqa: E402
+from data_paths import CARDS_JSON, TESTED_CARDS as OUTPUT_JSON  # noqa: E402
 
 BEHAVIORAL_DIR = REPO_ROOT / "tests" / "behavioral"
 

@@ -19,7 +19,7 @@ databases, or ad-hoc re-homing without touching code:
 
 Usage::
 
-    from digimon_gym.data_paths import CARDS_JSON
+    from data_paths import CARDS_JSON
     with open(CARDS_JSON) as f:
         cards = json.load(f)
 

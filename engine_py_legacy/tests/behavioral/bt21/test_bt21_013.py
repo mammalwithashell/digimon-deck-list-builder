@@ -380,7 +380,7 @@ class TestBT21013WhenAttacking:
         # effect_digivolve_from_hand uses get_cost_itself (play_cost) as base
         # AD1-002 play_cost=8, cost_reduction=2 -> effective cost = 6
         import json
-        from digimon_gym.data_paths import CARDS_JSON
+        from data_paths import CARDS_JSON
         with open(CARDS_JSON, 'r', encoding='utf-8') as f:
             cards = json.load(f)
         ad1_002 = cards.get('AD1-002', {})

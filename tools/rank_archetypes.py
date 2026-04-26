@@ -17,7 +17,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from digimon_gym.data_paths import DECK_LIBRARY  # noqa: E402
+from data_paths import DECK_LIBRARY  # noqa: E402
 
 
 def main():

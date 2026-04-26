@@ -16,7 +16,7 @@ import json
 from functools import lru_cache
 from typing import Iterable
 
-from digimon_gym.data_paths import TESTED_CARDS as _TESTED_CARDS_PATH
+from data_paths import TESTED_CARDS as _TESTED_CARDS_PATH
 
 
 @lru_cache(maxsize=1)

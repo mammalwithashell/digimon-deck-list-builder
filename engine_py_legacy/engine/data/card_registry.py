@@ -40,7 +40,7 @@ class CardRegistry:
         if json_path is None:
             # Import locally to avoid a circular import (data_paths is a
             # peer of the engine package).
-            from digimon_gym.data_paths import CARDS_JSON
+            from data_paths import CARDS_JSON
             json_path = str(CARDS_JSON)
 
         with open(json_path, "r", encoding="utf-8") as f:

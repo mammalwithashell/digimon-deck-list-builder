@@ -1,5 +1,5 @@
 """Tests for `tools/ingest_cards.py` — tri-color ingest + override merging."""
-from digimon_gym.data_paths import CARDS_JSON
+from data_paths import CARDS_JSON
 from tools.ingest_cards import (
     COLOR_MAP,
     apply_overrides,

@@ -19,7 +19,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from digimon_gym.data_paths import DECK_LIBRARY
+from data_paths import DECK_LIBRARY
 from digimon_engine import CardDatabase, CardKind, CardRegistry
 
 

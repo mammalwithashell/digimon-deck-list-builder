@@ -146,7 +146,7 @@ class PeriodMeta:
     total_results: int = 0
 
 
-from digimon_gym.data_paths import ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH
+from data_paths import ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH
 
 ARCHETYPE_ALIASES_PATH = str(_ARCHETYPE_ALIASES_PATH)
 

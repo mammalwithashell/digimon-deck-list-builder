@@ -407,7 +407,7 @@ class CardDatabase:
 
     def load_cards(self):
         # Local import avoids a circular load through `digimon_gym.__init__`.
-        from digimon_gym.data_paths import CARDS_JSON
+        from data_paths import CARDS_JSON
         json_path = str(CARDS_JSON)
 
         if not os.path.exists(json_path):

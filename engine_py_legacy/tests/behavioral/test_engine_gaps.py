@@ -35,7 +35,7 @@ def make_game():
 # Greedy baseline helpers (inlined from qa/debug_game_helper.run_greedy_baseline)
 # ---------------------------------------------------------------------------
 
-from digimon_gym.data_paths import DECK_LIBRARY as DECK_LIBRARY_PATH
+from data_paths import DECK_LIBRARY as DECK_LIBRARY_PATH
 
 
 def _load_deck(archetype_name: str) -> list[str]:

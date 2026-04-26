@@ -46,7 +46,7 @@ from digimon_engine import parse_tts
 
 logger = logging.getLogger(__name__)
 
-from digimon_gym.data_paths import (
+from data_paths import (
     ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH,
     DECK_LIBRARY as _DECK_LIBRARY_PATH,
 )
