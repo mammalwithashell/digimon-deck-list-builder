@@ -173,3 +173,39 @@ def parse(xros_req: str) -> XrosReqParseResult:
         else:
             unparsed.append(line)
     return XrosReqParseResult(parsed=parsed, unparsed_lines=unparsed)
+
+
+def _flow_dict(d: dict) -> str:
+    """Render a dict as YAML flow style preserving insertion order.
+
+    Strings are double-quoted unconditionally; ints are bare. Matches the
+    `from: { name_is: "Koromon" }` style used in the DSL spec.
+    """
+    parts = []
+    for k, v in d.items():
+        if isinstance(v, str):
+            parts.append(f'{k}: "{v}"')
+        elif isinstance(v, int):
+            parts.append(f"{k}: {v}")
+        else:
+            raise TypeError(f"unexpected value type for {k}: {type(v).__name__}")
+    return "{ " + ", ".join(parts) + " }"
+
+
+def _render_one(path: ParsedAltPath) -> str:
+    lines = [f"- kind: {path.kind}"]
+    if path.from_ is not None:
+        lines.append(f"  from: {_flow_dict(path.from_)}")
+    if path.materials is not None:
+        lines.append("  materials:")
+        for mat in path.materials:
+            lines.append(f"    - {_flow_dict(mat)}")
+    lines.append(f"  cost: {path.cost}")
+    return "\n".join(lines)
+
+
+def render_alt_paths_yaml(paths: list[ParsedAltPath]) -> str:
+    """Render parsed alt paths as a YAML fragment matching DSL spec §3."""
+    if not paths:
+        return "_(none)_"
+    return "\n".join(_render_one(p) for p in paths)

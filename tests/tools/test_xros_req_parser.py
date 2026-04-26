@@ -7,6 +7,7 @@ from tools.xros_req_parser import (
     ParsedAltPath,
     XrosReqParseResult,
     parse,
+    render_alt_paths_yaml,
 )
 
 
@@ -130,3 +131,63 @@ def test_descriptor_lines_are_unparsed():
     result = parse(raw)
     assert result.parsed == []
     assert result.unparsed_lines == [raw]
+
+
+# ---------------------------------------------------------------------------
+# render_alt_paths_yaml tests
+# ---------------------------------------------------------------------------
+
+def test_render_empty():
+    assert render_alt_paths_yaml([]) == "_(none)_"
+
+
+def test_render_named_target_only():
+    paths = [ParsedAltPath(kind="digivolve", from_={"name_is": "Koromon"}, materials=None, cost=0)]
+    assert render_alt_paths_yaml(paths) == (
+        "- kind: digivolve\n"
+        "  from: { name_is: \"Koromon\" }\n"
+        "  cost: 0"
+    )
+
+
+def test_render_lv_trait():
+    paths = [ParsedAltPath(
+        kind="digivolve", from_={"level_eq": 5, "trait_has": "Xros Heart"},
+        materials=None, cost=2,
+    )]
+    assert render_alt_paths_yaml(paths) == (
+        "- kind: digivolve\n"
+        "  from: { level_eq: 5, trait_has: \"Xros Heart\" }\n"
+        "  cost: 2"
+    )
+
+
+def test_render_amp_materials():
+    paths = [ParsedAltPath(
+        kind="app_fusion", from_=None,
+        materials=[{"name_is": "Globemon"}, {"name_is": "Charismon"}],
+        cost=0,
+    )]
+    assert render_alt_paths_yaml(paths) == (
+        "- kind: app_fusion\n"
+        "  materials:\n"
+        "    - { name_is: \"Globemon\" }\n"
+        "    - { name_is: \"Charismon\" }\n"
+        "  cost: 0"
+    )
+
+
+def test_render_multiple_paths_separated_by_blank_line():
+    paths = [
+        ParsedAltPath(kind="digivolve", from_={"level_eq": 5, "name_contains": "Greymon"}, materials=None, cost=3),
+        ParsedAltPath(kind="digivolve", from_={"level_eq": 5, "trait_has": "Hero"}, materials=None, cost=3),
+    ]
+    out = render_alt_paths_yaml(paths)
+    assert out == (
+        "- kind: digivolve\n"
+        "  from: { level_eq: 5, name_contains: \"Greymon\" }\n"
+        "  cost: 3\n"
+        "- kind: digivolve\n"
+        "  from: { level_eq: 5, trait_has: \"Hero\" }\n"
+        "  cost: 3"
+    )
