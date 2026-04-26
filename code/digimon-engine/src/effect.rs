@@ -9,6 +9,36 @@ use crate::permanent::PermanentHandle;
 /// inspection (for static DP modifiers / OPT state). They receive a
 /// read-only view of game state; they must not mutate.
 pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 'static>;
+
+/// Replacement-effect candidate-filter closure. Evaluated in
+/// `replacement::collect_candidates` after `condition` for `WhenWouldBe*`
+/// timings, with `cause` threaded in. Returns `true` to keep the candidate
+/// in the dispatch list, `false` to skip — used by `<Scapegoat>` to suppress
+/// the outer "may" dialog when the deletion cause is `OwnEffect` (RULES_CONTEXT
+/// 16-31) and to suppress the dialog when there are no substitute candidates
+/// (mirrors DCGO `CanActivateScapegoat`'s `HasMatchConditionPermanent` gate).
+///
+/// Distinct from `condition`:
+/// - `condition` is cause-agnostic and evaluated for every effect timing.
+/// - `replacement_condition` is cause-aware and ONLY consulted by the
+///   replacement dispatcher when collecting candidates.
+///
+/// If both are set on a single Effect, both must return true for the
+/// candidate to be kept — `condition` runs first.
+///
+/// **Naming:** distinct from `replacement::ReplacementConditionFn`, which
+/// lives on passive modifier registry entries and takes a different
+/// signature `(&EffectReadContext, &ReplacementSubject)`. The two types
+/// serve adjacent but separate roles in the candidate collection pipeline
+/// — passives use the registry's `ReplacementConditionFn`; effect-side
+/// candidate filtering uses this `EffectReplacementConditionFn`.
+pub type EffectReplacementConditionFn = Box<
+    dyn Fn(&EffectReadContext, crate::replacement::ReplacementCause) -> bool
+        + Send
+        + Sync
+        + 'static,
+>;
+
 pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync + 'static>;
 pub type CostReductionFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
 pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
@@ -46,6 +76,11 @@ pub struct Effect {
 
     // Behavior
     pub condition: Option<ConditionFn>,
+    /// Cause-aware candidate filter for `WhenWouldBe*` replacement timings.
+    /// Evaluated in `replacement::collect_candidates` AFTER `condition`,
+    /// with the `ReplacementCause` threaded in. Both must return true for
+    /// the candidate to be kept. See `EffectReplacementConditionFn`.
+    pub replacement_condition: Option<EffectReplacementConditionFn>,
     pub process: Option<ProcessFn>,
 
     // Phase 5 closure-valued cost hooks (dispatch wired in Tasks 2-4).
@@ -342,6 +377,7 @@ impl EffectBuilder {
                 blast_digivolve: false,
                 max_per_turn: 0,
                 condition: None,
+                replacement_condition: None,
                 process: None,
                 cost_reduction_fn: None,
                 pay_cost_fn: None,
@@ -445,6 +481,23 @@ impl EffectBuilder {
         f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     ) -> Self {
         self.inner.condition = Some(Box::new(f));
+        self
+    }
+
+    /// Attach a cause-aware candidate filter for `WhenWouldBe*` replacements.
+    /// Evaluated in `replacement::collect_candidates` after `condition`.
+    /// See `EffectReplacementConditionFn` doc for the full contract; primary
+    /// use is `<Scapegoat>` suppressing the outer "may" dialog on
+    /// `ReplacementCause::OwnEffect` per RULES_CONTEXT 16-31, and on the
+    /// no-substitute case mirroring DCGO `HasMatchConditionPermanent`.
+    pub fn replacement_condition(
+        mut self,
+        f: impl Fn(&EffectReadContext, crate::replacement::ReplacementCause) -> bool
+            + Send
+            + Sync
+            + 'static,
+    ) -> Self {
+        self.inner.replacement_condition = Some(Box::new(f));
         self
     }
 

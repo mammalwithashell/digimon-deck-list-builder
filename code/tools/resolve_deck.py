@@ -27,11 +27,19 @@ from pathlib import Path
 from typing import Optional
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
+_CODE_DIR = _PROJECT_ROOT / "code"
+# Add `code/` (not the repo root) so sibling-package imports like
+# `tools.xros_req_parser` resolve under the post-Phase-6 layout.
+if str(_CODE_DIR) not in sys.path:
+    sys.path.insert(0, str(_CODE_DIR))
 
-from data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH
+from data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH, CARDS_JSON as _CARDS_JSON_PATH
 from digimon_engine import CardDatabase, CardKind
+from tools.xros_req_parser import (
+    XrosReqParseResult,
+    parse as _parse_xros_req,
+    render_alt_paths_yaml as _render_alt_paths_yaml,
+)
 
 # Scripts still live alongside the Python engine (language-specific code,
 # not shared data); only the pure data files moved to `data/`.
@@ -332,6 +340,63 @@ def resolve_archetype(
         best_decklist=best_decklist,
         deck_pool_path=deck_pool_path,
     )
+
+
+_CARDS_JSON_CACHE: Optional[dict] = None
+
+
+def _load_cards_json_raw() -> dict:
+    """Load `data/cards.json` once per process and cache."""
+    global _CARDS_JSON_CACHE
+    if _CARDS_JSON_CACHE is None:
+        with open(_CARDS_JSON_PATH, "r", encoding="utf-8") as f:
+            _CARDS_JSON_CACHE = json.load(f)
+    return _CARDS_JSON_CACHE
+
+
+def build_card_meta_md(card_id: str) -> tuple[str, XrosReqParseResult]:
+    """Render the per-card metadata `.md` body for `card_id`.
+
+    Returns (body, parse_result). The caller owns file I/O. Raises KeyError
+    if `card_id` is not present in `data/cards.json`.
+    """
+    cards = _load_cards_json_raw()
+    if card_id not in cards:
+        raise KeyError(card_id)
+    record = cards[card_id]
+
+    name = record.get("card_name_eng") or ""
+    xros_req = record.get("xros_req") or ""
+    parse_result = _parse_xros_req(xros_req)
+    alt_paths_yaml = _render_alt_paths_yaml(parse_result.parsed)
+
+    record_json = json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False)
+
+    parts = [
+        f"# {card_id} — {name}",
+        "",
+        "## Alt paths (parsed from xros_req)",
+        "",
+        alt_paths_yaml,
+        "",
+        "## Source record",
+        "",
+        "```json",
+        record_json,
+        "```",
+    ]
+    if parse_result.unparsed_lines:
+        parts += [
+            "",
+            "## Unparsed xros_req",
+            "",
+            "```text",
+            *parse_result.unparsed_lines,
+            "```",
+        ]
+    parts.append("")  # trailing newline
+    body = "\n".join(parts)
+    return body, parse_result
 
 
 def _print_table(manifest: ArchetypeManifest) -> None:

@@ -55,6 +55,20 @@ pub enum CountCappedZone {
     Material(crate::permanent::PermanentHandle),
 }
 
+/// Per-card-number / -level / -name uniqueness constraint applied to a
+/// `select_count_capped_multi` selection. After each pick, candidates that
+/// share the constrained attribute with any already-picked card are
+/// removed from the next step's `valid_action_ids`.
+///
+/// Mirrors `digimon_dsl::compiled::CompiledDistinctBy`; the DSL lowering
+/// in `dsl_cards::step::selections` translates the variant unchanged.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DistinctByMode {
+    CardNumber,
+    Level,
+    Name,
+}
+
 impl<'a> EffectContext<'a> {
     /// Prompt `self.player` to pick a Digimon from their clockwise-next
     /// opponent's battle area. The `filter` decides which field slots are
@@ -711,6 +725,7 @@ impl<'a> EffectContext<'a> {
         max: u8,
         prompt: &str,
         is_optional_zero: bool,
+        distinct_by: Option<DistinctByMode>,
         filter: F,
         callback: C,
     ) where
@@ -804,6 +819,7 @@ impl<'a> EffectContext<'a> {
             range_start,
             max,
             is_optional_zero,
+            distinct_by,
             candidate_indices,
             Vec::new(), // accum starts empty
             prompt_owned,
@@ -1138,6 +1154,7 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
         max: u8,
         prompt: &str,
         is_optional_zero: bool,
+        distinct_by: Option<crate::effect_context::DistinctByMode>,
         filter: F,
         callback: C,
     ) where
@@ -1146,7 +1163,7 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
     {
         let prev = self.ctx.override_selecting_player.take();
         self.ctx.override_selecting_player = Some(self.selecting_player);
-        self.ctx.select_count_capped_multi(of_player, zone, max, prompt, is_optional_zero, filter, callback);
+        self.ctx.select_count_capped_multi(of_player, zone, max, prompt, is_optional_zero, distinct_by, filter, callback);
         self.ctx.override_selecting_player = prev;
     }
 
@@ -1279,6 +1296,7 @@ fn install_count_capped_step(
     range_start: u16,
     max: u8,
     is_optional_zero: bool,
+    distinct_by: Option<DistinctByMode>,
     candidate_indices: Vec<usize>, // zone indices still eligible
     accum: Vec<crate::card_source::CardHandle>, // handles picked so far (in order)
     prompt: String,
@@ -1374,10 +1392,66 @@ fn install_count_capped_step(
                 return;
             }
 
+            // Pre-resolve the data_indices for all accumulated picks so the
+            // distinct_by filter below can look up card attributes without
+            // holding a conflicting borrow over the zone slice.
+            //
+            // We iterate the zone once per accumulated handle. Because picks are
+            // removed from `candidate_indices` at each step but NOT physically
+            // moved in the zone, the CardHandle is still findable by its
+            // `card_index` field (the handle identity).
+            let accum_data_indices: Vec<usize> = if distinct_by.is_some() {
+                new_accum
+                    .iter()
+                    .filter_map(|&h| {
+                        let zone_slice: &[crate::card_source::CardSource] = match zone {
+                            CountCappedZone::Hand => &game.player(of_player).hand,
+                            CountCappedZone::Trash => &game.player(of_player).trash,
+                            CountCappedZone::Material(ph) => {
+                                &game.player(ph.player).battle_area[ph.index as usize].card_sources
+                            }
+                        };
+                        zone_slice.iter().find(|c| c.handle() == h).map(|c| c.data_index)
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
             // Remove the picked index from candidates for the next step.
+            // If `distinct_by` is set, also remove any remaining index whose
+            // card shares the constrained attribute with any already-picked card.
             let new_candidates: Vec<usize> = candidate_indices
                 .into_iter()
                 .filter(|&i| i != pick_zone_idx)
+                .filter(|&i| {
+                    let Some(mode) = distinct_by else { return true };
+                    // Look up the candidate's card data.
+                    let cand_data_idx = match zone {
+                        CountCappedZone::Hand => game.player(of_player).hand[i].data_index,
+                        CountCappedZone::Trash => game.player(of_player).trash[i].data_index,
+                        CountCappedZone::Material(ph) => {
+                            game.player(ph.player).battle_area[ph.index as usize]
+                                .card_sources[i]
+                                .data_index
+                        }
+                    };
+                    let cand_data = &game.card_data[cand_data_idx];
+                    // Reject the candidate if it matches any accumulated pick.
+                    !accum_data_indices.iter().any(|&picked_data_idx| {
+                        let picked_data = &game.card_data[picked_data_idx];
+                        match mode {
+                            DistinctByMode::CardNumber => picked_data.card_id == cand_data.card_id,
+                            DistinctByMode::Level => {
+                                matches!(
+                                    (picked_data.level, cand_data.level),
+                                    (Some(p), Some(c)) if p == c
+                                )
+                            }
+                            DistinctByMode::Name => picked_data.card_name == cand_data.card_name,
+                        }
+                    })
+                })
                 .collect();
 
             // If no candidates remain, commit early with what we have.
@@ -1417,6 +1491,7 @@ fn install_count_capped_step(
                 range_start,
                 max,
                 is_optional_zero,
+                distinct_by,
                 new_candidates,
                 new_accum,
                 prompt,

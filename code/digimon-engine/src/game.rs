@@ -305,6 +305,31 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) pending_post_deletion_replays:
         Vec<(crate::enums::PlayerId, crate::card_source::CardHandle)>,
+
+    /// Phase 2d Task 7: when a control-flow or iteration step's body parks
+    /// a selection, the steps that follow the control-flow step in the
+    /// OUTER slice are captured here. Selection-install callbacks drain
+    /// this after their own tail completes, resuming the outer slice.
+    ///
+    /// `None` outside of a parked control-flow continuation. Always cleared
+    /// at the bottom of the selection callback that drained it.
+    ///
+    /// **Invariant: at most one outstanding outer continuation at a time.**
+    /// `run_steps` MUST `debug_assert!(self.dsl_outer_tail.is_none())` before
+    /// writing — overwriting a `Some` value would silently drop a parked
+    /// outer slice and abort the user's still-pending sequence. Today the
+    /// dispatcher guarantees this by never re-entering `run_steps` from
+    /// within a selection callback before that callback's drain runs (the
+    /// callback drains and then the outer slice is gone), but a future
+    /// change that allows nested parks (e.g. an `Optional` body whose
+    /// inner `If` body itself parks) will need to either (a) make this a
+    /// `Vec<(_, _)>` stack, or (b) refuse the second park with a clear
+    /// validation error. Don't silently overwrite.
+    #[doc(hidden)]
+    pub dsl_outer_tail: Option<(
+        Vec<digimon_dsl::compiled::CompiledStep>,
+        crate::dsl_cards::bindings::Bindings,
+    )>,
 }
 
 impl Game {
@@ -442,6 +467,7 @@ impl Game {
             in_counter_window: false,
             pending_deletion_resume: None,
             pending_post_deletion_replays: Vec::new(),
+            dsl_outer_tail: None,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -897,6 +923,20 @@ impl Game {
         idx
     }
 
+    /// Advance the card-index counter to `value` if it would move forward.
+    /// No-op if `value <= self.next_card_index` — the counter must never
+    /// regress, since that would re-issue an index already in circulation.
+    ///
+    /// Used by test harnesses (e.g. `DebugRunner`) that pre-seed cards with
+    /// indices `0..N` and need the game to allocate `N..` for any cards
+    /// minted after setup. Centralized here so future invariants around
+    /// card-index management have a single chokepoint.
+    pub(crate) fn advance_card_index_to(&mut self, value: u16) {
+        if value > self.next_card_index {
+            self.next_card_index = value;
+        }
+    }
+
     // --- Convenience methods that avoid borrow conflicts ---
 
     /// Suspend a single permanent. Fires `OnSuspend` observers in every
@@ -1082,10 +1122,12 @@ impl Game {
     /// mechanical.
     ///
     /// Callers: `select_opponent_permanent` (selection-time gate, Phase A)
-    /// and the script-API mutation entry points on `EffectContext` (Phase B):
-    /// `delete_permanent`, `return_to_hand`, `return_to_deck`, `de_digivolve`,
-    /// `suspend`, and the negative-DP branches of `add_dp_modifier` /
-    /// `add_modifier`.
+    /// and the script-API mutation entry points on `EffectContext` (Phase B,
+    /// broadened in Phase E prep): `delete_permanent`, `return_to_hand`,
+    /// `return_to_deck`, `de_digivolve`, `suspend`, and `add_modifier` /
+    /// `add_dp_modifier`. The `add_modifier` site is unconditional — every
+    /// `ModifierType` and every value (positive, negative, or zero) is gated,
+    /// matching DCGO's `CanNotAffected` semantics literally.
     pub fn progress_excludes(
         &self,
         target: PermanentHandle,

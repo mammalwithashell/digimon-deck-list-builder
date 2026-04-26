@@ -257,3 +257,59 @@ fn card_removed_from_trash_post_play() {
         "FORTITUDE-CARD landed on field"
     );
 }
+
+// ─── Test 4: Defensive None-return when card is no longer in trash ──────────
+
+/// Regression for the `<Save>` + `<Fortitude>` interaction surfaced by Phase D
+/// Task 14 integration smoke. If a queued Fortitude replay fires after another
+/// effect (e.g. Save) has already moved the card out of trash and under a
+/// Tamer's stack, the call must NOT panic — it must return `None` and leave
+/// game state untouched. Callers (specifically the drain hook in
+/// `combat::finalize_permanent_deletion`) bind the result to `let _ = ...` and
+/// silently absorb the no-op.
+#[test]
+fn returns_none_when_card_not_in_trash() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("RELOCATED-CARD"))
+        .start();
+
+    let tp = r.game.turn_player();
+
+    // Push the card to trash, then immediately drain it (simulating another
+    // effect relocating the card before the replay fires).
+    let handle = push_to_trash(&mut r, tp, "RELOCATED-CARD");
+    r.game.players[tp as usize].trash.clear();
+
+    assert_eq!(
+        r.game.players[tp as usize].trash.len(),
+        0,
+        "trash empty before defensive call"
+    );
+    assert_eq!(
+        r.game.players[tp as usize].battle_area.len(),
+        0,
+        "battle area empty before defensive call"
+    );
+
+    let memory_before = r.game.memory;
+
+    let result = {
+        let mut ctx = EffectContext::new(&mut r.game, handle, None, tp);
+        ctx.play_from_trash_free_unsuspended(handle)
+    };
+
+    // None returned, no permanent created, memory unchanged.
+    assert!(
+        result.is_none(),
+        "expected None when card is not in trash"
+    );
+    assert_eq!(
+        r.game.players[tp as usize].battle_area.len(),
+        0,
+        "no permanent created on missing-card path"
+    );
+    assert_eq!(
+        r.game.memory, memory_before,
+        "memory untouched on missing-card path"
+    );
+}

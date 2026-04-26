@@ -9,7 +9,8 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{CardColor, CardKind, GamePhase, Keyword};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType, PlayerId};
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{AttackState, AttackTarget, PendingAttack};
 
 fn fighter(id: &str, dp: i32, keywords: Vec<Keyword>) -> CardData {
@@ -64,6 +65,61 @@ fn setup_progress_attacker() -> (
         counter_depth: 0,
     });
     (r, progress, opp)
+}
+
+/// Install a modifier as if `effect_player`'s effect is the source, then
+/// drop the source attribution. Wraps the
+/// `set_effect_source_player_for_test → EffectContext::add_modifier → clear`
+/// boilerplate that every Phase B+ modifier-gate test repeats.
+///
+/// Tests that exercise other `EffectContext` mutation entry points
+/// (`delete_permanent`, `return_to_hand`, `de_digivolve`, `suspend`, etc.)
+/// or that need to call `add_dp_modifier` directly to cover its delegate
+/// path do not use this helper — they keep the explicit `EffectContext::new`
+/// scope so the API under test stays visible at the call site.
+fn install_modifier_as(
+    r: &mut DebugRunner,
+    effect_player: PlayerId,
+    target: PermanentHandle,
+    modifier: ModifierType,
+    value: i32,
+    expiry: Expiry,
+) {
+    r.game.set_effect_source_player_for_test(Some(effect_player));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, effect_player);
+        ctx.add_modifier(target, modifier, value, expiry);
+    }
+    r.game.set_effect_source_player_for_test(None);
+}
+
+/// Build a runner with one non-Progress attacker on P0 and one opponent
+/// permanent on P1. Used for regression tests that need to confirm the
+/// gate predicate evaluates to `false` (gate inactive) outside Progress
+/// scope — e.g., to catch a future broadening of `progress_excludes` that
+/// would accidentally suppress all opponent-sourced modifiers.
+fn setup_plain_attacker() -> (DebugRunner, PermanentHandle, PermanentHandle) {
+    let mut r = DebugRunner::builder()
+        .add_card(fighter("PLAIN", 4000, vec![])) // no Progress keyword
+        .add_card(fighter("OPP", 4000, vec![]))
+        .start();
+    let plain = r.place_on_field(0, "PLAIN", None);
+    let opp = r.place_on_field(1, "OPP", None);
+    r.game.pending_attack = Some(PendingAttack {
+        attacker: plain,
+        original_target: AttackTarget::Player(1),
+        effective_target: AttackTarget::Player(1),
+        is_blocked: false,
+        blocker: None,
+        is_vortex: false,
+        is_overclock: false,
+        cancelled: false,
+        battle_occurred: false,
+        return_phase: GamePhase::Main,
+        state: AttackState::Declared,
+        counter_depth: 0,
+    });
+    (r, plain, opp)
 }
 
 #[test]
@@ -236,12 +292,12 @@ fn opponent_effect_negative_dp_does_not_apply_to_progress_attacker() {
 }
 
 #[test]
-fn opponent_effect_positive_dp_still_applies_to_progress_attacker() {
-    // Sanity check: Progress only excludes opponent effects that target the
-    // carrier negatively (matching DCGO's CanNotAffectedClass semantics for
-    // hostile effects). A positive DP buff from an opponent effect — rare but
-    // possible via card text like "Your opponent's Digimon gets +1000 DP" —
-    // still applies.
+fn opponent_effect_positive_dp_does_not_apply_to_progress_attacker() {
+    // DCGO-faithful: Progress.cs's SkillCondition is `IsOpponentEffect(...)` —
+    // a pure source-side check. CanNotBeAffected gates regardless of sign,
+    // including positive DP grants. Flipped from the Phase B precedent that
+    // let positive buffs through; see plan
+    // docs/superpowers/plans/2026-04-24-progress-gate-broaden-modifier-scope.md.
     use digimon_engine::enums::{Expiry, ModifierType};
     let (mut r, progress, _opp) = setup_progress_attacker();
     r.game.set_effect_source_player_for_test(Some(1));
@@ -251,7 +307,12 @@ fn opponent_effect_positive_dp_still_applies_to_progress_attacker() {
     }
     r.game.set_effect_source_player_for_test(None);
     let dp_sum = r.game.modifiers.sum(progress, ModifierType::ChangeDp);
-    assert_eq!(dp_sum, 1000, "positive DP buffs are not gated by Progress");
+    assert_eq!(
+        dp_sum, 0,
+        "Progress attacker must not receive opponent-effect +DP modifier; \
+         got accumulated ChangeDp = {}",
+        dp_sum
+    );
 }
 
 #[test]
@@ -299,5 +360,142 @@ fn rule_driven_delete_still_removes_progress_attacker() {
         r.game.players[0].battle_area.len(),
         0,
         "rule-driven (None-source) delete must still remove Progress attacker"
+    );
+}
+
+#[test]
+fn opponent_effect_cannot_unsuspend_does_not_freeze_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    install_modifier_as(&mut r, 1, progress, ModifierType::CannotUnsuspend, 0, Expiry::EndOfOpponentsTurn);
+    assert!(
+        !r.game.modifiers.has(progress, ModifierType::CannotUnsuspend),
+        "Progress attacker must not be frozen by opponent CannotUnsuspend"
+    );
+}
+
+#[test]
+fn opponent_effect_cannot_attack_does_not_lock_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    install_modifier_as(&mut r, 1, progress, ModifierType::CannotAttack, 0, Expiry::EndOfTurn);
+    assert!(
+        !r.game.modifiers.has(progress, ModifierType::CannotAttack),
+        "Progress attacker must not pick up opponent-effect CannotAttack lockdown"
+    );
+}
+
+#[test]
+fn opponent_effect_dont_have_dp_does_not_apply_to_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    install_modifier_as(&mut r, 1, progress, ModifierType::DontHaveDp, 0, Expiry::EndOfAttack);
+    assert!(
+        !r.game.modifiers.has(progress, ModifierType::DontHaveDp),
+        "Progress attacker must not be DontHaveDp-clamped by opponent effect"
+    );
+}
+
+#[test]
+fn opponent_effect_negative_base_dp_does_not_apply_to_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    install_modifier_as(&mut r, 1, progress, ModifierType::ChangeBaseDp, -2000, Expiry::EndOfTurn);
+    assert_eq!(
+        r.game.modifiers.sum(progress, ModifierType::ChangeBaseDp),
+        0,
+        "Progress attacker must not receive opponent-effect ChangeBaseDp(-2000)"
+    );
+}
+
+#[test]
+fn opponent_effect_positive_base_dp_also_does_not_apply_to_progress_attacker() {
+    // DCGO-faithful: positive base-DP grants from opponents are gated for
+    // the same reason positive ChangeDp is gated — CanNotBeAffected is
+    // hostility-blind.
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    install_modifier_as(&mut r, 1, progress, ModifierType::ChangeBaseDp, 1000, Expiry::EndOfTurn);
+    assert_eq!(
+        r.game.modifiers.sum(progress, ModifierType::ChangeBaseDp),
+        0,
+        "Progress attacker must not receive opponent-effect ChangeBaseDp(+1000) either"
+    );
+}
+
+#[test]
+fn opponent_effect_negative_security_attack_does_not_apply_to_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    install_modifier_as(&mut r, 1, progress, ModifierType::SecurityAttackChange, -1, Expiry::EndOfTurn);
+    assert_eq!(
+        r.game.modifiers.sum(progress, ModifierType::SecurityAttackChange),
+        0,
+        "Progress attacker must not receive opponent-effect SecurityAttackChange(-1)"
+    );
+}
+
+#[test]
+fn opponent_effect_protective_modifier_does_not_apply_to_progress_attacker() {
+    // DCGO-faithful: even a notionally-protective modifier (e.g. global
+    // "all Digimon can't be deleted by effects this turn" rider from an
+    // opponent's option) does not reach the Progress attacker. The gate
+    // is purely source-side per Progress.cs SkillCondition, not hostility-
+    // classified. Mirrors the positive-DP test's logic.
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    install_modifier_as(
+        &mut r,
+        1,
+        progress,
+        ModifierType::CannotBeDestroyedByEffect,
+        0,
+        Expiry::EndOfTurn,
+    );
+    assert!(
+        !r.game.modifiers.has(progress, ModifierType::CannotBeDestroyedByEffect),
+        "Progress gate is source-side only — opponent-granted protection doesn't pass through"
+    );
+}
+
+#[test]
+fn own_effect_cannot_attack_still_locks_progress_attacker() {
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    install_modifier_as(&mut r, 0, progress, ModifierType::CannotAttack, 0, Expiry::EndOfTurn);
+    assert!(
+        r.game.modifiers.has(progress, ModifierType::CannotAttack),
+        "own-sourced CannotAttack must still install on Progress carrier"
+    );
+}
+
+#[test]
+fn opponent_effect_negative_dp_applies_to_non_progress_attacker() {
+    // Regression guard: if a future change accidentally broadens
+    // `progress_excludes` (e.g. drops the Progress-keyword check or the
+    // current-attacker gate), this test would start failing — confirming
+    // the predicate is still narrow enough to let opponent-sourced
+    // modifiers land on a plain attacker. The gate must fire ONLY for
+    // Progress carriers, not all attacking permanents.
+    let (mut r, plain, _opp) = setup_plain_attacker();
+    install_modifier_as(&mut r, 1, plain, ModifierType::ChangeDp, -3000, Expiry::EndOfTurn);
+    assert_eq!(
+        r.game.modifiers.sum(plain, ModifierType::ChangeDp),
+        -3000,
+        "opponent-sourced -DP must land on a non-Progress attacker; \
+         progress_excludes should return false here (no Keyword::Progress, \
+         no ImmunityToOpponentEffects modifier)"
+    );
+}
+
+#[test]
+fn own_effect_positive_dp_still_buffs_progress_attacker() {
+    // Sanity: own buffs are not gated. progress_excludes returns false when
+    // src == target.player, so own players can still buff their own
+    // attacking Progress carrier mid-attack.
+    use digimon_engine::enums::{Expiry, ModifierType};
+    let (mut r, progress, _opp) = setup_progress_attacker();
+    r.game.set_effect_source_player_for_test(Some(0));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
+        ctx.add_dp_modifier(progress, 2000, Expiry::EndOfTurn);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    assert_eq!(
+        r.game.modifiers.sum(progress, ModifierType::ChangeDp),
+        2000,
+        "own-sourced positive DP must still install on Progress carrier"
     );
 }
