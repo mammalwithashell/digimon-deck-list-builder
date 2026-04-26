@@ -28,7 +28,7 @@ from digimon_gym.db.schemas import (
     ManifestResponse,
     PrepareModelResponse,
 )
-from digimon_gym.engine.model_utils import get_models_dir
+from digimon_engine import get_models_dir
 from digimon_gym.storage import spaces
 from digimon_gym.storage.model_resolver import resolve_manifest_model_path
 

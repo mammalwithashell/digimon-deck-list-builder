@@ -151,8 +151,7 @@ def _separate_egg_deck(deck_ids: List[str]) -> Tuple[List[str], List[str]]:
 
     Lazy-imports CardDatabase to avoid heavy module load at router import.
     """
-    from digimon_gym.engine.data.card_database import CardDatabase
-    from digimon_gym.engine.data.enums import CardKind
+    from digimon_engine import CardDatabase, CardKind
 
     db = CardDatabase()
     egg_deck: List[str] = []
