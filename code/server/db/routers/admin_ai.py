@@ -902,11 +902,13 @@ def _apply_and_commit_single_task(
             edits=edits,
             force=force,
             force_allowed_path=primary_path,
+            worktree=True,
         )
         check_outputs = run_profile_checks(
             repo_root=ctx.worktree_path,
             scope_profile=scope_profile,
             applied_files=applied_files,
+            worktree=True,
         )
         commit_sha = _git.commit_files(
             worktree_path=ctx.worktree_path,

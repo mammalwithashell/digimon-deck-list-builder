@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.ai.autofix_apply import (
+    WORKTREE_SOURCE_DIR,
     ApplyValidationError,
     apply_validated_edits,
     run_profile_checks,
@@ -668,7 +669,9 @@ class AISetRunOrchestrator:
 
         self.git.preflight(run_mode="pr")
         ctx = self.git.prepare_worktree_for_task(task_id=task.id, run_mode="pr")
-        applied_files = apply_validated_edits(repo_root=ctx.worktree_path, edits=edits)
+        applied_files = apply_validated_edits(
+            repo_root=ctx.worktree_path, edits=edits, worktree=True
+        )
 
         # Update frozen manifest hashes for any edited frozen-lane scripts
         self._update_manifest_hashes(ctx.worktree_path, card_id, applied_files)
@@ -677,9 +680,11 @@ class AISetRunOrchestrator:
             repo_root=ctx.worktree_path,
             scope_profile=scope_profile,
             applied_files=applied_files,
+            worktree=True,
         )
         commit_files = list(applied_files)
-        manifest_rel = "digimon_gym/engine/data/scripts/_frozen_manifest.json"
+        # After Phase-6 hoist the manifest lives under code/ in the worktree.
+        manifest_rel = f"{WORKTREE_SOURCE_DIR}/digimon_gym/engine/data/scripts/_frozen_manifest.json"
         if manifest_rel not in commit_files:
             commit_files.append(manifest_rel)
         commit_sha = self.git.commit_files(
@@ -709,8 +714,14 @@ class AISetRunOrchestrator:
     def _update_manifest_hashes(
         worktree_path: Path, card_id: str, applied_files: list[str]
     ) -> None:
-        """Update frozen manifest hashes in the worktree after editing scripts."""
-        scripts_root = worktree_path / "digimon_gym" / "engine" / "data" / "scripts"
+        """Update frozen manifest hashes in the worktree after editing scripts.
+
+        ``applied_files`` are worktree-relative paths returned by
+        :func:`apply_validated_edits` with ``worktree=True``, i.e. they carry
+        the ``code/`` prefix (``"code/digimon_gym/engine/data/scripts/…"``).
+        """
+        # After Phase-6 hoist the scripts root is under code/ in the worktree.
+        scripts_root = worktree_path / WORKTREE_SOURCE_DIR / "digimon_gym" / "engine" / "data" / "scripts"
         manifest_path = scripts_root / "_frozen_manifest.json"
         if not manifest_path.exists():
             return
@@ -719,9 +730,10 @@ class AISetRunOrchestrator:
         cards = manifest.get("cards", {})
         updated = False
 
+        _wt_scripts_prefix = f"{WORKTREE_SOURCE_DIR}/digimon_gym/engine/data/scripts/"
         for rel_path in applied_files:
             # Only update manifest for frozen-lane script edits
-            if not rel_path.startswith("digimon_gym/engine/data/scripts/"):
+            if not rel_path.startswith(_wt_scripts_prefix):
                 continue
             if "/generated/" in rel_path:
                 continue
@@ -736,9 +748,7 @@ class AISetRunOrchestrator:
             # Find matching manifest entry by card_id or relpath
             for cid, entry in cards.items():
                 frozen_rel = entry.get("frozen_relpath", "").replace("\\", "/")
-                script_rel = rel_path.replace(
-                    "digimon_gym/engine/data/scripts/", ""
-                ).replace("\\", "/")
+                script_rel = rel_path.replace(_wt_scripts_prefix, "").replace("\\", "/")
                 if frozen_rel == script_rel:
                     entry["frozen_hash"] = new_hash
                     updated = True

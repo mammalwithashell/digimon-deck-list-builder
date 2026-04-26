@@ -31,7 +31,7 @@ from data_paths import CARD_OVERRIDES as _CARD_OVERRIDES_PATH
 
 CARDS_JSON = str(_CARDS_JSON_PATH)
 CARD_OVERRIDES_JSON = str(_CARD_OVERRIDES_PATH)
-PRIORITY_SETS_TXT = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "scraper", "priority_sets.txt")
+PRIORITY_SETS_TXT = os.path.join(os.path.dirname(__file__), "scraper", "priority_sets.txt")
 
 COLOR_MAP = {
     "Red": 0, "Blue": 1, "Yellow": 2, "Green": 3,
@@ -427,7 +427,7 @@ def bulk_ingest():
     """Ingest all priority sets that are missing from cards.json."""
     priority_sets = read_priority_sets()
     if not priority_sets:
-        print("No priority sets found. Ensure digimon_gym/scraper/priority_sets.txt exists.")
+        print("No priority sets found. Ensure tools/scraper/priority_sets.txt exists.")
         sys.exit(1)
 
     existing, cards_path = load_cards_json()

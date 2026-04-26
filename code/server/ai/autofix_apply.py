@@ -12,6 +12,11 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# After the Phase-6 hoist, all Python source lives under code/ inside the repo.
+# When the AI pipeline checks out a worktree it gets the repo root, so paths
+# returned by the AI (e.g. "digimon_gym/engine/data/scripts/bt13/bt13_006.py")
+# must be prefixed with WORKTREE_SOURCE_DIR before resolving against the worktree root.
+WORKTREE_SOURCE_DIR = "code"
 MAX_CONTEXT_CHARS_PER_FILE = int(os.environ.get("AI_AUTOFIX_CONTEXT_CHARS_PER_FILE", "8000"))
 MAX_CONTEXT_CHARS_TOTAL = int(os.environ.get("AI_AUTOFIX_CONTEXT_CHARS_TOTAL", "16000"))
 
@@ -224,7 +229,17 @@ def apply_validated_edits(
     edits: list[dict[str, str]],
     force: bool = False,
     force_allowed_path: str | None = None,
+    worktree: bool = False,
 ) -> list[str]:
+    """Apply validated edits to files under repo_root.
+
+    When ``worktree=True`` the edits are being applied to an external git
+    worktree checked out from the Phase-6 layout (source under ``code/``).
+    In that case each logical path like ``"digimon_gym/engine/data/scripts/…"``
+    is resolved as ``repo_root / WORKTREE_SOURCE_DIR / logical_path`` and the
+    returned ``applied_files`` list carries the full worktree-relative path
+    (i.e. ``"code/digimon_gym/engine/data/scripts/…"``).
+    """
     if force:
         if len(edits) != 1:
             raise ApplyValidationError(
@@ -237,27 +252,33 @@ def apply_validated_edits(
 
     applied_paths: list[str] = []
     for edit in edits:
-        abs_path = repo_root / edit["path"]
+        logical_path = edit["path"]
+        if worktree:
+            wt_rel = f"{WORKTREE_SOURCE_DIR}/{logical_path}"
+            abs_path = repo_root / wt_rel
+        else:
+            wt_rel = logical_path
+            abs_path = repo_root / logical_path
         if not abs_path.exists():
-            raise ApplyValidationError(f"Cannot edit missing file: {edit['path']}")
+            raise ApplyValidationError(f"Cannot edit missing file: {logical_path}")
         current_hash = _sha256(abs_path).lower()
         if current_hash != edit["expected_hash"]:
             can_force_apply = (
                 len(edits) == 1
                 and force_allowed_path is not None
-                and edit["path"] == force_allowed_path
+                and logical_path == force_allowed_path
             )
             if force and can_force_apply:
                 pass
             else:
                 raise HashMismatchError(
-                    path=edit["path"],
+                    path=logical_path,
                     expected_hash=edit["expected_hash"],
                     current_hash=current_hash,
                     can_force_apply=can_force_apply,
                 )
         abs_path.write_text(edit["new_content"], encoding="utf-8")
-        applied_paths.append(edit["path"])
+        applied_paths.append(wt_rel)
     return applied_paths
 
 
@@ -277,27 +298,46 @@ def _run_check_command(args: list[str], *, cwd: Path) -> str:
     return f"{cmd}: {output or 'ok'}"
 
 
-def derive_targeted_tests(applied_files: list[str]) -> list[str]:
+def derive_targeted_tests(applied_files: list[str], *, worktree: bool = False) -> list[str]:
+    """Derive a list of test paths to run for the given applied files.
+
+    ``applied_files`` may contain either plain logical paths
+    (``"digimon_gym/engine/…"``) or Phase-6 worktree-relative paths
+    (``"code/digimon_gym/engine/…"``).  Both forms are handled automatically.
+
+    When ``worktree=True`` the returned paths carry the ``code/`` prefix so
+    they are correct relative to the external worktree root.  When
+    ``worktree=False`` they are plain paths relative to ``PROJECT_ROOT``
+    (i.e. the ``code/`` directory itself).
+    """
     tests: list[str] = []
     touched_sets: set[str] = set()
     has_engine_change = False
 
+    _scripts_prefix = "digimon_gym/engine/data/scripts/"
+    _engine_prefix = "digimon_gym/engine/"
+    _engine_prefix_wt = f"{WORKTREE_SOURCE_DIR}/{_engine_prefix}"
+
     for rel in applied_files:
-        if rel.startswith("digimon_gym/engine/data/scripts/") and not rel.startswith("digimon_gym/engine/data/scripts/_"):
-            parts = rel.split("/")
+        # Strip optional worktree prefix so we can use a single code path.
+        logical = rel[len(WORKTREE_SOURCE_DIR) + 1:] if rel.startswith(_engine_prefix_wt) else rel
+        if logical.startswith(_scripts_prefix) and not logical.startswith(_scripts_prefix + "_"):
+            parts = logical.split("/")
+            # parts: ["digimon_gym","engine","data","scripts",<set_id>,<file>]
             if len(parts) >= 6:
                 touched_sets.add(parts[4].lower())
-        if rel.startswith("digimon_gym/engine/"):
+        if logical.startswith(_engine_prefix):
             has_engine_change = True
 
     for set_id in sorted(touched_sets):
         candidate = f"tests/test_{set_id}_scripts.py"
         if (PROJECT_ROOT / candidate).exists():
-            tests.append(candidate)
+            tests.append(f"{WORKTREE_SOURCE_DIR}/{candidate}" if worktree else candidate)
 
     if has_engine_change:
-        if (PROJECT_ROOT / "tests/test_ai_pipeline.py").exists():
-            tests.append("tests/test_ai_pipeline.py")
+        candidate = "tests/test_ai_pipeline.py"
+        if (PROJECT_ROOT / candidate).exists():
+            tests.append(f"{WORKTREE_SOURCE_DIR}/{candidate}" if worktree else candidate)
 
     seen: set[str] = set()
     unique: list[str] = []
@@ -309,16 +349,38 @@ def derive_targeted_tests(applied_files: list[str]) -> list[str]:
     return unique
 
 
-def run_profile_checks(*, repo_root: Path, scope_profile: str, applied_files: list[str]) -> list[str]:
+def run_profile_checks(
+    *, repo_root: Path, scope_profile: str, applied_files: list[str], worktree: bool = False
+) -> list[str]:
+    """Run syntax + integrity + targeted pytest checks.
+
+    When ``worktree=True`` the ``repo_root`` is an external git worktree
+    checked out from the Phase-6 repo layout (source under ``code/``), and
+    ``applied_files`` carry worktree-relative paths with the ``code/`` prefix
+    (form returned by :func:`apply_validated_edits` with ``worktree=True``).
+
+    When ``worktree=False`` (default) the ``repo_root`` is the local server
+    codebase root (i.e. the ``code/`` directory itself), and ``applied_files``
+    use plain logical paths such as ``"digimon_gym/engine/data/scripts/…"``.
+    """
     outputs: list[str] = []
     if applied_files:
         compile_targets = [str(repo_root / rel) for rel in applied_files if rel.endswith(".py")]
         if compile_targets:
             outputs.append(_run_check_command(["python", "-m", "py_compile", *compile_targets], cwd=repo_root))
 
-    outputs.append(_run_check_command(["python", "tools/check_frozen_integrity.py"], cwd=repo_root))
+    # After the Phase-6 hoist, the script lives under code/tools/ inside the
+    # repo.  When operating against a worktree (repo root) we must prefix with
+    # WORKTREE_SOURCE_DIR; when operating against PROJECT_ROOT (= code/) the
+    # script is directly at tools/check_frozen_integrity.py.
+    integrity_script = (
+        f"{WORKTREE_SOURCE_DIR}/tools/check_frozen_integrity.py"
+        if worktree
+        else "tools/check_frozen_integrity.py"
+    )
+    outputs.append(_run_check_command(["python", integrity_script], cwd=repo_root))
 
-    tests = derive_targeted_tests(applied_files)
+    tests = derive_targeted_tests(applied_files, worktree=worktree)
     if tests:
         outputs.append(_run_check_command(["python", "-m", "pytest", "-q", *tests], cwd=repo_root))
 

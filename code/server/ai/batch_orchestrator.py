@@ -535,11 +535,14 @@ class AIFixBatchOrchestrator:
 
         self.git.preflight(run_mode=batch.run_mode)
         ctx = self.git.prepare_worktree(set_id=batch.set_id, batch_id=batch.id, run_mode=batch.run_mode)
-        applied_files = apply_validated_edits(repo_root=ctx.worktree_path, edits=edits)
+        applied_files = apply_validated_edits(
+            repo_root=ctx.worktree_path, edits=edits, worktree=True
+        )
         check_outputs = run_profile_checks(
             repo_root=ctx.worktree_path,
             scope_profile=scope_profile,
             applied_files=applied_files,
+            worktree=True,
         )
         commit_sha = self.git.commit_files(
             worktree_path=ctx.worktree_path,
