@@ -56,7 +56,7 @@ fn append_source(r: &mut DebugRunner, field_index: usize, card_id: &str) {
 }
 
 #[test]
-fn install_emits_source_select_action_ids_for_each_source() {
+fn install_emits_source_select_action_ids_excluding_top() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("BASE"))
         .add_card(make_digimon("MID"))
@@ -66,7 +66,9 @@ fn install_emits_source_select_action_ids_for_each_source() {
     let oc = r.place_on_field(tp, "BASE", Some(0));
     append_source(&mut r, oc.index as usize, "MID");
     append_source(&mut r, oc.index as usize, "TOP");
-    // Three sources now: BASE, MID, TOP.
+    // Three sources now: BASE (idx 0), MID (idx 1), TOP (idx 2).
+    // The top card is the active Digimon and must NOT be offered as a
+    // material — mirrors CountCappedZone::Material's contract.
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), Some(oc), tp);
@@ -82,10 +84,12 @@ fn install_emits_source_select_action_ids_for_each_source() {
     assert!(sel.is_optional);
     assert_eq!(r.game.current_phase, GamePhase::SelectMaterial);
 
-    let expected: Vec<u16> = (0..3)
+    // Indices 0 and 1 only — index 2 (TOP) is excluded.
+    let expected: Vec<u16> = (0..2)
         .map(|i| SOURCE_SELECT_START + (oc.index as u16) * SOURCES_PER_FIELD + i as u16)
         .collect();
     assert_eq!(sel.valid_action_ids, expected);
+    assert_eq!(sel.valid_action_ids.len(), 2);
 }
 
 #[test]
@@ -149,12 +153,16 @@ fn callback_receives_decoded_source_index() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("BASE"))
         .add_card(make_digimon("MID"))
+        .add_card(make_digimon("MID2"))
         .add_card(make_digimon("TOP"))
         .start();
     let tp = r.game.turn_player();
     let oc = r.place_on_field(tp, "BASE", Some(0));
     append_source(&mut r, oc.index as usize, "MID");
+    append_source(&mut r, oc.index as usize, "MID2");
     append_source(&mut r, oc.index as usize, "TOP");
+    // Four sources: BASE (0), MID (1), MID2 (2), TOP (3).
+    // Index 3 (TOP) is excluded; indices 0..=2 are selectable.
 
     let observed: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(None));
     let slot = Arc::clone(&observed);
@@ -166,7 +174,7 @@ fn callback_receives_decoded_source_index() {
         });
     }
 
-    // Resolve with the action ID for source index 2.
+    // Resolve with the action ID for source index 2 (MID2 — a material, not the top).
     let action = SOURCE_SELECT_START + (oc.index as u16) * SOURCES_PER_FIELD + 2;
     let (decoded_field, decoded_source) = decode_source_select(action);
     assert_eq!(decoded_field, oc.index as u16);
@@ -226,6 +234,28 @@ fn optional_select_material_accepts_pass() {
         .resolve_selection(tp, PASS)
         .expect("optional selection accepts PASS");
     assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn single_source_permanent_offers_no_materials() {
+    // A permanent with only its top card (1 source) has no materials —
+    // the top is excluded by contract, so no prompt is installed.
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("SOLO"))
+        .start();
+    let tp = r.game.turn_player();
+    let oc = r.place_on_field(tp, "SOLO", Some(0));
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), Some(oc), tp);
+        ctx.select_material(oc, "no materials", true, |_, _| true, |_, _| {});
+    }
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "single-source permanent has no materials — top is never offered"
+    );
+    assert_ne!(r.game.current_phase, GamePhase::SelectMaterial);
 }
 
 #[test]
