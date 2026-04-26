@@ -10,10 +10,10 @@
 //!   target_a.card_sources ++ target_b.card_sources ++ [from_hand]
 //! (target_a's stack first, target_b's stack second, then the new top).
 //!
-//! No shared `Game::dna_digivolve_from_hand_inner` exists today — the
-//! user-action `initiate_dna_digivolve` path stubs execution as
-//! `TODO(dna-digivolve-execute)`. The primitive therefore performs the
-//! merge inline; the user-action path can adopt the same logic later.
+//! Both this effect path and the user-action `initiate_dna_digivolve`
+//! path delegate to the shared `Game::dna_digivolve_inner` core
+//! (added in Phase 2f1 Task 4). The user-action two-stage selection
+//! chain is covered by `tests/dna_digivolve_user_action.rs`.
 
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -193,9 +193,9 @@ fn effect_initiated_dna_digivolve_preserves_stacked_materials_under_top() {
 
     let handles: Vec<_> = merged.card_sources.iter().map(|c| c.handle()).collect();
     // CHOSEN-NOT-CANONICAL contract: order is target_a's stack first,
-    // target_b's second, then hand top. When the user-action
-    // initiate_dna_digivolve lands (TODO(dna-digivolve-execute) at
-    // game_actions.rs:2198), update both this test and that path together.
+    // target_b's second, then hand top. The user-action
+    // `initiate_dna_digivolve` path now delegates to the same
+    // `Game::dna_digivolve_inner` core; ordering matches across both paths.
     assert_eq!(handles[0], base_a_handle, "card_sources[0] = target_a base");
     assert_eq!(handles[1], top_a_handle, "card_sources[1] = target_a top");
     assert_eq!(
