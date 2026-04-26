@@ -147,3 +147,41 @@ reverse = {k: sorted(v) for k, v in reverse.items()}
 (Adjust the structural path if `deck_library.json` schema diverges; the actual schema lives in `code/tools/meta_loader.py`.)
 
 ---
+
+## Phase 2: Batch and Plan
+
+### 2a. Group cards into batches
+
+Default batch size is `--batch-size` (default 4). Apply these grouping heuristics in order:
+
+1. Cards that reference each other by name in their printed text → same batch.
+2. A tamer + Digimon it explicitly buffs (by name match in the tamer's text) → same batch.
+3. An option card + the Digimon(s) it explicitly targets by name → same batch.
+4. Remaining slots filled in card-ID order.
+
+Mixed-mode batches are allowed: a single batch may contain both IMPLEMENT-mode and AUDIT-mode cards. The orchestrator dispatches the right wave per card in Phase 4.
+
+### 2b. Print plan and require approval
+
+Emit the plan table in this exact shape:
+
+```
+Archetype: <name or "DSL test pool">
+Total cards in pool: <N>
+IMPLEMENT (no YAML yet):     <n>
+AUDIT (existing YAML):       <n>
+SKIP (prior verdict):        <n>
+SKIP (--no-audit + YAML):    <n>
+
+To process: <m> → <ceil(m / batch_size)> batches of <batch_size>
+
+Batch 1: <ID1 [I|A]>, <ID2 [I|A]>, <ID3 [I|A]>, <ID4 [I|A]>
+Batch 2: ...
+...
+
+Note: [I] = IMPLEMENT, [A] = AUDIT
+```
+
+**Require explicit user confirmation before Phase 4.** If `--report-only` is set, exit cleanly here.
+
+---
