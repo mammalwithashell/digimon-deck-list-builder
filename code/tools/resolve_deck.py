@@ -34,7 +34,16 @@ if str(_CODE_DIR) not in sys.path:
     sys.path.insert(0, str(_CODE_DIR))
 
 from data_paths import DECK_LIBRARY as _DECK_LIBRARY_PATH, CARDS_JSON as _CARDS_JSON_PATH
-from digimon_engine import CardDatabase, CardKind
+
+# Prefer the Rust-backed PyO3 binding (production runtime + RL training).
+# Fall back to the sunset Python engine for lightweight CI workflows
+# (card-meta-integrity, frozen-integrity) that don't build the wheel.
+try:
+    from digimon_engine import CardDatabase, CardKind
+except ImportError:
+    from engine_py_legacy.engine.data.card_database import CardDatabase
+    from engine_py_legacy.engine.data.enums import CardKind
+
 from tools.xros_req_parser import (
     XrosReqParseResult,
     parse as _parse_xros_req,

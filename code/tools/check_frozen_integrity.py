@@ -11,7 +11,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS_ROOT = ROOT / "digimon_gym" / "engine" / "data" / "scripts"
+# Phase 4 moved the Python engine to engine_py_legacy/. The frozen scripts
+# now live alongside the sunset engine, not the production digimon_gym/ tree.
+SCRIPTS_ROOT = ROOT / "engine_py_legacy" / "engine" / "data" / "scripts"
 MANIFEST_PATH = SCRIPTS_ROOT / "_frozen_manifest.json"
 SCRIPT_FILENAME_RE = re.compile(r"^[a-z0-9]+_[0-9]{3}(?:_token)?\.py$")
 
@@ -25,7 +27,9 @@ def sha256(path: Path) -> str:
 def iter_frozen_files() -> list[Path]:
     files = []
     for set_dir in SCRIPTS_ROOT.iterdir():
-        if not set_dir.is_dir() or set_dir.name in {"generated", "__pycache__"}:
+        # `test/` holds engine-internal test fixtures (test_NNN.py), not
+        # production frozen scripts — exclude alongside generated/__pycache__.
+        if not set_dir.is_dir() or set_dir.name in {"generated", "__pycache__", "test"}:
             continue
         for py_file in set_dir.glob("*.py"):
             if py_file.name == "__init__.py":
