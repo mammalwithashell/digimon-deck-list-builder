@@ -1053,6 +1053,26 @@ impl<'a> EffectContext<'a> {
         })
     }
 
+    /// Play a card from `player`'s hand at `hand_index` **without subtracting
+    /// memory**. Used by effects that say "play this without paying its memory
+    /// cost" (e.g. DSL `PlayFromHandFree` step lowerings).
+    ///
+    /// Thin alias over `play_from_hand_with_cost(_, _, CostDelta::Free)`:
+    /// `CostDelta::Free.resolve(_) == 0` → `effective_cost = 0` →
+    /// `pay_memory(0)` is a no-op, so memory is unchanged. OnPlay +
+    /// OnEnterFieldAnyone triggers fire as normal.
+    ///
+    /// Returns the `PermanentHandle` of the new field permanent, or `None` if
+    /// the hand index is invalid, the battle area is full, or the play was
+    /// gated by a flood-gate (`CannotPlayDigimonByEffect`).
+    pub fn play_from_hand_free(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<PermanentHandle> {
+        self.play_from_hand_with_cost(player, hand_index, crate::enums::CostDelta::Free)
+    }
+
     /// Play a card from `player`'s trash at `trash_index`, deducting memory
     /// according to `cost_delta`. OnPlay effects fire.
     pub fn play_from_trash_with_cost(
