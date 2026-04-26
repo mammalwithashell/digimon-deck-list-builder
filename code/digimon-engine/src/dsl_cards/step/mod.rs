@@ -12,6 +12,7 @@ pub mod modifiers;
 pub mod permanent_mutations;
 pub mod permanent_scan;
 pub mod play_digivolve;
+pub mod replacement_outcome;
 pub mod schedule_delayed;
 pub mod selections;
 pub mod zone_moves;
@@ -186,6 +187,9 @@ pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut
         return;
     }
     if schedule_delayed::try_run(step, ctx, bindings) {
+        return;
+    }
+    if replacement_outcome::try_run(step, ctx, bindings) {
         return;
     }
     // Phase 2d+: other families.

@@ -198,6 +198,7 @@ fn compile_cost_delta(c: &crate::step::CostDelta) -> CompiledCostDelta {
         CostDelta::Keyword(CostDeltaKeyword::Free) => CompiledCostDelta::Free,
         CostDelta::Keyword(CostDeltaKeyword::Printed) => CompiledCostDelta::Printed,
         CostDelta::Literal(n) => CompiledCostDelta::Literal(*n),
+        CostDelta::Reduce { reduce } => CompiledCostDelta::Reduce(*reduce),
     }
 }
 
@@ -704,6 +705,14 @@ fn compile_declarative(
                 })
                 .collect(),
             exclude_cause: p.exclude_cause,
+            process: p
+                .process
+                .iter()
+                .enumerate()
+                .map(|(i, s)| {
+                    compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors)
+                })
+                .collect(),
             summary,
             summary_key,
         },
@@ -1007,14 +1016,14 @@ fn compile_step(
         S::EffectInitiatedDigivolve(a) => CompiledStep::EffectInitiatedDigivolve {
             target: compile_binding_ref(&a.target),
             from_hand: compile_binding_ref(&a.from_hand),
-            cost: a.cost,
+            cost: compile_cost_delta(&a.cost),
             ignore_requirements: a.ignore_requirements,
         },
         S::EffectInitiatedDnaDigivolve(a) => CompiledStep::EffectInitiatedDnaDigivolve {
             target_a: compile_binding_ref(&a.target_a),
             target_b: compile_binding_ref(&a.target_b),
             from_hand: compile_binding_ref(&a.from_hand),
-            cost: a.cost,
+            cost: compile_cost_delta(&a.cost),
             ignore_requirements: a.ignore_requirements,
         },
 
@@ -1210,6 +1219,14 @@ fn compile_step(
                 })
                 .collect(),
         ),
+        S::CancelReplacement(_) => CompiledStep::CancelReplacement,
+        S::HandleReplacement(_) => CompiledStep::HandleReplacement,
+        S::RedirectReplacement(r) => CompiledStep::RedirectReplacement {
+            zone: compile_zone(r.zone),
+        },
+        S::SubstituteReplacement(s) => CompiledStep::SubstituteReplacement {
+            subject: compile_binding_ref(&s.subject),
+        },
         S::RawRust(r) => CompiledStep::RawRust {
             fn_name: r.fn_name.clone(),
             consumes: r.consumes.clone(),

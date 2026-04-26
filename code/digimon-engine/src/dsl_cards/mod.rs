@@ -64,11 +64,12 @@ impl CardEffect for DslCardEffect {
                 }
                 CompiledClause::Declarative(decl) => match decl {
                     CompiledDeclarativeClause::GrantKeyword {
-                        keyword, value, scope, ..
+                        keyword,
+                        value,
+                        scope,
+                        ..
                     } => {
-                        if let Some(e) =
-                            lower_grant_keyword::lower(card, keyword, *value, *scope)
-                        {
+                        if let Some(e) = lower_grant_keyword::lower(card, keyword, *value, *scope) {
                             out.push(e);
                         }
                     }
@@ -106,10 +107,8 @@ impl CardEffect for DslCardEffect {
                     } => {
                         // Phase 1c scope: only when_playing_this + literal amount
                         // + no pay_cost + no ally-played hook + before_pay_cost timing.
-                        let timing_ok = matches!(
-                            reduction_timing.as_deref(),
-                            None | Some("before_pay_cost")
-                        );
+                        let timing_ok =
+                            matches!(reduction_timing.as_deref(), None | Some("before_pay_cost"));
                         if !timing_ok {
                             continue 'clause;
                         }
@@ -175,14 +174,16 @@ impl CardEffect for DslCardEffect {
                         active_when,
                         sources,
                         exclude_cause,
+                        process,
                         ..
                     } => {
-                        out.push(lower_partition::lower(
+                        out.extend(lower_partition::lower(
                             card,
                             *scope,
                             active_when.as_ref(),
                             sources,
                             exclude_cause,
+                            process,
                         ));
                     }
                     CompiledDeclarativeClause::Delay {

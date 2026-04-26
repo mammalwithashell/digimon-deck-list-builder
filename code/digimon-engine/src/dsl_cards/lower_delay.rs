@@ -12,7 +12,7 @@ use digimon_dsl::compiled::{CompiledPredicate, CompiledScope, CompiledStep, Comp
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::run_step;
+use crate::dsl_cards::step::run_steps;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::{DelayTrigger, EffectTiming};
 
@@ -39,9 +39,7 @@ pub fn lower(
         .delay(delay_trigger)
         .process(move |ctx| {
             let mut bindings = Bindings::new();
-            for s in process_arc.iter() {
-                run_step(s, ctx, &mut bindings);
-            }
+            let _ = run_steps(&process_arc, ctx, &mut bindings);
         });
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();

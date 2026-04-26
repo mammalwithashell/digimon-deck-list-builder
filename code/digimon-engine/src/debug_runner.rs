@@ -15,19 +15,30 @@
 //! ```
 
 use std::collections::HashMap;
+#[cfg(feature = "dsl-yaml-loader")]
+use std::sync::{Arc, OnceLock};
 
 use crate::card_data::CardData;
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
-use crate::enums::{CardKind, GamePhase, ModifierType, PlayerId};
+use crate::enums::{CardColor, CardKind, GamePhase, ModifierType, PlayerId};
+use crate::events::GameEvent;
 use crate::game::Game;
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
 use crate::rules::Rules;
+use crate::selection::{PendingSelection, PendingSelectionView, SelectionError, SelectionKind};
+
+#[cfg(feature = "dsl-yaml-loader")]
+use crate::dsl_cards::DslCardEffect;
+#[cfg(feature = "dsl-yaml-loader")]
+use digimon_dsl::compiled::{CompiledCard, CompiledCardKind, CompiledClause, CompiledColor};
 
 /// A scripted game runner for behavioral tests.
 pub struct DebugRunner {
     pub game: Game,
+    #[cfg(feature = "dsl-yaml-loader")]
+    compiled_cards: HashMap<String, Arc<CompiledCard>>,
 }
 
 impl DebugRunner {
@@ -39,7 +50,11 @@ impl DebugRunner {
     /// construct the game via `Game::new` directly (e.g. mulligan tests that
     /// want real deck draws) and still want DebugRunner's convenience API.
     pub fn wrap(game: Game) -> Self {
-        Self { game }
+        Self {
+            game,
+            #[cfg(feature = "dsl-yaml-loader")]
+            compiled_cards: HashMap::new(),
+        }
     }
 
     // ─── Mulligan helpers ─────────────────────────────────────────────
@@ -238,11 +253,110 @@ impl DebugRunner {
             index: field_index as u8,
         }
     }
+
+    // ─── DSL inspection helpers ─────────────────────────────────────
+
+    #[cfg(feature = "dsl-yaml-loader")]
+    pub fn compiled_card(&self, card_id: &str) -> Option<&CompiledCard> {
+        self.compiled_cards.get(card_id).map(Arc::as_ref)
+    }
+
+    #[cfg(feature = "dsl-yaml-loader")]
+    pub fn dsl_clause(&self, card_id: &str, idx: usize) -> Option<&CompiledClause> {
+        self.compiled_card(card_id)?.effects.get(idx)
+    }
+
+    // ─── Selection/action helpers ───────────────────────────────────
+
+    pub fn pending_selection(&self) -> Option<&PendingSelection> {
+        self.game.pending_selection.as_ref()
+    }
+
+    pub fn pending_selection_view(&self) -> Option<PendingSelectionView> {
+        self.pending_selection().map(PendingSelection::view)
+    }
+
+    pub fn pending_kind(&self) -> Option<SelectionKind> {
+        self.pending_selection().map(|s| s.kind)
+    }
+
+    pub fn pending_is_optional(&self) -> bool {
+        self.pending_selection()
+            .map(|s| s.is_optional)
+            .unwrap_or(false)
+    }
+
+    pub fn pending_action_count(&self) -> usize {
+        self.pending_selection()
+            .map(|s| s.valid_action_ids.len())
+            .unwrap_or(0)
+    }
+
+    pub fn execute_action(
+        &mut self,
+        player: PlayerId,
+        action_id: u16,
+    ) -> Result<(), SelectionError> {
+        self.game.resolve_selection(player, action_id)
+    }
+
+    pub fn execute_branch(&mut self, branch_index: usize) -> Result<(), SelectionError> {
+        let (player, action_id) = {
+            let sel = self
+                .pending_selection()
+                .ok_or(SelectionError::NoPendingSelection)?;
+            let choices = sel
+                .effect_choices
+                .as_ref()
+                .ok_or(SelectionError::InvalidAction)?;
+            let choice = choices
+                .get(branch_index)
+                .ok_or(SelectionError::InvalidAction)?;
+            (sel.selecting_player, choice.action_id)
+        };
+        self.execute_action(player, action_id)
+    }
+
+    pub fn auto_resolve(&mut self) -> Result<(), SelectionError> {
+        while let Some(sel) = self.pending_selection() {
+            let player = sel.selecting_player;
+            let action_id = match sel.valid_action_ids.first().copied() {
+                Some(id) => id,
+                None if sel.is_optional => crate::action::space::PASS,
+                None => return Err(SelectionError::InvalidAction),
+            };
+            self.execute_action(player, action_id)?;
+        }
+        Ok(())
+    }
+
+    // ─── Event helpers ──────────────────────────────────────────────
+
+    pub fn event_checkpoint(&self) -> usize {
+        self.game.events().len()
+    }
+
+    pub fn events_since(&self, checkpoint: usize) -> &[GameEvent] {
+        let start = checkpoint.min(self.game.events().len());
+        &self.game.events()[start..]
+    }
+
+    pub fn events_of_kind<F>(&self, checkpoint: usize, predicate: F) -> Vec<&GameEvent>
+    where
+        F: Fn(&GameEvent) -> bool,
+    {
+        self.events_since(checkpoint)
+            .iter()
+            .filter(|event| predicate(event))
+            .collect()
+    }
 }
 
 /// Builder for DebugRunner.
 pub struct DebugRunnerBuilder {
     card_data: HashMap<String, CardData>,
+    #[cfg(feature = "dsl-yaml-loader")]
+    compiled_cards: HashMap<String, Arc<CompiledCard>>,
     /// Cards explicitly placed in each player's hand.
     hands: HashMap<PlayerId, Vec<String>>,
     /// Cards explicitly placed in each player's deck (top of deck = end of vec).
@@ -265,6 +379,8 @@ impl Default for DebugRunnerBuilder {
     fn default() -> Self {
         Self {
             card_data: HashMap::new(),
+            #[cfg(feature = "dsl-yaml-loader")]
+            compiled_cards: HashMap::new(),
             hands: HashMap::new(),
             decks: HashMap::new(),
             securities: HashMap::new(),
@@ -288,6 +404,35 @@ impl DebugRunnerBuilder {
     pub fn add_card(mut self, card: CardData) -> Self {
         self.card_data.insert(card.card_id.clone(), card);
         self
+    }
+
+    /// Load one DSL card from the embedded DSL pack and register its lowered
+    /// effects into this runner.
+    #[cfg(feature = "dsl-yaml-loader")]
+    pub fn dsl_card(mut self, card_id: &str) -> Result<Self, String> {
+        let compiled = embedded_dsl_registry()?
+            .lookup(card_id)
+            .ok_or_else(|| format!("DSL card {card_id} not found in embedded pack"))?
+            .clone();
+        self.register_compiled_card(compiled);
+        Ok(self)
+    }
+
+    /// Compile one inline YAML DSL card fixture and register it into this
+    /// runner. Useful for tests that need compact behavior-specific cards.
+    #[cfg(feature = "dsl-yaml-loader")]
+    pub fn from_dsl_yaml(mut self, yaml: &str) -> Result<Self, String> {
+        let spec: digimon_dsl::CardSpec =
+            serde_yml::from_str(yaml).map_err(|e| format!("parse DSL YAML: {e}"))?;
+        let compiled = digimon_dsl::compile::compile(&spec).map_err(|errors| {
+            errors
+                .into_iter()
+                .map(|e| format!("{} {}: {}", e.card_id, e.path, e.message))
+                .collect::<Vec<_>>()
+                .join("\n")
+        })?;
+        self.register_compiled_card(compiled);
+        Ok(self)
     }
 
     /// Set the rules. Default is `Rules::standard()`.
@@ -360,9 +505,7 @@ impl DebugRunnerBuilder {
     }
 
     fn build_inner(&mut self) -> DebugRunner {
-        let player_count = self
-            .player_count
-            .unwrap_or(self.rules.player_count);
+        let player_count = self.player_count.unwrap_or(self.rules.player_count);
 
         // We bypass Game::new because it shuffles/deals from decks, which loses
         // determinism. Instead, build an empty Game with the shared card_data and
@@ -413,29 +556,25 @@ impl DebugRunnerBuilder {
 
             if let Some(ids) = self.hands.get(&pid) {
                 for card_id in ids {
-                    let card =
-                        Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].hand.push(card);
                 }
             }
             if let Some(ids) = self.decks.get(&pid) {
                 for card_id in ids {
-                    let card =
-                        Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].deck.push(card);
                 }
             }
             if let Some(ids) = self.securities.get(&pid) {
                 for card_id in ids {
-                    let card =
-                        Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].security.push(card);
                 }
             }
             if let Some(ids) = self.digitamas.get(&pid) {
                 for card_id in ids {
-                    let card =
-                        Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
                     if card_data_store[card.data_index].card_kind != CardKind::DigiEgg {
                         // Allow non-eggs in digitama for tests, but warn via debug.
                     }
@@ -458,7 +597,11 @@ impl DebugRunnerBuilder {
             let _ = build_registry; // silence unused-import if path changes
         }
 
-        DebugRunner { game }
+        DebugRunner {
+            game,
+            #[cfg(feature = "dsl-yaml-loader")]
+            compiled_cards: std::mem::take(&mut self.compiled_cards),
+        }
     }
 
     fn make_card(
@@ -473,6 +616,75 @@ impl DebugRunnerBuilder {
         let card = CardSource::new(*data_idx, owner, *next_idx);
         *next_idx += 1;
         card
+    }
+
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn register_compiled_card(&mut self, compiled: CompiledCard) {
+        let card_id = compiled.card.clone();
+        let compiled = Arc::new(compiled);
+        self.card_data
+            .entry(card_id.clone())
+            .or_insert_with(|| card_data_from_compiled(compiled.as_ref()));
+        self.compiled_cards
+            .insert(card_id.clone(), compiled.clone());
+        let registry = self.registry.get_or_insert_with(build_registry);
+        registry.insert(&card_id, Arc::new(DslCardEffect::new(compiled)));
+    }
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+fn embedded_dsl_registry() -> Result<&'static digimon_dsl::CardRegistry, String> {
+    static REGISTRY: OnceLock<Result<digimon_dsl::CardRegistry, String>> = OnceLock::new();
+    REGISTRY
+        .get_or_init(crate::dsl_registry::from_embedded)
+        .as_ref()
+        .map_err(Clone::clone)
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+fn card_data_from_compiled(card: &CompiledCard) -> CardData {
+    CardData {
+        card_id: card.card.clone(),
+        card_name: card.name.clone(),
+        card_kind: match card.kind {
+            CompiledCardKind::Digimon => CardKind::Digimon,
+            CompiledCardKind::Tamer => CardKind::Tamer,
+            CompiledCardKind::Option => CardKind::Option,
+            CompiledCardKind::DigiEgg => CardKind::DigiEgg,
+            CompiledCardKind::Token => CardKind::Token,
+        },
+        level: card.level,
+        dp: card.dp,
+        play_cost: card.cost.unwrap_or(0).max(0) as u16,
+        colors: card
+            .color
+            .iter()
+            .copied()
+            .map(compiled_color_to_engine)
+            .collect(),
+        traits: card.traits.clone(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        effect_class_name: card.card.replace('-', "_"),
+        index: 0,
+        norm_id: 0.0,
+        keywords: Vec::new(),
+    }
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+fn compiled_color_to_engine(color: CompiledColor) -> CardColor {
+    match color {
+        CompiledColor::Red => CardColor::Red,
+        CompiledColor::Blue => CardColor::Blue,
+        CompiledColor::Yellow => CardColor::Yellow,
+        CompiledColor::Green => CardColor::Green,
+        CompiledColor::Black => CardColor::Black,
+        CompiledColor::Purple => CardColor::Purple,
+        CompiledColor::White => CardColor::White,
     }
 }
 
