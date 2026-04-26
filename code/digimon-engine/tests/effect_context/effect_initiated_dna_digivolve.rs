@@ -15,9 +15,11 @@
 //! `TODO(dna-digivolve-execute)`. The primitive therefore performs the
 //! merge inline; the user-action path can adopt the same logic later.
 
-use digimon_engine::card_source::CardSource;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
+use std::sync::Arc;
 
 #[test]
 fn effect_initiated_dna_digivolve_merges_two_permanents_with_hand_top() {
@@ -286,4 +288,66 @@ fn effect_initiated_dna_digivolve_returns_none_when_hand_card_missing() {
     // Battle area unchanged.
     assert_eq!(runner.game.players[0].battle_area.len(), 2);
     assert_eq!(runner.game.memory, 5);
+}
+
+/// A `CardEffect` that grants +1 memory whenever an `OnDnaDigivolve` trigger
+/// fires for the permanent it's attached to. The test below uses memory delta
+/// as the observable side effect — same pattern as `DigivolveObsMem` in
+/// `timing_dispatch.rs`.
+struct DnaDigivolveObsMem;
+impl CardEffect for DnaDigivolveObsMem {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_dna_digivolve(card)
+            .name("+1 on dna digivolve")
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn effect_initiated_dna_digivolve_fires_on_dna_digivolve_trigger() {
+    // Place TST-A and TST-B on P0's battle area, with TST-DNA-RESULT in hand.
+    // Register an OnDnaDigivolve effect against TST-DNA-RESULT that grants +1
+    // memory when fired. After the merge, TST-DNA-RESULT sits on top of the
+    // merged permanent — so its OnDnaDigivolve effect is in scope regardless
+    // of whether Task 4 fires the trigger globally (PlayerBattleArea) or
+    // locally (Permanent(merged_handle)).
+    //
+    // This test FAILS today: `EffectContext::effect_initiated_dna_digivolve`
+    // does not yet enqueue OnDnaDigivolve. Task 4 will wire it.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TST-A", "DnaSourceA"))
+        .add_card(make_test_card("TST-B", "DnaSourceB"))
+        .add_card(make_test_card("TST-DNA-RESULT", "DnaResult"))
+        .hand(0, &["TST-DNA-RESULT"])
+        .memory(5)
+        .start();
+    runner.register_effect("TST-DNA-RESULT", Arc::new(DnaDigivolveObsMem));
+
+    let handle_a = runner.place_on_field(0, "TST-A", None);
+    let handle_b = runner.place_on_field(0, "TST-B", None);
+    let hand_card_handle = runner.game.players[0].hand[0].handle();
+
+    let before = runner.game.memory;
+
+    let result = {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card_handle, None, 0);
+        ctx.effect_initiated_dna_digivolve(handle_a, handle_b, hand_card_handle, 0, true)
+    };
+    assert!(
+        result.is_some(),
+        "precondition: effect_initiated_dna_digivolve should succeed for valid handles"
+    );
+
+    let after = runner.game.memory;
+    assert_eq!(
+        after - before,
+        1,
+        "OnDnaDigivolve must fire exactly once on the merged permanent \
+         (memory before={}, after={}, expected delta=+1)",
+        before,
+        after
+    );
 }
