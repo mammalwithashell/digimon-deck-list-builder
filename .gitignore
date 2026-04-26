@@ -57,3 +57,11 @@ code/tools/onnxruntime-vendor/**/*.dylib
 
 # Generated ONNX test fixtures
 code/tests/api/fixtures/*.onnx
+
+# Post-refactor leftovers (real sources moved under code/)
+/frontend/
+/src-tauri/
+/tests/
+
+# Agent worktrees
+.claude/worktrees/
