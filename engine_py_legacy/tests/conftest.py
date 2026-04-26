@@ -1,4 +1,4 @@
-"""Root conftest.py — shared fixtures for all tests.
+"""Engine_py_legacy test conftest — fixtures for the sunsetting Python engine.
 
 Provides:
 - reset_registry: autouse fixture that resets CardRegistry between tests
@@ -9,7 +9,7 @@ import json
 import pytest
 
 from digimon_gym.data_paths import DECK_LIBRARY
-from digimon_gym.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.card_registry import CardRegistry
 
 
 @pytest.fixture(autouse=True)
@@ -28,7 +28,7 @@ def debug_runner():
         runner = debug_runner(archetype1="Puppets", initial_memory=10)
         runner = debug_runner(deck1=[...], deck2=[...], skip_shuffle=True)
     """
-    from digimon_gym.engine.runners.debug_runner import DebugRunner
+    from engine_py_legacy.engine.runners.debug_runner import DebugRunner
 
     _cache = {}
 
