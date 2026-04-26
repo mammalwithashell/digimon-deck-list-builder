@@ -254,3 +254,113 @@ For each card in the current batch, collect:
 `<card_id_lower>` is `card_id.replace("-", "_").lower()` (e.g. `BT15-003` → `bt15_003`, `P-117` → `p_117`, `LM-029` → `lm_029`, `AD1-025` → `ad1_025`).
 
 ---
+
+### 4B. Scout Wave (Sonnet, parallel — IMPLEMENT-mode cards only)
+
+For each IMPLEMENT-mode card in the batch, dispatch one Agent call. AUDIT-mode cards skip this wave entirely. All scout calls go in **a single assistant message** for true parallelism. Use `subagent_type: "general-purpose"`, model `sonnet`, no isolation (read-only).
+
+**Scout prompt template:**
+
+````
+You are a scout sub-agent for the /batch-implement-cards-rust-dsl skill. Your job is to pre-curate context for an implementer agent that will author the YAML card spec and behavioral tests for a single Digimon TCG card. The implementer is bounded by token budget — your brief replaces the need to embed the full DSL spec.
+
+# Your card
+
+Card ID: {{CARD_ID}}
+Card Name: {{CARD_NAME}}
+Card Kind: {{CARD_KIND}}
+Level: {{LEVEL}}    DP: {{DP}}    Play Cost: {{PLAY_COST}}
+Colors: {{COLORS}}
+Traits (type_eng): {{TRAITS}}
+Evo Costs: {{EVO_COSTS}}
+DNA Costs: {{DNA_COSTS}}
+
+## Effect text (authoritative)
+{{EFFECT_TEXT}}
+
+## Inherited effect text
+{{INHERITED_TEXT}}
+
+## Security effect text
+{{SECURITY_TEXT}}
+
+## DCGO C# reference (behavioral source of truth)
+Path: {{CSHARP_PATH}}
+```
+{{CSHARP_BODY}}
+```
+
+# Reference docs (cite paths — Read what you need, do not paste full bodies)
+
+- DSL test API (test patterns + anti-patterns): `docs/RUST_DSL_TEST_API.md`
+- DSL syntax + compile pipeline (vocabulary reference): `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md`
+- Engine API (`EffectContext` surface): `docs/RUST_ENGINE_API.md`
+- Existing shipping YAMLs: `code/digimon-engine/cards/`
+- Curated example pool: `code/digimon-engine/cards/_examples/`
+
+# Your task
+
+Produce a curated brief for the implementer. The brief must:
+
+1. **Classify the card's mechanics** against the pattern taxonomy in `docs/RUST_DSL_TEST_API.md` §4.3 (Groups A–H). List every applicable row tag.
+
+2. **Identify the DSL verbs / step kinds the implementer will need.** For each verb, cite the section of the DSL spec where it is defined. If the verb does not appear in the spec, mark it as a candidate DSL-vocab gap (do NOT speculate it exists).
+
+3. **Find 1–2 closest exemplar YAMLs** from `code/digimon-engine/cards/` (production) or `code/digimon-engine/cards/_examples/` (curated). Cite paths and a one-line "why this is the closest match."
+
+4. **Identify the target engine APIs.** For each DSL verb, name the `EffectContext` method it lowers to per `docs/RUST_ENGINE_API.md`.
+
+5. **Sketch behavioral test scope per `docs/RUST_DSL_TEST_API.md` §5.** Enumerate: structural assertions (clauses by scope/timing), per-branch behavioral tests, negative tests, OPT enforcement test (if applicable), event-log test (if applicable).
+
+6. **Pre-flight gap suspicion.** Emit one of:
+   - `NONE` — no gap suspected.
+   - `ENGINE-GAP: <description>` — engine lacks a primitive (the DSL verb you would use lowers to a method that does not exist in `EffectContext`).
+   - `DSL-GAP: <description>` — engine has the primitive but no DSL verb maps to it.
+   - `HYBRID: <description>` — both.
+   You may return any verdict here; the implementer will confirm or refute.
+
+# Source priority (for behavioral questions)
+
+1. Printed card text (above) — authoritative.
+2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
+3. DCGO C# (above) — implementation-detail tiebreaker only.
+
+Do NOT cite Python scripts (`code/engine_py_legacy/`) — they are out of scope for this skill.
+
+# Output format (return EXACTLY this structure, nothing else)
+
+```
+## Brief: {{CARD_ID}}
+
+### Pattern rows (test API §4.3)
+- <row tag>, <row tag>, ...
+
+### Required DSL verbs / step-kinds
+- <verb_name> → DSL spec §X.Y [+optional usage note]
+- ...
+
+### Closest exemplar YAMLs
+1. <path> — <one-line why>
+2. <path> — <one-line why>
+
+### Target engine APIs (from RUST_ENGINE_API.md)
+- EffectContext::<method_name>
+- ...
+
+### Behavioral test scope (test API §5)
+- Structural: <clause counts by scope/timing>
+- Per-branch: <enumerate>
+- Negative tests: <enumerate>
+- OPT lockout: <yes/no — if yes, which clause>
+- Event-log assertions: <yes/no — if yes, which events>
+
+### Pre-flight gap suspicion
+NONE | ENGINE-GAP: <description> | DSL-GAP: <description> | HYBRID: <description>
+```
+````
+
+The orchestrator validates that the returned brief contains all six section headings before passing it to the implementer. If validation fails, dispatch a single retry with the same prompt. If the retry also fails, fall back to embedding `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md` directly into the implementer prompt for that one card.
+
+**Pre-flight gap short-circuit:** if a scout returns `ENGINE-GAP`, `DSL-GAP`, or `HYBRID` with high confidence (the brief explicitly states the missing API/verb), the orchestrator MAY skip the implementer wave for that card and emit a `BLOCKED` verdict directly. The reviewer still confirms the gap in Phase 4D.
+
+---
