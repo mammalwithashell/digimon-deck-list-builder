@@ -20,8 +20,8 @@ use serde::Deserialize;
 
 // Data files — `include_str!` bakes the bytes into the crate, so there's no
 // separate resource-bundling step for desktop builds.
-const CARDS_JSON: &str = include_str!("../../data/cards.json");
-const TESTED_CARDS_JSON: &str = include_str!("../../data/tested_cards.json");
+const CARDS_JSON: &str = include_str!("../../../data/cards.json");
+const TESTED_CARDS_JSON: &str = include_str!("../../../data/tested_cards.json");
 
 /// Minimal card metadata — only the fields validation + parsing touch.
 /// The full cards.json entry has many more keys (DP, effect text, etc.);
