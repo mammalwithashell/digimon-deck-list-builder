@@ -1818,12 +1818,13 @@ tail of replacement-effect cards (Evade, Partition, EX5-015).
 **TDD:** each new primitive gets a behavioral test *before* its
 lowering lands. Parity suite expands.
 
-**Progress (2026-04-26):** sub-phases 3a, 3b, and 3c have landed in the
-engine/DSL infra test suite. Remaining Phase 3 work is concentrated in
-3d (formula/runtime gaps: raw-rust formula dispatch, `CardCountInZone`
-zone payload, aggregate scope, broader event predicates, scheduled
-generation counter) and 3e (multi-parking scheduled drains plus
-`OnDnaDigivolve` trigger wiring).
+**Progress (2026-04-26):** sub-phases 3a through 3e have landed in the
+engine/DSL infra test suite. Phase 3d now covers raw-rust formula
+dispatch, `CardCountInZone` zone/player payloads, aggregate scope,
+event predicates/bindings backed by trigger context, and next-turn
+scheduled generation checks. Phase 3e now covers scheduled-drain
+resume after DSL selections and `OnDnaDigivolve` wiring for both
+effect-initiated and user-action DNA paths.
 
 **Exit criteria:** ~3,000 cards retired (75%). Hand-written card
 footprint capped at ~1,000.
