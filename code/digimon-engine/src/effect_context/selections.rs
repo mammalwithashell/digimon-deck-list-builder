@@ -179,6 +179,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -200,7 +202,7 @@ impl<'a> EffectContext<'a> {
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let hand_index = action_id.saturating_sub(PLAY_HAND_START) as usize;
                 let mut ctx =
-                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                    EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
                 user_callback(&mut ctx, hand_index);
             }),
             on_decline: None,
@@ -236,6 +238,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -257,7 +261,7 @@ impl<'a> EffectContext<'a> {
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let trash_index = action_id.saturating_sub(TRASH_EFFECT_START) as usize;
                 let mut ctx =
-                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                    EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
                 user_callback(&mut ctx, trash_index);
             }),
             on_decline: None,
@@ -308,6 +312,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -329,7 +335,7 @@ impl<'a> EffectContext<'a> {
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let (_, source_idx) = crate::action::space::decode_source_select(action_id);
                 let mut ctx =
-                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                    EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
                 user_callback(&mut ctx, source_idx as usize);
             }),
             on_decline: None,
@@ -369,6 +375,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -390,7 +398,7 @@ impl<'a> EffectContext<'a> {
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let choice_index = action_id.saturating_sub(HAND_EFFECT_START) as usize;
                 let mut ctx =
-                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                    EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
                 user_callback(&mut ctx, choice_index);
             }),
             on_decline: None,
@@ -429,6 +437,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -450,7 +460,7 @@ impl<'a> EffectContext<'a> {
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(SEL_REVEAL_START) as usize;
                 let mut ctx =
-                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                    EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
                 user_callback(&mut ctx, index);
             }),
             on_decline: None,
@@ -498,6 +508,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -519,7 +531,7 @@ impl<'a> EffectContext<'a> {
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(base) as usize;
                 let mut ctx =
-                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                    EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
                 user_callback(&mut ctx, index);
             }),
             on_decline: None,
@@ -594,6 +606,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let user_callback: Box<
@@ -628,7 +642,7 @@ impl<'a> EffectContext<'a> {
                     game.player(of_player).hand[idx].handle()
                 };
                 let mut ctx =
-                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                    EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
                 user_callback(&mut ctx, handle);
             }),
             on_decline: None,
@@ -675,6 +689,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let previous_phase = self.game.current_phase;
@@ -683,7 +699,7 @@ impl<'a> EffectContext<'a> {
         let final_callback: Box<
             dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
         > = Box::new(move |game: &mut Game, ordered: Vec<crate::card_source::CardHandle>| {
-            let mut ctx = EffectContext::new(game, source_card, source_permanent, selecting_player);
+            let mut ctx = EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
             callback(&mut ctx, ordered);
         });
 
@@ -800,6 +816,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
         let previous_phase = self.game.current_phase;
@@ -808,7 +826,7 @@ impl<'a> EffectContext<'a> {
         let final_callback: Box<
             dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
         > = Box::new(move |game: &mut Game, picks: Vec<crate::card_source::CardHandle>| {
-            let mut ctx = EffectContext::new(game, source_card, source_permanent, selecting_player);
+            let mut ctx = EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
             callback(&mut ctx, picks);
         });
 
@@ -953,6 +971,8 @@ impl<'a> EffectContext<'a> {
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
 
@@ -986,7 +1006,7 @@ impl<'a> EffectContext<'a> {
                     index: target_index,
                 };
                 let mut ctx =
-                    EffectContext::new(game, source_card, source_permanent, selecting_player);
+                    EffectContext::new_with_override(game, source_card, source_permanent, controller, override_pin);
                 user_callback(&mut ctx, h);
             }),
             on_decline: None,

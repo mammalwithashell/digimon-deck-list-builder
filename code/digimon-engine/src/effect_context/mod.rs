@@ -250,6 +250,34 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Construct an `EffectContext` with an explicit selecting-player
+    /// override. Used by `AsSelectingPlayer` lowering and by selection
+    /// callbacks that must preserve the `(controller, override)` pair across
+    /// the parked-callback boundary (Phase 2f3).
+    ///
+    /// `controller` becomes `self.player` (the original effect controller);
+    /// `override_selecting_player` is preserved as-is so a nested `select_*`
+    /// inside the callback (or the dsl_outer_tail) routes to the override
+    /// rather than back to the controller.
+    pub fn new_with_override(
+        game: &'a mut Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        controller: PlayerId,
+        override_selecting_player: Option<PlayerId>,
+    ) -> Self {
+        let mut ctx = Self::new(game, source_card, source_permanent, controller);
+        ctx.override_selecting_player = override_selecting_player;
+        ctx
+    }
+
+    /// Read the current selecting-player override, if any. The override is
+    /// installed by `AsSelectingPlayer` lowering (Phase 2f3) and persists
+    /// across selection-callback boundaries via `new_with_override`.
+    pub fn override_selecting_player(&self) -> Option<PlayerId> {
+        self.override_selecting_player
+    }
+
     // ─── Read-only queries ────────────────────────────────────────────
 
     pub fn memory(&self) -> i16 {
