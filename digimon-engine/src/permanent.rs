@@ -130,6 +130,21 @@ impl Permanent {
         self.top_card().card_kind(data) == CardKind::Tamer
     }
 
+    /// Returns `true` if this permanent's digivolution stack contains at
+    /// least one Tamer source that is NOT face-down. Used by the `<Mind Link>`
+    /// candidate filter — DCGO `MindLink.cs:25`:
+    /// `cardSource.IsTamer && !cardSource.IsFlipped`.
+    ///
+    /// The top card itself is included in the scan; the top of a Tamer
+    /// permanent is by definition a non-face-down Tamer source, so a Tamer
+    /// permanent is correctly excluded as a target by this helper (a Tamer
+    /// is its own controller's Tamer; MindLink should not target Tamers).
+    pub fn has_non_facedown_tamer_source(&self, data: &[CardData]) -> bool {
+        self.card_sources
+            .iter()
+            .any(|src| src.is_tamer(data) && !src.face_down)
+    }
+
     /// Whether the top card is a DigiEgg (in breeding area).
     pub fn is_digi_egg(&self, data: &[CardData]) -> bool {
         self.top_card().card_kind(data) == CardKind::DigiEgg

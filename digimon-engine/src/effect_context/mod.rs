@@ -1207,6 +1207,121 @@ impl<'a> EffectContext<'a> {
         target_player.battle_area[target.index as usize].push_under(taken);
     }
 
+    /// Place `tamer`'s top card at the bottom of `digimon`'s digivolution
+    /// stack, replicating DCGO `MindLink.cs:71-79`:
+    /// `IPlacePermanentToDigivolutionCards(new[] { tamer, selectedDigimon })`.
+    ///
+    /// The Tamer permanent itself is removed from battle area; its top
+    /// CardSource becomes the new bottom of the target Digimon's stack.
+    /// The face-down flag is NOT set (MindLink places face-up).
+    ///
+    /// ## DCGO parity (CardController.cs:3011-3061)
+    ///
+    /// `IPlacePermanentToDigivolutionCards.PlacePermanentToDigivolutionCards`
+    /// takes `cardSource = DigivolutionPermanent.TopCard` (just the top),
+    /// calls `DiscardEvoRoots()` on the rest of the stack (sending those
+    /// sources to trash), removes the source permanent from field, then
+    /// calls `getDigivolutionPermanent.AddDigivolutionCardsBottom(...)` to
+    /// tuck the top card under the target.
+    ///
+    /// ## Index-stability strategy
+    ///
+    /// Removing `tamer` from `battle_area` shifts every higher-indexed
+    /// permanent down by one. To keep the `digimon` handle valid we
+    /// resolve `digimon`'s slot AFTER the removal (adjusting if it was
+    /// past `tamer.index`). Both must share the same controller (DCGO
+    /// `IsPermanentExistsOnOwnerBattleArea`); we assert that, since the
+    /// MindLink filter already enforces it.
+    ///
+    /// ## Modifier cleanup
+    ///
+    /// `Game.modifiers.clear_permanent(tamer)` and
+    /// `expire_player_on_permanent_leave(tamer)` are invoked before the
+    /// removal, mirroring `Game::return_to_deck`'s and the deletion
+    /// finalize's cleanup pattern. Player-scoped modifiers sourced from
+    /// the Tamer (e.g., printed memory-gain effects) expire here.
+    ///
+    /// ## Source-stack handling
+    ///
+    /// In the auto-install context the Tamer is freshly placed and has
+    /// only its top card in `card_sources` (no digivolution sources
+    /// under a Tamer in normal play). For defensive completeness against
+    /// hand-rolled MindLink callers that place the Tamer on a stack with
+    /// sources, any sources below the top are trashed (mirroring DCGO
+    /// `DiscardEvoRoots` — sources can't ride the move).
+    ///
+    /// Used by: `<Mind Link>` keyword auto-install (Phase F Task 5).
+    pub fn attach_tamer_to_digimon(
+        &mut self,
+        tamer: PermanentHandle,
+        digimon: PermanentHandle,
+    ) {
+        // Validate: shared controller (MindLink targets own permanents).
+        debug_assert_eq!(
+            tamer.player, digimon.player,
+            "attach_tamer_to_digimon: tamer and target must share a controller"
+        );
+        let controller = tamer.player;
+
+        // Bounds check the tamer slot.
+        let tamer_idx = tamer.index as usize;
+        if tamer_idx >= self.game.player(controller).battle_area.len() {
+            return;
+        }
+
+        // Cleanup tamer-scoped modifiers BEFORE removal (modifier registry
+        // is keyed on PermanentHandle, which becomes invalid after the
+        // index shift caused by `Vec::remove`).
+        self.game.modifiers.clear_permanent(tamer);
+        self.game
+            .modifiers
+            .expire_player_on_permanent_leave(tamer);
+
+        // Remove the Tamer permanent from battle area. This shifts indices
+        // for all higher-indexed permanents on the same player down by 1.
+        let mut tamer_perm = self
+            .game
+            .player_mut(controller)
+            .battle_area
+            .remove(tamer_idx);
+
+        // Trash any sources below the top (DCGO DiscardEvoRoots). The top
+        // is the card that rides under the target.
+        let Some(top) = tamer_perm.card_sources.pop() else {
+            return;
+        };
+        // Below-top sources go to trash. Linked Option cards (Tamers can
+        // host them via `<Linked>`) likewise go to trash — they cannot
+        // ride the host into another permanent's digivolution stack.
+        for source in tamer_perm.card_sources.drain(..) {
+            self.game.player_mut(controller).trash.push(source);
+        }
+        for linked in tamer_perm.linked_cards.drain(..) {
+            self.game.player_mut(controller).trash.push(linked);
+        }
+
+        // Resolve the target's NEW slot after the index shift. If the
+        // digimon was at a higher index than the removed tamer, its
+        // slot dropped by 1; otherwise it's unchanged.
+        let digimon_idx = if (digimon.index as usize) > tamer_idx {
+            (digimon.index as usize) - 1
+        } else {
+            digimon.index as usize
+        };
+
+        // Bounds check the (possibly shifted) target slot. If the target
+        // is gone, route the lifted top card to the controller's trash
+        // (safe-fail — same shape as `place_card_under_permanent_bottom`).
+        let target_player = self.game.player_mut(controller);
+        if digimon_idx >= target_player.battle_area.len() {
+            target_player.trash.push(top);
+            return;
+        }
+        // Insert at the bottom of the target's stack. `face_down` stays
+        // `false` (MindLink places face-up).
+        target_player.battle_area[digimon_idx].push_under(top);
+    }
+
     /// Trash the current top Digimon of `perm` and promote the next-highest
     /// digivolution source to become the new visible top. The remainder of the
     /// stack is preserved intact.

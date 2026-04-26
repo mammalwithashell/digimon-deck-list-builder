@@ -22,9 +22,10 @@
 //! nor a deletion trigger) — see §Active-skill keywords below.
 //!
 //! Phase F so far: Execute (Task 3 — auto-installed `EndOfYourTurn`
-//! optional grant + `EndOfAttack` self-delete observer). Iceclad is
-//! consumed at the combat resolver (no auto-install). MindLink and
-//! Training remain out-of-scope deferred.
+//! optional grant + `EndOfAttack` self-delete observer); MindLink (Task 5
+//! — `[Main]` active skill on Tamers, optional own-Digimon pick + tuck-
+//! under-target via `attach_tamer_to_digimon`). Iceclad is consumed at the
+//! combat resolver (no auto-install). Training remains deferred to Task 6.
 //!
 //! Intentionally NOT auto-installed (per Phase E cards.json survey — zero
 //! bare printings; auto-install would double-fire alongside hand-rolled
@@ -1292,6 +1293,101 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 })
                 .build(),
         ],
+
+        // Phase F §F3 — printed Mind Link: `[Main]` active skill on Tamers.
+        // "Place this Tamer at the bottom of one of your Digimon's
+        // digivolution stack. Target Digimon must have no Tamer cards in its
+        // digivolution stack (face-down Tamer sources don't count)." DCGO
+        // `MindLink.cs`. RULES_CONTEXT 16-27.
+        //
+        // ## Activation gate
+        //
+        //   1. Self is a Tamer on battle area.
+        //   2. Controller has ≥1 own non-Tamer permanent with no
+        //      non-face-down Tamer source (DCGO line 25:
+        //      `cardSource.IsTamer && !cardSource.IsFlipped`).
+        //   3. Target is not a token (DCGO line 23: `!permanent.IsToken`).
+        //
+        // ## Body
+        //
+        // Optional pick (DCGO `canNoSelect: true`, line 60). Player selects
+        // the target Digimon; on pick, `attach_tamer_to_digimon(self, picked)`
+        // moves the Tamer's top card to the bottom of the Digimon's stack
+        // and removes the Tamer permanent from battle area (mirroring DCGO
+        // `IPlacePermanentToDigivolutionCards(new[] { tamer, digimon })`).
+        //
+        // ## Cost
+        //
+        // Zero. `[Main]` active skill — `EffectTiming::MainOnField` exposes
+        // the activation in the action mask without any cost gating, mirroring
+        // MaterialSave's parity treatment.
+        //
+        // ## Self-scope
+        //
+        // The `[Main]` mask emission iterates the carrier's stack; the
+        // `MainOnField` timing on the keyword auto-effect is naturally
+        // self-scoped because `activate_field_main` runs only the matched
+        // permanent's effects, with `source_permanent` set to the carrier.
+        Keyword::MindLink => vec![Effect::declarative(card)
+            .name("<Mind Link>")
+            .timing(EffectTiming::MainOnField)
+            // Gate at mask-build time so the activation only appears when
+            // the carrier is a Tamer on field AND there is at least one
+            // valid target Digimon (non-Tamer top, no token, no
+            // non-face-down Tamer source).
+            .condition(|ctx| {
+                let Some(perm) = ctx.source_permanent() else {
+                    return false;
+                };
+                if !perm.is_tamer(&ctx.game.card_data) {
+                    return false;
+                }
+                let owner = ctx.player;
+                ctx.battle_area(owner).iter().any(|p| {
+                    !p.is_tamer(&ctx.game.card_data)
+                        && !p.top_card().is_token
+                        && !p.has_non_facedown_tamer_source(&ctx.game.card_data)
+                })
+            })
+            .process(move |ctx| {
+                let Some(me) = ctx.source_permanent else {
+                    return;
+                };
+                let owner = me.player;
+
+                // Optional own-permanent pick (DCGO `canNoSelect: true`).
+                // Filter mirrors the gate plus a self-exclusion (the
+                // carrier is itself on its controller's battle area; we
+                // must never target it).
+                ctx.select_own_permanent(
+                    "select a Digimon to receive the Mind Link Tamer",
+                    /*is_optional=*/ true,
+                    move |g, h| {
+                        if h.player != owner || h == me {
+                            return false;
+                        }
+                        let Some(p) = g.players[h.player as usize]
+                            .battle_area
+                            .get(h.index as usize)
+                        else {
+                            return false;
+                        };
+                        // Same constraints as the activation gate: non-Tamer
+                        // top, non-token, no non-face-down Tamer source.
+                        if p.is_tamer(&g.card_data) {
+                            return false;
+                        }
+                        if p.top_card().is_token {
+                            return false;
+                        }
+                        !p.has_non_facedown_tamer_source(&g.card_data)
+                    },
+                    move |ctx, picked| {
+                        ctx.attach_tamer_to_digimon(me, picked);
+                    },
+                );
+            })
+            .build()],
 
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),
