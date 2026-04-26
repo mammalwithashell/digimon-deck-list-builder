@@ -58,3 +58,4 @@ mod phase2e_select_reveal;
 mod phase2e_select_security;
 mod phase2e_select_union_zone;
 mod phase2e_end_to_end;
+mod phase2f1_play_steps;
