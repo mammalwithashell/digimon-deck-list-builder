@@ -100,6 +100,7 @@ impl CardEffect for FragmentLike {
                     FRAGMENT_N,
                     "trash N cards from hand",
                     false,
+                    None,
                     |_g, _src| true,
                     move |ctx, picks| {
                         // Trash picked cards from hand. picks is a Vec<CardHandle>.

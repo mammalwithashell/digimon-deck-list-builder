@@ -14,7 +14,7 @@
 
 mod selections;
 
-pub use selections::{CountCappedZone, EffectContextSelectorScope};
+pub use selections::{CountCappedZone, DistinctByMode, EffectContextSelectorScope};
 
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
