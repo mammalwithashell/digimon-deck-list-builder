@@ -14,15 +14,12 @@ models/
 runs/
 .claude/settings.local.json
 nul
-frontend/dist/
-frontend/node_modules/
 code/frontend/dist/
 code/frontend/node_modules/
 .env
 .env.local
 .env.*.local
 data/app.db
-frontend/tsconfig.tsbuildinfo
 code/frontend/tsconfig.tsbuildinfo
 .playwright-mcp/
 .worktrees/
@@ -41,13 +38,13 @@ flamegraph.svg
 *.orig
 
 # Tauri
-src-tauri/target/
-src-tauri/binaries/
-src-tauri/resources/models/
-src-tauri/resources/onnxruntime/
-tools/onnxruntime-vendor/**/*.dll
-tools/onnxruntime-vendor/**/*.so
-tools/onnxruntime-vendor/**/*.dylib
+code/src-tauri/target/
+code/src-tauri/binaries/
+code/src-tauri/resources/models/
+code/src-tauri/resources/onnxruntime/
+code/tools/onnxruntime-vendor/**/*.dll
+code/tools/onnxruntime-vendor/**/*.so
+code/tools/onnxruntime-vendor/**/*.dylib
 *.AppImage
 *.dmg
 *.msi
@@ -59,4 +56,4 @@ tools/onnxruntime-vendor/**/*.dylib
 .claude/scheduled_tasks.lock
 
 # Generated ONNX test fixtures
-tests/api/fixtures/*.onnx
+code/tests/api/fixtures/*.onnx

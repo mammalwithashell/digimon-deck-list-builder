@@ -21,7 +21,7 @@
       "request": "launch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "${workspaceFolder}/frontend",
+      "cwd": "${workspaceFolder}/code/frontend",
       "console": "integratedTerminal"
     }
   ],
