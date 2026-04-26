@@ -40,11 +40,8 @@ from digimon_gym.data_paths import (
     ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH,
     DECK_LIBRARY as _DECK_LIBRARY_PATH,
 )
-from digimon_gym.engine.data.deck_loader import (
-    RE_CARD_ID,
-    expand_deck_dict,
-    parse_deck,
-)
+from digimon_gym.engine.data.deck_loader import RE_CARD_ID  # parity-doc: regex stays on Python
+from digimon_engine import expand_deck_dict, parse_deck
 
 logger = logging.getLogger(__name__)
 

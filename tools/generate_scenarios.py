@@ -20,9 +20,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from digimon_gym.data_paths import DECK_LIBRARY
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.card_registry import CardRegistry
-from digimon_gym.engine.data.enums import CardKind
+from digimon_engine import CardDatabase, CardKind, CardRegistry
 
 
 def load_archetype_cards(archetype_name: str) -> set[str]:

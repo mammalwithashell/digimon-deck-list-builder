@@ -17,7 +17,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from digimon_gym.engine.game.constants import ACTION_SPACE_SIZE, TENSOR_SIZE
+from digimon_engine import ACTION_SPACE_SIZE, TENSOR_SIZE
 
 
 # ---------------------------------------------------------------------------

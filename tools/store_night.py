@@ -162,7 +162,7 @@ def build_opponent_list(
         (deck_ids, meta_weight, archetype_name) and skipped is list of
         archetype names that couldn't be resolved.
     """
-    from digimon_gym.engine.data.deck_finder import load_implemented_card_ids
+    from digimon_engine import load_implemented_card_ids
 
     if not _DECK_LIBRARY_PATH.exists():
         return [], []

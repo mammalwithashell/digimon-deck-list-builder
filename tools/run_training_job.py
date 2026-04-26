@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 
 def _load_deck_from_file(path: str) -> List[str]:
     """Load a deck list from a JSON array or digimoncard.io text file."""
-    from digimon_gym.engine.data.deck_loader import parse_tts, parse_text
+    from digimon_engine import parse_tts, parse_text
 
     raw = Path(path).read_text(encoding="utf-8")
     stripped = raw.strip()
@@ -38,7 +38,7 @@ def _load_deck_from_library(deck_id: str) -> List[str]:
     from digimon_gym.data_paths import DECK_LIBRARY
     with open(DECK_LIBRARY, encoding="utf-8") as f:
         library = json.load(f)
-    from digimon_gym.engine.data.deck_loader import parse_tts
+    from digimon_engine import parse_tts
     for arch_data in library.get("archetypes", {}).values():
         for deck in arch_data.get("decklists", []):
             if deck.get("deck_id") == deck_id:
