@@ -185,3 +185,72 @@ Note: [I] = IMPLEMENT, [A] = AUDIT
 **Require explicit user confirmation before Phase 4.** If `--report-only` is set, exit cleanly here.
 
 ---
+
+## Phase 3: Pre-Read Shared Context (orchestrator)
+
+Read these files **once** at the start of the skill run and hold them for embedding into every prompt in Phase 4:
+
+1. `docs/RUST_DSL_TEST_API.md` (full)
+2. The skill's positive-rules appendix (the section "Skill Positive-Rules Appendix" later in this file)
+3. `qa/archetype-qa/engine-gaps.md` (current engine gaps)
+4. `qa/dsl-vocab-gaps.md` (current DSL vocab gaps; was created during skill skeleton)
+
+The DSL spec (`docs/superpowers/specs/2026-04-21-card-scripting-dsl.md`, ~58K tokens) and `docs/RUST_ENGINE_API.md` are **cited as paths**, not embedded — workers `Read` them on demand.
+
+Pre-create directories if missing:
+
+```bash
+mkdir -p code/digimon-engine/cards
+mkdir -p code/digimon-engine/tests/cards_behavioral
+mkdir -p qa/archetype-qa/dsl
+```
+
+For each unique `<set>` in the planned cards (extracted via `set_prefix(card_id)`):
+
+```bash
+mkdir -p code/digimon-engine/cards/<set>
+mkdir -p code/digimon-engine/tests/cards_behavioral/<set>
+```
+
+### 3a. Pre-wire test discovery for the run (orchestrator)
+
+To let workers run their own tests during the TDD loop in 4C without touching shared state mid-flight, the orchestrator pre-wires `mod.rs` registrations for every non-skipped card in the run **before** dispatching the first batch. Workers can then `cargo test --test cards_behavioral -- <card_id_lower>` immediately.
+
+For each non-skipped card in this skill run:
+
+1. Ensure `code/digimon-engine/tests/cards_behavioral/<set>/mod.rs` exists. Append `mod <card_id_lower>;` if not already present.
+2. Ensure `code/digimon-engine/tests/cards_behavioral/main.rs` contains `mod <set>;` for this set. Append if missing.
+3. Ensure `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs` exists as an empty file (zero bytes) so the `mod` declaration resolves before the worker writes content. The empty file compiles as a no-op module.
+
+If a worker returns BLOCKED and writes nothing, the orchestrator removes the `mod <card_id_lower>;` line and deletes the empty `.rs` file at merge time (Phase 4E).
+
+**This pre-wire is the only orchestrator write to shared state before agents run.** All other shared-state mutations remain in Phase 4E.
+
+---
+
+## Phase 4: Batch Loop
+
+Repeat for each batch from Phase 2.
+
+### 4A. Per-Card Context Gather (orchestrator)
+
+For each card in the current batch, collect:
+
+1. **Card metadata** from `data/cards.json`:
+   - `card_name_eng`
+   - `effect_description_eng`
+   - `inherited_effect_description_eng`
+   - `security_effect_eng`
+   - `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`, `dna_costs`
+
+2. **DCGO C# reference**: glob `DCGO/Assets/Scripts/CardEffect/<SET>/*/<CARD_ID_UNDERSCORE>.cs` where `<CARD_ID_UNDERSCORE> = card_id.replace("-", "_")` (e.g. `BT15-003` → `BT15_003.cs`). Read the file body if found; record "absent" if not. Promo cards (`P-...`) frequently lack DCGO files; that is acceptable, the worker proceeds with printed text only.
+
+3. **Prior verdict** from `validated_cards_dsl.json` (if any).
+
+4. **AUDIT-mode only** — also read:
+   - `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` (the existing YAML body)
+   - `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs` if present (existing tests)
+
+`<card_id_lower>` is `card_id.replace("-", "_").lower()` (e.g. `BT15-003` → `bt15_003`, `P-117` → `p_117`, `LM-029` → `lm_029`, `AD1-025` → `ad1_025`).
+
+---
