@@ -18,8 +18,11 @@ pub use selections::{CountCappedZone, DistinctByMode, EffectContextSelectorScope
 
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
-use crate::enums::{Expiry, Keyword, ModifierType, PlayerId, PlaySource, StackPosition};
+use crate::dsl_cards::bindings::Bindings;
+use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, PlayerId, PlaySource, StackPosition};
 use crate::game::Game;
+use crate::scheduled_effects::ScheduledEffect;
+use digimon_dsl::compiled::CompiledStep;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
@@ -287,6 +290,35 @@ impl<'a> EffectContext<'a> {
     /// intentionally not widened, so all writes go through this setter.
     pub(crate) fn set_override_selecting_player(&mut self, p: Option<PlayerId>) {
         self.override_selecting_player = p;
+    }
+
+    // ─── Delayed scheduling (Phase 2f4 Task 1) ─────────────────────────
+
+    /// Schedule a one-shot delayed effect to fire at a future timing
+    /// boundary. Used by `CompiledStep::ScheduleDelayed` lowering (Phase 2f4
+    /// Task 3) for card text like "at the end of your next turn, do X".
+    ///
+    /// The effect's `body`, `captured_bindings`, source card, and source
+    /// permanent are stored on `Game::scheduled_effects`. When
+    /// `scheduled_effects::fire_scheduled_for_timing(game, when)` drains the
+    /// queue, a fresh `EffectContext` is constructed against the captured
+    /// `(controller, source_card, source_permanent)` and the body runs
+    /// through `run_steps` with the captured bindings replayed.
+    pub fn schedule_delayed(
+        &mut self,
+        when: EffectTiming,
+        body: Vec<CompiledStep>,
+        captured_bindings: Bindings,
+    ) {
+        let entry = ScheduledEffect {
+            when,
+            body,
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            controller: self.player,
+            captured_bindings,
+        };
+        self.game.scheduled_effects.push(entry);
     }
 
     // ─── Read-only queries ────────────────────────────────────────────

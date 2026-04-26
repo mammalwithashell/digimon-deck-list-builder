@@ -14,5 +14,6 @@ mod play_from_hand_free;
 mod play_from_materials;
 mod play_from_security;
 mod play_from_trash;
+mod schedule_delayed;
 mod trash_card_source;
 mod trash_top_source;

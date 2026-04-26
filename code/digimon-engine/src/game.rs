@@ -330,6 +330,12 @@ pub struct Game {
         Vec<digimon_dsl::compiled::CompiledStep>,
         crate::dsl_cards::bindings::Bindings,
     )>,
+
+    /// Phase 2f4 Task 1 — one-shot delayed-effect queue. Entries are scheduled
+    /// via `EffectContext::schedule_delayed` and drained by
+    /// `scheduled_effects::fire_scheduled_for_timing` whose `when:` matches.
+    /// Task 2 wires the drain into observer-fire boundaries (turn end, etc.).
+    pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
 }
 
 impl Game {
@@ -468,6 +474,7 @@ impl Game {
             pending_deletion_resume: None,
             pending_post_deletion_replays: Vec::new(),
             dsl_outer_tail: None,
+            scheduled_effects: Vec::new(),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
