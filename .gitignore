@@ -55,6 +55,7 @@ tools/onnxruntime-vendor/**/*.dylib
 # PM Agent
 .claude/pm/sessions/
 .claude/pm/.briefing-lock
+.claude/scheduled_tasks.lock
 
 # Generated ONNX test fixtures
 tests/api/fixtures/*.onnx
