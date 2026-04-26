@@ -1,0 +1,16 @@
+numpy>=1.24
+gymnasium>=0.29
+torch>=2.0
+fastapi>=0.100
+httpx>=0.24
+uvicorn>=0.20
+openai>=1.40
+python-dotenv>=1.0
+pypdf>=4.2
+
+[dev]
+pytest>=7.0
+
+[train]
+stable-baselines3>=2.0
+sb3-contrib>=2.0

@@ -33,7 +33,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-REPO_ROOT: Path = Path(__file__).resolve().parent
+REPO_ROOT: Path = Path(__file__).resolve().parent.parent
 
 # Default data directory. ``DIGIMON_DATA_DIR`` overrides the root; each
 # file env var below overrides the individual path.
