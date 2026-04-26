@@ -138,7 +138,7 @@ def export_lstm(output_path: str) -> None:
 
 
 def _verify_mlp(onnx_path: str) -> None:
-    from digimon_gym.engine.onnx_policy import load_onnx_policy
+    from digimon_gym.inference.onnx_policy import load_onnx_policy
 
     policy = load_onnx_policy(onnx_path, model_type="auto")
     obs = np.random.randn(TENSOR_SIZE).astype(np.float32)
@@ -150,7 +150,7 @@ def _verify_mlp(onnx_path: str) -> None:
 
 
 def _verify_lstm(onnx_path: str) -> None:
-    from digimon_gym.engine.onnx_policy import load_onnx_policy
+    from digimon_gym.inference.onnx_policy import load_onnx_policy
 
     policy = load_onnx_policy(onnx_path, model_type="auto")
     obs = np.random.randn(TENSOR_SIZE).astype(np.float32)

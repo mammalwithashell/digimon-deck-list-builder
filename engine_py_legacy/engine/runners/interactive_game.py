@@ -54,7 +54,7 @@ class InteractiveGame(BaseGameRunner):
 
     def _load_onnx_policy(self, player_num: int, model_path: str) -> None:
         """Load an ONNX policy for a player (auto-detects MLP vs LSTM)."""
-        from digimon_gym.engine.onnx_policy import load_onnx_policy
+        from digimon_gym.inference.onnx_policy import load_onnx_policy
         self._onnx_policies[player_num] = load_onnx_policy(model_path)
 
     def reset_policies(self) -> None:

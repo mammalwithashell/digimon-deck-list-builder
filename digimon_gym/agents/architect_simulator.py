@@ -87,7 +87,7 @@ class _OnnxPolicy:
     """Wrapper around OnnxMlpPolicy / OnnxLstmPolicy."""
 
     def __init__(self, path: str):
-        from digimon_gym.engine.onnx_policy import load_onnx_policy
+        from digimon_gym.inference.onnx_policy import load_onnx_policy
         self._policy = load_onnx_policy(path, model_type="auto")
         self._is_lstm = hasattr(self._policy, "h")
 
