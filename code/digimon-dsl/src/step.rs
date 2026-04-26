@@ -612,7 +612,7 @@ pub struct MarkSecurityArgs {
 #[serde(deny_unknown_fields)]
 pub struct AddDpModifierArgs {
     pub target: BindingRef,
-    pub value: i32,
+    pub value: ModifierValueSpec,
     pub expiry: String, // parsed as enum in Task 12 validation
 }
 
@@ -621,8 +621,25 @@ pub struct AddDpModifierArgs {
 pub struct AddModifierArgs {
     pub target: ModifierTarget,
     pub modifier: String,
-    pub value: i32,
+    pub value: ModifierValueSpec,
     pub expiry: String,
+}
+
+/// Value carried by `add_dp_modifier` / `add_modifier`. Accepts either a
+/// bare integer (`value: 3000`) or a `formula:`-wrapped block
+/// (`value: { formula: { base: 0, per: stack_size, delta: 1000 } }`).
+///
+/// The wrapper key mirrors `alt_path::CostSpec` / `alt_path::FormulaCost` so
+/// authors see one consistent shape across cost and modifier formulas.
+///
+/// Untagged: serde tries `Literal(i32)` first (a YAML scalar int), falling
+/// through to `Formula` (a YAML mapping with a `formula:` key) when the
+/// scalar match fails.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(untagged)]
+pub enum ModifierValueSpec {
+    Literal(i32),
+    Formula(crate::alt_path::FormulaCost),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

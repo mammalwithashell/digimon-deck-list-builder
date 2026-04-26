@@ -1,6 +1,8 @@
 //! Phase 2c — modifier step dispatch (AddDpModifier, AddModifier, GrantKeyword).
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledModifierTarget, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledModifierTarget, CompiledModifierValue, CompiledStep,
+};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_step;
@@ -25,7 +27,7 @@ fn add_dp_modifier_end_of_turn_raises_effective_dp() {
 
     let step = CompiledStep::AddDpModifier {
         target: CompiledBindingRef::Named("tgt".into()),
-        value: 3000,
+        value: CompiledModifierValue::Literal(3000),
         expiry: "EndOfTurn".into(),
     };
     let mut bindings = Bindings::new();
@@ -62,7 +64,7 @@ fn add_dp_modifier_with_bad_expiry_is_noop() {
 
     let step = CompiledStep::AddDpModifier {
         target: CompiledBindingRef::Named("tgt".into()),
-        value: 3000,
+        value: CompiledModifierValue::Literal(3000),
         expiry: "NotARealExpiry".into(),
     };
     let mut bindings = Bindings::new();
@@ -99,7 +101,7 @@ fn add_modifier_cannot_attack_blocks_attack_flag() {
     let step = CompiledStep::AddModifier {
         target: CompiledModifierTarget::Binding(CompiledBindingRef::Named("tgt".into())),
         modifier: "CannotAttack".into(),
-        value: 0,
+        value: CompiledModifierValue::Literal(0),
         expiry: "EndOfTurn".into(),
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();
@@ -133,7 +135,7 @@ fn add_modifier_unknown_modifier_string_is_noop() {
     let step = CompiledStep::AddModifier {
         target: CompiledModifierTarget::Binding(CompiledBindingRef::Named("tgt".into())),
         modifier: "NotAModifier".into(),
-        value: 0,
+        value: CompiledModifierValue::Literal(0),
         expiry: "EndOfTurn".into(),
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();
@@ -174,7 +176,7 @@ fn add_modifier_filter_target_applies_to_match() {
     let step = CompiledStep::AddModifier {
         target: CompiledModifierTarget::Filter(CompiledPredicate::default()),
         modifier: "CannotAttack".into(),
-        value: 0,
+        value: CompiledModifierValue::Literal(0),
         expiry: "EndOfTurn".into(),
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();

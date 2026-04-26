@@ -7,8 +7,8 @@
 //!   - for_each { over: { kind: digimon, owner: you }, body: [add_dp_modifier +1000 EndOfTurn] }
 
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledCardKind, CompiledPlayerRef, CompiledPredicate, CompiledStep,
-    CompiledZone,
+    CompiledBindingRef, CompiledCardKind, CompiledModifierValue, CompiledPlayerRef,
+    CompiledPredicate, CompiledStep, CompiledZone,
 };
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -99,7 +99,7 @@ fn multi_pick_then_per_selected_then_for_each_round_trip() {
             bind_as: "tgt".to_string(),
             body: vec![CompiledStep::AddDpModifier {
                 target: CompiledBindingRef::Named("tgt".to_string()),
-                value: 1000,
+                value: CompiledModifierValue::Literal(1000),
                 expiry: "EndOfTurn".to_string(),
             }],
         },

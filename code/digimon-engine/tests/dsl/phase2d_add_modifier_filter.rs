@@ -3,7 +3,8 @@
 //! applies the modifier to each match.
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledModifierTarget, CompiledPredicate, CompiledStep,
+    CompiledCardKind, CompiledModifierTarget, CompiledModifierValue, CompiledPredicate,
+    CompiledStep,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -35,7 +36,7 @@ fn add_modifier_filter_targets_every_match() {
             ..CompiledPredicate::default()
         }),
         modifier: "CannotBeAffected".to_string(),
-        value: 0,
+        value: CompiledModifierValue::Literal(0),
         expiry: "EndOfTurn".to_string(),
     }];
 

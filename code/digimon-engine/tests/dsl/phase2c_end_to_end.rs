@@ -9,7 +9,9 @@
 //!        then:        [DeletePermanent { target: Named("tgt") }],
 //!        else_branch: [AddDpModifier { target: Named("tgt"), value: 3000, expiry: "EndOfTurn" }] }
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledModifierValue, CompiledPredicate, CompiledStep,
+};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_steps;
@@ -71,7 +73,7 @@ fn select_then_if_your_turn_deletes_opponent_permanent() {
             }],
             else_branch: vec![CompiledStep::AddDpModifier {
                 target: CompiledBindingRef::Named("tgt".to_string()),
-                value: 3000,
+                value: CompiledModifierValue::Literal(3000),
                 expiry: "EndOfTurn".to_string(),
             }],
         },
@@ -177,7 +179,7 @@ fn select_then_if_opponents_turn_buffs_opponent_permanent() {
             }],
             else_branch: vec![CompiledStep::AddDpModifier {
                 target: CompiledBindingRef::Named("tgt".to_string()),
-                value: 3000,
+                value: CompiledModifierValue::Literal(3000),
                 expiry: "EndOfTurn".to_string(),
             }],
         },

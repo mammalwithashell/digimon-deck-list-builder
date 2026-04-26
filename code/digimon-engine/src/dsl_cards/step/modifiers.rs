@@ -7,7 +7,7 @@
 //!
 //! Phase 2c handlers: AddDpModifier, AddModifier, GrantKeyword.
 
-use digimon_dsl::compiled::{CompiledModifierTarget, CompiledStep};
+use digimon_dsl::compiled::{CompiledModifierTarget, CompiledModifierValue, CompiledStep};
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
@@ -24,10 +24,15 @@ pub fn try_run(
     match step {
         CompiledStep::AddDpModifier { target, value, expiry } => {
             let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            // Phase 2f2 Task 1: `value` is now an enum. Task 3 will replace this
+            // guard with a real evaluator call for the `Formula` arm; for now
+            // formula-valued modifiers silently no-op so engine compilation
+            // stays green and the existing literal path is unchanged.
+            let CompiledModifierValue::Literal(n) = value else { return true; };
             if let Some(ResolvedBinding::Permanent(h)) =
                 resolve_binding_ref(target, ctx, bindings)
             {
-                ctx.add_dp_modifier(h, *value, expiry);
+                ctx.add_dp_modifier(h, *n, expiry);
             }
             true
         }
@@ -36,19 +41,22 @@ pub fn try_run(
             let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier) else {
                 return true;
             };
+            // Phase 2f2 Task 1: see AddDpModifier note above — Task 3 wires
+            // formula evaluation; for now formula values are a silent no-op.
+            let CompiledModifierValue::Literal(n) = value else { return true; };
             match target {
                 CompiledModifierTarget::Binding(b) => {
                     if let Some(ResolvedBinding::Permanent(h)) =
                         resolve_binding_ref(b, ctx, bindings)
                     {
-                        ctx.add_modifier(h, modifier_ty, *value, expiry);
+                        ctx.add_modifier(h, modifier_ty, *n, expiry);
                     }
                 }
                 CompiledModifierTarget::Filter(pred) => {
                     // Phase 2d Task 8: scan battle-area, apply modifier to every match.
                     let matches = crate::dsl_cards::step::permanent_scan::scan(ctx, pred);
                     for h in matches {
-                        ctx.add_modifier(h, modifier_ty, *value, expiry);
+                        ctx.add_modifier(h, modifier_ty, *n, expiry);
                     }
                 }
             }
