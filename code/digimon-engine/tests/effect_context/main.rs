@@ -6,6 +6,7 @@
 
 mod armor_purge_top;
 mod battle_opponent_of;
+mod effect_initiated_dna_digivolve;
 mod material_zone_select;
 mod place_under_permanent;
 mod play_from_hand_free;
