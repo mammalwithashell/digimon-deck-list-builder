@@ -24,8 +24,10 @@ For release wheels: `maturin build --release`.
 
 ## Parity tests
 
+The parity test currently lives under the sunset tree:
+
 ```bash
-DIGIMON_BACKEND=rust python -m pytest code/tests/engine/test_rust_backend_parity.py -v
+DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v
 ```
 
 Cross-engine divergences are tracked in [`docs/RUST_PYTHON_PARITY.md`](../../docs/RUST_PYTHON_PARITY.md).

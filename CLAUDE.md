@@ -255,7 +255,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test test_cards_beha
 cd code/digimon-engine-py && maturin develop
 
 # Python-side Rust-backend parity test (uses Rust engine via env var)
-DIGIMON_BACKEND=rust python -m pytest code/tests/engine/test_rust_backend_parity.py -v
+DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v
 ```
 
 ## Working Rules

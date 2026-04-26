@@ -18,7 +18,7 @@ npm install
 npm run dev          # dev server
 npm run build        # web build
 npm run test         # vitest
-npm run e2e          # playwright (see playwright.config.ts)
+npm run e2e          # Playwright (see playwright.config.ts)
 ```
 
 ## Build targets
