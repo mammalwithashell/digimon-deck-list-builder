@@ -1042,8 +1042,13 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
 
         // Phase F Task 1 — printed Scapegoat: "When this Digimon would be
         // deleted [other than by your own effect], you may delete another
-        // of your Digimon to prevent it." DCGO `Scapegoat.cs`.
+        // of your **Digimon** to prevent it." DCGO `Scapegoat.cs`.
         // RULES_CONTEXT 16-31 (Immediate-type, Optional).
+        //
+        // The substitute MUST be a Digimon — Tamers are not valid
+        // substitutes per printed text. Both the upstream candidate-
+        // existence gate and the inner pick filter consult
+        // `Permanent::is_tamer(&card_data)` to exclude Tamer permanents.
         //
         // ## Cause filter (UPSTREAM)
         //
@@ -1063,8 +1068,10 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         //
         // Mirrors DCGO `CanActivateScapegoat`'s `HasMatchConditionPermanent`
         // gate: the keyword is inactive when the controller has no other
-        // own permanents to substitute. Suppressed at candidate-collection
-        // time so the outer dialog never parks in this case.
+        // own **Digimon** to substitute. Suppressed at candidate-collection
+        // time so the outer dialog never parks in this case. Tamers are
+        // excluded per printed text ("another of your **Digimon**" —
+        // RULES_CONTEXT 16-31).
         //
         // ## Selection chain
         //
@@ -1072,8 +1079,8 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         //      original deletion to proceed.
         //   2. On ACCEPT: parked own-permanent pick via
         //      `rctx.effect.select_own_permanent(...)`. Filter: same-
-        //      controller, non-self. Mandatory once accepted (DCGO: once
-        //      committed to substitute, must pick).
+        //      controller, non-self, non-Tamer. Mandatory once accepted
+        //      (DCGO: once committed to substitute, must pick).
         //   3. On pick: `ctx.substitute_replacement(Permanent(picked))`
         //      writes `Substituted` to the parked slot. The dispatcher's
         //      post-callback hook commits the substituted deletion.
@@ -1094,16 +1101,18 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     return false;
                 }
                 // DCGO HasMatchConditionPermanent: at least one other own
-                // permanent must exist as a substitute candidate.
+                // **Digimon** must exist as a substitute candidate.
+                // Printed text restricts the substitute to "another of your
+                // Digimon" — Tamers are not valid candidates
+                // (RULES_CONTEXT 16-31).
                 let Some(me) = ctx.source_permanent else {
                     return false;
                 };
                 let owner = me.player;
                 let battle = ctx.battle_area(owner);
-                battle
-                    .iter()
-                    .enumerate()
-                    .any(|(i, _)| i as u8 != me.index)
+                battle.iter().enumerate().any(|(i, p)| {
+                    i as u8 != me.index && !p.is_tamer(&ctx.game.card_data)
+                })
             })
             .replacement_process(|rctx| {
                 use crate::replacement::ReplacementSubject;
@@ -1125,16 +1134,26 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
 
                 let owner = me_perm.player;
 
-                // Inner pick: another of own permanents. Filter: same-
-                // controller, non-self. Mandatory once accepted
-                // (is_optional=false). The upstream
-                // `replacement_condition` already guarantees at least one
-                // candidate exists, so this select_own_permanent will
-                // always install a pending_selection.
+                // Inner pick: another of own **Digimon**. Filter: same-
+                // controller, non-self, non-Tamer (printed text:
+                // "another of your Digimon" — RULES_CONTEXT 16-31).
+                // Mandatory once accepted (is_optional=false). The
+                // upstream `replacement_condition` already guarantees at
+                // least one Digimon candidate exists, so this
+                // select_own_permanent will always install a
+                // pending_selection.
                 rctx.effect.select_own_permanent(
                     "select another of your Digimon to delete instead",
                     /*is_optional=*/ false,
-                    move |_g, h| h.player == owner && h != me_perm,
+                    move |g, h| {
+                        if h.player != owner || h == me_perm {
+                            return false;
+                        }
+                        g.players[h.player as usize]
+                            .battle_area
+                            .get(h.index as usize)
+                            .is_some_and(|p| !p.is_tamer(&g.card_data))
+                    },
                     move |ctx, picked| {
                         // Substitute the deletion subject to the picked
                         // permanent. The dispatcher's Substituted commit
