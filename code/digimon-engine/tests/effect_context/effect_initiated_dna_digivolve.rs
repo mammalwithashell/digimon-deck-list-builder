@@ -192,10 +192,9 @@ fn effect_initiated_dna_digivolve_preserves_stacked_materials_under_top() {
     );
 
     let handles: Vec<_> = merged.card_sources.iter().map(|c| c.handle()).collect();
-    // CHOSEN-NOT-CANONICAL contract: order is target_a's stack first,
-    // target_b's second, then hand top. The user-action
-    // `initiate_dna_digivolve` path now delegates to the same
-    // `Game::dna_digivolve_inner` core; ordering matches across both paths.
+    // Canonical stack order (locked in Game::dna_digivolve_inner): target_a's
+    // stack first, target_b's second, then hand top. Matches the user-action
+    // path (Game::initiate_dna_digivolve -> two-stage selection).
     assert_eq!(handles[0], base_a_handle, "card_sources[0] = target_a base");
     assert_eq!(handles[1], top_a_handle, "card_sources[1] = target_a top");
     assert_eq!(
