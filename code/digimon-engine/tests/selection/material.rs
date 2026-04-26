@@ -238,6 +238,8 @@ fn optional_select_material_accepts_pass() {
 
 #[test]
 fn single_source_permanent_offers_no_materials() {
+    use std::sync::{Arc, Mutex};
+
     // A permanent with only its top card (1 source) has no materials —
     // the top is excluded by contract, so no prompt is installed.
     let mut r = DebugRunner::builder()
@@ -246,9 +248,17 @@ fn single_source_permanent_offers_no_materials() {
     let tp = r.game.turn_player();
     let oc = r.place_on_field(tp, "SOLO", Some(0));
 
+    // Track callback invocations: with no candidates, the callback must
+    // never fire — regression for the no-approximations contract (the
+    // engine cannot silently auto-pick the top card to satisfy a script).
+    let callback_count: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
+    let counter = Arc::clone(&callback_count);
+
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), Some(oc), tp);
-        ctx.select_material(oc, "no materials", true, |_, _| true, |_, _| {});
+        ctx.select_material(oc, "no materials", true, |_, _| true, move |_, _| {
+            *counter.lock().unwrap() += 1;
+        });
     }
 
     assert!(
@@ -256,6 +266,11 @@ fn single_source_permanent_offers_no_materials() {
         "single-source permanent has no materials — top is never offered"
     );
     assert_ne!(r.game.current_phase, GamePhase::SelectMaterial);
+    assert_eq!(
+        *callback_count.lock().unwrap(),
+        0,
+        "callback must not fire when no material candidates exist"
+    );
 }
 
 #[test]
