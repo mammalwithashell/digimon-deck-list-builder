@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SETS = ["EX10", "BT13", "EX11", "BT23", "BT21", "BT24"]
 CARD_ID_RE = re.compile(r"^[A-Z0-9]+-[0-9]{3}(?:-[A-Z0-9]+)?$")
 TOKEN_FILE_RE = re.compile(r"^[a-z0-9]+_[0-9]{3}_token\.py$")

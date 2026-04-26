@@ -25,7 +25,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Bootstrap: ensure repo root is on sys.path so retrieval imports work
 # ---------------------------------------------------------------------------
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from server.ai.retrieval import (
