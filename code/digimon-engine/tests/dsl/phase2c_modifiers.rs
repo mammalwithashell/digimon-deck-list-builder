@@ -28,7 +28,7 @@ fn add_dp_modifier_end_of_turn_raises_effective_dp() {
     let step = CompiledStep::AddDpModifier {
         target: CompiledBindingRef::Named("tgt".into()),
         value: CompiledModifierValue::Literal(3000),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
     };
     let mut bindings = Bindings::new();
     bindings.insert_permanent("tgt", handle);
@@ -102,7 +102,7 @@ fn add_modifier_cannot_attack_blocks_attack_flag() {
         target: CompiledModifierTarget::Binding(CompiledBindingRef::Named("tgt".into())),
         modifier: "CannotAttack".into(),
         value: CompiledModifierValue::Literal(0),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();
     bindings.insert_permanent("tgt", handle);
@@ -136,7 +136,7 @@ fn add_modifier_unknown_modifier_string_is_noop() {
         target: CompiledModifierTarget::Binding(CompiledBindingRef::Named("tgt".into())),
         modifier: "NotAModifier".into(),
         value: CompiledModifierValue::Literal(0),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();
     bindings.insert_permanent("tgt", handle);
@@ -177,7 +177,7 @@ fn add_modifier_filter_target_applies_to_match() {
         target: CompiledModifierTarget::Filter(CompiledPredicate::default()),
         modifier: "CannotAttack".into(),
         value: CompiledModifierValue::Literal(0),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
     };
     let mut bindings = digimon_engine::dsl_cards::bindings::Bindings::new();
 
@@ -211,7 +211,7 @@ fn grant_keyword_blocker_is_queryable() {
     let step = CompiledStep::GrantKeyword {
         target: CompiledBindingRef::Named("tgt".into()),
         keyword: "Blocker".into(),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
         value: None,
     };
     let mut bindings = Bindings::new();
@@ -246,7 +246,7 @@ fn grant_keyword_unknown_name_is_noop() {
     let step = CompiledStep::GrantKeyword {
         target: CompiledBindingRef::Named("tgt".into()),
         keyword: "NotAKeyword".into(),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
         value: None,
     };
     let mut bindings = Bindings::new();

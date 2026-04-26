@@ -100,7 +100,7 @@ fn multi_pick_then_per_selected_then_for_each_round_trip() {
             body: vec![CompiledStep::AddDpModifier {
                 target: CompiledBindingRef::Named("tgt".to_string()),
                 value: CompiledModifierValue::Literal(1000),
-                expiry: "EndOfTurn".to_string(),
+                expiry: "end_of_turn".to_string(),
             }],
         },
     ];

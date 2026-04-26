@@ -18,14 +18,9 @@
 //! prompted, not the candidate set. Hence "opponent picks from your perms" —
 //! exactly the canonical "opponent chooses your Digimon" pattern.
 //!
-//! Note: the YAML uses `expiry: EndOfTurn` (PascalCase) rather than the
-//! `end_of_turn` form the validator accepts. There is a pre-existing
-//! divergence between the validator's accepted forms (snake_case) and the
-//! engine's `lookup_expiry` keys (PascalCase) — `compile()` does not call
-//! `validate()` and passes the string verbatim, so the engine-facing form
-//! is what reaches `add_dp_modifier` at runtime. Using the engine form here
-//! keeps this end-to-end test focused on the `as_selecting_player` pipeline
-//! rather than the orthogonal expiry-string mismatch.
+//! Uses `expiry: end_of_turn` — the canonical snake_case form accepted by
+//! both the validator (`KNOWN_EXPIRY_KEYS`) and the engine (`lookup_expiry`).
+//! See `tests/dsl/expiry_parity.rs` for the lockstep enforcement.
 
 use std::sync::Arc;
 
@@ -59,7 +54,7 @@ effects:
             - add_dp_modifier:
                 target: chosen
                 value: -3000
-                expiry: EndOfTurn
+                expiry: end_of_turn
 "#;
     let spec: digimon_dsl::CardSpec =
         serde_yml::from_str(yaml).expect("YAML parses");

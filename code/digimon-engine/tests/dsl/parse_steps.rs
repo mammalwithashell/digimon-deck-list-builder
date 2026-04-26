@@ -117,7 +117,7 @@ fn parse_delete_permanent_with_binding_ref() {
 #[test]
 fn add_modifier_target_as_binding_ref() {
     let step = parse_single_step(
-        r#"add_modifier: { target: my_target, modifier: CannotAttack, value: 1, expiry: end_of_your_turn }"#,
+        r#"add_modifier: { target: my_target, modifier: CannotAttack, value: 1, expiry: end_of_turn}"#,
     );
     match step {
         StepSpec::AddModifier(args) => {
