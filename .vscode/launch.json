@@ -7,7 +7,7 @@
       "request": "launch",
       "module": "uvicorn",
       "args": [
-        "digimon_gym.api:app",
+        "server.api:app",
         "--port",
         "8000"
       ],
@@ -21,7 +21,7 @@
       "request": "launch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "${workspaceFolder}/frontend",
+      "cwd": "${workspaceFolder}/code/frontend",
       "console": "integratedTerminal"
     }
   ],

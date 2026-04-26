@@ -12,7 +12,7 @@ Add a WebSocket transport layer on top of the existing game engine for network p
 
 ### 1.1 Backend: Connection Manager
 
-**New file: `digimon_gym/routers/ws_manager.py`**
+**New file: `code/server/routers/ws_manager.py`**
 
 ```python
 class ConnectionManager:
@@ -38,7 +38,7 @@ Responsibilities:
 
 ### 1.2 Backend: WebSocket Game Router
 
-**New file: `digimon_gym/routers/ws_games.py`**
+**New file: `code/server/routers/ws_games.py`**
 
 ```python
 router = APIRouter()
@@ -91,7 +91,7 @@ Server → Client:
 
 ### 1.3 Backend: Game Lobby & Matchmaking
 
-**New file: `digimon_gym/routers/lobby.py`**
+**New file: `code/server/routers/lobby.py`**
 
 ```python
 router = APIRouter(tags=["lobby"])
@@ -139,14 +139,14 @@ async def cancel_lobby_game(game_id: str) -> dict:
 
 ### 1.4 Backend: Register New Routers
 
-**Modify: `digimon_gym/api.py`**
+**Modify: `code/server/api.py`**
 
 - Import and mount `ws_games.router` and `lobby.router`
 - Add `websockets` to requirements if not already present (FastAPI includes Starlette WebSocket support natively — no new dependency needed)
 
 ### 1.5 Frontend: WebSocket Hook
 
-**New file: `frontend/src/hooks/useWebSocketGame.ts`**
+**New file: `code/frontend/src/hooks/useWebSocketGame.ts`**
 
 ```typescript
 interface UseWebSocketGameOptions {
@@ -173,20 +173,20 @@ function useWebSocketGame(options: UseWebSocketGameOptions) {
 
 ### 1.6 Frontend: Lobby UI
 
-**New file: `frontend/src/pages/LobbyPage.tsx`**
+**New file: `code/frontend/src/pages/LobbyPage.tsx`**
 
 - "Create Game" form: select deck, choose public/private → gets join code
 - "Join Game" input: enter join code → joins game
 - "Browse Games" list: shows public pending games (polls `GET /lobby/games`)
 - After joining: redirect to `/game/{id}` with WebSocket mode
 
-**Modify: `frontend/src/App.tsx`**
+**Modify: `code/frontend/src/App.tsx`**
 
 - Add route: `/lobby` → `LobbyPage`
 
 ### 1.7 Frontend: GamePage Dual-Mode Support
 
-**Modify: `frontend/src/pages/GamePage.tsx`**
+**Modify: `code/frontend/src/pages/GamePage.tsx`**
 
 - Detect mode: if game was created via lobby (URL param or route state), use `useWebSocketGame`
 - If game was created locally (existing flow), continue using `useGameActions` with HTTP
@@ -194,7 +194,7 @@ function useWebSocketGame(options: UseWebSocketGameOptions) {
 
 ### 1.8 Frontend: Spectator Mode
 
-**Modify: `frontend/src/pages/GamePage.tsx`**
+**Modify: `code/frontend/src/pages/GamePage.tsx`**
 
 - If `role=spectator` in URL params, connect via WebSocket with `role: "spectator"`
 - Hide action buttons (no action mask interaction)
@@ -203,7 +203,7 @@ function useWebSocketGame(options: UseWebSocketGameOptions) {
 
 ### 1.9 Backend: Hidden Information & Perspective Filtering
 
-**New file: `digimon_gym/engine/state_filter.py`**
+**New file: `code/engine_py_legacy/engine/state_filter.py`**
 
 The game engine's `to_ui_json()` currently returns **everything** — both players' hands, security stacks, etc. For network play this leaks hidden information. We need per-recipient state filtering.
 
@@ -276,7 +276,7 @@ Both players must agree to `"open"` spectating. The host sets it at game creatio
 
 ### 1.10 Backend: Reconnection Support
 
-**Modify: `digimon_gym/routers/ws_games.py`**
+**Modify: `code/server/routers/ws_games.py`**
 
 When a player reconnects:
 1. Authenticate via token → identify `user_id` and `player_id`
@@ -289,17 +289,17 @@ When a player reconnects:
 
 | File | Action | Description |
 |------|--------|-------------|
-| `digimon_gym/routers/ws_manager.py` | Create | WebSocket connection manager |
-| `digimon_gym/routers/ws_games.py` | Create | WebSocket game endpoint |
-| `digimon_gym/routers/lobby.py` | Create | Lobby create/join/list endpoints |
-| `digimon_gym/engine/state_filter.py` | Create | Per-recipient state filtering (hidden information) |
-| `digimon_gym/routers/schemas.py` | Modify | Add lobby request/response schemas |
-| `digimon_gym/api.py` | Modify | Mount new routers |
-| `frontend/src/hooks/useWebSocketGame.ts` | Create | WebSocket hook |
-| `frontend/src/pages/LobbyPage.tsx` | Create | Lobby UI page |
-| `frontend/src/pages/GamePage.tsx` | Modify | Dual-mode (HTTP/WS), spectator support, redacted rendering |
-| `frontend/src/App.tsx` | Modify | Add `/lobby` route |
-| `frontend/src/api/lobbyApi.ts` | Create | Lobby API client |
+| `code/server/routers/ws_manager.py` | Create | WebSocket connection manager |
+| `code/server/routers/ws_games.py` | Create | WebSocket game endpoint |
+| `code/server/routers/lobby.py` | Create | Lobby create/join/list endpoints |
+| `code/engine_py_legacy/engine/state_filter.py` | Create | Per-recipient state filtering (hidden information) |
+| `code/server/routers/schemas.py` | Modify | Add lobby request/response schemas |
+| `code/server/api.py` | Modify | Mount new routers |
+| `code/frontend/src/hooks/useWebSocketGame.ts` | Create | WebSocket hook |
+| `code/frontend/src/pages/LobbyPage.tsx` | Create | Lobby UI page |
+| `code/frontend/src/pages/GamePage.tsx` | Modify | Dual-mode (HTTP/WS), spectator support, redacted rendering |
+| `code/frontend/src/App.tsx` | Modify | Add `/lobby` route |
+| `code/frontend/src/api/lobbyApi.ts` | Create | Lobby API client |
 
 ### 1.12 Verification
 
@@ -347,7 +347,7 @@ This script requires PyTorch (it imports the SB3 model to trace it). It runs on 
 
 ### 2.2 ONNX Inference Wrapper
 
-**New file: `digimon_gym/engine/onnx_policy.py`**
+**New file: `code/digimon_gym/inference/onnx_policy.py`**
 
 ```python
 """Lightweight ONNX-based policy for trained agent inference. No PyTorch required."""
@@ -393,7 +393,7 @@ class OnnxLstmPolicy:
 
 ### 2.3 New Policy Type in InteractiveGame
 
-**Modify: `digimon_gym/engine/runners/interactive_game.py`**
+**Modify: `code/engine_py_legacy/engine/runners/interactive_game.py`**
 
 Add support for `"trained"` policy alongside `"greedy"` and `"random"`:
 
@@ -417,7 +417,7 @@ class InteractiveGame(BaseGameRunner):
 
 ### 2.4 Game Router Updates
 
-**Modify: `digimon_gym/routers/schemas.py`**
+**Modify: `code/server/routers/schemas.py`**
 
 ```python
 class CreateGameRequest(BaseModel):
@@ -428,7 +428,7 @@ class CreateGameRequest(BaseModel):
     player2_model: Optional[str] = None
 ```
 
-**Modify: `digimon_gym/routers/games.py`**
+**Modify: `code/server/routers/games.py`**
 
 - Pass `model_path` to InteractiveGame when policy is `"trained"`
 - Resolve model filename against a configurable models directory
@@ -462,10 +462,10 @@ Note: No SQLAlchemy, aiosqlite, bcrypt, or python-jose — the sidecar doesn't d
 | File | Action | Description |
 |------|--------|-------------|
 | `scripts/export_onnx.py` | Create | SB3 → ONNX conversion script (requires PyTorch) |
-| `digimon_gym/engine/onnx_policy.py` | Create | ONNX inference wrapper (no PyTorch) |
-| `digimon_gym/engine/runners/interactive_game.py` | Modify | Add "trained" policy type |
-| `digimon_gym/routers/schemas.py` | Modify | Add model fields to CreateGameRequest |
-| `digimon_gym/routers/games.py` | Modify | Pass model path to InteractiveGame |
+| `code/digimon_gym/inference/onnx_policy.py` | Create | ONNX inference wrapper (no PyTorch) |
+| `code/engine_py_legacy/engine/runners/interactive_game.py` | Modify | Add "trained" policy type |
+| `code/server/routers/schemas.py` | Modify | Add model fields to CreateGameRequest |
+| `code/server/routers/games.py` | Modify | Pass model path to InteractiveGame |
 | `requirements.txt` | Modify | Add onnxruntime |
 | `requirements-desktop.txt` | Create | Gameplay-only deps |
 
@@ -487,18 +487,18 @@ Package the application as a Tauri v2 desktop app. A **lightweight** Python side
 
 ### 3.1 Initialize Tauri
 
-**New directory: `src-tauri/`**
+**New directory: `code/src-tauri/`**
 
 Run `npm create tauri-app` from the frontend directory (or `cargo tauri init`). This generates:
-- `src-tauri/tauri.conf.json` — build config
-- `src-tauri/src/main.rs` — Rust entry point
-- `src-tauri/Cargo.toml` — Rust dependencies
-- `src-tauri/capabilities/` — permission config
-- `src-tauri/icons/` — app icons
+- `code/src-tauri/tauri.conf.json` — build config
+- `code/src-tauri/src/main.rs` — Rust entry point
+- `code/src-tauri/Cargo.toml` — Rust dependencies
+- `code/src-tauri/capabilities/` — permission config
+- `code/src-tauri/icons/` — app icons
 
 ### 3.2 Tauri Configuration
 
-**New file: `src-tauri/tauri.conf.json`**
+**New file: `code/src-tauri/tauri.conf.json`**
 
 ```jsonc
 {
@@ -508,7 +508,7 @@ Run `npm create tauri-app` from the frontend directory (or `cargo tauri init`). 
   "identifier": "com.digimon-tcg.app",
   "build": {
     "beforeBuildCommand": "npm run build",
-    "frontendDist": "../frontend/dist",
+    "frontendDist": "../code/frontend/dist",
     "devUrl": "http://localhost:5173"
   },
   "app": {
@@ -533,7 +533,7 @@ Run `npm create tauri-app` from the frontend directory (or `cargo tauri init`). 
 
 ### 3.3 Tauri Capabilities (Permissions)
 
-**New file: `src-tauri/capabilities/default.json`**
+**New file: `code/src-tauri/capabilities/default.json`**
 
 ```json
 {
@@ -551,7 +551,7 @@ Run `npm create tauri-app` from the frontend directory (or `cargo tauri init`). 
 
 ### 3.4 Rust Entry Point: Sidecar Management
 
-**New file: `src-tauri/src/main.rs`**
+**New file: `code/src-tauri/src/main.rs`**
 
 ```rust
 // Minimal Rust — just manages the Python sidecar lifecycle
@@ -585,7 +585,7 @@ fn main() {
 
 ### 3.5 Python Sidecar Entry Point
 
-**New file: `digimon_gym/desktop_main.py`**
+**New file: `code/digimon_gym/desktop_main.py`**
 
 The desktop sidecar is a **stripped-down FastAPI app** — it only mounts the game engine routes and deck tools. No database, no auth, no user management. All of that lives on the central server.
 
@@ -632,10 +632,10 @@ if __name__ == "__main__":
 **New file: `desktop.spec`**
 
 PyInstaller spec file that bundles:
-- `digimon_gym/engine/` package (game engine only)
-- `digimon_gym/routers/games.py`, `deck_tools.py`, `schemas.py`, `state.py`
-- `digimon_gym/desktop_main.py` (entry point)
-- Card data files from `digimon_gym/engine/data/`
+- `code/engine_py_legacy/engine/` package (game engine only)
+- `code/server/routers/games.py`, `deck_tools.py`, `schemas.py`, `state.py`
+- `code/digimon_gym/desktop_main.py` (entry point)
+- Card data files from `code/engine_py_legacy/engine/data/`
 - Excludes: torch, stable-baselines3, sb3-contrib, openai, anthropic, SQLAlchemy, aiosqlite, all training/admin/AI/DB modules
 
 Output binary name follows Tauri's platform-specific naming convention:
@@ -659,17 +659,17 @@ if [ "$PROFILE" = "gameplay" ]; then
 else
     pip install -r requirements.txt
     # Copy model weights to resources
-    mkdir -p src-tauri/resources/models
-    cp models/*.onnx src-tauri/resources/models/
+    mkdir -p code/src-tauri/resources/models
+    cp models/*.onnx code/code/src-tauri/resources/models/
 fi
 
 pyinstaller desktop.spec
-# Move output to src-tauri/binaries/ with platform-specific name
+# Move output to code/src-tauri/binaries/ with platform-specific name
 ```
 
 ### 3.8 Frontend: Dual-Server Architecture
 
-**Modify: `frontend/src/api/client.ts`**
+**Modify: `code/frontend/src/api/client.ts`**
 
 The desktop app talks to **two servers** depending on the feature:
 
@@ -700,9 +700,9 @@ The game API client should route requests based on game mode — local games go 
 
 ```gitignore
 # Tauri
-src-tauri/target/
-src-tauri/binaries/
-src-tauri/resources/models/
+code/src-tauri/target/
+code/src-tauri/binaries/
+code/src-tauri/resources/models/
 *.AppImage
 *.dmg
 *.msi
@@ -713,15 +713,15 @@ src-tauri/resources/models/
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src-tauri/tauri.conf.json` | Create | Tauri build configuration |
-| `src-tauri/src/main.rs` | Create | Sidecar lifecycle management |
-| `src-tauri/Cargo.toml` | Create | Rust dependencies (tauri, tauri-plugin-shell) |
-| `src-tauri/capabilities/default.json` | Create | Permission config |
-| `src-tauri/icons/` | Create | App icons (generated by `tauri icon`) |
-| `digimon_gym/desktop_main.py` | Create | Lightweight sidecar entry point (game engine only, no DB/auth) |
+| `code/src-tauri/tauri.conf.json` | Create | Tauri build configuration |
+| `code/src-tauri/src/main.rs` | Create | Sidecar lifecycle management |
+| `code/src-tauri/Cargo.toml` | Create | Rust dependencies (tauri, tauri-plugin-shell) |
+| `code/src-tauri/capabilities/default.json` | Create | Permission config |
+| `code/src-tauri/icons/` | Create | App icons (generated by `tauri icon`) |
+| `code/digimon_gym/desktop_main.py` | Create | Lightweight sidecar entry point (game engine only, no DB/auth) |
 | `desktop.spec` | Create | PyInstaller spec file |
 | `scripts/build-sidecar.sh` | Create | Build script for sidecar binary |
-| `frontend/src/api/client.ts` | Modify | Dual-server routing (local sidecar + remote server) |
+| `code/frontend/src/api/client.ts` | Modify | Dual-server routing (local sidecar + remote server) |
 | `.gitignore` | Modify | Ignore Tauri build artifacts |
 
 ### 3.12 Verification

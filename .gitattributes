@@ -6,3 +6,8 @@ Dockerfile.* text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 Caddyfile text eol=lf
+
+# Per-card metadata is byte-exact-checked by tools/build_card_meta --check.
+# Force LF on every platform so the generator's output matches the on-disk
+# tree on Windows checkouts.
+data/card_meta/** text eol=lf

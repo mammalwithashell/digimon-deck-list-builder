@@ -91,8 +91,8 @@ ssh $SSH_OPTS "root@${DROPLET_IP}" "
     mkdir -p ${REMOTE_MODELS} && \
     docker run --gpus all --rm \
         -v ${REMOTE_MODELS}:/app/models \
+        -v ${REMOTE_DIR}/data:/app/data \
         -e DIGIMON_BACKEND=rust \
-        -e DIGIMON_CARDS_JSON=/app/digimon_gym/engine/data/cards.json \
         ${PGPASSWORD:+-e PGPASSWORD='${PGPASSWORD}'} \
         ${DIGILAB_CONN_STR:+-e DIGILAB_CONN_STR='${DIGILAB_CONN_STR}'} \
         digimon-trainer ${JOB_CONFIG}
@@ -119,7 +119,7 @@ ONNX_PATH="models/pilot_ppo_${JOB_NAME}.onnx"
 if [[ ! -f "$ZIP_PATH" ]]; then
     echo "WARNING: Model zip not found at $ZIP_PATH — skipping ONNX export."
 else
-    python tools/export_onnx.py \
+    python code/tools/export_onnx.py \
         --type "$MODEL_TYPE" \
         --input "$ZIP_PATH" \
         --output "$ONNX_PATH"
@@ -137,7 +137,7 @@ if [[ "$PUBLISH" == "--publish" ]]; then
     else
         echo ""
         echo "[publish] Uploading to Spaces and confirming..."
-        python tools/publish_model.py \
+        python code/tools/publish_model.py \
             --onnx "$ONNX_PATH" \
             --name "$JOB_NAME" \
             --type "$MODEL_TYPE" \

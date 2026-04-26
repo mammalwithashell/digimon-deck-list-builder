@@ -24,12 +24,25 @@ dev = [
     "pytest>=7.0",
 ]
 
+[tool.setuptools.packages.find]
+where = ["code"]
+include = ["server*", "digimon_gym*"]
+exclude = ["engine_py_legacy*", "tests*", "tools*"]
+
+[tool.setuptools]
+py-modules = ["data_paths"]
+
+[tool.setuptools.package-dir]
+"" = "code"
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "--ignore=tests/test_rl_gym.py --ignore=tests/ai_pipeline -v"
+testpaths = ["code/tests"]
+pythonpath = ["code"]
+addopts = "--ignore=code/tests/test_rl_gym.py --ignore=code/tests/ai_pipeline --ignore=code/engine_py_legacy -v"
+norecursedirs = ["code/engine_py_legacy"]
 asyncio_mode = "auto"
 markers = [
-    "ai_pipeline: AI pipeline tests (digimon_gym.ai.* and DB deps)",
+    "ai_pipeline: AI pipeline tests (server.ai.* and DB deps)",
     "behavioral: Behavioral tests using DebugRunner with real card effects",
     "scenario: YAML scenario-based tests",
     "slow: Tests that take >10s (greedy baselines)",
@@ -37,4 +50,4 @@ markers = [
 
 [build-system]
 requires = ["setuptools>=68.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"

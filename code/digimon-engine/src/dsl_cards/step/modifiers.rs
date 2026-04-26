@@ -1,0 +1,109 @@
+//! Synchronous modifier-step lowering (Phase 2c).
+//!
+//! Verbs: AddDpModifier, AddModifier, GrantKeyword. All are binding-target
+//! (filter-target form for AddModifier is Phase 2d). Unknown expiry strings,
+//! unknown modifier names, or unknown keyword names cause the step to no-op —
+//! same strictness convention as 2b (invalid references don't panic).
+//!
+//! Phase 2c handlers: AddDpModifier, AddModifier, GrantKeyword.
+//! Phase 2f2 Task 3: `CompiledModifierValue::Formula(_)` is now lowered
+//! through `formula_eval::evaluate`. The evaluator returns `i32` and both
+//! `EffectContext::add_dp_modifier` / `add_modifier` take `i32`, so no
+//! narrowing or saturation happens at this boundary today. If the engine
+//! ever narrows the modifier value type (e.g. to `i16`), this dispatch
+//! site is where saturation logic would need to land — see
+//! `phase2f2_modifier_formula::add_dp_modifier_formula_large_value_passes_through`
+//! which guards against an unannounced narrowing change.
+
+use digimon_dsl::compiled::{
+    CompiledModifierTarget, CompiledModifierValue, CompiledStep,
+};
+
+use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
+use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::expiry_map::lookup_expiry;
+use crate::dsl_cards::formula_eval;
+use crate::effect_context::EffectContext;
+use crate::permanent::PermanentHandle;
+
+/// Resolve a `CompiledModifierValue` to the `i32` the engine modifier APIs
+/// take. Literal values are returned verbatim; Formula values are evaluated
+/// with `target` as the resolution point for per-selectors (stack_size,
+/// material_count, digivolution_color_count).
+///
+/// `target` MUST be the permanent the modifier is being applied to — for the
+/// filter-target form this means the per-iteration handle, NOT the source
+/// permanent. Hoisting the call outside a `for h in matches` loop would tie
+/// the formula to the source's stack instead of the matched target's
+/// (Susanoomon-style "+2000 DP per material on this Digimon" must give
+/// different DP per match if matches have different material counts).
+fn resolve_modifier_value(
+    value: &CompiledModifierValue,
+    ctx: &EffectContext<'_>,
+    target: PermanentHandle,
+) -> i32 {
+    match value {
+        CompiledModifierValue::Literal(n) => *n,
+        CompiledModifierValue::Formula(f) => formula_eval::evaluate(f, ctx, target),
+    }
+}
+
+/// Returns `true` if `step` is a modifier family handled here.
+/// Unknown steps fall through (the caller may try other families).
+pub fn try_run(
+    step: &CompiledStep,
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+) -> bool {
+    match step {
+        CompiledStep::AddDpModifier { target, value, expiry } => {
+            let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            if let Some(ResolvedBinding::Permanent(h)) =
+                resolve_binding_ref(target, ctx, bindings)
+            {
+                let n = resolve_modifier_value(value, ctx, h);
+                ctx.add_dp_modifier(h, n, expiry);
+            }
+            true
+        }
+        CompiledStep::AddModifier { target, modifier, value, expiry } => {
+            let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier) else {
+                return true;
+            };
+            match target {
+                CompiledModifierTarget::Binding(b) => {
+                    if let Some(ResolvedBinding::Permanent(h)) =
+                        resolve_binding_ref(b, ctx, bindings)
+                    {
+                        let n = resolve_modifier_value(value, ctx, h);
+                        ctx.add_modifier(h, modifier_ty, n, expiry);
+                    }
+                }
+                CompiledModifierTarget::Filter(pred) => {
+                    // Phase 2d Task 8: scan battle-area, apply modifier to every match.
+                    // Phase 2f2 Task 3: formula evaluation is INSIDE the loop with
+                    // `h` as the target, so per-selectors (StackSize etc.) resolve
+                    // against each matched permanent — NOT hoisted outside.
+                    let matches = crate::dsl_cards::step::permanent_scan::scan(ctx, pred);
+                    for h in matches {
+                        let n = resolve_modifier_value(value, ctx, h);
+                        ctx.add_modifier(h, modifier_ty, n, expiry);
+                    }
+                }
+            }
+            true
+        }
+        CompiledStep::GrantKeyword { target, keyword, expiry, value } => {
+            let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            let Some(kw) = crate::dsl_cards::modifier_map::lookup_keyword(keyword, *value) else {
+                return true;
+            };
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings) {
+                ctx.grant_keyword(h, kw, expiry);
+            }
+            true
+        }
+        _ => false,
+    }
+}
