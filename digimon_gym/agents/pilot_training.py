@@ -20,10 +20,14 @@ import os
 import argparse
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, Dict, Optional, List, Union
 
 import numpy as np
 import gymnasium
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_MODELS_DIR = str(_REPO_ROOT / "models")
 
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
@@ -461,7 +465,7 @@ def make_env(opponent: str = "greedy",
 
 
 def save_model(model: Union[MaskablePPO, MaskableRecurrentPPO],
-               models_dir: str = "models",
+               models_dir: str = DEFAULT_MODELS_DIR,
                job_id: Optional[str] = None) -> str:
     """Save trained model with a unique filename.
 
