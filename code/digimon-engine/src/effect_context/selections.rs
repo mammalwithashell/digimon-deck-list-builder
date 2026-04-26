@@ -269,12 +269,16 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Prompt `self.player` to pick a card from a permanent's digivolution
-    /// stack — i.e., one of the `card_sources` entries on `of_permanent`.
-    /// Used for DNA / material-driven effects ("remove 1 of this Digimon's
-    /// sources", "trash 2 materials to gain memory"). Parity §4.6d-residual.
+    /// stack — i.e., one of the `card_sources` entries on `of_permanent`,
+    /// **excluding** the top card (the active Digimon itself). Used for
+    /// DNA / material-driven effects ("remove 1 of this Digimon's sources",
+    /// "trash 2 materials to gain memory"). Parity §4.6d-residual.
     ///
     /// `filter(game, source_index)` runs once per source position at install
-    /// time (index 0 = bottom card, index `card_sources.len()-1` = top).
+    /// time (index 0 = bottom card, index `card_sources.len()-2` = highest
+    /// material). The top card at `card_sources.len()-1` is never offered —
+    /// matches DCGO's `DigivolutionCards` (which excludes `TopCard`) and the
+    /// `CountCappedZone::Material` contract on the multi-pick variant.
     /// Callback receives the chosen `source_index`.
     pub fn select_material<F, C>(
         &mut self,
@@ -290,7 +294,7 @@ impl<'a> EffectContext<'a> {
         use crate::action::space::{SOURCES_PER_FIELD, SOURCE_SELECT_START};
 
         let field_index = of_permanent.index as u16;
-        let source_count = match self
+        let stack_len = match self
             .game
             .player(of_permanent.player)
             .battle_area
@@ -299,6 +303,8 @@ impl<'a> EffectContext<'a> {
             Some(perm) => perm.card_sources.len(),
             None => return,
         };
+        // Mirror CountCappedZone::Material: top card is never a candidate.
+        let source_count = stack_len.saturating_sub(1);
         let cap = source_count.min(SOURCES_PER_FIELD as usize);
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
         for i in 0..cap {

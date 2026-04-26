@@ -451,22 +451,13 @@ fn install_select_material(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
-    // Exclude the top card (last index): only offer non-top sources as candidates.
-    // Mirrors select_count_capped_multi(Material) which does stack_len - 1.
+    // Top-card exclusion is enforced by EffectContext::select_material itself
+    // (matches CountCappedZone::Material). Phase 2b accept-all filter applies.
     ctx.select_material(
         perm,
         &prompt,
         optional,
-        move |game, src_idx| {
-            let total = game
-                .player(perm.player)
-                .battle_area
-                .get(perm.index as usize)
-                .map(|p| p.card_sources.len())
-                .unwrap_or(0);
-            // Exclude top card: top is at index total-1.
-            src_idx + 1 < total
-        },
+        |_game, _src_idx| true,
         move |cb_ctx, src_idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
