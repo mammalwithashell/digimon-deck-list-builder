@@ -23,7 +23,10 @@ fn phase_0_exit_criteria() {
     ]);
     let ctx = ValidationContext { raw_rust: &reg };
 
+    // CARGO_MANIFEST_DIR is `code/digimon-engine`; cards.json lives at the
+    // repo root under `data/`, so go up two levels.
     let cards_json = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
         .join("..")
         .join("data/cards.json");
     let db = digimon_engine::dsl_bridge::RealCardDataAdapter::from_path(&cards_json)

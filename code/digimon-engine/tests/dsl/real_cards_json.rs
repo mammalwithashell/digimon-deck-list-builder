@@ -4,7 +4,10 @@ use digimon_engine::dsl::spec::CardSpec;
 use std::path::PathBuf;
 
 fn cards_json_path() -> PathBuf {
+    // CARGO_MANIFEST_DIR is `code/digimon-engine`; cards.json lives at the
+    // repo root under `data/`, so go up two levels.
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
         .join("..")
         .join("data/cards.json")
 }
