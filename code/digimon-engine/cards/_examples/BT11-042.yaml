@@ -1,0 +1,41 @@
+card: BT11-042
+name: Angewomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 6000
+traits: [Archangel]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: raw_rust
+    fn: bt11_042_when_digivolving_security_search_recovery
+    triggers: [when_digivolving]
+
+  - kind: raw_rust
+    fn: bt11_042_your_turn_ladydevimon_or_mirei
+    triggers: [on_ally_played]
+
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - any_permanent:
+            of: you
+            kind: digimon
+            color_is: purple
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      any_of:
+        - trait_has: Angel
+        - trait_has: Archangel
+        - trait_has: Fallen Angel
+    grant_keyword: { keyword: Blocker }

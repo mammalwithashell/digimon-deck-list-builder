@@ -1,13 +1,13 @@
 //! Phase 1b exit criteria — the full YAML→pack→embedded pipeline works
-//! end-to-end for all 15 worked examples.
+//! end-to-end for all 22 worked examples.
 
 #[test]
 fn phase_1b_exit_criteria() {
-    let registry = digimon_engine::dsl_registry::from_embedded()
-        .expect("embedded registry must load");
+    let registry =
+        digimon_engine::dsl_registry::from_embedded().expect("embedded registry must load");
 
-    // All 15 fixtures round-tripped through the pack.
-    assert_eq!(registry.len(), 15);
+    // All 22 fixtures round-tripped through the pack.
+    assert_eq!(registry.len(), 22);
 
     // Spot-check a handful of cards end-to-end.
     let st2_13 = registry.lookup("ST2-13").expect("ST2-13 present");

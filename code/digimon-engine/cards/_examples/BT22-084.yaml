@@ -29,7 +29,7 @@ effects:
   - kind: aura
     active_when: { all_turns: true }
     target:
-      of: you
+      owner: you
       zone: [battle_area]
       any_of:
         - name_contains: "Greymon"

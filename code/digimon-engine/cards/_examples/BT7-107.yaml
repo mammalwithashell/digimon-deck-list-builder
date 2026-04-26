@@ -1,0 +1,39 @@
+card: BT7-107
+name: Calling From the Darkness
+kind: option
+color: [purple]
+cost: 1
+
+effects:
+  - when: main_from_hand
+    summary: "Delete 1 of your Digimon; return up to 2 purple Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          filter: { kind: digimon }
+          prompt: "Delete one of your Digimon"
+      - delete_permanent: { target: sacrifice }
+      - select_trash:
+          of: you
+          bind_as: first
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          prompt: "Return a purple Digimon"
+      - add_to_hand_from_trash: { of: you, card: first }
+      - select_trash:
+          of: you
+          bind_as: second
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          prompt: "Return another purple Digimon"
+      - add_to_hand_from_trash: { of: you, card: second }
+
+  - kind: raw_rust
+    fn: bt7_107_security_add_self_to_hand
+    triggers: [on_security]
