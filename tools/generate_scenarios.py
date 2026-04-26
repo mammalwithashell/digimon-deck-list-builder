@@ -42,11 +42,11 @@ def generate_scenario(card_id: str, archetype: str, db: CardDatabase) -> dict:
     if not entity:
         return None
 
-    name = entity.card_name_eng
+    name = entity.card_name
     kind = entity.card_kind
     level = entity.level
     play_cost = entity.play_cost
-    effect_text = entity.effect_description_eng or ""
+    effect_text = entity.effect_text or ""
 
     # Determine appropriate memory
     memory = max(play_cost + 2, 3) if play_cost else 5

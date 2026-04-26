@@ -104,7 +104,7 @@ fn resolve_cards_path() -> PyResult<PathBuf> {
 /// Python-visible mirror of the Rust `CardKind` enum. Variants match
 /// `digimon_gym.engine.data.enums.CardKind` plus `Token` (Rust-only
 /// today; included so `From<RustCardKind>` is total).
-#[pyclass(module = "digimon_engine", name = "CardKind", eq, eq_int)]
+#[pyclass(module = "digimon_engine", name = "CardKind", eq, eq_int, hash, frozen)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum CardKind {
     Digimon,
@@ -130,7 +130,7 @@ impl From<RustCardKind> for CardKind {
 /// match the **Python** convention (Start, End, SelectEffectChoice)
 /// rather than the Rust internal names (Unsuspend, EndTurn, EffectChoice)
 /// so callers post-Phase 3 cutover keep their existing identifiers.
-#[pyclass(module = "digimon_engine", name = "GamePhase", eq, eq_int)]
+#[pyclass(module = "digimon_engine", name = "GamePhase", eq, eq_int, hash, frozen)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum GamePhase {
     Mulligan,
@@ -186,6 +186,19 @@ impl From<RustGamePhase> for GamePhase {
     }
 }
 
+/// Python-visible mirror of `card_data::EvoCost`.
+#[pyclass(module = "digimon_engine", name = "PyEvoCost")]
+#[derive(Clone)]
+pub struct PyEvoCost {
+    /// Required color of the source card. String form of `CardColor`.
+    #[pyo3(get)]
+    pub card_color: String,
+    #[pyo3(get)]
+    pub level: u8,
+    #[pyo3(get)]
+    pub memory_cost: u16,
+}
+
 /// Python-visible per-card metadata wrapper. Mirror of the subset of
 /// `card_data::CardData` that callers need at the Python layer (the
 /// full struct contains effect text and DSL-only fields the bindings
@@ -212,6 +225,8 @@ pub struct PyCard {
     #[pyo3(get)]
     pub traits: Vec<String>,
     #[pyo3(get)]
+    pub evo_costs: Vec<PyEvoCost>,
+    #[pyo3(get)]
     pub effect_text: String,
     #[pyo3(get)]
     pub inherited_text: String,
@@ -230,6 +245,20 @@ impl PyCard {
             play_cost: card.play_cost,
             colors: card.colors.iter().map(|c| format!("{:?}", c)).collect(),
             traits: card.traits.clone(),
+            evo_costs: card.evo_costs.iter().map(|ec| PyEvoCost {
+                card_color: match ec.card_color {
+                    0 => "Red".to_string(),
+                    1 => "Blue".to_string(),
+                    2 => "Yellow".to_string(),
+                    3 => "Green".to_string(),
+                    4 => "White".to_string(),
+                    5 => "Black".to_string(),
+                    6 => "Purple".to_string(),
+                    _ => format!("Unknown({})", ec.card_color),
+                },
+                level: ec.level,
+                memory_cost: ec.memory_cost,
+            }).collect(),
             effect_text: card.effect_text.clone(),
             inherited_text: card.inherited_text.clone(),
             security_text: card.security_text.clone(),
@@ -766,6 +795,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RustHeadlessGame>()?;
     m.add_class::<CardDatabase>()?;
     m.add_class::<PyCard>()?;
+    m.add_class::<PyEvoCost>()?;
     m.add_class::<PyDeckValidationResult>()?;
     m.add_function(wrap_pyfunction!(parse_tts, m)?)?;
     m.add_function(wrap_pyfunction!(parse_text, m)?)?;

@@ -414,12 +414,12 @@ class ArchitectExplainer:
 
         return {
             "card_id": card_id,
-            "card_name": card.card_name_eng or card_id,
-            "card_kind": card.card_kind.name if card.card_kind else None,
+            "card_name": card.card_name or card_id,
+            "card_kind": str(card.card_kind) if card.card_kind else None,
             "level": card.level,
             "play_cost": card.play_cost,
             "dp": card.dp,
-            "colors": [c.name for c in card.card_colors] if card.card_colors else [],
+            "colors": list(card.colors) if card.colors else [],
         }
 
     def _opponent_names(self) -> List[str]:

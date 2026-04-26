@@ -157,22 +157,25 @@ def _build_card_entry(
     card = db.get_card(card_id)
 
     if card:
-        card_name = card.card_name_eng
+        # Rust PyCard uses card_name (matching Rust CardData); Python equivalent
+        # field was card_name_eng.
+        card_name = card.card_name
         card_kind = _KIND_NAMES.get(card.card_kind, "Digimon")
         level = card.level if card.level and card.level > 0 else None
-        colors = [c.name for c in card.card_colors]
-        traits = ", ".join(card.type_eng) if card.type_eng else ""
+        # Rust PyCard returns colors as a Vec<String>; Python CardDatabase
+        # returned a list of CardColor enums (with .name).
+        colors = list(card.colors)
+        # Rust PyCard renames Python's type_eng → traits and *_eng → *_text.
+        traits = ", ".join(card.traits) if card.traits else ""
         dp = card.dp if card.dp is not None and card.dp > 0 else None
         play_cost = card.play_cost if card.play_cost is not None else None
         evo_costs = [
-            {"color": ec.card_color.name if hasattr(ec, "card_color") and ec.card_color else "",
-             "cost": ec.memory_cost if hasattr(ec, "memory_cost") else 0,
-             "level": ec.level if hasattr(ec, "level") else 0}
-            for ec in (card.evo_costs or [])
+            {"color": ec.card_color, "cost": ec.memory_cost, "level": ec.level}
+            for ec in card.evo_costs
         ]
-        effect_text = card.effect_description_eng or ""
-        inherited_text = card.inherited_effect_description_eng or ""
-        security_text = card.security_effect_description_eng or ""
+        effect_text = card.effect_text or ""
+        inherited_text = card.inherited_text or ""
+        security_text = card.security_text or ""
     else:
         card_name = ""
         card_kind = "Digimon"
