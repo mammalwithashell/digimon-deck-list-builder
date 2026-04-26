@@ -1646,6 +1646,50 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   numeric modifiers; extend `AddDpModifier` to accept
   `CompiledModifierTarget::Filter` (binding-only today). Defers to
   2f3+: `AsSelectingPlayer` override-persistence, `ScheduleDelayed`.
+- **2f3** (landed 2026-04-26) — `AsSelectingPlayer` step lowering with
+  override-persistence across selection callbacks. Engine refactor: every
+  `pub fn select_*` callback in `code/digimon-engine/src/effect_context/selections.rs`
+  now constructs the post-resolution `EffectContext` via
+  `EffectContext::new_with_override(game, source_card, source_permanent,
+  controller, override_pin)` (10 call sites — `select_hand`,
+  `select_trash`, `install_field_selection` shared by own/opponent
+  permanent, `select_count_capped_multi`, `select_effect_choice`,
+  `select_reveal`, `select_security`, `select_material`,
+  `select_union_zone`, `select_ordered_permutation`). The seeding line
+  `let selecting_player = self.override_selecting_player.unwrap_or(self.player);`
+  (which feeds `pending_selection.selecting_player`) is preserved verbatim
+  at every site — only the callback's reconstructed ctx changes shape so
+  it carries `(controller, override_pin)` rather than collapsing them.
+  Field `override_selecting_player` stays `pub(super)`; a new
+  `pub(crate) fn set_override_selecting_player(&mut self, p:
+  Option<PlayerId>)` setter is the only mutation path for callers
+  outside `effect_context/`. DSL lowering at
+  `code/digimon-engine/src/dsl_cards/step/as_selecting_player.rs`
+  follows a save → set → run_steps → conditional-restore pattern: on
+  `RunOutcome::Synchronous` the previous override is restored; on
+  `Parked` it is NOT restored (Task 1's `new_with_override` carries it
+  through the parked-callback boundary). Outer-tail leak fix:
+  `drain_dsl_outer_tail(cb_ctx)` now calls
+  `set_override_selecting_player(None)` BEFORE running the parked
+  outer-tail steps, so an outer sibling `select_*` after
+  `as_selecting_player` correctly routes to the controller, not the
+  override. Pinned by
+  `as_selecting_player_outer_tail_select_does_not_inherit_override`
+  (regression guard — empirically verified by the implementer that
+  removing the clear makes the test fail). End-to-end YAML test at
+  `code/digimon-engine/tests/dsl/phase2f3_end_to_end.rs` exercises the
+  canonical "your opponent chooses one of your Digimon" card text via a
+  TST-VOTE Opponent's Vote card with `as_selecting_player: { of:
+  opponent, body: [select_own_permanent, add_dp_modifier: -3000] }`.
+  Pre-existing systemic divergence surfaced (out of 2f3 scope, tracked
+  as a follow-up): the DSL validator accepts snake_case expiry strings
+  (`end_of_turn`) but the engine's `lookup_expiry` only matches
+  PascalCase (`EndOfTurn`). Cards authored with the validator-blessed
+  form silently no-op modifiers at runtime — the
+  `phase2f3_end_to_end.rs` YAML uses `EndOfTurn` to work around it.
+  The follow-up should land before card scripts are authored against
+  Phase 2f3. Defers to 2f4+: `ScheduleDelayed` (needs
+  `ctx.schedule_delayed` engine primitive).
 
 ### 7.4 Phase 3 — Advanced clauses
 
