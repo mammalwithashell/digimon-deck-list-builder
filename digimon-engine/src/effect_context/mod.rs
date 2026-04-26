@@ -1243,12 +1243,14 @@ impl<'a> EffectContext<'a> {
     ///
     /// ## Source-stack handling
     ///
-    /// In the auto-install context the Tamer is freshly placed and has
-    /// only its top card in `card_sources` (no digivolution sources
-    /// under a Tamer in normal play). For defensive completeness against
-    /// hand-rolled MindLink callers that place the Tamer on a stack with
-    /// sources, any sources below the top are trashed (mirroring DCGO
-    /// `DiscardEvoRoots` — sources can't ride the move).
+    /// Sources below the top of the Tamer's stack are routed to trash
+    /// (mirroring DCGO `DiscardEvoRoots` — sources can't ride the move).
+    /// Each such trash fires `OnDigivolutionCardTrashed` per player and
+    /// drains the queue, mirroring `Game::return_to_deck`'s leave-field
+    /// path. Linked cards on the Tamer (Tamers can host Option cards via
+    /// `<Linked>`) are likewise trashed; if any were present, a single
+    /// `OnLinkedCardTrashed` is fired per player and drained, mirroring
+    /// `Game::finalize_permanent_deletion`'s linked-cascade pattern.
     ///
     /// Used by: `<Mind Link>` keyword auto-install (Phase F Task 5).
     pub fn attach_tamer_to_digimon(
@@ -1257,7 +1259,11 @@ impl<'a> EffectContext<'a> {
         digimon: PermanentHandle,
     ) {
         // Validate: shared controller (MindLink targets own permanents).
-        debug_assert_eq!(
+        // Promoted to `assert_eq!` so the precondition is enforced in
+        // release builds too — this is a public primitive, and a release
+        // caller violating it would silently misroute trash and target
+        // lookup rather than panicking.
+        assert_eq!(
             tamer.player, digimon.player,
             "attach_tamer_to_digimon: tamer and target must share a controller"
         );
@@ -1293,11 +1299,35 @@ impl<'a> EffectContext<'a> {
         // Below-top sources go to trash. Linked Option cards (Tamers can
         // host them via `<Linked>`) likewise go to trash — they cannot
         // ride the host into another permanent's digivolution stack.
+        //
+        // Mirror `Game::return_to_deck` (game_actions.rs:1497-1506): fire
+        // `OnDigivolutionCardTrashed` per source, per player, draining
+        // between each so observers see them one at a time.
         for source in tamer_perm.card_sources.drain(..) {
             self.game.player_mut(controller).trash.push(source);
+            for pid in 0..self.game.players.len() {
+                self.game.enqueue_triggered(
+                    crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.game.drain_effect_queue();
         }
+        // Mirror `Game::finalize_permanent_deletion` (combat.rs:2429-2437):
+        // route all linked cards to trash, then fire a single
+        // `OnLinkedCardTrashed` per player if any were present.
+        let had_linked = !tamer_perm.linked_cards.is_empty();
         for linked in tamer_perm.linked_cards.drain(..) {
             self.game.player_mut(controller).trash.push(linked);
+        }
+        if had_linked {
+            for pid in 0..self.game.players.len() {
+                self.game.enqueue_triggered(
+                    crate::enums::EffectTiming::OnLinkedCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.game.drain_effect_queue();
         }
 
         // Resolve the target's NEW slot after the index shift. If the
