@@ -839,6 +839,35 @@ impl Game {
         true
     }
 
+    /// Pay memory cost **without** the floor check. Used by effect-initiated
+    /// flows that explicitly opt out of the affordability constraint
+    /// (`ignore_requirements: true`). Always mutates and emits the
+    /// `MemoryChange` event — even if the resulting memory dips below
+    /// `rules.memory_range.0`.
+    ///
+    /// Callers must have already decided that the floor check should be
+    /// skipped (typically because a printed effect overrides the normal
+    /// rules). For ordinary plays, use `pay_memory` instead.
+    ///
+    /// `cost == 0` is a no-op (returns immediately, no event emitted) —
+    /// matches `pay_memory`'s zero-cost short-circuit.
+    pub(crate) fn pay_memory_unchecked(&mut self, cost: u16) {
+        if cost == 0 {
+            return;
+        }
+        let new_memory = self.memory - cost as i16;
+        let delta = new_memory - self.memory;
+        self.memory = new_memory;
+        let seq = self.next_event_seq();
+        let player = self.turn_player();
+        self.events.push(crate::events::GameEvent::MemoryChange {
+            seq,
+            player,
+            delta,
+            total: self.memory,
+        });
+    }
+
     /// End the turn if memory has crossed to the opponent's side.
     /// Call this after a batch of effects resolves (not synchronously inside
     /// `pay_memory`, which would starve effects of their turn).
@@ -1043,6 +1072,132 @@ impl Game {
             self.drain_effect_queue();
         }
         ok
+    }
+
+    /// Shared core for DNA digivolve. Performs material consumption, hand-card
+    /// consumption, stack merging, memory payment (if `cost > 0` and not under
+    /// `ignore_requirements`), and trigger firing.
+    ///
+    /// **Material-stack ordering (canonical):** `target_a.card_sources` are
+    /// concatenated, then `target_b.card_sources`, then `from_hand` is pushed
+    /// on top. `target_a` should correspond to `DnaCost::requirement1` and
+    /// `target_b` to `requirement2`; callers that select materials by user
+    /// input must pre-orient via `get_dna_stacking_order`.
+    ///
+    /// **Trigger surface (in order):**
+    /// 1. `WhenDigivolving` on the merged permanent → drain
+    /// 2. `OnDigivolve` on every player's battle area → drain
+    /// 3. `OnDnaDigivolve` on the merged permanent → drain
+    ///
+    /// **Index-shift:** if `target_a.player == target_b.player` and
+    /// `target_b.index < target_a.index`, the merged permanent ends up at
+    /// `target_a.index - 1` (because removing `target_b` first shifts the
+    /// remaining slots). Callers should use the returned handle, not
+    /// `target_a` directly.
+    ///
+    /// **Returns** `Some(merged_handle)` on success, `None` on:
+    /// - identical targets (`target_a == target_b`)
+    /// - either target's index out of range on its player's battle area
+    /// - hand index out of range on `hand_owner`
+    /// - `cost > 0` and `Game::pay_memory` fails
+    ///
+    /// The pay-memory-bypass branch (`ignore_requirements && cost > 0`) is
+    /// *not* present here — callers that need to bypass the affordability
+    /// floor must subtract from `self.memory` before calling (see
+    /// `Game::pay_memory_unchecked`). The two callers are:
+    /// - `EffectContext::effect_initiated_dna_digivolve` — engine-effect
+    ///   wrapper that handles the IR's `(cost, ignore_requirements)` shape
+    ///   and invokes the bypass branch when needed.
+    /// - `Game::initiate_dna_digivolve`'s stage-2 selection callback — the
+    ///   user-action path; passes the printed cost minus
+    ///   `BeforePayCost` reductions and never bypasses.
+    ///
+    /// `grant_digivolve_bonus`: if true, `hand_owner` draws 1 card after the
+    /// merge but before triggers fire. The user-action path passes `true`
+    /// (matching `digivolve_from_hand`); the effect-initiated path passes
+    /// `false`.
+    pub(crate) fn dna_digivolve_inner(
+        &mut self,
+        target_a: PermanentHandle,
+        target_b: PermanentHandle,
+        hand_owner: PlayerId,
+        hand_index: usize,
+        cost: u16,
+        grant_digivolve_bonus: bool,
+    ) -> Option<PermanentHandle> {
+        use crate::enums::EffectTiming;
+        use crate::selection::TriggerSource;
+
+        if target_a == target_b {
+            return None;
+        }
+        if (target_a.index as usize) >= self.player(target_a.player).battle_area.len() {
+            return None;
+        }
+        if (target_b.index as usize) >= self.player(target_b.player).battle_area.len() {
+            return None;
+        }
+        if hand_index >= self.player(hand_owner).hand.len() {
+            return None;
+        }
+
+        if cost > 0 && !self.pay_memory(cost) {
+            return None;
+        }
+
+        let target_a_index_after = if target_a.player == target_b.player
+            && (target_b.index as usize) < (target_a.index as usize)
+        {
+            (target_a.index as usize) - 1
+        } else {
+            target_a.index as usize
+        };
+
+        let perm_b = self
+            .player_mut(target_b.player)
+            .battle_area
+            .remove(target_b.index as usize);
+        let new_top = self.player_mut(hand_owner).hand.remove(hand_index);
+
+        let turn = self.turn_count;
+        {
+            let perm_a =
+                &mut self.player_mut(target_a.player).battle_area[target_a_index_after];
+            perm_a.card_sources.extend(perm_b.card_sources);
+            perm_a.card_sources.push(new_top);
+            perm_a.turn_digivolved = turn;
+        }
+
+        let merged_handle = PermanentHandle {
+            player: target_a.player,
+            index: target_a_index_after as u8,
+        };
+
+        if grant_digivolve_bonus {
+            self.player_mut(hand_owner).draw();
+        }
+
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue();
+
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnDigivolve,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+
+        self.enqueue_triggered(
+            EffectTiming::OnDnaDigivolve,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue();
+
+        Some(merged_handle)
     }
 
     /// Returns `true` when `card` may digivolve onto `perm` per standard

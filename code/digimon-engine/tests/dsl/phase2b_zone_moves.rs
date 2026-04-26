@@ -111,7 +111,6 @@ fn select_hand_parks_selection_and_fires_callback() {
         .build();
 
     let src_handle = runner.game.players[0].hand[0].handle();
-    let tgt_handle = runner.game.players[0].hand[1].handle();
 
     // A SelectHand with no tail — just installs a selection; the callback
     // fires with the chosen index (no further steps to run).

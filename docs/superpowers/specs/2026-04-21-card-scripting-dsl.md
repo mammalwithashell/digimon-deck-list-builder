@@ -1599,8 +1599,9 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   DNA digivolve — asymmetric IR shapes; (d) `EffectInitiatedDigivolve`
   carries `cost: i32`, which can express `Free (0)` and `Fixed(n)` but
   not `Reduce(n)` — a Phase 3 IR-widening concern. Tracked follow-ups:
-  fire `OnDnaDigivolve` from both this primitive and the canonical
-  user-action path once `TODO(dna-digivolve-execute)` lands; widen
+  ~~fire `OnDnaDigivolve` from both this primitive and the canonical
+  user-action path once `TODO(dna-digivolve-execute)` lands~~ resolved
+  2026-04-26 (see `RUST_PYTHON_PARITY.md` §4.5e); widen
   `BindingValue::HandIndex` / `TrashIndex` to carry a `PlayerId` so
   placement steps can target opponent zones. Defers to 2f2+: formula
   values in `add_modifier`, `AsSelectingPlayer` override-persistence,

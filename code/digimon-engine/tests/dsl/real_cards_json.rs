@@ -42,6 +42,11 @@ fn real_adapter_all_fixtures_cross_check() {
     let adapter = RealCardDataAdapter::from_path(&cards_json_path()).unwrap();
     let mut failures = Vec::new();
     for spec in &specs {
+        // Synthetic test cards (`TST-*`) don't exist in the real cards.json
+        // and are intentionally excluded from cross-check.
+        if spec.card.starts_with("TST-") {
+            continue;
+        }
         if let Err(e) = cross_check(spec, &adapter) {
             failures.push(format!("{}: {e}", spec.card));
         }

@@ -254,6 +254,14 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnDigivolve)
     }
 
+    /// Fires when this Digimon DNA digivolves (as the merged result card).
+    /// Refines `OnDigivolve`: a card with both an `OnDigivolve` and an
+    /// `OnDnaDigivolve` clause sees the broader timing fire first, then the
+    /// more-specific one, on the same merged permanent.
+    pub fn on_dna_digivolve(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnDnaDigivolve)
+    }
+
     /// Fires when this permanent becomes suspended.
     pub fn on_suspend(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnSuspend)

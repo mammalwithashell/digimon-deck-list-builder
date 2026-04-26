@@ -18,7 +18,7 @@ use std::collections::HashMap;
 #[cfg(feature = "dsl-yaml-loader")]
 use std::sync::{Arc, OnceLock};
 
-use crate::card_data::CardData;
+use crate::card_data::{CardData, DnaCost, DnaRequirement};
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::enums::{CardColor, CardKind, GamePhase, ModifierType, PlayerId};
@@ -735,6 +735,45 @@ pub fn make_test_egg(card_id: &str, card_name: &str) -> CardData {
         index: 0,
         norm_id: 0.0,
     }
+}
+
+// ─── DNA-digivolve test helpers ───────────────────────────────────────
+
+/// Build a `DnaRequirement` matching exactly one level. All other
+/// constraint fields (colors, name_contains, text_contains) are empty.
+pub fn dna_req_lv(level: u8) -> DnaRequirement {
+    DnaRequirement {
+        level,
+        card_colors: Vec::new(),
+        name_contains: String::new(),
+        text_contains: String::new(),
+    }
+}
+
+/// Build a minimal `CardData` with a non-default `level` set on top of
+/// `make_test_card`'s defaults.
+pub fn make_test_card_with_level(card_id: &str, card_name: &str, level: u8) -> CardData {
+    let mut d = make_test_card(card_id, card_name);
+    d.level = Some(level);
+    d
+}
+
+/// Build a minimal Digimon `CardData` with a single `DnaCost` whose
+/// `requirement1` and `requirement2` are level-only (`dna_req_lv`).
+pub fn make_test_dna_card(
+    card_id: &str,
+    card_name: &str,
+    req1_level: u8,
+    req2_level: u8,
+    memory_cost: i16,
+) -> CardData {
+    let mut d = make_test_card(card_id, card_name);
+    d.dna_costs = vec![DnaCost {
+        memory_cost,
+        requirement1: dna_req_lv(req1_level),
+        requirement2: dna_req_lv(req2_level),
+    }];
+    d
 }
 
 #[cfg(test)]
