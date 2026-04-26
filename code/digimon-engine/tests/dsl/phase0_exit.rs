@@ -14,7 +14,7 @@ fn examples_dir() -> PathBuf {
 fn phase_0_exit_criteria() {
     let (specs, errors) = loader::load_dir_ok(&examples_dir());
     assert!(errors.is_empty(), "parse errors: {errors:#?}");
-    assert_eq!(specs.len(), 15, "expected exactly 15 examples");
+    assert_eq!(specs.len(), 16, "expected exactly 16 examples");
 
     let reg = StubRegistry::with([
         "bt13_007_royal_knight_cost_reduction",
