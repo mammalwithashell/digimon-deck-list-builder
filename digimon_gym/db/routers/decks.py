@@ -19,8 +19,12 @@ from digimon_gym.db.schemas import (
     DeckSummary,
     UpdateDeckRequest,
 )
+# validate_deck + CardRestriction stay on Python: the no_restriction game-mode
+# path passes an empty CardRestriction() to bypass restricted-list checks,
+# and the Rust binding only exposes the official-ENG list path. Tracked in
+# RUST_PYTHON_PARITY.md.
 from digimon_gym.engine.data.deck_loader import validate_deck, RESTRICTED_LIST, CardRestriction
-from digimon_gym.engine.data.tested_cards import out_of_set_cards
+from digimon_engine import out_of_set_cards
 
 router = APIRouter(prefix="/decks", tags=["decks"])
 
@@ -62,8 +66,7 @@ def _validate_for_mode(card_ids: list[str], game_mode: str, titan_role: str | No
         # Filter out size errors and re-check with titan size
         errors = [e for e in result.errors if "Main deck must be exactly" not in e]
         # Count main deck cards (non-egg)
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import CardKind
+        from digimon_engine import CardDatabase, CardKind
         db = CardDatabase()
         main_count = sum(
             1 for cid in card_ids
@@ -82,8 +85,7 @@ def _validate_for_mode(card_ids: list[str], game_mode: str, titan_role: str | No
             if count > 1:
                 errors.append(f"{card_id}: {count} copies (EDH Commander is singleton — max 1)")
         # Size: 70 main deck cards
-        from digimon_gym.engine.data.card_database import CardDatabase
-        from digimon_gym.engine.data.enums import CardKind
+        from digimon_engine import CardDatabase, CardKind
         db = CardDatabase()
         main_count = sum(
             1 for cid in card_ids
