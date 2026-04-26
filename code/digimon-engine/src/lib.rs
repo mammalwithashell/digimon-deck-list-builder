@@ -31,6 +31,7 @@ pub mod cards;
 pub mod combat;
 pub mod selection;
 pub mod effect_queue;
+pub mod scheduled_effects;
 pub mod dna_digivolve;
 pub mod debug_runner;
 pub mod runners;

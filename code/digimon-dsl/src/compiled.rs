@@ -261,6 +261,17 @@ pub enum CompiledAggregateSelector {
     HighestLevel,
 }
 
+/// Value carried by `add_dp_modifier` / `add_modifier` steps. Phase 2f2 Task 1
+/// generalizes this from a bare `i32` so card text like Susanoomon's
+/// "+2000 DP per material on this Digimon" can express the value as a
+/// formula. The runtime evaluator (Phase 2f2 Task 2) and step-runner wiring
+/// (Task 3) consume this enum.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompiledModifierValue {
+    Literal(i32),
+    Formula(CompiledFormula),
+}
+
 // ── Clauses ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -464,8 +475,8 @@ pub enum CompiledStep {
     EffectInitiatedDnaDigivolve { target_a: CompiledBindingRef, target_b: CompiledBindingRef, from_hand: CompiledBindingRef, cost: i32, ignore_requirements: bool },
     TrashTopSecurity { of: CompiledPlayerRef },
     MarkSecurityFaceUp { of: CompiledPlayerRef, card: CompiledBindingRef },
-    AddDpModifier { target: CompiledBindingRef, value: i32, expiry: String },
-    AddModifier { target: CompiledModifierTarget, modifier: String, value: i32, expiry: String },
+    AddDpModifier { target: CompiledBindingRef, value: CompiledModifierValue, expiry: String },
+    AddModifier { target: CompiledModifierTarget, modifier: String, value: CompiledModifierValue, expiry: String },
     GrantKeyword { target: CompiledBindingRef, keyword: String, expiry: String, value: Option<i32> },
     SelectOwnPermanent { filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
     SelectOpponentPermanent { filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },

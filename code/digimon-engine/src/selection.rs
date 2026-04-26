@@ -291,7 +291,7 @@ pub enum TriggerSource {
 /// defender's security card is popped until the check finishes (either the
 /// card is trashed or an effect plays it from security).
 ///
-/// The `played` bit is raised by `EffectContext::play_from_security` — it
+/// The `played` bit is raised by `EffectContext::play_pending_security` — it
 /// signals the security-resolution loop that the card is now a Permanent on
 /// the field, and must NOT be trashed at the end of the check.
 #[derive(Debug, Clone)]

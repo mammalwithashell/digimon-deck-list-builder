@@ -828,6 +828,14 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
     }
 }
 
+fn compile_modifier_value(v: &crate::step::ModifierValueSpec) -> CompiledModifierValue {
+    use crate::step::ModifierValueSpec as S;
+    match v {
+        S::Literal(n) => CompiledModifierValue::Literal(*n),
+        S::Formula(fc) => CompiledModifierValue::Formula(compile_formula(&fc.formula)),
+    }
+}
+
 fn compile_modifier_target(
     t: &crate::step::ModifierTarget,
     prefix: &str,
@@ -1020,7 +1028,7 @@ fn compile_step(
 
         S::AddDpModifier(a) => CompiledStep::AddDpModifier {
             target: compile_binding_ref(&a.target),
-            value: a.value,
+            value: compile_modifier_value(&a.value),
             expiry: a.expiry.clone(),
         },
         S::AddModifier(a) => CompiledStep::AddModifier {
@@ -1031,7 +1039,7 @@ fn compile_step(
                 errors,
             ),
             modifier: a.modifier.clone(),
-            value: a.value,
+            value: compile_modifier_value(&a.value),
             expiry: a.expiry.clone(),
         },
         S::GrantKeyword(a) => CompiledStep::GrantKeyword {

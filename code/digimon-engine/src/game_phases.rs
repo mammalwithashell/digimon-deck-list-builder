@@ -205,6 +205,13 @@ impl Game {
         }
         self.drain_effect_queue();
 
+        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
+        // EndOfOpponentsTurn after the printed-observer fan-out.
+        crate::scheduled_effects::fire_scheduled_for_timing(
+            self,
+            EffectTiming::EndOfOpponentsTurn,
+        );
+
         // Advance turn
         self.turn_player_idx = (self.turn_player_idx + 1) % self.turn_order.len();
         self.turn_count += 1;
@@ -443,6 +450,22 @@ impl Game {
             crate::selection::TriggerSource::PlayerBattleArea(player),
         );
         self.drain_effect_queue();
+
+        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
+        // EndOfYourTurn here. Printed observers fire first (above);
+        // scheduled bodies fire AFTER — they're the turn-end
+        // housekeeping that printed text scheduled when its own observer
+        // ran earlier.
+        //
+        // Note: `EffectTiming` does not have a unified `EndOfTurn`
+        // variant — the enum collapses to `EndOfYourTurn` (active
+        // player) and `EndOfOpponentsTurn` (inactive players, fired
+        // from `rotate_turn_player`). Both peer drains are wired
+        // separately at their respective observer-fire sites.
+        crate::scheduled_effects::fire_scheduled_for_timing(
+            self,
+            EffectTiming::EndOfYourTurn,
+        );
     }
 
     /// Phase 8 Task 3: fire and trash every Delayed Option (across all

@@ -5,7 +5,7 @@
 //! wraps `&Game` for `condition` closures and tensor-time effect inspection.
 //! Both expose the same read-only query surface.
 //!
-//! **File layout.** Selection-prompt helpers (`select_*`, `play_from_security`,
+//! **File layout.** Selection-prompt helpers (`select_*`, `play_pending_security`,
 //! `mark_security_face_up`, plus the private `install_field_selection`
 //! shared implementation) live in `selections.rs` — they are numerous and
 //! will grow substantially as the gap-closing roadmap adds multi-select,
@@ -18,8 +18,11 @@ pub use selections::{CountCappedZone, DistinctByMode, EffectContextSelectorScope
 
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
-use crate::enums::{Expiry, Keyword, ModifierType, PlayerId, PlaySource, StackPosition};
+use crate::dsl_cards::bindings::Bindings;
+use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, PlayerId, PlaySource, StackPosition};
 use crate::game::Game;
+use crate::scheduled_effects::ScheduledEffect;
+use digimon_dsl::compiled::CompiledStep;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
@@ -248,6 +251,74 @@ impl<'a> EffectContext<'a> {
             player,
             override_selecting_player: None,
         }
+    }
+
+    /// Construct an `EffectContext` with an explicit selecting-player
+    /// override. Used by `AsSelectingPlayer` lowering and by selection
+    /// callbacks that must preserve the `(controller, override)` pair across
+    /// the parked-callback boundary (Phase 2f3).
+    ///
+    /// `controller` becomes `self.player` (the original effect controller);
+    /// `override_selecting_player` is preserved as-is so a nested `select_*`
+    /// inside the callback (or the dsl_outer_tail) routes to the override
+    /// rather than back to the controller.
+    pub fn new_with_override(
+        game: &'a mut Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        controller: PlayerId,
+        override_selecting_player: Option<PlayerId>,
+    ) -> Self {
+        let mut ctx = Self::new(game, source_card, source_permanent, controller);
+        ctx.override_selecting_player = override_selecting_player;
+        ctx
+    }
+
+    /// Read the current selecting-player override, if any. The override is
+    /// installed by `AsSelectingPlayer` lowering (Phase 2f3) and persists
+    /// across selection-callback boundaries via `new_with_override`.
+    pub fn override_selecting_player(&self) -> Option<PlayerId> {
+        self.override_selecting_player
+    }
+
+    /// Install (or clear) the selecting-player override. Used by
+    /// `AsSelectingPlayer` step lowering (Phase 2f3) to scope the override
+    /// to the body and restore the previous value on synchronous
+    /// completion, and by `drain_dsl_outer_tail` to clear the override
+    /// before running sibling steps that follow a body-parked
+    /// `AsSelectingPlayer`. Crate-private — the field itself is
+    /// intentionally not widened, so all writes go through this setter.
+    pub(crate) fn set_override_selecting_player(&mut self, p: Option<PlayerId>) {
+        self.override_selecting_player = p;
+    }
+
+    // ─── Delayed scheduling (Phase 2f4 Task 1) ─────────────────────────
+
+    /// Schedule a one-shot delayed effect to fire at a future timing
+    /// boundary. Used by `CompiledStep::ScheduleDelayed` lowering (Phase 2f4
+    /// Task 3) for card text like "at the end of your next turn, do X".
+    ///
+    /// The effect's `body`, `captured_bindings`, source card, and source
+    /// permanent are stored on `Game::scheduled_effects`. When
+    /// `scheduled_effects::fire_scheduled_for_timing(game, when)` drains the
+    /// queue, a fresh `EffectContext` is constructed against the captured
+    /// `(controller, source_card, source_permanent)` and the body runs
+    /// through `run_steps` with the captured bindings replayed.
+    pub fn schedule_delayed(
+        &mut self,
+        when: EffectTiming,
+        body: Vec<CompiledStep>,
+        captured_bindings: Bindings,
+    ) {
+        let entry = ScheduledEffect {
+            when,
+            body,
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            controller: self.player,
+            captured_bindings,
+        };
+        self.game.scheduled_effects.push(entry);
     }
 
     // ─── Read-only queries ────────────────────────────────────────────
@@ -1053,6 +1124,197 @@ impl<'a> EffectContext<'a> {
         })
     }
 
+    /// Play a card from `player`'s hand at `hand_index` **without subtracting
+    /// memory**. Used by effects that say "play this without paying its memory
+    /// cost" (e.g. DSL `PlayFromHandFree` step lowerings).
+    ///
+    /// Thin alias over `play_from_hand_with_cost(_, _, CostDelta::Free)`:
+    /// `CostDelta::Free.resolve(_) == 0` → `effective_cost = 0` →
+    /// `pay_memory(0)` is a no-op, so memory is unchanged. OnPlay +
+    /// OnEnterFieldAnyone triggers fire as normal.
+    ///
+    /// Returns the `PermanentHandle` of the new field permanent, or `None` if
+    /// the hand index is invalid, the battle area is full, or the play was
+    /// gated by a flood-gate (`CannotPlayDigimonByEffect`).
+    pub fn play_from_hand_free(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<PermanentHandle> {
+        self.play_from_hand_with_cost(player, hand_index, crate::enums::CostDelta::Free)
+    }
+
+    /// Play the top card of `player`'s security stack **without paying
+    /// memory**. Used by effects that say "play the top card of your
+    /// security stack" (e.g. BT12-091; Phase 2f1 DSL `PlayFromSecurity`
+    /// step lowerings).
+    ///
+    /// Distinct from [`Self::play_pending_security`] (the security-skill
+    /// replay path that consumes the transient `Game.pending_security`
+    /// during the attack-time security check). This method operates on the
+    /// player's persistent `security` zone.
+    ///
+    /// ## Implementation strategy: hand-transit
+    ///
+    /// `Game::play_from_hand_with_cost(player, hand_index, CostDelta::Free)`
+    /// already encapsulates the full placement path — battle-area capacity
+    /// check, `CannotPlayDigimonByEffect` gate, `Permanent::new`, OnPlay
+    /// trigger drain, OnEnterFieldAnyone broadcast, `Play` event emission.
+    /// Re-introducing the placement body here would duplicate that logic
+    /// and risk drift. Instead: pop the top of `player.security`, push it
+    /// to the end of `player.hand`, and route through `play_from_hand_free`
+    /// at that index. The card spends one tick in hand but never as a
+    /// player-visible state — the hand is mutated and consumed inside this
+    /// single method call before any selection prompt or event handler can
+    /// observe it. The behavior is identical to the spec's suggested
+    /// `place_card_in_battle_area` helper without forcing an engine-wide
+    /// refactor of `play_from_hand_with_cost` to extract one.
+    ///
+    /// On rollback (battle area full, flood-gate, etc.) the card is
+    /// restored to the top of `security` so this method is a clean no-op
+    /// on failure — matching the precedent set by `play_from_hand_free`,
+    /// which does not corrupt state on flood-gate-rejected plays.
+    ///
+    /// Also clears the popped card's entry from `face_up_security` —
+    /// `face_up_security` is keyed by `card_index`, and a played card no
+    /// longer lives in the security zone, so leaving the bit set would
+    /// pollute the tensor's face-up bookkeeping.
+    ///
+    /// Returns the `PermanentHandle` of the new field permanent, or `None`
+    /// if security is empty, the battle area is full, or the play was
+    /// gated by a flood-gate.
+    pub fn play_from_security(&mut self, player: PlayerId) -> Option<PermanentHandle> {
+        // Pop the top of security. Empty stack → nothing to do.
+        let card = match self.game.player_mut(player).security.pop() {
+            Some(c) => c,
+            None => return None,
+        };
+
+        // `face_up_security` is keyed by card_index — clear it whether or
+        // not the card was face-up; remove() is a no-op when absent.
+        let card_index = card.card_index;
+        self.game
+            .player_mut(player)
+            .face_up_security
+            .remove(&card_index);
+
+        // Park at end of hand and play through the established hand-free
+        // path. The hand index is the new last position.
+        self.game.player_mut(player).hand.push(card);
+        let hand_index = self.game.player(player).hand.len() - 1;
+
+        match self.play_from_hand_free(player, hand_index) {
+            Some(handle) => Some(handle),
+            None => {
+                // Rollback: pop the card back out of hand and restore it to
+                // the top of security so the failure is observable as a
+                // no-op. Restore face_up_security entry too in case the
+                // caller depended on it.
+                let card = self
+                    .game
+                    .player_mut(player)
+                    .hand
+                    .pop()
+                    .expect("invariant: card was just pushed to hand");
+                // Note: we deliberately do NOT re-insert into
+                // face_up_security on rollback — the card is back in the
+                // security zone but its visibility-state was already
+                // consumed by the abortive play attempt. Matches the
+                // tradeoff `play_from_hand_with_cost` makes elsewhere on
+                // gated rollbacks.
+                self.game.player_mut(player).security.push(card);
+                None
+            }
+        }
+    }
+
+    /// Remove the source at `source_index` from `target`'s digivolution
+    /// stack and play the underlying card into `target.player`'s battle
+    /// area, deducting memory according to `cost_delta`. OnPlay effects
+    /// fire as if the card had been played from hand.
+    ///
+    /// Card-text precedent: BT15-080 — "place this card's bottom material
+    /// into battle area as a Digimon" (Phase 2f1 DSL `PlayFromMaterials`
+    /// step lowering).
+    ///
+    /// ## Implementation strategy: hand-transit (mirrors `play_from_security`)
+    ///
+    /// `Game::play_from_hand_with_cost(player, hand_index, cost_delta)`
+    /// already encapsulates the full placement path — battle-area capacity
+    /// check, `CannotPlayDigimonByEffect` gate, `Permanent::new`, OnPlay
+    /// trigger drain, OnEnterFieldAnyone broadcast, `Play` event emission.
+    /// Re-introducing the placement body here would duplicate that logic
+    /// and risk drift. Instead: pop the chosen `CardSource` out of
+    /// `target`'s `card_sources`, push it to the end of the controller's
+    /// `hand`, and route through `play_from_hand_with_cost` at that index.
+    /// The card spends one tick in hand but never as a player-visible
+    /// state — the hand is mutated and consumed inside this single method
+    /// call before any selection prompt or event handler can observe it.
+    /// Identical pattern to `play_from_security` (Task 3a).
+    ///
+    /// On rollback (battle area full, flood-gate, etc.) the source is
+    /// restored to its **original index** in `target.card_sources` so the
+    /// failure is observable as a no-op.
+    ///
+    /// Returns the `PermanentHandle` of the new field permanent, or `None`
+    /// if `target` is invalid, `source_index` is out of bounds, the battle
+    /// area is full, memory is insufficient, or the play was gated by a
+    /// flood-gate.
+    pub fn play_from_materials(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<PermanentHandle> {
+        // Validate target permanent + source_index up-front using immutable
+        // borrows.
+        let player = target.player;
+        {
+            let p = self.game.player(player);
+            let perm = p.battle_area.get(target.index as usize)?;
+            if source_index >= perm.card_sources.len() {
+                return None;
+            }
+        }
+
+        // Extract the source. `Vec::remove` shifts subsequent sources down
+        // one index — that's the desired behavior for material extraction
+        // (the stack closes the gap left by the removed source).
+        let source = self
+            .game
+            .player_mut(player)
+            .battle_area[target.index as usize]
+            .card_sources
+            .remove(source_index);
+
+        // Park at the end of `player`'s hand and route through the standard
+        // play-from-hand path. The hand index is the new last position.
+        self.game.player_mut(player).hand.push(source);
+        let hand_index = self.game.player(player).hand.len() - 1;
+
+        match self.play_from_hand_with_cost(player, hand_index, cost_delta) {
+            Some(handle) => Some(handle),
+            None => {
+                // Rollback: pop the card out of hand and reinsert it at
+                // its original index in `target.card_sources` so the
+                // failure is a clean no-op for callers.
+                let card = self
+                    .game
+                    .player_mut(player)
+                    .hand
+                    .pop()
+                    .expect("invariant: card was just pushed to hand");
+                // The target permanent index is still valid here — only
+                // hand was mutated by the failed play attempt; the
+                // battle-area entry was left untouched.
+                self.game.player_mut(player).battle_area[target.index as usize]
+                    .card_sources
+                    .insert(source_index, card);
+                None
+            }
+        }
+    }
+
     /// Play a card from `player`'s trash at `trash_index`, deducting memory
     /// according to `cost_delta`. OnPlay effects fire.
     pub fn play_from_trash_with_cost(
@@ -1516,6 +1778,59 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(perm.player).trash.push(removed);
     }
 
+    /// Strip the top digivolution source from `target`'s stack and route the
+    /// underlying card to the target's controller's trash. Returns `true` on
+    /// success; `false` if the target handle is invalid or the stack is empty.
+    ///
+    /// Used by card effects that say "trash the top digivolution source of
+    /// this Digimon" — the bool-returning, gate-friendly counterpart to
+    /// `armor_purge_top` (which is reserved for the `<Armor Purge>` keyword
+    /// auto-install body and panics on insufficient stack).
+    ///
+    /// Mirrors `armor_purge_top`'s observer dispatch: after the trash, fires
+    /// `OnDigivolutionCardTrashed` once per player and drains the queue, so
+    /// observers (e.g. Rocks-archetype source-trash listeners) see the
+    /// trashed top. The trashed card moves through the standard trash path —
+    /// no special routing.
+    ///
+    /// Reject-before-mutate discipline: invalid handle and empty stack both
+    /// return `false` before any state change.
+    pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        // Validate target slot.
+        let permanent = match self
+            .game
+            .player_mut(target.player)
+            .battle_area
+            .get_mut(target.index as usize)
+        {
+            Some(p) => p,
+            None => return false,
+        };
+        // Pop top of card_sources; bail clean if empty.
+        let removed = match permanent.card_sources.pop() {
+            Some(s) => s,
+            None => return false,
+        };
+        // Route the trashed source to the controller's trash (sources are
+        // controlled by the permanent's controller).
+        let controller = target.player;
+        self.game.player_mut(controller).trash.push(removed);
+
+        // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors
+        // `armor_purge_top` (effect_context/mod.rs:~1604) and the
+        // sources-below-top dispatch in `Game::return_to_hand` /
+        // `Game::return_to_deck`. Enqueue once per player so observers on
+        // either side of the field pick it up.
+        for pid in 0..self.game.players.len() {
+            self.game.enqueue_triggered(
+                crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+            );
+        }
+        self.game.drain_effect_queue();
+        true
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_hand(
@@ -1562,6 +1877,217 @@ impl<'a> EffectContext<'a> {
             ignore_color,
             PlaySource::ByEffect,
         )
+    }
+
+    /// Effect-initiated DNA digivolve: consume `target_a` and `target_b`
+    /// from their owner's battle area, merge their digivolution stacks
+    /// underneath the `from_hand` card (which is removed from its owner's
+    /// hand and becomes the new top of stack), and place the resulting
+    /// permanent in the slot vacated by `target_a`.
+    ///
+    /// Card-text precedent: BT5-085 Omnimon — "DNA digivolve from your hand
+    /// without paying the memory cost" type effects (Phase 2f1 DSL
+    /// `EffectInitiatedDnaDigivolve` step lowering).
+    ///
+    /// ## Stack ordering
+    ///
+    /// Final `card_sources` of the merged permanent:
+    ///   `target_a.card_sources ++ target_b.card_sources ++ [from_hand_card]`
+    ///
+    /// `target_a`'s entire stack is the lowest portion (oldest digivolution
+    /// sources at the bottom), `target_b`'s entire stack stacks on top of
+    /// `target_a`'s, and the `from_hand` card is the new top.
+    ///
+    /// Note: there is no canonical user-action DNA-digivolve execution
+    /// path in the engine yet — `Game::initiate_dna_digivolve` installs a
+    /// pending selection but its execution body is stubbed
+    /// (`TODO(dna-digivolve-execute)`). When that path lands, both call
+    /// sites should converge on a shared `Game::dna_digivolve_inner`; for
+    /// now this primitive performs the merge inline.
+    ///
+    /// ## Semantics of `ignore_requirements`
+    ///
+    /// `ignore_requirements: true` skips both the cost-check (the digivolve
+    /// runs even at the printed memory cost would be unaffordable) AND the
+    /// color/level/material-affinity validation (the engine effect drives
+    /// the DNA evolution irrespective of legality). The `cost` argument is
+    /// still applied to memory — passing `cost: 0` makes the merge free.
+    ///
+    /// ## Defensive validation
+    ///
+    /// Returns `None` if:
+    /// - `target_a == target_b` (would consume the same permanent twice).
+    /// - Either `target_a` or `target_b` is out-of-range on its declared
+    ///   player's battle area.
+    /// - `from_hand` is not present in the corresponding player's hand.
+    /// - `cost > 0` and `!ignore_requirements` and the controller cannot
+    ///   pay the memory cost (no rollback in that case yet — early-out
+    ///   before any state mutation).
+    ///
+    /// On success the merged permanent's handle is returned. The slot
+    /// vacated by `target_b` is removed from the battle area (with shift
+    /// semantics), and the slot at `target_a`'s original index now holds
+    /// the merged permanent.
+    ///
+    /// Fires `WhenDigivolving` (on the merged permanent) and `OnDigivolve`
+    /// (every player's battle area), matching the trigger surface of
+    /// `Game::effect_initiated_digivolve`. `OnDnaDigivolve` is defined as a
+    /// timing but is not yet wired by the user-action path either; once the
+    /// canonical user-action DNA digivolve lands and decides on
+    /// `OnDnaDigivolve` semantics, this primitive should match.
+    pub fn effect_initiated_dna_digivolve(
+        &mut self,
+        target_a: PermanentHandle,
+        target_b: PermanentHandle,
+        from_hand: CardHandle,
+        cost: i32,
+        ignore_requirements: bool,
+    ) -> Option<PermanentHandle> {
+        // 1. Reject when target_a and target_b refer to the same permanent.
+        if target_a == target_b {
+            return None;
+        }
+
+        // 2. Validate both target indices on their respective players'
+        // battle areas. We do this with split-borrow semantics so the
+        // length checks land inside their own scopes.
+        {
+            let p = self.game.player(target_a.player);
+            if (target_a.index as usize) >= p.battle_area.len() {
+                return None;
+            }
+        }
+        {
+            let p = self.game.player(target_b.player);
+            if (target_b.index as usize) >= p.battle_area.len() {
+                return None;
+            }
+        }
+
+        // 3. Locate the `from_hand` card. Search every player's hand —
+        // typical printed card text reads "from your hand" so this is
+        // usually `self.player`, but we keep the lookup zone-agnostic
+        // for parity with how the IR stores `from_hand` as a handle.
+        let mut from_hand_owner: Option<PlayerId> = None;
+        let mut from_hand_index: Option<usize> = None;
+        for pid in 0..self.game.players.len() {
+            if let Some(idx) = self
+                .game
+                .players[pid]
+                .hand
+                .iter()
+                .position(|c| c.handle() == from_hand)
+            {
+                from_hand_owner = Some(pid as PlayerId);
+                from_hand_index = Some(idx);
+                break;
+            }
+        }
+        let (hand_owner, hand_index) = match (from_hand_owner, from_hand_index) {
+            (Some(o), Some(i)) => (o, i),
+            _ => return None,
+        };
+
+        // 4. Resolve the effective memory cost. `ignore_requirements`
+        // gates the affordability check but does NOT zero out the cost —
+        // matching the IR's two-knob shape (`cost: i32` separate from
+        // `ignore_requirements: bool`).
+        let effective_cost: u16 = cost.max(0) as u16;
+
+        // 5. Pay memory FIRST so the (rare) failure mode is observable as a
+        // no-op without any state changes. `pay_memory` is the single
+        // source of truth for affordability — it returns `false` when the
+        // post-payment memory would dip below `rules.memory_range.0`, and
+        // we early-out before any state mutation (target_b removal,
+        // target_a mutation) so the failure path is clean. With
+        // `ignore_requirements=true` we still subtract `cost` (the IR's
+        // expectation: cost is what's actually paid; ignore_requirements
+        // only skips legality checks).
+        if effective_cost > 0 {
+            // pay_memory enforces the floor; under ignore_requirements we
+            // bypass that floor by directly mutating memory + emitting the
+            // event the engine usually ties to pay_memory. NOTE: this is
+            // the only direct game.memory mutation outside game.rs — if
+            // pay_memory gains additional side effects (logging, hooks,
+            // end-turn checks), mirror them here or refactor both to share
+            // a private helper. Drift hazard: keep this branch and
+            // `Game::pay_memory` in lockstep.
+            if ignore_requirements {
+                let new_memory = self.game.memory - effective_cost as i16;
+                let delta = new_memory - self.game.memory;
+                self.game.memory = new_memory;
+                let seq = self.game.next_event_seq();
+                let player = self.game.turn_player();
+                self.game
+                    .events
+                    .push(crate::events::GameEvent::MemoryChange {
+                        seq,
+                        player,
+                        delta,
+                        total: self.game.memory,
+                    });
+            } else if !self.game.pay_memory(effective_cost) {
+                return None;
+            }
+        }
+
+        // 6. Remove target_b's permanent first. We process target_b before
+        // target_a because removing target_b shifts the remaining
+        // battle_area entries by one if target_b's index < target_a's
+        // index on the same player. We compute the post-removal index of
+        // target_a from a snapshot taken now.
+        let target_a_index_after = if target_a.player == target_b.player
+            && (target_b.index as usize) < (target_a.index as usize)
+        {
+            // Removing target_b shifts target_a down by one slot.
+            (target_a.index as usize) - 1
+        } else {
+            target_a.index as usize
+        };
+
+        let perm_b = self
+            .game
+            .player_mut(target_b.player)
+            .battle_area
+            .remove(target_b.index as usize);
+
+        // 7. Take the from_hand card.
+        let new_top = self.game.player_mut(hand_owner).hand.remove(hand_index);
+
+        // 8. Merge the stacks. `target_a` stays in its (possibly shifted)
+        // slot; we modify it in place.
+        let turn = self.game.turn_count;
+        {
+            let perm_a = &mut self.game.player_mut(target_a.player).battle_area
+                [target_a_index_after];
+            // Append target_b's stack to target_a's stack, then push new top.
+            perm_a.card_sources.extend(perm_b.card_sources.into_iter());
+            perm_a.card_sources.push(new_top);
+            perm_a.turn_digivolved = turn;
+        }
+
+        let merged_handle = PermanentHandle {
+            player: target_a.player,
+            index: target_a_index_after as u8,
+        };
+
+        // 9. Fire WhenDigivolving + OnDigivolve, matching the single-target
+        // `Game::effect_initiated_digivolve` trigger surface.
+        self.game.enqueue_triggered(
+            crate::enums::EffectTiming::WhenDigivolving,
+            crate::selection::TriggerSource::Permanent(merged_handle),
+        );
+        self.game.drain_effect_queue();
+
+        for pid in 0..self.game.players.len() {
+            self.game.enqueue_triggered(
+                crate::enums::EffectTiming::OnDigivolve,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.game.drain_effect_queue();
+
+        Some(merged_handle)
     }
 
     // ─── Modifier registration ────────────────────────────────────────

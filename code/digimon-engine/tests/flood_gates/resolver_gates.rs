@@ -360,7 +360,7 @@ fn make_attacker() -> CardData {
 #[test]
 fn cannot_play_digimon_by_effect_blocks_security_trigger_play() {
     // TEST-021 is a Digimon with "[Security] Play this card without paying its
-    // cost." — its SecuritySkill calls ctx.play_from_security().
+    // cost." — its SecuritySkill calls ctx.play_pending_security().
     let mut test021 = make_test_card("TEST-021", "Test021");
     test021.play_cost = 5; // deliberately expensive — free play must be gated
 

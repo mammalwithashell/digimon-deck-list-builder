@@ -1575,6 +1575,197 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   play / digivolve / placement steps, formula values in `add_modifier`
   `value`, and `ScheduleDelayed` (needs `ctx.schedule_delayed` engine
   primitive).
+- **2f1** (landed 2026-04-26) — play / digivolve / placement step
+  lowering: `PlayFromHand`, `PlayFromHandFree`, `PlayFromTrash`,
+  `PlayFromTrashFree`, `PlayFromSecurity`, `PlayFromMaterials`,
+  `EffectInitiatedDigivolve`, `EffectInitiatedDnaDigivolve`,
+  `PlayToken`, `PlaceOnSecurity`, `PlaceAsBottomSource`,
+  `TrashTopSource`. New engine primitives: `play_from_hand_free`,
+  `play_from_security`, `play_from_materials`,
+  `effect_initiated_dna_digivolve`, `trash_top_source`. The existing
+  `play_from_security()` (security-skill replay) was renamed to
+  `play_pending_security()` to free the name for the persistent-zone
+  primitive — Rust forbids method-name overloading. Cost-delta
+  translation (`Free` / `Printed` / `Literal`) lives in the DSL
+  step-handler `dsl_cards/step/play_digivolve.rs` via
+  `lower_cost_delta`, mapping `CompiledCostDelta` →
+  `crate::enums::CostDelta` so the engine surface stays free of DSL
+  imports. Fixture quirks worth noting: (a) `play_from_trash*` YAML
+  uses `hand_index:` (struct reuse); (b) `EffectInitiatedDigivolve`
+  still requires a matching `evo_costs` row by level even with
+  `ignore_requirements: true` (the flag covers color/level/memory but
+  not the cost-table lookup itself); (c) `from_hand` resolves via
+  `HandIndex(i)` for single-target digivolve but `Card(handle)` for
+  DNA digivolve — asymmetric IR shapes; (d) `EffectInitiatedDigivolve`
+  carries `cost: i32`, which can express `Free (0)` and `Fixed(n)` but
+  not `Reduce(n)` — a Phase 3 IR-widening concern. Tracked follow-ups:
+  fire `OnDnaDigivolve` from both this primitive and the canonical
+  user-action path once `TODO(dna-digivolve-execute)` lands; widen
+  `BindingValue::HandIndex` / `TrashIndex` to carry a `PlayerId` so
+  placement steps can target opponent zones. Defers to 2f2+: formula
+  values in `add_modifier`, `AsSelectingPlayer` override-persistence,
+  `ScheduleDelayed`.
+- **2f2** (landed 2026-04-26) — formula values in `add_dp_modifier` /
+  `add_modifier`. New IR shape `CompiledModifierValue { Literal(i32) |
+  Formula(CompiledFormula) }` replaces the bare `value: i32` field on
+  both step variants. YAML accepts either a bare int (`value: 3000`) or
+  a `{ formula: ... }` block via `serde(untagged)` `ModifierValueSpec`,
+  reusing `alt_path::FormulaCost` for the wrapper. Runtime evaluator
+  lives at `code/digimon-engine/src/dsl_cards/formula_eval.rs` —
+  signature `evaluate(&CompiledFormula, &EffectContext, target:
+  PermanentHandle) -> i32`. `target` is mandatory because per-selectors
+  (`StackSize` / `MaterialCount` / `DigivolutionColorCount`) resolve
+  against the bound or matched permanent; `AllyCount` resolves against
+  the target's player; aggregates (`LowestDp` / `HighestDp` /
+  `LowestLevel` / `HighestLevel`) scope to `ctx.player`'s battle area.
+  Filter-target `add_modifier` evaluates the formula **per match**
+  inside the scan loop, never hoisted (load-bearing for Susanoomon-style
+  "+X DP per material on this Digimon" semantics — pinned by
+  `add_modifier_filter_target_formula_evaluated_per_match`'s
+  `assert_ne!` on two permanents with different stack sizes). The
+  modifier-value pipeline is **i32 end-to-end**
+  (`formula_eval::evaluate` → `EffectContext::add_modifier` →
+  `ModifierEntry.value` → `ModifierRegistry::sum`); no narrowing today.
+  The `add_dp_modifier_formula_large_value_passes_through` test pins
+  the contract with `Literal(40000)` (above i16::MAX) and is the
+  tripwire if a future engine change narrows the type — saturation
+  goes in `step/modifiers.rs::resolve_modifier_value` if it ever
+  becomes necessary. Defensive convention: degenerate formula inputs
+  (FloorDiv arity != 2, divide by zero, missing target, empty
+  aggregate set) return `0` rather than panic; `RawRust(name)` and
+  `CardCountInZone` are Phase 3 placeholders that return `0`.
+  Debug-build `eprintln!` warnings emit on the two card-author-bug
+  branches (`RawRust` unregistered, `FloorDiv` wrong arity). A
+  compile-time `const _: () = assert!((CardColor::Purple as u8) < 8)`
+  guards the `DigivolutionColorCount` `u8` bitmask. Tracked
+  follow-ups: wire `RawRust` formula dispatch through
+  `RawRustRegistry`; widen `CompiledPerSelector::CardCountInZone`
+  with a `CompiledZone` payload; consider opponent / universal scope
+  for `CompiledAggregateSelector`; widen `lookup_modifier_type` to
+  expose value-bearing names (`ChangeDp` etc.) for filter-target
+  numeric modifiers; extend `AddDpModifier` to accept
+  `CompiledModifierTarget::Filter` (binding-only today). Defers to
+  2f3+: `AsSelectingPlayer` override-persistence, `ScheduleDelayed`.
+- **2f3** (landed 2026-04-26) — `AsSelectingPlayer` step lowering with
+  override-persistence across selection callbacks. Engine refactor: every
+  `pub fn select_*` callback in `code/digimon-engine/src/effect_context/selections.rs`
+  now constructs the post-resolution `EffectContext` via
+  `EffectContext::new_with_override(game, source_card, source_permanent,
+  controller, override_pin)` (10 call sites — `select_hand`,
+  `select_trash`, `install_field_selection` shared by own/opponent
+  permanent, `select_count_capped_multi`, `select_effect_choice`,
+  `select_reveal`, `select_security`, `select_material`,
+  `select_union_zone`, `select_ordered_permutation`). The seeding line
+  `let selecting_player = self.override_selecting_player.unwrap_or(self.player);`
+  (which feeds `pending_selection.selecting_player`) is preserved verbatim
+  at every site — only the callback's reconstructed ctx changes shape so
+  it carries `(controller, override_pin)` rather than collapsing them.
+  Field `override_selecting_player` stays `pub(super)`; a new
+  `pub(crate) fn set_override_selecting_player(&mut self, p:
+  Option<PlayerId>)` setter is the only mutation path for callers
+  outside `effect_context/`. DSL lowering at
+  `code/digimon-engine/src/dsl_cards/step/as_selecting_player.rs`
+  follows a save → set → run_steps → conditional-restore pattern: on
+  `RunOutcome::Synchronous` the previous override is restored; on
+  `Parked` it is NOT restored (Task 1's `new_with_override` carries it
+  through the parked-callback boundary). Outer-tail leak fix:
+  `drain_dsl_outer_tail(cb_ctx)` now calls
+  `set_override_selecting_player(None)` BEFORE running the parked
+  outer-tail steps, so an outer sibling `select_*` after
+  `as_selecting_player` correctly routes to the controller, not the
+  override. Pinned by
+  `as_selecting_player_outer_tail_select_does_not_inherit_override`
+  (regression guard — empirically verified by the implementer that
+  removing the clear makes the test fail). End-to-end YAML test at
+  `code/digimon-engine/tests/dsl/phase2f3_end_to_end.rs` exercises the
+  canonical "your opponent chooses one of your Digimon" card text via a
+  TST-VOTE Opponent's Vote card with `as_selecting_player: { of:
+  opponent, body: [select_own_permanent, add_dp_modifier: -3000] }`.
+  Pre-existing systemic divergence surfaced (out of 2f3 scope, tracked
+  as a follow-up): the DSL validator accepts snake_case expiry strings
+  (`end_of_turn`) but the engine's `lookup_expiry` only matches
+  PascalCase (`EndOfTurn`). Cards authored with the validator-blessed
+  form silently no-op modifiers at runtime — the
+  `phase2f3_end_to_end.rs` YAML uses `EndOfTurn` to work around it.
+  The follow-up should land before card scripts are authored against
+  Phase 2f3. Defers to 2f4+: `ScheduleDelayed` (needs
+  `ctx.schedule_delayed` engine primitive).
+- **2f4** (landed 2026-04-26) — `schedule_delayed` engine subsystem +
+  DSL lowering. New `code/digimon-engine/src/scheduled_effects.rs`
+  introduces `pub struct ScheduledEffect { when: EffectTiming, body:
+  Vec<CompiledStep>, source_card: CardHandle, source_permanent:
+  Option<PermanentHandle>, controller: PlayerId, captured_bindings:
+  Bindings }` and `pub fn fire_scheduled_for_timing(game, t)` that
+  drains every queued effect whose `when` matches `t` in FIFO order.
+  `Game::scheduled_effects: Vec<ScheduledEffect>` field added. New
+  primitive `EffectContext::schedule_delayed(when, body,
+  captured_bindings)` captures `(self.source_card, self.source_permanent,
+  self.player)` plus the passed args. Stored as `CardHandle` (Copy)
+  rather than the plan's suggested `CardSource` (Clone) — cleaner, no
+  new trait bound, matches `EffectContext::new`'s `source_card`
+  parameter type. Drain wired into 4 observer-fire boundaries with
+  scheduled bodies firing AFTER printed observers (so observers see
+  pre-scheduled state and scheduled bodies see post-observer state):
+  `EndOfYourTurn` (in `game_phases.rs::fire_end_of_your_turn`),
+  `EndOfOpponentsTurn` (in `game_phases.rs::rotate_turn_player`),
+  `EndOfBattle` (in `combat.rs::resolve_battle`), and `EndOfAttack` (in
+  `combat.rs::cleanup_attack`, BEFORE `expire_end_of_attack` so
+  scheduled bodies see same attack context). The unified `EndOfTurn`
+  variant doesn't exist in `EffectTiming` (split into
+  `EndOfYourTurn` + `EndOfOpponentsTurn`); `EndOfYourNextTurn`,
+  `EndOfOpponentsNextTurn`, `UntilNextUnsuspend` deferred to Phase 3
+  (need a generation counter on `ScheduledEffect` for "next turn"
+  semantics — out of 2f4 scope). Re-entrancy / parked-selection
+  guard: `fire_scheduled_for_timing` includes a per-iteration
+  `debug_assert!(game.dsl_outer_tail.is_none())` with a TODO(phase-3)
+  comment for retry logic — most scheduled bodies are synchronous
+  (`gain_memory`, `draw`, `add_modifier`); cards that schedule a
+  body that itself parks would trip the assertion in debug builds and
+  must wait for Phase 3. DSL lowering at
+  `code/digimon-engine/src/dsl_cards/step/schedule_delayed.rs`:
+  `compiled_timing_to_engine(*when)` maps `CompiledTiming` →
+  `EffectTiming`, then `ctx.schedule_delayed(t, body.clone(),
+  bindings.clone())`. Bindings are cloned at schedule time so
+  subsequent caller mutations don't leak into the captured copy.
+  End-to-end YAML test at
+  `code/digimon-engine/tests/dsl/phase2f4_end_to_end.rs` (DelayedDraw
+  card: `on_play → schedule_delayed: { when: end_of_your_turn, body:
+  [draw: { of: you, count: 1 }] }`) exercises the full pipeline.
+  Notable structural finding: the timing pipeline (`TimingSpec` →
+  `CompiledTiming` → `EffectTiming` via direct enum-variant matching
+  in `timing_map.rs::compiled_timing_to_engine`) is divergence-immune,
+  unlike the expiry pipeline (string-keyed `lookup_expiry` —
+  pre-existing snake_case-vs-PascalCase divergence surfaced in 2f3).
+  A future cleanup should convert `lookup_expiry` to the same
+  enum-match-only design as `compiled_timing_to_engine` to eliminate
+  that class of bug.
+
+## Phase 2 status
+
+**Phase 2 is feature-complete (sub-phases 2a–2f4 landed 2026-04-23
+through 2026-04-26).** Every variant of `CompiledStep` in the IR is
+wired to engine behaviour:
+
+| Sub-phase | Scope |
+|---|---|
+| 2a | Triggered clause lowering + memory/draw + `run_steps` scaffold |
+| 2b | Selection steps (`SelectHand` / `SelectTrash` / `SelectOwn|OpponentPermanent`), binding refs, continuation dispatcher, zone moves |
+| 2c | Permanent mutations (Suspend / Unsuspend / Delete / ReturnToHand / ReturnToDeck / DeDigivolve), AddDpModifier, AddModifier (binding-target), GrantKeyword, control flow (`If` / `Optional`) |
+| 2d | Multi-result bindings (`PermanentList` / `CardList`), iteration verbs (`ForEach`, `PerSelected`), multi-pick selection (`SelectCountCappedMulti`), `AddModifier` filter-target arm, run_steps continuation propagation |
+| 2e | `SelectEffectChoice`, `SelectReveal`, `SelectSecurity`, `SelectMaterial`, `SelectUnionZone`, `SelectOrderedPermutation`, `distinct_by` enforcement on `SelectCountCappedMulti` |
+| 2f1 | Play / digivolve / placement steps (`PlayFromHand*`, `PlayFromTrash*`, `PlayFromSecurity`, `PlayFromMaterials`, `EffectInitiated*Digivolve*`, `PlayToken`, `PlaceOnSecurity`, `PlaceAsBottomSource`, `TrashTopSource`) + 5 new engine primitives |
+| 2f2 | Formula values in `add_modifier` / `add_dp_modifier` (`CompiledModifierValue` IR + `formula_eval::evaluate` runtime evaluator) |
+| 2f3 | `AsSelectingPlayer` override-persistence across selection callbacks (engine `new_with_override` constructor + DSL lowering) |
+| 2f4 | `schedule_delayed` engine subsystem + DSL lowering (4 observer-fire wiring sites) |
+
+Subsequent work moves to Phase 3 (§7.4) — replacement clauses,
+broader `event_target_*` predicates, per-iteration park resumption,
+formula primitives beyond literals (`raw_rust` registry dispatch,
+`CardCountInZone` zone payload), opponent / universal `Aggregate`
+scope, IR widening for `BindingValue::HandIndex` / `TrashIndex` to
+carry `PlayerId`, multi-parking drains in `ScheduledEffect`, and
+`OnDnaDigivolve` trigger wiring (alongside the canonical
+user-action DNA digivolve flow).
 
 ### 7.4 Phase 3 — Advanced clauses
 

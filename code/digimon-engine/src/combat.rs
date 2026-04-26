@@ -1877,7 +1877,7 @@ impl Game {
                     // addressed alongside native keyword wiring (Task 6).
 
                     // Trash the revealed card unless an effect raised the
-                    // `played` bit via `EffectContext::play_from_security`.
+                    // `played` bit via `EffectContext::play_pending_security`.
                     // `security_resolution` stays alive across the observer
                     // drain so a selection installed by an observer can
                     // resume through `DisposeFinalize` (§2.5j residual).
@@ -2034,6 +2034,15 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+
+        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
+        // EndOfAttack after the printed-observer fan-out. Fires before
+        // modifier expiry / pending_attack clear so scheduled bodies see
+        // the same attack context as printed observers.
+        crate::scheduled_effects::fire_scheduled_for_timing(
+            self,
+            crate::enums::EffectTiming::EndOfAttack,
+        );
 
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
@@ -2222,6 +2231,15 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+
+        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
+        // EndOfBattle after the printed-observer fan-out. EndOfAttack
+        // (which always fires next, in `cleanup_attack`) gets its own
+        // drain at that site.
+        crate::scheduled_effects::fire_scheduled_for_timing(
+            self,
+            crate::enums::EffectTiming::EndOfBattle,
+        );
 
         outcome
     }
