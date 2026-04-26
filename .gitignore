@@ -15,11 +15,14 @@ runs/
 nul
 frontend/dist/
 frontend/node_modules/
+code/frontend/dist/
+code/frontend/node_modules/
 .env
 .env.local
 .env.*.local
 data/app.db
 frontend/tsconfig.tsbuildinfo
+code/frontend/tsconfig.tsbuildinfo
 .playwright-mcp/
 .worktrees/
 Digimon TCG resources/glossary.pdf
