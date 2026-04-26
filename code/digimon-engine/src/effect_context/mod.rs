@@ -1879,62 +1879,43 @@ impl<'a> EffectContext<'a> {
         )
     }
 
-    /// Effect-initiated DNA digivolve: consume `target_a` and `target_b`
-    /// from their owner's battle area, merge their digivolution stacks
-    /// underneath the `from_hand` card (which is removed from its owner's
-    /// hand and becomes the new top of stack), and place the resulting
-    /// permanent in the slot vacated by `target_a`.
+    /// Merge two existing battle-area permanents into a single permanent
+    /// topped with a card from hand. Effect-initiated DNA digivolve.
     ///
-    /// Card-text precedent: BT5-085 Omnimon — "DNA digivolve from your hand
-    /// without paying the memory cost" type effects (Phase 2f1 DSL
-    /// `EffectInitiatedDnaDigivolve` step lowering).
+    /// Delegates to `Game::dna_digivolve_inner` for the merge + triggers.
+    /// This wrapper handles the IR's two-knob shape (`cost: i32` separate
+    /// from `ignore_requirements: bool`) and the pay-memory-bypass branch
+    /// that fires when `ignore_requirements` is set and the printed cost
+    /// would otherwise dip below the memory floor.
     ///
-    /// ## Stack ordering
+    /// ## Stacking order
     ///
-    /// Final `card_sources` of the merged permanent:
-    ///   `target_a.card_sources ++ target_b.card_sources ++ [from_hand_card]`
+    /// `target_a.card_sources ++ target_b.card_sources ++ [from_hand]`.
+    /// `target_a` corresponds to `DnaCost::requirement1`. See
+    /// `Game::dna_digivolve_inner` for the canonical contract.
     ///
-    /// `target_a`'s entire stack is the lowest portion (oldest digivolution
-    /// sources at the bottom), `target_b`'s entire stack stacks on top of
-    /// `target_a`'s, and the `from_hand` card is the new top.
+    /// ## Triggers
     ///
-    /// Note: there is no canonical user-action DNA-digivolve execution
-    /// path in the engine yet — `Game::initiate_dna_digivolve` installs a
-    /// pending selection but its execution body is stubbed
-    /// (`TODO(dna-digivolve-execute)`). When that path lands, both call
-    /// sites should converge on a shared `Game::dna_digivolve_inner`; for
-    /// now this primitive performs the merge inline.
+    /// `WhenDigivolving` → `OnDigivolve` (global) → `OnDnaDigivolve`,
+    /// each followed by a queue drain. See
+    /// `Game::dna_digivolve_inner` for the firing sequence.
     ///
     /// ## Semantics of `ignore_requirements`
     ///
-    /// `ignore_requirements: true` skips both the cost-check (the digivolve
-    /// runs even at the printed memory cost would be unaffordable) AND the
-    /// color/level/material-affinity validation (the engine effect drives
-    /// the DNA evolution irrespective of legality). The `cost` argument is
-    /// still applied to memory — passing `cost: 0` makes the merge free.
+    /// `ignore_requirements: true` skips the affordability floor — i.e. the
+    /// merge runs even when subtracting `cost` from memory would dip below
+    /// `rules.memory_range.0`. The `cost` argument is still subtracted —
+    /// `ignore_requirements` is not the same as "free". For
+    /// `cost: 0, ignore_requirements: true`, no memory mutation occurs.
     ///
     /// ## Defensive validation
     ///
     /// Returns `None` if:
-    /// - `target_a == target_b` (would consume the same permanent twice).
-    /// - Either `target_a` or `target_b` is out-of-range on its declared
-    ///   player's battle area.
-    /// - `from_hand` is not present in the corresponding player's hand.
+    /// - `target_a == target_b`
+    /// - either target's index is out of range on its player's battle area
+    /// - `from_hand` is not present in any player's hand
     /// - `cost > 0` and `!ignore_requirements` and the controller cannot
-    ///   pay the memory cost (no rollback in that case yet — early-out
-    ///   before any state mutation).
-    ///
-    /// On success the merged permanent's handle is returned. The slot
-    /// vacated by `target_b` is removed from the battle area (with shift
-    /// semantics), and the slot at `target_a`'s original index now holds
-    /// the merged permanent.
-    ///
-    /// Fires `WhenDigivolving` (on the merged permanent) and `OnDigivolve`
-    /// (every player's battle area), matching the trigger surface of
-    /// `Game::effect_initiated_digivolve`. `OnDnaDigivolve` is defined as a
-    /// timing but is not yet wired by the user-action path either; once the
-    /// canonical user-action DNA digivolve lands and decides on
-    /// `OnDnaDigivolve` semantics, this primitive should match.
+    ///   pay the memory cost (early-out before any state mutation)
     pub fn effect_initiated_dna_digivolve(
         &mut self,
         target_a: PermanentHandle,
@@ -1943,151 +1924,73 @@ impl<'a> EffectContext<'a> {
         cost: i32,
         ignore_requirements: bool,
     ) -> Option<PermanentHandle> {
-        // 1. Reject when target_a and target_b refer to the same permanent.
         if target_a == target_b {
             return None;
         }
-
-        // 2. Validate both target indices on their respective players'
-        // battle areas. We do this with split-borrow semantics so the
-        // length checks land inside their own scopes.
+        if (target_a.index as usize)
+            >= self.game.player(target_a.player).battle_area.len()
         {
-            let p = self.game.player(target_a.player);
-            if (target_a.index as usize) >= p.battle_area.len() {
-                return None;
-            }
+            return None;
         }
+        if (target_b.index as usize)
+            >= self.game.player(target_b.player).battle_area.len()
         {
-            let p = self.game.player(target_b.player);
-            if (target_b.index as usize) >= p.battle_area.len() {
-                return None;
-            }
+            return None;
         }
 
-        // 3. Locate the `from_hand` card. Search every player's hand —
-        // typical printed card text reads "from your hand" so this is
-        // usually `self.player`, but we keep the lookup zone-agnostic
-        // for parity with how the IR stores `from_hand` as a handle.
-        let mut from_hand_owner: Option<PlayerId> = None;
-        let mut from_hand_index: Option<usize> = None;
+        // Locate the from_hand card across all players' hands.
+        let mut hand_owner: Option<PlayerId> = None;
+        let mut hand_index: Option<usize> = None;
         for pid in 0..self.game.players.len() {
-            if let Some(idx) = self
-                .game
-                .players[pid]
+            if let Some(idx) = self.game.players[pid]
                 .hand
                 .iter()
                 .position(|c| c.handle() == from_hand)
             {
-                from_hand_owner = Some(pid as PlayerId);
-                from_hand_index = Some(idx);
+                hand_owner = Some(pid as PlayerId);
+                hand_index = Some(idx);
                 break;
             }
         }
-        let (hand_owner, hand_index) = match (from_hand_owner, from_hand_index) {
-            (Some(o), Some(i)) => (o, i),
-            _ => return None,
-        };
+        let (hand_owner, hand_index) = (hand_owner?, hand_index?);
 
-        // 4. Resolve the effective memory cost. `ignore_requirements`
-        // gates the affordability check but does NOT zero out the cost —
-        // matching the IR's two-knob shape (`cost: i32` separate from
-        // `ignore_requirements: bool`).
         let effective_cost: u16 = cost.max(0) as u16;
 
-        // 5. Pay memory FIRST so the (rare) failure mode is observable as a
-        // no-op without any state changes. `pay_memory` is the single
-        // source of truth for affordability — it returns `false` when the
-        // post-payment memory would dip below `rules.memory_range.0`, and
-        // we early-out before any state mutation (target_b removal,
-        // target_a mutation) so the failure path is clean. With
-        // `ignore_requirements=true` we still subtract `cost` (the IR's
-        // expectation: cost is what's actually paid; ignore_requirements
-        // only skips legality checks).
-        if effective_cost > 0 {
-            // pay_memory enforces the floor; under ignore_requirements we
-            // bypass that floor by directly mutating memory + emitting the
-            // event the engine usually ties to pay_memory. NOTE: this is
-            // the only direct game.memory mutation outside game.rs — if
-            // pay_memory gains additional side effects (logging, hooks,
-            // end-turn checks), mirror them here or refactor both to share
-            // a private helper. Drift hazard: keep this branch and
-            // `Game::pay_memory` in lockstep.
-            if ignore_requirements {
-                let new_memory = self.game.memory - effective_cost as i16;
-                let delta = new_memory - self.game.memory;
-                self.game.memory = new_memory;
-                let seq = self.game.next_event_seq();
-                let player = self.game.turn_player();
-                self.game
-                    .events
-                    .push(crate::events::GameEvent::MemoryChange {
-                        seq,
-                        player,
-                        delta,
-                        total: self.game.memory,
-                    });
-            } else if !self.game.pay_memory(effective_cost) {
-                return None;
-            }
-        }
-
-        // 6. Remove target_b's permanent first. We process target_b before
-        // target_a because removing target_b shifts the remaining
-        // battle_area entries by one if target_b's index < target_a's
-        // index on the same player. We compute the post-removal index of
-        // target_a from a snapshot taken now.
-        let target_a_index_after = if target_a.player == target_b.player
-            && (target_b.index as usize) < (target_a.index as usize)
-        {
-            // Removing target_b shifts target_a down by one slot.
-            (target_a.index as usize) - 1
+        // Memory: under ignore_requirements bypass the floor; otherwise let
+        // dna_digivolve_inner pay normally.
+        if ignore_requirements && effective_cost > 0 {
+            let new_memory = self.game.memory - effective_cost as i16;
+            let delta = new_memory - self.game.memory;
+            self.game.memory = new_memory;
+            let seq = self.game.next_event_seq();
+            let player = self.game.turn_player();
+            self.game
+                .events
+                .push(crate::events::GameEvent::MemoryChange {
+                    seq,
+                    player,
+                    delta,
+                    total: self.game.memory,
+                });
+            // Pass cost=0 to the inner so it doesn't double-pay.
+            self.game.dna_digivolve_inner(
+                target_a,
+                target_b,
+                hand_owner,
+                hand_index,
+                0,
+                false,
+            )
         } else {
-            target_a.index as usize
-        };
-
-        let perm_b = self
-            .game
-            .player_mut(target_b.player)
-            .battle_area
-            .remove(target_b.index as usize);
-
-        // 7. Take the from_hand card.
-        let new_top = self.game.player_mut(hand_owner).hand.remove(hand_index);
-
-        // 8. Merge the stacks. `target_a` stays in its (possibly shifted)
-        // slot; we modify it in place.
-        let turn = self.game.turn_count;
-        {
-            let perm_a = &mut self.game.player_mut(target_a.player).battle_area
-                [target_a_index_after];
-            // Append target_b's stack to target_a's stack, then push new top.
-            perm_a.card_sources.extend(perm_b.card_sources.into_iter());
-            perm_a.card_sources.push(new_top);
-            perm_a.turn_digivolved = turn;
+            self.game.dna_digivolve_inner(
+                target_a,
+                target_b,
+                hand_owner,
+                hand_index,
+                effective_cost,
+                false,
+            )
         }
-
-        let merged_handle = PermanentHandle {
-            player: target_a.player,
-            index: target_a_index_after as u8,
-        };
-
-        // 9. Fire WhenDigivolving + OnDigivolve, matching the single-target
-        // `Game::effect_initiated_digivolve` trigger surface.
-        self.game.enqueue_triggered(
-            crate::enums::EffectTiming::WhenDigivolving,
-            crate::selection::TriggerSource::Permanent(merged_handle),
-        );
-        self.game.drain_effect_queue();
-
-        for pid in 0..self.game.players.len() {
-            self.game.enqueue_triggered(
-                crate::enums::EffectTiming::OnDigivolve,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
-        self.game.drain_effect_queue();
-
-        Some(merged_handle)
     }
 
     // ─── Modifier registration ────────────────────────────────────────
