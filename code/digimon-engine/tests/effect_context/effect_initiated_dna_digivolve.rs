@@ -190,6 +190,10 @@ fn effect_initiated_dna_digivolve_preserves_stacked_materials_under_top() {
     );
 
     let handles: Vec<_> = merged.card_sources.iter().map(|c| c.handle()).collect();
+    // CHOSEN-NOT-CANONICAL contract: order is target_a's stack first,
+    // target_b's second, then hand top. When the user-action
+    // initiate_dna_digivolve lands (TODO(dna-digivolve-execute) at
+    // game_actions.rs:2198), update both this test and that path together.
     assert_eq!(handles[0], base_a_handle, "card_sources[0] = target_a base");
     assert_eq!(handles[1], top_a_handle, "card_sources[1] = target_a top");
     assert_eq!(

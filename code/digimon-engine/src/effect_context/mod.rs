@@ -1869,23 +1869,25 @@ impl<'a> EffectContext<'a> {
         // matching the IR's two-knob shape (`cost: i32` separate from
         // `ignore_requirements: bool`).
         let effective_cost: u16 = cost.max(0) as u16;
-        if !ignore_requirements && effective_cost > 0 {
-            // Pre-flight affordability — we early-out cleanly before any
-            // mutation if the cost can't be paid.
-            let prospective = self.game.memory - effective_cost as i16;
-            if prospective < self.game.rules.memory_range.0 {
-                return None;
-            }
-        }
 
         // 5. Pay memory FIRST so the (rare) failure mode is observable as a
-        // no-op without any state changes. With `ignore_requirements=true`
-        // we still subtract `cost` (the IR's expectation: cost is what's
-        // actually paid; ignore_requirements only skips legality checks).
+        // no-op without any state changes. `pay_memory` is the single
+        // source of truth for affordability — it returns `false` when the
+        // post-payment memory would dip below `rules.memory_range.0`, and
+        // we early-out before any state mutation (target_b removal,
+        // target_a mutation) so the failure path is clean. With
+        // `ignore_requirements=true` we still subtract `cost` (the IR's
+        // expectation: cost is what's actually paid; ignore_requirements
+        // only skips legality checks).
         if effective_cost > 0 {
             // pay_memory enforces the floor; under ignore_requirements we
             // bypass that floor by directly mutating memory + emitting the
-            // event the engine usually ties to pay_memory.
+            // event the engine usually ties to pay_memory. NOTE: this is
+            // the only direct game.memory mutation outside game.rs — if
+            // pay_memory gains additional side effects (logging, hooks,
+            // end-turn checks), mirror them here or refactor both to share
+            // a private helper. Drift hazard: keep this branch and
+            // `Game::pay_memory` in lockstep.
             if ignore_requirements {
                 let new_memory = self.game.memory - effective_cost as i16;
                 let delta = new_memory - self.game.memory;
