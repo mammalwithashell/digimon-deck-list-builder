@@ -11,50 +11,15 @@
 
 use std::sync::Arc;
 
-use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement};
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{
+    make_test_card, make_test_card_with_level, make_test_dna_card, DebugRunner,
+};
 use digimon_engine::dsl_cards::DslCardEffect;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::GamePhase;
 
 const DNA_TRIGGER_YAML: &str =
     include_str!("../../cards/_examples/TST_DNA_TRIGGER.yaml");
-
-fn empty_req() -> DnaRequirement {
-    DnaRequirement {
-        level: 0,
-        card_colors: Vec::new(),
-        name_contains: String::new(),
-        text_contains: String::new(),
-    }
-}
-
-fn lvl_req(level: u8) -> DnaRequirement {
-    DnaRequirement {
-        level,
-        ..empty_req()
-    }
-}
-
-fn lv_card(card_id: &str, name: &str, level: u8) -> CardData {
-    let mut d = make_test_card(card_id, name);
-    d.level = Some(level);
-    d
-}
-
-/// CardData for the DSL trigger card — same id/name as in
-/// `TST_DNA_TRIGGER.yaml`, plus a DNA cost (Lv5 + Lv6, 0 memory) and
-/// level 7 to match the YAML.
-fn dna_trigger_card_data() -> CardData {
-    let mut d = make_test_card("TST-DNA-TRIGGER", "TestDnaTrigger");
-    d.level = Some(7);
-    d.dna_costs = vec![DnaCost {
-        memory_cost: 0,
-        requirement1: lvl_req(5),
-        requirement2: lvl_req(6),
-    }];
-    d
-}
 
 fn build_dsl_trigger_effect() -> Arc<DslCardEffect> {
     let spec: digimon_dsl::CardSpec =
@@ -66,9 +31,14 @@ fn build_dsl_trigger_effect() -> Arc<DslCardEffect> {
 #[test]
 fn dsl_on_dna_digivolve_fires_from_user_action_path() {
     let mut runner = DebugRunner::builder()
-        .add_card(lv_card("TST-LV5", "FiveDigi", 5))
-        .add_card(lv_card("TST-LV6", "SixDigi", 6))
-        .add_card(dna_trigger_card_data())
+        .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))
+        .add_card(make_test_card_with_level("TST-LV6", "SixDigi", 6))
+        .add_card({
+            let mut card =
+                make_test_dna_card("TST-DNA-TRIGGER", "TestDnaTrigger", 5, 6, 0);
+            card.level = Some(7);
+            card
+        })
         .add_card(make_test_card("TST-DECK-A", "DeckCard"))
         .hand(0, &["TST-DNA-TRIGGER"])
         .deck(0, &["TST-DECK-A", "TST-DECK-A"])
@@ -104,9 +74,14 @@ fn dsl_on_dna_digivolve_fires_from_user_action_path() {
 #[test]
 fn dsl_on_dna_digivolve_fires_from_effect_path() {
     let mut runner = DebugRunner::builder()
-        .add_card(lv_card("TST-LV5", "FiveDigi", 5))
-        .add_card(lv_card("TST-LV6", "SixDigi", 6))
-        .add_card(dna_trigger_card_data())
+        .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))
+        .add_card(make_test_card_with_level("TST-LV6", "SixDigi", 6))
+        .add_card({
+            let mut card =
+                make_test_dna_card("TST-DNA-TRIGGER", "TestDnaTrigger", 5, 6, 0);
+            card.level = Some(7);
+            card
+        })
         .add_card(make_test_card("TST-DECK-A", "DeckCard"))
         .hand(0, &["TST-DNA-TRIGGER"])
         .deck(0, &["TST-DECK-A", "TST-DECK-A"])

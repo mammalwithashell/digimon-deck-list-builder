@@ -161,23 +161,10 @@ pub fn get_valid_dna_second_targets(
 #[cfg(test)]
 mod tests_stacking {
     use super::*;
-    use crate::card_data::{CardData, DnaCost, DnaRequirement};
+    use crate::card_data::{CardData, DnaCost};
     use crate::card_source::CardSource;
-    use crate::debug_runner::make_test_card;
+    use crate::debug_runner::{dna_req_lv, make_test_card};
     use crate::permanent::Permanent;
-
-    fn empty_req() -> DnaRequirement {
-        DnaRequirement {
-            level: 0,
-            card_colors: Vec::new(),
-            name_contains: String::new(),
-            text_contains: String::new(),
-        }
-    }
-
-    fn lvl_req(level: u8) -> DnaRequirement {
-        DnaRequirement { level, ..empty_req() }
-    }
 
     fn lvl_card(idx: usize, level: u8) -> CardData {
         let mut d = make_test_card(&format!("LVL{}-{}", level, idx), "TestMon");
@@ -197,8 +184,8 @@ mod tests_stacking {
         let mut evo = make_test_card("EVO-1", "Evo");
         evo.dna_costs = vec![DnaCost {
             memory_cost: 1,
-            requirement1: lvl_req(5),
-            requirement2: lvl_req(6),
+            requirement1: dna_req_lv(5),
+            requirement2: dna_req_lv(6),
         }];
         let data = vec![evo, lvl_card(0, 5), lvl_card(1, 6)];
         let p_lv5 = perm_at(1);
@@ -216,8 +203,8 @@ mod tests_stacking {
         let mut evo = make_test_card("EVO-2", "Evo");
         evo.dna_costs = vec![DnaCost {
             memory_cost: 0,
-            requirement1: lvl_req(5),
-            requirement2: lvl_req(5),
+            requirement1: dna_req_lv(5),
+            requirement2: dna_req_lv(5),
         }];
         let data = vec![evo, lvl_card(0, 5)];
         let battle = vec![perm_at(1), perm_at(1), perm_at(1)];

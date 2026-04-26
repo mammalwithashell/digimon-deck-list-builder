@@ -3,48 +3,17 @@
 //! `tests/effect_context/effect_initiated_dna_digivolve.rs` which covers
 //! the engine-effect path.
 
-use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement};
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{
+    make_test_card, make_test_card_with_level, make_test_dna_card, DebugRunner,
+};
 use digimon_engine::enums::GamePhase;
-
-fn empty_req() -> DnaRequirement {
-    DnaRequirement {
-        level: 0,
-        card_colors: Vec::new(),
-        name_contains: String::new(),
-        text_contains: String::new(),
-    }
-}
-
-fn lvl_req(level: u8) -> DnaRequirement {
-    DnaRequirement {
-        level,
-        ..empty_req()
-    }
-}
-
-fn dna_card(card_id: &str, name: &str, req1_lv: u8, req2_lv: u8, mem: i16) -> CardData {
-    let mut d = make_test_card(card_id, name);
-    d.dna_costs = vec![DnaCost {
-        memory_cost: mem,
-        requirement1: lvl_req(req1_lv),
-        requirement2: lvl_req(req2_lv),
-    }];
-    d
-}
-
-fn lv_card(card_id: &str, name: &str, level: u8) -> CardData {
-    let mut d = make_test_card(card_id, name);
-    d.level = Some(level);
-    d
-}
 
 #[test]
 fn user_action_dna_digivolve_two_stage_resolution_merges_permanents() {
     let mut runner = DebugRunner::builder()
-        .add_card(lv_card("TST-LV5", "FiveDigi", 5))
-        .add_card(lv_card("TST-LV6", "SixDigi", 6))
-        .add_card(dna_card("TST-DNA", "DnaDigi", 5, 6, 0))
+        .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))
+        .add_card(make_test_card_with_level("TST-LV6", "SixDigi", 6))
+        .add_card(make_test_dna_card("TST-DNA", "DnaDigi", 5, 6, 0))
         .hand(0, &["TST-DNA"])
         .memory(5)
         .start();
@@ -88,9 +57,9 @@ fn user_action_dna_digivolve_two_stage_resolution_merges_permanents() {
 #[test]
 fn user_action_dna_digivolve_pays_memory_cost() {
     let mut runner = DebugRunner::builder()
-        .add_card(lv_card("TST-LV5", "FiveDigi", 5))
-        .add_card(lv_card("TST-LV6", "SixDigi", 6))
-        .add_card(dna_card("TST-DNA-3", "DnaCost3", 5, 6, 3))
+        .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))
+        .add_card(make_test_card_with_level("TST-LV6", "SixDigi", 6))
+        .add_card(make_test_dna_card("TST-DNA-3", "DnaCost3", 5, 6, 3))
         .hand(0, &["TST-DNA-3"])
         .memory(5)
         .start();
@@ -110,9 +79,9 @@ fn user_action_dna_digivolve_pays_memory_cost() {
 #[test]
 fn user_action_dna_digivolve_grants_draw_bonus() {
     let mut runner = DebugRunner::builder()
-        .add_card(lv_card("TST-LV5", "FiveDigi", 5))
-        .add_card(lv_card("TST-LV6", "SixDigi", 6))
-        .add_card(dna_card("TST-DNA", "DnaDigi", 5, 6, 0))
+        .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))
+        .add_card(make_test_card_with_level("TST-LV6", "SixDigi", 6))
+        .add_card(make_test_dna_card("TST-DNA", "DnaDigi", 5, 6, 0))
         .add_card(make_test_card("TST-DECK", "DeckCard"))
         .hand(0, &["TST-DNA"])
         .deck(0, &["TST-DECK"])
@@ -137,7 +106,7 @@ fn user_action_dna_digivolve_grants_draw_bonus() {
 #[test]
 fn user_action_dna_digivolve_rejects_when_phase_is_not_main() {
     let mut runner = DebugRunner::builder()
-        .add_card(dna_card("TST-DNA", "DnaDigi", 5, 6, 0))
+        .add_card(make_test_dna_card("TST-DNA", "DnaDigi", 5, 6, 0))
         .hand(0, &["TST-DNA"])
         .start();
     // Force a non-Main phase. (`Battle` is not a GamePhase variant; use
