@@ -42,10 +42,11 @@ def _make_runner(deck1: List[str], deck2: List[str]):
         return RustHeadlessGame(deck1, deck2)
     return HeadlessGame(deck1, deck2)
 from digimon_gym.engine.game import (
-    TENSOR_SIZE, ACTION_SPACE_SIZE, FIELD_SLOTS,
-    TARGETS_PER_ATTACKER, FIELDS_PER_HAND, SECURITY_TARGET, BREEDING_SLOT,
-)
-from digimon_gym.engine.data.enums import PendingAction, GamePhase
+    FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND,
+    SECURITY_TARGET, BREEDING_SLOT,
+)  # parity-doc: these geometry constants stay on Python until migrated
+from digimon_gym.engine.data.enums import PendingAction  # parity-doc: Python-engine fallback path only
+from digimon_engine import ACTION_SPACE_SIZE, GamePhase, TENSOR_SIZE
 
 # Action Space Constants (re-exported for backward compatibility)
 ACTION_PLAY_CARD_START = 0
