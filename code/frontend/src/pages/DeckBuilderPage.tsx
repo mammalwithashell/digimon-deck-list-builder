@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import { CardSearchPanel } from '@/components/deckbuilder/CardSearchPanel';
 import { DeckListPanel } from '@/components/deckbuilder/DeckListPanel';
 import { DeckStats } from '@/components/deckbuilder/DeckStats';
@@ -8,20 +9,40 @@ import { ImportExport } from '@/components/deckbuilder/ImportExport';
 import { CardDetail } from '@/components/shared/CardDetail';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import { useAuthStore } from '@/stores/authStore';
+import { getCardById } from '@/api/digimonCardApi';
 import * as deckApi from '@/api/deckApi';
 import * as deckStore from '@/storage/deckStore';
+import type { DeckEntry } from '@/types/deck';
 
 // Desktop saves decks to the local Tauri-backed store; web keeps hitting
 // the hosted `/decks` API. The tested-cards allowlist + raw-validate calls
 // already branch inside `deckApi` itself, so they stay on `deckApi`.
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
+function groupCardIds(ids: string[], altArts: boolean[] = []): DeckEntry[] {
+  const counts = new Map<string, { cardId: string; isAltArt: boolean; count: number }>();
+  ids.forEach((cardId, i) => {
+    const isAltArt = !!altArts[i];
+    const key = `${cardId}|${isAltArt ? '1' : '0'}`;
+    const existing = counts.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      counts.set(key, { cardId, isAltArt, count: 1 });
+    }
+  });
+  return Array.from(counts.values());
+}
+
 export function DeckBuilderPage() {
+  const { id: routeDeckId } = useParams();
+  const location = useLocation();
   const {
     deckName,
     setDeckName,
     deckId,
     setDeckId,
+    loadDeck,
     mainDeck,
     eggDeck,
     isDirty,
@@ -45,8 +66,45 @@ export function DeckBuilderPage() {
         // If the endpoint is unreachable, fall back to an empty set so
         // the user sees no cards rather than the unrestricted pool.
         setTestedCardIds([]);
-      });
+    });
   }, [testedCardIds, setTestedCardIds]);
+
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('import') === '1') {
+      setShowImport(true);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!routeDeckId || routeDeckId === deckId) return;
+    const deckIdToLoad = routeDeckId;
+    let active = true;
+
+    async function loadRouteDeck() {
+      const decks = IS_DESKTOP ? deckStore : deckApi;
+      const deck = await decks.getDeck(deckIdToLoad);
+      const mainEntries = groupCardIds(deck.main_deck, deck.main_deck_alt_arts);
+      const eggEntries = groupCardIds(deck.egg_deck, deck.egg_deck_alt_arts);
+      const allIds = [...new Set([...deck.main_deck, ...deck.egg_deck])];
+      const cardDataMap = new Map<string, Awaited<ReturnType<typeof getCardById>>>();
+      await Promise.allSettled(
+        allIds.map(async (cardId) => {
+          const data = await getCardById(cardId);
+          if (data) cardDataMap.set(cardId, data);
+        }),
+      );
+      for (const entry of [...mainEntries, ...eggEntries]) {
+        const data = cardDataMap.get(entry.cardId);
+        if (data) entry.cardData = data;
+      }
+      if (active) loadDeck(deck.id, deck.name, mainEntries, eggEntries);
+    }
+
+    loadRouteDeck().catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [deckId, loadDeck, routeDeckId]);
 
   const handleSave = async () => {
     setSaving(true);
