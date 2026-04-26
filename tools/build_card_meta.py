@@ -13,6 +13,7 @@ _coverage_baseline.json at the root.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import sys
 from pathlib import Path
@@ -62,6 +63,101 @@ def _filter_by_set(card_ids: list[str], set_id: str) -> list[str]:
     return [c for c in card_ids if set_id_from_card_id(c) == target]
 
 
+COVERAGE_BASELINE_PATH_NAME = "_coverage_baseline.json"
+COVERAGE_REPORT_PATH_NAME = "_coverage.md"
+
+
+def compute_coverage(stats: list[tuple[str, int, int]]) -> dict:
+    """Bucket each card. A card with zero unparsed lines is fully parsed
+    (including cards with no xros_req at all). One unparsed line + at least
+    one parsed line is partially parsed. All-unparsed-no-parsed is wholly
+    unparsed.
+    """
+    fully = partial = wholly = 0
+    partial_cards: list[str] = []
+    wholly_cards: list[str] = []
+    for cid, n_parsed, n_unparsed in stats:
+        if n_unparsed == 0:
+            fully += 1
+        elif n_parsed > 0:
+            partial += 1
+            partial_cards.append(cid)
+        else:
+            wholly += 1
+            wholly_cards.append(cid)
+    return {
+        "fully_parsed": fully,
+        "partially_parsed": partial,
+        "wholly_unparsed": wholly,
+        "partial_cards": partial_cards,
+        "wholly_cards": wholly_cards,
+    }
+
+
+def write_coverage_report(stats: list[tuple[str, int, int]]) -> Path:
+    cov = compute_coverage(stats)
+    total = len(stats)
+    lines = [
+        "# xros_req parser coverage",
+        "",
+        f"Generated: {datetime.datetime.utcnow().isoformat(timespec='seconds')}Z",
+        "",
+        f"- Total cards: {total}",
+        f"- Fully parsed (incl. no xros_req): {cov['fully_parsed']}",
+        f"- Partially parsed: {cov['partially_parsed']}",
+        f"- Wholly unparsed (with xros_req): {cov['wholly_unparsed']}",
+        "",
+        "## Cards with partial xros_req parses",
+        "",
+    ]
+    if cov["partial_cards"]:
+        lines += [f"- {c}" for c in sorted(cov["partial_cards"])]
+    else:
+        lines.append("_(none)_")
+    lines += ["", "## Cards with wholly unparsed xros_req", ""]
+    if cov["wholly_cards"]:
+        lines += [f"- {c}" for c in sorted(cov["wholly_cards"])]
+    else:
+        lines.append("_(none)_")
+    lines.append("")
+    out = CARD_META_ROOT / COVERAGE_REPORT_PATH_NAME
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+    return out
+
+
+def _load_baseline() -> dict:
+    path = CARD_META_ROOT / COVERAGE_BASELINE_PATH_NAME
+    if not path.exists():
+        return {"partially_parsed": 0, "wholly_unparsed": 0}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def cmd_coverage_check(stats_override: list[tuple[str, int, int]] | None = None) -> int:
+    if stats_override is not None:
+        stats = stats_override
+    else:
+        stats = [build_one(c) for c in _all_card_ids()]
+    cov = compute_coverage(stats)
+    baseline = _load_baseline()
+    regressed = (
+        cov["partially_parsed"] > baseline.get("partially_parsed", 0)
+        or cov["wholly_unparsed"] > baseline.get("wholly_unparsed", 0)
+    )
+    if regressed:
+        print(
+            "coverage regressed: "
+            f"partial {cov['partially_parsed']} (baseline {baseline.get('partially_parsed', 0)}), "
+            f"wholly {cov['wholly_unparsed']} (baseline {baseline.get('wholly_unparsed', 0)})",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"coverage OK (partial {cov['partially_parsed']}, wholly {cov['wholly_unparsed']})"
+    )
+    return 0
+
+
 def cmd_check(card_ids: list[str] | None = None) -> int:
     """Rebuild every card to memory, compare against the on-disk tree.
 
@@ -103,8 +199,24 @@ def cmd_build(args: argparse.Namespace) -> int:
     else:
         ids = _all_card_ids()
     CARD_META_ROOT.mkdir(parents=True, exist_ok=True)
+    stats: list[tuple[str, int, int]] = []
     for cid in ids:
-        write_card_meta(cid, CARD_META_ROOT)
+        body, parse_result = build_card_meta_md(cid)
+        set_dir = CARD_META_ROOT / set_id_from_card_id(cid)
+        set_dir.mkdir(parents=True, exist_ok=True)
+        (set_dir / f"{cid}.md").write_text(body, encoding="utf-8", newline="\n")
+        stats.append((cid, len(parse_result.parsed), len(parse_result.unparsed_lines)))
+    # Only refresh the report + baseline on a full build (--card/--set are partial).
+    if not args.card and not args.set:
+        write_coverage_report(stats)
+        cov = compute_coverage(stats)
+        baseline_payload = {
+            "partially_parsed": cov["partially_parsed"],
+            "wholly_unparsed": cov["wholly_unparsed"],
+        }
+        (CARD_META_ROOT / COVERAGE_BASELINE_PATH_NAME).write_text(
+            json.dumps(baseline_payload, indent=2) + "\n", encoding="utf-8", newline="\n"
+        )
     print(f"wrote {len(ids)} card meta files to {CARD_META_ROOT}")
     return 0
 
@@ -120,8 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         return cmd_check()
     if args.coverage_check:
-        print("--coverage-check not implemented yet (see Task 8)", file=sys.stderr)
-        return 2
+        return cmd_coverage_check()
     return cmd_build(args)
 
 

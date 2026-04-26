@@ -1,6 +1,7 @@
 """Tests for tools.build_card_meta CLI."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -69,3 +70,52 @@ def test_check_mode_fails_on_missing_file(tmp_path: Path, monkeypatch, capsys):
     assert rc == 1
     captured = capsys.readouterr()
     assert "missing" in captured.err.lower() or "BT17-007" in captured.err
+
+
+def test_compute_coverage_buckets_correctly():
+    from tools.build_card_meta import compute_coverage
+
+    # (card_id, n_parsed, n_unparsed)
+    stats = [
+        ("A", 1, 0),  # fully parsed
+        ("B", 2, 0),  # fully parsed
+        ("C", 1, 1),  # partially parsed
+        ("D", 0, 2),  # wholly unparsed
+        ("E", 0, 0),  # no xros_req at all — counts as fully parsed (nothing to fail on)
+    ]
+    cov = compute_coverage(stats)
+    assert cov["fully_parsed"] == 3
+    assert cov["partially_parsed"] == 1
+    assert cov["wholly_unparsed"] == 1
+
+
+def test_coverage_check_passes_when_equal_to_baseline(tmp_path: Path, monkeypatch):
+    from tools import build_card_meta as m
+
+    monkeypatch.setattr(m, "CARD_META_ROOT", tmp_path)
+    baseline = tmp_path / "_coverage_baseline.json"
+    baseline.write_text(
+        json.dumps({"partially_parsed": 0, "wholly_unparsed": 0}),
+        encoding="utf-8",
+    )
+
+    # Inject deterministic stats: zero failures
+    rc = m.cmd_coverage_check(stats_override=[("BT17-007", 1, 0)])
+    assert rc == 0
+
+
+def test_coverage_check_fails_on_regression(tmp_path: Path, monkeypatch, capsys):
+    from tools import build_card_meta as m
+
+    monkeypatch.setattr(m, "CARD_META_ROOT", tmp_path)
+    baseline = tmp_path / "_coverage_baseline.json"
+    baseline.write_text(
+        json.dumps({"partially_parsed": 0, "wholly_unparsed": 0}),
+        encoding="utf-8",
+    )
+
+    # One newly partially-parsed card
+    rc = m.cmd_coverage_check(stats_override=[("X", 1, 1)])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "regress" in err.lower()
