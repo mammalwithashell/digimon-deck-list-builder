@@ -332,6 +332,72 @@ def resolve_archetype(
     )
 
 
+import json as _json
+
+from tools.xros_req_parser import (
+    XrosReqParseResult,
+    parse as _parse_xros_req,
+    render_alt_paths_yaml as _render_alt_paths_yaml,
+)
+
+_CARDS_JSON_PATH = _PROJECT_ROOT / "data" / "cards.json"
+_CARDS_JSON_CACHE: Optional[dict] = None
+
+
+def _load_cards_json_raw() -> dict:
+    """Load `data/cards.json` once per process and cache."""
+    global _CARDS_JSON_CACHE
+    if _CARDS_JSON_CACHE is None:
+        with open(_CARDS_JSON_PATH, "r", encoding="utf-8") as f:
+            _CARDS_JSON_CACHE = _json.load(f)
+    return _CARDS_JSON_CACHE
+
+
+def build_card_meta_md(card_id: str) -> tuple[str, XrosReqParseResult]:
+    """Render the per-card metadata `.md` body for `card_id`.
+
+    Returns (body, parse_result). The caller owns file I/O. Raises KeyError
+    if `card_id` is not present in `data/cards.json`.
+    """
+    cards = _load_cards_json_raw()
+    if card_id not in cards:
+        raise KeyError(card_id)
+    record = cards[card_id]
+
+    name = record.get("card_name_eng") or ""
+    xros_req = record.get("xros_req") or ""
+    parse_result = _parse_xros_req(xros_req)
+    alt_paths_yaml = _render_alt_paths_yaml(parse_result.parsed)
+
+    record_json = _json.dumps(record, indent=2, sort_keys=True, ensure_ascii=False)
+
+    parts = [
+        f"# {card_id} — {name}",
+        "",
+        "## Alt paths (parsed from xros_req)",
+        "",
+        alt_paths_yaml,
+        "",
+        "## Source record",
+        "",
+        "```json",
+        record_json,
+        "```",
+    ]
+    if parse_result.unparsed_lines:
+        parts += [
+            "",
+            "## Unparsed xros_req",
+            "",
+            "```text",
+            *parse_result.unparsed_lines,
+            "```",
+        ]
+    parts.append("")  # trailing newline
+    body = "\n".join(parts)
+    return body, parse_result
+
+
 def _print_table(manifest: ArchetypeManifest) -> None:
     """Print a human-readable summary table to stdout."""
     print(f"Archetype: {manifest.archetype_name}", end="")
