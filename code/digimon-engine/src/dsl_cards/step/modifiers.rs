@@ -48,6 +48,26 @@ fn resolve_modifier_value(
     }
 }
 
+/// Resolve an authored expiry string. Unknown strings still no-op (same
+/// strictness convention as the rest of Phase 2c), but in debug builds we
+/// emit a warning so the silent no-op stops being invisible — this is the
+/// failure mode that motivated Phase 2f3's expiry parity sweep.
+fn resolve_expiry(verb: &str, raw: &str) -> Option<crate::enums::Expiry> {
+    match lookup_expiry(raw) {
+        Some(e) => Some(e),
+        None => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "[debug] dsl::{verb}: unknown expiry {:?} — modifier will not apply. \
+                 The DSL validator should have rejected this at compile time; \
+                 this warning indicates a validator/engine drift.",
+                raw
+            );
+            None
+        }
+    }
+}
+
 /// Returns `true` if `step` is a modifier family handled here.
 /// Unknown steps fall through (the caller may try other families).
 pub fn try_run(
@@ -57,7 +77,7 @@ pub fn try_run(
 ) -> bool {
     match step {
         CompiledStep::AddDpModifier { target, value, expiry } => {
-            let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            let Some(expiry) = resolve_expiry("add_dp_modifier", expiry) else { return true; };
             if let Some(ResolvedBinding::Permanent(h)) =
                 resolve_binding_ref(target, ctx, bindings)
             {
@@ -67,7 +87,7 @@ pub fn try_run(
             true
         }
         CompiledStep::AddModifier { target, modifier, value, expiry } => {
-            let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            let Some(expiry) = resolve_expiry("add_modifier", expiry) else { return true; };
             let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier) else {
                 return true;
             };
@@ -95,7 +115,7 @@ pub fn try_run(
             true
         }
         CompiledStep::GrantKeyword { target, keyword, expiry, value } => {
-            let Some(expiry) = lookup_expiry(expiry) else { return true; };
+            let Some(expiry) = resolve_expiry("grant_keyword", expiry) else { return true; };
             let Some(kw) = crate::dsl_cards::modifier_map::lookup_keyword(keyword, *value) else {
                 return true;
             };
