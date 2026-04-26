@@ -170,3 +170,55 @@ class TestResolveArchetype:
                 return
 
         pytest.skip("No archetypes with decklists found")
+
+
+def test_build_card_meta_md_renders_known_card():
+    from tools.resolve_deck import build_card_meta_md
+
+    body, parse_result = build_card_meta_md("BT17-007")
+
+    # H1 header
+    assert body.splitlines()[0] == "# BT17-007 — Agumon"
+
+    # Alt paths block: BT17-007's xros_req is "[Digivolve] [Koromon]: Cost 0"
+    assert "## Alt paths (parsed from xros_req)" in body
+    assert '- kind: digivolve\n  from: { name_is: "Koromon" }\n  cost: 0' in body
+
+    # Source record block: verbatim cards.json entry
+    assert "## Source record" in body
+    assert "```json" in body
+    assert '"card_id": "BT17-007"' in body
+
+    # No unparsed section for this card
+    assert "## Unparsed xros_req" not in body
+
+    # parse_result is the same XrosReqParseResult the renderer used
+    assert len(parse_result.parsed) == 1
+    assert parse_result.unparsed_lines == []
+
+
+def test_build_card_meta_md_includes_unparsed_block_when_present():
+    from tools.resolve_deck import build_card_meta_md
+
+    # AD1-005's xros_req has a parsed line + a descriptor line
+    body, parse_result = build_card_meta_md("AD1-005")
+
+    assert "## Unparsed xros_req" in body
+    assert parse_result.unparsed_lines  # non-empty
+    # The unparsed text should appear verbatim in the file body
+    for line in parse_result.unparsed_lines:
+        assert line in body
+
+
+def test_build_card_meta_md_xros_req_absent_emits_none_marker():
+    from tools.resolve_deck import build_card_meta_md
+
+    # Pick a card with no xros_req — most Tamers and Options have none.
+    # ST2-13 Hammer Spark is an Option with no xros_req.
+    body, _ = build_card_meta_md("ST2-13")
+    assert "## Alt paths (parsed from xros_req)" in body
+    # The body between the alt paths header and the source record header
+    # should contain "_(none)_".
+    alt_section = body.split("## Alt paths (parsed from xros_req)", 1)[1]
+    alt_section = alt_section.split("## Source record", 1)[0]
+    assert "_(none)_" in alt_section

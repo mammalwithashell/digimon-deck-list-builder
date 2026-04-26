@@ -152,10 +152,12 @@ fn add_modifier_unknown_modifier_string_is_noop() {
     );
 }
 
-/// AddModifier with a Filter target is deferred to Phase 2d and should no-op
-/// for now: no modifier is registered on the target permanent.
+/// AddModifier with a Filter target — Phase 2d Task 8 implementation: applies
+/// the modifier to every battle-area permanent matching the filter. Single-
+/// permanent regression check; multi-permanent coverage lives in
+/// `phase2d_add_modifier_filter.rs`.
 #[test]
-fn add_modifier_filter_target_is_noop_until_2d() {
+fn add_modifier_filter_target_applies_to_match() {
     use digimon_dsl::compiled::{CompiledModifierTarget, CompiledPredicate};
 
     let card = make_test_card("T-MODFLT", "T-MODFLT");
@@ -182,10 +184,10 @@ fn add_modifier_filter_target_is_noop_until_2d() {
         run_step(&step, &mut ctx, &mut bindings);
     }
 
-    // Filter branch is deferred to Phase 2d — no modifier should be registered.
+    // Filter branch now applies the modifier to every battle-area match.
     assert!(
-        runner.game.modifiers.get(handle, digimon_engine::enums::ModifierType::CannotAttack).is_empty(),
-        "Filter target branch should be a no-op until Phase 2d"
+        !runner.game.modifiers.get(handle, digimon_engine::enums::ModifierType::CannotAttack).is_empty(),
+        "Filter target branch should register CannotAttack on the matching permanent"
     );
 }
 

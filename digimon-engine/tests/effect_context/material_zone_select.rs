@@ -104,6 +104,7 @@ fn material_zone_collects_permanent_card_sources() {
             /*max=*/ 2,
             "select sources",
             /*is_optional_zero=*/ false,
+            None,
             |_g, _src| true,
             move |_ctx, picks| {
                 *slot.lock().unwrap() = Some(picks);
@@ -215,6 +216,7 @@ fn material_zone_with_no_sources_yields_no_candidates() {
             /*max=*/ 2,
             "pick sources (should be empty)",
             /*is_optional_zero=*/ true,
+            None,
             |_g, _src| true,
             move |_ctx, picks| {
                 assert!(picks.is_empty(), "empty zone must deliver empty Vec");
@@ -266,6 +268,7 @@ fn material_zone_optional_zero_allows_pass_at_start() {
             /*max=*/ 3,
             "pick up to 3 (optional)",
             /*is_optional_zero=*/ true,
+            None,
             |_g, _src| true,
             move |_ctx, picks| {
                 *slot.lock().unwrap() = Some(picks);

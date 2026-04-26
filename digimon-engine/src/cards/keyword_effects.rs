@@ -241,6 +241,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     n,
                     "trash N digivolution cards",
                     /*is_optional_zero=*/ false,
+                    /*distinct_by=*/ None,
                     |_g, _src| true,
                     move |ctx, picks| {
                         // Trash each picked source from the carrier's stack
@@ -794,6 +795,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     /*max=*/ 2,
                     "select 2 cards to play",
                     /*is_optional_zero=*/ false,
+                    /*distinct_by=*/ None,
                     |_g, _src| true,
                     move |ctx, picks| {
                         // Defensive: only act on a complete 2-pick. The
@@ -925,6 +927,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                             n,
                             "select cards to place under Tamer",
                             /*is_optional_zero=*/ true,
+                            /*distinct_by=*/ None,
                             |_g, _src| true,
                             move |ctx, picks| {
                                 // Place each picked source at the bottom
