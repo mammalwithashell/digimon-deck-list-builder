@@ -4,10 +4,21 @@ async function openDesktopLauncher(page: Page) {
   await page.goto('/');
   const launcherHeading = page.getByRole('heading', { name: /PICK UP WHERE YOU LEFT OFF/i });
   const isLauncherVisible = await launcherHeading
-    .waitFor({ state: 'visible', timeout: 3000 })
+    .waitFor({ state: 'visible', timeout: 1000 })
     .then(() => true)
     .catch(() => false);
-  test.skip(!isLauncherVisible, 'desktop launcher route is only available in desktop build');
+  if (isLauncherVisible) {
+    return launcherHeading;
+  }
+
+  const webHomeHeading = page.getByRole('heading', { name: 'Digimon TCG Simulator' });
+  const isWebHomeVisible = await webHomeHeading
+    .waitFor({ state: 'visible', timeout: 1000 })
+    .then(() => true)
+    .catch(() => false);
+  test.skip(isWebHomeVisible, 'desktop launcher route is only available in desktop build');
+
+  await expect(launcherHeading).toBeVisible();
   return launcherHeading;
 }
 
