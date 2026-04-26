@@ -4,7 +4,10 @@ use digimon_engine::dsl::spec::CardSpec;
 use std::path::PathBuf;
 
 fn cards_json_path() -> PathBuf {
+    // CARGO_MANIFEST_DIR is `code/digimon-engine`; cards.json lives at the
+    // repo root under `data/`, so go up two levels.
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
         .join("..")
         .join("data/cards.json")
 }
@@ -39,6 +42,11 @@ fn real_adapter_all_fixtures_cross_check() {
     let adapter = RealCardDataAdapter::from_path(&cards_json_path()).unwrap();
     let mut failures = Vec::new();
     for spec in &specs {
+        // Synthetic test cards (`TST-*`) don't exist in the real cards.json
+        // and are intentionally excluded from cross-check.
+        if spec.card.starts_with("TST-") {
+            continue;
+        }
         if let Err(e) = cross_check(spec, &adapter) {
             failures.push(format!("{}: {e}", spec.card));
         }

@@ -3,10 +3,10 @@
 
 #[test]
 fn phase_1b_exit_criteria() {
-    let registry = digimon_engine::dsl_registry::from_embedded()
-        .expect("embedded registry must load");
+    let registry =
+        digimon_engine::dsl_registry::from_embedded().expect("embedded registry must load");
 
-    // All fixtures round-tripped through the pack (15 real cards + 1 TST).
+    // All fixtures round-tripped through the pack.
     assert!(registry.len() >= 1, "phase 1b exit: registry must be non-empty");
 
     // Spot-check a handful of cards end-to-end.

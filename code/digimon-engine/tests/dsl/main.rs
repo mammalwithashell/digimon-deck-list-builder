@@ -69,3 +69,7 @@ mod phase2f3_end_to_end;
 mod phase2f4_schedule_delayed;
 mod phase2f4_end_to_end;
 mod phase2g_on_dna_digivolve;
+mod phase3a_binding_player_id;
+mod phase3a_cost_delta;
+mod phase3b_replacement_process;
+mod phase3c_partition_delay_process;

@@ -333,6 +333,7 @@ pub enum CompiledDeclarativeClause {
         active_when: Option<CompiledPredicate>,
         sources: Vec<CompiledPredicate>,
         exclude_cause: Vec<String>,
+        process: Vec<CompiledStep>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -471,8 +472,8 @@ pub enum CompiledStep {
     PlayFromTrashFree { of: CompiledPlayerRef, trash_index: CompiledBindingRef },
     PlayFromSecurity,
     PlayFromMaterials { target: CompiledBindingRef, source_index: CompiledBindingRef, cost_delta: Option<CompiledCostDelta> },
-    EffectInitiatedDigivolve { target: CompiledBindingRef, from_hand: CompiledBindingRef, cost: i32, ignore_requirements: bool },
-    EffectInitiatedDnaDigivolve { target_a: CompiledBindingRef, target_b: CompiledBindingRef, from_hand: CompiledBindingRef, cost: i32, ignore_requirements: bool },
+    EffectInitiatedDigivolve { target: CompiledBindingRef, from_hand: CompiledBindingRef, cost: CompiledCostDelta, ignore_requirements: bool },
+    EffectInitiatedDnaDigivolve { target_a: CompiledBindingRef, target_b: CompiledBindingRef, from_hand: CompiledBindingRef, cost: CompiledCostDelta, ignore_requirements: bool },
     TrashTopSecurity { of: CompiledPlayerRef },
     MarkSecurityFaceUp { of: CompiledPlayerRef, card: CompiledBindingRef },
     AddDpModifier { target: CompiledBindingRef, value: CompiledModifierValue, expiry: String },
@@ -495,6 +496,10 @@ pub enum CompiledStep {
     PerSelected { selection: String, bind_as: String, body: Vec<CompiledStep> },
     ScheduleDelayed { when: CompiledTiming, body: Vec<CompiledStep> },
     Optional(Vec<CompiledStep>),
+    CancelReplacement,
+    HandleReplacement,
+    RedirectReplacement { zone: CompiledZone },
+    SubstituteReplacement { subject: CompiledBindingRef },
     RawRust { fn_name: String, consumes: Vec<String>, binds: Vec<String> },
 }
 
@@ -522,6 +527,7 @@ pub enum CompiledCostDelta {
     Free,
     Printed,
     Literal(i32),
+    Reduce(i32),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

@@ -19,9 +19,7 @@ use crate::dsl_cards::step::{drain_dsl_outer_tail, resolve_player, run_steps};
 use crate::effect_context::{CountCappedZone, DistinctByMode, EffectContext};
 use crate::permanent::PermanentHandle;
 
-fn map_distinct_by(
-    d: Option<digimon_dsl::compiled::CompiledDistinctBy>,
-) -> Option<DistinctByMode> {
+fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Option<DistinctByMode> {
     use digimon_dsl::compiled::CompiledDistinctBy;
     d.map(|c| match c {
         CompiledDistinctBy::CardNumber => DistinctByMode::CardNumber,
@@ -40,7 +38,13 @@ pub fn try_install(
     bindings: Bindings,
 ) -> bool {
     match step {
-        CompiledStep::SelectHand { of, bind_as, prompt, optional, .. } => {
+        CompiledStep::SelectHand {
+            of,
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
             install_select_hand(
                 ctx,
                 *of,
@@ -52,7 +56,13 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectTrash { of, bind_as, prompt, optional, .. } => {
+        CompiledStep::SelectTrash {
+            of,
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
             install_select_trash(
                 ctx,
                 *of,
@@ -64,7 +74,12 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectOwnPermanent { bind_as, prompt, optional, .. } => {
+        CompiledStep::SelectOwnPermanent {
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
             install_select_own_permanent(
                 ctx,
                 bind_as.clone(),
@@ -75,7 +90,12 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectOpponentPermanent { bind_as, prompt, optional, .. } => {
+        CompiledStep::SelectOpponentPermanent {
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
             install_select_opponent_permanent(
                 ctx,
                 bind_as.clone(),
@@ -87,7 +107,14 @@ pub fn try_install(
             true
         }
         CompiledStep::SelectCountCappedMulti {
-            of, zone, max, bind_as, prompt, optional_zero, distinct_by, ..
+            of,
+            zone,
+            max,
+            bind_as,
+            prompt,
+            optional_zero,
+            distinct_by,
+            ..
         } => {
             install_select_count_capped_multi(
                 ctx,
@@ -103,7 +130,12 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectEffectChoice { labels, bind_as, prompt, .. } => {
+        CompiledStep::SelectEffectChoice {
+            labels,
+            bind_as,
+            prompt,
+            ..
+        } => {
             install_select_effect_choice(
                 ctx,
                 labels.clone(),
@@ -114,7 +146,13 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectReveal { of: _, bind_as, prompt, optional, .. } => {
+        CompiledStep::SelectReveal {
+            of: _,
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
             install_select_reveal(
                 ctx,
                 bind_as.clone(),
@@ -125,7 +163,13 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectSecurity { of, bind_as, prompt, optional, .. } => {
+        CompiledStep::SelectSecurity {
+            of,
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
             install_select_security(
                 ctx,
                 *of,
@@ -137,7 +181,13 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectMaterial { of_permanent, bind_as, prompt, optional, .. } => {
+        CompiledStep::SelectMaterial {
+            of_permanent,
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
             use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
             let perm = match resolve_binding_ref(of_permanent, ctx, &bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
@@ -156,7 +206,14 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectUnionZone { of, zones, bind_as, prompt, optional, .. } => {
+        CompiledStep::SelectUnionZone {
+            of,
+            zones,
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
             use crate::selection::UnionZoneSet;
             let mut zoneset = UnionZoneSet(0);
             for z in zones {
@@ -184,7 +241,12 @@ pub fn try_install(
             );
             true
         }
-        CompiledStep::SelectOrderedPermutation { items, bind_as, prompt, .. } => {
+        CompiledStep::SelectOrderedPermutation {
+            items,
+            bind_as,
+            prompt,
+            ..
+        } => {
             use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
             let item_list = match resolve_binding_ref(items, ctx, &bindings) {
                 Some(ResolvedBinding::CardList(v)) => v,
@@ -224,7 +286,7 @@ fn install_select_hand(
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_hand_index(name, idx as u16);
+                b.insert_hand_index(name, target_player, idx as u16);
             }
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail captured by run_steps when
@@ -253,7 +315,7 @@ fn install_select_trash(
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_trash_index(name, idx as u16);
+                b.insert_trash_index(name, target_player, idx as u16);
             }
             run_steps(&tail, cb_ctx, &mut b);
             // Phase 2d Task 7: drain outer tail.
@@ -365,20 +427,16 @@ fn install_select_effect_choice(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
-    ctx.select_effect_choice(
-        &prompt,
-        labels,
-        move |cb_ctx, idx| {
-            let mut b = bindings.clone();
-            if let Some(name) = &bind_as {
-                b.insert_literal(name, idx as i64);
-            }
-            run_steps(&tail, cb_ctx, &mut b);
-            // Phase 2d Task 7: drain outer tail captured by run_steps when
-            // this selection was installed inside a control-flow body.
-            drain_dsl_outer_tail(cb_ctx);
-        },
-    );
+    ctx.select_effect_choice(&prompt, labels, move |cb_ctx, idx| {
+        let mut b = bindings.clone();
+        if let Some(name) = &bind_as {
+            b.insert_literal(name, idx as i64);
+        }
+        run_steps(&tail, cb_ctx, &mut b);
+        // Phase 2d Task 7: drain outer tail captured by run_steps when
+        // this selection was installed inside a control-flow body.
+        drain_dsl_outer_tail(cb_ctx);
+    });
 }
 
 fn install_select_reveal(
@@ -451,22 +509,13 @@ fn install_select_material(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
-    // Exclude the top card (last index): only offer non-top sources as candidates.
-    // Mirrors select_count_capped_multi(Material) which does stack_len - 1.
+    // Top-card exclusion is enforced by EffectContext::select_material itself
+    // (matches CountCappedZone::Material). Phase 2b accept-all filter applies.
     ctx.select_material(
         perm,
         &prompt,
         optional,
-        move |game, src_idx| {
-            let total = game
-                .player(perm.player)
-                .battle_area
-                .get(perm.index as usize)
-                .map(|p| p.card_sources.len())
-                .unwrap_or(0);
-            // Exclude top card: top is at index total-1.
-            src_idx + 1 < total
-        },
+        |_game, _src_idx| true,
         move |cb_ctx, src_idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -497,18 +546,14 @@ fn install_select_ordered_permutation(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
-    ctx.select_ordered_permutation(
-        items,
-        &prompt,
-        move |cb_ctx, ordered| {
-            let mut b = bindings.clone();
-            if let Some(name) = &bind_as {
-                b.insert_card_list(name, ordered);
-            }
-            run_steps(&tail, cb_ctx, &mut b);
-            drain_dsl_outer_tail(cb_ctx);
-        },
-    );
+    ctx.select_ordered_permutation(items, &prompt, move |cb_ctx, ordered| {
+        let mut b = bindings.clone();
+        if let Some(name) = &bind_as {
+            b.insert_card_list(name, ordered);
+        }
+        run_steps(&tail, cb_ctx, &mut b);
+        drain_dsl_outer_tail(cb_ctx);
+    });
 }
 
 #[allow(clippy::too_many_arguments)]

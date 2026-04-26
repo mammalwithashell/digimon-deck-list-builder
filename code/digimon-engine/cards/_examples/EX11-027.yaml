@@ -1,0 +1,42 @@
+card: EX11-027
+name: Maquinamon
+kind: digimon
+level: 3
+color: [green, black]
+cost: 3
+dp: 1000
+traits: [Composite, LIBERATOR]
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, name_contains: "Maquinamon" }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "Reveal 3; add Maquinamon cards, then link"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - select_reveal:
+          of: you
+          bind_as: maquinamon
+          optional: true
+          filter: { name_contains: "Maquinamon" }
+          prompt: "Add Maquinamon"
+      - add_to_hand_from_reveal: { of: you, card: maquinamon }
+      - select_reveal:
+          of: you
+          bind_as: text_card
+          optional: true
+          filter:
+            any_of:
+              - name_contains: "Maquinamon"
+              - trait_has: Composite
+          prompt: "Add a Maquinamon-text card"
+      - add_to_hand_from_reveal: { of: you, card: text_card }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - raw_rust: { fn: ex11_027_optional_link_maquinamon }
+
+  - kind: raw_rust
+    fn: ex11_027_link_requirements
+    triggers: [main_from_hand, main_on_field]

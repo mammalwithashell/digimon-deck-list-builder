@@ -1,11 +1,12 @@
 //! Predicate evaluator. Phase 1c Task 3: leaf fields + combinators + existentials.
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledColor, CompiledExistential, CompiledPlayerRef, CompiledPredicate,
-    CompiledZone,
+    CompiledBindingCompare, CompiledCardKind, CompiledColor, CompiledExistential,
+    CompiledPlayerRef, CompiledPredicate, CompiledZone,
 };
 
 use crate::card_source::CardHandle;
+use crate::dsl_cards::bindings::Bindings;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, PlayerId};
 use crate::permanent::PermanentHandle;
@@ -22,6 +23,15 @@ pub fn eval_predicate(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
     subject: PredicateSubject,
+) -> bool {
+    eval_predicate_with_bindings(pred, rctx, subject, None)
+}
+
+pub fn eval_predicate_with_bindings(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    subject: PredicateSubject,
+    bindings: Option<&Bindings>,
 ) -> bool {
     // Game-state fields — independent of subject.
     if let Some(want) = pred.your_turn {
@@ -59,40 +69,54 @@ pub fn eval_predicate(
 
     // Combinators — short-circuit on first failure.
     for child in &pred.all_of {
-        if !eval_predicate(child, rctx, subject) {
+        if !eval_predicate_with_bindings(child, rctx, subject, bindings) {
             return false;
         }
     }
     if !pred.any_of.is_empty() {
-        let any_match = pred.any_of.iter().any(|c| eval_predicate(c, rctx, subject));
+        let any_match = pred
+            .any_of
+            .iter()
+            .any(|c| eval_predicate_with_bindings(c, rctx, subject, bindings));
         if !any_match {
             return false;
         }
     }
     for child in &pred.none_of {
-        if eval_predicate(child, rctx, subject) {
+        if eval_predicate_with_bindings(child, rctx, subject, bindings) {
             return false;
         }
     }
     if let Some(inner) = &pred.not {
-        if eval_predicate(inner, rctx, subject) {
+        if eval_predicate_with_bindings(inner, rctx, subject, bindings) {
+            return false;
+        }
+    }
+
+    if let Some(values) = &pred.equals {
+        if !compare_binding_values(values, bindings, |a, b| a == b) {
+            return false;
+        }
+    }
+    if let Some(values) = &pred.not_equals {
+        if !compare_binding_values(values, bindings, |a, b| a != b) {
             return false;
         }
     }
 
     // Existentials — scan battle areas.
     if let Some(ex) = &pred.any_permanent {
-        if !existential_any(ex, rctx) {
+        if !existential_any(ex, rctx, bindings) {
             return false;
         }
     }
     if let Some(ex) = &pred.no_permanent {
-        if existential_any(ex, rctx) {
+        if existential_any(ex, rctx, bindings) {
             return false;
         }
     }
     if let Some(ex) = &pred.all_permanents {
-        if !existential_all(ex, rctx) {
+        if !existential_all(ex, rctx, bindings) {
             return false;
         }
     }
@@ -104,12 +128,49 @@ pub fn eval_predicate(
     }
 }
 
-fn existential_any(ex: &CompiledExistential, rctx: &EffectReadContext<'_>) -> bool {
+fn compare_binding_values(
+    values: &[CompiledBindingCompare],
+    bindings: Option<&Bindings>,
+    cmp: impl Fn(i64, i64) -> bool,
+) -> bool {
+    let Some((first, rest)) = values.split_first() else {
+        return false;
+    };
+    let Some(left) = resolve_compare_value(first, bindings) else {
+        return false;
+    };
+    rest.iter()
+        .all(|right| resolve_compare_value(right, bindings).is_some_and(|r| cmp(left, r)))
+}
+
+fn resolve_compare_value(
+    value: &CompiledBindingCompare,
+    bindings: Option<&Bindings>,
+) -> Option<i64> {
+    match value {
+        CompiledBindingCompare::Literal(n) => Some(*n),
+        CompiledBindingCompare::Binding(name) => bindings?.get_literal(name),
+    }
+}
+
+fn existential_any(
+    ex: &CompiledExistential,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> bool {
     for p in existential_players(ex.of, rctx) {
         let n = rctx.game.player(p).battle_area.len();
         for i in 0..n {
-            let handle = PermanentHandle { player: p, index: i as u8 };
-            if eval_predicate(&ex.predicate, rctx, PredicateSubject::Permanent(handle)) {
+            let handle = PermanentHandle {
+                player: p,
+                index: i as u8,
+            };
+            if eval_predicate_with_bindings(
+                &ex.predicate,
+                rctx,
+                PredicateSubject::Permanent(handle),
+                bindings,
+            ) {
                 return true;
             }
         }
@@ -117,14 +178,26 @@ fn existential_any(ex: &CompiledExistential, rctx: &EffectReadContext<'_>) -> bo
     false
 }
 
-fn existential_all(ex: &CompiledExistential, rctx: &EffectReadContext<'_>) -> bool {
+fn existential_all(
+    ex: &CompiledExistential,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> bool {
     let mut any_seen = false;
     for p in existential_players(ex.of, rctx) {
         let n = rctx.game.player(p).battle_area.len();
         for i in 0..n {
             any_seen = true;
-            let handle = PermanentHandle { player: p, index: i as u8 };
-            if !eval_predicate(&ex.predicate, rctx, PredicateSubject::Permanent(handle)) {
+            let handle = PermanentHandle {
+                player: p,
+                index: i as u8,
+            };
+            if !eval_predicate_with_bindings(
+                &ex.predicate,
+                rctx,
+                PredicateSubject::Permanent(handle),
+                bindings,
+            ) {
                 return false;
             }
         }

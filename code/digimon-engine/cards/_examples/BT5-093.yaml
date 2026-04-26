@@ -1,7 +1,7 @@
 card: BT5-093
 name: Tai Kamiya & Matt Ishida
 kind: tamer
-color: [black]
+color: [white]
 cost: 4
 effects:
   - when: start_of_your_turn

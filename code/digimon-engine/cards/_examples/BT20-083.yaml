@@ -2,7 +2,7 @@ card: BT20-083
 name: Omekamon
 kind: digimon
 level: 4
-color: [black]
+color: [white]
 cost: 5
 dp: 5000
 traits: [Puppet, X Antibody, LIBERATOR]
