@@ -30,7 +30,7 @@ from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.callbacks import BaseCallback
 
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
-from digimon_gym.engine.game import ACTION_SPACE_SIZE
+from digimon_engine import ACTION_SPACE_SIZE
 from digimon_gym.agents.gauntlet import MetaGauntlet, GauntletWrapper
 from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
 from digimon_gym.agents.maskable_recurrent import (
@@ -795,7 +795,7 @@ def main():
     # Load player deck if specified
     deck1 = None
     if args.deck1:
-        from digimon_gym.engine.data.deck_loader import parse_deck
+        from digimon_engine import parse_deck
         with open(args.deck1, "r") as f:
             deck1 = parse_deck(f.read())
         print(f"  Player deck: {len(deck1)} cards from {args.deck1}")

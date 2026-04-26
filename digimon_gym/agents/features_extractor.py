@@ -21,8 +21,8 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 from digimon_gym.engine.data.tensor_layout import (
     CARD_ID_POSITIONS, SCALAR_POSITIONS, NUM_CARD_SLOTS, NUM_SCALAR_SLOTS,
-)
-from digimon_gym.engine.data.card_registry import REGISTRY_CAPACITY, EMBEDDING_DIM
+)  # parity-doc: tensor_layout stays on Python engine
+from digimon_engine import REGISTRY_CAPACITY, EMBEDDING_DIM
 
 
 class CardEmbeddingExtractor(BaseFeaturesExtractor):
