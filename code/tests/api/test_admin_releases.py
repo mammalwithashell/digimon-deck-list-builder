@@ -10,7 +10,7 @@ import boto3
 import pytest
 from botocore.client import Config as BotocoreConfig
 from httpx import ASGITransport, AsyncClient
-from moto import mock_s3
+from moto import mock_aws
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -85,7 +85,7 @@ async def client(session_factory, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _mock_spaces(monkeypatch):
-    """Wrap every test with moto mock_s3 and create the test bucket."""
+    """Wrap every test with moto mock_aws and create the test bucket."""
     monkeypatch.setenv("SPACES_ENDPOINT", _ENDPOINT)
     monkeypatch.setenv("SPACES_BUCKET", _BUCKET)
     monkeypatch.setenv("SPACES_REGION", _REGION)
@@ -96,7 +96,7 @@ def _mock_spaces(monkeypatch):
     monkeypatch.setenv("AWS_DEFAULT_REGION", _REGION)
     spaces._client.cache_clear()
 
-    with mock_s3():
+    with mock_aws():
         raw = _raw_client()
         raw.create_bucket(Bucket=_BUCKET)
         yield

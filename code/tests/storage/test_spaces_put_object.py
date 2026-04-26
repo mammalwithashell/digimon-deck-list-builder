@@ -6,7 +6,7 @@ import json
 import boto3
 import pytest
 from botocore.client import Config as BotocoreConfig
-from moto import mock_s3
+from moto import mock_aws
 
 from server.storage import spaces
 
@@ -54,7 +54,7 @@ def _make_bucket(s3_client):
     s3_client.create_bucket(Bucket=_BUCKET)
 
 
-@mock_s3
+@mock_aws
 def test_put_object_stores_bytes_with_headers():
     raw = _raw_client()
     _make_bucket(raw)
@@ -72,7 +72,7 @@ def test_put_object_stores_bytes_with_headers():
     assert head["CacheControl"] == "public, max-age=60"
 
 
-@mock_s3
+@mock_aws
 def test_put_json_serializes_dict():
     raw = _raw_client()
     _make_bucket(raw)

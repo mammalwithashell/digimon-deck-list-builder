@@ -8,7 +8,7 @@ import boto3
 import pytest
 from botocore.client import Config as BotocoreConfig
 from botocore.exceptions import ClientError
-from moto import mock_s3
+from moto import mock_aws
 
 from server.storage import spaces
 
@@ -73,7 +73,7 @@ def _make_bucket(s3_client):
 # ---------------------------------------------------------------------------
 
 
-@mock_s3
+@mock_aws
 def test_generate_presigned_put_returns_signed_url():
     """generate_presigned_put() should return a URL containing X-Amz-Signature."""
     raw = _raw_client()
@@ -83,7 +83,7 @@ def test_generate_presigned_put_returns_signed_url():
     assert "X-Amz-Signature" in url, f"Expected signed URL, got: {url}"
 
 
-@mock_s3
+@mock_aws
 def test_head_object_roundtrip():
     """PUT a blob via boto3 directly, then HEAD it via wrapper — ContentLength must match."""
     raw = _raw_client()
@@ -95,7 +95,7 @@ def test_head_object_roundtrip():
     assert meta["ContentLength"] == len(blob)
 
 
-@mock_s3
+@mock_aws
 def test_stream_sha256_matches_hashlib():
     """stream_sha256() must produce the same digest as hashlib.sha256 on the same bytes."""
     raw = _raw_client()
@@ -109,7 +109,7 @@ def test_stream_sha256_matches_hashlib():
     assert got_size == len(blob)
 
 
-@mock_s3
+@mock_aws
 def test_delete_object_removes():
     """PUT an object, delete it via wrapper, then HEAD should raise ClientError 404."""
     raw = _raw_client()
@@ -123,7 +123,7 @@ def test_delete_object_removes():
     assert exc_info.value.response["Error"]["Code"] in ("404", "NoSuchKey")
 
 
-@mock_s3
+@mock_aws
 def test_iter_object_chunks_across_boundary():
     """Reassembled stream must equal the original and span multiple chunks."""
     raw = _raw_client()
@@ -137,7 +137,7 @@ def test_iter_object_chunks_across_boundary():
     assert len(chunks) >= 2  # confirms we actually crossed a chunk boundary
 
 
-@mock_s3
+@mock_aws
 def test_download_and_hash_writes_file_and_matches_hashlib(tmp_path):
     """download_and_hash writes bytes to disk AND returns sha256 matching hashlib."""
     raw = _raw_client()
@@ -153,7 +153,7 @@ def test_download_and_hash_writes_file_and_matches_hashlib(tmp_path):
     assert sha_hex == hashlib.sha256(blob).hexdigest()
 
 
-@mock_s3
+@mock_aws
 def test_missing_env_var_raises_at_call_time(monkeypatch):
     """If SPACES_ENDPOINT is unset, calling head_object should raise RuntimeError (not ImportError)."""
     monkeypatch.delenv("SPACES_ENDPOINT")
