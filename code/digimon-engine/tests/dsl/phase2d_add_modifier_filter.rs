@@ -15,7 +15,7 @@ use digimon_engine::enums::ModifierType;
 #[test]
 fn add_modifier_filter_targets_every_match() {
     // P0 has 2 digimon, P1 has 1. Filter: { kind: digimon }. Expect all 3
-    // to receive the CannotBeAffected modifier with EndOfTurn expiry.
+    // to receive the CannotBeAffected modifier with end_of_turn expiry.
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("SRC", "SRC"))
         .add_card(make_test_card("D1", "D1"))
@@ -37,7 +37,7 @@ fn add_modifier_filter_targets_every_match() {
         }),
         modifier: "CannotBeAffected".to_string(),
         value: CompiledModifierValue::Literal(0),
-        expiry: "EndOfTurn".to_string(),
+        expiry: "end_of_turn".to_string(),
     }];
 
     {

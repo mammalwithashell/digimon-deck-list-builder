@@ -7,7 +7,7 @@
 //!   SelectOpponentPermanent { bind_as: "tgt", filter: {}, prompt: "...", optional: false }
 //!   If { condition: your_turn == true,
 //!        then:        [DeletePermanent { target: Named("tgt") }],
-//!        else_branch: [AddDpModifier { target: Named("tgt"), value: 3000, expiry: "EndOfTurn" }] }
+//!        else_branch: [AddDpModifier { target: Named("tgt"), value: 3000, expiry: "end_of_turn" }] }
 
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledModifierValue, CompiledPredicate, CompiledStep,
@@ -74,7 +74,7 @@ fn select_then_if_your_turn_deletes_opponent_permanent() {
             else_branch: vec![CompiledStep::AddDpModifier {
                 target: CompiledBindingRef::Named("tgt".to_string()),
                 value: CompiledModifierValue::Literal(3000),
-                expiry: "EndOfTurn".to_string(),
+                expiry: "end_of_turn".to_string(),
             }],
         },
     ];
@@ -180,7 +180,7 @@ fn select_then_if_opponents_turn_buffs_opponent_permanent() {
             else_branch: vec![CompiledStep::AddDpModifier {
                 target: CompiledBindingRef::Named("tgt".to_string()),
                 value: CompiledModifierValue::Literal(3000),
-                expiry: "EndOfTurn".to_string(),
+                expiry: "end_of_turn".to_string(),
             }],
         },
     ];

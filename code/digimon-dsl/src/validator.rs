@@ -272,11 +272,19 @@ fn is_known_keyword(name: &str) -> bool {
     )
 }
 
+/// Every snake_case expiry key the validator accepts. Must stay in lockstep
+/// with `digimon_engine::dsl_cards::expiry_map::all_engine_expiry_keys()`;
+/// the parity test in `code/digimon-engine/tests/dsl/expiry_parity.rs`
+/// fails the build if the two lists diverge.
+pub const KNOWN_EXPIRY_KEYS: &[&str] = &[
+    "permanent",
+    "end_of_turn",
+    "end_of_opponents_turn",
+    "end_of_attack",
+    "end_of_battle",
+    "until_leave_field",
+];
+
 fn is_known_expiry(name: &str) -> bool {
-    matches!(
-        name,
-        "end_of_your_turn" | "end_of_opponents_turn" | "end_of_your_next_turn"
-        | "end_of_opponents_next_turn" | "end_of_turn" | "end_of_battle"
-        | "end_of_attack" | "permanent" | "until_next_unsuspend" | "while_source_exists"
-    )
+    KNOWN_EXPIRY_KEYS.contains(&name)
 }

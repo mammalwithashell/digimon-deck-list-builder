@@ -73,7 +73,7 @@ fn add_dp_modifier_formula_value_resolves_against_target_stack_size() {
             per: CompiledPerSelector::StackSize,
             delta: 1000,
         }),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
     };
     let mut bindings = Bindings::new();
     bindings.insert_permanent("tgt", handle);
@@ -129,7 +129,7 @@ fn add_modifier_filter_target_formula_evaluated_per_match() {
             per: CompiledPerSelector::StackSize,
             delta: 1,
         }),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
     };
 
     {
@@ -168,7 +168,7 @@ fn add_dp_modifier_literal_arm_unchanged() {
     let step = CompiledStep::AddDpModifier {
         target: CompiledBindingRef::Named("tgt".into()),
         value: CompiledModifierValue::Literal(3000),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
     };
     let mut bindings = Bindings::new();
     bindings.insert_permanent("tgt", handle);
@@ -207,7 +207,7 @@ fn add_dp_modifier_formula_large_value_passes_through() {
     let step = CompiledStep::AddDpModifier {
         target: CompiledBindingRef::Named("tgt".into()),
         value: CompiledModifierValue::Formula(CompiledFormula::Literal(40000)),
-        expiry: "EndOfTurn".into(),
+        expiry: "end_of_turn".into(),
     };
     let mut bindings = Bindings::new();
     bindings.insert_permanent("tgt", handle);
