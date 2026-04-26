@@ -1,0 +1,149 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, List, Dict, Any
+from ....core.card_script import CardScript
+from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
+
+if TYPE_CHECKING:
+    from ....core.card_source import CardSource
+
+
+class BT15_026(CardScript):
+    """BT15-026 WereGarurumon | Lv.5"""
+
+    def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        effects = []
+
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
+        effect0 = ICardEffect()
+        effect0.set_effect_name("BT15-026 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 3
+        effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
+        effect0._alt_digi_name = "Garurumon"
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            return True
+        effect0.set_can_use_condition(condition0)
+        effects.append(effect0)
+
+        # Factory effect: blast_digivolve
+        # Blast Digivolve
+        effect1 = ICardEffect()
+        effect1.set_effect_name("BT15-026 Blast Digivolve")
+        effect1.set_effect_description("Blast Digivolve")
+        effect1.is_counter_effect = True
+        effect1._is_blast_digivolve = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # [On Play] Trigger <Draw 1>. (Draw 1 card from your deck.)
+        effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect2.set_effect_name("BT15-026 Draw 1 and trash 1 card from hand")
+        effect2.set_effect_description("[On Play] Trigger <Draw 1>. (Draw 1 card from your deck.)")
+        effect2.is_on_play = True
+
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
+            # Triggered on play — validated by engine timing
+            return True
+
+        effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Draw 1, Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.draw_cards(1)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
+
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # [When Digivolving] Trigger <Draw 1>. (Draw 1 card from your deck.)
+        effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect3.set_effect_name("BT15-026 Draw 1 and trash 1 card from hand")
+        effect3.set_effect_description("[When Digivolving] Trigger <Draw 1>. (Draw 1 card from your deck.)")
+        effect3.is_when_digivolving = True
+
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
+            # Triggered when digivolving — validated by engine timing
+            return True
+
+        effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Draw 1, Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.draw_cards(1)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
+
+        # Timing: EffectTiming.OnAddHand
+        # [All Turns][Once Per Turn] When one of your Digimon's effects adds cards to your hand, 1 of your opponent's Digimon or Tamers can't suspend until the end of the turn.
+        effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAddHand)
+        effect4.set_effect_name("BT15-026 Opponent's 1 Digimon or Tamer can't suspend")
+        effect4.set_effect_description("[All Turns][Once Per Turn] When one of your Digimon's effects adds cards to your hand, 1 of your opponent's Digimon or Tamers can't suspend until the end of the turn.")
+        effect4.set_max_count_per_turn(1)
+        effect4.set_hash_string("CantSuspend_BT15_026")
+
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Effect Immunity"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from engine_py_legacy.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
+
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
+
+        return effects

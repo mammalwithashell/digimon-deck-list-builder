@@ -31,9 +31,9 @@ Process an entire archetype's card scripts through a test-driven faithfulness pi
 | Engine API Ref | `qa/archetype-qa/engine-api-reference.md` |
 | Engine Gaps | `qa/archetype-qa/engine-gaps.md` |
 | C# Scripts | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CLASS_NAME}.cs` |
-| Python Scripts | `digimon_gym/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py` |
-| Card Metadata | `digimon_gym/engine/data/cards.json` |
-| Deck Library | `digimon_gym/engine/data/deck_library.json` |
+| Python Scripts | `code/engine_py_legacy/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py` |
+| Card Metadata | `data/cards.json` |
+| Deck Library | `data/deck_library.json` |
 | Validated Cards | `qa/qa-reports/validated_cards.json` |
 | Archetype QA | `qa/archetype-qa/{archetype_name}.md` |
 | Pinecone Index | `digimon-engine` (namespaces: engine-api, card-scripts, card-metadata) |
@@ -150,12 +150,12 @@ For each set that appears in the card pool, ensure both test and script director
 
 ```bash
 # Test directories
-mkdir -p tests/behavioral/{set_lower}
-touch tests/behavioral/{set_lower}/__init__.py
+mkdir -p code/engine_py_legacy/tests/behavioral/{set_lower}
+touch code/engine_py_legacy/tests/behavioral/{set_lower}/__init__.py
 
 # Script directories (for IMPLEMENT cards that need new scripts)
-mkdir -p digimon_gym/engine/data/scripts/{set_lower}
-touch digimon_gym/engine/data/scripts/{set_lower}/__init__.py
+mkdir -p code/engine_py_legacy/engine/data/scripts/{set_lower}
+touch code/engine_py_legacy/engine/data/scripts/{set_lower}/__init__.py
 ```
 
 ### 3d. Initialize Notion tracker
@@ -185,9 +185,9 @@ Repeat for each batch of 4 cards. Maintain running totals: `faithful_count`, `im
 
 For each card in the current batch, the orchestrator reads:
 
-1. **Card metadata** from `digimon_gym/engine/data/cards.json` — extract entry for this card ID. Key fields: `card_name_eng`, `effect_description_eng`, `inherited_effect_description_eng`, `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`
+1. **Card metadata** from `data/cards.json` — extract entry for this card ID. Key fields: `card_name_eng`, `effect_description_eng`, `inherited_effect_description_eng`, `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`
 
-2. **Current Python script** from `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py` — if the card is categorized as IMPLEMENT (no script exists), set to `null` in the agent prompt
+2. **Current Python script** from `code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py` — if the card is categorized as IMPLEMENT (no script exists), set to `null` in the agent prompt
 
 3. **C# reference** — glob for `DCGO/Assets/Scripts/CardEffect/{SET}/*/{CLASS_NAME}.cs` (color subdirectory varies; C# class name uses underscores: BT17-001 → BT17_001.cs). The C# source is the **behavioral source of truth** for implementation. If not found, note "C# reference not available — use card text as sole source of truth".
 
@@ -231,12 +231,12 @@ You are performing a test-driven {MODE: "faithfulness review and fix" | "impleme
 
 ## Current Python Script
 {If FIX:}
-File: `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
+File: `code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py`
 ```python
 {script contents}
 ```
 {If IMPLEMENT:}
-No existing script. You will create: `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
+No existing script. You will create: `code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py`
 
 ## C# Reference Implementation (Behavioral Source of Truth)
 File: `{csharp_path}`
@@ -261,7 +261,7 @@ Break the card text into numbered clauses. For each clause identify:
 ### Step 2: Write DebugRunner Tests FIRST
 BEFORE reading or modifying any script, write tests that encode what the card SHOULD do based on the card text (source of truth).
 
-Create `tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py`:
+Create `code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py`:
 
 ```python
 import pytest
@@ -291,11 +291,11 @@ class Test{CLASS_NAME}{CardName}:
 - One test method per distinct effect clause
 - For conditional effects: at least one positive + one negative case
 - Tests should verify specific state changes described in the card text
-- Use the `debug_runner` fixture from `tests/conftest.py`
+- Use the `debug_runner` fixture from `code/engine_py_legacy/tests/conftest.py`
 
 ### Step 3: Run Tests
 ```bash
-python -m pytest tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py -v
+python -m pytest code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py -v
 ```
 {If FIX: "Failures reveal discrepancies between card text and current script."}
 {If IMPLEMENT: "Tests will fail since no script exists yet. This confirms your test expectations before implementation."}
@@ -309,11 +309,11 @@ Read the script carefully. Compare each clause against:
 - Run the 16-item Error Checklist below
 
 {If IMPLEMENT:}
-Create `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py` from scratch:
+Create `code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py` from scratch:
 - Use the C# reference as behavioral guide for timing, conditions, and flow
 - Follow patterns from the Engine API Reference excerpt below
 - Translate C# patterns to Python engine API (see Error Checklist for correct API usage)
-- Ensure the script directory exists: `digimon_gym/engine/data/scripts/{set}/` (create `__init__.py` if needed)
+- Ensure the script directory exists: `code/engine_py_legacy/engine/data/scripts/{set}/` (create `__init__.py` if needed)
 
 ### Step 5: {FIX: "Fix the Script" | IMPLEMENT: "Refine the Script"}
 For each failing test / MISMATCH clause:
@@ -321,13 +321,13 @@ For each failing test / MISMATCH clause:
 - Follow patterns from the Engine API Reference
 - Verify importability:
   ```bash
-  python -c "from digimon_gym.engine.data.scripts.{set}.{set}_{nnn} import {CLASS_NAME}; print('OK')"
+  python -c "from engine_py_legacy.engine.data.scripts.{set}.{set}_{nnn} import {CLASS_NAME}; print('OK')"
   ```
 - If a clause hits an engine gap: add comment `# ENGINE GAP: {description}` and report BLOCKED for that clause
 
 ### Step 6: Re-run Tests
 ```bash
-python -m pytest tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py -v
+python -m pytest code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py -v
 ```
 If tests fail: analyze → fix script or test → rerun. ONE revision round maximum.
 
@@ -410,7 +410,7 @@ Result: MATCH | IMPLEMENTED | FIXED | BLOCKED
 Clause 2 ...
 
 ### Tests Written
-- tests/behavioral/{set}/test_{set}_{nnn}.py — N tests
+- code/engine_py_legacy/tests/behavioral/{set}/test_{set}_{nnn}.py — N tests
   - test_{name}: {what it verifies} — {PASS|FAIL}
   ...
 
@@ -526,8 +526,8 @@ After the review agent returns:
 #### 4D-i. Copy files from worktrees
 
 For each agent's worktree, copy:
-- Script: `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py` (modified for FIX cards, newly created for IMPLEMENT cards)
-- New test file: `tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py`
+- Script: `code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py` (modified for FIX cards, newly created for IMPLEMENT cards)
+- New test file: `code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py`
 
 #### 4D-ii. Apply review fixes
 
@@ -536,7 +536,7 @@ For any card the review agent marked NEEDS-FIX, apply the specific fix instructi
 #### 4D-iii. Run all batch tests together
 
 ```bash
-python -m pytest tests/behavioral/{set_lower}/test_{set_lower}_{nnn1}.py tests/behavioral/{set_lower}/test_{set_lower}_{nnn2}.py tests/behavioral/{set_lower}/test_{set_lower}_{nnn3}.py tests/behavioral/{set_lower}/test_{set_lower}_{nnn4}.py -v
+python -m pytest code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn1}.py code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn2}.py code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn3}.py code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn4}.py -v
 ```
 
 If any tests fail: one targeted fix round by the orchestrator. Diagnose and fix the specific issue.

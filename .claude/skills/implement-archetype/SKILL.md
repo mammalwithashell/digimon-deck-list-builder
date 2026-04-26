@@ -14,11 +14,11 @@ You are implementing all card effects for archetype **$ARGUMENTS** in the Digimo
 - **Design Spec**: `docs/superpowers/specs/2026-03-10-implement-archetype-design.md`
 - **Card API**: `https://digimoncard.io/index.php/api-public/search?card=<CARD_ID>`
 - **C# Scripts**: `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs`
-- **Python Scripts**: `digimon_gym/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py`
-- **Frozen Manifest**: `digimon_gym/engine/data/scripts/_frozen_manifest.json`
-- **Deck Library**: `digimon_gym/engine/data/deck_library.json`
+- **Python Scripts**: `code/engine_py_legacy/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py`
+- **Frozen Manifest**: `code/engine_py_legacy/engine/data/scripts/_frozen_manifest.json`
+- **Deck Library**: `data/deck_library.json`
 - **Engine Gaps**: `qa/archetype-qa/engine-gaps.md`
-- **Known Complex Cards**: `digimon_gym/engine/data/scripts/known_complex_cards.json`
+- **Known Complex Cards**: `code/engine_py_legacy/engine/data/scripts/known_complex_cards.json`
 
 ---
 
@@ -388,7 +388,7 @@ If you encounter an unfamiliar engine pattern or get stuck:
 
 ## Output Format
 For each card:
-1. Write the complete script file to: digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py
+1. Write the complete script file to: code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py
 2. After writing, output the verdict:
 ```
 CARD_ID: IMPLEMENTED
@@ -450,7 +450,7 @@ For each IMPLEMENTED script:
 **Card Text:** {effect_text}
 **Inherited Text:** {inherited_text}
 **Security Text:** {security_text}
-**File:** digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py
+**File:** code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py
 
 ```python
 {script contents written by Sonnet agent}
@@ -591,7 +591,7 @@ After fixing QA failures and writing new scripts, ingest updated card scripts in
 so the next archetype run benefits from them:
 
 ```bash
-python tools/ingest_pinecone.py --namespace card-scripts --set {set_id}
+python code/tools/ingest_pinecone.py --namespace card-scripts --set {set_id}
 ```
 
 ---
@@ -633,9 +633,9 @@ If crashes occur, identify the failing script from the stack trace and fix it. R
 
 ### 6b. Targeted effect tests
 
-For Complex cards and fixed QA-FAIL cards, write pytest cases in `tests/behavioral/test_{archetype_name}.py`.
+For Complex cards and fixed QA-FAIL cards, write pytest cases in `code/engine_py_legacy/tests/behavioral/test_{archetype_name}.py`.
 
-Each test should use `DebugRunner` (via the `debug_runner` fixture from `tests/conftest.py`):
+Each test should use `DebugRunner` (via the `debug_runner` fixture from `code/engine_py_legacy/tests/conftest.py`):
 1. Set up a specific board state with real cards
 2. Trigger the effect
 3. Assert the outcome via snapshots
@@ -666,7 +666,7 @@ class TestGankoomonEffects:
         assert "blocker" in snap.p1_field[0].keywords
 ```
 
-Run: `python -m pytest tests/behavioral -v`
+Run: `python -m pytest code/engine_py_legacy/tests/behavioral -v`
 
 ---
 
@@ -691,8 +691,8 @@ Present to the user:
 - N tests written, all passing
 
 ### New/Modified Files
-- digimon_gym/engine/data/scripts/{set}/{files}...
-- tests/test_archetype_{name}.py
+- code/engine_py_legacy/engine/data/scripts/{set}/{files}...
+- code/engine_py_legacy/tests/test_archetype_{name}.py
 - qa/archetype-qa/{name}.md
 
 ### Engine Gaps Found

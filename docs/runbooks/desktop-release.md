@@ -28,13 +28,13 @@ Tag body = release notes. Testers see it verbatim in the update modal — keep i
 | `beta` | `updates/beta/latest.json` | Reserved | Not yet used |
 | `stable` | `updates/stable/latest.json` | Reserved | Not yet used |
 
-Only `alpha` is active. Path shape is future-proof — adding a channel is a static-file operation, not a schema change. Channel identifier is compile-baked into the desktop build via `src-tauri/src/updater.rs:MANIFEST_URL` and `tauri.conf.json:plugins.updater.endpoints`. Switching channels means building a different binary; you can't flip a tester mid-install.
+Only `alpha` is active. Path shape is future-proof — adding a channel is a static-file operation, not a schema change. Channel identifier is compile-baked into the desktop build via `code/src-tauri/src/updater.rs:MANIFEST_URL` and `tauri.conf.json:plugins.updater.endpoints`. Switching channels means building a different binary; you can't flip a tester mid-install.
 
 ### URL shapes
 
 | Concern | URL pattern | Set by |
 |---|---|---|
-| Manifest (Tauri reads this) | `https://<spaces-cdn-host>/updates/<channel>/latest.json` | `digimon_gym/db/routers/admin_releases.py:_manifest_key` + `spaces.public_url` |
+| Manifest (Tauri reads this) | `https://<spaces-cdn-host>/updates/<channel>/latest.json` | `code/server/db/routers/admin_releases.py:_manifest_key` + `spaces.public_url` |
 | Installer artifact | `https://<spaces-cdn-host>/releases/<release_id>/<filename>` | `admin_releases.py:_artifact_spaces_key` |
 | Filename (Windows) | `digimon-tcg-<version>-x86_64-setup.exe` | `admin_releases.py:_artifact_filename` |
 | Filename (Linux) | `digimon-tcg-<version>-x86_64.AppImage` | same |
@@ -49,7 +49,7 @@ Only `alpha` is active. Path shape is future-proof — adding a channel is a sta
 
 All `/admin/releases/*` endpoints require `ROLE_ADMIN` via `Bearer` JWT. The manifest URL is public-read (no auth).
 
-The `<spaces-cdn-host>` resolves via `digimon_gym/storage/spaces.py:public_url()`:
+The `<spaces-cdn-host>` resolves via `code/server/storage/spaces.py:public_url()`:
 - If `SPACES_CDN_URL` env var is set: `{SPACES_CDN_URL}/<key>` (DO Spaces CDN, preferred for throughput)
 - Else: `{SPACES_ENDPOINT}/{SPACES_BUCKET}/<key>` (direct origin)
 
@@ -79,7 +79,7 @@ Server reads these lazily — missing env vars raise `RuntimeError` at first Spa
 | `VITE_BUILD_TARGET` | `desktop` vs `web` — tree-shakes admin/training UI | CI, local dev (`npm run dev:desktop`) |
 | Tauri `env!("CARGO_PKG_VERSION")` | Runtime self-version for min-version comparison | `Cargo.toml:[package].version` |
 
-No runtime env vars consumed by the updater itself — the manifest URL + pubkey are compile-baked into the binary (`src-tauri/tauri.conf.json`, `src-tauri/src/updater.rs:MANIFEST_URL`). This is intentional: a tester can't be tricked into pointing at an attacker's manifest via env-var injection.
+No runtime env vars consumed by the updater itself — the manifest URL + pubkey are compile-baked into the binary (`code/src-tauri/tauri.conf.json`, `code/src-tauri/src/updater.rs:MANIFEST_URL`). This is intentional: a tester can't be tricked into pointing at an attacker's manifest via env-var injection.
 
 #### GitHub Actions secrets
 
@@ -102,7 +102,7 @@ No runtime env vars consumed by the updater itself — the manifest URL + pubkey
 | `$HOME\.tauri\digimon-updater.key` (maintainer machine) | Ed25519 private key (password-encrypted) | Key leak; pre-production launch |
 | 1Password "Digimon TCG" → "Tauri Updater Key" | Private key password | With the key |
 | GitHub Actions `TAURI_UPDATER_PRIVATE_KEY` + `TAURI_UPDATER_KEY_PASSWORD` | Signing key for CI builds | With the key |
-| `src-tauri/tauri.conf.json:plugins.updater.pubkey` | Public key (committed) | With the key, major version bump |
+| `code/src-tauri/tauri.conf.json:plugins.updater.pubkey` | Public key (committed) | With the key, major version bump |
 | DB `users` row `ci-desktop-release` | CI user's bcrypt password hash | Annually or on leak |
 | GitHub Actions `CI_ADMIN_TOKEN` | CI user's long-lived JWT (365d) | Annually or on leak; re-provision via the tool |
 
@@ -150,7 +150,7 @@ Canonical shape at `https://<spaces-cdn-host>/updates/<channel>/latest.json`. Se
 | `notes` | Update modal body | Plain text, newline-separated |
 | `platforms.<target>.signature` | Tauri plugin (Ed25519 verify) | Base64 output of `cargo tauri signer sign` |
 | `platforms.<target>.url` | Tauri plugin (download) | Public-read Spaces URL |
-| `min_version` | `src-tauri/src/updater.rs` (startup guard) | SemVer floor; running below triggers force-update modal |
+| `min_version` | `code/src-tauri/src/updater.rs` (startup guard) | SemVer floor; running below triggers force-update modal |
 | `engine_commit` | Display + future gating | 7-char git SHA at CI build time |
 | `channel` | Logging + admin UI | Redundant with URL path |
 | `release_id` | Telemetry, logging | UUID of the DB row |
@@ -177,11 +177,11 @@ Two independent paths; force-update takes precedence over the normal toast/modal
 |---|---|---|---|
 | Decisions + rationale | `Decisions` | _(n/a)_ | _(n/a)_ |
 | Manifest JSON shape | `Manifest contract` | Task 7 | `admin_releases.py:_build_manifest` |
-| Admin API surface | `Server surface` | Tasks 5–8 | `digimon_gym/db/routers/admin_releases.py` |
-| DB tables | `Server surface → DB schema` | Tasks 1–2 | `alembic/.../20260421_0015_app_releases.py`, `digimon_gym/db/models.py` |
-| Tauri wiring | `Tauri integration` | Tasks 10–12 | `src-tauri/tauri.conf.json`, `src-tauri/src/updater.rs`, `frontend/src/updater/` |
+| Admin API surface | `Server surface` | Tasks 5–8 | `code/server/db/routers/admin_releases.py` |
+| DB tables | `Server surface → DB schema` | Tasks 1–2 | `alembic/.../20260421_0015_app_releases.py`, `code/server/db/models.py` |
+| Tauri wiring | `Tauri integration` | Tasks 10–12 | `code/src-tauri/tauri.conf.json`, `code/src-tauri/src/updater.rs`, `code/frontend/src/updater/` |
 | CI pipeline | `Release pipeline` | Tasks 13–14 | `.github/workflows/desktop-release.yml`, `tools/provision_ci_release_user.py` |
-| Rollback + kill-switch | `Rollback + kill-switch` | Task 8 (unpublish) + Task 11 (min_version) | `admin_releases.py:unpublish_release`, `src-tauri/src/updater.rs:check_min_version` |
+| Rollback + kill-switch | `Rollback + kill-switch` | Task 8 (unpublish) + Task 11 (min_version) | `admin_releases.py:unpublish_release`, `code/src-tauri/src/updater.rs:check_min_version` |
 
 ---
 
@@ -189,7 +189,7 @@ Two independent paths; force-update takes precedence over the normal toast/modal
 
 - Private key file: `$HOME/.tauri/digimon-updater.key` (password-encrypted, maintainer machine only).
 - Password: 1Password → "Digimon TCG" → "Tauri Updater Key".
-- Public key: committed in `src-tauri/tauri.conf.json` under `plugins.updater.pubkey`.
+- Public key: committed in `code/src-tauri/tauri.conf.json` under `plugins.updater.pubkey`.
 - GitHub Actions secrets:
   - `TAURI_UPDATER_PRIVATE_KEY` — file contents
   - `TAURI_UPDATER_KEY_PASSWORD` — key passphrase
@@ -214,7 +214,7 @@ Get-Content -Raw $HOME\.tauri\digimon-updater.key | gh secret set TAURI_UPDATER_
 gh secret set TAURI_UPDATER_KEY_PASSWORD                # interactive paste
 gh secret set HOSTED_API_URL --body "https://api.digimon-tcg.example.com"
 
-# 4. Paste the printed public key into src-tauri/tauri.conf.json
+# 4. Paste the printed public key into code/src-tauri/tauri.conf.json
 #    plugins.updater.pubkey — commit that change
 
 # 5. Provision the CI admin user + long-lived token
@@ -223,7 +223,7 @@ python tools/provision_ci_release_user.py --password $PASS | gh secret set CI_AD
 Remove-Variable PASS
 ```
 
-The Spaces URL in `plugins.updater.endpoints` must match where the server writes the manifest (see `digimon_gym/storage/spaces.py:public_url()` — which prefers `SPACES_CDN_URL` on the server, else `SPACES_ENDPOINT/<bucket>/`). The default configured is `https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/updates/alpha/latest.json` — adjust if your bucket host differs.
+The Spaces URL in `plugins.updater.endpoints` must match where the server writes the manifest (see `code/server/storage/spaces.py:public_url()` — which prefers `SPACES_CDN_URL` on the server, else `SPACES_ENDPOINT/<bucket>/`). The default configured is `https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/updates/alpha/latest.json` — adjust if your bucket host differs.
 
 ---
 
@@ -231,8 +231,8 @@ The Spaces URL in `plugins.updater.endpoints` must match where the server writes
 
 1. Ensure `main` is green and the change you want to ship is merged.
 2. Bump the version in both files (they must stay in sync):
-   - `src-tauri/tauri.conf.json` — the `version` field at the top
-   - `src-tauri/Cargo.toml` — the `[package].version` field
+   - `code/src-tauri/tauri.conf.json` — the `version` field at the top
+   - `code/src-tauri/Cargo.toml` — the `[package].version` field
 3. Commit the version bump.
 4. Create an annotated tag with release notes in the body. The body becomes the update-modal text your testers see.
    ```bash
@@ -257,7 +257,7 @@ The Spaces URL in `plugins.updater.endpoints` must match where the server writes
 Testers can self-recover by updating forward. The rollback is "cut a new release from the last good commit":
 
 1. `git checkout <last-good-commit>`
-2. Bump `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml` to a version strictly greater than the broken one (e.g., broken `0.2.0-alpha.3` → cut `0.2.0-alpha.4`).
+2. Bump `code/src-tauri/tauri.conf.json` and `code/src-tauri/Cargo.toml` to a version strictly greater than the broken one (e.g., broken `0.2.0-alpha.3` → cut `0.2.0-alpha.4`).
 3. Tag + push:
    ```bash
    git tag -a desktop-v0.2.0-alpha.4 -m "Revert 0.2.0-alpha.3 — deckbuilder regression"
@@ -304,7 +304,7 @@ Rotation invalidates every already-installed tester's auto-update path — Tauri
    ```powershell
    cargo tauri signer generate -w $HOME\.tauri\digimon-updater-v2.key
    ```
-2. Update `src-tauri/tauri.conf.json`'s `plugins.updater.pubkey`.
+2. Update `code/src-tauri/tauri.conf.json`'s `plugins.updater.pubkey`.
 3. Update GHA secrets:
    ```powershell
    Get-Content -Raw $HOME\.tauri\digimon-updater-v2.key | gh secret set TAURI_UPDATER_PRIVATE_KEY

@@ -1,0 +1,1068 @@
+"""Tests for phase decoders: Block, Counter, Selection, and attack resolution phases.
+
+Covers:
+  A. Permanent.can_block() (6 tests)
+  B. Backward compatibility — attack without blockers/counters (4 tests)
+  C. BlockTiming decoder (8 tests)
+  D. CounterTiming decoder (7 tests)
+  E. Selection framework (5 tests)
+  F. Integration (3 tests)
+"""
+
+import pytest
+
+from engine_py_legacy.engine.game import (
+    Game, PendingAttack, PendingSelection,
+    ACTION_SPACE_SIZE, FIELD_SLOTS,
+)
+from engine_py_legacy.engine.data.enums import (
+    GamePhase, CardKind, CardColor, EffectTiming, AttackResolution,
+)
+from engine_py_legacy.engine.data.card_registry import CardRegistry
+from engine_py_legacy.engine.data.evo_cost import EvoCost
+from engine_py_legacy.engine.core.player import Player
+from engine_py_legacy.engine.core.permanent import Permanent
+from engine_py_legacy.engine.core.card_source import CardSource
+from engine_py_legacy.engine.core.entity_base import CEntity_Base
+from engine_py_legacy.engine.interfaces.card_effect import ICardEffect
+from engine_py_legacy.engine.loggers import VerboseLogger
+
+
+# ─── Helpers ─────────────────────────────────────────────────────────
+
+def make_card(card_id="TEST-001", name="TestDigimon", kind=CardKind.Digimon,
+              dp=5000, level=4, play_cost=5, colors=None, owner=None):
+    """Create a CardSource with given attributes."""
+    entity = CEntity_Base()
+    entity.card_id = card_id
+    entity.card_name_eng = name
+    entity.card_kind = kind
+    entity.dp = dp
+    entity.level = level
+    entity.play_cost = play_cost
+    entity.card_colors = colors or [CardColor.Red]
+    cs = CardSource()
+    cs.set_base_data(entity, owner)
+    return cs
+
+
+class BlockerEffect(ICardEffect):
+    """Mock effect that grants <Blocker>."""
+    def __init__(self, inherited=False):
+        super().__init__()
+        self._is_blocker = True
+        self.is_inherited_effect = inherited
+        self.timing = EffectTiming.NoTiming
+
+
+class BlastDigivolveEffect(ICardEffect):
+    """Mock effect that grants Blast Digivolve (counter)."""
+    def __init__(self):
+        super().__init__()
+        self._is_blast_digivolve = True
+        self.is_counter_effect = True
+        self.is_inherited_effect = False
+        self.timing = EffectTiming.NoTiming
+
+
+class TriggerEffect(ICardEffect):
+    """Mock effect used to assert exact timing and source restrictions."""
+
+    def __init__(self, *, on_play=False, when_digivolving=False,
+                 inherited=False, description="Effect", callback=None):
+        super().__init__()
+        self.is_on_play = on_play
+        self.is_when_digivolving = when_digivolving
+        self.is_inherited_effect = inherited
+        self.set_effect_description(description)
+        self.set_can_use_condition(lambda ctx: True)
+        self.set_on_process_callback(callback or (lambda ctx: None))
+
+
+class MockCardSourceWithEffects(CardSource):
+    """CardSource that returns custom effects instead of querying CardDatabase."""
+    def __init__(self):
+        super().__init__()
+        self._mock_effects = []
+
+    def effect_list(self, timing):
+        return self._mock_effects
+
+
+def make_blocker_card(card_id="BLOCKER-001", name="BlockerMon", dp=6000,
+                      level=4, colors=None, owner=None, inherited=False):
+    """Create a CardSource that has the <Blocker> keyword."""
+    entity = CEntity_Base()
+    entity.card_id = card_id
+    entity.card_name_eng = name
+    entity.card_kind = CardKind.Digimon
+    entity.dp = dp
+    entity.level = level
+    entity.play_cost = 5
+    entity.card_colors = colors or [CardColor.Red]
+    cs = MockCardSourceWithEffects()
+    cs.set_base_data(entity, owner)
+    cs._mock_effects = [BlockerEffect(inherited=inherited)]
+    return cs
+
+
+def make_blast_digivolve_card(card_id="BLAST-001", name="BlastMon", dp=8000,
+                               level=5, colors=None, owner=None):
+    """Create a CardSource with Blast Digivolve and proper evo_costs."""
+    entity = CEntity_Base()
+    entity.card_id = card_id
+    entity.card_name_eng = name
+    entity.card_kind = CardKind.Digimon
+    entity.dp = dp
+    entity.level = level
+    entity.play_cost = 7
+    entity.card_colors = colors or [CardColor.Red]
+    # ACE/Blast cards have evo_costs — required for can_digivolve() validation
+    primary_color = colors[0] if colors else CardColor.Red
+    entity.evo_costs = [EvoCost(card_color=primary_color, level=level - 1, memory_cost=3)]
+    cs = MockCardSourceWithEffects()
+    cs.set_base_data(entity, owner)
+    cs._mock_effects = [BlastDigivolveEffect()]
+    return cs
+
+
+def make_card_with_effects(card_id="TEST-001", name="TestDigimon", kind=CardKind.Digimon,
+                           dp=5000, level=4, play_cost=5, colors=None, owner=None,
+                           effects=None):
+    entity = CEntity_Base()
+    entity.card_id = card_id
+    entity.card_name_eng = name
+    entity.card_kind = kind
+    entity.dp = dp
+    entity.level = level
+    entity.play_cost = play_cost
+    entity.card_colors = colors or [CardColor.Red]
+    cs = MockCardSourceWithEffects()
+    cs.set_base_data(entity, owner)
+    cs._mock_effects = effects or []
+    for eff in cs._mock_effects:
+        eff.effect_source_card = cs
+    return cs
+
+
+def setup_game_at_phase(phase: GamePhase, memory: int = 5) -> Game:
+    """Create a Game positioned at the given phase with some cards."""
+    game = Game()
+    game.current_phase = phase
+    game.memory = memory
+    game.turn_count = 2
+    game.turn_player = game.player1
+    game.opponent_player = game.player2
+    game.player1.is_my_turn = True
+    return game
+
+
+def setup_attack_game():
+    """Create a Game with an attacker on P1's field and set at Main phase.
+
+    Returns (game, attacker_permanent).
+    """
+    game = setup_game_at_phase(GamePhase.Main, memory=5)
+    # Give both players some security and library cards
+    for _ in range(5):
+        game.player1.security_cards.append(make_card(name="P1Sec", owner=game.player1))
+        game.player2.security_cards.append(make_card(name="P2Sec", owner=game.player2))
+    for _ in range(10):
+        game.player1.library_cards.append(make_card(name="P1Lib", owner=game.player1))
+        game.player2.library_cards.append(make_card(name="P2Lib", owner=game.player2))
+
+    attacker_card = make_card(card_id="ATK-001", name="Attacker", dp=7000,
+                              level=4, owner=game.player1)
+    attacker = Permanent([attacker_card])
+    game.player1.battle_area.append(attacker)
+    return game, attacker
+
+
+@pytest.fixture(autouse=True)
+def init_test_registry():
+    """Initialize registry with test card IDs for this module."""
+    CardRegistry.initialize_from_list([
+        "TEST-001", "BLOCKER-001", "BLAST-001", "ATK-001", "TARGET-001",
+    ])
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# A. Permanent.can_block() Tests (6 tests)
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestCanBlock:
+    def test_blocker_effect_returns_true(self):
+        """Digimon with <Blocker> can block."""
+        blocker_card = make_blocker_card()
+        perm = Permanent([blocker_card])
+        attacker_card = make_card(name="Attacker", dp=5000)
+        attacker = Permanent([attacker_card])
+        assert perm.can_block(attacker) is True
+
+    def test_normal_digimon_returns_false(self):
+        """Digimon without <Blocker> cannot block."""
+        card = make_card(name="NormalMon")
+        perm = Permanent([card])
+        attacker = Permanent([make_card(name="Attacker")])
+        assert perm.can_block(attacker) is False
+
+    def test_suspended_blocker_returns_false(self):
+        """Suspended Digimon with <Blocker> cannot block."""
+        blocker_card = make_blocker_card()
+        perm = Permanent([blocker_card])
+        perm.suspend()
+        attacker = Permanent([make_card(name="Attacker")])
+        assert perm.can_block(attacker) is False
+
+    def test_tamer_with_blocker_flag_returns_false(self):
+        """Tamers cannot block even if they somehow have a blocker flag."""
+        entity = CEntity_Base()
+        entity.card_id = "TAMER-001"
+        entity.card_name_eng = "TamerBlocker"
+        entity.card_kind = CardKind.Tamer
+        entity.dp = 0
+        entity.level = 0
+        entity.play_cost = 3
+        entity.card_colors = [CardColor.Red]
+        cs = MockCardSourceWithEffects()
+        cs.set_base_data(entity, None)
+        cs._mock_effects = [BlockerEffect(inherited=False)]
+        perm = Permanent([cs])
+        attacker = Permanent([make_card(name="Attacker")])
+        assert perm.can_block(attacker) is False
+
+    def test_inherited_blocker_works(self):
+        """Inherited <Blocker> from digivolution source works."""
+        # Bottom card: has inherited blocker
+        bottom = make_blocker_card(card_id="BOTTOM-001", name="BottomMon",
+                                   inherited=True)
+        # Top card: normal digimon (no blocker)
+        top = make_card(card_id="TOP-001", name="TopMon", level=5, dp=8000)
+        perm = Permanent([bottom, top])
+        attacker = Permanent([make_card(name="Attacker")])
+        assert perm.can_block(attacker) is True
+
+    def test_top_card_non_inherited_blocker_works(self):
+        """Non-inherited <Blocker> from top card works."""
+        # Bottom card: normal
+        bottom = make_card(card_id="BOTTOM-002", name="BottomMon", level=3)
+        # Top card: has non-inherited blocker
+        top = make_blocker_card(card_id="TOP-002", name="TopBlocker", level=4,
+                                inherited=False)
+        perm = Permanent([bottom, top])
+        attacker = Permanent([make_card(name="Attacker")])
+        assert perm.can_block(attacker) is True
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# B. Backward Compatibility Tests (4 tests)
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestBackwardCompatibility:
+    def test_attack_without_blockers_resolves_immediately(self):
+        """Attack against player with no blockers goes straight to resolution."""
+        game, attacker = setup_attack_game()
+
+        # Attack player (security attack)
+        game.resolve_attack(attacker, game.player2)
+
+        # Should be back in Main phase (or End if memory crossed)
+        assert game.current_phase in (GamePhase.Main, GamePhase.End,
+                                       GamePhase.Start, GamePhase.Breeding)
+        assert game.pending_attack is None
+        assert game.active_player is None
+
+    def test_attack_vs_digimon_resolves_immediately(self):
+        """Attack against digimon with no blockers resolves immediately."""
+        game, attacker = setup_attack_game()
+        target_card = make_card(card_id="TARGET-001", name="Target", dp=3000,
+                                owner=game.player2)
+        target = Permanent([target_card])
+        game.player2.battle_area.append(target)
+
+        game.resolve_attack(attacker, target)
+
+        # Target should be deleted (7000 > 3000)
+        assert target not in game.player2.battle_area
+        assert game.pending_attack is None
+        assert game.active_player is None
+
+    def test_pending_attack_cleaned_up_after_resolution(self):
+        """PendingAttack and active_player are None after battle resolution."""
+        game, attacker = setup_attack_game()
+
+        game.resolve_attack(attacker, game.player2)
+
+        assert game.pending_attack is None
+        assert game.active_player is None
+
+    def test_attacker_is_suspended_after_attack(self):
+        """Attacker should be suspended after declaring an attack."""
+        game, attacker = setup_attack_game()
+        assert not attacker.is_suspended
+
+        game.resolve_attack(attacker, game.player2)
+
+        assert attacker.is_suspended
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# C. BlockTiming Tests (8 tests)
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestBlockTiming:
+    def _setup_with_blocker(self):
+        """Set up game where opponent has a blocker on field."""
+        game, attacker = setup_attack_game()
+        blocker_card = make_blocker_card(name="OpponentBlocker", dp=6000,
+                                         owner=game.player2)
+        blocker = Permanent([blocker_card])
+        game.player2.battle_area.append(blocker)
+        return game, attacker, blocker
+
+    def test_attack_with_blocker_enters_block_timing(self):
+        """When opponent has a blocker, attack enters BlockTiming phase."""
+        game, attacker, blocker = self._setup_with_blocker()
+
+        game.resolve_attack(attacker, game.player2)
+
+        assert game.current_phase == GamePhase.BlockTiming
+        assert game.pending_attack is not None
+        assert game.pending_attack.attacker is attacker
+
+    def test_active_player_set_to_opponent_during_block(self):
+        """During BlockTiming, active_player is the opponent (defender)."""
+        game, attacker, blocker = self._setup_with_blocker()
+
+        game.resolve_attack(attacker, game.player2)
+
+        assert game.active_player is game.player2
+        assert game.current_player_id == game.player2.player_id
+
+    def test_block_mask_includes_valid_blockers(self):
+        """Action mask during BlockTiming includes valid blocker slots."""
+        game, attacker, blocker = self._setup_with_blocker()
+
+        game.resolve_attack(attacker, game.player2)
+        mask = game.get_action_mask(game.player2.player_id)
+
+        # Pass is always valid
+        assert mask[62] == 1.0
+        # Blocker is at index 0 in opponent's battle_area → action 100
+        assert mask[100] == 1.0
+
+    def test_block_mask_excludes_suspended_blockers(self):
+        """Suspended blockers should not appear in the block mask."""
+        game, attacker, blocker = self._setup_with_blocker()
+        blocker.suspend()  # Can't block while suspended
+
+        game.resolve_attack(attacker, game.player2)
+
+        # No blockers available → should skip to counter/resolve
+        # (since no valid blockers, attack shouldn't enter BlockTiming)
+        assert game.current_phase != GamePhase.BlockTiming
+
+    def test_decline_block_proceeds_to_resolve(self):
+        """Action 62 (pass) during BlockTiming declines and resolves battle."""
+        game, attacker, blocker = self._setup_with_blocker()
+
+        game.resolve_attack(attacker, game.player2)
+        assert game.current_phase == GamePhase.BlockTiming
+
+        # Decline block
+        game.decode_action(62, game.player2.player_id)
+
+        # Should resolve (no counter options either for plain cards)
+        assert game.pending_attack is None
+        assert game.active_player is None
+
+    def test_selecting_blocker_redirects_target(self):
+        """Selecting a blocker changes the effective target."""
+        game, attacker, blocker = self._setup_with_blocker()
+
+        game.resolve_attack(attacker, game.player2)
+        assert game.current_phase == GamePhase.BlockTiming
+
+        # Block with blocker at index 0
+        game.decode_action(100, game.player2.player_id)
+
+        # Blocker should be suspended
+        assert blocker.is_suspended
+
+    def test_blocker_suspends_on_block(self):
+        """The blocker is suspended when it blocks."""
+        game, attacker, blocker = self._setup_with_blocker()
+        assert not blocker.is_suspended
+
+        game.resolve_attack(attacker, game.player2)
+        game.decode_action(100, game.player2.player_id)
+
+        assert blocker.is_suspended
+
+    def test_battle_uses_blocker_dp_for_comparison(self):
+        """When blocked, battle resolution compares against blocker's DP."""
+        game, attacker, blocker = self._setup_with_blocker()
+        # Attacker: 7000 DP, Blocker: 6000 DP → blocker should be deleted
+        assert attacker.dp == 7000
+        assert blocker.dp == 6000
+
+        game.resolve_attack(attacker, game.player2)
+        game.decode_action(100, game.player2.player_id)
+
+        # Blocker (6000) < Attacker (7000) → blocker should be deleted
+        assert blocker not in game.player2.battle_area
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# D. CounterTiming Tests (7 tests)
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestCounterTiming:
+    def _setup_with_counter(self):
+        """Set up game where opponent has a blast digivolve card in hand
+        and a valid target on field."""
+        game, attacker = setup_attack_game()
+        # Field target: level 4 Red digimon
+        field_card = make_card(card_id="FIELD-001", name="FieldMon", dp=5000,
+                               level=4, colors=[CardColor.Red], owner=game.player2)
+        field_perm = Permanent([field_card])
+        game.player2.battle_area.append(field_perm)
+
+        # Hand card: level 5 Red blast digivolve
+        blast_card = make_blast_digivolve_card(
+            card_id="BLAST-001", name="BlastMon", dp=8000,
+            level=5, colors=[CardColor.Red], owner=game.player2,
+        )
+        game.player2.hand_cards.append(blast_card)
+
+        return game, attacker, field_perm, blast_card
+
+    def test_counter_timing_reached_after_no_block(self):
+        """CounterTiming is reached when there are counter options."""
+        game, attacker, field_perm, blast_card = self._setup_with_counter()
+
+        game.resolve_attack(attacker, game.player2)
+
+        assert game.current_phase == GamePhase.CounterTiming
+        assert game.active_player is game.player2
+        assert game.pending_attack is not None
+
+    def test_counter_mask_shows_blast_digivolve_options(self):
+        """Counter timing mask shows valid blast digivolve actions."""
+        game, attacker, field_perm, blast_card = self._setup_with_counter()
+
+        game.resolve_attack(attacker, game.player2)
+        mask = game.get_action_mask(game.player2.player_id)
+
+        # Pass is always valid
+        assert mask[62] == 1.0
+        # Blast card is at hand index 0, field target at index 0
+        # Action = 400 + hand*15 + field = 400 + 0*15 + 0 = 400
+        assert mask[400] == 1.0
+
+    def test_decline_counter_resolves_battle(self):
+        """Declining counter (action 62) resolves the battle."""
+        game, attacker, field_perm, blast_card = self._setup_with_counter()
+
+        game.resolve_attack(attacker, game.player2)
+        assert game.current_phase == GamePhase.CounterTiming
+
+        game.decode_action(62, game.player2.player_id)
+
+        assert game.pending_attack is None
+        assert game.active_player is None
+
+    def test_blast_digivolve_moves_card_from_hand(self):
+        """Blast digivolve removes the card from hand."""
+        game, attacker, field_perm, blast_card = self._setup_with_counter()
+
+        game.resolve_attack(attacker, game.player2)
+        assert blast_card in game.player2.hand_cards
+
+        # Blast digivolve: hand=0, field=0 → action 400
+        game.decode_action(400, game.player2.player_id)
+
+        assert blast_card not in game.player2.hand_cards
+
+    def test_blast_digivolve_changes_dp(self):
+        """Blast digivolve changes the field permanent's DP."""
+        game, attacker, field_perm, blast_card = self._setup_with_counter()
+        assert field_perm.dp == 5000  # Before digivolve
+
+        game.resolve_attack(attacker, game.player2)
+        game.decode_action(400, game.player2.player_id)
+
+        # After blast digivolve, top card is blast_card with 8000 DP
+        assert field_perm.dp == 8000
+
+    def test_blast_digivolve_affects_battle_outcome(self):
+        """Blast digivolve can change the battle outcome by changing DP."""
+        game, attacker, field_perm, blast_card = self._setup_with_counter()
+        # Attacker: 7000 DP, field: 5000 (without counter) → 8000 (with counter)
+
+        game.resolve_attack(attacker, field_perm)
+
+        # Should reach CounterTiming (opponent has blast digivolve)
+        assert game.current_phase == GamePhase.CounterTiming
+
+        # Blast digivolve → field becomes 8000 DP
+        game.decode_action(400, game.player2.player_id)
+
+        # Now attacker (7000) < field_perm (8000) → attacker should be deleted
+        assert attacker not in game.player1.battle_area
+
+    def test_state_cleaned_up_after_counter_resolution(self):
+        """All interrupt state is cleaned up after counter + battle resolution."""
+        game, attacker, field_perm, blast_card = self._setup_with_counter()
+
+        game.resolve_attack(attacker, game.player2)
+        game.decode_action(400, game.player2.player_id)
+
+        assert game.pending_attack is None
+        assert game.active_player is None
+        assert game.pending_selection is None
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# E. Selection Framework Tests (5 tests)
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestSelectionFramework:
+    def test_request_selection_transitions_phase(self):
+        """request_selection changes the game phase."""
+        game = setup_game_at_phase(GamePhase.Main)
+
+        callback_called = []
+        game.request_selection(
+            phase=GamePhase.SelectTarget,
+            player=game.player1,
+            callback=lambda idx: callback_called.append(idx),
+            valid_indices=[100, 101, 102],
+        )
+
+        assert game.current_phase == GamePhase.SelectTarget
+        assert game.pending_selection is not None
+        assert game.active_player is game.player1
+
+    def test_selection_callback_fires_on_valid_selection(self):
+        """Callback fires when a valid selection is made."""
+        game = setup_game_at_phase(GamePhase.Main)
+
+        callback_called = []
+        game.request_selection(
+            phase=GamePhase.SelectTarget,
+            player=game.player1,
+            callback=lambda idx: callback_called.append(idx),
+            valid_indices=[100, 101, 102],
+        )
+
+        game.decode_action(101, game.player1.player_id)
+
+        assert callback_called == [101]
+
+    def test_selection_restores_phase_after_completion(self):
+        """Phase restores to previous phase after selection completes."""
+        game = setup_game_at_phase(GamePhase.Main)
+
+        game.request_selection(
+            phase=GamePhase.SelectTarget,
+            player=game.player1,
+            callback=lambda idx: None,
+            valid_indices=[100],
+        )
+
+        game.decode_action(100, game.player1.player_id)
+
+        assert game.current_phase == GamePhase.Main
+        assert game.pending_selection is None
+        assert game.active_player is None
+
+    def test_trash_selection_validates_index(self):
+        """Trash selection decoder validates against trash size."""
+        from engine_py_legacy.engine.game import SEL_TRASH_START
+        game = setup_game_at_phase(GamePhase.Main)
+        # Add 3 cards to trash
+        for i in range(3):
+            game.player1.trash_cards.append(
+                make_card(name=f"TrashCard{i}", owner=game.player1)
+            )
+
+        callback_called = []
+        game.request_selection(
+            phase=GamePhase.SelectTrash,
+            player=game.player1,
+            callback=lambda idx: callback_called.append(idx),
+        )
+
+        # Valid index: SEL_TRASH_START + 1 selects trash card at index 1
+        # Callback receives the full action_id (consistent with other selection decoders)
+        game.decode_action(SEL_TRASH_START + 1, game.player1.player_id)
+        assert callback_called == [SEL_TRASH_START + 1]
+
+    def test_source_selection_decodes_correctly(self):
+        """Source selection decoder correctly extracts field_idx and source_idx."""
+        game = setup_game_at_phase(GamePhase.Main)
+        # Add a permanent with 3 sources (digivolution stack)
+        cards = [
+            make_card(card_id="SRC-001", name="Src1", level=3, owner=game.player1),
+            make_card(card_id="SRC-002", name="Src2", level=4, owner=game.player1),
+            make_card(card_id="SRC-003", name="Src3", level=5, owner=game.player1),
+        ]
+        perm = Permanent(cards)
+        game.player1.battle_area.append(perm)
+
+        callback_called = []
+        game.request_selection(
+            phase=GamePhase.SelectSource,
+            player=game.player1,
+            callback=lambda idx: callback_called.append(idx),
+        )
+
+        # Action 2000 + field_idx*10 + source_idx = 2000 + 0*10 + 1 = 2001
+        game.decode_action(2001, game.player1.player_id)
+        assert callback_called == [2001]
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# F. Integration Tests (3 tests)
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestIntegration:
+    def test_full_attack_block_counter_resolve_flow(self):
+        """Full flow: attack → counter → block → resolve (DCGO order: counter before block)."""
+        game, attacker = setup_attack_game()
+
+        # Put a blocker on opponent's field
+        blocker_card = make_blocker_card(name="Blocker", dp=6000,
+                                         owner=game.player2)
+        blocker = Permanent([blocker_card])
+        game.player2.battle_area.append(blocker)
+
+        # Put a blast digivolve target + card for opponent
+        # (but blocker will take the hit, so counter won't change target outcome)
+        field_card = make_card(card_id="FIELD-002", name="FieldMon2", dp=4000,
+                               level=4, colors=[CardColor.Red], owner=game.player2)
+        field_perm = Permanent([field_card])
+        game.player2.battle_area.append(field_perm)
+
+        blast_card = make_blast_digivolve_card(
+            card_id="BLAST-002", name="BlastMon2", dp=9000,
+            level=5, colors=[CardColor.Red], owner=game.player2,
+        )
+        game.player2.hand_cards.append(blast_card)
+
+        # Start attack → should enter CounterTiming first (DCGO: counter before block)
+        game.resolve_attack(attacker, game.player2)
+        assert game.current_phase == GamePhase.CounterTiming
+
+        # Decline counter → should enter BlockTiming
+        game.decode_action(62, game.player2.player_id)
+        assert game.current_phase == GamePhase.BlockTiming
+
+        # Decline block → resolve battle
+        game.decode_action(62, game.player2.player_id)
+        assert game.pending_attack is None
+        assert game.active_player is None
+
+    def test_mask_decoder_roundtrip_block_timing(self):
+        """Valid mask actions can be decoded during BlockTiming."""
+        game, attacker = setup_attack_game()
+        blocker_card = make_blocker_card(name="Blocker", dp=6000,
+                                         owner=game.player2)
+        blocker = Permanent([blocker_card])
+        game.player2.battle_area.append(blocker)
+
+        game.resolve_attack(attacker, game.player2)
+        assert game.current_phase == GamePhase.BlockTiming
+
+        mask = game.get_action_mask(game.player2.player_id)
+
+        # All valid actions in mask should be decodable without error
+        valid_actions = [i for i, v in enumerate(mask) if v == 1.0]
+        assert len(valid_actions) >= 1  # At least pass (62)
+        assert 62 in valid_actions
+
+        # Decode one valid action (pass)
+        game.decode_action(62, game.player2.player_id)
+        # Should not crash and should progress the game state
+
+    def test_mask_decoder_roundtrip_counter_timing(self):
+        """Valid mask actions can be decoded during CounterTiming."""
+        game, attacker = setup_attack_game()
+
+        # Field target for blast digivolve
+        field_card = make_card(card_id="FIELD-003", name="FieldMon3", dp=5000,
+                               level=4, colors=[CardColor.Red], owner=game.player2)
+        field_perm = Permanent([field_card])
+        game.player2.battle_area.append(field_perm)
+
+        blast_card = make_blast_digivolve_card(
+            card_id="BLAST-003", name="BlastMon3", dp=8000,
+            level=5, colors=[CardColor.Red], owner=game.player2,
+        )
+        game.player2.hand_cards.append(blast_card)
+
+        game.resolve_attack(attacker, game.player2)
+        assert game.current_phase == GamePhase.CounterTiming
+
+        mask = game.get_action_mask(game.player2.player_id)
+
+        valid_actions = [i for i, v in enumerate(mask) if v == 1.0]
+        assert 62 in valid_actions  # Pass always valid
+        assert 400 in valid_actions  # Blast digivolve option
+
+        # Decode the blast digivolve
+        game.decode_action(400, game.player2.player_id)
+
+        # Should have resolved
+        assert game.pending_attack is None
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# G. Effect Timing Guard Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestEffectTimingGuards:
+    def test_digivolve_does_not_trigger_on_play_effect(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        base = make_card(card_id="TEST-001", name="Base", level=3, owner=p1)
+        p1.battle_area.append(Permanent([base]))
+
+        on_play_hits = []
+        evo = make_card_with_effects(
+            card_id="TEST-001",
+            name="Evo",
+            level=4,
+            owner=p1,
+            effects=[
+                TriggerEffect(
+                    on_play=True,
+                    description="[On Play] gain 1 memory.",
+                    callback=lambda ctx: on_play_hits.append("hit"),
+                )
+            ],
+        )
+        p1.hand_cards.append(evo)
+
+        game.action_digivolve(0, 0)
+        assert on_play_hits == []
+
+    def test_breeding_digivolve_triggers_no_normal_timings(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        egg = make_card(card_id="TEST-001", name="Egg", kind=CardKind.DigiEgg, level=2, owner=p1)
+        p1.breeding_area = Permanent([egg])
+
+        on_play_hits = []
+        when_digi_hits = []
+        evo = make_card_with_effects(
+            card_id="TEST-001",
+            name="Breeding Evo",
+            level=3,
+            owner=p1,
+            effects=[
+                TriggerEffect(on_play=True, callback=lambda ctx: on_play_hits.append("on_play")),
+                TriggerEffect(when_digivolving=True, callback=lambda ctx: when_digi_hits.append("when_digi")),
+            ],
+        )
+        p1.hand_cards.append(evo)
+
+        game.action_digivolve_breeding(0)
+        assert p1.breeding_area is not None
+        assert p1.breeding_area.level == 3
+        assert on_play_hits == []
+        assert when_digi_hits == []
+
+    def test_when_digivolving_only_top_source_fires(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        inherited_hits = []
+        top_hits = []
+
+        under_source = make_card_with_effects(
+            card_id="TEST-001",
+            name="UnderSource",
+            level=2,
+            owner=p1,
+            effects=[
+                TriggerEffect(
+                    when_digivolving=True,
+                    inherited=True,
+                    callback=lambda ctx: inherited_hits.append("under"),
+                )
+            ],
+        )
+        base_top = make_card(card_id="TEST-001", name="BaseTop", level=3, owner=p1)
+        p1.battle_area.append(Permanent([under_source, base_top]))
+
+        evo = make_card_with_effects(
+            card_id="TEST-001",
+            name="EvoTop",
+            level=4,
+            owner=p1,
+            effects=[
+                TriggerEffect(
+                    when_digivolving=True,
+                    callback=lambda ctx: top_hits.append("top"),
+                )
+            ],
+        )
+        p1.hand_cards.append(evo)
+
+        game.action_digivolve(0, 0)
+        assert inherited_hits == []
+        assert top_hits == ["top"]
+
+    def test_effect_log_includes_effect_text(self):
+        logger = VerboseLogger()
+        game = Game(logger=logger)
+        game.current_phase = GamePhase.Main
+        game.turn_player = game.player1
+        game.opponent_player = game.player2
+        game.player1.is_my_turn = True
+        game.memory = 5
+
+        played_hits = []
+        on_play = TriggerEffect(
+            on_play=True,
+            description="[On Play] Gain 1 memory.",
+            callback=lambda ctx: played_hits.append("played"),
+        )
+        card = make_card_with_effects(
+            card_id="TEST-001",
+            name="LoggerMon",
+            owner=game.player1,
+            effects=[on_play],
+        )
+        game.player1.hand_cards.append(card)
+
+        game.action_play_card(0)
+        logs = logger.get_logs()
+
+        assert played_hits == ["played"]
+        assert any(
+            "[Effect] OnEnterFieldAnyone" in line and "[On Play] Gain 1 memory." in line
+            for line in logs
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# I. Digivolution Bonus Draw Tests (Rule 8-1-4)
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestDigivolveBonusDraw:
+    """Standard digivolution draws 1 card (Rule 8-1-4 step 4)."""
+
+    def test_digivolve_draws_one_card(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        # Seed library so draw has something to pull
+        for _ in range(5):
+            p1.library_cards.append(make_card(name="LibCard", owner=p1))
+
+        base = make_card(card_id="BASE-001", name="Base", level=3, owner=p1)
+        p1.battle_area.append(Permanent([base]))
+
+        evo = make_card(card_id="EVO-001", name="Evo", level=4, owner=p1)
+        evo.c_entity_base.evo_costs = [EvoCost(card_color=CardColor.Red, level=3, memory_cost=2)]
+        p1.hand_cards.append(evo)
+
+        hand_before = len(p1.hand_cards) - 1  # -1 for evo card leaving hand
+        lib_before = len(p1.library_cards)
+
+        game.action_digivolve(0, 0)
+
+        # Net hand change: -1 (evo card used) + 1 (draw) = 0
+        assert len(p1.hand_cards) == hand_before + 1
+        assert len(p1.library_cards) == lib_before - 1
+
+    def test_breeding_digivolve_draws_one_card(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        for _ in range(5):
+            p1.library_cards.append(make_card(name="LibCard", owner=p1))
+
+        egg = make_card(card_id="EGG-001", name="Egg", kind=CardKind.DigiEgg, level=2, owner=p1)
+        p1.breeding_area = Permanent([egg])
+
+        evo = make_card(card_id="EVO-001", name="Evo", level=3, owner=p1)
+        evo.c_entity_base.evo_costs = [EvoCost(card_color=CardColor.Red, level=2, memory_cost=1)]
+        p1.hand_cards.append(evo)
+
+        hand_before = len(p1.hand_cards) - 1
+        lib_before = len(p1.library_cards)
+
+        game.action_digivolve_breeding(0)
+
+        assert len(p1.hand_cards) == hand_before + 1
+        assert len(p1.library_cards) == lib_before - 1
+
+    def test_digivolve_empty_library_no_crash(self):
+        """Digivolve with empty library: card stacks but no draw (no crash)."""
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        # Empty library
+        p1.library_cards.clear()
+
+        base = make_card(card_id="BASE-001", name="Base", level=3, owner=p1)
+        p1.battle_area.append(Permanent([base]))
+
+        evo = make_card(card_id="EVO-001", name="Evo", level=4, owner=p1)
+        evo.c_entity_base.evo_costs = [EvoCost(card_color=CardColor.Red, level=3, memory_cost=2)]
+        p1.hand_cards.append(evo)
+
+        game.action_digivolve(0, 0)
+
+        # Card was used from hand, nothing drawn
+        assert len(p1.hand_cards) == 0
+        # Stack grew
+        assert len(p1.battle_area[0].card_sources) == 2
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# G. [Hand][Main] Action Type Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+class HandMainEffect(ICardEffect):
+    """Mock [Hand][Main] effect with configurable condition."""
+    def __init__(self, condition_result=True, callback=None):
+        super().__init__()
+        self._is_hand_main = True
+        self.timing = EffectTiming.NoTiming
+        self._condition_result = condition_result
+        self._process_called = False
+        self.set_can_use_condition(lambda ctx: self._condition_result)
+        self.set_on_process_callback(callback or self._default_process)
+
+    def _default_process(self, ctx):
+        self._process_called = True
+
+
+class TestHandMainMask:
+    """Test [Hand][Main] action masking."""
+
+    def test_hand_main_masked_on_when_condition_passes(self):
+        """Hand card with _is_hand_main and passing condition → action 30+h masked on."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=True)
+        card = make_card_with_effects(
+            card_id="HM-001", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
+        mask = build_action_mask(game, 1)
+        assert mask[30] == 1.0, "Action 30 (hand idx 0) should be masked on"
+
+    def test_hand_main_masked_off_when_condition_fails(self):
+        """Hand card with _is_hand_main and failing condition → action 30+h masked off."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=False)
+        card = make_card_with_effects(
+            card_id="HM-002", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
+        mask = build_action_mask(game, 1)
+        assert mask[30] == 0.0, "Action 30 should be masked off when condition fails"
+
+    def test_hand_main_multiple_hand_cards(self):
+        """Multiple hand cards, only the one with _is_hand_main gets 30+h masked."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        normal_card = make_card(card_id="NORM-001", name="NormalMon", owner=p1)
+        p1.hand_cards.append(normal_card)
+
+        hm_effect = HandMainEffect(condition_result=True)
+        hm_card = make_card_with_effects(
+            card_id="HM-003", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(hm_card)
+
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
+        mask = build_action_mask(game, 1)
+        assert mask[30] == 0.0, "Normal card at idx 0 should NOT have hand-main action"
+        assert mask[31] == 1.0, "Hand-main card at idx 1 should have action 31 masked on"
+
+    def test_hand_main_not_masked_in_breeding_phase(self):
+        """[Hand][Main] effects should NOT be masked on during Breeding phase."""
+        game = setup_game_at_phase(GamePhase.Breeding, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=True)
+        card = make_card_with_effects(
+            card_id="HM-004", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        from engine_py_legacy.engine.game.action_mask import build_action_mask
+        mask = build_action_mask(game, 1)
+        assert mask[30] == 0.0, "Hand-main should not be masked on in Breeding phase"
+
+
+class TestHandMainDecode:
+    """Test [Hand][Main] action decoding."""
+
+    def test_decode_hand_main_calls_process(self):
+        """Action 30 in Main phase → _execute_hand_main_effect(0) → process callback called."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=True)
+        card = make_card_with_effects(
+            card_id="HM-005", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        game.decode_action(30, 1)
+        assert hm_effect._process_called, "Process callback should have been called"
+
+    def test_decode_hand_main_offset(self):
+        """Action 35 in Main phase → activates hand card at index 5."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        # Fill indices 0-4 with normal cards
+        for i in range(5):
+            p1.hand_cards.append(make_card(card_id=f"FILL-{i}", name=f"Fill{i}", owner=p1))
+        hm_effect = HandMainEffect(condition_result=True)
+        card = make_card_with_effects(
+            card_id="HM-006", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        game.decode_action(35, 1)
+        assert hm_effect._process_called, "Process callback for card at index 5 should be called"
+
+    def test_decode_hand_main_skips_when_condition_fails(self):
+        """Action decode skips process when condition fails."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=False)
+        card = make_card_with_effects(
+            card_id="HM-007", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        game.decode_action(30, 1)
+        assert not hm_effect._process_called, "Process should NOT be called when condition fails"
+
+    def test_decode_hand_main_context_has_hand_idx(self):
+        """Process callback receives correct context with hand_idx."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        received_ctx = {}
+
+        def capture_ctx(ctx):
+            received_ctx.update(ctx)
+
+        hm_effect = HandMainEffect(condition_result=True, callback=capture_ctx)
+        card = make_card_with_effects(
+            card_id="HM-008", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        game.decode_action(30, 1)
+        assert received_ctx.get('hand_idx') == 0
+        assert received_ctx.get('card') is card
+        assert received_ctx.get('player') is p1
+        assert received_ctx.get('game') is game

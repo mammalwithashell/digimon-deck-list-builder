@@ -11,7 +11,7 @@
 
 ### Step 1: Enrich `security_reveal` event with card data
 
-**File:** `digimon_gym/engine/core/player.py` (`security_attack` method, ~line 502)
+**File:** `code/engine_py_legacy/engine/core/player.py` (`security_attack` method, ~line 502)
 
 Add to the `security_reveal` event meta:
 - `main_effect_text`: the card's main effect text (for display)
@@ -26,7 +26,7 @@ Also enrich `security_battle` event meta with:
 
 ### Step 2: Queue-based security reveal on frontend
 
-**File:** `frontend/src/components/board/SecurityRevealOverlay.tsx`
+**File:** `code/frontend/src/components/board/SecurityRevealOverlay.tsx`
 
 Currently shows only the latest event. Refactor to:
 - Queue ALL security_reveal events (multiple checks per attack with SA+1, etc.)
@@ -36,7 +36,7 @@ Currently shows only the latest event. Refactor to:
 
 ### Step 3: DP comparison overlay
 
-**File:** `frontend/src/components/board/SecurityRevealOverlay.tsx` (extend)
+**File:** `code/frontend/src/components/board/SecurityRevealOverlay.tsx` (extend)
 
 After showing the security card, if it's a Digimon, transition to a DP comparison view:
 - Left: attacker card + DP value
@@ -47,7 +47,7 @@ After showing the security card, if it's a Digimon, transition to a DP compariso
 
 ### Step 4: Security break animation
 
-**File:** `frontend/src/index.css`
+**File:** `code/frontend/src/index.css`
 
 Add CSS animation for when security is broken:
 - Glass shatter / crack effect on the security stack (CSS-only, inspired by DCGO)
@@ -56,7 +56,7 @@ Add CSS animation for when security is broken:
 
 ### Step 5: Security effect text display
 
-**File:** `frontend/src/components/board/SecurityRevealOverlay.tsx`
+**File:** `code/frontend/src/components/board/SecurityRevealOverlay.tsx`
 
 When showing the revealed card:
 - Display the card's security effect text below the card (e.g., "[Security] Play this card without paying the cost")
@@ -67,7 +67,7 @@ When showing the revealed card:
 
 ### Step 6: Add `active_effect` data to game state
 
-**File:** `digimon_gym/engine/game.py` (in `execute_effects` / effect processing)
+**File:** `code/engine_py_legacy/engine/game.py` (in `execute_effects` / effect processing)
 
 Enrich `effect_activate` events with:
 - `effect_text`: the effect's description text
@@ -78,7 +78,7 @@ Enrich `effect_activate` events with:
 
 ### Step 7: Effect text popup component
 
-**File:** `frontend/src/components/game/EffectPopup.tsx` (new)
+**File:** `code/frontend/src/components/game/EffectPopup.tsx` (new)
 
 - Subscribe to `effect_activate` events
 - Show floating popup near the source permanent with:
@@ -89,7 +89,7 @@ Enrich `effect_activate` events with:
 
 ### Step 8: Sequential effect delay
 
-**File:** `frontend/src/components/board/SecurityRevealOverlay.tsx` and `EffectPopup.tsx`
+**File:** `code/frontend/src/components/board/SecurityRevealOverlay.tsx` and `EffectPopup.tsx`
 
 - When multiple effects resolve in sequence, add 300ms delay between showing each popup
 - Use a queue system similar to the security reveal queue from Step 2
@@ -97,16 +97,16 @@ Enrich `effect_activate` events with:
 ## Files Modified
 
 ### Backend (3 files):
-1. `digimon_gym/engine/core/player.py` — enrich security events (Step 1)
-2. `digimon_gym/engine/game.py` — enrich effect_activate events (Step 6)
-3. `digimon_gym/engine/events.py` — no changes needed (meta dict is flexible)
+1. `code/engine_py_legacy/engine/core/player.py` — enrich security events (Step 1)
+2. `code/engine_py_legacy/engine/game.py` — enrich effect_activate events (Step 6)
+3. `code/engine_py_legacy/engine/events.py` — no changes needed (meta dict is flexible)
 
 ### Frontend (5 files):
-1. `frontend/src/components/board/SecurityRevealOverlay.tsx` — queue + DP overlay + effect text (Steps 2, 3, 5)
-2. `frontend/src/components/board/SecurityStack.tsx` — security break animation trigger (Step 4)
-3. `frontend/src/index.css` — new animations (Step 4)
-4. `frontend/src/components/game/EffectPopup.tsx` — NEW: effect text popup (Step 7)
-5. `frontend/src/pages/GamePage.tsx` — mount EffectPopup component (Step 7)
+1. `code/frontend/src/components/board/SecurityRevealOverlay.tsx` — queue + DP overlay + effect text (Steps 2, 3, 5)
+2. `code/frontend/src/components/board/SecurityStack.tsx` — security break animation trigger (Step 4)
+3. `code/frontend/src/index.css` — new animations (Step 4)
+4. `code/frontend/src/components/game/EffectPopup.tsx` — NEW: effect text popup (Step 7)
+5. `code/frontend/src/pages/GamePage.tsx` — mount EffectPopup component (Step 7)
 
 ### Tests:
 - Update `tests/test_security_flow.py` — verify enriched event metadata
