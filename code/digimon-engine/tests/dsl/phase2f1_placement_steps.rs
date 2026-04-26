@@ -26,7 +26,7 @@ fn place_on_security_step_moves_hand_card_to_security_top() {
     let security_before = runner.game.players[0].security.len();
 
     let mut bindings = Bindings::new();
-    bindings.insert_hand_index("src", 0);
+    bindings.insert_hand_index("src", 0, 0);
 
     let step = CompiledStep::PlaceOnSecurity {
         of: CompiledPlayerRef::You,
@@ -85,7 +85,7 @@ fn place_as_bottom_source_step_tucks_hand_card_under_target_permanent() {
     let hand_before = runner.game.players[0].hand.len();
 
     let mut bindings = Bindings::new();
-    bindings.insert_hand_index("src", 0);
+    bindings.insert_hand_index("src", 0, 0);
     bindings.insert_permanent("tgt", target);
 
     let step = CompiledStep::PlaceAsBottomSource {

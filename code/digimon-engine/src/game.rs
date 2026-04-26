@@ -235,6 +235,12 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) parked_replacement: Option<crate::replacement::ParkedReplacement>,
 
+    /// Temporary bridge used by DSL replacement-process outcome steps before
+    /// the dispatcher has installed a `ParkedReplacement`. The replacement
+    /// lowering drains this into the active `ReplacementContext`.
+    #[doc(hidden)]
+    pub(crate) dsl_replacement_outcome: Option<crate::replacement::ReplacementOutcome>,
+
     /// Phase 9 Task 3 — set to `true` while a hand Counter Option is
     /// resolving through `play_option_from_hand`. Consumed by
     /// `play_option_core` to fire CounterEffect timing on the played
@@ -470,6 +476,7 @@ impl Game {
             effect_source_player: None,
             current_deletion_cause: None,
             parked_replacement: None,
+            dsl_replacement_outcome: None,
             in_counter_window: false,
             pending_deletion_resume: None,
             pending_post_deletion_replays: Vec::new(),
@@ -794,6 +801,12 @@ impl Game {
     /// PyO3 layer can expose a per-step event list.
     pub fn drain_events(&mut self) -> Vec<crate::events::GameEvent> {
         std::mem::take(&mut self.events)
+    }
+
+    /// Borrow accumulated events without draining them. Debug tooling uses
+    /// this to checkpoint and assert on incremental event emission.
+    pub fn events(&self) -> &[crate::events::GameEvent] {
+        &self.events
     }
 
     // ─── Memory management ─────────────────────────────────────────
