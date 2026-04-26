@@ -9,8 +9,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
 from digimon_gym.db.auth import decode_access_token
-from digimon_gym.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.engine.state_filter import filter_state_for_player
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from engine_py_legacy.engine.state_filter import filter_state_for_player
 from digimon_gym.routers.state import active_games
 from digimon_gym.routers.ws_manager import manager
 
@@ -88,7 +88,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
         await manager.connect_spectator(game_id, websocket)
         # Send current state
         full_state = runner.game.to_ui_json()
-        from digimon_gym.engine.state_filter import filter_state_for_spectator
+        from engine_py_legacy.engine.state_filter import filter_state_for_spectator
 
         spec_state = filter_state_for_spectator(
             full_state, manager.get_settings(game_id).spectator_mode

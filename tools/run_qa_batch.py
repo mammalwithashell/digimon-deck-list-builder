@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from digimon_gym.engine.runners.scenario_runner import ScenarioRunner, ScenarioResult
+from engine_py_legacy.engine.runners.scenario_runner import ScenarioRunner, ScenarioResult
 
 
 def run_batch(scenario_dir: Path) -> list[ScenarioResult]:

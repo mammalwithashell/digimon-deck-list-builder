@@ -11,10 +11,10 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
-from digimon_gym.engine.data.enums import PlayerType
-from digimon_gym.engine.model_utils import list_onnx_models, resolve_model_path
-from digimon_gym.engine.runners.headless_game import HeadlessGame
-from digimon_gym.engine.runners.interactive_game import InteractiveGame
+from engine_py_legacy.engine.data.enums import PlayerType
+from engine_py_legacy.engine.model_utils import list_onnx_models, resolve_model_path
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
 from digimon_engine import get_models_dir, parse_deck
 from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest, SurrenderRequest
 from digimon_gym.routers.state import active_games

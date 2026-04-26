@@ -13,7 +13,7 @@ import logging
 from typing import List, Tuple, Dict, Any, Optional
 import gymnasium
 from gymnasium import spaces
-from digimon_gym.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
 
 try:
     from digimon_engine import RustHeadlessGame  # type: ignore
@@ -41,11 +41,11 @@ def _make_runner(deck1: List[str], deck2: List[str]):
             )
         return RustHeadlessGame(deck1, deck2)
     return HeadlessGame(deck1, deck2)
-from digimon_gym.engine.game import (
+from engine_py_legacy.engine.game import (
     FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND,
     SECURITY_TARGET, BREEDING_SLOT,
 )  # parity-doc: these geometry constants stay on Python until migrated
-from digimon_gym.engine.data.enums import PendingAction  # parity-doc: Python-engine fallback path only
+from engine_py_legacy.engine.data.enums import PendingAction  # parity-doc: Python-engine fallback path only
 from digimon_engine import ACTION_SPACE_SIZE, GamePhase, TENSOR_SIZE
 
 # Action Space Constants (re-exported for backward compatibility)

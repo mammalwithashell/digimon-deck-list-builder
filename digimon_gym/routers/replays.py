@@ -12,7 +12,7 @@ from digimon_gym.routers.schemas import (
     ReplayStepResponse,
     SeekRequest,
 )
-from digimon_gym.engine.runners.replay_runner import ReplayRunner
+from engine_py_legacy.engine.runners.replay_runner import ReplayRunner
 from digimon_gym.routers.state import active_replays
 
 router = APIRouter(tags=["replays"])

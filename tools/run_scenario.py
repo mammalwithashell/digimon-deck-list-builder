@@ -15,7 +15,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from digimon_gym.engine.runners.scenario_runner import ScenarioRunner, ScenarioResult
+from engine_py_legacy.engine.runners.scenario_runner import ScenarioRunner, ScenarioResult
 
 
 def run_single(path: Path) -> ScenarioResult:

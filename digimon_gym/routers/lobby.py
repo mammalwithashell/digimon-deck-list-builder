@@ -21,9 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from digimon_gym.db.auth import get_current_user
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import User
-from digimon_gym.engine.data.deck_loader import parse_deck
-from digimon_gym.engine.data.enums import PlayerType
-from digimon_gym.engine.runners.interactive_game import InteractiveGame
+from engine_py_legacy.engine.data.deck_loader import parse_deck
+from engine_py_legacy.engine.data.enums import PlayerType
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.routers.state import active_games
 from digimon_gym.routers.ws_manager import GameSettings, manager
 

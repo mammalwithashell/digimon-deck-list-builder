@@ -19,7 +19,7 @@ import torch.nn as nn
 from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
-from digimon_gym.engine.data.tensor_layout import (
+from engine_py_legacy.engine.data.tensor_layout import (
     CARD_ID_POSITIONS, SCALAR_POSITIONS, NUM_CARD_SLOTS, NUM_SCALAR_SLOTS,
 )  # parity-doc: tensor_layout stays on Python engine
 from digimon_engine import REGISTRY_CAPACITY, EMBEDDING_DIM

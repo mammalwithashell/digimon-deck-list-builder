@@ -38,7 +38,7 @@ from digimon_gym.db.auth import get_current_user
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import Deck, User
 from digimon_engine import validate_deck
-from digimon_gym.engine.runners.interactive_game import InteractiveGame  # noqa: F401
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame  # noqa: F401
 from digimon_gym.routers.lobby import (
     PendingGame,
     _generate_join_code,

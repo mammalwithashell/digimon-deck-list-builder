@@ -166,7 +166,7 @@ def _parse_xros_costs(xros_req):
     """
     if not xros_req:
         return [], []
-    from digimon_gym.engine.data.card_database import parse_xros_req, parse_digixros_req  # noqa: E402
+    from engine_py_legacy.engine.data.card_database import parse_xros_req, parse_digixros_req  # noqa: E402
     dna_costs = parse_xros_req(xros_req)
     digixros_costs = parse_digixros_req(xros_req)
     return (

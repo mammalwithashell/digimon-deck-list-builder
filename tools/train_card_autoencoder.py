@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from digimon_gym.engine.data.card_features import CardFeatureVectorizer, FEATURE_DIM
+from engine_py_legacy.engine.data.card_features import CardFeatureVectorizer, FEATURE_DIM
 
 DATA_DIR = Path(__file__).resolve().parent.parent / 'digimon_gym' / 'engine' / 'data'
 

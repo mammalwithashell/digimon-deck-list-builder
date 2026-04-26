@@ -23,7 +23,7 @@ from digimon_gym.db.schemas import (
 # path passes an empty CardRestriction() to bypass restricted-list checks,
 # and the Rust binding only exposes the official-ENG list path. Tracked in
 # RUST_PYTHON_PARITY.md.
-from digimon_gym.engine.data.deck_loader import validate_deck, RESTRICTED_LIST, CardRestriction
+from engine_py_legacy.engine.data.deck_loader import validate_deck, RESTRICTED_LIST, CardRestriction
 from digimon_engine import out_of_set_cards
 
 router = APIRouter(prefix="/decks", tags=["decks"])

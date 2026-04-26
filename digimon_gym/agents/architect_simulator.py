@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Protocol, Tuple
 
 import numpy as np
 
-from digimon_gym.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
 
 logger = logging.getLogger(__name__)
 

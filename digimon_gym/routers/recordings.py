@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import GameRecording, GameRecordingReport
 from digimon_gym.db.schemas import BugReportRequest, BugReportResponse, RecordingResponse, RecordingSaveResponse
-from digimon_gym.engine.runners.headless_game import HeadlessGame
-from digimon_gym.engine.runners.replay_runner import ReplayRunner
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.replay_runner import ReplayRunner
 from digimon_gym.routers.state import active_games
 
 router = APIRouter(tags=["recordings"])

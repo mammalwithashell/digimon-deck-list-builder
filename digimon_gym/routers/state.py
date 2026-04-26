@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from digimon_gym.engine.runners.headless_game import HeadlessGame
-from digimon_gym.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.engine.runners.replay_runner import ReplayRunner
+from engine_py_legacy.engine.runners.headless_game import HeadlessGame
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from engine_py_legacy.engine.runners.replay_runner import ReplayRunner
 
 active_games: dict[str, HeadlessGame | InteractiveGame] = {}
 active_replays: dict[str, ReplayRunner] = {}

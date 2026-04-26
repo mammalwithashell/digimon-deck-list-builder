@@ -77,7 +77,7 @@ from digimon_gym.db.schemas import (
     QueueSetIssueFixesResponse,
     TaskPromotionRequest,
 )
-from digimon_gym.engine.data.script_promotion import (
+from engine_py_legacy.engine.data.script_promotion import (
     ScriptPromotionError,
     promote_script_from_generated,
     scripts_root,

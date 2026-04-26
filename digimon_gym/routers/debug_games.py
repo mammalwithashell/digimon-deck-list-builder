@@ -7,10 +7,10 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.enums import PlayerType, GamePhase
-from digimon_gym.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.engine.core.player import Player
+from engine_py_legacy.engine.data.card_database import CardDatabase
+from engine_py_legacy.engine.data.enums import PlayerType, GamePhase
+from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
+from engine_py_legacy.engine.core.player import Player
 from digimon_gym.routers.schemas import (
     CreateDebugGameRequest,
     SetMemoryRequest,
@@ -21,7 +21,7 @@ from digimon_gym.routers.schemas import (
     ClearZoneRequest,
     SetPhaseRequest,
 )
-from digimon_gym.engine.debug.state_injection import (
+from engine_py_legacy.engine.debug.state_injection import (
     place_on_field as _place_on_field,
     place_in_breeding as _place_in_breeding,
     clear_zone as _clear_zone,
