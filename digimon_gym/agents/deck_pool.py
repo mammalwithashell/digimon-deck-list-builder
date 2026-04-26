@@ -26,9 +26,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 import gymnasium
 import numpy as np
 
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.deck_loader import expand_deck_dict, validate_deck
-from digimon_gym.engine.data.enums import CardKind
+from digimon_engine import CardDatabase, CardKind, expand_deck_dict, validate_deck
 
 logger = logging.getLogger(__name__)
 

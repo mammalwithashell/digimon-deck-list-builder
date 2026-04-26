@@ -42,7 +42,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import gymnasium
 
-from digimon_gym.engine.data.deck_loader import parse_tts
+from digimon_engine import parse_tts
 
 logger = logging.getLogger(__name__)
 
