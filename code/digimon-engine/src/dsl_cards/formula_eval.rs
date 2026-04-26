@@ -11,6 +11,15 @@
 //! rather than panicking. The validator (Phase 2 schema check) shouldn't
 //! produce these but the engine must not crash on a malformed pack.
 //!
+//! The two card-author-bug branches (mis-arity FloorDiv, unregistered
+//! RawRust) emit `#[cfg(debug_assertions)] eprintln!` warnings so a
+//! malformed pack surfaces in dev/test logs instead of producing
+//! subtly wrong DP values silently. Logging is observability only —
+//! the return value contract (always 0) is unchanged. The remaining
+//! defensive branches (divide-by-zero, missing target permanent,
+//! empty aggregate set) are validator/engine guarantees and stay
+//! silent to keep hot loops quiet.
+//!
 //! ## Per-selector semantics
 //!
 //! - `StackSize` — total number of `CardSource`s in the target's
@@ -36,7 +45,19 @@
 use digimon_dsl::compiled::{CompiledAggregateSelector, CompiledFormula, CompiledPerSelector};
 
 use crate::effect_context::EffectContext;
+use crate::enums::CardColor;
 use crate::permanent::PermanentHandle;
+
+// Compile-time guard for the `DigivolutionColorCount` u8 bitmask in
+// `evaluate_per`. `1u8 << n` is undefined behavior for `n >= 8`. Today
+// `CardColor` has 7 variants (Red=0..Purple=6); if a future color is
+// added that pushes the discriminant >= 8, this build break forces the
+// author to widen the bitmask (u16 / hash-set) instead of silently
+// shifting into UB. `Purple` is the highest-disc variant in `enums.rs`.
+const _: () = assert!(
+    (CardColor::Purple as u8) < 8,
+    "DigivolutionColorCount uses a u8 bitmask; CardColor must fit in u8"
+);
 
 /// Evaluate a `CompiledFormula` against the live game state in `ctx`,
 /// using `target` as the resolution point for per-selectors that
@@ -60,6 +81,13 @@ pub fn evaluate(
             // and the compiled form ships the operands as a Vec for forward-
             // compatibility. Anything other than 2 operands is malformed; return 0.
             if args.len() != 2 {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "[debug] formula_eval: FloorDiv with {} operands (expected 2); \
+                     returning 0. This indicates a malformed compiled pack — the \
+                     DSL surface enforces binary `floor_div(a, b)`.",
+                    args.len()
+                );
                 return 0;
             }
             let l = evaluate(&args[0], ctx, target);
@@ -89,11 +117,19 @@ pub fn evaluate(
                 .unwrap_or(0)
         }
         CompiledFormula::Aggregate(sel) => evaluate_aggregate(*sel, ctx),
-        CompiledFormula::RawRust(_name) => {
+        CompiledFormula::RawRust(name) => {
             // Phase 3 will wire raw_rust formula dispatch through
             // `digimon_dsl::raw_rust_registry::RawRustRegistry`. For
             // Phase 2f2 the registry only tracks names (no fn pointers
             // to value-returning callables), so we silent-no-op to 0.
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "[debug] formula_eval: RawRust(\"{}\") not registered; returning 0. \
+                 Phase 3 will wire value-returning raw_rust callables through \
+                 `RawRustRegistry`; until then a pack referencing a raw_rust \
+                 formula is malformed for runtime evaluation.",
+                name
+            );
             0
         }
     }
