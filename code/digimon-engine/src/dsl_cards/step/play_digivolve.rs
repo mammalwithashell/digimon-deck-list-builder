@@ -46,6 +46,26 @@ fn lower_cost_delta(d: Option<&digimon_dsl::compiled::CompiledCostDelta>) -> Cos
     }
 }
 
+/// Resolve a `source: CompiledBindingRef` to a `CardSourceRef`, defaulting the
+/// source-zone owner to `ctx.player` (the effect controller) for hand/trash
+/// binding kinds. Returns `None` if the binding can't be resolved or has an
+/// unsupported kind. See I2 above for the owner-heuristic limitation.
+fn resolve_card_source_ref(
+    source: &digimon_dsl::compiled::CompiledBindingRef,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> Option<CardSourceRef> {
+    let owner = ctx.player;
+    match resolve_binding_ref(source, ctx, bindings)? {
+        ResolvedBinding::HandIndex(i) => Some(CardSourceRef::Hand(owner, i as usize)),
+        ResolvedBinding::TrashIndex(i) => Some(CardSourceRef::Trash(owner, i as usize)),
+        ResolvedBinding::Card(h) => Some(CardSourceRef::Reveal(h)),
+        // DeckTop and other kinds: no IR binding produces them today.
+        // Future: widen as IR evolves.
+        _ => None,
+    }
+}
+
 /// Try to handle `step` as a play / digivolve / placement variant.
 /// Returns `true` if the variant was matched (regardless of whether the
 /// underlying engine call succeeded).
@@ -143,7 +163,13 @@ pub fn try_run(
             // `cost: i32`. Map a positive cost to `CostDelta::Fixed(cost)`
             // and `cost == 0` to `CostDelta::Free` so memory is genuinely
             // unaffected.
-            let delta = if *cost <= 0 {
+            //
+            // IR carries cost as i32, which can express Free (0) and Fixed(n) but not
+            // CostDelta::Reduce(n) (printed cost minus N). Phase 3 may widen the IR
+            // field if a card needs that semantics. cost == 0 collapses to Free
+            // (semantically identical for memory accounting).
+            debug_assert!(*cost >= 0, "EffectInitiatedDigivolve cost: i32 went negative");
+            let delta = if *cost == 0 {
                 CostDelta::Free
             } else {
                 CostDelta::Fixed(*cost as i16)
@@ -191,17 +217,12 @@ pub fn try_run(
         }
         CompiledStep::PlaceOnSecurity { of, source, position, face_up } => {
             let p = resolve_player(ctx, *of);
-            // Resolve the source binding to a `CardSourceRef`. Hand/Trash
-            // indices need a player — use the effect's controller (`ctx.player`)
-            // since "place card from your hand on opponent's security" is the
-            // common pattern (controller is owner of the source zone).
-            let owner = ctx.player;
-            let source_ref = match resolve_binding_ref(source, ctx, bindings) {
-                Some(ResolvedBinding::HandIndex(i)) => CardSourceRef::Hand(owner, i as usize),
-                Some(ResolvedBinding::TrashIndex(i)) => CardSourceRef::Trash(owner, i as usize),
-                Some(ResolvedBinding::Card(h)) => CardSourceRef::Reveal(h),
-                _ => return true,
-            };
+            // TODO(2f-followup): BindingValue::HandIndex / TrashIndex carry no PlayerId,
+            // so we default the source-zone owner to ctx.player (effect controller).
+            // If a future card needs to place an opponent's hand card, the IR's
+            // BindingValue::HandIndex will need to widen to include a PlayerId, OR a
+            // new HandIndexFor variant must be added.
+            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else { return true; };
             let _ = ctx.place_on_security(p, source_ref, super::map_stack_position(*position), *face_up);
             true
         }
@@ -210,13 +231,12 @@ pub fn try_run(
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
             };
-            let owner = ctx.player;
-            let source_ref = match resolve_binding_ref(source, ctx, bindings) {
-                Some(ResolvedBinding::HandIndex(i)) => CardSourceRef::Hand(owner, i as usize),
-                Some(ResolvedBinding::TrashIndex(i)) => CardSourceRef::Trash(owner, i as usize),
-                Some(ResolvedBinding::Card(h)) => CardSourceRef::Reveal(h),
-                _ => return true,
-            };
+            // TODO(2f-followup): BindingValue::HandIndex / TrashIndex carry no PlayerId,
+            // so we default the source-zone owner to ctx.player (effect controller).
+            // If a future card needs to place an opponent's hand card, the IR's
+            // BindingValue::HandIndex will need to widen to include a PlayerId, OR a
+            // new HandIndexFor variant must be added.
+            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else { return true; };
             let _ = ctx.place_as_bottom_source(source_ref, target_handle);
             true
         }
