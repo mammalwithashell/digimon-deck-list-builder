@@ -32,8 +32,8 @@ Process an entire archetype's card scripts through a test-driven faithfulness pi
 | Engine Gaps | `qa/archetype-qa/engine-gaps.md` |
 | C# Scripts | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CLASS_NAME}.cs` |
 | Python Scripts | `code/engine_py_legacy/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py` |
-| Card Metadata | `digimon_gym/engine/data/cards.json` |
-| Deck Library | `digimon_gym/engine/data/deck_library.json` |
+| Card Metadata | `data/cards.json` |
+| Deck Library | `data/deck_library.json` |
 | Validated Cards | `qa/qa-reports/validated_cards.json` |
 | Archetype QA | `qa/archetype-qa/{archetype_name}.md` |
 | Pinecone Index | `digimon-engine` (namespaces: engine-api, card-scripts, card-metadata) |
@@ -185,7 +185,7 @@ Repeat for each batch of 4 cards. Maintain running totals: `faithful_count`, `im
 
 For each card in the current batch, the orchestrator reads:
 
-1. **Card metadata** from `digimon_gym/engine/data/cards.json` — extract entry for this card ID. Key fields: `card_name_eng`, `effect_description_eng`, `inherited_effect_description_eng`, `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`
+1. **Card metadata** from `data/cards.json` — extract entry for this card ID. Key fields: `card_name_eng`, `effect_description_eng`, `inherited_effect_description_eng`, `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`
 
 2. **Current Python script** from `code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py` — if the card is categorized as IMPLEMENT (no script exists), set to `null` in the agent prompt
 
@@ -321,7 +321,7 @@ For each failing test / MISMATCH clause:
 - Follow patterns from the Engine API Reference
 - Verify importability:
   ```bash
-  python -c "from digimon_gym.engine.data.scripts.{set}.{set}_{nnn} import {CLASS_NAME}; print('OK')"
+  python -c "from engine_py_legacy.engine.data.scripts.{set}.{set}_{nnn} import {CLASS_NAME}; print('OK')"
   ```
 - If a clause hits an engine gap: add comment `# ENGINE GAP: {description}` and report BLOCKED for that clause
 

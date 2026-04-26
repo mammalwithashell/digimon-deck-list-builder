@@ -9,7 +9,7 @@ This document is the canonical scripting reference. Before writing any card effe
 ## 1. Project layout
 
 ```
-digimon-engine/
+code/digimon-engine/
 ├── src/
 │   ├── lib.rs                  # Re-exports the public API
 │   ├── game.rs                 # Game state + turn machine
@@ -219,7 +219,7 @@ Effect::on_deletion(card)
 ))
 ```
 
-The slot is populated by `Game::current_deletion_cause`, set by the deletion fire-site for the duration of the OnDeletion drain and cleared once the queue is empty. See `digimon-engine/tests/combat/deletion_cause_observer.rs` for the canonical regression.
+The slot is populated by `Game::current_deletion_cause`, set by the deletion fire-site for the duration of the OnDeletion drain and cleared once the queue is empty. See `code/code/digimon-engine/tests/combat/deletion_cause_observer.rs` for the canonical regression.
 
 ### Replacement-process outcome-setters
 
@@ -307,7 +307,7 @@ For the underlying substrate that makes this possible, see
 
 #### Worked example — Save auto-install body
 
-Save's auto-install (in `digimon-engine/src/cards/keyword_effects.rs`) is the
+Save's auto-install (in `code/code/digimon-engine/src/cards/keyword_effects.rs`) is the
 canonical example of an **optional** selection-bearing OnDeletion trigger.
 Annotated line-by-line:
 
@@ -469,7 +469,7 @@ auto-install cannot encode:
   in DCGO `Partition.cs`). Override via hand-rolled to apply per-group logic.
 
 To override: set the card's `effect_class_name` in `cards.json` to a
-hand-rolled struct in `digimon-engine/src/cards/<set>/<card_id>.rs`. The
+hand-rolled struct in `code/code/digimon-engine/src/cards/<set>/<card_id>.rs`. The
 auto-install is skipped when `CardEffectRegistry` has a hand-rolled entry
 for that `card_id` (the registry entry wins).
 
@@ -1110,7 +1110,7 @@ Cause-filter semantics: `.opponent_only()` sets `cause_filter = Some(OpponentEff
 
 `<Barrier>`, `<Evade>`, and `<Decode>` ship out-of-the-box via printed-keyword auto-install at `effects_for_card` time — no hand-authored `CardEffect` script required. Put the keyword in `CardData::keywords` and the engine installs the matching replacement.
 
-**Phase D (2026-04-25):** `<Fragment(N)>`, `<ArmorPurge>`, `<Save>`, `<Decoy>`, `<Fortitude>`, `<Partition>`, and `<MaterialSave(N)>` now auto-install alongside Barrier/Evade/Decode. Cards declaring only these keywords need zero hand-rolled `CardEffect` code. See the "Selection-bearing keyword authoring pattern" section above for the template and `digimon-engine/src/cards/keyword_effects.rs` for the canonical implementations.
+**Phase D (2026-04-25):** `<Fragment(N)>`, `<ArmorPurge>`, `<Save>`, `<Decoy>`, `<Fortitude>`, `<Partition>`, and `<MaterialSave(N)>` now auto-install alongside Barrier/Evade/Decode. Cards declaring only these keywords need zero hand-rolled `CardEffect` code. See the "Selection-bearing keyword authoring pattern" section above for the template and `code/code/digimon-engine/src/cards/keyword_effects.rs` for the canonical implementations.
 
 ### Worked example — a hand-authored Barrier-flavored effect
 
@@ -1163,7 +1163,7 @@ impl CardEffect for MyBarrier {
 
 ### Testing a Would* effect
 
-TDD per working rule 18 — write behavioral tests against `DebugRunner` under `digimon-engine/tests/replacements/` **before** implementing the effect:
+TDD per working rule 18 — write behavioral tests against `DebugRunner` under `code/code/digimon-engine/tests/replacements/` **before** implementing the effect:
 
 ```rust
 #[test]
@@ -1375,7 +1375,7 @@ vec![
 
 ### Testing an Option effect
 
-Per working rule 18, write behavioral tests against `DebugRunner` under `digimon-engine/tests/option_flow/` before implementing:
+Per working rule 18, write behavioral tests against `DebugRunner` under `code/code/digimon-engine/tests/option_flow/` before implementing:
 
 ```rust
 #[test]
@@ -1569,7 +1569,7 @@ Effect::new(card, EffectTiming::OnAllyAttack)
 
 ### Testing a combat interrupt
 
-Per working rule 18, write behavioral tests against `DebugRunner` under `digimon-engine/tests/combat/` before implementing:
+Per working rule 18, write behavioral tests against `DebugRunner` under `code/code/digimon-engine/tests/combat/` before implementing:
 
 ```rust
 #[test]
@@ -1613,9 +1613,9 @@ see [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md).
 
 ## 10. Registering a card
 
-1. Create `digimon-engine/src/cards/<set>/<card_id>.rs` implementing `CardEffect`.
-2. Create/update `digimon-engine/src/cards/<set>/mod.rs` with a `register` function that calls `registry.insert` for every card in the set.
-3. Add `pub mod <set>;` to `digimon-engine/src/cards.rs`.
+1. Create `code/code/digimon-engine/src/cards/<set>/<card_id>.rs` implementing `CardEffect`.
+2. Create/update `code/code/digimon-engine/src/cards/<set>/mod.rs` with a `register` function that calls `registry.insert` for every card in the set.
+3. Add `pub mod <set>;` to `code/code/digimon-engine/src/cards.rs`.
 4. Call `<set>::register(&mut registry)` inside `cards::build_registry()`.
 
 A card is **not** active until it appears in `build_registry()`.
@@ -1628,7 +1628,7 @@ There are **two separate registries**. Don't confuse them.
 
 ### `CardRegistry` — card_id ↔ integer index (for the RL tensor)
 
-Defined in [card_registry.rs](../digimon-engine/src/card_registry.rs). Built with `CardRegistry::from_cards(&HashMap<String, CardData>)`. Provides:
+Defined in [card_registry.rs](../code/code/digimon-engine/src/card_registry.rs). Built with `CardRegistry::from_cards(&HashMap<String, CardData>)`. Provides:
 
 - `get_index(card_id) -> u16` — integer for tensor encoding. `0` = padding/unknown.
 - `get_norm_id(card_id) -> f32` — normalized float for non-embedding tensor slots.
@@ -1642,7 +1642,7 @@ Duplicate indices panic at construction. Missing indices in otherwise-production
 
 ### `CardEffectRegistry` — card_id → `Arc<dyn CardEffect>` (for effect scripts)
 
-Defined in [cards.rs](../digimon-engine/src/cards.rs). Populated at compile time by `build_registry()`, which calls each set's `register()` function.
+Defined in [cards.rs](../code/code/digimon-engine/src/cards.rs). Populated at compile time by `build_registry()`, which calls each set's `register()` function.
 
 A missing entry here means the card plays as **vanilla** — no effect, no error.
 
@@ -1650,7 +1650,7 @@ A missing entry here means the card plays as **vanilla** — no effect, no error
 
 1. **cards.json gets updated** by the card pipeline. New cards are appended with fresh `index` values (likely 4083..4182). **Existing indices never change.** The Rust `CardRegistry` will pick up the new mappings automatically on next load.
 
-2. **New effect scripts** go into `digimon-engine/src/cards/bt25/*.rs`. Add `pub mod bt25;` to `cards.rs` and `bt25::register(&mut registry)` to `build_registry()`. Cargo rebuild.
+2. **New effect scripts** go into `code/code/digimon-engine/src/cards/bt25/*.rs`. Add `pub mod bt25;` to `cards.rs` and `bt25::register(&mut registry)` to `build_registry()`. Cargo rebuild.
 
 3. **Cards with no script yet** play as vanilla — they're in the `CardRegistry` (so they have tensor positions) but not in the `CardEffectRegistry` (so no effects fire). Perfectly fine; the engine silently no-ops.
 
@@ -1735,7 +1735,7 @@ r.skip_mulligan();              // auto-keep everyone else
 
 The DTO returned from every `rust_*` command carries `mulligan_current_player: Option<PlayerId>` and `mulligan_used: Vec<bool>`. The frontend hides the Mulligan button for any player whose `mulligan_used` is true, and only enables keep/mulligan controls for the player whose id matches `mulligan_current_player`.
 
-`rustMulliganDecide(keep: boolean)` from `frontend/src/api/rustEngine.ts` applies the decision for the current decider and returns the updated state.
+`rustMulliganDecide(keep: boolean)` from `code/code/frontend/src/api/rustEngine.ts` applies the decision for the current decider and returns the updated state.
 
 ### What's NOT here (yet)
 
@@ -1797,7 +1797,7 @@ Each one iterates effects via `CardEffectRegistry::get(card_id).effects(handle)`
 
 This is the onramp the forthcoming Rust `batch-fix-cards` skill will hand to sub-agents. Authors (human or AI) follow it directly until the skill exists. The flow mirrors the Python `/batch-fix-cards` convention: decompose → test-first → implement → verdict.
 
-Worked example pattern: `digimon-engine/src/cards/test_cards.rs` (the `TEST-001..TEST-022` structs) with paired tests in `digimon-engine/tests/test_cards_behavioral.rs`. Read both side-by-side before starting a real card.
+Worked example pattern: `code/code/digimon-engine/src/cards/test_cards.rs` (the `TEST-001..TEST-022` structs) with paired tests in `code/code/digimon-engine/tests/test_cards_behavioral.rs`. Read both side-by-side before starting a real card.
 
 ### 1. Decompose the card text into numbered clauses
 
@@ -1813,7 +1813,7 @@ Each clause becomes a discrete assertion in the test. The numbering stays in com
 
 ### 2. Write failing behavioral tests first
 
-Create or extend a test file under `digimon-engine/tests/`. Use `DebugRunner::builder()` to construct a minimal game state — inject only what the clause exercises. One `#[test]` per clause outcome, including both positive and negative branches.
+Create or extend a test file under `code/code/digimon-engine/tests/`. Use `DebugRunner::builder()` to construct a minimal game state — inject only what the clause exercises. One `#[test]` per clause outcome, including both positive and negative branches.
 
 ```rust
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -1850,14 +1850,14 @@ fn clause2_no_memory_when_trashed_card_is_not_lv5() {
 ### 3. Run the tests and confirm they fail
 
 ```bash
-cargo test --manifest-path digimon-engine/Cargo.toml --test your_card_behavioral
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test your_card_behavioral
 ```
 
 Expect compile failures (no `CardEffect` impl yet) or assertion failures. A passing test at this point means the test doesn't actually exercise the clause — rewrite it until it fails for the right reason.
 
 ### 4. Implement the `CardEffect`
 
-Add a zero-sized struct in `digimon-engine/src/cards/` (under a set-scoped submodule for real cards — e.g. `src/cards/bt16/bt16_052.rs`). Implement `CardEffect::effects` using the `Effect` builder. Use `EffectContext` for every mutation — never reach into `Game` internals from a `process` closure.
+Add a zero-sized struct in `code/code/digimon-engine/src/cards/` (under a set-scoped submodule for real cards — e.g. `src/cards/bt16/bt16_052.rs`). Implement `CardEffect::effects` using the `Effect` builder. Use `EffectContext` for every mutation — never reach into `Game` internals from a `process` closure.
 
 ```rust
 use std::sync::Arc;
@@ -1889,10 +1889,10 @@ Numbered comments inside the closure match the clause decomposition from Step 1.
 
 ### 5. Register the effect
 
-Wire the card into the registry. Real cards register from their set module; test cards register from `test_cards::register`. Follow the existing pattern in `digimon-engine/src/cards.rs` and `digimon-engine/src/cards/test_cards.rs`.
+Wire the card into the registry. Real cards register from their set module; test cards register from `test_cards::register`. Follow the existing pattern in `code/code/digimon-engine/src/cards.rs` and `code/code/digimon-engine/src/cards/test_cards.rs`.
 
 ```rust
-// digimon-engine/src/cards/bt16/mod.rs
+// code/digimon-engine/src/cards/bt16/mod.rs
 pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("BT16-001", Arc::new(bt16_001::BT16_001));
     // …
@@ -1902,13 +1902,13 @@ pub fn register(registry: &mut CardEffectRegistry) {
 ### 6. Run the tests and confirm they pass
 
 ```bash
-cargo test --manifest-path digimon-engine/Cargo.toml --test your_card_behavioral
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test your_card_behavioral
 ```
 
 All clause tests green. Then run the full suite to catch regressions:
 
 ```bash
-cargo test --manifest-path digimon-engine/Cargo.toml
+cargo test --manifest-path code/digimon-engine/Cargo.toml
 ```
 
 ### 7. Emit a verdict
@@ -2107,7 +2107,7 @@ API via `Effect` builders.
 
 Added in Phase 4 to surface ordered permutations, union-zone picks, count-capped multi-selects, and opponent-as-selector flows through `PendingSelection` so the RL action space observes every branch.
 
-All four helpers live in `digimon-engine/src/effect_context/selections.rs`. Three new `SelectionKind` variants (`UnionZone`, `OrderedPermutation`, `CountCappedMultiSelect`) and three new `GamePhase` variants (`SelectUnion`, `SelectPermutation`, `SelectBudgeted`) are added in `selection.rs` and `enums.rs` respectively. No new action-range constants — all four helpers reuse existing ranges (Python-parity pattern).
+All four helpers live in `code/code/digimon-engine/src/effect_context/selections.rs`. Three new `SelectionKind` variants (`UnionZone`, `OrderedPermutation`, `CountCappedMultiSelect`) and three new `GamePhase` variants (`SelectUnion`, `SelectPermutation`, `SelectBudgeted`) are added in `selection.rs` and `enums.rs` respectively. No new action-range constants — all four helpers reuse existing ranges (Python-parity pattern).
 
 Commits: `67e0afa4`..`65f0b3a6` (8 commits). Full suite: **495 passing** (+32 from Phase 3 baseline of 463).
 
@@ -2250,7 +2250,7 @@ ctx.select_reveal(
 ctx.place_remainder_on_deck(p, StackPosition::Bottom);
 ```
 
-**Note on chaining follow-up effects.** `place_remainder_on_deck` installs its own `PendingSelection` callback internally. If the card text requires another selection after the placement (e.g., "…then your opponent chooses a card to trash"), install that selection *after* `place_remainder_on_deck` resolves, in a separate step — not chained inside the same callback. See `digimon-engine/tests/selection/behavioral_end_to_end.rs` for an example of this two-step pattern.
+**Note on chaining follow-up effects.** `place_remainder_on_deck` installs its own `PendingSelection` callback internally. If the card text requires another selection after the placement (e.g., "…then your opponent chooses a card to trash"), install that selection *after* `place_remainder_on_deck` resolves, in a separate step — not chained inside the same callback. See `code/code/digimon-engine/tests/selection/behavioral_end_to_end.rs` for an example of this two-step pattern.
 
 ---
 

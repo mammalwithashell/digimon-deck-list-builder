@@ -8,19 +8,19 @@ Scripts and modules for managing card data, running AI reviews, and building/dep
 
 ### 1.1 Card Ingester
 
-**Script:** `tools/ingest_cards.py`
+**Script:** `code/tools/ingest_cards.py`
 
 Fetches card data from the digimoncard.io API and merges it into `data/cards.json`. This is the first step when adding a new set — it populates card metadata (name, colors, level, DP, evo costs, traits, effect text) before `build_registry.py` assigns stable indices.
 
 ```bash
 # Ingest a single set by ID
-python tools/ingest_cards.py --set BT26
+python code/tools/ingest_cards.py --set BT26
 
 # Ingest all priority sets missing from cards.json
-python tools/ingest_cards.py --bulk
+python code/tools/ingest_cards.py --bulk
 ```
 
-**Priority sets** are read from `digimon_gym/scraper/priority_sets.txt`. Bulk mode skips sets already in `cards.json`.
+**Priority sets** are read from `code/tools/scraper/priority_sets.txt`. Bulk mode skips sets already in `cards.json`.
 
 When re-ingesting an existing set, existing `index` and `norm_id` values are preserved on matching card IDs so stable tensor encoding is not corrupted. Genuinely new cards will lack these fields until `build_registry.py` is run. The script warns if cards with existing indices are missing from the API response.
 
@@ -28,22 +28,22 @@ When re-ingesting an existing set, existing `index` and `norm_id` values are pre
 
 ### 1.2 Card Registry Builder
 
-**Script:** `tools/build_registry.py`
+**Script:** `code/tools/build_registry.py`
 
 Assigns stable integer indices to every card in `cards.json`. These indices are used by the RL tensor writer and `nn.Embedding` lookup. Must be run after `ingest_cards.py` to assign indices to newly ingested cards.
 
 ```bash
 # Full build from API (fetches all known sets)
-python tools/build_registry.py
+python code/tools/build_registry.py
 
 # Dry run — fetch + stats, no write
-python tools/build_registry.py --dry-run
+python code/tools/build_registry.py --dry-run
 
 # Rebuild norm_ids only (no API fetch)
-python tools/build_registry.py --offline
+python code/tools/build_registry.py --offline
 
 # Fetch specific sets only
-python tools/build_registry.py --sets BT25 EX12
+python code/tools/build_registry.py --sets BT25 EX12
 ```
 
 | Argument | Default | Description |
@@ -65,7 +65,7 @@ python tools/build_registry.py --sets BT25 EX12
 
 ### 1.3 Card Autoencoder Trainer
 
-**Script:** `tools/train_card_autoencoder.py`
+**Script:** `code/tools/train_card_autoencoder.py`
 
 Trains a small autoencoder on 112-float feature vectors (see Card Feature Vectorizer below) to produce compact 16-float embeddings. These embeddings warm-start the `nn.Embedding` table in the RL policy network so new cards start with meaningful representations instead of random noise.
 
@@ -93,8 +93,8 @@ Input (112) → Linear(112, 64) → ReLU → Linear(64, 16) → [embedding]
 
 | File | Description |
 |---|---|
-| `digimon_gym/engine/data/card_encoder.pt` | Encoder weights (for re-encoding new cards) |
-| `digimon_gym/engine/data/card_embeddings.npy` | Precomputed embedding table, shape `(max_index+1, 16)` |
+| `code/engine_py_legacy/engine/data/card_encoder.pt` | Encoder weights (for re-encoding new cards) |
+| `code/engine_py_legacy/engine/data/card_embeddings.npy` | Precomputed embedding table, shape `(max_index+1, 16)` |
 
 After training, the script prints a spot-check showing each sampled card and its 3 nearest neighbors by cosine similarity. Cards of similar type/stats should cluster together.
 
@@ -104,30 +104,30 @@ After training, the script prints a spot-check showing each sampled card and its
 
 ### 2.1 Promote Script
 
-**Script:** `tools/promote_script.py`
+**Script:** `code/tools/promote_script.py`
 
-Promotes a generated card script from the generated lane into the frozen production lane. Calls `digimon_gym.engine.data.script_promotion.promote_script_from_generated` and requires the expected hash of the generated script for safety.
+Promotes a generated card script from the generated lane into the frozen production lane. Calls `engine_py_legacy.engine.data.script_promotion.promote_script_from_generated` and requires the expected hash of the generated script for safety.
 
 ```bash
-python tools/promote_script.py \
+python code/tools/promote_script.py \
   --card-id BT22-001 \
   --set-id BT22 \
   --module-name bt22_001 \
   --expected-generated-hash <sha256>
 ```
 
-On success, prints the promotion result as JSON (frozen path, hash). The script is moved to `digimon_gym/engine/data/scripts/{set_id}/` and the frozen manifest is updated.
+On success, prints the promotion result as JSON (frozen path, hash). The script is moved to `code/engine_py_legacy/engine/data/scripts/{set_id}/` and the frozen manifest is updated.
 
 ---
 
 ### 2.2 Check Frozen Integrity
 
-**Script:** `tools/check_frozen_integrity.py`
+**Script:** `code/tools/check_frozen_integrity.py`
 
-CI guard that verifies no frozen scripts have been modified outside of the promotion workflow. Computes SHA-256 hashes of all files in `digimon_gym/engine/data/scripts/` (excluding `generated/` and `__pycache__`) and compares them against `_frozen_manifest.json`. Also detects untracked frozen files that are not in the manifest.
+CI guard that verifies no frozen scripts have been modified outside of the promotion workflow. Computes SHA-256 hashes of all files in `code/engine_py_legacy/engine/data/scripts/` (excluding `generated/` and `__pycache__`) and compares them against `_frozen_manifest.json`. Also detects untracked frozen files that are not in the manifest.
 
 ```bash
-python tools/check_frozen_integrity.py
+python code/tools/check_frozen_integrity.py
 ```
 
 Exits non-zero if any frozen file has been modified, is missing, or is present without a manifest entry. Intended to run in CI on every PR that touches the `scripts/` directory.
@@ -138,14 +138,14 @@ Exits non-zero if any frozen file has been modified, is missing, or is present w
 
 ### 3.1 Build Review Batches
 
-**Script:** `tools/build_review_batches.py`
+**Script:** `code/tools/build_review_batches.py`
 
 Builds per-card review candidates and groups them into 5-card batches for queuing as `review_batch` AI tasks. Reads generated scripts and the frozen manifest to determine which cards have pending or reviewable scripts. Outputs a JSON plan file consumed by `queue_review_batches.py`.
 
 ```bash
-python tools/build_review_batches.py --sets EX10,BT13,EX11,BT23,BT21,BT24
-python tools/build_review_batches.py --sets BT24 --output data/review/bt24_plan.json
-python tools/build_review_batches.py --sets ALL --dry-run
+python code/tools/build_review_batches.py --sets EX10,BT13,EX11,BT23,BT21,BT24
+python code/tools/build_review_batches.py --sets BT24 --output data/review/bt24_plan.json
+python code/tools/build_review_batches.py --sets ALL --dry-run
 ```
 
 Default sets: `EX10, BT13, EX11, BT23, BT21, BT24`. Output plan is written to `data/review/` by default.
@@ -154,21 +154,21 @@ Default sets: `EX10, BT13, EX11, BT23, BT21, BT24`. Output plan is written to `d
 
 ### 3.2 Queue Review Batches
 
-**Script:** `tools/queue_review_batches.py`
+**Script:** `code/tools/queue_review_batches.py`
 
 Reads a review plan JSON produced by `build_review_batches.py` and queues each batch as an AI task via the admin API. Requires a running API server and an admin bearer token.
 
 ```bash
-python tools/queue_review_batches.py \
+python code/tools/queue_review_batches.py \
   --plan data/review/six_set_review_plan.json \
   --base-url http://127.0.0.1:8000 \
   --token $DIGIMON_ADMIN_BEARER_TOKEN
 
 # Dry run (show what would be queued)
-python tools/queue_review_batches.py --plan data/review/plan.json --dry-run
+python code/tools/queue_review_batches.py --plan data/review/plan.json --dry-run
 
 # Cap number of batches submitted
-python tools/queue_review_batches.py --plan data/review/plan.json --max-tasks 10
+python code/tools/queue_review_batches.py --plan data/review/plan.json --max-tasks 10
 ```
 
 | Argument | Default | Description |
@@ -186,17 +186,17 @@ python tools/queue_review_batches.py --plan data/review/plan.json --max-tasks 10
 
 ### 4.1 Ingest Pinecone
 
-**Script:** `tools/ingest_pinecone.py`
+**Script:** `code/tools/ingest_pinecone.py`
 
-Ingests engine docs, card scripts, and card metadata into the `digimon-engine` Pinecone index for sub-agent retrieval. Uses Pinecone integrated inference — text is auto-embedded on upsert. Chunking helpers come from `digimon_gym/ai/retrieval.py`.
+Ingests engine docs, card scripts, and card metadata into the `digimon-engine` Pinecone index for sub-agent retrieval. Uses Pinecone integrated inference — text is auto-embedded on upsert. Chunking helpers come from `code/server/ai/retrieval.py`.
 
 Requires `PINECONE_API_KEY` env var.
 
 ```bash
-python tools/ingest_pinecone.py --all                          # Full rebuild
-python tools/ingest_pinecone.py --namespace card-scripts       # Single namespace
-python tools/ingest_pinecone.py --namespace card-scripts --set bt10  # Single set
-python tools/ingest_pinecone.py --all --dry-run                # Preview counts
+python code/tools/ingest_pinecone.py --all                          # Full rebuild
+python code/tools/ingest_pinecone.py --namespace card-scripts       # Single namespace
+python code/tools/ingest_pinecone.py --namespace card-scripts --set bt10  # Single set
+python code/tools/ingest_pinecone.py --all --dry-run                # Preview counts
 ```
 
 **Namespaces:**
@@ -212,14 +212,14 @@ python tools/ingest_pinecone.py --all --dry-run                # Preview counts
 
 ### 4.2 Verify Pinecone
 
-**Script:** `tools/verify_pinecone.py`
+**Script:** `code/tools/verify_pinecone.py`
 
 Checks Pinecone index health: verifies all expected namespaces exist with non-zero vector counts and runs spot-check queries to confirm retrieval is working.
 
 Requires `PINECONE_API_KEY` env var.
 
 ```bash
-python tools/verify_pinecone.py
+python code/tools/verify_pinecone.py
 ```
 
 Exits non-zero if any expected namespace is empty or spot-check queries return no results.
@@ -230,19 +230,19 @@ Exits non-zero if any expected namespace is empty or spot-check queries return n
 
 ### 5.1 Meta Loader
 
-**Script:** `tools/meta_loader.py`
+**Script:** `code/tools/meta_loader.py`
 
 Scrapes tournament decklists from multiple sources and builds `data/deck_library.json`. Sources include DigimonMeta.com, Egman Events, DigimonCard.io, and a DigiLab PostgreSQL database. Computes meta share and conversion rate from placement data.
 
 ```bash
-python tools/meta_loader.py --scrape-digimonmeta URL   # Scrape BT24/EX11 decks
-python tools/meta_loader.py --scrape-egman URL          # Scrape Egman tournament decks
-python tools/meta_loader.py --scrape-digimoncard-io URL # Scrape DigimonCard.io tournament
-python tools/meta_loader.py --scrape-digilab            # Scrape decklists from DigiLab DB
-python tools/meta_loader.py --import-file FILE          # Import a local deck file
-python tools/meta_loader.py --fetch-meta                # Fetch DigiLab stats (optional)
-python tools/meta_loader.py --build                     # Resolve + dedup + compute stats + write
-python tools/meta_loader.py --report                    # Print summary of deck_library.json
+python code/tools/meta_loader.py --scrape-digimonmeta URL   # Scrape BT24/EX11 decks
+python code/tools/meta_loader.py --scrape-egman URL          # Scrape Egman tournament decks
+python code/tools/meta_loader.py --scrape-digimoncard-io URL # Scrape DigimonCard.io tournament
+python code/tools/meta_loader.py --scrape-digilab            # Scrape decklists from DigiLab DB
+python code/tools/meta_loader.py --import-file FILE          # Import a local deck file
+python code/tools/meta_loader.py --fetch-meta                # Fetch DigiLab stats (optional)
+python code/tools/meta_loader.py --build                     # Resolve + dedup + compute stats + write
+python code/tools/meta_loader.py --report                    # Print summary of deck_library.json
 ```
 
 The `--build` step deduplicates decklists, groups them into archetypes, and computes meta_share and conversion_rate fields. The resulting `deck_library.json` is consumed by `GauntletWrapper` and `rank_archetypes.py`.
@@ -251,14 +251,14 @@ The `--build` step deduplicates decklists, groups them into archetypes, and comp
 
 ### 5.2 Rank Archetypes
 
-**Script:** `tools/rank_archetypes.py`
+**Script:** `code/tools/rank_archetypes.py`
 
 Reads `deck_library.json` and prints a ranked table of archetypes by `meta_share`. Useful for deciding which archetypes to prioritize for implementation.
 
 ```bash
-python tools/rank_archetypes.py
-python tools/rank_archetypes.py --top 30
-python tools/rank_archetypes.py --top 20 --min-coverage 0.8
+python code/tools/rank_archetypes.py
+python code/tools/rank_archetypes.py --top 30
+python code/tools/rank_archetypes.py --top 20 --min-coverage 0.8
 ```
 
 | Argument | Default | Description |
@@ -272,7 +272,7 @@ Output columns: archetype name, meta_share, number of decklists, unique card cou
 
 ### 5.3 Resolve Deck
 
-**Module:** `tools/resolve_deck.py`
+**Module:** `code/tools/resolve_deck.py`
 
 Resolves an archetype name into an enriched card manifest. Handles alias resolution, deck library lookup, frozen manifest checks, C# script discovery, and card metadata loading. Auto-writes `qa/archetype-qa/{slug}/deck_pool.json`.
 
@@ -294,11 +294,11 @@ cards = resolve_cards(["BT24-017", "BT24-018"])
 
 **As a CLI:**
 ```bash
-python tools/resolve_deck.py "Royal Knights"                # Human-readable table
-python tools/resolve_deck.py "Royal Knights" --json         # Full JSON manifest
-python tools/resolve_deck.py --cards BT24-017,BT24-018     # Explicit card list
-python tools/resolve_deck.py --list-archetypes              # List all archetypes
-python tools/resolve_deck.py --list-archetypes --min-share 0.01  # Filter by meta share
+python code/tools/resolve_deck.py "Royal Knights"                # Human-readable table
+python code/tools/resolve_deck.py "Royal Knights" --json         # Full JSON manifest
+python code/tools/resolve_deck.py --cards BT24-017,BT24-018     # Explicit card list
+python code/tools/resolve_deck.py --list-archetypes              # List all archetypes
+python code/tools/resolve_deck.py --list-archetypes --min-share 0.01  # Filter by meta share
 ```
 
 **Return types:**
@@ -310,27 +310,27 @@ python tools/resolve_deck.py --list-archetypes --min-share 0.01  # Filter by met
 
 ### 5.4 Store Night Recommender
 
-**Script:** `tools/store_night.py`
+**Script:** `code/tools/store_night.py`
 
 Evaluates which deck to bring to a specific store's weekly event. Queries the store's local meta from DigiLab, resolves decklists (personal library first, then scraped), simulates matchups, and prints a ranked recommendation with detailed analysis.
 
 ```bash
 # Basic recommendation
-python tools/store_night.py --store "The Card Haven" \
+python code/tools/store_night.py --store "The Card Haven" \
     --archetypes "Rocks,Millenniummon,Dark Masters" --library my_decks.json
 
 # Full analysis with all optional features
-python tools/store_night.py --store "The Card Haven" \
+python code/tools/store_night.py --store "The Card Haven" \
     --archetypes "Rocks,Medusamon" \
     --players --trends --decklists --colors --normalize
 
 # Filter to locals and compare two stores
-python tools/store_night.py --store "The Card Haven" \
+python code/tools/store_night.py --store "The Card Haven" \
     --archetypes "Rocks" --event-type locals \
     --compare-stores "Boardwalk Games"
 
 # With deck optimization
-python tools/store_night.py --store "The Card Haven" \
+python code/tools/store_night.py --store "The Card Haven" \
     --archetypes "Rocks" --library my_decks.json --optimize
 ```
 
@@ -373,18 +373,18 @@ python tools/store_night.py --store "The Card Haven" \
 10. **Cross-Store Comparison** (`--compare-stores`) — side-by-side meta share table with deltas
 11. **Optimization** (`--optimize`) — candidate pool breakdown and before/after win rates
 
-**Dependencies:** `digimon_gym.digilab_client` (DigiLab queries), `digimon_gym.agents.architect_simulator` (simulation, only when evaluating), `tools.decklist_analysis` (card-level analysis, only with `--decklists`).
+**Dependencies:** `server.digilab_client` (DigiLab queries), `digimon_gym.agents.architect_simulator` (simulation, only when evaluating), `tools.decklist_analysis` (card-level analysis, only with `--decklists`).
 
 ---
 
 ### 5.5 Decklist Analysis
 
-**Module:** `tools/decklist_analysis.py`
+**Module:** `code/tools/decklist_analysis.py`
 
 Pure analysis functions for card-level statistics across decklists. No DB access — operates on `DecklistRecord` objects from `digilab_client`. Used by `store_night.py --decklists` but can also be imported standalone.
 
 ```python
-from digimon_gym.digilab_client import get_decklists_for_archetype
+from server.digilab_client import get_decklists_for_archetype
 from tools.decklist_analysis import (
     compute_card_frequencies,
     compute_winning_differentials,
@@ -421,7 +421,7 @@ trends = compute_card_trends(records, periods=3)
 
 ### 5.6 DigiLab Client
 
-**Module:** `digimon_gym/digilab_client.py`
+**Module:** `code/server/digilab_client.py`
 
 Pure psycopg2 queries against the DigiLab PostgreSQL database. Standalone — no SQLAlchemy, no app dependencies. All query functions accept the same scope parameters:
 
@@ -451,19 +451,19 @@ Pure psycopg2 queries against the DigiLab PostgreSQL database. Standalone — no
 
 ### 6.1 ONNX Export
 
-**Script:** `tools/export_onnx.py`
+**Script:** `code/tools/export_onnx.py`
 
 Converts SB3 MaskablePPO / MaskableRecurrentPPO `.zip` checkpoints to ONNX format. Requires PyTorch and SB3 — intended for dev machines, not end-user desktops. The resulting `.onnx` files can be loaded with `onnxruntime` (no PyTorch needed).
 
 ```bash
-python tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
-python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
+python code/tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
+python code/tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
 ```
 
 Exported files are consumed by:
 
-- **Hosted API / training**: `OnnxMlpPolicy` / `OnnxLstmPolicy` in `digimon_gym/engine/onnx_policy.py`; served via the `/games/models` API route.
-- **Desktop app**: `digimon-engine/src/inference/` loads the same `.onnx` at runtime after it's downloaded from the hosted manifest and cached under `dirs::data_dir()/digimon-tcg/models/<id>/policy.onnx`.
+- **Hosted API / training**: `OnnxMlpPolicy` / `OnnxLstmPolicy` in `code/digimon_gym/inference/onnx_policy.py`; served via the `/games/models` API route.
+- **Desktop app**: `code/digimon-engine/src/inference/` loads the same `.onnx` at runtime after it's downloaded from the hosted manifest and cached under `dirs::data_dir()/digimon-tcg/models/<id>/policy.onnx`.
 
 Newly-exported models reach desktop users by being published to the admin model manifest (`/models/manifest.json`) with the correct `tensor_size` / `action_space_size`; the desktop app rejects downloads that mismatch the Rust engine's contract.
 
@@ -484,12 +484,12 @@ The installer contains only the Rust binary + frontend assets + icons. Trained A
 
 ### 6.3 Training Smoke Test
 
-**Script:** `tools/train_smoke_test.py`
+**Script:** `code/tools/train_smoke_test.py`
 
 Validates that `DigimonEnv` works end-to-end with a manual random-action loop and with SB3 MaskablePPO. Does not validate rule correctness — only checks that the environment initializes, steps without crashing, and produces valid observations and masks.
 
 ```bash
-python tools/train_smoke_test.py
+python code/tools/train_smoke_test.py
 ```
 
 Requires `stable-baselines3` and `sb3-contrib`.
@@ -502,7 +502,7 @@ These modules live inside the engine and are used at runtime as well as by the t
 
 ### 7.1 Card Feature Vectorizer
 
-**Module:** `digimon_gym/engine/data/card_features.py`
+**Module:** `code/engine_py_legacy/engine/data/card_features.py`
 
 Converts structured card attributes from `cards.json` into fixed-size float vectors for autoencoder training. Not used at RL inference time — only for generating warm-start embeddings.
 
@@ -532,7 +532,7 @@ features = vectorizer.vectorize_all()  # shape: (max_index+1, 112)
 
 ### 7.2 Card Registry
 
-**Module:** `digimon_gym/engine/data/card_registry.py`
+**Module:** `code/engine_py_legacy/engine/data/card_registry.py`
 
 Runtime lookup from card ID strings (e.g. `"BT1-001"`) to integer indices used in the tensor. Auto-initializes from `cards.json` on first use.
 
@@ -553,7 +553,7 @@ Runtime lookup from card ID strings (e.g. `"BT1-001"`) to integer indices used i
 
 ### 7.3 Tensor Layout Map
 
-**Module:** `digimon_gym/engine/data/tensor_layout.py`
+**Module:** `code/engine_py_legacy/engine/data/tensor_layout.py`
 
 Computes which positions in the 1375-float observation tensor hold card IDs vs scalar values. Used by `CardEmbeddingExtractor` to split the tensor for GPU-side embedding lookup.
 
@@ -592,7 +592,7 @@ When a new Digimon TCG set releases, follow these steps:
 ### Step 1: Ingest Card Metadata
 
 ```bash
-python tools/ingest_cards.py --set BT26
+python code/tools/ingest_cards.py --set BT26
 ```
 
 Fetches card data from digimoncard.io and merges it into `cards.json`. New cards will not yet have `index` or `norm_id` fields.
@@ -600,14 +600,14 @@ Fetches card data from digimoncard.io and merges it into `cards.json`. New cards
 ### Step 2: Assign Stable Registry Indices
 
 ```bash
-python tools/build_registry.py --sets BT26
+python code/tools/build_registry.py --sets BT26
 ```
 
 New cards get append-only indices. Existing indices are preserved, so old trained agents remain valid.
 
 ### Step 3: Implement Card Effects in Rust
 
-Card scripts are now hand-written Rust `CardEffect` implementations under `digimon-engine/src/cards/`. Use the `/batch-implement-cards-rust` skill to dispatch the TDD pipeline against the new set, or `/assess-archetype-rust` to pre-flight the engine primitives the set will require.
+Card scripts are now hand-written Rust `CardEffect` implementations under `code/digimon-engine/src/cards/`. Use the `/batch-implement-cards-rust` skill to dispatch the TDD pipeline against the new set, or `/assess-archetype-rust` to pre-flight the engine primitives the set will require.
 
 ```bash
 # Optional pre-flight: see which engine primitives the set needs
@@ -622,7 +622,7 @@ The C# files at `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` rema
 ### Step 4: Verify Frozen Integrity (Python sunset only)
 
 ```bash
-python tools/check_frozen_integrity.py
+python code/tools/check_frozen_integrity.py
 ```
 
 Only relevant if Python card scripts were touched. The Python script lane is being sunset alongside the Rust engine migration.
@@ -638,8 +638,8 @@ Retrains the autoencoder on all cards including the new set. Produces updated `c
 ### Step 6: Update Pinecone Index (Optional)
 
 ```bash
-python tools/ingest_pinecone.py --namespace card-scripts --set bt26
-python tools/ingest_pinecone.py --namespace card-metadata
+python code/tools/ingest_pinecone.py --namespace card-scripts --set bt26
+python code/tools/ingest_pinecone.py --namespace card-metadata
 ```
 
 Makes the new scripts and card metadata searchable by sub-agents.
@@ -660,7 +660,7 @@ Old pilots still work — their saved model checkpoint contains the `nn.Embeddin
 
 ## 9. Archive
 
-**Directory:** `tools/archive/`
+**Directory:** `code/tools/archive/`
 
 One-time migration and backfill scripts that have already been run. Do not re-run these — they are kept for historical reference only.
 

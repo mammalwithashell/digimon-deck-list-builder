@@ -31,7 +31,7 @@ Review, fix, test, and track a single Digimon TCG card script for faithfulness a
 | Engine Gaps | `qa/archetype-qa/engine-gaps.md` |
 | C# Scripts | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CLASS_NAME}.cs` |
 | Python Scripts | `code/engine_py_legacy/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py` |
-| Card Metadata | `digimon_gym/engine/data/cards.json` |
+| Card Metadata | `data/cards.json` |
 | Validated Cards | `qa/qa-reports/validated_cards.json` |
 | Archetype QA | `qa/archetype-qa/{archetype_name}.md` |
 | Pinecone Index | `digimon-engine` (namespaces: engine-api, card-scripts, card-metadata) |
@@ -63,7 +63,7 @@ Verify the Python script exists. If missing: report "MISSING — no script to re
 Read all of these. Parallelize where possible.
 
 ### 2a. Card metadata
-Read `digimon_gym/engine/data/cards.json`, extract entry for this card ID. Key fields:
+Read `data/cards.json`, extract entry for this card ID. Key fields:
 - `card_name_eng` — display name
 - `effect_description_eng` — **source of truth** for what the script must do
 - `inherited_effect_description_eng` — inherited effect text
@@ -179,7 +179,7 @@ For each MISMATCH: edit the specific function/section. Follow patterns from Engi
 
 ### 4b. Verify importability
 ```bash
-python -c "from digimon_gym.engine.data.scripts.{set}.{set}_{nnn} import {CLASS_NAME}; print('OK')"
+python -c "from engine_py_legacy.engine.data.scripts.{set}.{set}_{nnn} import {CLASS_NAME}; print('OK')"
 ```
 
 ### 4c. Handle BLOCKED clauses

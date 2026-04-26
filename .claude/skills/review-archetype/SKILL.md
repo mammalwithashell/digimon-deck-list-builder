@@ -22,7 +22,7 @@ Systematic audit and fix of card scripts against official card text, using a tec
 - **Engine API Reference**: `qa/archetype-qa/engine-api-reference.md`
 - **C# Scripts**: `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` (underscore convention: BT17-001 = BT17_001.cs)
 - **Python Scripts**: `code/engine_py_legacy/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py`
-- **Deck Library**: `digimon_gym/engine/data/deck_library.json`
+- **Deck Library**: `data/deck_library.json`
 - **Engine Gaps**: `qa/archetype-qa/engine-gaps.md`
 - **Existing QA Docs**: `qa/archetype-qa/{archetype_name}.md`
 - **Pinecone Index**: `digimon-engine` (namespaces: engine-api, card-scripts, card-metadata, rules-docs)

@@ -15,7 +15,7 @@ for any bugs you find.
 **Primary (In-Process — preferred):**
 No server required. Use `DebugRunner` directly in Python:
 ```python
-from digimon_gym.engine.runners.debug_runner import DebugRunner
+from engine_py_legacy.engine.runners.debug_runner import DebugRunner
 runner = DebugRunner(deck1, deck2, initial_memory=8, starting_hand1=["BT24-059"])
 print(runner.board_with_actions())
 ```
@@ -61,7 +61,7 @@ Before starting a new QA session, check what has already been tested.
 If $ARGUMENTS contains an archetype name, use that. Otherwise, find eligible archetypes:
 
 ```bash
-python -m digimon_gym.engine.data.deck_finder --min-coverage 1.0 --max-results 20
+python -m engine_py_legacy.engine.data.deck_finder --min-coverage 1.0 --max-results 20
 ```
 
 If no fully-playable decks are found, try `--min-coverage 0.95` and note the missing cards.
@@ -76,7 +76,7 @@ python -c "
 import json
 from pathlib import Path
 
-lib = json.loads(Path('digimon_gym/engine/data/deck_library.json').read_text())
+lib = json.loads(Path('data/deck_library.json').read_text())
 validated = json.loads(Path('qa/qa-reports/validated_cards.json').read_text()) if Path('qa/qa-reports/validated_cards.json').exists() else {'cards': {}}
 
 archetype = lib['archetypes'].get('ARCHETYPE_NAME', {})
@@ -113,7 +113,7 @@ Before playing, understand what each card should do:
 2. For each key card in the selected deck, look up its data:
    ```bash
    python -c "
-   from digimon_gym.engine.data.card_database import CardDatabase
+   from engine_py_legacy.engine.data.card_database import CardDatabase
    db = CardDatabase()
    card = db.get_card('CARD_ID')
    if card:
@@ -152,12 +152,12 @@ Before playing, understand what each card should do:
 Use `DebugRunner` for fast, no-server testing:
 
 ```python
-from digimon_gym.engine.runners.debug_runner import DebugRunner
+from engine_py_legacy.engine.runners.debug_runner import DebugRunner
 
 # Load decks from deck_library.json
 import json
 from pathlib import Path
-lib = json.loads(Path("digimon_gym/engine/data/deck_library.json").read_text())
+lib = json.loads(Path("data/deck_library.json").read_text())
 deck1 = json.loads(lib["archetypes"]["ARCHETYPE"]["decklists"][0]["decklist"])
 deck2 = json.loads(lib["archetypes"]["OPPONENT"]["decklists"][0]["decklist"])
 

@@ -36,8 +36,8 @@ Cards in the archetype that are already registered in Rust are skipped. This ski
 | Behavioral test patterns | `code/digimon-engine/tests/test_cards_behavioral.rs`, `code/digimon-engine/tests/security_effects.rs` |
 | DebugRunner builder | `code/digimon-engine/src/debug_runner.rs` |
 | Effect registry | `code/digimon-engine/src/cards.rs` |
-| Card metadata | `digimon_gym/engine/data/cards.json` |
-| Deck library | `digimon_gym/engine/data/deck_library.json` |
+| Card metadata | `data/cards.json` |
+| Deck library | `data/deck_library.json` |
 | C# reference | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CLASS_NAME}.cs` (underscore naming) |
 | Validated cards (Rust) | `qa/qa-reports/validated_cards_rust.json` |
 | Archetype QA (Rust) | `qa/archetype-qa/rust/{archetype_slug}.md` |
@@ -49,7 +49,7 @@ Cards in the archetype that are already registered in Rust are skipped. This ski
 
 ### 1a. Build archetype manifest
 
-Reuse the existing Python tool `code/tools/resolve_deck.py`. It reads `digimon_gym/engine/data/deck_library.json`, which is populated upstream by `code/tools/meta_loader.py` from local-card-shop TCG meta decklists (DigimonMeta.com, Egman Events, DigimonCard.io, DigiLab). Agents do not re-scrape — treat `deck_library.json` as the authoritative deck pool and use `resolve_archetype` to extract the card manifest:
+Reuse the existing Python tool `code/tools/resolve_deck.py`. It reads `data/deck_library.json`, which is populated upstream by `code/tools/meta_loader.py` from local-card-shop TCG meta decklists (DigimonMeta.com, Egman Events, DigimonCard.io, DigiLab). Agents do not re-scrape — treat `deck_library.json` as the authoritative deck pool and use `resolve_archetype` to extract the card manifest:
 
 ```python
 import sys; sys.path.insert(0, '.')
@@ -141,7 +141,7 @@ Repeat for each batch.
 
 For each of the 4 cards in the batch, collect:
 
-1. **Card metadata** from `digimon_gym/engine/data/cards.json`:
+1. **Card metadata** from `data/cards.json`:
    - `card_name_eng`, `effect_description_eng`, `inherited_effect_description_eng`, `security_effect_eng`
    - `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`, `dna_costs`
 

@@ -1,7 +1,7 @@
 # DCGO ↔ Rust Keyword Parity
 
 **Date:** 2026-04-24
-**Scope:** Cross-engine parity tracker for printed keyword behaviors. Compares the DCGO C# source-of-truth implementation (`DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/`) against the Rust engine's `Keyword` enum consumption surface (`digimon-engine/src/**/*.rs`).
+**Scope:** Cross-engine parity tracker for printed keyword behaviors. Compares the DCGO C# source-of-truth implementation (`DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/`) against the Rust engine's `Keyword` enum consumption surface (`code/digimon-engine/src/**/*.rs`).
 
 Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that tracker catalogs semantic divergences in shared *subsystems* between Rust and Python; this tracker catalogs per-*keyword* behavioral fidelity against the C# source.
 
@@ -62,12 +62,12 @@ Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re
 
 See the spec at [superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md) §5 Phase A/B for the full plan.
 
-**`place_as_bottom_source` — reviewed, no gate.** Phase B's final code review flagged `EffectContext::place_as_bottom_source` as a candidate site. Verdict after cross-checking DCGO: not gated. DCGO's primitive [`Permanent.AddDigivolutionCardsBottom`](../DCGO/Assets/Scripts/Script/Permanent.cs#L1104) has no internal `CanNotBeAffected` check, and DCGO scripts that intentionally place a source under an opponent's Digimon (e.g. [EX10-059](../DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_059.cs#L218)) do not filter the target on `CanNotBeAffected` either. Adding a card under a stack is not "affecting" the target in DCGO's semantics — the TopCard's status is unchanged. Gating in Rust would over-restrict relative to DCGO. The decision is documented inline at [`effect_context/mod.rs::place_as_bottom_source`](../digimon-engine/src/effect_context/mod.rs).
+**`place_as_bottom_source` — reviewed, no gate.** Phase B's final code review flagged `EffectContext::place_as_bottom_source` as a candidate site. Verdict after cross-checking DCGO: not gated. DCGO's primitive [`Permanent.AddDigivolutionCardsBottom`](../DCGO/Assets/Scripts/Script/Permanent.cs#L1104) has no internal `CanNotBeAffected` check, and DCGO scripts that intentionally place a source under an opponent's Digimon (e.g. [EX10-059](../DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_059.cs#L218)) do not filter the target on `CanNotBeAffected` either. Adding a card under a stack is not "affecting" the target in DCGO's semantics — the TopCard's status is unchanged. Gating in Rust would over-restrict relative to DCGO. The decision is documented inline at [`effect_context/mod.rs::place_as_bottom_source`](../code/code/digimon-engine/src/effect_context/mod.rs).
 
 ### Progress — gate scope (Phase B + Phase E prep)
 
 The gate is consumed at the script-API mutation entry points in
-`digimon-engine/src/effect_context/mod.rs`. As of the Phase E preparatory
+`code/digimon-engine/src/effect_context/mod.rs`. As of the Phase E preparatory
 broadening, the suppressed mutation set is:
 
 - `ctx.delete_permanent`
@@ -161,8 +161,8 @@ Ranked by alpha-archetype blast radius:
 ## Source citations
 
 - DCGO keyword implementations: `DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/*.cs` (behaviors) and `DCGO/Assets/Scripts/Script/CardEffectFactory/KeyWordEffects/*.cs` (factory wrappers). 28 files total.
-- Rust keyword enum: [`digimon-engine/src/enums.rs`](../digimon-engine/src/enums.rs) (`Keyword` ~line 265, `ModifierType::Grant*` ~line 355).
-- Native parsing: [`digimon-engine/src/card_data.rs::parse_printed_keywords`](../digimon-engine/src/card_data.rs).
-- Unified keyword query: [`digimon-engine/src/game.rs::has_keyword`](../digimon-engine/src/game.rs).
-- Auto-installed replacements: [`digimon-engine/src/cards/keyword_effects.rs`](../digimon-engine/src/cards/keyword_effects.rs).
-- Major consumption sites: [`digimon-engine/src/combat.rs`](../digimon-engine/src/combat.rs), [`digimon-engine/src/action/mask.rs`](../digimon-engine/src/action/mask.rs), [`digimon-engine/src/game_phases.rs`](../digimon-engine/src/game_phases.rs).
+- Rust keyword enum: [`code/digimon-engine/src/enums.rs`](../code/code/digimon-engine/src/enums.rs) (`Keyword` ~line 265, `ModifierType::Grant*` ~line 355).
+- Native parsing: [`code/digimon-engine/src/card_data.rs::parse_printed_keywords`](../code/code/digimon-engine/src/card_data.rs).
+- Unified keyword query: [`code/digimon-engine/src/game.rs::has_keyword`](../code/code/digimon-engine/src/game.rs).
+- Auto-installed replacements: [`code/digimon-engine/src/cards/keyword_effects.rs`](../code/code/digimon-engine/src/cards/keyword_effects.rs).
+- Major consumption sites: [`code/digimon-engine/src/combat.rs`](../code/code/digimon-engine/src/combat.rs), [`code/digimon-engine/src/action/mask.rs`](../code/code/digimon-engine/src/action/mask.rs), [`code/digimon-engine/src/game_phases.rs`](../code/code/digimon-engine/src/game_phases.rs).

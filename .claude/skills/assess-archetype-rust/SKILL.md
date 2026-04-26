@@ -37,9 +37,9 @@ The ONLY files you may create or modify:
 | Purpose | Path |
 |---|---|
 | Archetype → card IDs (with `deck_frequency`, `meta_share`, `best_decklist`) | `code/tools/resolve_deck.py :: resolve_archetype()` |
-| Deck library (consumed by `resolve_deck`) | `digimon_gym/engine/data/deck_library.json` |
+| Deck library (consumed by `resolve_deck`) | `data/deck_library.json` |
 | Deck library ingestion (DigimonMeta, Egman, DigimonCard.io, DigiLab) | `code/tools/meta_loader.py` — run `--build` to refresh before large audits |
-| Card text/metadata | `digimon_gym/engine/data/cards.json` |
+| Card text/metadata | `data/cards.json` |
 | Rust scripting API | `docs/RUST_ENGINE_API.md` (timings, EffectContext, Effect builder, Keyword, ModifierType) |
 | Cross-engine divergences | `docs/RUST_PYTHON_PARITY.md` |
 | Currently registered Rust cards | `code/digimon-engine/src/cards.rs` + `code/digimon-engine/src/cards/` |
@@ -53,7 +53,7 @@ The ONLY files you may create or modify:
 
 Resolve the card pool via the project's meta-ingestion pipeline. `deck_library.json` is built by `code/tools/meta_loader.py` from real tournament decklists (DigimonMeta, Egman, DigimonCard.io, DigiLab) and is the source of the `deck_frequency` / `meta_share` / `best_decklist` signals this skill relies on to prioritize audit batches.
 
-**Before a large audit**, check `deck_library.json`'s freshness (`git log -1 digimon_gym/engine/data/deck_library.json`). If stale, ask the user whether to refresh:
+**Before a large audit**, check `deck_library.json`'s freshness (`git log -1 data/deck_library.json`). If stale, ask the user whether to refresh:
 
 ```bash
 python code/tools/meta_loader.py --scrape-digimonmeta <URL>   # or --scrape-egman / --scrape-digimoncard-io / --scrape-digilab

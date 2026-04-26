@@ -16,7 +16,7 @@ You are implementing all card effects for archetype **$ARGUMENTS** in the Digimo
 - **C# Scripts**: `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs`
 - **Python Scripts**: `code/engine_py_legacy/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py`
 - **Frozen Manifest**: `code/engine_py_legacy/engine/data/scripts/_frozen_manifest.json`
-- **Deck Library**: `digimon_gym/engine/data/deck_library.json`
+- **Deck Library**: `data/deck_library.json`
 - **Engine Gaps**: `qa/archetype-qa/engine-gaps.md`
 - **Known Complex Cards**: `code/engine_py_legacy/engine/data/scripts/known_complex_cards.json`
 
