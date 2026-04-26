@@ -793,3 +793,122 @@ After all batches complete:
 Re-running on the same archetype (or `--pool`) is safe: the `validated_cards_dsl.json` lookup in Phase 1c short-circuits cards with `IMPLEMENTED` or `AUDITED-OK` verdicts. Other verdicts (`PARTIAL`, `AUDITED-MISSING-TESTS`, `AUDITED-DRIFT`, `BLOCKED`) are re-attempted on the next run — the user is expected to address the underlying issue (engine gap closed, DSL vocab landed, drift triaged) before re-invocation.
 
 ---
+
+## Skill Positive-Rules Appendix
+
+This appendix is the "C" half of the hybrid checklist. The "A" half is `docs/RUST_DSL_TEST_API.md` §11 (the anti-pattern list). Both halves are embedded into the implementer, auditor, and reviewer prompts in Phase 4.
+
+1. **TDD ordering is strict.** Tests are written before YAML. Test file must exist and fail before any YAML is authored. Implementer's verdict block must show the failing-test output before the passing-test output.
+2. **File header docstring is mandatory** (test API §5). Format: card text verbatim from `cards.json`, DCGO C# reference path, pattern row tags from §4.3.
+3. **One positive AND one negative test per condition.** Splitting is non-negotiable per test API §11.3. A single test asserting both directions is rejected.
+4. **Every clause gets ≥1 integrated test** driven through `play` / `attack` / `end_turn`. Clause-isolated `EffectContext` tests (per §7) are *additional*, not substitutes.
+5. **OPT clauses get an explicit lockout test** (test API §5 Section 5). Test that the second activation in the same turn is gated, and that the lockout clears after `end_turn`.
+6. **Cost-firing clauses get an event-log test** (test API §5 Section 4). When an effect's cost has side effects (trash security, lose security, deletion), assert the corresponding `GameEvent` fires via `events_since(checkpoint)`.
+7. **Use `dsl_card(id)`, never inline-paste production YAML** (test API §11.1). Inline fixtures are reserved for the cases enumerated in §10.
+8. **Use `digimon_engine::action::space::*` constants, never hard-code action IDs** (test API §11.12).
+9. **No approximations.** Every player choice surfaces through `pending_selection`. No `.iter().next()`, no `[0]`, no `min`/`max` over targets, no auto-resolutions of multi-option choices.
+10. **No Python references.** Do not cite `code/engine_py_legacy/`, do not import Python script structure as ground truth. Ground truth is printed text + `docs/RULES_CONTEXT.md` / fandom wiki + DCGO C#.
+11. **Engine-gap vs DSL-vocab-gap discipline.** Before declaring `BLOCKED`, confirm: does the engine *really* lack the primitive (read `docs/RUST_ENGINE_API.md`), or does only the DSL lack a verb that would lower to it (read the DSL spec)? Set `gap_kind` accordingly.
+12. **No `place_on_field` shortcuts when testing OnPlay paths** (test API §11.11). `place_on_field` is for post-play state only.
+13. **No `auto_resolve` through a multi-branch prompt when testing a specific branch** (test API §11.4). Use `execute_branch` / `execute_action`, then `auto_resolve` only after the branching choice is locked.
+
+---
+
+## `validated_cards_dsl.json` Schema
+
+```json
+{
+  "version": 1,
+  "last_updated": "YYYY-MM-DD",
+  "cards": {
+    "BT15-003": {
+      "card_name": "Nyaromon",
+      "validated_date": "YYYY-MM-DD",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice — Nokia/Greymon/Omnimon",
+      "yaml_path": "code/digimon-engine/cards/bt15/BT15-003.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_003.rs",
+      "test_count": 7,
+      "patterns": ["G4", "E2", "F5"],
+      "notes": "Inherited When Attacking + OPT + top/bottom branch"
+    }
+  }
+}
+```
+
+| Field | Domain |
+|---|---|
+| `status` | `IMPLEMENTED` / `PARTIAL` / `AUDITED-OK` / `AUDITED-MISSING-TESTS` / `AUDITED-DRIFT` / `BLOCKED` |
+| `gap_kind` | `null` / `"engine"` / `"dsl"` / `"hybrid"` (only set when `status == BLOCKED`) |
+| `patterns` | Array of test-API §4.3 row tags from the scout brief |
+
+The Python-side `qa/qa-reports/validated_cards.json` is **never modified**.
+
+---
+
+## Per-Archetype QA Artifact Template
+
+Path: `qa/archetype-qa/dsl/<archetype_slug>.md` (or `qa/dsl-test-pool-progress.md` for `--pool` runs).
+
+```markdown
+# Archetype DSL Implementation: {Archetype Name}
+Date: {YYYY-MM-DD}
+Total cards in pool: {N}
+Processed this run: {M}
+Pipeline: batch-implement-cards-rust-dsl
+
+## Summary
+- IMPLEMENTED: {n}
+- PARTIAL: {n}
+- AUDITED-OK: {n}
+- AUDITED-MISSING-TESTS: {n}
+- AUDITED-DRIFT: {n}
+- BLOCKED (engine): {n}
+- BLOCKED (dsl): {n}
+- BLOCKED (hybrid): {n}
+- SKIPPED (prior verdict): {n}
+
+## Per-Card Verdicts
+| Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+|---------|------|------|---------|--------|-------|-------|
+
+## Engine-Gap Blocked Cards
+### {CARD_ID} {card_name}
+- Effect text: "..."
+- Missing engine API: ...
+- Suggested addition: ...
+
+## DSL-Vocab-Gap Blocked Cards
+### {CARD_ID} {card_name}
+- Effect text: "..."
+- Missing DSL verb: ...
+- Lowers to engine API: ...
+- Suggested DSL syntax: ...
+
+## New Patterns Discovered
+- {pattern}: {description} — propose adding to RUST_DSL_TEST_API.md
+```
+
+---
+
+## Invariants (orchestrator enforces)
+
+- Workers never edit `main.rs`, any `mod.rs`, `cards.rs`, `validated_cards_dsl.json`, or any tracker file. Orchestrator owns all shared state. Worker output that touches forbidden paths is rejected and re-dispatched once; second drift escalates to user.
+- Card-ID conventions: YAML files use original-case dashed IDs (`BT15-003.yaml`); Rust test files use lowercase-underscore (`bt15_003.rs`). Pack registry key is the original-case ID (`"BT15-003"`).
+- The Python `qa/qa-reports/validated_cards.json` is never touched.
+- No Notion calls.
+- No Pinecone calls.
+
+---
+
+## Known Limitations (v1)
+
+- **No `--fix` mode.** `AUDITED-DRIFT` emits a diff proposal but does not modify YAML. Promoted to v1.1 when real drift is observed.
+- **No Notion sync.**
+- **No Pinecone retrieval.** Agents use scout brief + read-on-demand only.
+- **Single fix round per batch.** Orchestrator does one re-dispatch on cargo failure, then escalates.
+- **Workers cannot add a new test binary or new set's `mod.rs`.** Orchestrator-only territory.
+- **`--report-only` is plan-only.** Does not run scouts to pre-classify gaps.
+- **Sonnet implementer is default; Opus is the escape hatch via `--implementer-model opus`.** No automatic escalation on review-failure loops in v1; user re-dispatches by hand.
