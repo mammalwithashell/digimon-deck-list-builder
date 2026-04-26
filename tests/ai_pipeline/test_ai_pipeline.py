@@ -42,7 +42,7 @@ from digimon_gym.db.models import (
     ScriptPromotionAudit,
     User,
 )
-from digimon_gym.engine.data import script_promotion
+from engine_py_legacy.engine.data import script_promotion
 
 
 @pytest.fixture
