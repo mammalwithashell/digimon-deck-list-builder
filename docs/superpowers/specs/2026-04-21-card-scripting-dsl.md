@@ -1690,6 +1690,82 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   The follow-up should land before card scripts are authored against
   Phase 2f3. Defers to 2f4+: `ScheduleDelayed` (needs
   `ctx.schedule_delayed` engine primitive).
+- **2f4** (landed 2026-04-26) — `schedule_delayed` engine subsystem +
+  DSL lowering. New `code/digimon-engine/src/scheduled_effects.rs`
+  introduces `pub struct ScheduledEffect { when: EffectTiming, body:
+  Vec<CompiledStep>, source_card: CardHandle, source_permanent:
+  Option<PermanentHandle>, controller: PlayerId, captured_bindings:
+  Bindings }` and `pub fn fire_scheduled_for_timing(game, t)` that
+  drains every queued effect whose `when` matches `t` in FIFO order.
+  `Game::scheduled_effects: Vec<ScheduledEffect>` field added. New
+  primitive `EffectContext::schedule_delayed(when, body,
+  captured_bindings)` captures `(self.source_card, self.source_permanent,
+  self.player)` plus the passed args. Stored as `CardHandle` (Copy)
+  rather than the plan's suggested `CardSource` (Clone) — cleaner, no
+  new trait bound, matches `EffectContext::new`'s `source_card`
+  parameter type. Drain wired into 4 observer-fire boundaries with
+  scheduled bodies firing AFTER printed observers (so observers see
+  pre-scheduled state and scheduled bodies see post-observer state):
+  `EndOfYourTurn` (in `game_phases.rs::fire_end_of_your_turn`),
+  `EndOfOpponentsTurn` (in `game_phases.rs::rotate_turn_player`),
+  `EndOfBattle` (in `combat.rs::resolve_battle`), and `EndOfAttack` (in
+  `combat.rs::cleanup_attack`, BEFORE `expire_end_of_attack` so
+  scheduled bodies see same attack context). The unified `EndOfTurn`
+  variant doesn't exist in `EffectTiming` (split into
+  `EndOfYourTurn` + `EndOfOpponentsTurn`); `EndOfYourNextTurn`,
+  `EndOfOpponentsNextTurn`, `UntilNextUnsuspend` deferred to Phase 3
+  (need a generation counter on `ScheduledEffect` for "next turn"
+  semantics — out of 2f4 scope). Re-entrancy / parked-selection
+  guard: `fire_scheduled_for_timing` includes a per-iteration
+  `debug_assert!(game.dsl_outer_tail.is_none())` with a TODO(phase-3)
+  comment for retry logic — most scheduled bodies are synchronous
+  (`gain_memory`, `draw`, `add_modifier`); cards that schedule a
+  body that itself parks would trip the assertion in debug builds and
+  must wait for Phase 3. DSL lowering at
+  `code/digimon-engine/src/dsl_cards/step/schedule_delayed.rs`:
+  `compiled_timing_to_engine(*when)` maps `CompiledTiming` →
+  `EffectTiming`, then `ctx.schedule_delayed(t, body.clone(),
+  bindings.clone())`. Bindings are cloned at schedule time so
+  subsequent caller mutations don't leak into the captured copy.
+  End-to-end YAML test at
+  `code/digimon-engine/tests/dsl/phase2f4_end_to_end.rs` (DelayedDraw
+  card: `on_play → schedule_delayed: { when: end_of_your_turn, body:
+  [draw: { of: you, count: 1 }] }`) exercises the full pipeline.
+  Notable structural finding: the timing pipeline (`TimingSpec` →
+  `CompiledTiming` → `EffectTiming` via direct enum-variant matching
+  in `timing_map.rs::compiled_timing_to_engine`) is divergence-immune,
+  unlike the expiry pipeline (string-keyed `lookup_expiry` —
+  pre-existing snake_case-vs-PascalCase divergence surfaced in 2f3).
+  A future cleanup should convert `lookup_expiry` to the same
+  enum-match-only design as `compiled_timing_to_engine` to eliminate
+  that class of bug.
+
+## Phase 2 status
+
+**Phase 2 is feature-complete (sub-phases 2a–2f4 landed 2026-04-23
+through 2026-04-26).** Every variant of `CompiledStep` in the IR is
+wired to engine behaviour:
+
+| Sub-phase | Scope |
+|---|---|
+| 2a | Triggered clause lowering + memory/draw + `run_steps` scaffold |
+| 2b | Selection steps (`SelectHand` / `SelectTrash` / `SelectOwn|OpponentPermanent`), binding refs, continuation dispatcher, zone moves |
+| 2c | Permanent mutations (Suspend / Unsuspend / Delete / ReturnToHand / ReturnToDeck / DeDigivolve), AddDpModifier, AddModifier (binding-target), GrantKeyword, control flow (`If` / `Optional`) |
+| 2d | Multi-result bindings (`PermanentList` / `CardList`), iteration verbs (`ForEach`, `PerSelected`), multi-pick selection (`SelectCountCappedMulti`), `AddModifier` filter-target arm, run_steps continuation propagation |
+| 2e | `SelectEffectChoice`, `SelectReveal`, `SelectSecurity`, `SelectMaterial`, `SelectUnionZone`, `SelectOrderedPermutation`, `distinct_by` enforcement on `SelectCountCappedMulti` |
+| 2f1 | Play / digivolve / placement steps (`PlayFromHand*`, `PlayFromTrash*`, `PlayFromSecurity`, `PlayFromMaterials`, `EffectInitiated*Digivolve*`, `PlayToken`, `PlaceOnSecurity`, `PlaceAsBottomSource`, `TrashTopSource`) + 5 new engine primitives |
+| 2f2 | Formula values in `add_modifier` / `add_dp_modifier` (`CompiledModifierValue` IR + `formula_eval::evaluate` runtime evaluator) |
+| 2f3 | `AsSelectingPlayer` override-persistence across selection callbacks (engine `new_with_override` constructor + DSL lowering) |
+| 2f4 | `schedule_delayed` engine subsystem + DSL lowering (4 observer-fire wiring sites) |
+
+Subsequent work moves to Phase 3 (§7.4) — replacement clauses,
+broader `event_target_*` predicates, per-iteration park resumption,
+formula primitives beyond literals (`raw_rust` registry dispatch,
+`CardCountInZone` zone payload), opponent / universal `Aggregate`
+scope, IR widening for `BindingValue::HandIndex` / `TrashIndex` to
+carry `PlayerId`, multi-parking drains in `ScheduledEffect`, and
+`OnDnaDigivolve` trigger wiring (alongside the canonical
+user-action DNA digivolve flow).
 
 ### 7.4 Phase 3 — Advanced clauses
 
