@@ -1426,6 +1426,63 @@ impl<'a> EffectContext<'a> {
         self.game.drain_effect_queue();
     }
 
+    /// `<Training>` (Phase F §F4 / RULES_CONTEXT 16-40 / DCGO `Training.cs:30`)
+    /// helper: pop the controller's deck top and append it at the BOTTOM of
+    /// `perm`'s digivolution stack (`card_sources[0]`), marked face-down.
+    ///
+    /// Empty-deck case: silent no-op. The Rust port chooses safer behavior
+    /// than DCGO's `LibraryCards[0]` raw indexing — DCGO never reaches the
+    /// indexing line in practice because the `SetUpActivateClass` framework
+    /// only calls in once activation is committed; the Rust version accepts
+    /// the activation, pays the suspend cost in the calling effect, and
+    /// silently no-ops the card move when there's nothing to draw. Mirrors
+    /// the documented "no-op on empty source" pattern in `Player::draw`.
+    ///
+    /// `perm` may be either a battle-area or breeding-area permanent of
+    /// the controller; this helper does not enforce zone — the caller's
+    /// activation gate (carrier-not-suspended) handles eligibility. The
+    /// breeding-area branch is a separate `as_mut()` lookup since
+    /// `breeding_area: Option<Permanent>` is not in `battle_area`.
+    ///
+    /// The new source carries `face_down=true` (mirrors DCGO
+    /// `isFacedown: true`); face-down sources are filtered out of the
+    /// `<Mind Link>` "no Tamer source" gate (DCGO `MindLink.cs:25`
+    /// `!cardSource.IsFlipped`).
+    ///
+    /// Used by: `<Training>` keyword auto-install (Phase F Task 6).
+    pub fn training_place_deck_top_under_self_face_down(
+        &mut self,
+        perm: PermanentHandle,
+    ) {
+        // Pop the controller's deck top. Empty-deck case is a silent no-op.
+        let owner = perm.player;
+        let mut card = match self.game.player_mut(owner).deck.pop() {
+            Some(c) => c,
+            None => return,
+        };
+        // Mark face-down — DCGO `AddDigivolutionCardsBottom(..., isFacedown: true)`.
+        card.face_down = true;
+
+        // Locate the carrier in battle area; if it's not there, look in
+        // breeding area. (Breeding-area permanents never co-exist with a
+        // same-handle battle-area slot — `move_from_breeding` takes the
+        // Option, so the disjoint check holds.)
+        let player = self.game.player_mut(owner);
+        if let Some(p) = player.battle_area.get_mut(perm.index as usize) {
+            // Insert at bottom of stack (index 0).
+            p.card_sources.insert(0, card);
+            return;
+        }
+        if let Some(ref mut breeding) = player.breeding_area {
+            breeding.card_sources.insert(0, card);
+            return;
+        }
+        // Carrier no longer exists in either zone (defensive — the calling
+        // effect's `condition` gates on `source_permanent()`, which already
+        // requires the carrier to be live). Drop the card on the floor
+        // rather than misroute; in practice unreachable.
+    }
+
     /// Trash a specific digivolution source from a permanent.
     ///
     /// Used by:

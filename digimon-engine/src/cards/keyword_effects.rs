@@ -1389,6 +1389,91 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
+        // Phase F §F4 — printed Training: `[Main]` active skill, usable from
+        // BATTLE area OR BREEDING area (RULES_CONTEXT 16-40 / DCGO
+        // `Training.cs`). Cost: suspend self (must be unsuspended). Effect:
+        // place top deck card at the BOTTOM of self's digivolution stack,
+        // FACE-DOWN (DCGO `isFacedown: true`).
+        //
+        // ## Activation gate
+        //
+        // `!perm.is_suspended` — DCGO line 23
+        // `if (thisPermanent.IsSuspended || !thisPermanent.CanSuspend) yield break;`.
+        // We omit the `CanSuspend` check (no analog in this engine; suspension
+        // is universally allowed except via inert lock-out modifiers, which
+        // would manifest as `is_suspended` already being set or pre-empted).
+        //
+        // No deck-size gate — matches DCGO's `SetUpActivateClass` framework
+        // (which never pre-checks `LibraryCards[0]`). On empty deck, the
+        // body's `training_place_deck_top_under_self_face_down` no-ops; the
+        // suspend cost is still paid (mirrors the documented "no-op on empty
+        // source" pattern, e.g. `Player::draw`).
+        //
+        // ## Cost payment in `process` (not `pay_cost_fn`)
+        //
+        // `pay_cost_fn` fires only on the queue-driven trigger path
+        // (`effect_queue.rs:524`), not on the synchronous `[Main]` activation
+        // path (`activate_field_main`). For `MainOnField` skills the cost
+        // must be folded into the body — the precedent here is implicit
+        // since MaterialSave / MindLink are zero-cost; Training is the first
+        // `MainOnField` auto-install with a state-cost (suspend).
+        //
+        // ## Self-scope
+        //
+        // The `[Main]` mask emission iterates the carrier's stack; the
+        // `MainOnField` timing on the keyword auto-effect is naturally
+        // self-scoped because `activate_field_main` runs only the matched
+        // permanent's effects, with `source_permanent` set to the carrier.
+        //
+        // ## Battle-area vs. breeding-area dispatch
+        //
+        // Battle-area Training is dispatched by the existing `[Main]` machinery
+        // unchanged. Breeding-area Training requires a parallel mask emitter
+        // and dispatcher path (Phase F §F4 substrate work) under the field
+        // index `BREEDING_TARGET (=14)` — which is gated to Training-bearing
+        // carriers only, since RULES_CONTEXT 16-40 specifies that ONLY
+        // `<Training>` activates from breeding (surfacing all `MainOnField`
+        // effects from breeding would inadvertently expose Save / MaterialSave
+        // / MindLink from breeding too, which would be wrong).
+        Keyword::Training => vec![Effect::declarative(card)
+            .name("<Training>")
+            .timing(EffectTiming::MainOnField)
+            .condition(|ctx| {
+                let Some(perm) = ctx.source_permanent() else {
+                    return false;
+                };
+                !perm.is_suspended
+            })
+            .process(|ctx| {
+                let Some(me) = ctx.source_permanent else {
+                    return;
+                };
+                // Pay cost: suspend self. Deliberately direct on
+                // `players[..].battle_area[..].is_suspended` /
+                // `breeding_area.is_suspended` rather than via
+                // `EffectContext::suspend`, because:
+                //   1. `EffectContext::suspend` delegates to
+                //      `Game::suspend`, which only finds permanents in
+                //      `battle_area` — breeding-area carriers would silently
+                //      not suspend.
+                //   2. The carrier's own self-suspend doesn't need
+                //      `OnSuspend` observer firing (DCGO uses
+                //      `SuspendPermanentsClass.Tap` which fires its own
+                //      tap event, but the Rust observer hooks are listening
+                //      on battle-area permanents only — and there are no
+                //      cards that observe own-self breeding-area tap).
+                let owner = me.player;
+                let player = ctx.game.player_mut(owner);
+                if let Some(p) = player.battle_area.get_mut(me.index as usize) {
+                    p.is_suspended = true;
+                } else if let Some(ref mut breeding) = player.breeding_area {
+                    breeding.is_suspended = true;
+                }
+                // Effect: deck-top → bottom of self's stack, face-down.
+                ctx.training_place_deck_top_under_self_face_down(me);
+            })
+            .build()],
+
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),
     }
