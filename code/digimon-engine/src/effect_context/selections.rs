@@ -2,7 +2,7 @@
 //! readability. These are the 11 player-choice primitives card scripts use to
 //! install a `PendingSelection`: field, hand, trash, material, reveal,
 //! security, effect-choice, plus `mark_security_face_up` and
-//! `play_from_security`.
+//! `play_pending_security`.
 //!
 //! The "no-approximations" contract (CLAUDE.md §17–18) lives here: every
 //! optional card choice surfaces through one of these helpers — no
