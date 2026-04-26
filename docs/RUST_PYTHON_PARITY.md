@@ -1022,4 +1022,23 @@ These imports survived the Phase 3 cutover because the Rust counterpart
 isn't in `digimon_engine` yet. Each entry is a checklist: when the
 binding lands, remove the Python import and the row.
 
-(filled in Task 11 of the Phase 3 plan once all Phase 3 migrations land)
+| Surface | Caller(s) | Rust counterpart? |
+|---|---|---|
+| `engine.runners.headless_game.HeadlessGame` (Python class) | `routers/state.py`, `routers/recordings.py`, `routers/games.py`, `digimon_gym.py` (Python fallback path), `agents/architect_simulator.py` | `RustHeadlessGame` exists but has a different state-shape; per-caller migration is non-trivial. |
+| `engine.runners.interactive_game.InteractiveGame` | `routers/games.py`, `routers/debug_games.py`, `routers/matchmaking.py` (`# noqa: F401` re-export) | Pending — covered by the PvP bindings plan (`docs/superpowers/plans/2026-04-18-pyo3-pvp-bindings.md`). |
+| `engine.runners.replay_runner.ReplayRunner` | `routers/recordings.py` | Not planned. |
+| `engine.runners.scenario_runner.ScenarioRunner` | `tools/run_scenario.py`, `tools/run_qa_batch.py`, behavioral test infrastructure | Not planned (DebugRunner is the Rust-side parallel). |
+| `engine.data.tensor_layout.*` | `agents/features_extractor.py` | Not planned in scope. Add later if RL trainer survives. |
+| `engine.data.enums.PendingAction` | `digimon_gym.py` (Python fallback path) | Vestigial. Remove when the Python backend is retired. |
+| `engine.data.enums.PlayerType` | `routers/games.py`, `routers/debug_games.py` | Server orchestration concept, not engine. Stays Python-side. |
+| `engine.data.deck_loader.{validate_deck, RESTRICTED_LIST, CardRestriction}` | `db/routers/decks.py` (`no_restriction` mode passes empty `CardRestriction()` to bypass) | Rust binding's `validate_deck` always uses the official ENG list; an overload accepting a custom `CardRestriction` is not exposed. |
+| `engine.data.deck_loader.RE_CARD_ID` | `tools/meta_loader.py` | Regex constant; could expose if needed. |
+| `engine.data.card_features.CardFeatureVectorizer` | `tools/train_card_autoencoder.py` | Not planned. RL-training-side tool. |
+| `engine.data.script_promotion.*` | `tools/promote_script.py`, `tools/archive/bootstrap_frozen_manifest.py` | Sunset — Python script lane is going away. Tools delete in Phase 4. |
+| `engine.model_utils.{list_onnx_models, resolve_model_path}` | `routers/games.py`, `db/routers/admin_models.py` | Could be wrapped; low priority. |
+| `engine.onnx_policy.load_onnx_policy` | `routers/games.py`, `agents/architect_simulator.py`, `tools/export_random_onnx.py` | Stays Python-side. Phase 5 moves it to `digimon_gym/inference/onnx_policy.py`. |
+| `engine.core.{permanent.Permanent, player.Player, card_source.CardSource}` | `engine/debug/state_injection.py` | Engine internals — don't expose. |
+| `engine.events.GameEvent` (Python class) | `engine/loggers.py` | Python-engine internal. `digimon_engine` exposes events via `RustHeadlessGame.get_events_since_last_step`. |
+| `engine.data.card_database.{parse_xros_req, parse_digixros_req}` | `tools/ingest_cards.py` | Could be wrapped if needed; low priority. |
+| `engine.debug.state_injection.*` | `routers/debug_games.py` | Engine-internal scenario builder — don't expose. |
+| `engine.game.{FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND, SECURITY_TARGET, BREEDING_SLOT}` | `digimon_gym.py` | Geometry constants. The Rust crate has these in `action::space` (renamed `MAX_FIELD_SLOTS` for `FIELD_SLOTS`); could be exposed in a follow-on. |
