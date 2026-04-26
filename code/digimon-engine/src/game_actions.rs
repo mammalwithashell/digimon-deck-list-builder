@@ -2202,17 +2202,25 @@ impl Game {
                 let first_idx = action_id as usize;
                 let first_player = selecting_player;
                 let evo_hand_index = hand_index;
-                let evo_card = source_card;
-                let stage1_previous_phase = previous_phase;
 
                 // Defensive: validate the first index against the
                 // controller's current battle_area (it could have shifted
                 // since selection was installed if a triggered effect
                 // removed a permanent during the install drain).
                 if first_idx >= game.player(first_player).battle_area.len() {
+                    game.logger.log(&format!(
+                        "[Rejected] dna_digivolve stage 1: first index {} out of range (battle_area size={})",
+                        first_idx,
+                        game.player(first_player).battle_area.len()
+                    ));
                     return;
                 }
                 if evo_hand_index >= game.player(first_player).hand.len() {
+                    game.logger.log(&format!(
+                        "[Rejected] dna_digivolve stage 1: evo hand index {} out of range (hand size={})",
+                        evo_hand_index,
+                        game.player(first_player).hand.len()
+                    ));
                     return;
                 }
 
@@ -2227,6 +2235,10 @@ impl Game {
                     &game.card_data,
                 );
                 if second_targets.is_empty() {
+                    game.logger.log(&format!(
+                        "[Rejected] dna_digivolve stage 1: no valid second-material targets for first index {}",
+                        first_idx
+                    ));
                     return;
                 }
 
@@ -2236,100 +2248,21 @@ impl Game {
                 game.pending_selection = Some(PendingSelection {
                     kind: SelectionKind::Material,
                     selecting_player: first_player,
-                    previous_phase: stage1_previous_phase,
+                    previous_phase,
                     valid_action_ids: second_targets,
                     is_optional: false,
                     prompt: "Select second DNA material".to_string(),
                     effect_choices: None,
-                    source_card: evo_card,
+                    source_card,
                     source_permanent: None,
                     callback: Box::new(move |game: &mut Game, action_id: u16| {
-                        // Stage 2 resolution: action_id is the chosen
-                        // second-material battle_area index.
                         let second_idx = action_id as usize;
-                        if second_idx >= game.player(first_player).battle_area.len() {
-                            return;
-                        }
-                        if first_idx == second_idx {
-                            return;
-                        }
-                        if evo_hand_index >= game.player(first_player).hand.len() {
-                            return;
-                        }
-
-                        // Re-resolve the matching DnaCost for the chosen
-                        // pair.
-                        let evo_meta = &game.card_data[
-                            game.player(first_player).hand[evo_hand_index].data_index
-                        ];
-                        let battle = &game.player(first_player).battle_area;
-                        let perm_first = &battle[first_idx];
-                        let perm_second = &battle[second_idx];
-
-                        let stacking = crate::dna_digivolve::get_dna_stacking_order(
-                            evo_meta, perm_first, perm_second, &game.card_data,
-                        );
-                        let Some((first_is_top, dna_cost)) = stacking else {
-                            return;
-                        };
-
-                        // Snapshot printed_cost before we lose the borrow on
-                        // dna_cost (which borrows from card_data).
-                        let printed_cost = dna_cost.memory_cost;
-
-                        // Orient: target_a maps to req1 (the "top" of the
-                        // bottom-half stack). If first_is_top, the chosen
-                        // first IS req1; else swap.
-                        let (target_a, target_b) = if first_is_top {
-                            (
-                                PermanentHandle {
-                                    player: first_player,
-                                    index: first_idx as u8,
-                                },
-                                PermanentHandle {
-                                    player: first_player,
-                                    index: second_idx as u8,
-                                },
-                            )
-                        } else {
-                            (
-                                PermanentHandle {
-                                    player: first_player,
-                                    index: second_idx as u8,
-                                },
-                                PermanentHandle {
-                                    player: first_player,
-                                    index: first_idx as u8,
-                                },
-                            )
-                        };
-
-                        // Cost: printed - BeforePayCost reductions (matches
-                        // digivolve_from_hand).
-                        let total_reduction =
-                            game.scan_before_pay_cost_reduction(first_player);
-                        let effective_cost =
-                            (printed_cost as i32 - total_reduction).max(0) as u16;
-
-                        // Delegate to the shared core.
-                        // `grant_digivolve_bonus = true` matches
-                        // `digivolve_from_hand` and Python's
-                        // `player.dna_digivolve` draw on success.
-                        let _ = game.dna_digivolve_inner(
-                            target_a,
-                            target_b,
+                        game.resolve_dna_digivolve_stage2(
                             first_player,
+                            first_idx,
+                            second_idx,
                             evo_hand_index,
-                            effective_cost,
-                            true,
                         );
-
-                        // Auto-end-of-turn check (mirrors
-                        // digivolve_from_hand:1745).
-                        game.check_turn_end();
-
-                        // Phase auto-restores to stage1_previous_phase via
-                        // resolve_selection's post-callback logic.
                     }),
                     on_decline: None,
                 });
@@ -2342,6 +2275,109 @@ impl Game {
             on_decline: None,
         });
         true
+    }
+
+    /// Stage-2 resolution of `Game::initiate_dna_digivolve`'s two-stage
+    /// selection chain. Receives the chosen second-material `battle_area`
+    /// index and the captured stage-1 state. Re-resolves the matching
+    /// `DnaCost` orientation, applies `BeforePayCost` reductions, calls
+    /// `Game::dna_digivolve_inner`, and triggers the auto-end-of-turn
+    /// check (mirroring `digivolve_from_hand`).
+    ///
+    /// Defensively re-validates indices because triggered effects fired
+    /// during stage-1 install can mutate the battle area between selection
+    /// install and resolution.
+    ///
+    /// Failure paths log `[Rejected] ...` via `self.logger` and return
+    /// without mutating game state. The `pending_selection` was already
+    /// consumed by `resolve_generic_selection` before this method ran.
+    pub(crate) fn resolve_dna_digivolve_stage2(
+        &mut self,
+        first_player: PlayerId,
+        first_idx: usize,
+        second_idx: usize,
+        evo_hand_index: usize,
+    ) {
+        if second_idx >= self.player(first_player).battle_area.len() {
+            self.logger.log(&format!(
+                "[Rejected] resolve_dna_digivolve_stage2: second index {} out of range (battle_area size={})",
+                second_idx,
+                self.player(first_player).battle_area.len()
+            ));
+            return;
+        }
+        if first_idx == second_idx {
+            self.logger.log(
+                "[Rejected] resolve_dna_digivolve_stage2: first and second indices are equal",
+            );
+            return;
+        }
+        if evo_hand_index >= self.player(first_player).hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] resolve_dna_digivolve_stage2: evo hand index {} out of range (hand size={})",
+                evo_hand_index,
+                self.player(first_player).hand.len()
+            ));
+            return;
+        }
+
+        let evo_meta =
+            &self.card_data[self.player(first_player).hand[evo_hand_index].data_index];
+        let battle = &self.player(first_player).battle_area;
+        let perm_first = &battle[first_idx];
+        let perm_second = &battle[second_idx];
+
+        let stacking = crate::dna_digivolve::get_dna_stacking_order(
+            evo_meta,
+            perm_first,
+            perm_second,
+            &self.card_data,
+        );
+        let Some((first_is_top, dna_cost)) = stacking else {
+            self.logger.log(
+                "[Rejected] resolve_dna_digivolve_stage2: no matching DnaCost for chosen pair",
+            );
+            return;
+        };
+        let printed_cost = dna_cost.memory_cost;
+
+        let (target_a, target_b) = if first_is_top {
+            (
+                PermanentHandle {
+                    player: first_player,
+                    index: first_idx as u8,
+                },
+                PermanentHandle {
+                    player: first_player,
+                    index: second_idx as u8,
+                },
+            )
+        } else {
+            (
+                PermanentHandle {
+                    player: first_player,
+                    index: second_idx as u8,
+                },
+                PermanentHandle {
+                    player: first_player,
+                    index: first_idx as u8,
+                },
+            )
+        };
+
+        let total_reduction = self.scan_before_pay_cost_reduction(first_player);
+        let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
+
+        let _ = self.dna_digivolve_inner(
+            target_a,
+            target_b,
+            first_player,
+            evo_hand_index,
+            effective_cost,
+            true,
+        );
+
+        self.check_turn_end();
     }
 
     /// Move a card from `source` to `player_id`'s security stack at the given
