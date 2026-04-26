@@ -636,3 +636,73 @@ Clause 1 (<timing>): "<printed text>"
 ````
 
 ---
+
+### 4D. Review Wave (Opus, single agent, no isolation, read-only)
+
+After all worker agents in 4C return, the orchestrator copies their files out of the worktrees into the main tree (Phase 4E will document this; the reviewer reads from main tree). Then dispatch ONE Opus reviewer.
+
+**Reviewer prompt template:**
+
+````
+You are reviewing DSL YAML and behavioral tests authored by N worker agents in a TDD pipeline. Your job is to confirm faithfulness, completeness, and adherence to the hybrid checklist.
+
+# Engine context pack
+
+## RUST_DSL_TEST_API.md (full)
+{{RUST_DSL_TEST_API_BODY}}
+
+## Skill positive-rules appendix
+{{SKILL_POSITIVE_RULES_APPENDIX}}
+
+## Hybrid checklist
+The hybrid checklist is the union of `docs/RUST_DSL_TEST_API.md` §11 anti-patterns plus the positive rules in the appendix. Apply both in full to every card.
+
+# Per-card review materials
+
+For each card in this batch, you have:
+- The worker's verdict block (below).
+- The files they wrote: `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` and `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs`.
+- The card's authoritative metadata + printed text.
+- The DCGO C# reference body.
+
+{{PER_CARD_MATERIALS — for each card, repeat the metadata block + worker verdict + paths to written files}}
+
+# Source priority (for behavioral questions)
+
+1. Printed card text — authoritative.
+2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
+3. DCGO C# — implementation-detail tiebreaker only.
+
+# Your task — for each card, emit ONE of:
+
+```
+<CARD_ID>: APPROVED
+```
+
+or
+
+```
+<CARD_ID>: NEEDS-FIX
+  - Issue 1: <description> — Fix: <file:line directive>
+  - Issue 2: ...
+```
+
+Be precise — the orchestrator applies your fix directives verbatim. Each directive must specify exact file path, line range, and the change required.
+
+# What to check
+
+For IMPLEMENT-mode cards:
+- Hybrid checklist: every item applied. No silent drops, no auto-selections, no missing branches.
+- Test enumeration completeness against test API §5 (structural + per-clause + positive/negative + OPT + cost-firing where applicable).
+- Scout-vs-implementer disagreement: if scout flagged a gap and implementer disagreed, adjudicate. Check whether the engine API or DSL verb the implementer used actually exists.
+- Faithfulness: every clause in printed text is modeled in YAML; printed-vs-DCGO disagreements resolved per source priority.
+- TDD discipline: test file exists; tests are split positive/negative; behavioral tests are integrated (not just clause-isolated).
+
+For AUDIT-mode cards:
+- AUDITED-OK is real: re-walk the diff yourself; confirm no drift hidden.
+- AUDITED-MISSING-TESTS: confirm the added tests cover the gaps the auditor identified.
+- AUDITED-DRIFT: confirm the diff is correct. The orchestrator will NOT auto-apply YAML drift fixes in v1, but your confirmation routes the diff to the human triage workflow.
+- BLOCKED: same gap-kind discipline as implementer.
+````
+
+---
