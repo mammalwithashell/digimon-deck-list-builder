@@ -6,7 +6,7 @@ argument-hint: <ARCHETYPE_NAME> [--cards CARD1,CARD2,...] [--batch-size N]
 
 # Assess Archetype Rust Coverage — Pre-flight Engine Gap Audit
 
-You are auditing whether archetype **$ARGUMENTS** can be implemented today in the Rust engine (`digimon-engine/`) without stubs, approximations, or auto-selections (per CLAUDE.md §17). **You do not write engine code and you do not write card scripts.** Your deliverables are:
+You are auditing whether archetype **$ARGUMENTS** can be implemented today in the Rust engine (`code/digimon-engine/`) without stubs, approximations, or auto-selections (per CLAUDE.md §17). **You do not write engine code and you do not write card scripts.** Your deliverables are:
 
 1. Updates to `docs/RUST_ENGINE_GAPS.md` — deduplicated, capability-centric entries for each missing primitive.
 2. A one-line link added to `docs/INDEX.md` if `RUST_ENGINE_GAPS.md` did not already exist.
@@ -30,19 +30,19 @@ The ONLY files you may create or modify:
 - `docs/INDEX.md` (add exactly one link line if missing)
 - `.claude/plans/rust-engine-gaps-{slug}.md`
 
-`git diff digimon-engine/` must be empty at the end of the run. `git diff digimon_gym/` must be empty. If you think you need to touch anything else, stop and ask the user.
+`git diff code/digimon-engine/` must be empty at the end of the run. `git diff code/digimon_gym/` must be empty. If you think you need to touch anything else, stop and ask the user.
 
 ## Quick Reference — inputs the orchestrator reads
 
 | Purpose | Path |
 |---|---|
-| Archetype → card IDs (with `deck_frequency`, `meta_share`, `best_decklist`) | `tools/resolve_deck.py :: resolve_archetype()` |
+| Archetype → card IDs (with `deck_frequency`, `meta_share`, `best_decklist`) | `code/tools/resolve_deck.py :: resolve_archetype()` |
 | Deck library (consumed by `resolve_deck`) | `digimon_gym/engine/data/deck_library.json` |
-| Deck library ingestion (DigimonMeta, Egman, DigimonCard.io, DigiLab) | `tools/meta_loader.py` — run `--build` to refresh before large audits |
+| Deck library ingestion (DigimonMeta, Egman, DigimonCard.io, DigiLab) | `code/tools/meta_loader.py` — run `--build` to refresh before large audits |
 | Card text/metadata | `digimon_gym/engine/data/cards.json` |
 | Rust scripting API | `docs/RUST_ENGINE_API.md` (timings, EffectContext, Effect builder, Keyword, ModifierType) |
 | Cross-engine divergences | `docs/RUST_PYTHON_PARITY.md` |
-| Currently registered Rust cards | `digimon-engine/src/cards.rs` + `digimon-engine/src/cards/` |
+| Currently registered Rust cards | `code/digimon-engine/src/cards.rs` + `code/digimon-engine/src/cards/` |
 | C# reference (authoritative behavior) | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` |
 | Existing gap log (to dedupe against) | `docs/RUST_ENGINE_GAPS.md` |
 | Format reference (do not modify) | `qa/archetype-qa/engine-gaps.md` |
@@ -51,13 +51,13 @@ The ONLY files you may create or modify:
 
 ## Phase 1 — Resolve Card Pool
 
-Resolve the card pool via the project's meta-ingestion pipeline. `deck_library.json` is built by `tools/meta_loader.py` from real tournament decklists (DigimonMeta, Egman, DigimonCard.io, DigiLab) and is the source of the `deck_frequency` / `meta_share` / `best_decklist` signals this skill relies on to prioritize audit batches.
+Resolve the card pool via the project's meta-ingestion pipeline. `deck_library.json` is built by `code/tools/meta_loader.py` from real tournament decklists (DigimonMeta, Egman, DigimonCard.io, DigiLab) and is the source of the `deck_frequency` / `meta_share` / `best_decklist` signals this skill relies on to prioritize audit batches.
 
 **Before a large audit**, check `deck_library.json`'s freshness (`git log -1 digimon_gym/engine/data/deck_library.json`). If stale, ask the user whether to refresh:
 
 ```bash
-python tools/meta_loader.py --scrape-digimonmeta <URL>   # or --scrape-egman / --scrape-digimoncard-io / --scrape-digilab
-python tools/meta_loader.py --build
+python code/tools/meta_loader.py --scrape-digimonmeta <URL>   # or --scrape-egman / --scrape-digimoncard-io / --scrape-digilab
+python code/tools/meta_loader.py --build
 ```
 
 Then resolve the archetype the same way `/implement-archetype` does:
@@ -73,7 +73,7 @@ The returned `ArchetypeManifest` gives you `unique_cards` (each with `deck_frequ
 
 Then:
 
-1. Detect **already implemented in Rust**. Grep `digimon-engine/src/cards.rs` and every `digimon-engine/src/cards/*.rs` for each card ID (string literal and case-variant module name). A card counts as implemented iff it is inserted into `CardEffectRegistry` via a `register(...)` function — merely having a `card_data` entry does not count.
+1. Detect **already implemented in Rust**. Grep `code/digimon-engine/src/cards.rs` and every `code/digimon-engine/src/cards/*.rs` for each card ID (string literal and case-variant module name). A card counts as implemented iff it is inserted into `CardEffectRegistry` via a `register(...)` function — merely having a `card_data` entry does not count.
 2. Produce the **audit pool** = `manifest.unique_cards` minus implemented cards. These are the only cards you analyze deeply.
 3. Sort the audit pool by `deck_frequency` descending (tie-break on effect-text length descending, so complex cards are front-loaded), then chunk into batches of size `--batch-size` (default 5). High-frequency cards dominate archetype feasibility — if the most-played card in the archetype is blocked, the archetype is blocked.
 
@@ -155,7 +155,7 @@ Back in the main session:
    ```markdown
    # Rust Engine Gaps
 
-   Capability gaps in the Rust engine's scripting surface (`digimon-engine/`), discovered during archetype audits by `/assess-archetype-rust`. Distinct from `RUST_PYTHON_PARITY.md`, which tracks Rust↔Python divergences in shared subsystems.
+   Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `/assess-archetype-rust`. Distinct from `RUST_PYTHON_PARITY.md`, which tracks Rust↔Python divergences in shared subsystems.
 
    Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped).
 
@@ -184,7 +184,7 @@ Template:
 
 ## Goal
 
-Close the {N_blocking} blocking and {N_partial} partial engine gaps below so that {archetype} can be fully implemented in `digimon-engine/` without stubs, approximations, or auto-selections (per CLAUDE.md §17–18).
+Close the {N_blocking} blocking and {N_partial} partial engine gaps below so that {archetype} can be fully implemented in `code/digimon-engine/` without stubs, approximations, or auto-selections (per CLAUDE.md §17–18).
 
 This prompt was generated by `/assess-archetype-rust` on {YYYY-MM-DD}. Re-run that skill if card text, deck list, or engine API has changed.
 
@@ -204,10 +204,10 @@ This prompt was generated by `/assess-archetype-rust` on {YYYY-MM-DD}. Re-run th
 - `docs/RUST_ENGINE_API.md` — existing scripting surface
 - `docs/RUST_ENGINE_GAPS.md` — full gap entries with suggested API shapes
 - `docs/RUST_PYTHON_PARITY.md` — cross-engine divergences (some gaps may be parity-driven)
-- `digimon-engine/src/effect_context.rs` — where most new helpers land
-- `digimon-engine/src/effect.rs` + `digimon-engine/src/effect_queue.rs` — timings + triggered-effect plumbing
-- `digimon-engine/src/modifiers.rs` — modifier registry (new ModifierType variants land here)
-- `digimon-engine/tests/test_cards_behavioral.rs` — TDD harness (new tests land alongside; CLAUDE.md §18)
+- `code/digimon-engine/src/effect_context.rs` — where most new helpers land
+- `code/digimon-engine/src/effect.rs` + `code/digimon-engine/src/effect_queue.rs` — timings + triggered-effect plumbing
+- `code/digimon-engine/src/modifiers.rs` — modifier registry (new ModifierType variants land here)
+- `code/digimon-engine/tests/test_cards_behavioral.rs` — TDD harness (new tests land alongside; CLAUDE.md §18)
 
 ## Ask
 
@@ -217,7 +217,7 @@ Produce a phased implementation plan (per `superpowers:writing-plans`) that:
 2. Orders phases by dependency (shared plumbing first) and blast radius (high-card-count gaps first within each dependency tier).
 3. For each phase, lists:
    - API surface to add (exact function signatures / enum variants).
-   - Tests to write FIRST (TDD per CLAUDE.md §18) — name the `digimon-engine/tests/*.rs` file and test case.
+   - Tests to write FIRST (TDD per CLAUDE.md §18) — name the `code/digimon-engine/tests/*.rs` file and test case.
    - Affected Rust files.
    - Parity implications: does this resolve or create a `docs/RUST_PYTHON_PARITY.md` entry?
 4. Flags any gap that is architectural (e.g., native keyword parsing on CardData, interrupt-phase machinery) and should have its own spec under `docs/superpowers/specs/` before implementation.
@@ -248,8 +248,8 @@ Next step: feed the fix-plan prompt to /superpowers:writing-plans (or a fresh se
 
 ## Red Flags — STOP and Reset
 
-- You are about to edit a file under `digimon-engine/` → STOP. This skill writes no engine code.
-- You are about to edit a file under `digimon_gym/engine/data/scripts/` → STOP. This skill writes no card scripts.
+- You are about to edit a file under `code/digimon-engine/` → STOP. This skill writes no engine code.
+- You are about to edit a file under `code/engine_py_legacy/engine/data/scripts/` → STOP. This skill writes no card scripts.
 - You are about to touch `qa/archetype-qa/engine-gaps.md` → STOP. That file is Python-scoped.
 - You are about to file a new gap with a card-centric title (e.g. "BT17-042 cannot be implemented") → STOP. Gap titles are capability-centric.
 - You are about to skip Phase 4's dedup against existing `docs/RUST_ENGINE_GAPS.md` → STOP. Duplicate entries destroy the doc's value across runs.

@@ -1,6 +1,6 @@
 ---
 name: batch-implement-cards-rust
-description: Archetype-scoped TDD pipeline that hand-writes Rust `CardEffect` implementations in `digimon-engine/src/cards/`. Processes cards in batches of 4 with parallel Opus sub-agents. Each agent writes DebugRunner behavioral tests from card text FIRST, then implements the `CardEffect` struct to pass them. A review agent audits each batch. Orchestrator handles module registration. Tracks verdicts in `validated_cards_rust.json`.
+description: Archetype-scoped TDD pipeline that hand-writes Rust `CardEffect` implementations in `code/digimon-engine/src/cards/`. Processes cards in batches of 4 with parallel Opus sub-agents. Each agent writes DebugRunner behavioral tests from card text FIRST, then implements the `CardEffect` struct to pass them. A review agent audits each batch. Orchestrator handles module registration. Tracks verdicts in `validated_cards_rust.json`.
 argument-hint: <ARCHETYPE_NAME> [--cards CARD1,CARD2,...] [--batch-size N] [--report-only] [--skip-tests]
 ---
 
@@ -12,7 +12,7 @@ Cards in the archetype that are already registered in Rust are skipped. This ski
 
 ## When to Use
 
-- Implementing a new archetype in the Rust engine (`digimon-engine/src/cards/`)
+- Implementing a new archetype in the Rust engine (`code/digimon-engine/src/cards/`)
 - Migrating an already-Python-implemented archetype one-way to Rust (see CLAUDE.md §21)
 - Running a test-driven implementation pass across a deck list
 
@@ -32,10 +32,10 @@ Cards in the archetype that are already registered in Rust are skipped. This ski
 | Rust engine scripting API | `docs/RUST_ENGINE_API.md` |
 | Rust/Python parity tracker | `docs/RUST_PYTHON_PARITY.md` |
 | Engine design spec | `docs/superpowers/specs/2026-04-15-rust-engine-rewrite-design.md` |
-| Test-card worked examples | `digimon-engine/src/cards/test_cards.rs` |
-| Behavioral test patterns | `digimon-engine/tests/test_cards_behavioral.rs`, `digimon-engine/tests/security_effects.rs` |
-| DebugRunner builder | `digimon-engine/src/debug_runner.rs` |
-| Effect registry | `digimon-engine/src/cards.rs` |
+| Test-card worked examples | `code/digimon-engine/src/cards/test_cards.rs` |
+| Behavioral test patterns | `code/digimon-engine/tests/test_cards_behavioral.rs`, `code/digimon-engine/tests/security_effects.rs` |
+| DebugRunner builder | `code/digimon-engine/src/debug_runner.rs` |
+| Effect registry | `code/digimon-engine/src/cards.rs` |
 | Card metadata | `digimon_gym/engine/data/cards.json` |
 | Deck library | `digimon_gym/engine/data/deck_library.json` |
 | C# reference | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CLASS_NAME}.cs` (underscore naming) |
@@ -49,7 +49,7 @@ Cards in the archetype that are already registered in Rust are skipped. This ski
 
 ### 1a. Build archetype manifest
 
-Reuse the existing Python tool `tools/resolve_deck.py`. It reads `digimon_gym/engine/data/deck_library.json`, which is populated upstream by `tools/meta_loader.py` from local-card-shop TCG meta decklists (DigimonMeta.com, Egman Events, DigimonCard.io, DigiLab). Agents do not re-scrape — treat `deck_library.json` as the authoritative deck pool and use `resolve_archetype` to extract the card manifest:
+Reuse the existing Python tool `code/tools/resolve_deck.py`. It reads `digimon_gym/engine/data/deck_library.json`, which is populated upstream by `code/tools/meta_loader.py` from local-card-shop TCG meta decklists (DigimonMeta.com, Egman Events, DigimonCard.io, DigiLab). Agents do not re-scrape — treat `deck_library.json` as the authoritative deck pool and use `resolve_archetype` to extract the card manifest:
 
 ```python
 import sys; sys.path.insert(0, '.')
@@ -62,14 +62,14 @@ manifest = resolve_archetype('ARCHETYPE_NAME')
 
 `manifest.unique_cards` yields `CardEntry` objects with `card_id`, `card_name`, `card_kind`, `level`, `colors`, `traits`, `dp`, `play_cost`, `evo_costs`, `effect_text`, `inherited_text`, `security_text`, `csharp_path`, `deck_frequency`. `manifest.meta_share` and `manifest.best_decklist` come from the scraped tournament data. The Python-side `script_status` / `script_path` fields are **not used** — Rust has its own registry source of truth.
 
-If `resolve_archetype` raises `UnknownArchetype`, tell the user and offer `python tools/resolve_deck.py --list-archetypes --min-meta-share 0.01` to find valid names. If `deck_library.json` is stale or missing entries for the archetype, refresh via `python tools/meta_loader.py --scrape-digimonmeta URL` / `--scrape-digilab` / `--build` before retrying.
+If `resolve_archetype` raises `UnknownArchetype`, tell the user and offer `python code/tools/resolve_deck.py --list-archetypes --min-meta-share 0.01` to find valid names. If `deck_library.json` is stale or missing entries for the archetype, refresh via `python code/tools/meta_loader.py --scrape-digimonmeta URL` / `--scrape-digilab` / `--build` before retrying.
 
 ### 1b. Determine Rust registration status
 
-For each `card_id`, check whether it is already registered in Rust. Grep for the string `registry.insert("{card_id}"` across `digimon-engine/src/cards/` recursively:
+For each `card_id`, check whether it is already registered in Rust. Grep for the string `registry.insert("{card_id}"` across `code/digimon-engine/src/cards/` recursively:
 
 ```bash
-grep -rn 'registry.insert("BT17-001"' digimon-engine/src/cards/
+grep -rn 'registry.insert("BT17-001"' code/digimon-engine/src/cards/
 ```
 
 Classify each card as:
@@ -121,12 +121,12 @@ Before dispatching any agents, read these files once and hold them for embedding
 1. `docs/RUST_ENGINE_API.md` (full) — the scripting API reference.
 2. `docs/RUST_PYTHON_PARITY.md` (full) — gating doc.
 3. `qa/archetype-qa/engine-gaps-rust.md` (create if absent with header `# Engine Gaps Tracker (Rust)`).
-4. `digimon-engine/src/cards/test_cards.rs` (full) — worked-example excerpt.
-5. `digimon-engine/src/debug_runner.rs` — read the builder API section (lines around `pub fn builder`, `with_registry`, `add_card`, `hand`, `deck`, `security`, `play`, `place_on_field`, `attack_player`, `make_test_card`).
+4. `code/digimon-engine/src/cards/test_cards.rs` (full) — worked-example excerpt.
+5. `code/digimon-engine/src/debug_runner.rs` — read the builder API section (lines around `pub fn builder`, `with_registry`, `add_card`, `hand`, `deck`, `security`, `play`, `place_on_field`, `attack_player`, `make_test_card`).
 
 Pre-create directories if missing:
-- `digimon-engine/src/cards/{set}/` — e.g. `digimon-engine/src/cards/bt17/`
-- `digimon-engine/tests/behavioral/{set}/` — e.g. `digimon-engine/tests/behavioral/bt17/`
+- `code/digimon-engine/src/cards/{set}/` — e.g. `code/digimon-engine/src/cards/bt17/`
+- `code/digimon-engine/tests/behavioral/{set}/` — e.g. `code/digimon-engine/tests/behavioral/bt17/`
 - `qa/archetype-qa/rust/`
 
 `{set}` is the lowercased prefix from the card ID (`BT17-001` → `bt17`, `ST20-03` → `st20`, `AD1-011` → `ad1`).
@@ -207,8 +207,8 @@ Path: {{CSHARP_PATH}}
 # Your task
 
 Deliverables (and ONLY these — do NOT touch `cards.rs` or any `mod.rs`):
-1. `digimon-engine/src/cards/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs` — the CardEffect struct.
-2. `digimon-engine/tests/behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs` — DebugRunner tests.
+1. `code/digimon-engine/src/cards/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs` — the CardEffect struct.
+2. `code/digimon-engine/tests/behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs` — DebugRunner tests.
 
 `{{CARD_ID_LOWER_UNDERSCORE}}` is the card id lowercased with `-` replaced by `_` (e.g. `BT17-001` → `bt17_001`).
 
@@ -218,7 +218,7 @@ Deliverables (and ONLY these — do NOT touch `cards.rs` or any `mod.rs`):
 For each clause, capture: (a) timing (On Play / When Digivolving / Main / Security / Inherited / On Deletion / etc.), (b) exact text, (c) expected behavior, (d) C# mapping (which method in the reference file).
 
 **Step 2 — Write DebugRunner tests FIRST.**
-Create `digimon-engine/tests/behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs`. One `#[test]` function per clause. For conditional effects, write BOTH a positive and a negative test. Use this skeleton:
+Create `code/digimon-engine/tests/behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs`. One `#[test]` function per clause. For conditional effects, write BOTH a positive and a negative test. Use this skeleton:
 
 ```rust
 //! Behavioral tests for {{CARD_ID}} — {{CARD_NAME}}
@@ -268,12 +268,12 @@ fn clause_1_{{short_name}}() {
 
 Tests must compile. They will FAIL at this point (no effect registered yet). Run:
 ```
-cargo test --manifest-path digimon-engine/Cargo.toml --test behavioral_{{SET_LOWER}}_{{CARD_ID_LOWER_UNDERSCORE}}
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test behavioral_{{SET_LOWER}}_{{CARD_ID_LOWER_UNDERSCORE}}
 ```
-(or `cargo test --manifest-path digimon-engine/Cargo.toml {{CARD_ID_LOWER_UNDERSCORE}}` as a filter.) Confirm expected failures.
+(or `cargo test --manifest-path code/digimon-engine/Cargo.toml {{CARD_ID_LOWER_UNDERSCORE}}` as a filter.) Confirm expected failures.
 
 **Step 3 — Implement `CardEffect`.**
-Create `digimon-engine/src/cards/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs`. Follow the `Effect::on_play(card).name(...).condition(|ctx| {...}).process(|ctx| {...}).build()` builder pattern from RUST_ENGINE_API.md. One `CardEffect` struct whose `effects()` returns a `Vec<Effect>` containing every clause on the card (OnPlay, WhenDigivolving, Inherited, Security, etc.).
+Create `code/digimon-engine/src/cards/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs`. Follow the `Effect::on_play(card).name(...).condition(|ctx| {...}).process(|ctx| {...}).build()` builder pattern from RUST_ENGINE_API.md. One `CardEffect` struct whose `effects()` returns a `Vec<Effect>` containing every clause on the card (OnPlay, WhenDigivolving, Inherited, Security, etc.).
 
 Zero-sized struct, no fields. Closures must be `Fn + Send + Sync + 'static`; capture only `Copy` handles.
 
@@ -338,8 +338,8 @@ Clause 1 (OnPlay): "<exact text>"
 ...
 
 ### Files created
-- digimon-engine/src/cards/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs ({{N_EFFECTS}} effects)
-- digimon-engine/tests/behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs ({{N_TESTS}} tests)
+- code/digimon-engine/src/cards/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs ({{N_EFFECTS}} effects)
+- code/digimon-engine/tests/behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER_UNDERSCORE}}.rs ({{N_TESTS}} tests)
 
 ### Test output (cargo test ... -- --nocapture, trimmed)
 <paste the final passing (or failing, for BLOCKED) test summary>
@@ -365,7 +365,7 @@ You are reviewing Rust CardEffect implementations produced by 4 worker agents in
 
 For each card, you have:
 - The worker's verdict block (pasted below).
-- The files they wrote: `digimon-engine/src/cards/{{SET_LOWER}}/{{card}}.rs` and `digimon-engine/tests/behavioral/{{SET_LOWER}}/{{card}}.rs`.
+- The files they wrote: `code/digimon-engine/src/cards/{{SET_LOWER}}/{{card}}.rs` and `code/digimon-engine/tests/behavioral/{{SET_LOWER}}/{{card}}.rs`.
 - The card's authoritative metadata (pasted below).
 - The C# reference (pasted below).
 
@@ -394,12 +394,12 @@ Be precise — the orchestrator applies your fix directives verbatim.
 The orchestrator — not an agent — performs these steps in order:
 
 1. **Copy files out of worktrees** into the main tree:
-   - `digimon-engine/src/cards/{set}/{card_id_lower_underscore}.rs`
-   - `digimon-engine/tests/behavioral/{set}/{card_id_lower_underscore}.rs`
+   - `code/digimon-engine/src/cards/{set}/{card_id_lower_underscore}.rs`
+   - `code/digimon-engine/tests/behavioral/{set}/{card_id_lower_underscore}.rs`
 
 2. **Apply review fixes** from any `NEEDS-FIX` card.
 
-3. **Create or update `digimon-engine/src/cards/{set}/mod.rs`**:
+3. **Create or update `code/digimon-engine/src/cards/{set}/mod.rs`**:
 
    ```rust
    pub mod bt17_010;
@@ -413,14 +413,14 @@ The orchestrator — not an agent — performs these steps in order:
    }
    ```
 
-4. **Update `digimon-engine/src/cards.rs`**: add `pub mod {set};` and a `{set}::register(&mut registry);` call inside `build_registry()` (only if this is the first card from this set).
+4. **Update `code/digimon-engine/src/cards.rs`**: add `pub mod {set};` and a `{set}::register(&mut registry);` call inside `build_registry()` (only if this is the first card from this set).
 
-5. **Create or update `digimon-engine/tests/behavioral/{set}/mod.rs`** (or equivalent test discovery path):
+5. **Create or update `code/digimon-engine/tests/behavioral/{set}/mod.rs`** (or equivalent test discovery path):
    - Check how existing behavioral tests are discovered (`#[path = "..."]` vs `#[cfg(test)] mod tests { ... }`). For each new test file, add an inclusion line so `cargo test` picks it up.
 
 6. **Run batch tests:**
    ```bash
-   cargo test --manifest-path digimon-engine/Cargo.toml {set}_
+   cargo test --manifest-path code/digimon-engine/Cargo.toml {set}_
    ```
    If any fail, do **one** targeted fix round. Do not loop indefinitely — a persistent failure means the review agent missed something; escalate to the user with the failing output.
 
@@ -459,7 +459,7 @@ After all batches:
 4. **Blocked cards + engine gaps** — one section per gap with affected cards.
 5. **Full-suite green check:**
    ```bash
-   cargo test --manifest-path digimon-engine/Cargo.toml
+   cargo test --manifest-path code/digimon-engine/Cargo.toml
    ```
    Must pass. If not, the skill has left the tree in a broken state — escalate.
 6. **Finalize** `qa/archetype-qa/rust/{archetype_slug}.md` with the template below.
@@ -521,8 +521,8 @@ Pipeline: batch-implement-cards-rust
 
 ## Invariants (the orchestrator enforces these)
 
-- Worker agents **never** edit `digimon-engine/src/cards.rs` or any `mod.rs`. If a worker does, reject its output and re-dispatch.
-- The orchestrator **always** runs `cargo test --manifest-path digimon-engine/Cargo.toml` once in Phase 5. If it fails, leave the tree as-is and report to the user.
+- Worker agents **never** edit `code/digimon-engine/src/cards.rs` or any `mod.rs`. If a worker does, reject its output and re-dispatch.
+- The orchestrator **always** runs `cargo test --manifest-path code/digimon-engine/Cargo.toml` once in Phase 5. If it fails, leave the tree as-is and report to the user.
 - Card-ID conventions: file names are `{lower_case}_{nnn}.rs` (underscore, `BT17-001` → `bt17_001.rs`). Registry keys are the original hyphenated ID (`"BT17-001"`).
 - The Python `qa/qa-reports/validated_cards.json` is never modified.
 - No Notion or Pinecone calls in v1.

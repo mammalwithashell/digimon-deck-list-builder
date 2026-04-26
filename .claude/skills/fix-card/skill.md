@@ -30,7 +30,7 @@ Review, fix, test, and track a single Digimon TCG card script for faithfulness a
 | Engine API Ref | `qa/archetype-qa/engine-api-reference.md` |
 | Engine Gaps | `qa/archetype-qa/engine-gaps.md` |
 | C# Scripts | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CLASS_NAME}.cs` |
-| Python Scripts | `digimon_gym/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py` |
+| Python Scripts | `code/engine_py_legacy/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py` |
 | Card Metadata | `digimon_gym/engine/data/cards.json` |
 | Validated Cards | `qa/qa-reports/validated_cards.json` |
 | Archetype QA | `qa/archetype-qa/{archetype_name}.md` |
@@ -42,7 +42,7 @@ Review, fix, test, and track a single Digimon TCG card script for faithfulness a
 ## Phase 1: Resolve Card Identity
 
 Accept input in any form:
-- **File path**: `digimon_gym/engine/data/scripts/bt24/bt24_102.py` or IDE-selected file
+- **File path**: `code/engine_py_legacy/engine/data/scripts/bt24/bt24_102.py` or IDE-selected file
 - **Card ID (hyphen)**: `BT24-102`
 - **Card ID (underscore)**: `bt24_102` or `BT24_102`
 
@@ -51,7 +51,7 @@ Normalize to:
 - `set_lower`: `bt24`
 - `card_number`: `102`
 - `class_name`: `BT24_102` (underscore, for Python class and C# filename)
-- `python_path`: `digimon_gym/engine/data/scripts/{set_lower}/{set_lower}_{card_number}.py`
+- `python_path`: `code/engine_py_legacy/engine/data/scripts/{set_lower}/{set_lower}_{card_number}.py`
 - `csharp_glob`: `DCGO/Assets/Scripts/CardEffect/{SET_UPPER}/*/{CLASS_NAME}.cs`
 
 Verify the Python script exists. If missing: report "MISSING — no script to review" and stop.
@@ -71,7 +71,7 @@ Read `digimon_gym/engine/data/cards.json`, extract entry for this card ID. Key f
 - `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`
 
 ### 2b. Current Python script
-Read `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
+Read `code/engine_py_legacy/engine/data/scripts/{set}/{set}_{nnn}.py`
 
 ### 2c. C# reference implementation
 Glob for `DCGO/Assets/Scripts/CardEffect/{SET}/*/{CLASS_NAME}.cs`. Color subdirectory varies — use glob. If not found, note "C# reference not available" and proceed with card text only.
@@ -194,7 +194,7 @@ Skip if `--skip-tests` or `--report-only`.
 
 ### 5a. Write DebugRunner test
 
-Create `tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py`. Tests are organized by set subdirectory, mirroring the card script layout. Create the `{set_lower}/` directory and `__init__.py` if they don't exist. Use the `debug_runner` fixture from `tests/conftest.py`.
+Create `code/engine_py_legacy/tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py`. Tests are organized by set subdirectory, mirroring the card script layout. Create the `{set_lower}/` directory and `__init__.py` if they don't exist. Use the `debug_runner` fixture from `code/engine_py_legacy/tests/conftest.py`.
 
 ```python
 import pytest
@@ -227,7 +227,7 @@ class Test{CLASS_NAME}{CardName}:
 
 ### 5b. Run tests
 ```bash
-python -m pytest tests/behavioral/test_{set_lower}_{nnn}.py -v
+python -m pytest code/engine_py_legacy/tests/behavioral/test_{set_lower}_{nnn}.py -v
 ```
 
 ### 5c. Handle failures
@@ -281,7 +281,7 @@ Verdict: {FAITHFUL / FIXED / PARTIAL / BLOCKED}
 - {clause}: {what changed and why}
 
 ### Tests
-- tests/behavioral/test_{set}_{nnn}.py — N tests, all passing
+- code/engine_py_legacy/tests/behavioral/test_{set}_{nnn}.py — N tests, all passing
 
 ### Tracking
 - validated_cards.json: {status}

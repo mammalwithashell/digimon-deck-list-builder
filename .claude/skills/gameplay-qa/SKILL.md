@@ -537,14 +537,14 @@ After testing a card, save the test as a YAML scenario for regression testing.
 
 ### Generate scenario stubs
 ```bash
-python tools/generate_scenarios.py --archetype "ARCHETYPE" --output tests/scenarios/ARCHETYPE/
+python code/tools/generate_scenarios.py --archetype "ARCHETYPE" --output code/engine_py_legacy/tests/scenarios/ARCHETYPE/
 ```
 
-Scenarios in `tests/scenarios/` are auto-discovered by `pytest -m scenario`.
+Scenarios in `code/engine_py_legacy/tests/scenarios/` are auto-discovered by `pytest -m scenario`.
 
 ### Write a scenario
 ```yaml
-# tests/scenarios/archetype/bt24_059.yaml
+# code/engine_py_legacy/tests/scenarios/archetype/bt24_059.yaml
 name: "Medusamon On Play trashes Lv.4 target"
 setup:
   deck1_archetype: "medusamon"
@@ -574,10 +574,10 @@ assertions:
 python -m pytest tests -m scenario -v
 
 # Single scenario via CLI
-python tools/run_scenario.py tests/scenarios/medusamon/bt24_059.yaml
+python code/tools/run_scenario.py code/engine_py_legacy/tests/scenarios/medusamon/bt24_059.yaml
 
 # All scenarios for an archetype via CLI
-python tools/run_scenario.py tests/scenarios/medusamon/ --all
+python code/tools/run_scenario.py code/engine_py_legacy/tests/scenarios/medusamon/ --all
 ```
 
 ### Assertion types
