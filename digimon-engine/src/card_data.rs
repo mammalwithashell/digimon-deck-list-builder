@@ -318,6 +318,13 @@ pub fn parse_printed_keywords(
                 ("Progress", Keyword::Progress),
                 ("Retaliation", Keyword::Retaliation),
                 ("Scapegoat", Keyword::Scapegoat),
+                // Phase F additions:
+                // "Mind Link" must precede any future "Mind*" prefix —
+                // longest-prefix wins; printed token is ＜Mind Link＞.
+                ("Mind Link", Keyword::MindLink),
+                ("Iceclad", Keyword::Iceclad),
+                ("Execute", Keyword::Execute),
+                ("Training", Keyword::Training),
             ] {
                 if trimmed.starts_with(prefix) {
                     push_unique(kw, &mut found);
@@ -490,5 +497,26 @@ mod tests {
         );
         assert!(kws.contains(&Keyword::Retaliation), "should parse <Retaliation>");
         assert!(kws.contains(&Keyword::Scapegoat), "should parse <Scapegoat>");
+    }
+
+    #[test]
+    fn parse_phase_f_keywords() {
+        use crate::enums::Keyword;
+        let inputs = [
+            ("＜Execute＞", Keyword::Execute),
+            ("＜Iceclad＞", Keyword::Iceclad),
+            ("＜Mind Link＞", Keyword::MindLink),
+            ("＜Training＞", Keyword::Training),
+        ];
+        for (text, expected) in inputs {
+            let parsed = parse_printed_keywords(text, "", "");
+            assert!(
+                parsed.contains(&expected),
+                "expected {:?} in parse of {:?}, got {:?}",
+                expected,
+                text,
+                parsed,
+            );
+        }
     }
 }

@@ -325,6 +325,36 @@ pub enum Keyword {
     /// §E2 — auto-installed `WhenWouldBeDeleted` substitute replacement.
     /// RULES_CONTEXT 16-31.
     Scapegoat,
+
+    /// DCGO `Execute` — at end of your turn, this Digimon may attack
+    /// (including unsuspended Digimon); when the attack ends, this
+    /// Digimon is deleted. Trigger-type, Optional (RULES_CONTEXT 16-37).
+    /// Wire-up Phase F §F1 — auto-installed `EndOfYourTurn` triggered
+    /// effect that grants `MayAttack` + `CanAttackUnsuspended` for the
+    /// upcoming attack window and queues an `EndOfAttack` self-deletion.
+    Execute,
+
+    /// DCGO `Iceclad` — passive (RULES_CONTEXT 16-34). When this Digimon
+    /// is in a Digimon-vs-Digimon battle (NOT a security-Digimon battle),
+    /// compare digivolution-card count instead of DP. Higher count wins;
+    /// equal count = mutual destruction. No `keyword_to_auto_effect` arm —
+    /// consumed directly in `combat::resolve_battle` via `has_keyword`.
+    Iceclad,
+
+    /// DCGO `MindLink` — active skill on Tamers (RULES_CONTEXT 16-27).
+    /// `[Main]` activation: place this Tamer at the bottom of an own
+    /// Digimon's digivolution stack. Target Digimon must have NO Tamer
+    /// digivolution sources (DCGO `cardSource.IsTamer && !cardSource.IsFlipped`
+    /// — face-down Tamer sources do NOT count, hence the `face_down` field
+    /// on `CardSource`). Mandatory processing; optional timing under `[Main]`.
+    /// Wire-up Phase F §F3.
+    MindLink,
+
+    /// DCGO `Training` — active skill (RULES_CONTEXT 16-40). `[Main]`
+    /// activation usable from battle area OR breeding area: suspend self
+    /// (cost) + place top deck card under self at stack bottom, face-down.
+    /// Cost requires `is_suspended == false`. Wire-up Phase F §F4.
+    Training,
 }
 
 /// Zone where a card can exist.
