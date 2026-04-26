@@ -72,8 +72,25 @@ pub fn fire_scheduled_for_timing(game: &mut Game, t: EffectTiming) {
             ..
         } = eff;
         let mut bindings = captured_bindings;
+        // Phase 2f4 Task 2: parked-selection guard. With `dsl_outer_tail`'s
+        // single-outstanding invariant, two scheduled bodies parking in the
+        // same drain pass would clobber each other's outer-tail slot. In
+        // practice scheduled bodies are end-of-turn housekeeping
+        // (gain_memory / draw / plain modifier application) that don't
+        // park, so we assert rather than break-on-Parked. If a printed
+        // card needs a multi-parking drain in the future, Phase 3 should
+        // replace this with break-and-resume retry logic.
+        debug_assert!(
+            game.dsl_outer_tail.is_none(),
+            "scheduled effect fired while a previous parked selection is still outstanding; \
+             Phase 3 should add retry logic for multi-parking drains"
+        );
         let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
-        run_steps(&body, &mut ctx, &mut bindings);
+        let _outcome = run_steps(&body, &mut ctx, &mut bindings);
+        // TODO(phase-3): if `_outcome == RunOutcome::Parked`, break and
+        // resume the remaining queue once the parked selection resolves.
+        // Today, scheduled bodies typically don't park; the debug_assert
+        // above catches the rare case where they do.
     }
     // Restore non-matching effects, then append any newly-scheduled effects
     // that landed during firing (these go to the back of the queue).

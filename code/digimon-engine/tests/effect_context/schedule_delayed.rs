@@ -61,3 +61,48 @@ fn scheduled_effect_with_other_timing_does_not_fire() {
     fire_scheduled_for_timing(&mut runner.game, EffectTiming::EndOfYourTurn);
     assert_eq!(runner.game.memory, 1, "fires when correct timing arrives");
 }
+
+#[test]
+fn scheduled_effect_fires_at_engine_end_of_your_turn_transition() {
+    // Phase 2f4 Task 2 — wiring test.
+    //
+    // Schedule for EndOfYourTurn from inside an effect, then advance the
+    // engine through `end_turn()`. The phase transition should drain the
+    // ScheduledEffect queue (after the printed-observer drain) and run the
+    // body, proving that `fire_scheduled_for_timing` is wired into the
+    // observer-fire boundary.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TST", "S"))
+        .hand(0, &["TST"])
+        .start();
+    runner.game.memory = 0;
+
+    let src = runner.game.players[0].hand[0].handle();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src, None, 0);
+        ctx.schedule_delayed(
+            EffectTiming::EndOfYourTurn,
+            vec![CompiledStep::GainMemory(1)],
+            Bindings::new(),
+        );
+    }
+    assert_eq!(runner.game.memory, 0, "not fired before turn ends");
+
+    // Drive the engine through end-of-turn — the active player (P0) ends
+    // their turn, which should fire EndOfYourTurn (and EndOfTurn) and
+    // drain the scheduled queue.
+    //
+    // Memory accounting: GainMemory(1) lands during `fire_end_of_your_turn`
+    // → `memory = 1`. The swing-back check (`memory_before < 0` is false
+    // since `memory_before == 0`) doesn't trigger. Turn rotation then
+    // flips the seesaw: `memory = -memory == -1`. So the post-end-turn
+    // value is -1 — proof the body ran, where the unwired baseline would
+    // leave memory == 0 (untouched, then flipped to 0).
+    runner.end_turn();
+
+    assert_eq!(
+        runner.game.memory, -1,
+        "scheduled EndOfYourTurn body ran during the end-of-turn transition \
+         (memory: 0 → +1 by GainMemory → -1 by seesaw flip)"
+    );
+}
