@@ -1016,26 +1016,31 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
-        // Phase E §E2 — printed Scapegoat: "When this Digimon would be
+        // Phase F Task 1 — printed Scapegoat: "When this Digimon would be
         // deleted [other than by your own effect], you may delete another
         // of your Digimon to prevent it." DCGO `Scapegoat.cs`.
         // RULES_CONTEXT 16-31 (Immediate-type, Optional).
         //
-        // ## Cause filter
+        // ## Cause filter (UPSTREAM)
         //
-        // `rctx.cause != OwnEffect` — RULES_CONTEXT 16-31: a player's own
+        // `cause != OwnEffect` — RULES_CONTEXT 16-31: a player's own
         // effect cannot trigger their Scapegoat. Battle, OpponentEffect,
         // SecurityCheck, and Cost all DO trigger.
         //
-        // The cause filter runs IN-BODY rather than via `.condition(...)`
-        // because the candidate-condition `EffectReadContext` does not
-        // currently carry `cause` (see `replacement.rs::try_replace_inner`
-        // — cause-aware card-effect filtering is a tracked substrate gap,
-        // out of Phase E scope). Consequence: the outer `.optional()`
-        // dialog still parks on `OwnEffect` deletions; PASS proceeds
-        // correctly so end-state matches DCGO, but the UX shows a
-        // spurious dialog. Promote to a `.condition`-gated form once the
-        // substrate threads `cause` into the candidate filter.
+        // Phase F migrated this from the in-body fallback to the
+        // upstream candidate filter via `.replacement_condition(...)`.
+        // The dispatcher consults this BEFORE installing the outer
+        // optional accept dialog, so the spurious-dialog UX divergence
+        // from Phase E is closed. (Phase E note: the cause filter ran
+        // in-body because `collect_candidates` did not yet thread `cause`
+        // into the effect-side filter; Task 1 added that substrate.)
+        //
+        // ## No-substitute filter (UPSTREAM)
+        //
+        // Mirrors DCGO `CanActivateScapegoat`'s `HasMatchConditionPermanent`
+        // gate: the keyword is inactive when the controller has no other
+        // own permanents to substitute. Suppressed at candidate-collection
+        // time so the outer dialog never parks in this case.
         //
         // ## Selection chain
         //
@@ -1055,21 +1060,33 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // subject's permanent, so this body is naturally self-scoped.
         // The `subject == me_perm` guard is an explicit belt-and-suspenders
         // defense against any future cross-permanent enumeration changes.
-        //
-        // ## No-candidate handling
-        //
-        // If the controller has no other permanents, `select_own_permanent`
-        // no-ops silently (no candidates → no `pending_selection` installed
-        // → no parked replacement → original deletion proceeds). This
-        // matches DCGO `CanActivateScapegoat` returning false when there
-        // are no valid targets.
         Keyword::Scapegoat => vec![Effect::when_would_be_deleted(card)
             .name("<Scapegoat>")
             .optional()
+            .replacement_condition(|ctx, cause| {
+                use crate::replacement::ReplacementCause;
+                // RULES_CONTEXT 16-31: skip own-effect deletions.
+                if matches!(cause, ReplacementCause::OwnEffect) {
+                    return false;
+                }
+                // DCGO HasMatchConditionPermanent: at least one other own
+                // permanent must exist as a substitute candidate.
+                let Some(me) = ctx.source_permanent else {
+                    return false;
+                };
+                let owner = me.player;
+                let battle = ctx.battle_area(owner);
+                battle
+                    .iter()
+                    .enumerate()
+                    .any(|(i, _)| i as u8 != me.index)
+            })
             .replacement_process(|rctx| {
-                use crate::replacement::{ReplacementCause, ReplacementSubject};
+                use crate::replacement::ReplacementSubject;
 
-                // Self-scope guard.
+                // Self-scope guard (defense-in-depth — the candidate
+                // collector only enumerates the subject's own permanent
+                // for `WhenWouldBeDeleted`).
                 let me_perm = match rctx.effect.source_permanent {
                     Some(h) => h,
                     None => return,
@@ -1082,19 +1099,14 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     return;
                 }
 
-                // Cause filter: skip OwnEffect.
-                if matches!(rctx.cause, ReplacementCause::OwnEffect) {
-                    return;
-                }
-
                 let owner = me_perm.player;
 
                 // Inner pick: another of own permanents. Filter: same-
                 // controller, non-self. Mandatory once accepted
-                // (is_optional=false). `select_own_permanent` no-ops
-                // silently when no candidates match — no pending_selection
-                // is installed, so the dispatcher commits no outcome and
-                // the original deletion proceeds.
+                // (is_optional=false). The upstream
+                // `replacement_condition` already guarantees at least one
+                // candidate exists, so this select_own_permanent will
+                // always install a pending_selection.
                 rctx.effect.select_own_permanent(
                     "select another of your Digimon to delete instead",
                     /*is_optional=*/ false,

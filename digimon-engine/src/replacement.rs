@@ -401,7 +401,17 @@ fn collect_candidates(
                     continue;
                 }
             }
-            let _ = cause; // cause_filter on card effects is Task 6 scope
+            // Phase F Task 1: cause-aware candidate filter for WhenWouldBe*
+            // timings. Runs AFTER `condition`. Used by `<Scapegoat>` to drop
+            // the candidate before the outer accept dialog parks on
+            // `ReplacementCause::OwnEffect` (RULES_CONTEXT 16-31) and on the
+            // no-substitute case (DCGO `HasMatchConditionPermanent`).
+            if let Some(rcond) = &effect.replacement_condition {
+                let ctx = EffectReadContext::new(game, source_card, Some(h), h.player);
+                if !rcond(&ctx, cause) {
+                    continue;
+                }
+            }
             out.push(Candidate {
                 source_card,
                 source_permanent: Some(h),
