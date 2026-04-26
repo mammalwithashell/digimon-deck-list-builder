@@ -14,10 +14,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import ROLE_ADMIN, get_current_user, require_roles
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import AIModel, Deck, User
-from digimon_gym.db.schemas import (
+from server.db.auth import ROLE_ADMIN, get_current_user, require_roles
+from server.db.database import get_db
+from server.db.models import AIModel, Deck, User
+from server.db.schemas import (
     AIModelConfirmResponse,
     AIModelCreateRequest,
     AIModelCreateResponse,
@@ -29,8 +29,8 @@ from digimon_gym.db.schemas import (
     PrepareModelResponse,
 )
 from digimon_engine import get_models_dir
-from digimon_gym.storage import spaces
-from digimon_gym.storage.model_resolver import resolve_manifest_model_path
+from server.storage import spaces
+from server.storage.model_resolver import resolve_manifest_model_path
 
 admin_router = APIRouter(prefix="/admin/models", tags=["admin-models"])
 public_router = APIRouter(prefix="/models", tags=["models-public"])

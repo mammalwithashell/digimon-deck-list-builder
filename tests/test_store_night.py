@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from digimon_gym.digilab_client import (
+from server.digilab_client import (
     ColorDistribution,
     DecklistRecord,
     PeriodMeta,

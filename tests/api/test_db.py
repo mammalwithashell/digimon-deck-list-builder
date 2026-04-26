@@ -8,7 +8,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from digimon_gym.db.auth import (
+from server.db.auth import (
     create_access_token,
     create_refresh_token_value,
     decode_access_token,
@@ -16,8 +16,8 @@ from digimon_gym.db.auth import (
     hash_token,
     verify_password,
 )
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import (
+from server.db.database import get_db
+from server.db.models import (
     Base,
     Deck,
     Friendship,
@@ -57,7 +57,7 @@ async def db_session(db_engine):
 @pytest.fixture
 async def client(db_engine):
     """AsyncClient wired to the FastAPI app with test DB."""
-    from digimon_gym.api import app
+    from server.api import app
 
     session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -406,12 +406,12 @@ class TestMetaTierGating:
         updates). Uses the same fingerprint shape the real loader produces.
         Also bypasses the alpha-release tested-cards gate so synthetic IDs
         like META-001 round-trip through POST /decks."""
-        from digimon_gym.classifier import deck_tagger
-        from digimon_gym.classifier.meta_tier import (
+        from server.classifier import deck_tagger
+        from server.classifier.meta_tier import (
             ArchetypeFingerprint,
             ClassifierLibrary,
         )
-        from digimon_gym.db.routers import decks as decks_router
+        from server.db.routers import decks as decks_router
         monkeypatch.setattr(decks_router, "out_of_set_cards", lambda _cards: [])
 
         lib = ClassifierLibrary(

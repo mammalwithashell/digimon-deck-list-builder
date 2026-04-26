@@ -16,7 +16,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from digimon_gym.db.models import Agent, Base, TrainingJob
+from server.db.models import Agent, Base, TrainingJob
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ async def db_session(session_factory):
 def patch_async_session(monkeypatch, session_factory):
     """Monkey-patch the worker module's ``async_session`` to use the test DB."""
     monkeypatch.setattr(
-        "digimon_gym.agents.training_worker.async_session", session_factory
+        "server.workers.training_worker.async_session", session_factory
     )
 
 
@@ -107,7 +107,7 @@ def _make_agent(*, total_games: int = 0, total_wins: int = 0) -> Agent:
 class TestAtomicClaiming:
     async def test_no_double_claim(self, db_session, session_factory, patch_async_session):
         """Two workers claiming concurrently should never double-claim a job."""
-        from digimon_gym.agents.training_worker import TrainingJobWorker
+        from server.workers.training_worker import TrainingJobWorker
 
         # Create 5 queued jobs with staggered created_at so ordering is stable
         base_time = datetime.now(timezone.utc)
@@ -159,7 +159,7 @@ class TestConcurrentCapacity:
         self, db_session, patch_async_session, monkeypatch
     ):
         """Worker with max_concurrent=2 should never have more than 2 running tasks."""
-        from digimon_gym.agents.training_worker import TrainingJobWorker
+        from server.workers.training_worker import TrainingJobWorker
 
         # Create 4 queued jobs
         base_time = datetime.now(timezone.utc)
@@ -217,7 +217,7 @@ class TestDeviceRoundRobin:
         """Device assignment should cycle through configured devices."""
         monkeypatch.setenv("TRAINING_WORKER_DEVICES", "cpu,cuda:0,cuda:1")
 
-        from digimon_gym.agents.training_worker import TrainingJobWorker
+        from server.workers.training_worker import TrainingJobWorker
 
         worker = TrainingJobWorker()
 
@@ -237,7 +237,7 @@ class TestStaleRecovery:
         self, db_session, session_factory, patch_async_session
     ):
         """Stale recovery should only mark foreign-worker jobs as failed."""
-        from digimon_gym.agents.training_worker import TrainingJobWorker
+        from server.workers.training_worker import TrainingJobWorker
 
         worker = TrainingJobWorker()
         stale_time = datetime.now(timezone.utc) - timedelta(hours=3)
@@ -292,7 +292,7 @@ class TestAtomicAgentStats:
         self, db_session, session_factory, patch_async_session
     ):
         """Two concurrent _update_agent_stats calls should sum correctly."""
-        from digimon_gym.agents.training_worker import TrainingJobWorker
+        from server.workers.training_worker import TrainingJobWorker
 
         # Create an agent
         agent = _make_agent(total_games=0, total_wins=0)

@@ -15,10 +15,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import ROLE_ADMIN, require_roles
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import AppRelease, AppReleaseArtifact, User
-from digimon_gym.db.schemas import (
+from server.db.auth import ROLE_ADMIN, require_roles
+from server.db.database import get_db
+from server.db.models import AppRelease, AppReleaseArtifact, User
+from server.db.schemas import (
     AppReleaseArtifactUploadSlot,
     AppReleaseConfirmRequest,
     AppReleaseConfirmResponse,
@@ -31,7 +31,7 @@ from digimon_gym.db.schemas import (
     ReleaseManifest,
     UnpublishResponse,
 )
-from digimon_gym.storage import spaces
+from server.storage import spaces
 
 admin_router = APIRouter(prefix="/admin/releases", tags=["admin-releases"])
 

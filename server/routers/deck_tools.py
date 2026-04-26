@@ -13,7 +13,7 @@ from digimon_engine import (
     summarize_deck,
     validate_deck,
 )
-from digimon_gym.routers.schemas import DeckParseRequest, DeckValidateRequest
+from server.routers.schemas import DeckParseRequest, DeckValidateRequest
 
 router = APIRouter(tags=["deck-tools"])
 

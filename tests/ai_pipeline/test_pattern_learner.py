@@ -1,7 +1,7 @@
 # tests/test_pattern_learner.py
 import json
 import pytest
-from digimon_gym.ai.pattern_learner import cluster_autofix_diffs, DiffCluster
+from server.ai.pattern_learner import cluster_autofix_diffs, DiffCluster
 
 
 def _make_audit_record(card_id: str, before: str, after: str):
@@ -69,5 +69,5 @@ class TestClusterAutofixDiffs:
 
 class TestCreateLearnRun:
     def test_create_learn_run_exists(self):
-        from digimon_gym.ai.pattern_learner import create_learn_run
+        from server.ai.pattern_learner import create_learn_run
         assert callable(create_learn_run)

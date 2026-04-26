@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import (
+from server.db.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     REFRESH_TOKEN_EXPIRE_DAYS,
     ROLE_PLAYER,
@@ -27,9 +27,9 @@ from digimon_gym.db.auth import (
     hash_token,
     verify_password,
 )
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import RefreshToken, User, UserPreferences
-from digimon_gym.db.schemas import (
+from server.db.database import get_db
+from server.db.models import RefreshToken, User, UserPreferences
+from server.db.schemas import (
     GuestSessionResponse,
     LoginRequest,
     RefreshRequest,

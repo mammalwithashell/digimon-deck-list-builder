@@ -13,9 +13,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from sqlalchemy import select
 
-from digimon_gym.db.auth import DEFAULT_ROLES, assign_role_to_user, ensure_role_exists
-from digimon_gym.db.database import async_session, init_db
-from digimon_gym.db.models import User
+from server.db.auth import DEFAULT_ROLES, assign_role_to_user, ensure_role_exists
+from server.db.database import async_session, init_db
+from server.db.models import User
 
 
 async def run() -> None:

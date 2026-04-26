@@ -4,7 +4,7 @@ import hashlib
 
 import pytest
 
-from digimon_gym.ai.autofix_apply import (
+from server.ai.autofix_apply import (
     ApplyValidationError,
     apply_validated_edits,
     validate_edit_payload,

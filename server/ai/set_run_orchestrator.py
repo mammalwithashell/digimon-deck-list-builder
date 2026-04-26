@@ -17,20 +17,20 @@ logger = logging.getLogger(__name__)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.ai.autofix_apply import (
+from server.ai.autofix_apply import (
     ApplyValidationError,
     apply_validated_edits,
     run_profile_checks,
     validate_edit_payload,
 )
-from digimon_gym.ai.dispatcher import TaskDispatcher
-from digimon_gym.ai.git_adapter import GitAdapter
-from digimon_gym.ai.issue_resolution import (
+from server.ai.dispatcher import TaskDispatcher
+from server.ai.git_adapter import GitAdapter
+from server.ai.issue_resolution import (
     build_apply_resolution_note,
     resolve_open_issues_for_card,
 )
-from digimon_gym.db.database import async_session
-from digimon_gym.db.models import (
+from server.db.database import async_session
+from server.db.models import (
     AIFixApplyAudit,
     AISetRun,
     AISetRunItem,

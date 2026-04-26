@@ -18,14 +18,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import get_current_user
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import User
+from server.db.auth import get_current_user
+from server.db.database import get_db
+from server.db.models import User
 from engine_py_legacy.engine.data.deck_loader import parse_deck
 from engine_py_legacy.engine.data.enums import PlayerType
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.routers.state import active_games
-from digimon_gym.routers.ws_manager import GameSettings, manager
+from server.routers.state import active_games
+from server.routers.ws_manager import GameSettings, manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/lobby", tags=["lobby"])

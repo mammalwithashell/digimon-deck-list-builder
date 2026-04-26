@@ -10,8 +10,8 @@ from itertools import combinations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.database import async_session
-from digimon_gym.db.models import (
+from server.db.database import async_session
+from server.db.models import (
     Agent, DeckPool, Gauntlet, GauntletParticipant, MatchupResult, TrainingJob,
 )
 

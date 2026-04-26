@@ -22,15 +22,15 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from sqlalchemy import select
 
-from digimon_gym.db.auth import (
+from server.db.auth import (
     ALGORITHM,
     ROLE_ADMIN,
     SECRET_KEY,
     assign_role_to_user,
     hash_password,
 )
-from digimon_gym.db.database import async_session_maker
-from digimon_gym.db.models import User
+from server.db.database import async_session_maker
+from server.db.models import User
 
 CI_USERNAME = "ci-desktop-release"
 CI_EMAIL = "ci-desktop-release@ci.local"
@@ -38,7 +38,7 @@ TOKEN_EXPIRES = timedelta(days=365)
 
 
 def _mint_long_lived_token(user_id: str, username: str) -> str:
-    """Same shape as digimon_gym.db.auth.create_access_token, with a
+    """Same shape as server.db.auth.create_access_token, with a
     365-day expiry instead of 30 minutes. Carries ROLE_ADMIN so
     `require_roles(ROLE_ADMIN)` passes."""
     expire = datetime.now(timezone.utc) + TOKEN_EXPIRES

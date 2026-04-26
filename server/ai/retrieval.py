@@ -14,7 +14,7 @@ from typing import Iterable
 
 from rank_bm25 import BM25Okapi
 
-from digimon_gym.env import load_project_env
+from server.env import load_project_env
 
 load_project_env()
 

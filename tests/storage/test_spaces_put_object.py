@@ -1,4 +1,4 @@
-"""Moto-backed tests for put_object / put_json in digimon_gym.storage.spaces."""
+"""Moto-backed tests for put_object / put_json in server.storage.spaces."""
 from __future__ import annotations
 
 import json
@@ -8,7 +8,7 @@ import pytest
 from botocore.client import Config as BotocoreConfig
 from moto import mock_s3
 
-from digimon_gym.storage import spaces
+from server.storage import spaces
 
 # ---------------------------------------------------------------------------
 # Constants shared by all tests (mirror test_spaces.py conventions)

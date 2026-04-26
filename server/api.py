@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 import os
 
-from digimon_gym.env import load_project_env
+from server.env import load_project_env
 
 # Load .env before importing modules that read environment variables at import/init time.
 load_project_env()
@@ -9,32 +9,32 @@ load_project_env()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from digimon_gym.agents.training_worker import training_job_worker
-from digimon_gym.ai.worker import ai_task_worker
-from digimon_gym.db.database import init_db
+from server.workers.training_worker import training_job_worker
+from server.ai.worker import ai_task_worker
+from server.db.database import init_db
 from digimon_engine import CardDatabase, CardRegistry
-from digimon_gym.db.routers import admin_ai as admin_ai_router
-from digimon_gym.db.routers import training as training_router
-from digimon_gym.db.routers import assets as assets_router
-from digimon_gym.db.routers import auth as auth_router
-from digimon_gym.db.routers import decks as decks_router
-from digimon_gym.db.routers import friends as friends_router
-from digimon_gym.db.routers import issues as issues_router
-from digimon_gym.db.routers import patch_notes as patch_notes_router
-from digimon_gym.db.routers import users as users_router
-from digimon_gym.db.routers import admin_models as admin_models_router
-from digimon_gym.db.routers import admin_releases as admin_releases_router
-from digimon_gym.routers import deck_tools
-from digimon_gym.routers import games
-from digimon_gym.routers import health
-from digimon_gym.routers import lobby
-from digimon_gym.routers import matchmaking
-from digimon_gym.routers import recordings
-from digimon_gym.routers import replays
-from digimon_gym.routers import simulations
-from digimon_gym.routers import ws_games
-from digimon_gym.routers import ws_matchmaking
-from digimon_gym.routers import deck_optimizer
+from server.db.routers import admin_ai as admin_ai_router
+from server.db.routers import training as training_router
+from server.db.routers import assets as assets_router
+from server.db.routers import auth as auth_router
+from server.db.routers import decks as decks_router
+from server.db.routers import friends as friends_router
+from server.db.routers import issues as issues_router
+from server.db.routers import patch_notes as patch_notes_router
+from server.db.routers import users as users_router
+from server.db.routers import admin_models as admin_models_router
+from server.db.routers import admin_releases as admin_releases_router
+from server.routers import deck_tools
+from server.routers import games
+from server.routers import health
+from server.routers import lobby
+from server.routers import matchmaking
+from server.routers import recordings
+from server.routers import replays
+from server.routers import simulations
+from server.routers import ws_games
+from server.routers import ws_matchmaking
+from server.routers import deck_optimizer
 
 
 @asynccontextmanager
@@ -102,5 +102,5 @@ app.include_router(deck_optimizer.router)
 
 # Debug endpoints (only in debug mode)
 if os.getenv("DEBUG_MODE") == "1":
-    from digimon_gym.routers import debug_games
+    from server.routers import debug_games
     app.include_router(debug_games.router)

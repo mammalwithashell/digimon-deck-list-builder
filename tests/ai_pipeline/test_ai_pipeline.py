@@ -14,24 +14,24 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-import digimon_gym.ai.set_run_orchestrator as set_run_module
-from digimon_gym.ai import retrieval as retrieval_module
-from digimon_gym.ai.autofix_apply import ApplyValidationError, HashMismatchError, apply_validated_edits
-from digimon_gym.ai.batch_orchestrator import batch_orchestrator
-from digimon_gym.ai.client import OpenAIResponsesClient
-from digimon_gym.ai.dispatcher import DispatchOutcome
-from digimon_gym.ai.contracts import EngineCapabilityOutput, QATriageOutput, ScriptFidelityOutput
-from digimon_gym.ai.retrieval import LocalRAGIndex, build_local_index, discover_source_files
-from digimon_gym.ai.set_run_orchestrator import set_run_orchestrator
-from digimon_gym.ai.worker import AITaskWorker
-from digimon_gym.db.auth import (
+import server.ai.set_run_orchestrator as set_run_module
+from server.ai import retrieval as retrieval_module
+from server.ai.autofix_apply import ApplyValidationError, HashMismatchError, apply_validated_edits
+from server.ai.batch_orchestrator import batch_orchestrator
+from server.ai.client import OpenAIResponsesClient
+from server.ai.dispatcher import DispatchOutcome
+from server.ai.contracts import EngineCapabilityOutput, QATriageOutput, ScriptFidelityOutput
+from server.ai.retrieval import LocalRAGIndex, build_local_index, discover_source_files
+from server.ai.set_run_orchestrator import set_run_orchestrator
+from server.ai.worker import AITaskWorker
+from server.db.auth import (
     ROLE_ADMIN,
     ROLE_JUDGE,
     assign_role_to_user,
     get_user_role_names,
 )
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import (
+from server.db.database import get_db
+from server.db.models import (
     AIFixBatch,
     AIFixBatchItem,
     AISetRun,
@@ -67,7 +67,7 @@ async def session_factory(db_engine):
 
 @pytest.fixture
 async def client(session_factory):
-    from digimon_gym.api import app, ai_task_worker
+    from server.api import app, ai_task_worker
 
     async def override_get_db():
         async with session_factory() as session:
@@ -298,7 +298,7 @@ class TestAITasks:
         assert bt21_rows[0]["id"] == bt21_task["id"]
 
     async def test_apply_fix_stale_hash_returns_conflict(self, client: AsyncClient, session_factory, monkeypatch):
-        from digimon_gym.db.routers import admin_ai as admin_ai_router
+        from server.db.routers import admin_ai as admin_ai_router
 
         admin_tokens = await _register_and_login(client, "adminapplystale")
         await _grant_roles(session_factory, "adminapplystale", ROLE_ADMIN)
@@ -360,7 +360,7 @@ class TestAITasks:
     async def test_apply_fix_force_true_succeeds_and_resolves_card_issues(
         self, client: AsyncClient, session_factory, monkeypatch
     ):
-        from digimon_gym.db.routers import admin_ai as admin_ai_router
+        from server.db.routers import admin_ai as admin_ai_router
 
         admin_tokens = await _register_and_login(client, "adminapplyforce")
         await _grant_roles(session_factory, "adminapplyforce", ROLE_ADMIN)
@@ -451,7 +451,7 @@ class TestAITasks:
     async def test_apply_fix_force_still_conflicts_when_not_forceable(
         self, client: AsyncClient, session_factory, monkeypatch
     ):
-        from digimon_gym.db.routers import admin_ai as admin_ai_router
+        from server.db.routers import admin_ai as admin_ai_router
 
         admin_tokens = await _register_and_login(client, "adminapplynotforceable")
         await _grant_roles(session_factory, "adminapplynotforceable", ROLE_ADMIN)
@@ -588,7 +588,7 @@ class TestAITasks:
 
     async def test_worker_processes_one_task(self, session_factory, monkeypatch):
         # Point the worker module at the test DB sessionmaker.
-        from digimon_gym.ai import worker as worker_module
+        from server.ai import worker as worker_module
 
         monkeypatch.setattr(worker_module, "async_session", session_factory)
         worker = AITaskWorker()
@@ -629,7 +629,7 @@ class TestAITasks:
             assert task.output_tokens == 40
 
     async def test_worker_downgrades_model_on_tpm_overflow(self, session_factory, monkeypatch):
-        from digimon_gym.ai import worker as worker_module
+        from server.ai import worker as worker_module
 
         monkeypatch.setattr(worker_module, "async_session", session_factory)
         worker = AITaskWorker()
@@ -696,7 +696,7 @@ class TestAITasks:
         assert worker.max_concurrent == 1
 
     async def test_worker_claims_are_atomic_between_workers(self, session_factory, monkeypatch):
-        from digimon_gym.ai import worker as worker_module
+        from server.ai import worker as worker_module
 
         monkeypatch.setattr(worker_module, "async_session", session_factory)
         worker_a = AITaskWorker()
@@ -729,7 +729,7 @@ class TestAITasks:
             assert all(row.worker_id in {worker_a._worker_id, worker_b._worker_id} for row in rows)
 
     async def test_worker_runs_tasks_in_parallel_up_to_capacity(self, session_factory, monkeypatch):
-        from digimon_gym.ai import worker as worker_module
+        from server.ai import worker as worker_module
 
         monkeypatch.setattr(worker_module, "async_session", session_factory)
         monkeypatch.setenv("AI_WORKER_MAX_CONCURRENT", "3")
@@ -803,7 +803,7 @@ class TestAITasks:
             assert all(row.worker_id is None for row in rows)
 
     async def test_retry_requeues_task_and_clears_ownership(self, session_factory, monkeypatch):
-        from digimon_gym.ai import worker as worker_module
+        from server.ai import worker as worker_module
 
         monkeypatch.setattr(worker_module, "async_session", session_factory)
         worker = AITaskWorker()
@@ -839,7 +839,7 @@ class TestAITasks:
             assert "Retry" in str(task.error_text or "")
 
     async def test_stale_recovery_skips_current_worker_tasks(self, session_factory, monkeypatch):
-        from digimon_gym.ai import worker as worker_module
+        from server.ai import worker as worker_module
 
         monkeypatch.setattr(worker_module, "async_session", session_factory)
         worker = AITaskWorker()
@@ -934,7 +934,7 @@ class TestAITasks:
         assert any(item["id"] == item_id for item in list_resp.json())
 
     async def test_promote_completed_review_task_card(self, client: AsyncClient, session_factory, monkeypatch, tmp_path):
-        from digimon_gym.db.routers import admin_ai as admin_ai_router
+        from server.db.routers import admin_ai as admin_ai_router
 
         admin_tokens = await _register_and_login(client, "adminpromotefromtask")
         await _grant_roles(session_factory, "adminpromotefromtask", ROLE_ADMIN)
@@ -1153,7 +1153,7 @@ class TestAIFixBatches:
     async def test_batch_apply_success_auto_resolves_open_card_issues(
         self, client: AsyncClient, session_factory, monkeypatch
     ):
-        import digimon_gym.ai.batch_orchestrator as batch_module
+        import server.ai.batch_orchestrator as batch_module
 
         monkeypatch.setattr(batch_module, "async_session", session_factory)
         monkeypatch.setattr(batch_orchestrator.git, "preflight", lambda **_: None)

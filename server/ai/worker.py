@@ -11,12 +11,12 @@ from uuid import uuid4
 
 from sqlalchemy import or_, select, update
 
-from digimon_gym.ai.batch_orchestrator import batch_orchestrator
-from digimon_gym.ai.dispatcher import TaskDispatcher
-from digimon_gym.ai.set_run_orchestrator import set_run_orchestrator
-from digimon_gym.db.database import async_session
-from digimon_gym.db.models import AITask
-from digimon_gym.env import load_project_env
+from server.ai.batch_orchestrator import batch_orchestrator
+from server.ai.dispatcher import TaskDispatcher
+from server.ai.set_run_orchestrator import set_run_orchestrator
+from server.db.database import async_session
+from server.db.models import AITask
+from server.env import load_project_env
 
 load_project_env()
 

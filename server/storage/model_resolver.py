@@ -15,8 +15,8 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.models import AIModel
-from digimon_gym.storage import spaces
+from server.db.models import AIModel
+from server.storage import spaces
 
 
 def _manifest_cache_dir() -> Path:

@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from digimon_gym.classifier.meta_tier import (
+from server.classifier.meta_tier import (
     ClassifierLibrary,
     MetaTier,
     build_library_from_deck_library,
@@ -185,7 +185,7 @@ class TestTierThresholds:
         (0.0, "jank"),
     ])
     def test_share_to_tier_mapping(self, share: float, expected: MetaTier):
-        from digimon_gym.classifier.meta_tier import share_to_tier
+        from server.classifier.meta_tier import share_to_tier
         assert share_to_tier(share) == expected
 
     def test_custom_thresholds_honored(self, library: ClassifierLibrary):

@@ -18,8 +18,8 @@ from engine_py_legacy.engine.runners.headless_game import HeadlessGame
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
 from engine_py_legacy.engine.data.enums import GamePhase, PlayerType
 from engine_py_legacy.engine.game import ACTION_SPACE_SIZE, TENSOR_SIZE
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import Base
+from server.db.database import get_db
+from server.db.models import Base
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ async def db_engine():
 
 @pytest.fixture
 async def client(db_engine):
-    from digimon_gym.api import app
+    from server.api import app
 
     session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
 

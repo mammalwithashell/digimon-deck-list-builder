@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.models import Issue
+from server.db.models import Issue
 
 
 def build_apply_resolution_note(

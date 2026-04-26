@@ -8,11 +8,11 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
-from digimon_gym.db.auth import decode_access_token
+from server.db.auth import decode_access_token
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
 from engine_py_legacy.engine.state_filter import filter_state_for_player
-from digimon_gym.routers.state import active_games
-from digimon_gym.routers.ws_manager import manager
+from server.routers.state import active_games
+from server.routers.ws_manager import manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

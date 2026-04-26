@@ -14,8 +14,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import Base
+from server.db.database import get_db
+from server.db.models import Base
 
 
 @pytest.fixture
@@ -35,10 +35,10 @@ async def db_engine():
 
 @pytest.fixture
 async def client(db_engine, monkeypatch):
-    from digimon_gym.api import app
-    from digimon_gym.db.routers import decks as decks_router
-    from digimon_gym.routers.matchmaking import reset_state as reset_mm
-    from digimon_gym.routers.lobby import pending_games, code_to_game
+    from server.api import app
+    from server.db.routers import decks as decks_router
+    from server.routers.matchmaking import reset_state as reset_mm
+    from server.routers.lobby import pending_games, code_to_game
 
     # Reset all in-memory state between tests
     reset_mm()
@@ -101,7 +101,7 @@ class TestMatcherLogic:
     """Pure-function tests against matchmaking.matcher — no HTTP/DB."""
 
     def _ticket(self, **overrides):
-        from digimon_gym.routers.matchmaking import QueueTicket
+        from server.routers.matchmaking import QueueTicket
         base = dict(
             ticket_id="t-" + overrides.get("user_id", "u"),
             user_id="u",
@@ -118,52 +118,52 @@ class TestMatcherLogic:
         return QueueTicket(**base)
 
     def test_format_mismatch_never_compatible(self):
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         a = self._ticket(user_id="a", game_mode="standard")
         b = self._ticket(user_id="b", game_mode="no_restriction")
         assert find_match(a, [b], now=datetime.now(timezone.utc)) is None
 
     def test_same_user_cannot_match_self(self):
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         t = self._ticket(user_id="u")
         assert find_match(t, [t], now=datetime.now(timezone.utc)) is None
 
     def test_casual_queue_matches_any_tier_mix(self):
         """Casual is any-vs-any: meta and jank tickets match in the casual
         queue regardless of tier."""
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         a = self._ticket(user_id="a", queue_type="casual", self_tier="meta")
         b = self._ticket(user_id="b", queue_type="casual", self_tier="jank")
         assert find_match(a, [b], now=datetime.now(timezone.utc)) is b
 
     def test_jank_queue_matches_two_jank_tickets(self):
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         a = self._ticket(user_id="a", queue_type="jank", self_tier="jank")
         b = self._ticket(user_id="b", queue_type="jank", self_tier="jank")
         assert find_match(a, [b], now=datetime.now(timezone.utc)) is b
 
     def test_sweat_queue_matches_meta_vs_rogue(self):
         """Sweat pools meta and rogue together — both are tournament-shape."""
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         a = self._ticket(user_id="a", queue_type="sweat", self_tier="meta")
         b = self._ticket(user_id="b", queue_type="sweat", self_tier="rogue")
         assert find_match(a, [b], now=datetime.now(timezone.utc)) is b
 
     def test_cross_queue_jank_and_casual_never_match(self):
         """A jank-queue ticket and a casual-queue ticket must never pair."""
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         a = self._ticket(user_id="a", queue_type="jank", self_tier="jank")
         b = self._ticket(user_id="b", queue_type="casual", self_tier="jank")
         assert find_match(a, [b], now=datetime.now(timezone.utc)) is None
 
     def test_cross_queue_sweat_and_casual_never_match(self):
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         a = self._ticket(user_id="a", queue_type="sweat", self_tier="meta")
         b = self._ticket(user_id="b", queue_type="casual", self_tier="meta")
         assert find_match(a, [b], now=datetime.now(timezone.utc)) is None
 
     def test_casual_fifo_ordering(self):
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         now = datetime.now(timezone.utc)
         older = self._ticket(user_id="older", created_at=now - timedelta(seconds=30))
         newer = self._ticket(user_id="newer", created_at=now - timedelta(seconds=5))
@@ -171,7 +171,7 @@ class TestMatcherLogic:
         assert find_match(incoming, [newer, older], now=now) is older
 
     def test_ranked_initial_window_fifty(self):
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         now = datetime.now(timezone.utc)
         a = self._ticket(
             user_id="a", queue_type="ranked", rating=1500.0, created_at=now,
@@ -186,7 +186,7 @@ class TestMatcherLogic:
         assert find_match(a, [far], now=now) is None
 
     def test_ranked_window_expands_over_time(self):
-        from digimon_gym.routers.matchmaking import find_match, rating_window
+        from server.routers.matchmaking import find_match, rating_window
         start = datetime.now(timezone.utc)
         a = self._ticket(user_id="a", queue_type="ranked", rating=1500.0, created_at=start)
         b = self._ticket(user_id="b", queue_type="ranked", rating=1800.0, created_at=start)
@@ -201,14 +201,14 @@ class TestMatcherLogic:
         assert find_match(a, [b], now=later) is b
 
     def test_ranked_window_capped(self):
-        from digimon_gym.routers.matchmaking import rating_window
+        from server.routers.matchmaking import rating_window
         start = datetime.now(timezone.utc)
         a = self._ticket(user_id="a", queue_type="ranked", rating=1500.0, created_at=start)
         # After 10 minutes, window should cap at 400
         assert rating_window(a, start + timedelta(minutes=10)) == pytest.approx(400.0)
 
     def test_cross_queue_types_never_match(self):
-        from digimon_gym.routers.matchmaking import find_match
+        from server.routers.matchmaking import find_match
         now = datetime.now(timezone.utc)
         a = self._ticket(user_id="a", queue_type="casual")
         b = self._ticket(
@@ -285,8 +285,8 @@ class TestQueueEndpoints:
         """Two players in casual 'any' queue with same format should match
         immediately; the matcher synthesizes a join code that the second
         ticket's owner can feed to /lobby/join/{code}."""
-        from digimon_gym.routers.matchmaking import tickets, user_to_ticket
-        from digimon_gym.routers.lobby import pending_games, code_to_game
+        from server.routers.matchmaking import tickets, user_to_ticket
+        from server.routers.lobby import pending_games, code_to_game
 
         tok1 = await _register_login(client, "alice")
         tok2 = await _register_login(client, "bob")
@@ -321,7 +321,7 @@ class TestQueueEndpoints:
         assert body["join_code"] in code_to_game
 
     async def test_format_mismatch_does_not_match(self, client: AsyncClient):
-        from digimon_gym.routers.matchmaking import tickets
+        from server.routers.matchmaking import tickets
         tok1 = await _register_login(client, "std1")
         tok2 = await _register_login(client, "nr1")
         h1 = {"Authorization": f"Bearer {tok1}"}
@@ -398,7 +398,7 @@ class TestQueueEndpoints:
     async def test_matched_pair_can_join_via_lobby_code(self, client: AsyncClient):
         """After matching, the joiner hitting /lobby/join/{code} must produce a
         live InteractiveGame — same path as the friend-code flow."""
-        from digimon_gym.routers.state import active_games
+        from server.routers.state import active_games
 
         tok1 = await _register_login(client, "join1")
         tok2 = await _register_login(client, "join2")
@@ -523,7 +523,7 @@ class TestEnqueueFormatValidation:
         """A rejected enqueue must not register a ticket — the user must be
         able to retry with a clean deck without hitting the 'already has an
         active ticket' 409 guard."""
-        from digimon_gym.routers.matchmaking import tickets, user_to_ticket
+        from server.routers.matchmaking import tickets, user_to_ticket
         token = await _register_login(client, "retry1")
         headers = {"Authorization": f"Bearer {token}"}
         bad_deck = await self._seed_deck(
@@ -565,12 +565,12 @@ class TestMatchmakingWebSocket:
         )
         import asyncio as _asyncio
 
-        from digimon_gym.api import app
-        from digimon_gym.db.database import get_db
-        from digimon_gym.db.models import Base
-        from digimon_gym.db.routers import decks as decks_router
-        from digimon_gym.routers.lobby import pending_games, code_to_game
-        from digimon_gym.routers.matchmaking import reset_state as reset_mm
+        from server.api import app
+        from server.db.database import get_db
+        from server.db.models import Base
+        from server.db.routers import decks as decks_router
+        from server.routers.lobby import pending_games, code_to_game
+        from server.routers.matchmaking import reset_state as reset_mm
 
         reset_mm()
         pending_games.clear()
@@ -740,7 +740,7 @@ class TestMatchmakingWebSocket:
         preventing ghost entries in the queue."""
         client, teardown = self._setup()
         try:
-            from digimon_gym.routers.matchmaking import tickets
+            from server.routers.matchmaking import tickets
             tok = self._register_login_sync(client, "ghost1")
             h = {"Authorization": f"Bearer {tok}"}
             d = self._seed_deck_sync(client, h, _legal_deck())
@@ -764,7 +764,7 @@ class TestMatchmakingWebSocket:
         after match must not discard them."""
         client, teardown = self._setup()
         try:
-            from digimon_gym.routers.matchmaking import tickets
+            from server.routers.matchmaking import tickets
 
             tok_a = self._register_login_sync(client, "postA")
             tok_b = self._register_login_sync(client, "postB")
@@ -904,7 +904,7 @@ class TestTierEligibility:
         tier: str | None, monkeypatch,
     ) -> str:
         """Seed a deck whose classifier-assigned tier is forced to `tier`."""
-        from digimon_gym.db.routers import decks as decks_router
+        from server.db.routers import decks as decks_router
         monkeypatch.setattr(
             decks_router, "tag_deck",
             lambda _cards: (None, tier),
@@ -1022,7 +1022,7 @@ class TestAlphaQueueRouting:
         self, client: AsyncClient, headers: dict, card_ids: list[str],
         tier: str | None, monkeypatch,
     ) -> str:
-        from digimon_gym.db.routers import decks as decks_router
+        from server.db.routers import decks as decks_router
         monkeypatch.setattr(
             decks_router, "tag_deck",
             lambda _cards: (None, tier),
@@ -1085,7 +1085,7 @@ class TestAlphaQueueRouting:
     async def test_jank_ticket_and_casual_ticket_never_match(
         self, client: AsyncClient, monkeypatch,
     ):
-        from digimon_gym.routers.matchmaking import tickets
+        from server.routers.matchmaking import tickets
         tok1 = await _register_login(client, "xhttp1")
         tok2 = await _register_login(client, "xhttp2")
         h1 = {"Authorization": f"Bearer {tok1}"}

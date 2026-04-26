@@ -11,7 +11,7 @@ from engine_py_legacy.engine.data.card_database import CardDatabase
 from engine_py_legacy.engine.data.enums import PlayerType, GamePhase
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
 from engine_py_legacy.engine.core.player import Player
-from digimon_gym.routers.schemas import (
+from server.routers.schemas import (
     CreateDebugGameRequest,
     SetMemoryRequest,
     InjectCardRequest,
@@ -28,7 +28,7 @@ from engine_py_legacy.engine.debug.state_injection import (
     bulk_setup as _bulk_setup,
     BulkSetupConfig,
 )
-from digimon_gym.routers.state import active_games
+from server.routers.state import active_games
 
 router = APIRouter(prefix="/debug", tags=["debug"])
 

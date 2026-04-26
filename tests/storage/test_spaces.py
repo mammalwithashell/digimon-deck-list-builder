@@ -1,4 +1,4 @@
-"""Moto-backed unit tests for digimon_gym.storage.spaces."""
+"""Moto-backed unit tests for server.storage.spaces."""
 from __future__ import annotations
 
 import hashlib
@@ -10,7 +10,7 @@ from botocore.client import Config as BotocoreConfig
 from botocore.exceptions import ClientError
 from moto import mock_s3
 
-from digimon_gym.storage import spaces
+from server.storage import spaces
 
 # ---------------------------------------------------------------------------
 # Constants shared by all tests

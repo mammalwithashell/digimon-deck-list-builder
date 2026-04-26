@@ -28,7 +28,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from digimon_gym.ai.retrieval import (
+from server.ai.retrieval import (
     chunk_cards_json,
     chunk_markdown_by_section,
     chunk_python_by_ast,

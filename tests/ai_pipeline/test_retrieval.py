@@ -1,4 +1,4 @@
-"""Tests for source-type-aware chunking and hybrid retrieval in digimon_gym.ai.retrieval."""
+"""Tests for source-type-aware chunking and hybrid retrieval in server.ai.retrieval."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from digimon_gym.ai.retrieval import (
+from server.ai.retrieval import (
     Chunk,
     LocalRAGIndex,
     _cosine,
@@ -400,7 +400,7 @@ class TestInferPythonSourceType:
 class TestBuildLocalIndex:
     def test_builds_v2_index(self, tmp_path: Path):
         """Build an index from minimal synthetic sources and verify v2 format."""
-        from digimon_gym.ai.retrieval import build_local_index
+        from server.ai.retrieval import build_local_index
 
         # Create a small Python file under the engine path
         engine_dir = tmp_path / "digimon_gym" / "engine"
@@ -463,7 +463,7 @@ class TestBuildLocalIndex:
 
     def test_duplicate_section_headers_unique_ids(self, tmp_path: Path):
         """Two sections with the same ## header should get distinct chunk_ids."""
-        from digimon_gym.ai.retrieval import build_local_index
+        from server.ai.retrieval import build_local_index
 
         md_file = tmp_path / "SPEC.md"
         md_file.write_text(

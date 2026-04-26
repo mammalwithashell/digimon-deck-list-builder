@@ -1,10 +1,10 @@
-"""Tests for prompt builders in digimon_gym.ai.prompts."""
+"""Tests for prompt builders in server.ai.prompts."""
 
 from __future__ import annotations
 
 import pytest
 
-from digimon_gym.ai.prompts import (
+from server.ai.prompts import (
     _join_pinned_engine_chunks,
     build_script_autofix_messages,
 )

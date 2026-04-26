@@ -6,7 +6,7 @@ from fastapi import APIRouter
 
 from digimon_gym.digimon_gym import GameState, greedy_policy
 from engine_py_legacy.engine.data.deck_loader import parse_deck
-from digimon_gym.routers.schemas import SimulationRequest
+from server.routers.schemas import SimulationRequest
 
 router = APIRouter(tags=["simulations"])
 

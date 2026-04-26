@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Any, Type
 
 from pydantic import BaseModel
-from digimon_gym.env import load_project_env
+from server.env import load_project_env
 
 logger = logging.getLogger(__name__)
 

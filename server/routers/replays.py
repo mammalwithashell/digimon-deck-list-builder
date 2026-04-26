@@ -6,14 +6,14 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
-from digimon_gym.routers.schemas import (
+from server.routers.schemas import (
     ReplayCreateResponse,
     ReplayRequest,
     ReplayStepResponse,
     SeekRequest,
 )
 from engine_py_legacy.engine.runners.replay_runner import ReplayRunner
-from digimon_gym.routers.state import active_replays
+from server.routers.state import active_replays
 
 router = APIRouter(tags=["replays"])
 

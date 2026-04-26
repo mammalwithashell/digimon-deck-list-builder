@@ -16,8 +16,8 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import RefreshToken, Role, User, UserRole
+from server.db.database import get_db
+from server.db.models import RefreshToken, Role, User, UserRole
 
 # ── Configuration ───────────────────────────────────────────────────────
 

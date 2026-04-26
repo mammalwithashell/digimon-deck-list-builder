@@ -11,10 +11,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import get_current_user
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import User, UserAsset, UserPreferences
-from digimon_gym.db.schemas import (
+from server.db.auth import get_current_user
+from server.db.database import get_db
+from server.db.models import User, UserAsset, UserPreferences
+from server.db.schemas import (
     AssetResponse,
     PreferencesResponse,
     UpdatePreferencesRequest,

@@ -3,7 +3,7 @@
 Engine-only router — no database or auth dependencies.
 
 Register in api.py:
-    from digimon_gym.routers.deck_optimizer import router as deck_optimizer_router
+    from server.routers.deck_optimizer import router as deck_optimizer_router
     app.include_router(deck_optimizer_router)
 """
 

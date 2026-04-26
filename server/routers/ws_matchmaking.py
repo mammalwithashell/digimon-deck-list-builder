@@ -20,8 +20,8 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
-from digimon_gym.db.auth import decode_access_token
-from digimon_gym.routers import matchmaking as mm
+from server.db.auth import decode_access_token
+from server.routers import matchmaking as mm
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

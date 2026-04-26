@@ -5,8 +5,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from digimon_gym.db.database import get_db
-from digimon_gym.routers import matchmaking as mm
+from server.db.database import get_db
+from server.routers import matchmaking as mm
 
 
 @pytest.fixture(autouse=True)
@@ -18,8 +18,8 @@ def _clean_mm_state():
 
 @pytest.fixture
 async def client(db_engine):
-    from digimon_gym.api import app
-    from digimon_gym.routers.lobby import code_to_game, pending_games
+    from server.api import app
+    from server.routers.lobby import code_to_game, pending_games
 
     # Reset in-memory lobby state between tests (matchmaking handoff
     # writes to pending_games / code_to_game).

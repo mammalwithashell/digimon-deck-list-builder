@@ -122,7 +122,7 @@ async def create_learn_run(
 ) -> "AITranspilerLearnRun":
     """Create a transpiler learn run from a completed set run's autofixes."""
     from sqlalchemy import select
-    from digimon_gym.db.models import AIFixApplyAudit, AITranspilerLearnRun, AITask
+    from server.db.models import AIFixApplyAudit, AITranspilerLearnRun, AITask
 
     # Fetch successful audits for this set run
     stmt = (

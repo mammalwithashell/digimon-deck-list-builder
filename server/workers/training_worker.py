@@ -5,7 +5,7 @@ jobs to background threads.  Supports concurrent execution bounded by
 a capacity check (controlled via ``TRAINING_WORKER_MAX_CONCURRENT``).
 
 Follows the same lifecycle pattern as
-``digimon_gym.ai.worker.AITaskWorker``.
+``server.ai.worker.AITaskWorker``.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from uuid import uuid4
 
 from sqlalchemy import case, cast, select, update, Float as SAFloat
 
-from digimon_gym.db.database import async_session
-from digimon_gym.db.models import Agent, TrainingJob
+from server.db.database import async_session
+from server.db.models import Agent, TrainingJob
 
 logger = logging.getLogger(__name__)
 
@@ -391,7 +391,7 @@ class TrainingJobWorker:
         if not job.gauntlet_id:
             return
         try:
-            from digimon_gym.agents.gauntlet_orchestrator import (
+            from server.workers.gauntlet_orchestrator import (
                 gauntlet_orchestrator,
             )
 

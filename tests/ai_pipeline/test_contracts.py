@@ -1,5 +1,5 @@
 # tests/test_contracts.py
-from digimon_gym.ai.contracts import LLMTranspileOutput
+from server.ai.contracts import LLMTranspileOutput
 
 
 class TestLLMTranspileOutput:
@@ -26,7 +26,7 @@ class TestLLMTranspileOutput:
             )
 
 
-from digimon_gym.ai.contracts import TranspilerLearnOutput, TranspilerPatchSuggestion
+from server.ai.contracts import TranspilerLearnOutput, TranspilerPatchSuggestion
 
 
 class TestTranspilerLearnOutput:

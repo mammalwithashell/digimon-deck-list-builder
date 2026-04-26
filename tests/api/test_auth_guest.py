@@ -8,18 +8,18 @@ from httpx import ASGITransport, AsyncClient
 from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from digimon_gym.db.auth import (
+from server.db.auth import (
     ALGORITHM,
     SECRET_KEY,
     create_guest_access_token,
 )
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import User
+from server.db.database import get_db
+from server.db.models import User
 
 
 @pytest.fixture
 async def client(db_engine):
-    from digimon_gym.api import app
+    from server.api import app
 
     session_factory = async_sessionmaker(
         db_engine, class_=AsyncSession, expire_on_commit=False

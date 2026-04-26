@@ -7,10 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import ROLE_ADMIN, require_roles
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import KnownIssue, Release, User
-from digimon_gym.db.schemas import (
+from server.db.auth import ROLE_ADMIN, require_roles
+from server.db.database import get_db
+from server.db.models import KnownIssue, Release, User
+from server.db.schemas import (
     KnownIssueCreateRequest,
     KnownIssueResponse,
     KnownIssueUpdateRequest,

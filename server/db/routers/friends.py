@@ -9,10 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import get_current_user
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import Friendship, User
-from digimon_gym.db.schemas import FriendRequestResponse, FriendshipResponse, UserPublic
+from server.db.auth import get_current_user
+from server.db.database import get_db
+from server.db.models import Friendship, User
+from server.db.schemas import FriendRequestResponse, FriendshipResponse, UserPublic
 
 router = APIRouter(prefix="/friends", tags=["friends"])
 

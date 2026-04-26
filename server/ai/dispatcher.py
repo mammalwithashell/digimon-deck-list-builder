@@ -8,13 +8,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from digimon_gym.ai.autofix_apply import (
+from server.ai.autofix_apply import (
     build_file_context_for_task,
     get_allowed_roots_for_scope,
     get_primary_script_path,
 )
-from digimon_gym.ai.client import ANTHROPIC_PRICING, MODEL_PRICING, LLMClient, create_llm_client
-from digimon_gym.ai.contracts import (
+from server.ai.client import ANTHROPIC_PRICING, MODEL_PRICING, LLMClient, create_llm_client
+from server.ai.contracts import (
     EngineCapabilityOutput,
     LLMTranspileOutput,
     QATriageOutput,
@@ -22,7 +22,7 @@ from digimon_gym.ai.contracts import (
     ScriptFidelityOutput,
     TranspilerLearnOutput,
 )
-from digimon_gym.ai.prompts import (
+from server.ai.prompts import (
     build_engine_capability_messages,
     build_llm_transpile_messages,
     build_qa_triage_messages,
@@ -30,7 +30,7 @@ from digimon_gym.ai.prompts import (
     build_script_fidelity_messages,
     build_transpiler_learn_messages,
 )
-from digimon_gym.ai.retrieval import LocalRAGIndex
+from server.ai.retrieval import LocalRAGIndex
 
 
 from data_paths import CARDS_JSON as CARDS_JSON_PATH

@@ -11,7 +11,7 @@ import logging
 from threading import Lock
 from typing import Iterable, Optional
 
-from digimon_gym.classifier.meta_tier import (
+from server.classifier.meta_tier import (
     ClassifierLibrary,
     MetaTier,
     classify_deck,

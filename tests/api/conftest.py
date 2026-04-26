@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from digimon_gym.db.models import Base
+from server.db.models import Base
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def _reset_rate_limit():
     """Wipe /auth/guest rate-limit state before and after every API test so
     earlier tests that mint several guests don't trip the limit in later tests.
     """
-    from digimon_gym.db.routers.auth import _reset_guest_rate_limit
+    from server.db.routers.auth import _reset_guest_rate_limit
 
     _reset_guest_rate_limit()
     yield

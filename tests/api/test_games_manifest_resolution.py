@@ -11,9 +11,9 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import AIModel
-from digimon_gym.storage.model_resolver import (
+from server.db.database import get_db
+from server.db.models import AIModel
+from server.storage.model_resolver import (
     resolve_manifest_model_path,
     _manifest_cache_dir,
 )
@@ -21,7 +21,7 @@ from digimon_gym.storage.model_resolver import (
 
 @pytest.fixture
 async def client(db_engine):
-    from digimon_gym.api import app
+    from server.api import app
 
     session_factory = async_sessionmaker(
         db_engine, class_=AsyncSession, expire_on_commit=False
@@ -75,7 +75,7 @@ async def test_resolve_manifest_writes_to_sha_keyed_cache(db_session, tmp_path, 
         Path(dest).write_bytes(payload)
         return expected_sha, len(payload)
 
-    with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_download):
+    with patch("server.storage.spaces.download_and_hash", side_effect=fake_download):
         path_str, downloaded = await resolve_manifest_model_path(db_session, model_id)
 
     assert downloaded is True
@@ -108,7 +108,7 @@ async def test_resolve_manifest_hits_cache_on_second_call(db_session, tmp_path, 
         Path(dest).write_bytes(payload)
         return expected_sha, len(payload)
 
-    with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_download):
+    with patch("server.storage.spaces.download_and_hash", side_effect=fake_download):
         _, dl1 = await resolve_manifest_model_path(db_session, model_id)
         _, dl2 = await resolve_manifest_model_path(db_session, model_id)
 
@@ -146,7 +146,7 @@ async def test_prepare_model_returns_filename_and_caches(
         Path(dest).write_bytes(payload)
         return sha, len(payload)
 
-    with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_dl):
+    with patch("server.storage.spaces.download_and_hash", side_effect=fake_dl):
         headers = await _guest_auth_headers(client)
         resp = await client.post(f"/models/{model_id}/prepare", headers=headers)
 
@@ -180,7 +180,7 @@ async def test_prepare_model_reports_cache_hit_on_second_call(
         Path(dest).write_bytes(payload)
         return sha, len(payload)
 
-    with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_dl) as m:
+    with patch("server.storage.spaces.download_and_hash", side_effect=fake_dl) as m:
         headers = await _guest_auth_headers(client)
         r1 = await client.post(f"/models/{model_id}/prepare", headers=headers)
         r2 = await client.post(f"/models/{model_id}/prepare", headers=headers)
@@ -208,7 +208,7 @@ async def test_resolve_manifest_rejects_sha_mismatch(db_session, tmp_path, monke
         Path(dest).write_bytes(b"different-bytes")
         return hashlib.sha256(b"different-bytes").hexdigest(), 15
 
-    with patch("digimon_gym.storage.spaces.download_and_hash", side_effect=fake_dl):
+    with patch("server.storage.spaces.download_and_hash", side_effect=fake_dl):
         with pytest.raises(FileNotFoundError) as excinfo:
             await resolve_manifest_model_path(db_session, model_id)
 

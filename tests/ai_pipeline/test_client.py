@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from digimon_gym.ai.client import (
+from server.ai.client import (
     ANTHROPIC_MODEL_DEFAULTS,
     ANTHROPIC_PRICING,
     MODEL_DEFAULTS,
@@ -527,7 +527,7 @@ class TestCreateLLMClient:
             assert isinstance(client, OpenAIClient)
 
     def test_unknown_provider_defaults_to_openai_with_warning(self, caplog):
-        with caplog.at_level(logging.WARNING, logger="digimon_gym.ai.client"):
+        with caplog.at_level(logging.WARNING, logger="server.ai.client"):
             client = create_llm_client("gcp-vertex")
         assert isinstance(client, OpenAIClient)
         assert "Unknown AI provider" in caplog.text
@@ -543,11 +543,11 @@ class TestDispatcherUsesFactory:
 
     def test_dispatcher_init_creates_llm_client(self):
         """TaskDispatcher should use create_llm_client() when no client is provided."""
-        with patch("digimon_gym.ai.dispatcher.create_llm_client") as mock_factory:
+        with patch("server.ai.dispatcher.create_llm_client") as mock_factory:
             mock_client = MagicMock(spec=LLMClient)
             mock_factory.return_value = mock_client
 
-            from digimon_gym.ai.dispatcher import TaskDispatcher
+            from server.ai.dispatcher import TaskDispatcher
 
             dispatcher = TaskDispatcher()
             mock_factory.assert_called_once()
@@ -557,14 +557,14 @@ class TestDispatcherUsesFactory:
         """TaskDispatcher should accept a custom client without calling the factory."""
         custom_client = MagicMock(spec=LLMClient)
 
-        from digimon_gym.ai.dispatcher import TaskDispatcher
+        from server.ai.dispatcher import TaskDispatcher
 
         dispatcher = TaskDispatcher(client=custom_client)
         assert dispatcher.client is custom_client
 
     def test_dispatcher_no_longer_imports_openai_responses_client(self):
         """OpenAIResponsesClient was removed from dispatcher imports (unused after refactor)."""
-        import digimon_gym.ai.dispatcher as dispatcher_mod
+        import server.ai.dispatcher as dispatcher_mod
 
         # The name should NOT be in the dispatcher module's own namespace.
         assert "OpenAIResponsesClient" not in vars(dispatcher_mod)
@@ -578,7 +578,7 @@ class TestDispatcherCostFromUsage:
     """Verify _cost_from_usage chains OpenAI and Anthropic pricing lookups."""
 
     def test_openai_model_uses_openai_pricing(self):
-        from digimon_gym.ai.dispatcher import TaskDispatcher
+        from server.ai.dispatcher import TaskDispatcher
 
         cost = TaskDispatcher._cost_from_usage("gpt-4.1", 1_000_000, 1_000_000)
         in_price, out_price = MODEL_PRICING["gpt-4.1"]
@@ -586,7 +586,7 @@ class TestDispatcherCostFromUsage:
         assert cost == pytest.approx(expected)
 
     def test_anthropic_model_uses_anthropic_pricing(self):
-        from digimon_gym.ai.dispatcher import TaskDispatcher
+        from server.ai.dispatcher import TaskDispatcher
 
         cost = TaskDispatcher._cost_from_usage("claude-sonnet-4-6", 1_000_000, 1_000_000)
         in_price, out_price = ANTHROPIC_PRICING["claude-sonnet-4-6"]
@@ -594,7 +594,7 @@ class TestDispatcherCostFromUsage:
         assert cost == pytest.approx(expected)
 
     def test_unknown_model_uses_fallback_pricing(self):
-        from digimon_gym.ai.dispatcher import TaskDispatcher
+        from server.ai.dispatcher import TaskDispatcher
 
         cost = TaskDispatcher._cost_from_usage("unknown-model-xyz", 1_000_000, 1_000_000)
         # Fallback is (1.0, 4.0)
@@ -602,7 +602,7 @@ class TestDispatcherCostFromUsage:
         assert cost == pytest.approx(expected)
 
     def test_anthropic_opus_pricing(self):
-        from digimon_gym.ai.dispatcher import TaskDispatcher
+        from server.ai.dispatcher import TaskDispatcher
 
         cost = TaskDispatcher._cost_from_usage("claude-opus-4-6", 1_000_000, 1_000_000)
         in_price, out_price = ANTHROPIC_PRICING["claude-opus-4-6"]

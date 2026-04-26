@@ -96,7 +96,7 @@ def build_gauntlet(meta_scope: Optional[Dict[str, Any]], verbose: bool = True):
         print(f"Meta scope: local ({', '.join(scope_parts)})")
         print("Querying DigiLab for scoped meta stats...")
 
-    from digimon_gym.digilab_client import get_scoped_meta
+    from server.digilab_client import get_scoped_meta
 
     result = get_scoped_meta(
         store_ids=store_ids,

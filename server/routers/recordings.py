@@ -8,12 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import GameRecording, GameRecordingReport
-from digimon_gym.db.schemas import BugReportRequest, BugReportResponse, RecordingResponse, RecordingSaveResponse
+from server.db.database import get_db
+from server.db.models import GameRecording, GameRecordingReport
+from server.db.schemas import BugReportRequest, BugReportResponse, RecordingResponse, RecordingSaveResponse
 from engine_py_legacy.engine.runners.headless_game import HeadlessGame
 from engine_py_legacy.engine.runners.replay_runner import ReplayRunner
-from digimon_gym.routers.state import active_games
+from server.routers.state import active_games
 
 router = APIRouter(tags=["recordings"])
 

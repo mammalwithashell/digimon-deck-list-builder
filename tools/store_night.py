@@ -949,7 +949,7 @@ Examples:
         )
 
     # --- Resolve store ---
-    from digimon_gym.digilab_client import (
+    from server.digilab_client import (
         list_stores, get_scoped_meta, get_scoped_meta_normalized,
         get_player_history, get_color_distribution, get_meta_over_time,
         get_decklists_for_archetype,

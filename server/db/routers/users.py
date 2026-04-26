@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import get_current_user, get_user_role_names
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import User
-from digimon_gym.db.schemas import UpdateProfileRequest, UserProfile, UserPublic
+from server.db.auth import get_current_user, get_user_role_names
+from server.db.database import get_db
+from server.db.models import User
+from server.db.schemas import UpdateProfileRequest, UserProfile, UserPublic
 
 router = APIRouter(prefix="/users", tags=["users"])
 

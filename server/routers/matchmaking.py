@@ -13,7 +13,7 @@ State lives in-memory in the API process, mirroring the existing lobby
 game-creation logic is duplicated.
 
 Public contracts consumed by the matcher:
-    - `Deck.meta_tier`   → populated by `digimon_gym.classifier.deck_tagger`
+    - `Deck.meta_tier`   → populated by `server.classifier.deck_tagger`
     - `Deck.game_mode`   → format filter (standard / no_restriction / ...)
     - `User.rating`      → opaque scalar, updated by the ranked-rating spec
 """
@@ -34,18 +34,18 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import get_current_user
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import Deck, User
+from server.db.auth import get_current_user
+from server.db.database import get_db
+from server.db.models import Deck, User
 from digimon_engine import validate_deck
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame  # noqa: F401
-from digimon_gym.routers.lobby import (
+from server.routers.lobby import (
     PendingGame,
     _generate_join_code,
     code_to_game,
     pending_games,
 )
-from digimon_gym.routers.ws_manager import GameSettings, manager
+from server.routers.ws_manager import GameSettings, manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/matchmaking", tags=["matchmaking"])

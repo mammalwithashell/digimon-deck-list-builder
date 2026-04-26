@@ -13,7 +13,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.ai.autofix_apply import (
+from server.ai.autofix_apply import (
     HashMismatchError,
     apply_validated_edits,
     check_edit_applicability,
@@ -21,20 +21,20 @@ from digimon_gym.ai.autofix_apply import (
     run_profile_checks,
     validate_edit_payload,
 )
-from digimon_gym.ai.batch_orchestrator import (
+from server.ai.batch_orchestrator import (
     BatchOrchestrationError,
     batch_orchestrator,
 )
-from digimon_gym.ai.dispatcher import TaskDispatcher
-from digimon_gym.ai.git_adapter import GitAdapter, GitCommandError
-from digimon_gym.ai.issue_resolution import (
+from server.ai.dispatcher import TaskDispatcher
+from server.ai.git_adapter import GitAdapter, GitCommandError
+from server.ai.issue_resolution import (
     build_apply_resolution_note,
     resolve_open_issues_for_card,
 )
-from digimon_gym.ai.set_run_orchestrator import SetRunOrchestrationError, set_run_orchestrator
-from digimon_gym.db.auth import ROLE_ADMIN, require_roles
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import (
+from server.ai.set_run_orchestrator import SetRunOrchestrationError, set_run_orchestrator
+from server.db.auth import ROLE_ADMIN, require_roles
+from server.db.database import get_db
+from server.db.models import (
     AIFixBatch,
     AIFixBatchItem,
     AIFixApplyAudit,
@@ -47,7 +47,7 @@ from digimon_gym.db.models import (
     ScriptPromotionAudit,
     User,
 )
-from digimon_gym.db.schemas import (
+from server.db.schemas import (
     AIFixApplyAuditResponse,
     AIFixBatchCancelResponse,
     AIFixBatchCreateRequest,
@@ -1407,7 +1407,7 @@ async def create_transpiler_learn_run(
     current_user: User = Depends(require_roles(ROLE_ADMIN)),
 ):
     """Trigger pattern learning from a completed set run's autofixes."""
-    from digimon_gym.ai.pattern_learner import create_learn_run
+    from server.ai.pattern_learner import create_learn_run
     learn_run = await create_learn_run(
         db,
         source_set_run_id=req.source_set_run_id,

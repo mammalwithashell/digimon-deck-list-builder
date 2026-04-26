@@ -24,9 +24,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
-from digimon_gym.classifier.deck_tagger import get_library, tag_deck  # noqa: E402
-from digimon_gym.db.database import async_session  # noqa: E402
-from digimon_gym.db.models import Deck  # noqa: E402
+from server.classifier.deck_tagger import get_library, tag_deck  # noqa: E402
+from server.db.database import async_session  # noqa: E402
+from server.db.models import Deck  # noqa: E402
 
 logger = logging.getLogger("backfill_deck_meta_tier")
 

@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from digimon_gym.ai.dispatcher import extract_engine_calls, lookup_pinned_engine_methods
-from digimon_gym.ai.retrieval import LocalRAGIndex
+from server.ai.dispatcher import extract_engine_calls, lookup_pinned_engine_methods
+from server.ai.retrieval import LocalRAGIndex
 
 
 # ---------------------------------------------------------------------------
@@ -343,13 +343,13 @@ class TestLookupPinnedEngineMethods:
 
 class TestLLMTranspileDispatch:
     def test_rejects_missing_card_id(self):
-        from digimon_gym.ai.dispatcher import TaskDispatcher
+        from server.ai.dispatcher import TaskDispatcher
         d = TaskDispatcher(rag_index=None, client=None)
         with pytest.raises(ValueError, match="card_id"):
             d.run("llm_transpile", {"set_id": "bt24", "module_name": "bt24_042"})
 
     def test_unknown_task_type_raises(self):
-        from digimon_gym.ai.dispatcher import TaskDispatcher
+        from server.ai.dispatcher import TaskDispatcher
         d = TaskDispatcher(rag_index=None, client=None)
         with pytest.raises(ValueError, match="Unsupported"):
             d.run("nonexistent_type", {})

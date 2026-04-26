@@ -1303,7 +1303,7 @@ class DeckIngestor:
 def _print_local_meta_report(args):
     """Print scoped meta report comparing local vs global meta shares."""
     # Lazy import to avoid requiring psycopg2 for other commands
-    from digimon_gym.digilab_client import (
+    from server.digilab_client import (
         get_scoped_meta,
         list_stores as digilab_list_stores,
         list_scenes as digilab_list_scenes,

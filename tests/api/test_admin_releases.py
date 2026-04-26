@@ -14,10 +14,10 @@ from moto import mock_s3
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from digimon_gym.db.auth import ROLE_ADMIN, assign_role_to_user
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import AppRelease, AppReleaseArtifact, Base, User
-from digimon_gym.storage import spaces
+from server.db.auth import ROLE_ADMIN, assign_role_to_user
+from server.db.database import get_db
+from server.db.models import AppRelease, AppReleaseArtifact, Base, User
+from server.storage import spaces
 
 # ---------------------------------------------------------------------------
 # Moto / Spaces constants (mirror test_admin_models.py)
@@ -57,7 +57,7 @@ async def session_factory(db_engine):
 
 @pytest.fixture
 async def client(session_factory, monkeypatch):
-    from digimon_gym.api import app, ai_task_worker, training_job_worker
+    from server.api import app, ai_task_worker, training_job_worker
 
     async def override_get_db():
         async with session_factory() as session:

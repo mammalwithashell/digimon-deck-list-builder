@@ -10,9 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from digimon_gym.agents.gauntlet import MetaGauntlet
-from digimon_gym.db.auth import ROLE_ADMIN, require_roles
-from digimon_gym.db.database import get_db
-from digimon_gym.db.models import (
+from server.db.auth import ROLE_ADMIN, require_roles
+from server.db.database import get_db
+from server.db.models import (
     Agent,
     DeckPool,
     Gauntlet,
@@ -21,7 +21,7 @@ from digimon_gym.db.models import (
     TrainingJob,
     User,
 )
-from digimon_gym.db.schemas import (
+from server.db.schemas import (
     AgentCreateRequest,
     AgentResponse,
     AgentUpdateRequest,
@@ -475,7 +475,7 @@ async def start_gauntlet(
         raise HTTPException(status_code=400, detail="Gauntlet can only be started from configuring state")
 
     # Lazy import to avoid circular imports
-    from digimon_gym.agents.gauntlet_orchestrator import gauntlet_orchestrator
+    from server.workers.gauntlet_orchestrator import gauntlet_orchestrator
 
     await gauntlet_orchestrator.start_gauntlet(db, gauntlet_id=gauntlet_id)
     await db.refresh(gauntlet)
@@ -546,7 +546,7 @@ async def list_meta_scope_stores(
 ):
     """List DigiLab stores with tournament data."""
     import asyncio
-    from digimon_gym.digilab_client import list_stores
+    from server.digilab_client import list_stores
     stores = await asyncio.to_thread(list_stores)
     return [
         StoreInfoResponse(
@@ -567,7 +567,7 @@ async def list_meta_scope_scenes(
 ):
     """List DigiLab scenes with tournament data."""
     import asyncio
-    from digimon_gym.digilab_client import list_scenes
+    from server.digilab_client import list_scenes
     scenes = await asyncio.to_thread(list_scenes)
     return [
         SceneInfoResponse(
@@ -594,7 +594,7 @@ async def list_deck_library_archetypes(
     scoped_stats = None
     if scope == "store" and store_ids:
         import asyncio
-        from digimon_gym.digilab_client import get_scoped_meta
+        from server.digilab_client import get_scoped_meta
         ids = [int(x.strip()) for x in store_ids.split(",") if x.strip()]
         if ids:
             scoped_result = await asyncio.to_thread(get_scoped_meta, store_ids=ids)
@@ -602,7 +602,7 @@ async def list_deck_library_archetypes(
             mg.override_meta_shares({n: s.meta_share for n, s in scoped_stats.items()})
     elif scope == "scene" and scene_id is not None:
         import asyncio
-        from digimon_gym.digilab_client import get_scoped_meta
+        from server.digilab_client import get_scoped_meta
         scoped_result = await asyncio.to_thread(get_scoped_meta, scene_id=scene_id)
         scoped_stats = scoped_result.archetypes
         mg.override_meta_shares({n: s.meta_share for n, s in scoped_stats.items()})
