@@ -826,6 +826,35 @@ impl Game {
         true
     }
 
+    /// Pay memory cost **without** the floor check. Used by effect-initiated
+    /// flows that explicitly opt out of the affordability constraint
+    /// (`ignore_requirements: true`). Always mutates and emits the
+    /// `MemoryChange` event — even if the resulting memory dips below
+    /// `rules.memory_range.0`.
+    ///
+    /// Callers must have already decided that the floor check should be
+    /// skipped (typically because a printed effect overrides the normal
+    /// rules). For ordinary plays, use `pay_memory` instead.
+    ///
+    /// `cost == 0` is a no-op (returns immediately, no event emitted) —
+    /// matches `pay_memory`'s zero-cost short-circuit.
+    pub(crate) fn pay_memory_unchecked(&mut self, cost: u16) {
+        if cost == 0 {
+            return;
+        }
+        let new_memory = self.memory - cost as i16;
+        let delta = new_memory - self.memory;
+        self.memory = new_memory;
+        let seq = self.next_event_seq();
+        let player = self.turn_player();
+        self.events.push(crate::events::GameEvent::MemoryChange {
+            seq,
+            player,
+            delta,
+            total: self.memory,
+        });
+    }
+
     /// End the turn if memory has crossed to the opponent's side.
     /// Call this after a batch of effects resolves (not synchronously inside
     /// `pay_memory`, which would starve effects of their turn).

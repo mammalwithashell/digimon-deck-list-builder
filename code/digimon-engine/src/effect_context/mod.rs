@@ -1959,19 +1959,7 @@ impl<'a> EffectContext<'a> {
         // Memory: under ignore_requirements bypass the floor; otherwise let
         // dna_digivolve_inner pay normally.
         if ignore_requirements && effective_cost > 0 {
-            let new_memory = self.game.memory - effective_cost as i16;
-            let delta = new_memory - self.game.memory;
-            self.game.memory = new_memory;
-            let seq = self.game.next_event_seq();
-            let player = self.game.turn_player();
-            self.game
-                .events
-                .push(crate::events::GameEvent::MemoryChange {
-                    seq,
-                    player,
-                    delta,
-                    total: self.game.memory,
-                });
+            self.game.pay_memory_unchecked(effective_cost);
             // Pass cost=0 to the inner so it doesn't double-pay.
             self.game.dna_digivolve_inner(
                 target_a,
