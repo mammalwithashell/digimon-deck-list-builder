@@ -11,7 +11,7 @@
 //! rather than panicking. The validator (Phase 2 schema check) shouldn't
 //! produce these but the engine must not crash on a malformed pack.
 //!
-//! The two card-author-bug branches (mis-arity FloorDiv, unregistered
+//! The two card-author-bug branches (mis-arity FloorDiv, unknown
 //! RawRust) emit `#[cfg(debug_assertions)] eprintln!` warnings so a
 //! malformed pack surfaces in dev/test logs instead of producing
 //! subtly wrong DP values silently. Logging is observability only —
@@ -121,16 +121,12 @@ pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentH
             evaluate_aggregate(*selector, *scope, ctx)
         }
         CompiledFormula::RawRust(name) => {
-            // Phase 3 will wire raw_rust formula dispatch through
-            // `digimon_dsl::raw_rust_registry::RawRustRegistry`. For
-            // Phase 2f2 the registry only tracks names (no fn pointers
-            // to value-returning callables), so we silent-no-op to 0.
+            if let Some(value) = ctx.game.formula_extensions.evaluate(name, ctx, target) {
+                return value;
+            }
             #[cfg(debug_assertions)]
             eprintln!(
-                "[debug] formula_eval: RawRust(\"{}\") not registered; returning 0. \
-                 Phase 3 will wire value-returning raw_rust callables through \
-                 `RawRustRegistry`; until then a pack referencing a raw_rust \
-                 formula is malformed for runtime evaluation.",
+                "[debug] formula_eval: RawRust(\"{}\") has no engine callback; returning 0.",
                 name
             );
             0

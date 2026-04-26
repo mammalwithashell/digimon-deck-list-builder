@@ -5,6 +5,7 @@ use rand::SeedableRng;
 use crate::card_data::CardData;
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
+use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
 use crate::enums::{GamePhase, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
@@ -83,6 +84,8 @@ pub struct Game {
     pub modifiers: ModifierRegistry,
     /// Card effect registry — maps card_id to effect implementations.
     pub effect_registry: CardEffectRegistry,
+    /// Runtime callbacks for DSL `raw_rust` formulas.
+    pub formula_extensions: FormulaExtensionRegistry,
     /// Token metadata registry — maps canonical token names (e.g.
     /// "petrification") to `TokenDef` rows. `Game::new` pre-populates
     /// this via `token_registry::build_registry` and pushes a synthetic
@@ -453,6 +456,7 @@ impl Game {
             card_data: card_data_store,
             modifiers: ModifierRegistry::new(),
             effect_registry: build_registry(),
+            formula_extensions: FormulaExtensionRegistry::empty(),
             token_registry,
             rng,
             next_card_index,

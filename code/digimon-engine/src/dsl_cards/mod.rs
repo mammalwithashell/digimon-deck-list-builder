@@ -8,6 +8,7 @@ pub mod binding_ref;
 pub mod bindings;
 pub mod expiry_map;
 pub mod formula_eval;
+pub mod formula_registry;
 pub mod lower_aura;
 pub mod lower_cost_reduction;
 pub mod lower_delay;
