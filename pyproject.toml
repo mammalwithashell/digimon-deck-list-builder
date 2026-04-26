@@ -26,7 +26,8 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--ignore=tests/test_rl_gym.py --ignore=tests/ai_pipeline -v"
+addopts = "--ignore=tests/test_rl_gym.py --ignore=tests/ai_pipeline --ignore=engine_py_legacy -v"
+norecursedirs = ["engine_py_legacy"]
 asyncio_mode = "auto"
 markers = [
     "ai_pipeline: AI pipeline tests (digimon_gym.ai.* and DB deps)",

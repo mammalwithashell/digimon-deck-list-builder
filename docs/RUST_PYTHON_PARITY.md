@@ -1022,6 +1022,15 @@ These imports survived the Phase 3 cutover because the Rust counterpart
 isn't in `digimon_engine` yet. Each entry is a checklist: when the
 binding lands, remove the Python import and the row.
 
+**As of Phase 4** (2026-04-25), all surface paths are rooted at
+`engine_py_legacy.engine.*` — the Python engine moved to
+`engine_py_legacy/`. The "Surface" column below uses the unqualified
+shorthand (e.g., `engine.runners.headless_game.HeadlessGame`); read it
+as `engine_py_legacy.engine.runners.headless_game.HeadlessGame`. The
+sole exception is `engine.onnx_policy.load_onnx_policy`, which still
+lives at `digimon_gym.engine.onnx_policy.load_onnx_policy` until Phase 5
+relocates it to `digimon_gym/inference/`.
+
 | Surface | Caller(s) | Rust counterpart? |
 |---|---|---|
 | `engine.runners.headless_game.HeadlessGame` (Python class) | `routers/state.py`, `routers/recordings.py`, `routers/games.py`, `digimon_gym.py` (Python fallback path), `agents/architect_simulator.py` | `RustHeadlessGame` exists but has a different state-shape; per-caller migration is non-trivial. |
