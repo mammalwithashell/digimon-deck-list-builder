@@ -364,3 +364,171 @@ The orchestrator validates that the returned brief contains all six section head
 **Pre-flight gap short-circuit:** if a scout returns `ENGINE-GAP`, `DSL-GAP`, or `HYBRID` with high confidence (the brief explicitly states the missing API/verb), the orchestrator MAY skip the implementer wave for that card and emit a `BLOCKED` verdict directly. The reviewer still confirms the gap in Phase 4D.
 
 ---
+
+### 4C. Implementer / Auditor Wave
+
+For each non-skipped card in the batch, dispatch one Agent call in a single assistant message. Each agent runs with `isolation: "worktree"`. Model is `sonnet` by default; if `--implementer-model opus` was set, IMPLEMENT-mode workers use `opus`. AUDIT-mode workers always use `sonnet`.
+
+#### 4C.1 Implementer prompt (IMPLEMENT mode)
+
+````
+You are implementing a single Digimon TCG card effect using the engine's declarative YAML DSL via TDD.
+
+# Your card
+
+{{CARD_METADATA_BLOCK — same shape as the scout's per-card block}}
+
+## DCGO C# reference (behavioral source of truth)
+Path: {{CSHARP_PATH}}
+```
+{{CSHARP_BODY}}
+```
+
+## Prior verdict (if any)
+{{PRIOR_VERDICT_JSON}}
+
+# Scout brief
+{{SCOUT_BRIEF}}
+
+# Engine context pack
+
+## RUST_DSL_TEST_API.md (full — canonical for test patterns)
+{{RUST_DSL_TEST_API_BODY}}
+
+## Skill positive-rules appendix
+{{SKILL_POSITIVE_RULES_APPENDIX}}
+
+## Hybrid checklist (apply to every clause)
+The hybrid checklist is the union of:
+- All anti-patterns in `docs/RUST_DSL_TEST_API.md` §11 (already embedded above).
+- All positive rules in the appendix (already embedded above).
+
+## Current engine gaps (consult before declaring BLOCKED)
+{{ENGINE_GAPS_BODY}}
+
+## Current DSL vocab gaps (consult before declaring BLOCKED)
+{{DSL_VOCAB_GAPS_BODY}}
+
+## Read-on-demand
+- DSL spec (verb definitions, lowering rules): `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md`
+- Engine API (`EffectContext`, `Effect`, modifier types, timing enums): `docs/RUST_ENGINE_API.md`
+
+When you need a specific verb's parameters or an `EffectContext` method signature, Read the relevant section of the document above. Do not guess.
+
+# Source priority (for behavioral questions)
+
+1. Printed card text — authoritative.
+2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
+3. DCGO C# — implementation-detail tiebreaker only.
+
+Do NOT cite Python scripts (`code/engine_py_legacy/`).
+
+# Your task
+
+Deliverables (and ONLY these — do NOT touch any `mod.rs`, `main.rs`, `cards.rs`, or any tracker file):
+
+1. `code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml` — the DSL card spec.
+2. `code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs` — DebugRunner behavioral tests.
+
+`{{CARD_ID_LOWER}}` is `{{CARD_ID}}.replace("-", "_").lower()` (e.g. `BT15-003` → `bt15_003`).
+
+## Workflow (TDD-strict — follow in order)
+
+**Step 1 — Decompose card text into numbered clauses.**
+For each clause, capture: (a) timing (OnPlay / WhenAttacking / Inherited / WhenRemoveField / Security / etc.), (b) exact text, (c) expected behavior, (d) DCGO mapping (which method in the C# reference, if any).
+
+**Step 2 — Write the test file FIRST.**
+
+Create `code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs` per the test API §5 pattern. The file header docstring is mandatory — verbatim card text + DCGO ref path + pattern row tags from the scout brief.
+
+Cover, at minimum:
+- Section 1: Structural assertions on `compiled_card` (clause count by scope, `when` vector, `optional`, `once_per_turn`).
+- Section 2: Condition gating — one positive AND one negative test per condition (splitting is non-negotiable).
+- Section 3: Behavioral outcome per clause, integrated through `play` / `attack` / `end_turn`.
+- Section 4: For cost-firing clauses, an event-log assertion via `events_since(checkpoint)`.
+- Section 5: For OPT clauses, an explicit lockout test (second activation gated; lockout clears after `end_turn`).
+
+Use `dsl_card("{{CARD_ID}}")` to register the card under test. Do NOT inline-paste production YAML.
+
+Use `digimon_engine::action::space::*` constants for action IDs. Do NOT hard-code.
+
+**Step 3 — Run the tests, confirm expected failures.**
+
+```bash
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- {{CARD_ID_LOWER}}
+```
+
+The orchestrator has pre-wired `tests/cards_behavioral/<set>/mod.rs` and `main.rs` so this command resolves your test file immediately. Confirm the tests fail with the expected reasons (the YAML doesn't exist yet, so the embedded pack lookup fails when `dsl_card("{{CARD_ID}}")` runs).
+
+**Step 4 — Author the YAML.**
+
+Create `code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml`. Start from one of the exemplar YAML(s) the scout cited as the closest match. Adapt the structure to the printed card text. Use only DSL verbs the scout cited (or that you have verified by Reading the DSL spec).
+
+If you discover a needed verb is not in the DSL spec, STOP and emit verdict `BLOCKED` with `gap_kind: dsl` (or `engine` / `hybrid` per the diagnosis below).
+
+**Step 5 — Re-run tests until green.**
+
+Iterate. If a test reveals a YAML bug, fix the YAML. If a test reveals a test bug, fix the test. Both are valid.
+
+**Step 6 — Faithfulness self-audit against the hybrid checklist.**
+
+For each item in `docs/RUST_DSL_TEST_API.md` §11 plus the skill positive-rules appendix, confirm compliance. Note any unresolved item in your verdict block.
+
+**Step 7 — Diagnose `gap_kind` if BLOCKED.**
+
+If you reached `BLOCKED`:
+- `gap_kind: engine` — the DSL would need a verb that lowers to an `EffectContext` method that does NOT exist (verify by reading `docs/RUST_ENGINE_API.md`).
+- `gap_kind: dsl` — the `EffectContext` method exists, but no DSL verb / step kind / predicate maps to it (verify by reading the DSL spec).
+- `gap_kind: hybrid` — both: a new DSL verb is needed AND a new engine method is needed.
+
+**Step 8 — Emit verdict.**
+
+# Verdicts
+
+- `IMPLEMENTED` — every clause implemented faithfully; all tests pass.
+- `PARTIAL` — core clauses work; some nuance deferred with explicit comment. Explain precisely what's missing and why.
+- `BLOCKED` — a required mechanic is unavailable. Set `gap_kind` per Step 7.
+
+**Never ship stubs, auto-selections, or silent drops.** If a clause requires a player choice the engine cannot yet surface, the card is BLOCKED — not PARTIAL.
+
+# Output format (return EXACTLY this structure)
+
+```
+## {{CARD_ID}} — {{CARD_NAME}}
+
+### Verdict: IMPLEMENTED | PARTIAL | BLOCKED
+### Gap kind (if BLOCKED): engine | dsl | hybrid
+### Scout-disagreement (if any): <description>
+
+### Clause analysis
+Clause 1 (<timing>): "<exact text>"
+  Expected: <behavior>
+  YAML location: <CARD_ID>.yaml lines X–Y
+  Tests: <test_fn_name_1>, <test_fn_name_2>, ...
+  Status: MATCH | PARTIAL | BLOCKED
+Clause 2 ...
+
+### Files written
+- code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml (N clauses, M lines)
+- code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs (N tests)
+
+### Test output (final cargo test summary, trimmed)
+<paste the relevant lines from your final cargo test run>
+
+### Engine gaps discovered (if any)
+## {{CARD_ID}} — <clause name>
+Missing API: <description>
+Suggested addition: <signature on EffectContext>
+
+### DSL vocab gaps discovered (if any)
+## {{CARD_ID}} — <clause name>
+Missing verb / step kind / predicate: <description>
+Lowers to engine API: <which existing EffectContext method>
+Suggested DSL syntax: <YAML shape>
+
+### New patterns worth documenting in RUST_DSL_TEST_API.md (if any)
+- <pattern>: <description>
+```
+````
+
+---
