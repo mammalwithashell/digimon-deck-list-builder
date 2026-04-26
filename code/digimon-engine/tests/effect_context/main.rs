@@ -9,6 +9,7 @@ mod battle_opponent_of;
 mod material_zone_select;
 mod place_under_permanent;
 mod play_from_hand_free;
+mod play_from_materials;
 mod play_from_security;
 mod play_from_trash;
 mod trash_card_source;

@@ -1157,6 +1157,93 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Remove the source at `source_index` from `target`'s digivolution
+    /// stack and play the underlying card into `target.player`'s battle
+    /// area, deducting memory according to `cost_delta`. OnPlay effects
+    /// fire as if the card had been played from hand.
+    ///
+    /// Card-text precedent: BT15-080 — "place this card's bottom material
+    /// into battle area as a Digimon" (Phase 2f1 DSL `PlayFromMaterials`
+    /// step lowering).
+    ///
+    /// ## Implementation strategy: hand-transit (mirrors `play_from_security`)
+    ///
+    /// `Game::play_from_hand_with_cost(player, hand_index, cost_delta)`
+    /// already encapsulates the full placement path — battle-area capacity
+    /// check, `CannotPlayDigimonByEffect` gate, `Permanent::new`, OnPlay
+    /// trigger drain, OnEnterFieldAnyone broadcast, `Play` event emission.
+    /// Re-introducing the placement body here would duplicate that logic
+    /// and risk drift. Instead: pop the chosen `CardSource` out of
+    /// `target`'s `card_sources`, push it to the end of the controller's
+    /// `hand`, and route through `play_from_hand_with_cost` at that index.
+    /// The card spends one tick in hand but never as a player-visible
+    /// state — the hand is mutated and consumed inside this single method
+    /// call before any selection prompt or event handler can observe it.
+    /// Identical pattern to `play_from_security` (Task 3a).
+    ///
+    /// On rollback (battle area full, flood-gate, etc.) the source is
+    /// restored to its **original index** in `target.card_sources` so the
+    /// failure is observable as a no-op.
+    ///
+    /// Returns the `PermanentHandle` of the new field permanent, or `None`
+    /// if `target` is invalid, `source_index` is out of bounds, the battle
+    /// area is full, memory is insufficient, or the play was gated by a
+    /// flood-gate.
+    pub fn play_from_materials(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> Option<PermanentHandle> {
+        // Validate target permanent + source_index up-front using immutable
+        // borrows.
+        let player = target.player;
+        {
+            let p = self.game.player(player);
+            let perm = p.battle_area.get(target.index as usize)?;
+            if source_index >= perm.card_sources.len() {
+                return None;
+            }
+        }
+
+        // Extract the source. `Vec::remove` shifts subsequent sources down
+        // one index — that's the desired behavior for material extraction
+        // (the stack closes the gap left by the removed source).
+        let source = self
+            .game
+            .player_mut(player)
+            .battle_area[target.index as usize]
+            .card_sources
+            .remove(source_index);
+
+        // Park at the end of `player`'s hand and route through the standard
+        // play-from-hand path. The hand index is the new last position.
+        self.game.player_mut(player).hand.push(source);
+        let hand_index = self.game.player(player).hand.len() - 1;
+
+        match self.play_from_hand_with_cost(player, hand_index, cost_delta) {
+            Some(handle) => Some(handle),
+            None => {
+                // Rollback: pop the card out of hand and reinsert it at
+                // its original index in `target.card_sources` so the
+                // failure is a clean no-op for callers.
+                let card = self
+                    .game
+                    .player_mut(player)
+                    .hand
+                    .pop()
+                    .expect("invariant: card was just pushed to hand");
+                // The target permanent index is still valid here — only
+                // hand was mutated by the failed play attempt; the
+                // battle-area entry was left untouched.
+                self.game.player_mut(player).battle_area[target.index as usize]
+                    .card_sources
+                    .insert(source_index, card);
+                None
+            }
+        }
+    }
+
     /// Play a card from `player`'s trash at `trash_index`, deducting memory
     /// according to `cost_delta`. OnPlay effects fire.
     pub fn play_from_trash_with_cost(
