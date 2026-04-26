@@ -35,13 +35,13 @@ test.describe('Guest onboarding', () => {
 
     await page.goto('/');
     await expect(
-      page.getByRole('heading', { name: 'Digimon TCG Simulator' }),
+      page.getByRole('heading', { name: /PICK UP WHERE YOU LEFT OFF/i }),
     ).toBeVisible();
 
     // `/deckbuilder` sits under `<AuthGuard>`. Reaching it (rather than
     // being redirected to `/login`) proves the seeded guest session is
     // accepted by the auth store.
-    await page.getByRole('link', { name: /Deck Builder/ }).click();
+    await page.getByRole('link', { name: /Deck builder/i }).click();
     await expect(page).toHaveURL(/\/deckbuilder/);
     await expect(page.getByRole('button', { name: 'Validate' })).toBeVisible();
   });
