@@ -66,6 +66,9 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if !eval_event_fields(pred, rctx) {
+        return false;
+    }
 
     // Combinators — short-circuit on first failure.
     for child in &pred.all_of {
@@ -229,6 +232,71 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_contains.is_none()
         && pred.name_in.is_none()
         && pred.card_number_is.is_none()
+}
+
+fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> bool {
+    if let Some(want) = pred.event_target_kind {
+        let Some(card) = event_target_card(rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !kind_matches(want, data.card_kind) {
+            return false;
+        }
+    }
+    if let Some(ref trait_name) = pred.event_target_trait_has {
+        let Some(card) = event_target_card(rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(trait_name))
+        {
+            return false;
+        }
+    }
+    if let Some(ref trait_name) = pred.event_card_trait_has {
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(trait_name))
+        {
+            return false;
+        }
+    }
+    true
+}
+
+fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
+    let trigger = rctx.game.current_trigger_context?;
+    if let Some(handle) = trigger.target_permanent {
+        if let Some(card) = rctx
+            .game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.top_card().handle())
+        {
+            return Some(card);
+        }
+    }
+    trigger.target_card
 }
 
 fn eval_card_fields(

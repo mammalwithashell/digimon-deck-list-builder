@@ -21,6 +21,7 @@ use std::sync::{Arc, OnceLock};
 use crate::card_data::{CardData, DnaCost, DnaRequirement};
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
+use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
 use crate::enums::{CardColor, CardKind, GamePhase, ModifierType, PlayerId};
 use crate::events::GameEvent;
 use crate::game::Game;
@@ -200,6 +201,10 @@ impl DebugRunner {
         effect: std::sync::Arc<dyn crate::effect::CardEffect>,
     ) {
         self.game.effect_registry.insert(card_id, effect);
+    }
+
+    pub fn set_formula_extensions(&mut self, registry: FormulaExtensionRegistry) {
+        self.game.formula_extensions = registry;
     }
 
     pub fn turn_count(&self) -> u16 {

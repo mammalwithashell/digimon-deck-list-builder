@@ -90,6 +90,16 @@ Cross-card mechanic interactions: attack windows, Piercing math, security DP, OP
 
 Parser, validator, and lowering tests. Out of scope for card-script authors — touched only when the DSL vocabulary itself changes. Existing infra tests already use inline YAML extensively (see `tests/dsl/phase2b_end_to_end.rs`); preserve that style there.
 
+Current Phase 3 infra coverage includes:
+
+- `phase3d_formula_zone_count.rs`: `card_count_in_zone` formulas with `zone` and `of` payloads.
+- `phase3d_aggregate_scope.rs`: aggregate formulas scoped to controller, opponent, active player, or any player.
+- `phase3d_raw_rust_formula.rs`: runtime dispatch for registered `raw_rust` formula callbacks.
+- `phase3d_event_context.rs`: `event_target_*`, `event_card_trait_has`, `event_target`, and `event_card`.
+- `phase3d_scheduled_generation.rs`: next-turn delayed timings such as `end_of_your_next_turn`.
+- `phase3e_scheduled_reentry.rs`: scheduled effects that park on a DSL selection and then resume.
+- `phase3e_on_dna_digivolve.rs`: `on_dna_digivolve` for effect-initiated and user-action DNA.
+
 ### Decision tree
 
 > Is the test about a single card's effects? → **per-card** in `cards_behavioral/<set>/`.

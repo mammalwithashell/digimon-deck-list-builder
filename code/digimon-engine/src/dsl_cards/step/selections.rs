@@ -18,6 +18,7 @@ use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::{drain_dsl_outer_tail, resolve_player, run_steps};
 use crate::effect_context::{CountCappedZone, DistinctByMode, EffectContext};
 use crate::permanent::PermanentHandle;
+use crate::trigger_context::TriggerContext;
 
 fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Option<DistinctByMode> {
     use digimon_dsl::compiled::CompiledDistinctBy;
@@ -26,6 +27,19 @@ fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Opti
         CompiledDistinctBy::Level => DistinctByMode::Level,
         CompiledDistinctBy::Name => DistinctByMode::Name,
     })
+}
+
+fn run_tail_preserving_trigger_context(
+    cb_ctx: &mut EffectContext<'_>,
+    trigger_context: Option<TriggerContext>,
+    tail: &[CompiledStep],
+    bindings: &mut Bindings,
+) {
+    let previous = cb_ctx.game.current_trigger_context;
+    cb_ctx.game.current_trigger_context = trigger_context;
+    run_steps(tail, cb_ctx, bindings);
+    drain_dsl_outer_tail(cb_ctx);
+    cb_ctx.game.current_trigger_context = previous;
 }
 
 /// Returns `true` if `step` was a selection step and the remainder was
@@ -278,6 +292,7 @@ fn install_select_hand(
 ) {
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_hand(
         target_player,
         &prompt,
@@ -288,10 +303,7 @@ fn install_select_hand(
             if let Some(name) = &bind_as {
                 b.insert_hand_index(name, target_player, idx as u16);
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            // Phase 2d Task 7: drain outer tail captured by run_steps when
-            // this selection was installed inside a control-flow body.
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }
@@ -307,6 +319,7 @@ fn install_select_trash(
 ) {
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_trash(
         target_player,
         &prompt,
@@ -317,9 +330,7 @@ fn install_select_trash(
             if let Some(name) = &bind_as {
                 b.insert_trash_index(name, target_player, idx as u16);
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            // Phase 2d Task 7: drain outer tail.
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }
@@ -333,6 +344,7 @@ fn install_select_own_permanent(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_own_permanent(
         &prompt,
         optional,
@@ -342,9 +354,7 @@ fn install_select_own_permanent(
             if let Some(name) = &bind_as {
                 b.insert_permanent(name, handle);
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            // Phase 2d Task 7: drain outer tail.
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }
@@ -358,6 +368,7 @@ fn install_select_opponent_permanent(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_opponent_permanent(
         &prompt,
         optional,
@@ -367,9 +378,7 @@ fn install_select_opponent_permanent(
             if let Some(name) = &bind_as {
                 b.insert_permanent(name, handle);
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            // Phase 2d Task 7: drain outer tail.
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }
@@ -397,6 +406,7 @@ fn install_select_count_capped_multi(
         _ => return,
     };
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_count_capped_multi(
         target_player,
         engine_zone,
@@ -410,10 +420,7 @@ fn install_select_count_capped_multi(
             if let Some(name) = &bind_as {
                 b.insert_card_list(name, picks);
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            // Phase 2d Task 7: drain outer tail captured by run_steps when
-            // this selection was installed inside a control-flow body.
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }
@@ -427,15 +434,13 @@ fn install_select_effect_choice(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_effect_choice(&prompt, labels, move |cb_ctx, idx| {
         let mut b = bindings.clone();
         if let Some(name) = &bind_as {
             b.insert_literal(name, idx as i64);
         }
-        run_steps(&tail, cb_ctx, &mut b);
-        // Phase 2d Task 7: drain outer tail captured by run_steps when
-        // this selection was installed inside a control-flow body.
-        drain_dsl_outer_tail(cb_ctx);
+        run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
     });
 }
 
@@ -448,6 +453,7 @@ fn install_select_reveal(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_reveal(
         &prompt,
         optional,
@@ -464,8 +470,7 @@ fn install_select_reveal(
                 // skip the binding; downstream verbs that consume it no-op
                 // per the 2b/2c missing-binding convention.
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }
@@ -481,6 +486,7 @@ fn install_select_security(
 ) {
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_security(
         target_player,
         &prompt,
@@ -493,8 +499,7 @@ fn install_select_security(
                     b.insert_card(name, card.handle());
                 }
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }
@@ -509,6 +514,7 @@ fn install_select_material(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     // Top-card exclusion is enforced by EffectContext::select_material itself
     // (matches CountCappedZone::Material). Phase 2b accept-all filter applies.
     ctx.select_material(
@@ -531,8 +537,7 @@ fn install_select_material(
                     b.insert_card(name, card.handle());
                 }
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }
@@ -546,13 +551,13 @@ fn install_select_ordered_permutation(
     bindings: Bindings,
 ) {
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_ordered_permutation(items, &prompt, move |cb_ctx, ordered| {
         let mut b = bindings.clone();
         if let Some(name) = &bind_as {
             b.insert_card_list(name, ordered);
         }
-        run_steps(&tail, cb_ctx, &mut b);
-        drain_dsl_outer_tail(cb_ctx);
+        run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
     });
 }
 
@@ -569,6 +574,7 @@ fn install_select_union_zone(
 ) {
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
     ctx.select_union_zone(
         target_player,
         zoneset,
@@ -580,8 +586,7 @@ fn install_select_union_zone(
             if let Some(name) = &bind_as {
                 b.insert_card(name, handle);
             }
-            run_steps(&tail, cb_ctx, &mut b);
-            drain_dsl_outer_tail(cb_ctx);
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b);
         },
     );
 }

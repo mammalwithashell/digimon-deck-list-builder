@@ -5,6 +5,7 @@ use rand::SeedableRng;
 use crate::card_data::CardData;
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
+use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
 use crate::enums::{GamePhase, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
@@ -16,6 +17,7 @@ use crate::selection::{
     SecurityResolutionState, SelectionError,
 };
 use crate::token_registry::TokenRegistry;
+use crate::trigger_context::TriggerContext;
 
 /// Reasons `Game::activate_overclock` can fail. Exposed so callers
 /// (Tauri commands, tests, Python bindings) can distinguish between
@@ -83,6 +85,8 @@ pub struct Game {
     pub modifiers: ModifierRegistry,
     /// Card effect registry — maps card_id to effect implementations.
     pub effect_registry: CardEffectRegistry,
+    /// Runtime callbacks for DSL `raw_rust` formulas.
+    pub formula_extensions: FormulaExtensionRegistry,
     /// Token metadata registry — maps canonical token names (e.g.
     /// "petrification") to `TokenDef` rows. `Game::new` pre-populates
     /// this via `token_registry::build_registry` and pushes a synthetic
@@ -209,6 +213,13 @@ pub struct Game {
     /// security-check driver between drains).
     #[doc(hidden)]
     pub(crate) effect_source_player: Option<PlayerId>,
+
+    /// Runtime metadata for the trigger whose effect is currently resolving.
+    /// DSL event predicates and `event_target` / `event_card` bindings read
+    /// this slot. It is set by the effect-queue dispatcher around a queued
+    /// effect and restored afterward.
+    #[doc(hidden)]
+    pub current_trigger_context: Option<TriggerContext>,
 
     /// The cause of the deletion currently being observed by `OnDeletion`
     /// effects. Set by `commit_permanent_deletion` immediately before
@@ -342,6 +353,8 @@ pub struct Game {
     /// `scheduled_effects::fire_scheduled_for_timing` whose `when:` matches.
     /// Task 2 wires the drain into observer-fire boundaries (turn end, etc.).
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
+    /// Continuation for a scheduled-effect drain paused by a DSL selection.
+    pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
 }
 
 impl Game {
@@ -453,6 +466,7 @@ impl Game {
             card_data: card_data_store,
             modifiers: ModifierRegistry::new(),
             effect_registry: build_registry(),
+            formula_extensions: FormulaExtensionRegistry::empty(),
             token_registry,
             rng,
             next_card_index,
@@ -474,6 +488,7 @@ impl Game {
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,
+            current_trigger_context: None,
             current_deletion_cause: None,
             parked_replacement: None,
             dsl_replacement_outcome: None,
@@ -482,6 +497,7 @@ impl Game {
             pending_post_deletion_replays: Vec::new(),
             dsl_outer_tail: None,
             scheduled_effects: Vec::new(),
+            scheduled_drain_tail: None,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -1086,8 +1102,8 @@ impl Game {
     ///
     /// **Trigger surface (in order):**
     /// 1. `WhenDigivolving` on the merged permanent → drain
-    /// 2. `OnDigivolve` on every player's battle area → drain
-    /// 3. `OnDnaDigivolve` on the merged permanent → drain
+    /// 2. `OnDnaDigivolve` on the merged permanent → drain
+    /// 3. `OnDigivolve` on every player's battle area → drain
     ///
     /// **Index-shift:** if `target_a.player == target_b.player` and
     /// `target_b.index < target_a.index`, the merged permanent ends up at
@@ -1183,18 +1199,18 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        self.enqueue_triggered(
+            EffectTiming::OnDnaDigivolve,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue();
+
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnDigivolve,
                 TriggerSource::PlayerBattleArea(pid as PlayerId),
             );
         }
-        self.drain_effect_queue();
-
-        self.enqueue_triggered(
-            EffectTiming::OnDnaDigivolve,
-            TriggerSource::Permanent(merged_handle),
-        );
         self.drain_effect_queue();
 
         Some(merged_handle)

@@ -34,11 +34,15 @@ pub fn resolve_binding_ref(
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
         | CompiledBindingRef::OfPermanent(name) => resolve_named(name, bindings),
-        CompiledBindingRef::EventTarget | CompiledBindingRef::EventCard => {
-            // Phase 2b: engine event context not yet wired to the DSL layer.
-            // Returns None so steps relying on these silently no-op.
-            None
-        }
+        CompiledBindingRef::EventTarget => ctx
+            .game
+            .current_trigger_context
+            .and_then(|t| t.target_permanent.map(ResolvedBinding::Permanent)),
+        CompiledBindingRef::EventCard => ctx
+            .game
+            .current_trigger_context
+            .and_then(|t| t.event_card.or(t.target_card))
+            .map(ResolvedBinding::Card),
     }
 }
 

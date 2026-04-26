@@ -317,6 +317,7 @@ impl<'a> EffectContext<'a> {
             source_permanent: self.source_permanent,
             controller: self.player,
             captured_bindings,
+            scheduled_at_turn: self.game.turn_count,
         };
         self.game.scheduled_effects.push(entry);
     }
@@ -1896,7 +1897,7 @@ impl<'a> EffectContext<'a> {
     ///
     /// ## Triggers
     ///
-    /// `WhenDigivolving` → `OnDigivolve` (global) → `OnDnaDigivolve`,
+    /// `WhenDigivolving` → `OnDnaDigivolve` → `OnDigivolve` (global),
     /// each followed by a queue drain. See
     /// `Game::dna_digivolve_inner` for the firing sequence.
     ///

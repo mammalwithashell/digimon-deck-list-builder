@@ -136,6 +136,9 @@ pub enum EffectTiming {
     StartOfYourMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
+    EndOfYourNextTurn,
+    EndOfOpponentsNextTurn,
+    UntilNextUnsuspend,
     EndOfAttack,
     /// Fires when a battle resolves (DP comparison complete) but before
     /// `EndOfAttack`. Used for "if this Digimon wins/loses a battle" effects.

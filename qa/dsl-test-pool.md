@@ -19,6 +19,25 @@ The first implemented slice is the Nokia / Greymon / Omnimon lane:
 This slice now has real YAML fixtures, per-card behavioral tests, a mechanic
 test for the Nokia aura, and a headless matchup smoke using embedded DSL cards.
 
+## Phase 3 Runtime Coverage
+
+The Phase 3 DSL infra suite now covers the runtime features that unblock the
+next pool-card migrations:
+
+- Zone-count formulas: `card_count_in_zone` with `zone` and `of` payloads.
+- Aggregate formulas scoped to controller, opponent, active player, or any
+  player.
+- Runtime `raw_rust` formula dispatch through an engine callback registry.
+- Event trigger context for `event_target`, `event_card`, and related
+  predicates.
+- Next-turn scheduled effects and scheduled drains that resume after
+  selections.
+- `OnDnaDigivolve` triggers for both effect-initiated and user-action DNA.
+
+Good next card candidates from the pool are `AD1-025`, `BT18-019`, and
+`EX6-072` for DNA; `BT18-102` for formula-driven DP/material checks; and
+`BT7-107` / `BT15-003` for scheduled or selection-heavy negative paths.
+
 ## Pool
 
 | Card | Role | Primary coverage |

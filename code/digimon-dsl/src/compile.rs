@@ -143,6 +143,9 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::StartOfYourMainPhase => CompiledTiming::StartOfYourMainPhase,
         S::EndOfYourTurn => CompiledTiming::EndOfYourTurn,
         S::EndOfOpponentsTurn => CompiledTiming::EndOfOpponentsTurn,
+        S::EndOfYourNextTurn => CompiledTiming::EndOfYourNextTurn,
+        S::EndOfOpponentsNextTurn => CompiledTiming::EndOfOpponentsNextTurn,
+        S::UntilNextUnsuspend => CompiledTiming::UntilNextUnsuspend,
         S::OnAttackTargetChange => CompiledTiming::OnAttackTargetChange,
         S::MainFromHand => CompiledTiming::MainFromHand,
         S::MainOnField => CompiledTiming::MainOnField,
@@ -178,7 +181,10 @@ fn compile_per_selector(p: crate::formula::PerSelector) -> CompiledPerSelector {
         S::StackSize => CompiledPerSelector::StackSize,
         S::AllyCount => CompiledPerSelector::AllyCount,
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
-        S::CardCountInZone => CompiledPerSelector::CardCountInZone,
+        S::CardCountInZone(spec) => CompiledPerSelector::CardCountInZoneScoped {
+            zone: compile_zone(spec.zone),
+            of: compile_player_ref(spec.of),
+        },
     }
 }
 
@@ -248,7 +254,16 @@ fn compile_formula(f: &crate::formula::FormulaSpec) -> CompiledFormula {
             CompiledFormula::Min(v.iter().map(compile_formula).collect())
         }
         FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => {
-            CompiledFormula::Aggregate(compile_aggregate_selector(*a))
+            CompiledFormula::AggregateScoped {
+                selector: compile_aggregate_selector(*a),
+                scope: CompiledPlayerRef::You,
+            }
+        }
+        FormulaSpec::Compound(CompoundFormula::AggregateScoped(spec)) => {
+            CompiledFormula::AggregateScoped {
+                selector: compile_aggregate_selector(spec.selector),
+                scope: compile_player_ref(spec.scope),
+            }
         }
         FormulaSpec::Compound(CompoundFormula::RawRust(s)) => {
             CompiledFormula::RawRust(s.clone())

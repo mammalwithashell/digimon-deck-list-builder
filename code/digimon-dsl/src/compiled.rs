@@ -241,6 +241,10 @@ pub enum CompiledFormula {
     Max(Vec<CompiledFormula>),
     Min(Vec<CompiledFormula>),
     Aggregate(CompiledAggregateSelector),
+    AggregateScoped {
+        selector: CompiledAggregateSelector,
+        scope: CompiledPlayerRef,
+    },
     RawRust(String),
 }
 
@@ -251,6 +255,10 @@ pub enum CompiledPerSelector {
     AllyCount,
     DigivolutionColorCount,
     CardCountInZone,
+    CardCountInZoneScoped {
+        zone: CompiledZone,
+        of: CompiledPlayerRef,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -422,6 +430,9 @@ pub enum CompiledTiming {
     StartOfYourMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
+    EndOfYourNextTurn,
+    EndOfOpponentsNextTurn,
+    UntilNextUnsuspend,
     OnAttackTargetChange,
     MainFromHand,
     MainOnField,
