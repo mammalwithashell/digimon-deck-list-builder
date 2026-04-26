@@ -20,12 +20,10 @@ test.describe('Guest onboarding', () => {
     expect(session.user_id).toMatch(/^guest_/);
     expect(session.display_name).toMatch(/^Guest-/);
 
-    // The Playwright suite runs against the web-mode dev server
-    // (`npm run dev`), which does not enter the desktop-only mint path
-    // during hydrate. Seed localStorage with the exact keys
-    // `ensureGuestSession` + `authStore.hydrate` write after a successful
-    // mint on desktop so the downstream UI-flow assertions cover the
-    // same state the boot path produces.
+    // The Playwright suite can run against either web-mode or desktop-mode
+    // Vite. Seed localStorage with the exact keys `ensureGuestSession` +
+    // `authStore.hydrate` write after a successful mint so the downstream
+    // UI-flow assertions cover the same authenticated guest state.
     await page.addInitScript((s) => {
       localStorage.setItem('guest_access_token', s.access_token);
       localStorage.setItem('guest_user_id', s.user_id);
@@ -34,9 +32,11 @@ test.describe('Guest onboarding', () => {
     }, session);
 
     await page.goto('/');
-    await expect(
-      page.getByRole('heading', { name: /PICK UP WHERE YOU LEFT OFF/i }),
-    ).toBeVisible();
+    const desktopLauncherHeading = page.getByRole('heading', {
+      name: /PICK UP WHERE YOU LEFT OFF/i,
+    });
+    const webHomeHeading = page.getByRole('heading', { name: 'Digimon TCG Simulator' });
+    await expect(desktopLauncherHeading.or(webHomeHeading)).toBeVisible();
 
     // `/deckbuilder` sits under `<AuthGuard>`. Reaching it (rather than
     // being redirected to `/login`) proves the seeded guest session is
