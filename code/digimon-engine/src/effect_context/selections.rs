@@ -860,7 +860,16 @@ impl<'a> EffectContext<'a> {
     /// blocked — this method returns without raising `pending.played`.
     /// The security-resolution loop in `combat.rs` sees `played == false`
     /// and trashes the card via its normal "didn't stick" path.
-    pub fn play_from_security(&mut self) {
+    ///
+    /// **Renamed in Phase 2f1 Task 3a** — formerly `play_from_security`.
+    /// The 0-arg method was renamed to disambiguate from the new
+    /// `EffectContext::play_from_security(player)` primitive (top-of-
+    /// security-stack play, BT12-091 et al.). This method consumes the
+    /// transient `pending_security` state set up by the security-check
+    /// loop; the new primitive operates on a player's persistent
+    /// `security` zone. Both are needed — they cover distinct card-text
+    /// shapes — so a name disambiguation was required.
+    pub fn play_pending_security(&mut self) {
         let turn = self.game.turn_count;
         let field_slots = self.game.rules.field_slots as usize;
 

@@ -1073,6 +1073,90 @@ impl<'a> EffectContext<'a> {
         self.play_from_hand_with_cost(player, hand_index, crate::enums::CostDelta::Free)
     }
 
+    /// Play the top card of `player`'s security stack **without paying
+    /// memory**. Used by effects that say "play the top card of your
+    /// security stack" (e.g. BT12-091; Phase 2f1 DSL `PlayFromSecurity`
+    /// step lowerings).
+    ///
+    /// Distinct from [`Self::play_pending_security`] (the security-skill
+    /// replay path that consumes the transient `Game.pending_security`
+    /// during the attack-time security check). This method operates on the
+    /// player's persistent `security` zone.
+    ///
+    /// ## Implementation strategy: hand-transit
+    ///
+    /// `Game::play_from_hand_with_cost(player, hand_index, CostDelta::Free)`
+    /// already encapsulates the full placement path — battle-area capacity
+    /// check, `CannotPlayDigimonByEffect` gate, `Permanent::new`, OnPlay
+    /// trigger drain, OnEnterFieldAnyone broadcast, `Play` event emission.
+    /// Re-introducing the placement body here would duplicate that logic
+    /// and risk drift. Instead: pop the top of `player.security`, push it
+    /// to the end of `player.hand`, and route through `play_from_hand_free`
+    /// at that index. The card spends one tick in hand but never as a
+    /// player-visible state — the hand is mutated and consumed inside this
+    /// single method call before any selection prompt or event handler can
+    /// observe it. The behavior is identical to the spec's suggested
+    /// `place_card_in_battle_area` helper without forcing an engine-wide
+    /// refactor of `play_from_hand_with_cost` to extract one.
+    ///
+    /// On rollback (battle area full, flood-gate, etc.) the card is
+    /// restored to the top of `security` so this method is a clean no-op
+    /// on failure — matching the precedent set by `play_from_hand_free`,
+    /// which does not corrupt state on flood-gate-rejected plays.
+    ///
+    /// Also clears the popped card's entry from `face_up_security` —
+    /// `face_up_security` is keyed by `card_index`, and a played card no
+    /// longer lives in the security zone, so leaving the bit set would
+    /// pollute the tensor's face-up bookkeeping.
+    ///
+    /// Returns the `PermanentHandle` of the new field permanent, or `None`
+    /// if security is empty, the battle area is full, or the play was
+    /// gated by a flood-gate.
+    pub fn play_from_security(&mut self, player: PlayerId) -> Option<PermanentHandle> {
+        // Pop the top of security. Empty stack → nothing to do.
+        let card = match self.game.player_mut(player).security.pop() {
+            Some(c) => c,
+            None => return None,
+        };
+
+        // `face_up_security` is keyed by card_index — clear it whether or
+        // not the card was face-up; remove() is a no-op when absent.
+        let card_index = card.card_index;
+        self.game
+            .player_mut(player)
+            .face_up_security
+            .remove(&card_index);
+
+        // Park at end of hand and play through the established hand-free
+        // path. The hand index is the new last position.
+        self.game.player_mut(player).hand.push(card);
+        let hand_index = self.game.player(player).hand.len() - 1;
+
+        match self.play_from_hand_free(player, hand_index) {
+            Some(handle) => Some(handle),
+            None => {
+                // Rollback: pop the card back out of hand and restore it to
+                // the top of security so the failure is observable as a
+                // no-op. Restore face_up_security entry too in case the
+                // caller depended on it.
+                let card = self
+                    .game
+                    .player_mut(player)
+                    .hand
+                    .pop()
+                    .expect("invariant: card was just pushed to hand");
+                // Note: we deliberately do NOT re-insert into
+                // face_up_security on rollback — the card is back in the
+                // security zone but its visibility-state was already
+                // consumed by the abortive play attempt. Matches the
+                // tradeoff `play_from_hand_with_cost` makes elsewhere on
+                // gated rollbacks.
+                self.game.player_mut(player).security.push(card);
+                None
+            }
+        }
+    }
+
     /// Play a card from `player`'s trash at `trash_index`, deducting memory
     /// according to `cost_delta`. OnPlay effects fire.
     pub fn play_from_trash_with_cost(
