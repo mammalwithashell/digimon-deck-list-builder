@@ -20,6 +20,24 @@ _MARKER_TO_KIND = {
     "[Burst Digivolve]": "burst_digivolve",
 }
 
+# "[Marker] Lv.N w/[Trait] trait: Cost N"
+_RE_LV_TRAIT = re.compile(
+    r"^\s*(\[(?:Digivolve|DNA Digivolve|App Fusion|Burst Digivolve)\])"
+    r"\s*Lv\.(\d+)\s*w/\[([^\]]+)\]\s*trait\s*:\s*Cost\s*(\d+)\s*$"
+)
+
+# "[Marker] Lv.N w/[Name] in name: Cost N"
+_RE_LV_NAME_IN_NAME = re.compile(
+    r"^\s*(\[(?:Digivolve|DNA Digivolve|App Fusion|Burst Digivolve)\])"
+    r"\s*Lv\.(\d+)\s*w/\[([^\]]+)\]\s*in name\s*:\s*Cost\s*(\d+)\s*$"
+)
+
+# "[Marker] Lv.N w/[Name] in text: Cost N"
+_RE_LV_NAME_IN_TEXT = re.compile(
+    r"^\s*(\[(?:Digivolve|DNA Digivolve|App Fusion|Burst Digivolve)\])"
+    r"\s*Lv\.(\d+)\s*w/\[([^\]]+)\]\s*in text\s*:\s*Cost\s*(\d+)\s*$"
+)
+
 # "[Marker] [Name]: Cost N"
 _RE_NAMED_TARGET_ONLY = re.compile(
     r"^\s*(\[(?:Digivolve|DNA Digivolve|App Fusion|Burst Digivolve)\])"
@@ -45,6 +63,42 @@ def _split_lines(xros_req: str) -> list[str]:
     return [ln.strip() for ln in xros_req.replace("\r\n", "\n").split("\n") if ln.strip()]
 
 
+def _try_lv_trait(line: str) -> Optional[ParsedAltPath]:
+    m = _RE_LV_TRAIT.match(line)
+    if not m:
+        return None
+    return ParsedAltPath(
+        kind=_MARKER_TO_KIND[m.group(1)],
+        from_={"level_eq": int(m.group(2)), "trait_has": m.group(3)},
+        materials=None,
+        cost=int(m.group(4)),
+    )
+
+
+def _try_lv_name_in_name(line: str) -> Optional[ParsedAltPath]:
+    m = _RE_LV_NAME_IN_NAME.match(line)
+    if not m:
+        return None
+    return ParsedAltPath(
+        kind=_MARKER_TO_KIND[m.group(1)],
+        from_={"level_eq": int(m.group(2)), "name_contains": m.group(3)},
+        materials=None,
+        cost=int(m.group(4)),
+    )
+
+
+def _try_lv_name_in_text(line: str) -> Optional[ParsedAltPath]:
+    m = _RE_LV_NAME_IN_TEXT.match(line)
+    if not m:
+        return None
+    return ParsedAltPath(
+        kind=_MARKER_TO_KIND[m.group(1)],
+        from_={"level_eq": int(m.group(2)), "name_in_text": m.group(3)},
+        materials=None,
+        cost=int(m.group(4)),
+    )
+
+
 def _try_named_target_only(line: str) -> Optional[ParsedAltPath]:
     m = _RE_NAMED_TARGET_ONLY.match(line)
     if not m:
@@ -58,7 +112,12 @@ def _try_named_target_only(line: str) -> Optional[ParsedAltPath]:
     )
 
 
-_PRODUCTIONS = (_try_named_target_only,)
+_PRODUCTIONS = (
+    _try_lv_name_in_name,
+    _try_lv_name_in_text,
+    _try_lv_trait,
+    _try_named_target_only,
+)
 
 
 def parse(xros_req: str) -> XrosReqParseResult:
