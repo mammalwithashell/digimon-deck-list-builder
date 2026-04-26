@@ -8,28 +8,47 @@
 //! Fragment(N) / Decode / Armor Purge behave as printed without a hand-authored
 //! `CardEffect` script.
 //!
-//! ## Coverage matrix (Phase D — landed 2026-04-25, Phase E — landed 2026-04-25)
+//! ## Coverage matrix (Phase D — landed 2026-04-25, Phase E — landed 2026-04-25, Phase F — landed 2026-04-25)
 //!
 //! Auto-installed: Barrier, Evade, Decode (Phase 7); Fragment(N), ArmorPurge,
 //! Save, Decoy, Fortitude, Partition, MaterialSave(N) (Phase D);
-//! Retaliation, Scapegoat (Phase E).
+//! Retaliation, Scapegoat (Phase E); Execute, MindLink, Training (Phase F).
 //!
 //! Selection-bearing replacements consume Phase C's parked-replacement
 //! substrate via `ctx.cancel_leave / handle_replacement / substitute_replacement`.
 //! Trigger-based keywords (Fortitude, Partition, Retaliation) use the standard
 //! observer pattern. Scapegoat is an optional `WhenWouldBeDeleted` substitute
-//! replacement. MaterialSave(N) is a `[Main]` active skill (neither a replacement
-//! nor a deletion trigger) — see §Active-skill keywords below.
+//! replacement. MaterialSave(N), MindLink, and Training are `[Main]` active
+//! skills (neither a replacement nor a deletion trigger) — see §Active-skill
+//! keywords below. Execute is an `EndOfYourTurn` triggered effect granting
+//! `MayAttack` + `CanAttackUnsuspended` for the EOT-attack window with an
+//! `EndOfAttack` self-delete observer.
 //!
-//! Phase F so far: Execute (Task 3 — auto-installed `EndOfYourTurn`
-//! optional grant + `EndOfAttack` self-delete observer); MindLink (Task 5
-//! — `[Main]` active skill on Tamers, optional own-Digimon pick + tuck-
-//! under-target via `attach_tamer_to_digimon`). Iceclad is consumed at the
-//! combat resolver (no auto-install). Training remains deferred to Task 6.
+//! Phase F closed all printed-keyword gaps: every DCGO `KeyWordEffects/*.cs`
+//! now has a matching Rust enum variant + consumer (auto-install or
+//! resolution-site consumption).
 //!
 //! Intentionally NOT auto-installed (per Phase E cards.json survey — zero
 //! bare printings; auto-install would double-fire alongside hand-rolled
 //! effect text on every card): DeDigivolve(N), DrawX(N).
+//!
+//! ## Combat-only consumption (no auto-install)
+//!
+//! Iceclad (Phase F) does not have a `keyword_to_auto_effect` arm — it is
+//! consumed directly in `combat::resolve_battle`, which swaps the DP compare
+//! for a `card_sources.len()` compare when either combatant has the keyword.
+//! Security battles route through a different path (`resolve_player_security_loop`)
+//! and are unaffected, matching the RULES_CONTEXT 16-34 exception.
+//!
+//! ## Replacement-condition substrate (Phase F)
+//!
+//! `Effect.replacement_condition` (closure form `EffectReplacementConditionFn`)
+//! threads `cause` into the candidate-collection path via
+//! `replacement::collect_candidates`. Scapegoat was promoted onto this surface
+//! to gate the outer "may" dialog on `cause != OwnEffect` AND ≥1 substitute
+//! candidate, matching DCGO's `CanActivateScapegoat` pre-filter. Future
+//! cause-aware replacement keywords should use the same builder hook rather
+//! than relying on the inner-pick PASS to suppress spurious dialogs.
 //!
 //! Consumed at resolution site (no auto-install needed): SecurityAttackPlus(N),
 //! SecurityAttackMinus(N) — see `Game::security_attack_keyword_bonus` (Phase A §A3).

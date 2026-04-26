@@ -45,12 +45,12 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Decoy | Redirect deletion of any same-controller ally to self | ✅ | Auto-installed in Phase D 2026-04-25; `WhenWouldBeDeleted` subscription on ally deletions, `ctx.substitute_replacement`. See `keyword_effects.rs` and `tests/keyword_phase_d/decoy.rs`. |
 | Blast Digivolve | `Blast Digivolve` counter-window play | 🔴 | Parsed as `Keyword::BlastDigivolve` (renamed Phase A §A2). Auto-install of `Effect::blast_digivolve` from the keyword is deferred (Phase D scope did not include BlastDigivolve). |
 | MaterialSave(count) | Move up-to-N own stack sources under another permanent — `[Main]` active skill | ✅ | Auto-installed in Phase D 2026-04-25; `MainOnField` effect with gate (≥1 source + ≥1 own Tamer), own-Tamer pick then source-pick via `CountCappedZone::Material`, tuck via `ctx.place_card_under_permanent_bottom`. See `keyword_effects.rs` and `tests/keyword_phase_d/material_save.rs`. |
-| MindLink | Attach Tamer card to a Digimon with empty Tamer slot | ❌ | Not in Rust enum |
-| Iceclad | Compare digivolution-card count instead of DP in battle (except vs Security Digimon); higher count wins, tie = both delete | ❌ | Not in Rust enum. Previous description ('immunity to suspension') was incorrect; actual mechanic is digi-card-count battle compare per RULES_CONTEXT 16-34. Wiring: Phase F2. |
-| Execute | Active skill — attack unsuspended opp, self-delete on end-of-attack | ❌ | Not in Rust enum |
+| MindLink | Attach Tamer card to a Digimon with empty Tamer slot | ✅ | Auto-installed in Phase F 2026-04-25; `MainOnField` Tamer skill picks an own non-Tamer non-token Digimon with no non-face-down Tamer source and tucks self underneath via `attach_tamer_to_digimon`. New `face_down: bool` field on `CardSource` honors DCGO's `IsFlipped` filter. See `keyword_effects.rs::Keyword::MindLink` arm and `tests/keyword_phase_f/mind_link.rs`. RULES_CONTEXT 16-27. |
+| Iceclad | Compare digivolution-card count instead of DP in battle (except vs Security Digimon); higher count wins, tie = both delete | ✅ | Combat-resolution branch in `combat::resolve_battle` swaps DP compare for `card_sources.len()` compare when either combatant has Iceclad (security battles unaffected — they route through `resolve_player_security_loop`). See `combat.rs:resolve_battle` and `tests/keyword_phase_f/iceclad.rs`. RULES_CONTEXT 16-34. |
+| Execute | Active skill — attack unsuspended opp, self-delete on end-of-attack | ✅ | Auto-installed in Phase F 2026-04-25; `EndOfYourTurn` triggered effect grants `MayAttack` + `CanAttackUnsuspended` for the end-of-turn-attack window and queues `EndOfAttack` self-deletion. The printed 'may' surfaces at the EOT-action phase PASS exit (substrate adaptation: drainer auto-fires single optional triggers; observable end states match DCGO). See `keyword_effects.rs::Keyword::Execute` arm and `tests/keyword_phase_f/execute.rs`. RULES_CONTEXT 16-37. |
 | Retaliation | When deleted by battle, destroy the winner | ✅ | Auto-installed in Phase E 2026-04-25; `OnDeletion` trigger gated on `deletion_cause() == Battle`, deletes opposing combatant via `ctx.battle_opponent_of` (new accessor) with explicit `OwnEffect` cascade cause. See `keyword_effects.rs` and `tests/keyword_phase_e/retaliation.rs`. RULES_CONTEXT 16-12. |
-| Scapegoat | Delete another own Digimon to cancel own deletion | ✅ | Auto-installed in Phase E 2026-04-25; `WhenWouldBeDeleted` substitute replacement gated on `cause != OwnEffect`, optional outer dialog → parked own-permanent pick → sync substitute. See `keyword_effects.rs` and `tests/keyword_phase_e/scapegoat.rs`. RULES_CONTEXT 16-31. Known UX divergence: outer dialog parks on `OwnEffect` cause and is dismissed via PASS — cause-aware candidate filter is tracked substrate gap (`replacement.rs::try_replace_inner`). |
-| Training | Active skill — suspend self + place top deck card as own bottom source face-down | ❌ | Not in Rust enum; Python has handling, Rust does not |
+| Scapegoat | Delete another own Digimon to cancel own deletion | ✅ | Auto-installed in Phase E 2026-04-25; `WhenWouldBeDeleted` substitute replacement gated on `cause != OwnEffect`, optional outer dialog → parked own-permanent pick → sync substitute. See `keyword_effects.rs` and `tests/keyword_phase_e/scapegoat.rs`. RULES_CONTEXT 16-31. Phase F 2026-04-25: outer-dialog UX gap closed via the new `replacement_condition` builder. Substrate change: `replacement::collect_candidates` now threads `cause` into a per-effect `replacement_condition` closure; Scapegoat uses it to gate on `cause != OwnEffect` AND ≥1 substitute candidate (DCGO `CanActivateScapegoat` parity). See `tests/keyword_phase_f/scapegoat_cause_filter.rs`. |
+| Training | Active skill — suspend self + place top deck card as own bottom source face-down | ✅ | Auto-installed in Phase F 2026-04-25; `MainOnField` skill (battle area + breeding area) suspends self (cost) and places deck top at bottom of self stack, face-down via `training_place_deck_top_under_self_face_down`. New breeding-area `[Main]` dispatch substrate (`Game::activate_breeding_main_training` + `mask.rs` Training-only emitter at slot 14). See `keyword_effects.rs::Keyword::Training` arm and `tests/keyword_phase_f/training.rs`. RULES_CONTEXT 16-40. |
 
 ## Detailed notes on the divergences
 
@@ -93,11 +93,11 @@ The variants are parsed (so deck-builder validation, RL action masking, and hand
 
 This closes the "parametric auto-install gap" — the original framing assumed bare printings existed; they don't.
 
-### Scapegoat outer-dialog UX — substrate gap
+### Scapegoat outer-dialog UX — Phase F 2026-04-25 — resolved
 
-Phase E §E2 left a known divergence from DCGO. With `.optional()` set at builder time, the outer "may" accept dialog parks even when the cause filter would reject (`OwnEffect` cause) and even when there are zero candidates for the inner pick. PASS proceeds correctly so end-state matches DCGO, but the UX shows a spurious dialog.
+Phase E §E2 left a known divergence from DCGO: with `.optional()` set at builder time, the outer "may" accept dialog parked even on `OwnEffect` cause and even with zero candidates for the inner pick. End-state matched DCGO via PASS, but the spurious dialog itself was a UX leak.
 
-The fix lives in `replacement.rs::try_replace_inner` — the candidate-condition `EffectReadContext` does not currently carry `cause`, so a `.condition(...)`-gated form is unavailable in Phase E scope. Promote Scapegoat to a `.condition`-gated `WhenWouldBeDeleted` once the substrate threads `cause` into the candidate filter (and apply the same treatment to the no-candidate suppression — DCGO's `CanActivateScapegoat` pre-filters both).
+**Resolution (Phase F, commit `10ca36b8`).** New `replacement_condition: Option<EffectReplacementConditionFn>` field on `Effect` with a `.replacement_condition(...)` builder; `replacement::collect_candidates` now threads `cause` into the closure so candidate-side gating can read it. Scapegoat is re-mounted to gate on `cause != OwnEffect` AND ≥1 substitute candidate, matching DCGO's `CanActivateScapegoat` pre-filter. Behavioral coverage in `tests/keyword_phase_f/scapegoat_cause_filter.rs`.
 
 ## Missing-keyword backfill priorities
 
@@ -108,9 +108,9 @@ Ordered by archetype relevance to the alpha scope (Royal Knights, Jesmon GX, Roc
 | ~~1~~ | ~~Retaliation~~ | ~~Dark Masters core: BT15-077 LadyDevimon, BT15-079 Piedmon~~ ✅ resolved Phase E 2026-04-25 |
 | ~~2~~ | ~~MaterialSave(count)~~ | ~~Several Medusamon and Dark Masters entries use it~~ ✅ resolved Phase D |
 | ~~2~~ | ~~Scapegoat~~ | ~~Dark Masters (LM-043 Darkdramon)~~ ✅ resolved Phase E 2026-04-25 |
-| 3 | Training | Tied to TestCards.Training active-skill; needed for Rocks pre-evo slots |
-| 4 | Execute | Appears only on a handful of non-archetype cards; defer |
-| 5 | Iceclad, MindLink | Not in any alpha-target archetype; defer |
+| ~~3~~ | ~~Training~~ | ~~Tied to TestCards.Training active-skill; needed for Rocks pre-evo slots~~ ✅ resolved Phase F 2026-04-25 |
+| ~~4~~ | ~~Execute~~ | ~~Appears only on a handful of non-archetype cards; defer~~ ✅ resolved Phase F 2026-04-25 |
+| ~~5~~ | ~~Iceclad, MindLink~~ | ~~Not in any alpha-target archetype; defer~~ ✅ resolved Phase F 2026-04-25 |
 
 ## Gap ranking (consolidated for scheduling)
 
@@ -123,7 +123,7 @@ Ranked by alpha-archetype blast radius:
 5. ~~**Save distinct from MaterialSave**~~ — ✅ resolved Phase D 2026-04-25. Save, Decoy, Fortitude, MaterialSave(N) all auto-installed.
 6. ~~**Retaliation enum variant + replacement wire-up**~~ — ✅ resolved Phase E 2026-04-25. `OnDeletion` trigger auto-installed; Dark Masters archetype blocker cleared.
 7. ~~**Fortitude / DeDigivolve(N) parsed-form auto-install / Decoy**~~ — ✅ Fortitude + Decoy resolved Phase D 2026-04-25. DeDigivolve(N) auto-install resolved-as-no-op Phase E 2026-04-25 (zero bare printings; see ⚪ note in summary table).
-8. **Execute / Iceclad / MindLink / Training** — not in alpha archetypes; defer past alpha (Phase F).
+8. ~~**Execute / Iceclad / MindLink / Training**~~ — ✅ resolved Phase F 2026-04-25. All four enum-missing keywords wired (Execute + MindLink + Training auto-installs; Iceclad consumed at `combat::resolve_battle`). Plus the Phase E Scapegoat outer-dialog UX divergence closed via the new `replacement_condition` builder. ✅ resolved Phase F 2026-04-25.
 
 ## Source citations
 
