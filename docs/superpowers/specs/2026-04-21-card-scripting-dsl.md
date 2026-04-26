@@ -1575,6 +1575,36 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   play / digivolve / placement steps, formula values in `add_modifier`
   `value`, and `ScheduleDelayed` (needs `ctx.schedule_delayed` engine
   primitive).
+- **2f1** (landed 2026-04-26) — play / digivolve / placement step
+  lowering: `PlayFromHand`, `PlayFromHandFree`, `PlayFromTrash`,
+  `PlayFromTrashFree`, `PlayFromSecurity`, `PlayFromMaterials`,
+  `EffectInitiatedDigivolve`, `EffectInitiatedDnaDigivolve`,
+  `PlayToken`, `PlaceOnSecurity`, `PlaceAsBottomSource`,
+  `TrashTopSource`. New engine primitives: `play_from_hand_free`,
+  `play_from_security`, `play_from_materials`,
+  `effect_initiated_dna_digivolve`, `trash_top_source`. The existing
+  `play_from_security()` (security-skill replay) was renamed to
+  `play_pending_security()` to free the name for the persistent-zone
+  primitive — Rust forbids method-name overloading. Cost-delta
+  translation (`Free` / `Printed` / `Literal`) lives in the DSL
+  step-handler `dsl_cards/step/play_digivolve.rs` via
+  `lower_cost_delta`, mapping `CompiledCostDelta` →
+  `crate::enums::CostDelta` so the engine surface stays free of DSL
+  imports. Fixture quirks worth noting: (a) `play_from_trash*` YAML
+  uses `hand_index:` (struct reuse); (b) `EffectInitiatedDigivolve`
+  still requires a matching `evo_costs` row by level even with
+  `ignore_requirements: true` (the flag covers color/level/memory but
+  not the cost-table lookup itself); (c) `from_hand` resolves via
+  `HandIndex(i)` for single-target digivolve but `Card(handle)` for
+  DNA digivolve — asymmetric IR shapes; (d) `EffectInitiatedDigivolve`
+  carries `cost: i32`, which can express `Free (0)` and `Fixed(n)` but
+  not `Reduce(n)` — a Phase 3 IR-widening concern. Tracked follow-ups:
+  fire `OnDnaDigivolve` from both this primitive and the canonical
+  user-action path once `TODO(dna-digivolve-execute)` lands; widen
+  `BindingValue::HandIndex` / `TrashIndex` to carry a `PlayerId` so
+  placement steps can target opponent zones. Defers to 2f2+: formula
+  values in `add_modifier`, `AsSelectingPlayer` override-persistence,
+  `ScheduleDelayed`.
 
 ### 7.4 Phase 3 — Advanced clauses
 
