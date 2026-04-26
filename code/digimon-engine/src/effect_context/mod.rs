@@ -278,6 +278,17 @@ impl<'a> EffectContext<'a> {
         self.override_selecting_player
     }
 
+    /// Install (or clear) the selecting-player override. Used by
+    /// `AsSelectingPlayer` step lowering (Phase 2f3) to scope the override
+    /// to the body and restore the previous value on synchronous
+    /// completion, and by `drain_dsl_outer_tail` to clear the override
+    /// before running sibling steps that follow a body-parked
+    /// `AsSelectingPlayer`. Crate-private — the field itself is
+    /// intentionally not widened, so all writes go through this setter.
+    pub(crate) fn set_override_selecting_player(&mut self, p: Option<PlayerId>) {
+        self.override_selecting_player = p;
+    }
+
     // ─── Read-only queries ────────────────────────────────────────────
 
     pub fn memory(&self) -> i16 {

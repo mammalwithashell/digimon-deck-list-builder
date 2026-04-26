@@ -3,6 +3,7 @@
 //! Phase 2c: permanent mutations + modifier steps (AddDpModifier, AddModifier, GrantKeyword)
 //!           + control-flow steps (Optional, If).
 
+pub mod as_selecting_player;
 pub mod control_flow;
 pub mod draw;
 pub mod iteration;
@@ -91,8 +92,16 @@ fn park_outer_tail(
 /// future phases (`SelectReveal`, `SelectMaterial`, …) pick this up by
 /// calling one helper instead of duplicating the take + run_steps
 /// boilerplate per callback.
+///
+/// Phase 2f3: `cb_ctx` arrives with `override_selecting_player` carrying
+/// the override that was active at the parking select's install time.
+/// Outer-tail steps live OUTSIDE the `AsSelectingPlayer` body whose select
+/// parked, so they must not inherit the override. Clear it here before
+/// running the outer tail; the inner body's chained selects already saw
+/// the override via the parked-callback's reconstructed ctx (Task 1).
 pub(crate) fn drain_dsl_outer_tail(cb_ctx: &mut EffectContext<'_>) {
     if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
+        cb_ctx.set_override_selecting_player(None);
         run_steps(&outer_tail, cb_ctx, &mut outer_b);
     }
 }
@@ -116,6 +125,15 @@ pub fn run_steps(
         let step = &steps[i];
 
         if let Some(outcome) = control_flow::try_run(step, ctx, bindings) {
+            if matches!(outcome, RunOutcome::Parked) {
+                park_outer_tail(ctx, bindings, steps, i);
+                return RunOutcome::Parked;
+            }
+            i += 1;
+            continue;
+        }
+
+        if let Some(outcome) = as_selecting_player::try_run(step, ctx, bindings) {
             if matches!(outcome, RunOutcome::Parked) {
                 park_outer_tail(ctx, bindings, steps, i);
                 return RunOutcome::Parked;
