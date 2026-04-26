@@ -15,6 +15,8 @@ import { useAuthStore } from '@/stores/authStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
+const LauncherPage = lazy(() => import('@/components/launcher/LauncherPage').then(m => ({ default: m.LauncherPage })));
+
 // Lazy-load admin/training pages so they're tree-shaken out of desktop builds
 const AdminIssuesPage = lazy(() => import('@/pages/AdminIssuesPage').then(m => ({ default: m.AdminIssuesPage })));
 const AdminTasksPage = lazy(() => import('@/pages/AdminTasksPage').then(m => ({ default: m.AdminTasksPage })));
@@ -50,8 +52,9 @@ export function App() {
     <BrowserRouter>
       <UpdaterBridge />
       <Routes>
+        {IS_DESKTOP && <Route path="/" element={suspended(LauncherPage)} />}
         <Route element={<Layout />}>
-          <Route path="/" element={<HomePage />} />
+          {!IS_DESKTOP && <Route path="/" element={<HomePage />} />}
           <Route path="/patch-notes" element={<PatchNotesPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -75,9 +78,7 @@ export function App() {
               <Route path="/admin/models" element={suspended(AdminModelsPage)} />
             </Route>
           )}
-          {IS_DESKTOP && (
-            <Route path="/models" element={suspended(ModelsPage)} />
-          )}
+          {IS_DESKTOP && <Route path="/models" element={suspended(ModelsPage)} />}
         </Route>
       </Routes>
     </BrowserRouter>
