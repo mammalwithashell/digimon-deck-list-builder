@@ -9,6 +9,7 @@
 //! conditional effect).
 
 mod de_digivolve;
+mod dsl_omnimon_slice;
 mod test_cards;
 mod tokens;
 
