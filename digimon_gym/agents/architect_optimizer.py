@@ -26,7 +26,7 @@ import numpy as np
 from digimon_gym.agents.architect_agent import ArchitectDQN
 from digimon_gym.agents.architect_pool import CandidatePool, CardConstraint
 from digimon_gym.agents.architect_simulator import DeckSimulator
-from digimon_gym.engine.data.deck_finder import load_implemented_card_ids
+from digimon_engine import load_implemented_card_ids
 
 logger = logging.getLogger(__name__)
 

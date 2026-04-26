@@ -23,9 +23,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from digimon_gym.agents.deck_pool import analyze_core
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.deck_finder import load_implemented_card_ids
-from digimon_gym.engine.data.enums import CardKind
+from digimon_engine import CardDatabase, CardKind, load_implemented_card_ids
 
 logger = logging.getLogger(__name__)
 
@@ -91,10 +89,11 @@ class CandidatePool:
 
         # --- Restricted list filtering ---
         if use_restricted_list:
-            from digimon_gym.engine.data.deck_loader import RESTRICTED_LIST
+            from digimon_engine import restricted_list
+            _rl = restricted_list()
 
             banned = {
-                cid for cid, limit in RESTRICTED_LIST.card_limits.items()
+                cid for cid, limit in _rl.card_limits.items()
                 if limit == 0
             }
             raw_ids -= banned
@@ -129,11 +128,12 @@ class CandidatePool:
 
         # --- Apply restricted list max_copies overrides ---
         if use_restricted_list:
-            from digimon_gym.engine.data.deck_loader import RESTRICTED_LIST
+            from digimon_engine import restricted_list
+            _rl = restricted_list()
 
             for cid in self._candidates:
-                if cid in RESTRICTED_LIST.card_limits:
-                    limit = RESTRICTED_LIST.card_limits[cid]
+                if cid in _rl.card_limits:
+                    limit = _rl.card_limits[cid]
                     if limit > 0:  # banned already removed above
                         self._max_copies[cid] = min(
                             self._max_copies[cid], limit

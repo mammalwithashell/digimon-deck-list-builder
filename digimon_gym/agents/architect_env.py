@@ -20,8 +20,7 @@ from gymnasium import spaces
 
 from digimon_gym.agents.architect_pool import CandidatePool
 from digimon_gym.agents.architect_simulator import DeckSimulator
-from digimon_gym.engine.data.card_database import CardDatabase
-from digimon_gym.engine.data.enums import CardKind
+from digimon_engine import CardDatabase, CardKind
 
 logger = logging.getLogger(__name__)
 

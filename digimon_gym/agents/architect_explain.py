@@ -20,7 +20,7 @@ import numpy as np
 import torch
 
 from digimon_gym.agents.architect_optimizer import MetaOptimizer
-from digimon_gym.engine.data.card_database import CardDatabase
+from digimon_engine import CardDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +434,7 @@ class ArchitectExplainer:
         assert opponents is not None
 
         # Replicate build_opponents iteration to get names in order
-        from digimon_gym.engine.data.deck_finder import load_implemented_card_ids
+        from digimon_engine import load_implemented_card_ids
 
         from digimon_gym.data_paths import DECK_LIBRARY as deck_library_path
         if deck_library_path.exists():
