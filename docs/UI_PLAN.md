@@ -6,7 +6,7 @@ This document now separates what is currently implemented from future roadmap wo
 
 ### Frontend Routes
 
-Defined in `frontend/src/App.tsx`:
+Defined in `code/frontend/src/App.tsx`:
 
 - Public:
   - `/`
@@ -23,15 +23,15 @@ Defined in `frontend/src/App.tsx`:
 ### Implemented UI Areas
 
 1. Gameplay UI
-- Board and zone components under `frontend/src/components/board/`
-- Gameplay controls/logging under `frontend/src/components/game/`
-- Session orchestration in `frontend/src/pages/GamePage.tsx`
-- Action decoding helpers in `frontend/src/utils/actionDecoder.ts`
+- Board and zone components under `code/frontend/src/components/board/`
+- Gameplay controls/logging under `code/frontend/src/components/game/`
+- Session orchestration in `code/frontend/src/pages/GamePage.tsx`
+- Action decoding helpers in `code/frontend/src/utils/actionDecoder.ts`
 
 2. Deck Builder UI
-- Search/filter/grid/list panels in `frontend/src/components/deckbuilder/`
-- Page orchestration in `frontend/src/pages/DeckBuilderPage.tsx`
-- Store in `frontend/src/stores/deckBuilderStore.ts`
+- Search/filter/grid/list panels in `code/frontend/src/components/deckbuilder/`
+- Page orchestration in `code/frontend/src/pages/DeckBuilderPage.tsx`
+- Store in `code/frontend/src/stores/deckBuilderStore.ts`
 
 3. Auth and Layout
 - `LoginPage`, `RegisterPage`
@@ -42,7 +42,7 @@ Defined in `frontend/src/App.tsx`:
 - `AdminIssuesPage`
 - `AdminTasksPage`
 - `AdminPromotionsPage`
-- API client: `frontend/src/api/adminApi.ts`
+- API client: `code/frontend/src/api/adminApi.ts`
 
 ### Implemented Backend Endpoints Used by UI
 
@@ -63,8 +63,8 @@ Defined in `frontend/src/App.tsx`:
 ### Current Data Contracts to Keep Synced
 
 - Action constants and phase labels:
-  - Backend: `digimon_gym/engine/game.py`, `digimon_gym/engine/data/enums.py`
-  - Frontend: `frontend/src/utils/constants.ts`, `frontend/src/types/game.ts`
+  - Backend: `code/engine_py_legacy/engine/game.py`, `code/engine_py_legacy/engine/data/enums.py`
+  - Frontend: `code/frontend/src/utils/constants.ts`, `code/frontend/src/types/game.ts`
 - Spec docs:
   - `ACTION_SPEC.md`
   - `TENSOR_SPEC.md`

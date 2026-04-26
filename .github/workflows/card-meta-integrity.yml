@@ -20,9 +20,11 @@ jobs:
       - name: Verify card_meta tree matches generator output
         env:
           PYTHONIOENCODING: utf-8
+          PYTHONPATH: code
         run: python -m tools.build_card_meta --check
 
       - name: Verify xros_req parser coverage hasn't regressed
         env:
           PYTHONIOENCODING: utf-8
+          PYTHONPATH: code
         run: python -m tools.build_card_meta --coverage-check

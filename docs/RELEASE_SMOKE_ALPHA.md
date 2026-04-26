@@ -7,13 +7,13 @@ blocker before release.
 ## Build verification
 
 - [ ] `cd src-tauri && cargo tauri build` produces an installer without errors
-- [ ] `cargo test --manifest-path src-tauri/Cargo.toml deck_storage` passes (5 tests)
-- [ ] `cargo test --manifest-path digimon-engine/Cargo.toml` passes (engine regression)
+- [ ] `cargo test --manifest-path code/src-tauri/Cargo.toml deck_storage` passes (5 tests)
+- [ ] `cargo test --manifest-path code/digimon-engine/Cargo.toml` passes (engine regression)
 - [ ] `cd frontend && npx tsc --noEmit` is clean
 - [ ] `cd frontend && npx vitest run` passes (currently: `guest.test.ts`, 4 tests)
 - [ ] `python -m pytest tests/api/ -v` passes (backend regression; run only when backend changes land)
 - [ ] `JWT_SECRET_KEY` env var is set on the production server (not the default dev key)
-- [ ] `frontend/.env.desktop` has real URLs (not `api.digimon-tcg.example`)
+- [ ] `code/frontend/.env.desktop` has real URLs (not `api.digimon-tcg.example`)
 
 ## First launch (clean app-data dir)
 

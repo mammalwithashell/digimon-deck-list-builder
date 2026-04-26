@@ -51,12 +51,12 @@ Goal: play Digimon matches inside the headless engine to generate win/loss and p
 
 - Feed-forward policy from `sb3_contrib.MaskablePPO` with default `"MlpPolicy"`.
 - Uses action masking via `ActionMasker` wrapper.
-- Training entrypoint: `digimon_gym/agents/pilot_training.py`.
+- Training entrypoint: `code/digimon_gym/agents/pilot_training.py`.
 - Observation: 981 floats → MLP → 2120 action logits.
 
 ### MaskableRecurrentPPO (Custom LSTM)
 
-Custom implementation in `digimon_gym/agents/maskable_recurrent/` (3 modules + `__init__`).
+Custom implementation in `code/digimon_gym/agents/maskable_recurrent/` (3 modules + `__init__`).
 
 **Motivation**: SB3's `RecurrentPPO` and `MaskablePPO` are separate algorithms with no official combination. This module merges both capabilities.
 
@@ -127,7 +127,7 @@ How masking works end-to-end:
 
 ## 2.3 Gym Environment Contract
 
-Primary env: `DigimonEnv` (`digimon_gym/digimon_gym.py`).
+Primary env: `DigimonEnv` (`code/digimon_gym/digimon_gym.py`).
 
 ### API
 
@@ -180,7 +180,7 @@ Converts 2-player game to single-agent MDP. Auto-plays Player 2 turns using conf
 
 ### DeckPoolWrapper
 
-Location: `digimon_gym/agents/deck_pool.DeckPoolWrapper`.
+Location: `code/digimon_gym/agents/deck_pool.DeckPoolWrapper`.
 
 Varies agent's deck per episode for robustness training. On `reset()`, samples a variant from the pool and injects via `options["deck1"]`.
 
@@ -194,7 +194,7 @@ Varies agent's deck per episode for robustness training. On `reset()`, samples a
 
 ### GauntletWrapper
 
-Location: `digimon_gym/agents/gauntlet.GauntletWrapper`.
+Location: `code/digimon_gym/agents/gauntlet.GauntletWrapper`.
 
 Samples opponent deck from MetaGauntlet on `reset()`. Injects sampled deck via `options["deck2"]`.
 
@@ -203,7 +203,7 @@ Samples opponent deck from MetaGauntlet on `reset()`. Injects sampled deck via `
 
 ### LeagueOpponentWrapper
 
-Location: `digimon_gym/agents/league_wrapper.LeagueOpponentWrapper`.
+Location: `code/digimon_gym/agents/league_wrapper.LeagueOpponentWrapper`.
 
 Used in Stage 2 of GauntletOrchestrator pipeline. Two sampling modes:
 
@@ -216,7 +216,7 @@ Tracks per-opponent game/win counts during `step()` on terminal episodes.
 
 # 3. MetaGauntlet
 
-Location: `digimon_gym/agents/gauntlet.py`.
+Location: `code/digimon_gym/agents/gauntlet.py`.
 
 Purpose: sample opponent decks with meta weighting for training and evaluation.
 
@@ -259,13 +259,13 @@ Decks sorted by source preference; position-biased within archetype.
 
 ## 3.5 Deck Library Pipeline
 
-`tools/meta_loader.py` → `data/deck_library.json` → `MetaGauntlet.load()`
+`code/tools/meta_loader.py` → `data/deck_library.json` → `MetaGauntlet.load()`
 
 ---
 
 # 4. GauntletOrchestrator (3-Stage Pipeline)
 
-Location: `digimon_gym/agents/gauntlet_orchestrator.py`.
+Location: `code/server/workers/gauntlet_orchestrator.py`.
 
 DB-backed training pipeline managed by `GauntletOrchestrator`. Requires running backend (FastAPI + TrainingJobWorker). Detailed operations in `docs/TRAINING_RUNBOOK.md`.
 
@@ -308,7 +308,7 @@ configuring → stage_1 (bootstrap) → stage_2 (meta training) → stage_3 (eva
 
 # 5. Training Job Worker
 
-Location: `digimon_gym/agents/training_worker.py`.
+Location: `code/server/workers/training_worker.py`.
 
 - Async DB-backed queue worker.
 - Polls for queued `TrainingJob` rows.
@@ -326,13 +326,13 @@ Location: `digimon_gym/agents/training_worker.py`.
 
 The agent stack now runs inside a broader app platform:
 
-- Backend API (`digimon_gym/api.py`):
+- Backend API (`code/server/api.py`):
   - gameplay (`/games`, `/simulations`, `/recordings`, `/replays`)
   - deck utilities (`/decks/parse`, `/decks/validate`)
   - DB-backed user/auth/deck/friends/issues/admin routes
-- Frontend (`frontend/`):
+- Frontend (`code/frontend/`):
   - game UI, deck builder, auth, admin pages
-- Admin AI pipeline (`digimon_gym/ai/*`, `/admin/*` routes):
+- Admin AI pipeline (`code/server/ai/*`, `/admin/*` routes):
   - task queueing/execution
   - batch orchestration
   - fix apply, promotion audit, backlog management
@@ -359,13 +359,13 @@ Use this workflow to promote generated scripts into frozen production lanes.
 
 ## Source/Target Layout
 
-- Generated source: `digimon_gym/engine/data/scripts/generated/<set_id>/<module_name>.py`
-- Frozen target: `digimon_gym/engine/data/scripts/<set_id>/<module_name>.py`
-- Manifest: `digimon_gym/engine/data/scripts/_frozen_manifest.json`
+- Generated source: `code/engine_py_legacy/engine/data/scripts/generated/<set_id>/<module_name>.py`
+- Frozen target: `code/engine_py_legacy/engine/data/scripts/<set_id>/<module_name>.py`
+- Manifest: `code/engine_py_legacy/engine/data/scripts/_frozen_manifest.json`
 
 ## Promotion Contract
 
-- Promotions must go through `promote_script_from_generated` (`digimon_gym/engine/data/script_promotion.py`).
+- Promotions must go through `promote_script_from_generated` (`code/engine_py_legacy/engine/data/script_promotion.py`).
 - Promotion is hash-guarded using `expected_generated_hash` (sha256 of generated file).
 - Successful promotion:
   - copies generated file to frozen lane
@@ -376,7 +376,7 @@ Use this workflow to promote generated scripts into frozen production lanes.
 
 Use the CLI helper:
 
-`python tools/promote_script.py --card-id BT24-001 --set-id bt24 --module-name bt24_001 --expected-generated-hash <sha256>`
+`python code/tools/promote_script.py --card-id BT24-001 --set-id bt24 --module-name bt24_001 --expected-generated-hash <sha256>`
 
 ## Bulk Promotion (Current Generated Scripts)
 

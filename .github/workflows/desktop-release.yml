@@ -16,10 +16,10 @@ jobs:
         include:
           - runner: windows-latest
             target: windows-x86_64
-            bundle_glob: 'src-tauri/target/release/bundle/nsis/*-setup.exe'
+            bundle_glob: 'code/src-tauri/target/release/bundle/nsis/*-setup.exe'
           - runner: ubuntu-latest
             target: linux-x86_64
-            bundle_glob: 'src-tauri/target/release/bundle/appimage/*.AppImage'
+            bundle_glob: 'code/src-tauri/target/release/bundle/appimage/*.AppImage'
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -32,13 +32,14 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: './code/src-tauri -> target'
+          key: phase6
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: code/frontend/package-lock.json
 
       - name: Install Linux system deps
         if: matrix.runner == 'ubuntu-latest'
@@ -48,11 +49,11 @@ jobs:
             libayatana-appindicator3-dev librsvg2-dev libssl-dev patchelf
 
       - name: Install frontend deps
-        working-directory: frontend
+        working-directory: code/frontend
         run: npm ci
 
       - name: Build frontend (desktop mode, prod API baked in)
-        working-directory: frontend
+        working-directory: code/frontend
         env:
           VITE_BUILD_TARGET: desktop
           VITE_API_URL: https://inbetweentheatre.duckdns.org
@@ -62,7 +63,7 @@ jobs:
         run: cargo install tauri-cli --version "^2" --locked
 
       - name: Build + sign Tauri bundle
-        working-directory: src-tauri
+        working-directory: code/src-tauri
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_KEY_PASSWORD }}

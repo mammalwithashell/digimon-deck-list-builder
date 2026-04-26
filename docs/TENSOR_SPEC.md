@@ -108,7 +108,7 @@ Card identities are encoded as integer registry indices (float-cast):
 
 ### Tensor Layout Metadata
 
-`digimon_gym/engine/data/tensor_layout.py` exports:
+`code/engine_py_legacy/engine/data/tensor_layout.py` exports:
 
 - `CARD_ID_POSITIONS`: list of 520 tensor indices that hold card IDs
 - `SCALAR_POSITIONS`: list of 855 tensor indices that hold scalar values

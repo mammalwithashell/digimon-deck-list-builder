@@ -15,7 +15,7 @@ for any bugs you find.
 **Primary (In-Process — preferred):**
 No server required. Use `DebugRunner` directly in Python:
 ```python
-from digimon_gym.engine.runners.debug_runner import DebugRunner
+from engine_py_legacy.engine.runners.debug_runner import DebugRunner
 runner = DebugRunner(deck1, deck2, initial_memory=8, starting_hand1=["BT24-059"])
 print(runner.board_with_actions())
 ```
@@ -61,7 +61,7 @@ Before starting a new QA session, check what has already been tested.
 If $ARGUMENTS contains an archetype name, use that. Otherwise, find eligible archetypes:
 
 ```bash
-python -m digimon_gym.engine.data.deck_finder --min-coverage 1.0 --max-results 20
+python -m engine_py_legacy.engine.data.deck_finder --min-coverage 1.0 --max-results 20
 ```
 
 If no fully-playable decks are found, try `--min-coverage 0.95` and note the missing cards.
@@ -76,7 +76,7 @@ python -c "
 import json
 from pathlib import Path
 
-lib = json.loads(Path('digimon_gym/engine/data/deck_library.json').read_text())
+lib = json.loads(Path('data/deck_library.json').read_text())
 validated = json.loads(Path('qa/qa-reports/validated_cards.json').read_text()) if Path('qa/qa-reports/validated_cards.json').exists() else {'cards': {}}
 
 archetype = lib['archetypes'].get('ARCHETYPE_NAME', {})
@@ -113,7 +113,7 @@ Before playing, understand what each card should do:
 2. For each key card in the selected deck, look up its data:
    ```bash
    python -c "
-   from digimon_gym.engine.data.card_database import CardDatabase
+   from engine_py_legacy.engine.data.card_database import CardDatabase
    db = CardDatabase()
    card = db.get_card('CARD_ID')
    if card:
@@ -152,12 +152,12 @@ Before playing, understand what each card should do:
 Use `DebugRunner` for fast, no-server testing:
 
 ```python
-from digimon_gym.engine.runners.debug_runner import DebugRunner
+from engine_py_legacy.engine.runners.debug_runner import DebugRunner
 
 # Load decks from deck_library.json
 import json
 from pathlib import Path
-lib = json.loads(Path("digimon_gym/engine/data/deck_library.json").read_text())
+lib = json.loads(Path("data/deck_library.json").read_text())
 deck1 = json.loads(lib["archetypes"]["ARCHETYPE"]["decklists"][0]["decklist"])
 deck2 = json.loads(lib["archetypes"]["OPPONENT"]["decklists"][0]["decklist"])
 
@@ -537,14 +537,14 @@ After testing a card, save the test as a YAML scenario for regression testing.
 
 ### Generate scenario stubs
 ```bash
-python tools/generate_scenarios.py --archetype "ARCHETYPE" --output tests/scenarios/ARCHETYPE/
+python code/tools/generate_scenarios.py --archetype "ARCHETYPE" --output code/engine_py_legacy/tests/scenarios/ARCHETYPE/
 ```
 
-Scenarios in `tests/scenarios/` are auto-discovered by `pytest -m scenario`.
+Scenarios in `code/engine_py_legacy/tests/scenarios/` are auto-discovered by `pytest -m scenario`.
 
 ### Write a scenario
 ```yaml
-# tests/scenarios/archetype/bt24_059.yaml
+# code/engine_py_legacy/tests/scenarios/archetype/bt24_059.yaml
 name: "Medusamon On Play trashes Lv.4 target"
 setup:
   deck1_archetype: "medusamon"
@@ -574,10 +574,10 @@ assertions:
 python -m pytest tests -m scenario -v
 
 # Single scenario via CLI
-python tools/run_scenario.py tests/scenarios/medusamon/bt24_059.yaml
+python code/tools/run_scenario.py code/engine_py_legacy/tests/scenarios/medusamon/bt24_059.yaml
 
 # All scenarios for an archetype via CLI
-python tools/run_scenario.py tests/scenarios/medusamon/ --all
+python code/tools/run_scenario.py code/engine_py_legacy/tests/scenarios/medusamon/ --all
 ```
 
 ### Assertion types
