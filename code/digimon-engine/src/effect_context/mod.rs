@@ -1707,6 +1707,59 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(perm.player).trash.push(removed);
     }
 
+    /// Strip the top digivolution source from `target`'s stack and route the
+    /// underlying card to the target's controller's trash. Returns `true` on
+    /// success; `false` if the target handle is invalid or the stack is empty.
+    ///
+    /// Used by card effects that say "trash the top digivolution source of
+    /// this Digimon" — the bool-returning, gate-friendly counterpart to
+    /// `armor_purge_top` (which is reserved for the `<Armor Purge>` keyword
+    /// auto-install body and panics on insufficient stack).
+    ///
+    /// Mirrors `armor_purge_top`'s observer dispatch: after the trash, fires
+    /// `OnDigivolutionCardTrashed` once per player and drains the queue, so
+    /// observers (e.g. Rocks-archetype source-trash listeners) see the
+    /// trashed top. The trashed card moves through the standard trash path —
+    /// no special routing.
+    ///
+    /// Reject-before-mutate discipline: invalid handle and empty stack both
+    /// return `false` before any state change.
+    pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        // Validate target slot.
+        let permanent = match self
+            .game
+            .player_mut(target.player)
+            .battle_area
+            .get_mut(target.index as usize)
+        {
+            Some(p) => p,
+            None => return false,
+        };
+        // Pop top of card_sources; bail clean if empty.
+        let removed = match permanent.card_sources.pop() {
+            Some(s) => s,
+            None => return false,
+        };
+        // Route the trashed source to the controller's trash (sources are
+        // controlled by the permanent's controller).
+        let controller = target.player;
+        self.game.player_mut(controller).trash.push(removed);
+
+        // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors
+        // `armor_purge_top` (effect_context/mod.rs:~1604) and the
+        // sources-below-top dispatch in `Game::return_to_hand` /
+        // `Game::return_to_deck`. Enqueue once per player so observers on
+        // either side of the field pick it up.
+        for pid in 0..self.game.players.len() {
+            self.game.enqueue_triggered(
+                crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+            );
+        }
+        self.game.drain_effect_queue();
+        true
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_hand(

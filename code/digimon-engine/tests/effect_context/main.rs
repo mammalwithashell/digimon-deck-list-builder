@@ -14,3 +14,4 @@ mod play_from_materials;
 mod play_from_security;
 mod play_from_trash;
 mod trash_card_source;
+mod trash_top_source;
