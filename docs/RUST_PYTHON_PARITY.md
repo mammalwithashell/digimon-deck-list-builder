@@ -410,6 +410,25 @@ Rust (like Python's mask) does NOT currently track `_turn_activate_count` for Ha
 
 **Coverage:** [tests/action_main_effects_parity.rs](../code/digimon-engine/tests/action_main_effects_parity.rs) — 14 cases: fires / suppressions per zone (condition gate, OOB index, wrong timing), Field OPT exhaustion, Field inherited-filter, mask ↔ decoder consistency for both Field (OPT-aware) and Hand (no OPT).
 
+### 4.5e 🟢 DNA digivolve execution — implemented
+
+**User-action path** — `Game::initiate_dna_digivolve` ([game_actions.rs:2111](../code/digimon-engine/src/game_actions.rs#L2111)) installs a two-stage `SelectionKind::Material` chain. Stage 1 picks the first material, stage 2 picks the second. Stage 2 resolution computes the matching `DnaCost` via `get_dna_stacking_order`, applies `BeforePayCost` reductions, and calls `Game::dna_digivolve_inner`.
+
+**Engine-effect path** — `EffectContext::effect_initiated_dna_digivolve` ([effect_context/mod.rs](../code/digimon-engine/src/effect_context/mod.rs)) delegates to the same `Game::dna_digivolve_inner`. The wrapper handles the IR's `cost: i32` + `ignore_requirements: bool` shape and the pay-memory-bypass branch.
+
+**Shared core** — `Game::dna_digivolve_inner` performs material consumption, hand-card consumption, stack merging, optional memory payment, optional digivolution-bonus draw, and trigger firing.
+
+**Trigger surface** (both paths): `WhenDigivolving` (merged perm) → drain → `OnDigivolve` (global) → drain → `OnDnaDigivolve` (merged perm) → drain.
+
+**Stack ordering** (canonical, both paths): `target_a.card_sources ++ target_b.card_sources ++ [from_hand]`. `target_a` corresponds to `DnaCost::requirement1`. Diverges from Python's `bottom + top + [evo]` order; Python is sunset and the printed rules don't specify intra-stack ordering between materials.
+
+**Coverage:**
+- `tests/effect_context/effect_initiated_dna_digivolve.rs` — engine-effect path (4 tests including `OnDnaDigivolve` firing)
+- `tests/dna_digivolve_user_action.rs` — user-action path (4 tests covering two-stage flow, memory cost, draw bonus, phase rejection)
+- `tests/dsl/phase2g_on_dna_digivolve.rs` — DSL `<OnDnaDigivolve>` clause from both paths
+
+**Known DSL schema gap:** `CardSpec` does not yet support authoring `dna_costs` in YAML — DNA-digivolve cards must supply cost data via the `CardData` ingest path. The OnDnaDigivolve *clause* is fully expressible in DSL via `when: on_dna_digivolve`; only the cost-data side is missing. Tracked separately.
+
 ### 4.6 🟡 Interrupt-phase mask coverage — partial
 
 End-of-turn surface is complete for mask parity — Vortex (§4.6a) + Overclock/MayAttack/ForceAttack (§4.6c) emission, plus phase transition (§4.6b) and `pass_end_of_turn_action` resumption. Overclock sacrifice *execution* landed with §4.6c-residual. Combat interrupts (§4.6d) support Alliance, Counter, and Block; selection helpers now cover `SelectTarget` / `SelectHand` / `SelectTrash` / `SelectMaterial` / `EffectChoice` / `TriggerOrder`. Remaining per-effect selection kinds (`SelectReveal` / `SelectSecurity` / `SelectSource`) track as §4.6d-residual follow-up work.
