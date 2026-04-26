@@ -1132,7 +1132,8 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         //
         // ## Two-effect install
         //
-        // 1. `EndOfYourTurn` triggered effect, `.optional()`. On accept,
+        // 1. `EndOfYourTurn` triggered effect (NOT `.optional()` — see
+        //    "Where the 'may' lives" below). Body unconditionally
         //    grants `MayAttack` + `CanAttackUnsuspended` modifiers on
         //    self with `Expiry::EndOfTurn`. The end-of-turn-attack flow
         //    in `game_phases::end_turn` reads `has_end_of_turn_keywords`,
@@ -1154,14 +1155,15 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         //
         // ## Optionality (RULES_CONTEXT 16-37: Optional)
         //
-        // The outer `.optional()` accept dialog represents the printed
-        // "may". Declining (PASS) skips the entire body — no modifiers,
-        // no attack window. The `EndOfAttack` observer is always
-        // installed (it's a separate Effect on every Execute carrier),
-        // but its body short-circuits when no attack is in flight or
-        // when the Execute carrier was not the attacker, so a declined
-        // trigger never triggers a self-delete. DCGO arrives at the
-        // same outcome via `UntilEndAttackEffects` only firing when
+        // The printed "may" surfaces at the EOT-action phase PASS
+        // exit, not at the EndOfYourTurn trigger — see "Where the
+        // 'may' lives" below for the design rationale. PASS at
+        // EOT-action skips the granted attack; the `EndOfAttack`
+        // observer is gated on `pa.attacker == me`, which never holds
+        // when no attack initiates, so a declined Execute leaves the
+        // carrier on field and the `Expiry::EndOfTurn` modifiers expire
+        // cleanly on rotation. DCGO arrives at the same observable
+        // outcome via `UntilEndAttackEffects` only firing when
         // `SelectAttackEffect` actually runs.
         //
         // ## Self-scope
