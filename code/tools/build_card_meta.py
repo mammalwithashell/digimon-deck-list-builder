@@ -18,9 +18,12 @@ import json
 import sys
 from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_CODE_DIR = _PROJECT_ROOT / "code"
+# Add `code/` (not the repo root) so sibling-package imports like
+# `tools.resolve_deck` resolve under the post-Phase-6 layout.
+if str(_CODE_DIR) not in sys.path:
+    sys.path.insert(0, str(_CODE_DIR))
 
 from tools.resolve_deck import _load_cards_json_raw, build_card_meta_md  # noqa: E402
 
