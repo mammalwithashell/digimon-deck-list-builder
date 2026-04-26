@@ -263,3 +263,95 @@ fn as_selecting_player_parked_body_drains_outer_tail() {
         "outer-tail GainMemory(1) must run after body's select resolves"
     );
 }
+
+/// Regression guard: an outer-tail select sibling must NOT inherit the
+/// `AsSelectingPlayer` override from a preceding step.
+///
+/// Steps: `[AsSelectingPlayer { of: Opponent, body: [select_own_perm] },
+///          select_own_perm]`
+///
+/// The body's parked select routes to P1 (the override). When P1 resolves
+/// it, the parked-callback boundary reconstructs `cb_ctx` with
+/// `override = Some(1)` (Task 1's `new_with_override`), the body completes,
+/// and `drain_dsl_outer_tail` runs the outer-tail steps. Without the leak
+/// fix, `cb_ctx`'s override would still be `Some(1)`, so the outer-tail's
+/// `select_own_permanent` would route to P1 again. With the fix
+/// (`drain_dsl_outer_tail` calls `set_override_selecting_player(None)`
+/// before running the tail), the second select must route to the
+/// controller (P0).
+#[test]
+fn as_selecting_player_outer_tail_select_does_not_inherit_override() {
+    let mut runner = fixture_with_permanents();
+    let src_card = runner.game.players[0].hand[0].handle();
+
+    let body = vec![CompiledStep::SelectOwnPermanent {
+        filter: CompiledPredicate::default(),
+        bind_as: None,
+        prompt: "body pick".to_string(),
+        prompt_key: None,
+        optional: false,
+    }];
+    let steps = vec![
+        CompiledStep::AsSelectingPlayer {
+            of: CompiledPlayerRef::Opponent,
+            body,
+        },
+        CompiledStep::SelectOwnPermanent {
+            filter: CompiledPredicate::default(),
+            bind_as: None,
+            prompt: "outer-tail pick".to_string(),
+            prompt_key: None,
+            optional: false,
+        },
+    ];
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        let mut bindings = Bindings::new();
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    // First: body's select parks under the override (P1).
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("body's select_own_permanent should have parked");
+    assert_eq!(
+        pending.selecting_player, 1,
+        "body select must route to override (P1)"
+    );
+    let body_action = pending.valid_action_ids[0];
+
+    runner
+        .game
+        .resolve_selection(1, body_action)
+        .expect("P1 should resolve the body's parked selection");
+
+    // Second: after the body's callback completes, drain_dsl_outer_tail
+    // installs the outer-tail's select_own_permanent. It MUST route to the
+    // controller (P0) — not the override (P1) — because drain_dsl_outer_tail
+    // clears the override before running the parked tail.
+    let pending2 = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("outer-tail select_own_permanent should have parked");
+    assert_eq!(
+        pending2.selecting_player, 0,
+        "outer-tail select must route to controller (P0), NOT inherit the \
+         AsSelectingPlayer override — drain_dsl_outer_tail must clear the \
+         override before running parked tail steps"
+    );
+    let tail_action = pending2.valid_action_ids[0];
+
+    runner
+        .game
+        .resolve_selection(0, tail_action)
+        .expect("P0 (controller) should resolve the outer-tail selection");
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "all selections should be resolved"
+    );
+}
