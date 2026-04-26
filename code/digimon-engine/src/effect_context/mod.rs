@@ -1897,7 +1897,7 @@ impl<'a> EffectContext<'a> {
     ///
     /// ## Triggers
     ///
-    /// `WhenDigivolving` → `OnDigivolve` (global) → `OnDnaDigivolve`,
+    /// `WhenDigivolving` → `OnDnaDigivolve` → `OnDigivolve` (global),
     /// each followed by a queue drain. See
     /// `Game::dna_digivolve_inner` for the firing sequence.
     ///

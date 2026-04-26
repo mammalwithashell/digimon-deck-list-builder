@@ -79,3 +79,4 @@ mod phase3d_raw_rust_formula;
 mod phase3d_event_context;
 mod phase3d_scheduled_generation;
 mod phase3e_scheduled_reentry;
+mod phase3e_on_dna_digivolve;

@@ -1102,8 +1102,8 @@ impl Game {
     ///
     /// **Trigger surface (in order):**
     /// 1. `WhenDigivolving` on the merged permanent → drain
-    /// 2. `OnDigivolve` on every player's battle area → drain
-    /// 3. `OnDnaDigivolve` on the merged permanent → drain
+    /// 2. `OnDnaDigivolve` on the merged permanent → drain
+    /// 3. `OnDigivolve` on every player's battle area → drain
     ///
     /// **Index-shift:** if `target_a.player == target_b.player` and
     /// `target_b.index < target_a.index`, the merged permanent ends up at
@@ -1199,18 +1199,18 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        self.enqueue_triggered(
+            EffectTiming::OnDnaDigivolve,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue();
+
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnDigivolve,
                 TriggerSource::PlayerBattleArea(pid as PlayerId),
             );
         }
-        self.drain_effect_queue();
-
-        self.enqueue_triggered(
-            EffectTiming::OnDnaDigivolve,
-            TriggerSource::Permanent(merged_handle),
-        );
         self.drain_effect_queue();
 
         Some(merged_handle)
