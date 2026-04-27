@@ -965,6 +965,21 @@ pub fn rust_get_mask(
     Ok(action_mask_bytes(game))
 }
 
+#[tauri::command]
+pub fn rust_get_board_tensor_summary(
+    state: tauri::State<'_, RustEngineState>,
+    player_id: PlayerId,
+) -> Result<TensorSummaryDto, String> {
+    let game_guard = state.game.lock().map_err(|e| e.to_string())?;
+    let session_guard = state.session.lock().map_err(|e| e.to_string())?;
+    let game = game_guard.as_ref().ok_or("No active game")?;
+    let registry = session_guard.registry.as_ref().ok_or_else(|| {
+        "tensor summary: session has no card registry (game not created?)".to_string()
+    })?;
+    let mask = build_action_mask(game, player_id);
+    Ok(tensor_summary_for(game, player_id, registry, &mask))
+}
+
 /// Read the accumulated log (empty for now — Rust engine doesn't log yet).
 #[tauri::command]
 pub fn rust_get_log(
