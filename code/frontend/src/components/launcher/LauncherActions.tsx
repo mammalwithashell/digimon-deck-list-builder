@@ -14,7 +14,7 @@ export function LauncherActions({ hasDecks }: LauncherActionsProps) {
           <span className="launcher-action-desc">Start a local match on the redesigned board.</span>
           <span className="launcher-action-meta">ENTER</span>
         </Link>
-        <Link className="launcher-action" to={hasDecks ? '/deckbuilder' : '/deckbuilder?import=1'}>
+        <Link className="launcher-action" to={hasDecks ? '/deckbuilder' : '/deckbuilder/new?import=1'}>
           <span className="launcher-action-label">// LIBRARY</span>
           <span className="launcher-action-name">MY DECKS</span>
           <span className="launcher-action-desc">Saved locally for desktop play.</span>
@@ -24,7 +24,7 @@ export function LauncherActions({ hasDecks }: LauncherActionsProps) {
       <div className="launcher-quick">
         <Link to="/patch-notes"><span>// Updates</span><b>Patch notes</b></Link>
         <Link to="/lobby"><span>// Online</span><b>Lobby</b></Link>
-        <Link to="/deckbuilder"><span>// Build</span><b>Deck builder</b></Link>
+        <Link to="/deckbuilder/new"><span>// Build</span><b>Deck builder</b></Link>
       </div>
     </>
   );

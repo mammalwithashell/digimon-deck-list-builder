@@ -443,6 +443,32 @@ class CreateDeckRequest(BaseModel):
     tags: List[str] = []
 
 
+class DeckFolderResponse(BaseModel):
+    id: str
+    owner_id: str
+    name: str
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CreateDeckFolderRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=64)
+    sort_order: int = 0
+
+
+class UpdateDeckFolderRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=64)
+    sort_order: Optional[int] = None
+
+
+class UpdateDeckLibraryRequest(BaseModel):
+    folder_id: Optional[str] = None
+    is_pinned: Optional[bool] = None
+
+
 class UpdateDeckRequest(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
@@ -459,6 +485,7 @@ class UpdateDeckRequest(BaseModel):
 class DeckResponse(BaseModel):
     id: str
     owner_id: str
+    folder_id: Optional[str] = None
     name: str
     description: str
     game_mode: str
@@ -471,6 +498,7 @@ class DeckResponse(BaseModel):
     is_valid: bool
     validation_errors: List[str]
     is_public: bool
+    is_pinned: bool = False
     tags: List[str]
     meta_tier: Optional[str] = None
     meta_archetype: Optional[str] = None
@@ -483,12 +511,20 @@ class DeckResponse(BaseModel):
 class DeckSummary(BaseModel):
     id: str
     name: str
+    description: str = ""
     game_mode: str
     is_valid: bool
     is_public: bool
+    is_pinned: bool = False
+    folder_id: Optional[str] = None
     card_count: int
+    main_count: int
+    egg_count: int
+    tags: List[str] = Field(default_factory=list)
     meta_tier: Optional[str] = None
     meta_archetype: Optional[str] = None
+    colors: List[str] = Field(default_factory=list)
+    highest_level: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

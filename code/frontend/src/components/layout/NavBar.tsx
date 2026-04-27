@@ -32,7 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'deck-play',
     title: 'Gameplay',
     items: [
-      { to: '/deckbuilder', label: 'Deck Builder' },
+      { to: '/deckbuilder', label: 'Deck Library' },
       { to: '/game', label: 'Play' },
     ],
   },

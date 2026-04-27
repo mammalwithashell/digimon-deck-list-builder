@@ -15,6 +15,8 @@ use uuid::Uuid;
 pub struct Deck {
     pub id: String,
     pub owner_id: String,
+    #[serde(default)]
+    pub folder_id: Option<String>,
     pub name: String,
     #[serde(default)]
     pub description: String,
@@ -34,6 +36,8 @@ pub struct Deck {
     #[serde(default)]
     pub is_public: bool,
     #[serde(default)]
+    pub is_pinned: bool,
+    #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
     pub meta_tier: Option<String>,
@@ -47,17 +51,48 @@ pub struct Deck {
 pub struct DeckSummary {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub description: String,
     pub game_mode: String,
     pub is_valid: bool,
     pub is_public: bool,
+    #[serde(default)]
+    pub is_pinned: bool,
+    #[serde(default)]
+    pub folder_id: Option<String>,
     pub card_count: usize,
+    pub main_count: usize,
+    pub egg_count: usize,
+    #[serde(default)]
+    pub tags: Vec<String>,
     #[serde(default)]
     pub meta_tier: Option<String>,
     #[serde(default)]
     pub meta_archetype: Option<String>,
+    #[serde(default)]
+    pub colors: Vec<String>,
+    #[serde(default)]
+    pub highest_level: Option<u8>,
     pub created_at: String,
     pub updated_at: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeckFolder {
+    pub id: String,
+    pub owner_id: String,
+    pub name: String,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct LibraryMetadata {
+    folders: Vec<DeckFolder>,
+}
+
+const DEFAULT_FOLDER_NAMES: [&str; 3] = ["Tournament", "Experimental", "Casual"];
 
 fn decks_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let base = app
@@ -71,9 +106,80 @@ fn decks_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+fn library_metadata_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let base = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("app_data_dir unavailable: {e}"))?;
+    if !base.exists() {
+        fs::create_dir_all(&base).map_err(|e| format!("create app data dir: {e}"))?;
+    }
+    Ok(base.join("deck_library.json"))
+}
+
 fn read_deck_file(path: &Path) -> Option<Deck> {
     let bytes = fs::read(path).ok()?;
     serde_json::from_slice(&bytes).ok()
+}
+
+fn read_metadata(path: &Path) -> LibraryMetadata {
+    let Some(bytes) = fs::read(path).ok() else {
+        return LibraryMetadata::default();
+    };
+    serde_json::from_slice(&bytes).unwrap_or_default()
+}
+
+fn write_metadata(path: &Path, metadata: &LibraryMetadata) -> Result<(), String> {
+    let tmp_path = path.with_extension("json.tmp");
+    let json = serde_json::to_vec_pretty(metadata)
+        .map_err(|e| format!("serialize deck library metadata: {e}"))?;
+    fs::write(&tmp_path, json).map_err(|e| format!("write deck library metadata: {e}"))?;
+    fs::rename(&tmp_path, path).map_err(|e| format!("rename deck library metadata: {e}"))?;
+    Ok(())
+}
+
+fn ensure_default_folders(path: &Path) -> Result<LibraryMetadata, String> {
+    let mut metadata = read_metadata(path);
+    if metadata.folders.is_empty() {
+        let now = chrono::Utc::now().to_rfc3339();
+        metadata.folders = DEFAULT_FOLDER_NAMES
+            .iter()
+            .enumerate()
+            .map(|(idx, name)| DeckFolder {
+                id: Uuid::new_v4().to_string(),
+                owner_id: "guest".into(),
+                name: (*name).into(),
+                sort_order: idx as i32,
+                created_at: now.clone(),
+                updated_at: now.clone(),
+            })
+            .collect();
+        write_metadata(path, &metadata)?;
+    }
+    Ok(metadata)
+}
+
+fn deck_summary(deck: Deck) -> DeckSummary {
+    DeckSummary {
+        id: deck.id,
+        name: deck.name,
+        description: deck.description,
+        game_mode: deck.game_mode,
+        is_valid: deck.is_valid,
+        is_public: deck.is_public,
+        is_pinned: deck.is_pinned,
+        folder_id: deck.folder_id,
+        card_count: deck.main_deck.len() + deck.egg_deck.len(),
+        main_count: deck.main_deck.len(),
+        egg_count: deck.egg_deck.len(),
+        tags: deck.tags,
+        meta_tier: deck.meta_tier,
+        meta_archetype: deck.meta_archetype,
+        colors: vec![],
+        highest_level: None,
+        created_at: deck.created_at,
+        updated_at: deck.updated_at,
+    }
 }
 
 #[tauri::command]
@@ -89,18 +195,7 @@ pub fn decks_list(app: AppHandle) -> Result<Vec<DeckSummary>, String> {
         }
         match read_deck_file(&entry.path()) {
             Some(deck) => {
-                out.push(DeckSummary {
-                    id: deck.id,
-                    name: deck.name,
-                    game_mode: deck.game_mode,
-                    is_valid: deck.is_valid,
-                    is_public: deck.is_public,
-                    card_count: deck.main_deck.len() + deck.egg_deck.len(),
-                    meta_tier: deck.meta_tier,
-                    meta_archetype: deck.meta_archetype,
-                    created_at: deck.created_at,
-                    updated_at: deck.updated_at,
-                });
+                out.push(deck_summary(deck));
             }
             None => {
                 eprintln!(
@@ -155,6 +250,120 @@ pub fn decks_delete(app: AppHandle, deck_id: String) -> Result<bool, String> {
     }
 }
 
+#[tauri::command]
+pub fn deck_folders_list(app: AppHandle) -> Result<Vec<DeckFolder>, String> {
+    let path = library_metadata_path(&app)?;
+    let mut metadata = ensure_default_folders(&path)?;
+    metadata
+        .folders
+        .sort_by(|a, b| a.sort_order.cmp(&b.sort_order).then_with(|| a.name.cmp(&b.name)));
+    Ok(metadata.folders)
+}
+
+#[tauri::command]
+pub fn deck_folders_create(app: AppHandle, name: String, sort_order: Option<i32>) -> Result<DeckFolder, String> {
+    let path = library_metadata_path(&app)?;
+    let mut metadata = ensure_default_folders(&path)?;
+    if metadata.folders.iter().any(|f| f.name.eq_ignore_ascii_case(name.trim())) {
+        return Err("Folder name already exists".into());
+    }
+    let now = chrono::Utc::now().to_rfc3339();
+    let folder = DeckFolder {
+        id: Uuid::new_v4().to_string(),
+        owner_id: "guest".into(),
+        name: name.trim().into(),
+        sort_order: sort_order.unwrap_or(metadata.folders.len() as i32),
+        created_at: now.clone(),
+        updated_at: now,
+    };
+    metadata.folders.push(folder.clone());
+    write_metadata(&path, &metadata)?;
+    Ok(folder)
+}
+
+#[tauri::command]
+pub fn deck_folders_update(
+    app: AppHandle,
+    folder_id: String,
+    name: Option<String>,
+    sort_order: Option<i32>,
+) -> Result<DeckFolder, String> {
+    let path = library_metadata_path(&app)?;
+    let mut metadata = ensure_default_folders(&path)?;
+    if let Some(ref next_name) = name {
+        if metadata
+            .folders
+            .iter()
+            .any(|f| f.id != folder_id && f.name.eq_ignore_ascii_case(next_name.trim()))
+        {
+            return Err("Folder name already exists".into());
+        }
+    }
+    let folder = metadata
+        .folders
+        .iter_mut()
+        .find(|f| f.id == folder_id)
+        .ok_or_else(|| format!("folder not found: {folder_id}"))?;
+    if let Some(name) = name {
+        folder.name = name.trim().into();
+    }
+    if let Some(sort_order) = sort_order {
+        folder.sort_order = sort_order;
+    }
+    folder.updated_at = chrono::Utc::now().to_rfc3339();
+    let out = folder.clone();
+    write_metadata(&path, &metadata)?;
+    Ok(out)
+}
+
+#[tauri::command]
+pub fn deck_folders_delete(app: AppHandle, folder_id: String) -> Result<bool, String> {
+    let path = library_metadata_path(&app)?;
+    let mut metadata = ensure_default_folders(&path)?;
+    let before = metadata.folders.len();
+    metadata.folders.retain(|f| f.id != folder_id);
+    if metadata.folders.len() == before {
+        return Ok(false);
+    }
+    write_metadata(&path, &metadata)?;
+
+    let dir = decks_dir(&app)?;
+    for entry in fs::read_dir(&dir).map_err(|e| format!("read decks dir: {e}"))? {
+        let entry = entry.map_err(|e| format!("dir entry: {e}"))?;
+        if entry.path().extension().and_then(|s| s.to_str()) != Some("json") {
+            continue;
+        }
+        let Some(mut deck) = read_deck_file(&entry.path()) else {
+            continue;
+        };
+        if deck.folder_id.as_deref() == Some(folder_id.as_str()) {
+            deck.folder_id = None;
+            decks_put(app.clone(), deck)?;
+        }
+    }
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn decks_update_library(
+    app: AppHandle,
+    deck_id: String,
+    folder_id: Option<String>,
+    clear_folder: Option<bool>,
+    is_pinned: Option<bool>,
+) -> Result<Deck, String> {
+    let mut deck = decks_get(app.clone(), deck_id)?;
+    if clear_folder.unwrap_or(false) {
+        deck.folder_id = None;
+    } else if folder_id.is_some() {
+        deck.folder_id = folder_id;
+    }
+    if let Some(is_pinned) = is_pinned {
+        deck.is_pinned = is_pinned;
+    }
+    decks_put(app, deck)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,6 +379,7 @@ mod tests {
         Deck {
             id: id.into(),
             owner_id: "guest_abc".into(),
+            folder_id: None,
             name: format!("deck-{id}"),
             description: String::new(),
             game_mode: "standard".into(),
@@ -181,6 +391,7 @@ mod tests {
             is_valid: true,
             validation_errors: vec![],
             is_public: false,
+            is_pinned: false,
             tags: vec![],
             meta_tier: None,
             meta_archetype: None,
@@ -245,5 +456,63 @@ mod tests {
             .collect();
         assert_eq!(jsons.len(), 1);
         assert_eq!(jsons[0].path().file_name().unwrap(), "good.json");
+    }
+
+    #[test]
+    fn deck_summary_includes_library_fields() {
+        let mut deck = sample_deck("d1");
+        deck.folder_id = Some("folder-1".into());
+        deck.is_pinned = true;
+        deck.description = "test notes".into();
+        deck.tags = vec!["meta".into()];
+
+        let summary = deck_summary(deck);
+
+        assert_eq!(summary.folder_id.as_deref(), Some("folder-1"));
+        assert!(summary.is_pinned);
+        assert_eq!(summary.description, "test notes");
+        assert_eq!(summary.main_count, 50);
+        assert_eq!(summary.egg_count, 5);
+        assert_eq!(summary.tags, vec!["meta"]);
+    }
+
+    #[test]
+    fn metadata_seeds_default_folders_once() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join("deck_library.json");
+
+        let metadata = ensure_default_folders(&path).unwrap();
+        assert_eq!(metadata.folders.len(), 3);
+        assert_eq!(metadata.folders[0].name, "Tournament");
+
+        let again = ensure_default_folders(&path).unwrap();
+        assert_eq!(again.folders.len(), 3);
+        assert_eq!(again.folders[1].name, "Experimental");
+    }
+
+    #[test]
+    fn metadata_round_trips_custom_folder() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join("deck_library.json");
+        let folder = DeckFolder {
+            id: "folder-1".into(),
+            owner_id: "guest".into(),
+            name: "Locals".into(),
+            sort_order: 7,
+            created_at: "2026-04-26T00:00:00Z".into(),
+            updated_at: "2026-04-26T00:00:00Z".into(),
+        };
+        write_metadata(
+            &path,
+            &LibraryMetadata {
+                folders: vec![folder],
+            },
+        )
+        .unwrap();
+
+        let back = read_metadata(&path);
+        assert_eq!(back.folders.len(), 1);
+        assert_eq!(back.folders[0].name, "Locals");
+        assert_eq!(back.folders[0].sort_order, 7);
     }
 }
