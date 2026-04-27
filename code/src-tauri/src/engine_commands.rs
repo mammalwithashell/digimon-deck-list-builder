@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use digimon_engine::action::build_action_mask;
+use digimon_engine::action::explain::{explain_action, ActionExplanation};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::combat::AttackResult;
@@ -505,6 +506,27 @@ pub struct GameEventDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TensorSummaryDto {
+    pub player_id: PlayerId,
+    pub tensor_size: usize,
+    pub mask_size: usize,
+    pub legal_action_count: usize,
+    pub turn_count: u16,
+    pub phase: String,
+    pub memory: i16,
+    pub tensor_head: Vec<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionTraceDto {
+    pub actor: String,
+    pub player_id: PlayerId,
+    pub action_id: u16,
+    pub decoded: ActionExplanation,
+    pub tensor_summary: Option<TensorSummaryDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActionResponseDto {
     pub state: GameStateDto,
     pub action_mask: Vec<u8>,
@@ -864,6 +886,41 @@ fn validate_shapes(obs: &[f32], mask: &[f32], model_id: &str) -> Result<(), Stri
     Ok(())
 }
 
+fn tensor_summary_for(
+    game: &Game,
+    player_id: PlayerId,
+    registry: &CardRegistry,
+    mask: &[f32],
+) -> TensorSummaryDto {
+    let tensor = build_tensor(game, player_id, registry);
+    TensorSummaryDto {
+        player_id,
+        tensor_size: tensor.len(),
+        mask_size: mask.len(),
+        legal_action_count: mask.iter().filter(|&&v| v > 0.0).count(),
+        turn_count: game.turn_count,
+        phase: format!("{:?}", game.current_phase),
+        memory: game.memory,
+        tensor_head: tensor.iter().take(16).copied().collect(),
+    }
+}
+
+fn action_trace_for(
+    game: &Game,
+    actor: &str,
+    player_id: PlayerId,
+    action_id: u16,
+    tensor_summary: Option<TensorSummaryDto>,
+) -> ActionTraceDto {
+    ActionTraceDto {
+        actor: actor.to_string(),
+        player_id,
+        action_id,
+        decoded: explain_action(game, player_id, action_id),
+        tensor_summary,
+    }
+}
+
 /// Read the current action mask.
 #[tauri::command]
 pub fn rust_get_mask(
@@ -1079,6 +1136,49 @@ mod tests {
         }
         let registry = CardRegistry::from_cards(&db);
         (game, registry)
+    }
+
+    #[test]
+    fn tensor_summary_reports_engine_contract() {
+        let (game, registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        let mask = digimon_engine::action::build_action_mask(&game, pid);
+        let summary = tensor_summary_for(&game, pid, &registry, &mask);
+
+        assert_eq!(summary.player_id, pid);
+        assert_eq!(summary.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
+        assert_eq!(summary.mask_size, digimon_engine::action::space::ACTION_SPACE_SIZE);
+        assert_eq!(summary.tensor_size, 1375);
+        assert_eq!(summary.mask_size, 2168);
+        assert!(summary.legal_action_count > 0);
+        assert_eq!(summary.phase, format!("{:?}", game.current_phase));
+    }
+
+    #[test]
+    fn action_trace_serializes_human_action_context() {
+        let (mut game, registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        let mask = digimon_engine::action::build_action_mask(&game, pid);
+        let trace = action_trace_for(
+            &game,
+            "human",
+            pid,
+            digimon_engine::action::space::PASS,
+            Some(tensor_summary_for(&game, pid, &registry, &mask)),
+        );
+
+        assert_eq!(trace.actor, "human");
+        assert_eq!(trace.player_id, pid);
+        assert_eq!(trace.action_id, digimon_engine::action::space::PASS);
+        assert_eq!(trace.decoded.kind, digimon_engine::action::explain::ActionKind::Pass);
+        assert!(trace.tensor_summary.is_some());
+
+        let json = serde_json::to_string(&trace).unwrap();
+        assert!(json.contains("\"actor\":\"human\""));
+        assert!(json.contains("\"tensor_size\":1375"));
+        assert!(json.contains("\"mask_size\":2168"));
+
+        game.decode_action(digimon_engine::action::space::PASS, pid);
     }
 
     #[test]
