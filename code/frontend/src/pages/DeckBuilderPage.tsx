@@ -43,6 +43,7 @@ export function DeckBuilderPage() {
     deckId,
     setDeckId,
     loadDeck,
+    clearDeck,
     mainDeck,
     eggDeck,
     isDirty,
@@ -70,10 +71,14 @@ export function DeckBuilderPage() {
   }, [testedCardIds, setTestedCardIds]);
 
   useEffect(() => {
-    if (new URLSearchParams(location.search).get('import') === '1') {
+    const params = new URLSearchParams(location.search);
+    if (params.get('new') === '1') {
+      clearDeck();
+      setShowImport(false);
+    } else if (params.get('import') === '1') {
       setShowImport(true);
     }
-  }, [location.search]);
+  }, [clearDeck, location.search]);
 
   useEffect(() => {
     if (!routeDeckId || routeDeckId === deckId) return;
