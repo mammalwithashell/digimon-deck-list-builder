@@ -534,6 +534,7 @@ pub struct ActionResponseDto {
     pub logs: Vec<String>,
     pub events: Vec<GameEventDto>,
     pub action_context: serde_json::Value,
+    pub action_traces: Vec<ActionTraceDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -551,6 +552,7 @@ pub struct StepResponseDto {
     pub events: Vec<GameEventDto>,
     pub is_human_turn: bool,
     pub is_game_over: bool,
+    pub action_traces: Vec<ActionTraceDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -751,8 +753,17 @@ pub fn rust_submit_action(
     let pid = current_decision_player(game);
     let action_u16 = u16::try_from(action)
         .map_err(|_| format!("action {action} is out of range for a u16 action ID"))?;
+    let mask_before = build_action_mask(game, pid);
+    let human_trace = action_trace_for(
+        game,
+        "human",
+        pid,
+        action_u16,
+        optional_tensor_summary_for(game, pid, session_guard.registry.as_ref(), &mask_before),
+    );
     game.decode_action(action_u16, pid);
-    run_agent_steps(game, &session_guard, &inference)?;
+    let mut action_traces = vec![human_trace];
+    action_traces.extend(run_agent_steps(game, &session_guard, &inference)?);
     let events = drain_events(game);
     let mask = action_mask_bytes(game);
     let is_over = game.game_over;
@@ -763,6 +774,7 @@ pub fn rust_submit_action(
         logs: Vec::new(),
         events,
         action_context: serde_json::json!({}),
+        action_traces,
     })
 }
 
@@ -785,7 +797,7 @@ pub fn rust_step_game(
     let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
     let session_guard = state.session.lock().map_err(|e| e.to_string())?;
     let game = ensure_game(&mut game_guard)?;
-    run_agent_steps(game, &session_guard, &inference)?;
+    let action_traces = run_agent_steps(game, &session_guard, &inference)?;
     let mask = action_mask_bytes(game);
     let pid = current_decision_player(game);
     let is_human_turn = matches!(
@@ -800,6 +812,7 @@ pub fn rust_step_game(
         events: Vec::new(),
         is_human_turn,
         is_game_over: is_over,
+        action_traces,
     })
 }
 
@@ -822,21 +835,25 @@ pub fn run_agent_steps(
     game: &mut Game,
     session: &GameSession,
     inference: &InferenceState,
-) -> Result<(), String> {
+) -> Result<Vec<ActionTraceDto>, String> {
     // Cap iterations defensively so a bug in mask generation can't turn this
     // into an infinite spin. Normal games resolve in far fewer than this.
     const MAX_AGENT_STEPS: usize = 10_000;
+    let mut traces = Vec::new();
     for _ in 0..MAX_AGENT_STEPS {
         if game.game_over {
-            return Ok(());
+            return Ok(traces);
         }
         let pid = current_decision_player(game);
         let kind = decider_kind(session, pid);
-        let action = match kind {
-            PlayerKind::Human => return Ok(()),
+        let (actor, action) = match kind {
+            PlayerKind::Human => return Ok(traces),
             PlayerKind::Greedy => {
-                let mask = build_action_mask(game, pid);
-                digimon_engine::policies::greedy_action(game, &mask) as usize
+                let mask_before = build_action_mask(game, pid);
+                (
+                    "agent_greedy",
+                    digimon_engine::policies::greedy_action(game, &mask_before) as usize,
+                )
             }
             PlayerKind::Trained => {
                 let model_id = session
@@ -850,14 +867,22 @@ pub fn run_agent_steps(
                     "inference: session has no card registry (game not created?)".to_string()
                 })?;
                 let obs = build_tensor(game, pid, registry);
-                let mask = build_action_mask(game, pid);
-                validate_shapes(&obs, &mask, model_id)?;
-                inference.predict(model_id, &obs, &mask)?
+                let mask_before = build_action_mask(game, pid);
+                validate_shapes(&obs, &mask_before, model_id)?;
+                ("agent_trained", inference.predict(model_id, &obs, &mask_before)?)
             }
         };
         let action_u16 = u16::try_from(action).map_err(|_| {
             format!("agent returned out-of-range action {action}")
         })?;
+        let mask_before = build_action_mask(game, pid);
+        traces.push(action_trace_for(
+            game,
+            actor,
+            pid,
+            action_u16,
+            optional_tensor_summary_for(game, pid, session.registry.as_ref(), &mask_before),
+        ));
         game.decode_action(action_u16, pid);
     }
     Err(format!(
@@ -903,6 +928,15 @@ fn tensor_summary_for(
         memory: game.memory,
         tensor_head: tensor.iter().take(16).copied().collect(),
     }
+}
+
+fn optional_tensor_summary_for(
+    game: &Game,
+    player_id: PlayerId,
+    registry: Option<&CardRegistry>,
+    mask: &[f32],
+) -> Option<TensorSummaryDto> {
+    registry.map(|registry| tensor_summary_for(game, player_id, registry, mask))
 }
 
 fn action_trace_for(
@@ -1069,6 +1103,7 @@ mod tests {
             logs: Vec::new(),
             events: Vec::<GameEventDto>::new(),
             action_context: serde_json::json!({}),
+            action_traces: Vec::new(),
         };
 
         assert_eq!(
@@ -1182,6 +1217,67 @@ mod tests {
     }
 
     #[test]
+    fn action_response_includes_human_trace() {
+        let (mut game, registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        let mask_before = digimon_engine::action::build_action_mask(&game, pid);
+        let action = digimon_engine::action::space::PASS;
+        let human_trace = action_trace_for(
+            &game,
+            "human",
+            pid,
+            action,
+            Some(tensor_summary_for(&game, pid, &registry, &mask_before)),
+        );
+        game.decode_action(action, pid);
+
+        let resp = ActionResponseDto {
+            state: game_state_dto(&game),
+            action_mask: action_mask_bytes(&game),
+            is_game_over: game.game_over,
+            logs: Vec::new(),
+            events: Vec::<GameEventDto>::new(),
+            action_context: serde_json::json!({}),
+            action_traces: vec![human_trace],
+        };
+
+        assert_eq!(resp.action_traces.len(), 1);
+        assert_eq!(resp.action_traces[0].actor, "human");
+        assert_eq!(resp.action_traces[0].action_id, action);
+    }
+
+    #[test]
+    fn action_response_allows_human_trace_without_registry() {
+        let (mut game, _registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        let mask_before = digimon_engine::action::build_action_mask(&game, pid);
+        let action = digimon_engine::action::space::PASS;
+        let human_trace = action_trace_for(
+            &game,
+            "human",
+            pid,
+            action,
+            optional_tensor_summary_for(&game, pid, None, &mask_before),
+        );
+        game.decode_action(action, pid);
+
+        let resp = ActionResponseDto {
+            state: game_state_dto(&game),
+            action_mask: action_mask_bytes(&game),
+            is_game_over: game.game_over,
+            logs: Vec::new(),
+            events: Vec::<GameEventDto>::new(),
+            action_context: serde_json::json!({}),
+            action_traces: vec![human_trace],
+        };
+
+        assert_eq!(resp.action_traces.len(), 1);
+        assert_eq!(resp.action_traces[0].actor, "human");
+        assert_eq!(resp.action_traces[0].action_id, action);
+        assert!(resp.action_traces[0].tensor_summary.is_none());
+    }
+
+    #[test]
     fn run_agent_steps_stops_when_current_decider_is_human() {
         let (mut game, registry) = build_playable_game();
         let session = GameSession {
@@ -1191,8 +1287,9 @@ mod tests {
         };
         let inference = InferenceState::default();
         let before = (game.turn_count, game.current_phase);
-        run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
         let after = (game.turn_count, game.current_phase);
+        assert!(traces.is_empty());
         assert_eq!(before, after, "human seat should not advance state");
     }
 
@@ -1208,10 +1305,32 @@ mod tests {
             player_model_ids: vec![None, None],
         };
         let inference = InferenceState::default();
-        run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        assert!(!traces.is_empty());
+        assert!(traces.iter().all(|trace| trace.actor.starts_with("agent_")));
         assert!(
             game.game_over,
             "two greedy agents should play the game to completion"
+        );
+    }
+
+    #[test]
+    fn run_agent_steps_greedy_traces_without_registry() {
+        let (mut game, _registry) = build_playable_game();
+        let session = GameSession {
+            registry: None,
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+
+        assert!(!traces.is_empty());
+        assert!(traces.iter().all(|trace| trace.actor == "agent_greedy"));
+        assert!(traces.iter().all(|trace| trace.tensor_summary.is_none()));
+        assert!(
+            game.game_over,
+            "two greedy agents should still play to completion without registry"
         );
     }
 
@@ -1246,7 +1365,9 @@ mod tests {
         };
 
         let before_pid = current_decision_player(&game);
-        run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        assert!(!traces.is_empty());
+        assert!(traces.iter().all(|trace| trace.actor.starts_with("agent_")));
         // After the trained seat's turn the loop should have left us on a
         // human decider (or the game should be over).
         assert!(
