@@ -776,7 +776,7 @@ git commit -m "feat: add play flow state and adapters"
 - Modify: `code/frontend/src/components/launcher/LauncherShell.tsx`
 - Test: `code/frontend/e2e/play-flow.spec.ts`
 
-- [ ] **Step 1: Write a failing route smoke test**
+- [x] **Step 1: Write a failing route smoke test**
 
 Create `code/frontend/e2e/play-flow.spec.ts`:
 
@@ -824,7 +824,7 @@ test.describe('In Between play flow', () => {
 });
 ```
 
-- [ ] **Step 2: Run the route smoke test and verify it fails**
+- [x] **Step 2: Run the route smoke test and verify it fails**
 
 Run:
 
@@ -836,7 +836,7 @@ npm run e2e -- play-flow.spec.ts
 
 Expected: fail because `/play` is not routed and launcher PLAY still targets the old route.
 
-- [ ] **Step 3: Implement shared shell**
+- [x] **Step 3: Implement shared shell**
 
 Create `code/frontend/src/features/play/InBetweenShell.tsx`:
 
@@ -992,7 +992,7 @@ Create `code/frontend/src/features/play/InBetweenShell.css` with the mock-derive
 }
 ```
 
-- [ ] **Step 4: Wire routes and launcher links**
+- [x] **Step 4: Wire routes and launcher links**
 
 Modify `code/frontend/src/App.tsx`:
 
@@ -1027,7 +1027,7 @@ Modify `code/frontend/src/components/launcher/LauncherShell.tsx`:
 <Link className="launcher-nav-item" to="/play">Play</Link>
 ```
 
-- [ ] **Step 5: Run smoke test and commit**
+- [x] **Step 5: Run smoke test and commit**
 
 Run:
 

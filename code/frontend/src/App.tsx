@@ -9,8 +9,12 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { GamePage } from '@/pages/GamePage';
 import { DeckBuilderPage } from '@/pages/DeckBuilderPage';
 import { DeckLibraryPage } from '@/pages/DeckLibraryPage';
+import { DeckSelectPage } from '@/pages/DeckSelectPage';
 import { LobbyPage } from '@/pages/LobbyPage';
+import { MatchingPage } from '@/pages/MatchingPage';
+import { ModeSelectPage } from '@/pages/ModeSelectPage';
 import { PatchNotesPage } from '@/pages/PatchNotesPage';
+import { RoomLobbyPage } from '@/pages/RoomLobbyPage';
 import { UpdaterBridge } from '@/updater/UpdaterBridge';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -61,6 +65,10 @@ export function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route element={<AuthGuard />}>
             <Route path="/lobby" element={<LobbyPage />} />
+            <Route path="/play" element={<ModeSelectPage />} />
+            <Route path="/play/deck" element={<DeckSelectPage />} />
+            <Route path="/play/matching" element={<MatchingPage />} />
+            <Route path="/play/room/:gameId" element={<RoomLobbyPage />} />
             <Route path="/game/:id?" element={<GamePage />} />
             <Route path="/deckbuilder" element={<DeckLibraryPage />} />
             <Route path="/deckbuilder/new" element={<DeckBuilderPage />} />

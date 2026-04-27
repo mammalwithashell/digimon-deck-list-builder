@@ -45,7 +45,7 @@ export function LauncherShell({
             <nav className="launcher-side-section" aria-label="Main">
               <h5>Main</h5>
               <Link className="launcher-nav-item active" to="/">Home</Link>
-              <Link className="launcher-nav-item" to="/game">Play</Link>
+              <Link className="launcher-nav-item" to="/play">Play</Link>
               <Link className="launcher-nav-item" to="/deckbuilder">Decks <span>{String(deckCount).padStart(2, '0')}</span></Link>
               <Link className="launcher-nav-item" to="/patch-notes">Patch Notes</Link>
             </nav>

@@ -8,10 +8,10 @@ export function LauncherActions({ hasDecks }: LauncherActionsProps) {
   return (
     <>
       <div className="launcher-actions">
-        <Link className="launcher-action primary" to="/game">
+        <Link className="launcher-action primary" to="/play">
           <span className="launcher-action-label">// PRIMARY ACTION</span>
           <span className="launcher-action-name">PLAY</span>
-          <span className="launcher-action-desc">Start a local match on the redesigned board.</span>
+          <span className="launcher-action-desc">Choose format, deck, and opponent.</span>
           <span className="launcher-action-meta">ENTER</span>
         </Link>
         <Link className="launcher-action" to={hasDecks ? '/deckbuilder' : '/deckbuilder/new?import=1'}>
