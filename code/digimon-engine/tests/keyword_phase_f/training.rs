@@ -63,9 +63,8 @@ fn training_digimon(id: &str) -> CardData {
 }
 
 fn field_main_bit(field_index: usize) -> usize {
-    (FIELD_EFFECT_START
-        + field_index as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN)
+        as usize
 }
 
 fn breeding_main_bit() -> usize {
@@ -271,10 +270,7 @@ fn training_works_from_breeding_area() {
 
     // Activate via the breeding-area dispatch path.
     let fired = r.game.activate_field_main(0, BREEDING_TARGET as usize);
-    assert!(
-        fired,
-        "Training activation must succeed from breeding area"
-    );
+    assert!(fired, "Training activation must succeed from breeding area");
 
     // Carrier suspended.
     let breeding = r.game.players[0]
@@ -359,8 +355,5 @@ fn training_empty_deck_no_op() {
         stack_before,
         "carrier's stack must be unchanged on empty-deck no-op"
     );
-    assert!(
-        r.game.players[0].deck.is_empty(),
-        "deck must remain empty"
-    );
+    assert!(r.game.players[0].deck.is_empty(), "deck must remain empty");
 }

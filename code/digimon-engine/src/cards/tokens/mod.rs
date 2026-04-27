@@ -1,4 +1,4 @@
-//! Token printed abilities. Parallels `src/cards/bt17/` but indexed by
+//! Token printed abilities. Parallels `src/cards/test/` but indexed by
 //! synthetic token card_ids (`TOKEN_PETRIFICATION`, `TOKEN_FAMILIAR`).
 //! Tokens without printed abilities may omit their entry here entirely —
 //! the registry lookup returns `None` and the engine treats them as a
@@ -12,6 +12,9 @@ mod familiar;
 mod petrification;
 
 pub fn register(registry: &mut CardEffectRegistry) {
-    registry.insert("TOKEN_PETRIFICATION", Arc::new(petrification::PetrificationToken));
+    registry.insert(
+        "TOKEN_PETRIFICATION",
+        Arc::new(petrification::PetrificationToken),
+    );
     registry.insert("TOKEN_FAMILIAR", Arc::new(familiar::FamiliarToken));
 }

@@ -244,7 +244,10 @@ fn evade_redirects_to_bottom_of_deck() {
     }
 
     let mut r = DebugRunner::builder().add_card(card("EVADE")).start();
-    r.register_effect("EVADE", Arc::new(RedirectPlusWitness(on_deletion_fired.clone())));
+    r.register_effect(
+        "EVADE",
+        Arc::new(RedirectPlusWitness(on_deletion_fired.clone())),
+    );
     let handle = r.place_on_field(0, "EVADE", Some(0));
 
     let deck_before = r.game.player(0).deck.len();
@@ -279,7 +282,13 @@ fn substitute_redirects_deletion_to_other_permanent() {
     r.register_effect("SUBBER", Arc::new(SubstituteTo01));
     let subber = r.place_on_field(0, "SUBBER", Some(0));
     let target_b = r.place_on_field(0, "TARGET_B", Some(0));
-    assert_eq!(target_b, PermanentHandle { player: 0, index: 1 });
+    assert_eq!(
+        target_b,
+        PermanentHandle {
+            player: 0,
+            index: 1
+        }
+    );
 
     r.game.delete_permanent_with_effects(subber);
 
@@ -434,10 +443,7 @@ fn deletion_cause_security_check_is_inferred_during_security_reveal() {
         .add_card(sec_card)
         .security(1, &["HUGE_SEC_DIGI"])
         .start();
-    r.register_effect(
-        "WEAK_ATTACKER",
-        Arc::new(CauseSentinel(cause_slot.clone())),
-    );
+    r.register_effect("WEAK_ATTACKER", Arc::new(CauseSentinel(cause_slot.clone())));
     let attacker = r.place_on_field(0, "WEAK_ATTACKER", Some(0));
 
     let _ = r.attack_player(attacker, 1, false);

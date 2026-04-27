@@ -74,29 +74,22 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
     match step {
         // ── Play primitives (hand) ────────────────────────────────────────
         CompiledStep::PlayFromHand {
-            of,
+            of: _,
             hand_index,
             cost_delta,
         } => {
-            let p = resolve_player(ctx, *of);
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                debug_assert_eq!(owner, p, "play_from_hand binding player differs from `of`");
                 let delta = lower_cost_delta(cost_delta.as_ref());
                 let _ = ctx.play_from_hand_with_cost(owner, i as usize, delta);
             }
             true
         }
-        CompiledStep::PlayFromHandFree { of, hand_index } => {
-            let p = resolve_player(ctx, *of);
+        CompiledStep::PlayFromHandFree { of: _, hand_index } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                debug_assert_eq!(
-                    owner, p,
-                    "play_from_hand_free binding player differs from `of`"
-                );
                 let _ = ctx.play_from_hand_free(owner, i as usize);
             }
             true
@@ -104,31 +97,24 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
 
         // ── Play primitives (trash) ───────────────────────────────────────
         CompiledStep::PlayFromTrash {
-            of,
+            of: _,
             trash_index,
             cost_delta,
         } => {
-            let p = resolve_player(ctx, *of);
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
-                debug_assert_eq!(owner, p, "play_from_trash binding player differs from `of`");
                 let delta = lower_cost_delta(cost_delta.as_ref());
                 let _ = ctx.play_from_trash_with_cost(owner, i as usize, delta);
             }
             true
         }
-        CompiledStep::PlayFromTrashFree { of, trash_index } => {
-            let p = resolve_player(ctx, *of);
+        CompiledStep::PlayFromTrashFree { of: _, trash_index } => {
             // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
             // IR addresses by trash index so we must look up the handle.
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
-                debug_assert_eq!(
-                    owner, p,
-                    "play_from_trash_free binding player differs from `of`"
-                );
                 let handle: Option<CardHandle> = ctx
                     .game
                     .player(owner)

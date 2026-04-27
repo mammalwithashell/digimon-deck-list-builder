@@ -19,14 +19,17 @@ pub use selections::{CountCappedZone, DistinctByMode, EffectContextSelectorScope
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, PlayerId, PlaySource, StackPosition};
+use crate::dsl_cards::step::StepRuntime;
+use crate::enums::{
+    EffectTiming, Expiry, Keyword, ModifierType, PlaySource, PlayerId, StackPosition,
+};
 use crate::game::Game;
-use crate::scheduled_effects::ScheduledEffect;
-use digimon_dsl::compiled::CompiledStep;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
 use crate::rules::Rules;
+use crate::scheduled_effects::ScheduledEffect;
+use digimon_dsl::compiled::CompiledStep;
 
 /// Read-only view of game state for effect condition closures.
 ///
@@ -137,15 +140,24 @@ impl<'a> EffectReadContext<'a> {
     // closures so scripts can gate a `[Security]` effect on attacker traits.
 
     pub fn attacker(&self) -> Option<PermanentHandle> {
-        self.game.security_resolution.as_ref().and_then(|s| s.attacker)
+        self.game
+            .security_resolution
+            .as_ref()
+            .and_then(|s| s.attacker)
     }
 
     pub fn security_digimon(&self) -> Option<CardHandle> {
-        self.game.security_resolution.as_ref().map(|s| s.revealed_card)
+        self.game
+            .security_resolution
+            .as_ref()
+            .map(|s| s.revealed_card)
     }
 
     pub fn turn_player_at_check(&self) -> Option<PlayerId> {
-        self.game.security_resolution.as_ref().map(|s| s.turn_player)
+        self.game
+            .security_resolution
+            .as_ref()
+            .map(|s| s.turn_player)
     }
 
     // ─── OnDeletion cause accessors (Phase B §B5) ───────────────────────
@@ -201,10 +213,7 @@ impl<'a> EffectReadContext<'a> {
     /// the handler) and the winner is the other side of the pending attack.
     /// Direct player attacks (`AttackTarget::Player`) return `None` because
     /// there is no opposing Digimon.
-    pub fn battle_opponent_of(
-        &self,
-        self_handle: PermanentHandle,
-    ) -> Option<PermanentHandle> {
+    pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
         let pa = self.game.pending_attack.as_ref()?;
         let defender = match pa.effective_target {
             crate::AttackTarget::Digimon(h) => Some(h),
@@ -310,6 +319,16 @@ impl<'a> EffectContext<'a> {
         body: Vec<CompiledStep>,
         captured_bindings: Bindings,
     ) {
+        self.schedule_delayed_with_runtime(when, body, captured_bindings, StepRuntime::default());
+    }
+
+    pub fn schedule_delayed_with_runtime(
+        &mut self,
+        when: EffectTiming,
+        body: Vec<CompiledStep>,
+        captured_bindings: Bindings,
+        runtime: StepRuntime,
+    ) {
         let entry = ScheduledEffect {
             when,
             body,
@@ -318,6 +337,7 @@ impl<'a> EffectContext<'a> {
             controller: self.player,
             captured_bindings,
             scheduled_at_turn: self.game.turn_count,
+            runtime,
         };
         self.game.scheduled_effects.push(entry);
     }
@@ -410,20 +430,29 @@ impl<'a> EffectContext<'a> {
     /// The attacker whose attack triggered the current security check, if
     /// any. `None` for non-combat security reveals.
     pub fn attacker(&self) -> Option<PermanentHandle> {
-        self.game.security_resolution.as_ref().and_then(|s| s.attacker)
+        self.game
+            .security_resolution
+            .as_ref()
+            .and_then(|s| s.attacker)
     }
 
     /// The handle of the security card currently being resolved (the card
     /// that was popped from the defender's security stack). `None` outside a
     /// security-resolution context.
     pub fn security_digimon(&self) -> Option<CardHandle> {
-        self.game.security_resolution.as_ref().map(|s| s.revealed_card)
+        self.game
+            .security_resolution
+            .as_ref()
+            .map(|s| s.revealed_card)
     }
 
     /// Turn player at the moment the security check started. Stable across
     /// the entire resolution even if an effect toggles turn state mid-flight.
     pub fn turn_player_at_check(&self) -> Option<PlayerId> {
-        self.game.security_resolution.as_ref().map(|s| s.turn_player)
+        self.game
+            .security_resolution
+            .as_ref()
+            .map(|s| s.turn_player)
     }
 
     // ─── OnDeletion cause accessors (Phase B §B5) ───────────────────────
@@ -460,10 +489,7 @@ impl<'a> EffectContext<'a> {
     }
 
     /// See [`EffectReadContext::battle_opponent_of`].
-    pub fn battle_opponent_of(
-        &self,
-        self_handle: PermanentHandle,
-    ) -> Option<PermanentHandle> {
+    pub fn battle_opponent_of(&self, self_handle: PermanentHandle) -> Option<PermanentHandle> {
         let pa = self.game.pending_attack.as_ref()?;
         let defender = match pa.effective_target {
             crate::AttackTarget::Digimon(h) => Some(h),
@@ -569,12 +595,19 @@ impl<'a> EffectContext<'a> {
     pub fn gain_memory(&mut self, amount: i16) {
         let target = self.player;
         // Phase 6: CannotGainMemoryByEffect — suppress all memory gains by effect.
-        if self.game.modifiers.player_has(target, ModifierType::CannotGainMemoryByEffect) {
+        if self
+            .game
+            .modifiers
+            .player_has(target, ModifierType::CannotGainMemoryByEffect)
+        {
             return;
         }
         // Phase 6: CannotGainMemoryExceptFromTamers — only Tamer-sourced gains are
         // allowed; block Digimon/Option-sourced gains.
-        if self.game.modifiers.player_has(target, ModifierType::CannotGainMemoryExceptFromTamers)
+        if self
+            .game
+            .modifiers
+            .player_has(target, ModifierType::CannotGainMemoryExceptFromTamers)
             && !self.source_is_tamer()
         {
             return;
@@ -600,7 +633,11 @@ impl<'a> EffectContext<'a> {
         // Phase 6: if the drawing player has CannotDrawByEffect, suppress draw.
         // The flood gate fires FIRST (preserves Phase 6 semantics); if blocked,
         // no replacement window opens.
-        if self.game.modifiers.player_has(player, ModifierType::CannotDrawByEffect) {
+        if self
+            .game
+            .modifiers
+            .player_has(player, ModifierType::CannotDrawByEffect)
+        {
             return 0;
         }
 
@@ -608,12 +645,9 @@ impl<'a> EffectContext<'a> {
         // per card). Subject is the drawing player; no original_destination.
         let cause = self.game.infer_effect_cause(player);
         let subject = ReplacementSubject::Player(player);
-        let outcome = self.game.try_replace(
-            EffectTiming::WhenWouldDraw,
-            subject,
-            cause,
-            None,
-        );
+        let outcome = self
+            .game
+            .try_replace(EffectTiming::WhenWouldDraw, subject, cause, None);
         if self.game.pending_selection.is_some() {
             return 0;
         }
@@ -629,10 +663,7 @@ impl<'a> EffectContext<'a> {
                 );
             }
             ReplacementOutcome::Substituted(_) => {
-                debug_assert!(
-                    false,
-                    "Substituted not supported for WhenWouldDraw v1"
-                );
+                debug_assert!(false, "Substituted not supported for WhenWouldDraw v1");
             }
         }
 
@@ -685,16 +716,10 @@ impl<'a> EffectContext<'a> {
                 return false;
             }
             ReplacementOutcome::Redirected(_) => {
-                debug_assert!(
-                    false,
-                    "Redirected not supported for WhenWouldBeTrashed v1"
-                );
+                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
             }
             ReplacementOutcome::Substituted(_) => {
-                debug_assert!(
-                    false,
-                    "Substituted not supported for WhenWouldBeTrashed v1"
-                );
+                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
             }
         }
 
@@ -760,12 +785,9 @@ impl<'a> EffectContext<'a> {
         // re-call with a lower amount.
         let cause = self.game.infer_effect_cause(target.player);
         let subject = ReplacementSubject::Permanent(target);
-        let outcome = self.game.try_replace(
-            EffectTiming::WhenWouldBeDeDigivolved,
-            subject,
-            cause,
-            None,
-        );
+        let outcome =
+            self.game
+                .try_replace(EffectTiming::WhenWouldBeDeDigivolved, subject, cause, None);
         if self.game.pending_selection.is_some() {
             return 0;
         }
@@ -972,16 +994,10 @@ impl<'a> EffectContext<'a> {
                 return None;
             }
             ReplacementOutcome::Redirected(_) => {
-                debug_assert!(
-                    false,
-                    "Redirected not supported for WhenWouldBeTrashed v1"
-                );
+                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
             }
             ReplacementOutcome::Substituted(_) => {
-                debug_assert!(
-                    false,
-                    "Substituted not supported for WhenWouldBeTrashed v1"
-                );
+                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
             }
         }
 
@@ -1036,11 +1052,7 @@ impl<'a> EffectContext<'a> {
     ///   - `Random`: iterate forward, call `return_to_deck_from_reveal(Random)`
     ///               for each — placement order is semantically irrelevant but the
     ///               permutation selection is still surfaced to the RL agent.
-    pub fn place_remainder_on_deck(
-        &mut self,
-        player: PlayerId,
-        position: StackPosition,
-    ) {
+    pub fn place_remainder_on_deck(&mut self, player: PlayerId, position: StackPosition) {
         // Snapshot handles of every card currently in the reveal pool.
         let remainder: Vec<CardHandle> = self
             .game
@@ -1116,9 +1128,12 @@ impl<'a> EffectContext<'a> {
         hand_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
-        let field_index =
-            self.game
-                .play_from_hand_with_cost(player, hand_index, cost_delta, PlaySource::ByEffect)?;
+        let field_index = self.game.play_from_hand_with_cost(
+            player,
+            hand_index,
+            cost_delta,
+            PlaySource::ByEffect,
+        )?;
         Some(PermanentHandle {
             player,
             index: field_index as u8,
@@ -1281,10 +1296,7 @@ impl<'a> EffectContext<'a> {
         // Extract the source. `Vec::remove` shifts subsequent sources down
         // one index — that's the desired behavior for material extraction
         // (the stack closes the gap left by the removed source).
-        let source = self
-            .game
-            .player_mut(player)
-            .battle_area[target.index as usize]
+        let source = self.game.player_mut(player).battle_area[target.index as usize]
             .card_sources
             .remove(source_index);
 
@@ -1324,9 +1336,12 @@ impl<'a> EffectContext<'a> {
         trash_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
-        let field_index = self
-            .game
-            .play_from_trash_with_cost(player, trash_index, cost_delta, PlaySource::ByEffect)?;
+        let field_index = self.game.play_from_trash_with_cost(
+            player,
+            trash_index,
+            cost_delta,
+            PlaySource::ByEffect,
+        )?;
         Some(PermanentHandle {
             player,
             index: field_index as u8,
@@ -1449,16 +1464,16 @@ impl<'a> EffectContext<'a> {
     /// programming error (passing an invalid or already-moved handle).
     ///
     /// Used by: `<Save>`, `<Material Save N>`.
-    pub fn place_card_under_permanent_bottom(
-        &mut self,
-        card: CardHandle,
-        target: PermanentHandle,
-    ) {
-        let taken = self.game.remove_card_from_any_zone(card)
-            .unwrap_or_else(|| panic!(
-                "place_card_under_permanent_bottom: card {:?} not found in any zone",
-                card
-            ));
+    pub fn place_card_under_permanent_bottom(&mut self, card: CardHandle, target: PermanentHandle) {
+        let taken = self
+            .game
+            .remove_card_from_any_zone(card)
+            .unwrap_or_else(|| {
+                panic!(
+                    "place_card_under_permanent_bottom: card {:?} not found in any zone",
+                    card
+                )
+            });
 
         let target_player = self.game.player_mut(target.player);
         if (target.index as usize) >= target_player.battle_area.len() {
@@ -1516,11 +1531,7 @@ impl<'a> EffectContext<'a> {
     /// `Game::finalize_permanent_deletion`'s linked-cascade pattern.
     ///
     /// Used by: `<Mind Link>` keyword auto-install (Phase F Task 5).
-    pub fn attach_tamer_to_digimon(
-        &mut self,
-        tamer: PermanentHandle,
-        digimon: PermanentHandle,
-    ) {
+    pub fn attach_tamer_to_digimon(&mut self, tamer: PermanentHandle, digimon: PermanentHandle) {
         // Validate: shared controller (MindLink targets own permanents).
         // Promoted to `assert_eq!` so the precondition is enforced in
         // release builds too — this is a public primitive, and a release
@@ -1542,9 +1553,7 @@ impl<'a> EffectContext<'a> {
         // is keyed on PermanentHandle, which becomes invalid after the
         // index shift caused by `Vec::remove`).
         self.game.modifiers.clear_permanent(tamer);
-        self.game
-            .modifiers
-            .expire_player_on_permanent_leave(tamer);
+        self.game.modifiers.expire_player_on_permanent_leave(tamer);
 
         // Remove the Tamer permanent from battle area. This shifts indices
         // for all higher-indexed permanents on the same player down by 1.
@@ -1713,10 +1722,7 @@ impl<'a> EffectContext<'a> {
     /// `!cardSource.IsFlipped`).
     ///
     /// Used by: `<Training>` keyword auto-install (Phase F Task 6).
-    pub fn training_place_deck_top_under_self_face_down(
-        &mut self,
-        perm: PermanentHandle,
-    ) {
+    pub fn training_place_deck_top_under_self_face_down(&mut self, perm: PermanentHandle) {
         // Pop the controller's deck top. Empty-deck case is a silent no-op.
         let owner = perm.player;
         let mut card = match self.game.player_mut(owner).deck.pop() {
@@ -1928,14 +1934,10 @@ impl<'a> EffectContext<'a> {
         if target_a == target_b {
             return None;
         }
-        if (target_a.index as usize)
-            >= self.game.player(target_a.player).battle_area.len()
-        {
+        if (target_a.index as usize) >= self.game.player(target_a.player).battle_area.len() {
             return None;
         }
-        if (target_b.index as usize)
-            >= self.game.player(target_b.player).battle_area.len()
-        {
+        if (target_b.index as usize) >= self.game.player(target_b.player).battle_area.len() {
             return None;
         }
 
@@ -1962,14 +1964,8 @@ impl<'a> EffectContext<'a> {
         if ignore_requirements && effective_cost > 0 {
             self.game.pay_memory_unchecked(effective_cost);
             // Pass cost=0 to the inner so it doesn't double-pay.
-            self.game.dna_digivolve_inner(
-                target_a,
-                target_b,
-                hand_owner,
-                hand_index,
-                0,
-                false,
-            )
+            self.game
+                .dna_digivolve_inner(target_a, target_b, hand_owner, hand_index, 0, false)
         } else {
             self.game.dna_digivolve_inner(
                 target_a,
@@ -2008,21 +2004,11 @@ impl<'a> EffectContext<'a> {
         }
         self.game.modifiers.add(
             target,
-            ModifierEntry::simple(
-                modifier,
-                value,
-                expiry,
-                self.player,
-            ),
+            ModifierEntry::simple(modifier, value, expiry, self.player),
         );
     }
 
-    pub fn grant_keyword(
-        &mut self,
-        target: PermanentHandle,
-        keyword: Keyword,
-        expiry: Expiry,
-    ) {
+    pub fn grant_keyword(&mut self, target: PermanentHandle, keyword: Keyword, expiry: Expiry) {
         self.game
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);
@@ -2044,10 +2030,15 @@ impl<'a> EffectContext<'a> {
         face_up: bool,
     ) -> bool {
         // Phase 6: if the acting player has CannotAddSecurityByEffect, suppress.
-        if self.game.modifiers.player_has(self.player, ModifierType::CannotAddSecurityByEffect) {
+        if self
+            .game
+            .modifiers
+            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
+        {
             return false;
         }
-        self.game.place_on_security(player, source, position, face_up)
+        self.game
+            .place_on_security(player, source, position, face_up)
     }
 
     // ─── Combat mutations (Phase 9 Task 2) ────────────────────────────

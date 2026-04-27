@@ -36,7 +36,10 @@ impl CardEffect for HandBt5093 {
                         let top = perm.top_card();
                         let data = &rctx.game.card_data[top.data_index];
                         if data.card_name.contains("Omnimon") {
-                            hits.push(PermanentHandle { player: me, index: i as u8 });
+                            hits.push(PermanentHandle {
+                                player: me,
+                                index: i as u8,
+                            });
                         }
                     }
                 }
@@ -49,8 +52,7 @@ impl CardEffect for HandBt5093 {
 }
 
 fn dsl_bt5093_compiled() -> Arc<CompiledCard> {
-    let pack = digimon_engine::dsl_registry::from_embedded()
-        .expect("embedded pack loads");
+    let pack = digimon_engine::dsl_registry::from_embedded().expect("embedded pack loads");
     Arc::new(pack.lookup("BT5-093").expect("BT5-093 in pack").clone())
 }
 

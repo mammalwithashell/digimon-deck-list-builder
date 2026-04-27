@@ -268,7 +268,11 @@ impl ModelsManager {
                 .map(|d| d.as_secs())
                 .unwrap_or(0),
         };
-        tokio::fs::write(self.meta_path(&model.id), serde_json::to_string_pretty(&meta)?).await?;
+        tokio::fs::write(
+            self.meta_path(&model.id),
+            serde_json::to_string_pretty(&meta)?,
+        )
+        .await?;
         Ok(meta)
     }
 
@@ -478,11 +482,7 @@ mod tests {
             manifest: dummy_manifest_entry("good", "deadbeef", 10),
             downloaded_at: 42,
         };
-        std::fs::write(
-            mgr.meta_path("good"),
-            serde_json::to_string(&meta).unwrap(),
-        )
-        .unwrap();
+        std::fs::write(mgr.meta_path("good"), serde_json::to_string(&meta).unwrap()).unwrap();
 
         // A sibling directory with a corrupt meta.json — should be silently
         // skipped, not fail the whole listing.

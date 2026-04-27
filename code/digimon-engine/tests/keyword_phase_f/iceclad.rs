@@ -18,8 +18,8 @@
 //! arbitrary depth. Mirrors the pattern in
 //! `tests/cost_hooks/cost_reduction_fn.rs` and `tests/zone_manipulation.rs`.
 
-use digimon_engine::card_source::CardSource;
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardSource;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::Keyword;
@@ -31,7 +31,12 @@ use super::helpers::{digimon_with_keywords, plain_digimon};
 /// top card of a placed permanent. After this call, `card_sources.len() ==
 /// 1 + extra` (top + extras). The extras live UNDER the top (inserted at
 /// position 0), mirroring how digivolve-up would lay them down.
-fn stack_extra_sources(r: &mut DebugRunner, handle: PermanentHandle, filler_id: &str, extra: usize) {
+fn stack_extra_sources(
+    r: &mut DebugRunner,
+    handle: PermanentHandle,
+    filler_id: &str,
+    extra: usize,
+) {
     let game = r.game_mut();
     let filler_idx = game
         .card_data
@@ -123,10 +128,7 @@ fn iceclad_equal_count_mutual_destruction() {
         c
     };
 
-    let mut r = DebugRunner::builder()
-        .add_card(atk)
-        .add_card(def)
-        .start();
+    let mut r = DebugRunner::builder().add_card(atk).add_card(def).start();
 
     let atk_h = r.place_on_field(0, "ICE_ATK", Some(0));
     let def_h = r.place_on_field(1, "DEF", Some(0));

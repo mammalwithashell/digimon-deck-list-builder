@@ -20,6 +20,6 @@ mod reboot_unsuspend;
 mod redirect_and_cancel;
 mod rush_exemption;
 mod scenarios;
+mod security_attack_keyword;
 mod security_effects;
 mod would_attack_replacements;
-mod security_attack_keyword;

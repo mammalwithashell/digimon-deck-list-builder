@@ -210,7 +210,11 @@ fn fortitude_does_not_fire_when_no_source_was_under_self() {
     let carrier = r.place_on_field(0, "FORTITUDE", None);
     {
         let perm = &r.game.players[0].battle_area[carrier.index as usize];
-        assert_eq!(perm.card_sources.len(), 1, "preconditions: only top, no source");
+        assert_eq!(
+            perm.card_sources.len(),
+            1,
+            "preconditions: only top, no source"
+        );
     }
 
     r.game.delete_permanent_with_effects(carrier);

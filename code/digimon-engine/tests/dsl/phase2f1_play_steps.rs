@@ -57,8 +57,7 @@ fn play_from_hand_step_with_free_cost_delta_consumes_hand_and_keeps_memory() {
 
     // Memory unchanged — Free resolves to 0.
     assert_eq!(
-        runner.game.memory,
-        memory_before,
+        runner.game.memory, memory_before,
         "memory should be unchanged with CostDelta::Free"
     );
     // Hand shrinks by 1.
@@ -107,12 +106,68 @@ fn play_from_hand_free_step_consumes_hand_and_keeps_memory() {
         run_step(&step, &mut ctx, &mut bindings);
     }
 
-    assert_eq!(runner.game.memory, memory_before, "PlayFromHandFree must not change memory");
-    assert_eq!(runner.game.players[0].hand.len(), hand_before - 1, "hand shrinks by 1");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "PlayFromHandFree must not change memory"
+    );
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before - 1,
+        "hand shrinks by 1"
+    );
     assert_eq!(
         runner.game.players[0].battle_area.len(),
         battle_before + 1,
         "battle area gains 1 permanent"
+    );
+}
+
+#[test]
+fn play_from_hand_free_step_uses_bound_hand_owner() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("P0-SRC", "P0Source"))
+        .add_card(make_test_card("P1-PLAY", "P1Play"))
+        .hand(0, &["P0-SRC"])
+        .hand(1, &["P1-PLAY"])
+        .memory(5)
+        .start();
+
+    let src_card = runner.game.players[0].hand[0].handle();
+    let p0_hand_before = runner.game.players[0].hand.len();
+    let p1_battle_before = runner.game.players[1].battle_area.len();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_hand_index_for("idx", 1, 0);
+
+    let step = CompiledStep::PlayFromHandFree {
+        of: CompiledPlayerRef::You,
+        hand_index: CompiledBindingRef::Named("idx".into()),
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        p0_hand_before,
+        "P0 hand is untouched"
+    );
+    assert!(
+        runner.game.players[1].hand.is_empty(),
+        "P1 hand card is consumed"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area.len(),
+        p1_battle_before + 1,
+        "P1 plays the card carried by the owned hand binding"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[p1_battle_before]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "P1-PLAY"
     );
 }
 
@@ -157,7 +212,10 @@ fn play_from_trash_step_with_free_cost_delta_consumes_trash_and_keeps_memory() {
         run_step(&step, &mut ctx, &mut bindings);
     }
 
-    assert_eq!(runner.game.memory, memory_before, "Free cost delta keeps memory");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "Free cost delta keeps memory"
+    );
     assert_eq!(
         runner.game.players[0].trash.len(),
         trash_before - 1,
@@ -212,7 +270,10 @@ fn play_from_trash_free_step_consumes_trash_and_keeps_memory() {
         run_step(&step, &mut ctx, &mut bindings);
     }
 
-    assert_eq!(runner.game.memory, memory_before, "PlayFromTrashFree keeps memory");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "PlayFromTrashFree keeps memory"
+    );
     assert_eq!(
         runner.game.players[0].trash.len(),
         trash_before - 1,
@@ -259,7 +320,10 @@ fn play_from_security_step_consumes_security_and_keeps_memory() {
         run_step(&step, &mut ctx, &mut bindings);
     }
 
-    assert_eq!(runner.game.memory, memory_before, "PlayFromSecurity keeps memory");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "PlayFromSecurity keeps memory"
+    );
     assert_eq!(
         runner.game.players[0].security.len(),
         security_before - 1,
@@ -319,7 +383,10 @@ fn play_from_materials_step_extracts_source_and_plays_it_free() {
         run_step(&step, &mut ctx, &mut bindings);
     }
 
-    assert_eq!(runner.game.memory, memory_before, "Free cost delta keeps memory");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "Free cost delta keeps memory"
+    );
     // Base source extracted; original permanent now has 1 source (top only).
     assert_eq!(
         runner.game.players[0].battle_area[0].card_sources.len(),

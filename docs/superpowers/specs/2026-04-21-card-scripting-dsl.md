@@ -1386,20 +1386,26 @@ rejected. Reasons:
 
 ### 6.2 raw_rust registry
 
-A global `CardEffectExtensionRegistry` holds named Rust fns authored
+An engine-owned `EngineRawRustRegistry` holds named Rust fns authored
 alongside the engine crate:
 
 ```
 digimon-engine/src/cards/raw_rust/
-├── mod.rs           # pub fn register_all(reg: &mut CardEffectExtensionRegistry)
-├── bt13_007.rs      # fn royal_knight_cost_reduction(ctx: &EffectReadContext) -> i32
-├── bt10_111.rs      # fn digixros_wildcard(ctx: &mut EffectContext, bindings: &BindingMap) -> BindingMap
+├── mod.rs           # pub fn build_registry() -> EngineRawRustRegistry
+├── bt13_007.rs      # fn royal_knight_cost_reduction(ctx: &EffectContext, target: PermanentHandle) -> i32
+├── bt10_111.rs      # fn digixros_wildcard(ctx: &mut EffectContext, bindings: &mut Bindings)
 └── ...
 ```
 
-`register_all()` runs once at crate startup. The registry is frozen
-before `CardRegistry::load()` so the DSL validator can resolve
-`raw_rust: fn_name` references.
+`build_registry()` runs once at crate startup. The registry is frozen
+before DSL card registration so the engine can resolve `raw_rust:
+fn_name` references for whole clauses, process steps, formulas, and
+scheduled bodies.
+
+Implementation note: formula raw_rust receives `(&EffectContext,
+PermanentHandle)` so it shares the same target-resolution point as
+`formula_eval::evaluate_with_raw`. Functions that only need read-only
+state must treat the context as read-only.
 
 ### 6.3 Granularity (locked: hybrid both-levels)
 
@@ -1829,6 +1835,16 @@ effect-initiated and user-action DNA paths.
 **Exit criteria:** ~3,000 cards retired (75%). Hand-written card
 footprint capped at ~1,000.
 
+**Phase 3 reducer status (2026-04-26):** LANDED. Replacement process
+bodies now lower through the shared DSL step runtime, replacement
+`active_when` gates are honored, partition `active_when` / source /
+cause gates are applied, common selection reducers (`select_any_permanent`,
+`select_dna_pair`) are available, cost deltas can express printed-cost
+reductions, formula-backed cost reductions and synchronous `pay_cost`
+bodies lower without `raw_rust`, and DSL DNA alt-path metadata can enrich
+the engine `CardData::dna_costs` surface consumed by action masks and DNA
+execution.
+
 ### 7.5 Phase 4 — raw_rust escape hatch + long tail
 
 **Scope:** `CardEffectExtensionRegistry`, raw_rust at all three
@@ -1842,6 +1858,14 @@ tested as a unit before wiring).
 **Exit criteria:** ≥99% DSL+raw_rust coverage; hand-written
 `CardEffect` crate entirely retired except for the raw_rust fns.
 
+**Phase 4 status (2026-04-26):** LANDED.
+`EngineRawRustRegistry` supports whole-clause, process-step, and
+formula-level raw_rust dispatch. Step runtime is threaded through nested
+DSL execution, selection continuations, delayed scheduling, and scheduled
+body replay. The residual hand-written production card surface now lives
+under `code/digimon-engine/src/cards/raw_rust/`; `src/cards/` no longer
+contains production set modules outside the raw_rust shell.
+
 ### 7.6 Retirement schedule for `digimon-engine/src/cards/`
 
 ```
@@ -1850,7 +1874,9 @@ Phase 1 (end)   src/cards/  unchanged   same — no cards retired yet
 Phase 2 (end)   src/cards/  shrinks     first 500 migrate; tests/*.rs rewritten
 Phase 3 (end)   src/cards/  shrinks     ~3000 migrate
 Phase 4 (end)   src/cards/  becomes     src/cards/raw_rust/*.rs + src/cards/test/*.rs
-                             a thin shell for test cards + ~120 raw_rust fns
+                             + src/cards/tokens/*.rs + keyword_effects.rs
+                             a thin shell for tests, tokens, keyword auto-effects,
+                             and ~120 raw_rust fns
 ```
 
 ## 7a. Distribution — build-time compilation, no YAML on desktop

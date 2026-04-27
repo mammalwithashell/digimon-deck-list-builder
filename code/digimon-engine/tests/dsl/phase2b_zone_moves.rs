@@ -186,7 +186,13 @@ fn select_own_permanent_parks_selection() {
         "SelectOwnPermanent should install a PendingSelection"
     );
     assert_eq!(
-        runner.game.pending_selection.as_ref().unwrap().valid_action_ids.len(),
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids
+            .len(),
         1,
         "one permanent on field → one valid action"
     );
@@ -223,7 +229,13 @@ fn select_opponent_permanent_parks_selection() {
         "SelectOpponentPermanent should install a PendingSelection"
     );
     assert_eq!(
-        runner.game.pending_selection.as_ref().unwrap().valid_action_ids.len(),
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids
+            .len(),
         1,
         "one permanent on opponent's field → one valid action"
     );

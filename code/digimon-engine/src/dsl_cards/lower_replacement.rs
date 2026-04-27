@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::run_steps;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::trigger_map::lookup_replacement_trigger;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::EffectTiming;
@@ -41,9 +42,28 @@ pub fn lower(
     trigger: &str,
     process: &[CompiledStep],
 ) -> Option<Effect> {
+    lower_with_raw(
+        card,
+        scope,
+        _active_when,
+        trigger,
+        process,
+        Arc::new(EngineRawRustRegistry::new()),
+    )
+}
+
+pub fn lower_with_raw(
+    card: CardHandle,
+    scope: CompiledScope,
+    _active_when: Option<&CompiledPredicate>,
+    trigger: &str,
+    process: &[CompiledStep],
+    raw: Arc<EngineRawRustRegistry>,
+) -> Option<Effect> {
     let timing = lookup_replacement_trigger(trigger)?;
     let label = format!("Replacement: {trigger}");
     let process: Arc<[CompiledStep]> = Arc::from(process);
+    let runtime = StepRuntime::new(raw);
 
     let mut builder = new_when_would_builder(card, timing)?;
     builder = builder.name(&label);
@@ -55,7 +75,7 @@ pub fn lower(
     builder = builder.replacement_process(move |rctx| {
         let mut bindings = Bindings::new();
         rctx.effect.game.dsl_replacement_outcome = None;
-        let _ = run_steps(&process, rctx.effect, &mut bindings);
+        let _ = run_steps_with_runtime(&process, rctx.effect, &mut bindings, &runtime);
         if let Some(outcome) = rctx.effect.game.dsl_replacement_outcome.take() {
             rctx.outcome = outcome;
         }

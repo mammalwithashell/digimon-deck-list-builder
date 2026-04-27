@@ -157,12 +157,7 @@ impl Player {
 
     /// Play a card from hand to the field (creates a new Permanent).
     /// Returns the index in battle_area, or None if hand index is invalid or field is full.
-    pub fn play_from_hand(
-        &mut self,
-        hand_index: usize,
-        turn: u16,
-        rules: &Rules,
-    ) -> Option<usize> {
+    pub fn play_from_hand(&mut self, hand_index: usize, turn: u16, rules: &Rules) -> Option<usize> {
         if hand_index >= self.hand.len() {
             return None;
         }

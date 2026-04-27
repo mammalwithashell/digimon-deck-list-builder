@@ -105,8 +105,16 @@ impl Bindings {
         self.insert(name, BindingValue::HandIndex(player, i));
     }
 
+    pub fn insert_hand_index_for(&mut self, name: &str, player: PlayerId, i: u16) {
+        self.insert_hand_index(name, player, i);
+    }
+
     pub fn insert_trash_index(&mut self, name: &str, player: PlayerId, i: u16) {
         self.insert(name, BindingValue::TrashIndex(player, i));
+    }
+
+    pub fn insert_trash_index_for(&mut self, name: &str, player: PlayerId, i: u16) {
+        self.insert_trash_index(name, player, i);
     }
 
     pub fn insert_literal(&mut self, name: &str, v: i64) {

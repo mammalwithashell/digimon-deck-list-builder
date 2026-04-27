@@ -135,8 +135,7 @@ pub fn decks_put(app: AppHandle, deck: Deck) -> Result<Deck, String> {
     deck.updated_at = now;
     let path = dir.join(format!("{}.json", deck.id));
     let tmp_path = dir.join(format!("{}.json.tmp", deck.id));
-    let json = serde_json::to_vec_pretty(&deck)
-        .map_err(|e| format!("serialize deck: {e}"))?;
+    let json = serde_json::to_vec_pretty(&deck).map_err(|e| format!("serialize deck: {e}"))?;
     // Crash-atomic write: write the full body to a sibling `.tmp` then
     // rename into place. `rename` is atomic on POSIX and on Windows when
     // source + dest sit on the same volume (same directory here). Matches
@@ -224,7 +223,10 @@ mod tests {
         fs::write(&tmp_path, serde_json::to_vec(&deck).unwrap()).unwrap();
         fs::rename(&tmp_path, &final_path).unwrap();
         assert!(final_path.exists());
-        assert!(!tmp_path.exists(), "no temp file should linger after rename");
+        assert!(
+            !tmp_path.exists(),
+            "no temp file should linger after rename"
+        );
     }
 
     #[test]

@@ -53,10 +53,7 @@ impl CardRegistry {
                 let index = (i + 1) as u16;
                 id_to_index.insert(id.clone(), index);
                 index_to_id.insert(index, id.clone());
-                id_to_norm.insert(
-                    id.clone(),
-                    index as f32 / REGISTRY_CAPACITY as f32,
-                );
+                id_to_norm.insert(id.clone(), index as f32 / REGISTRY_CAPACITY as f32);
             }
         } else {
             // Production mode: honor the index recorded in cards.json exactly.

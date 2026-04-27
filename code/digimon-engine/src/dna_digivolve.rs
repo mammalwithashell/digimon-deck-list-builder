@@ -29,9 +29,7 @@ fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -
     // the material. Empty `card_colors` means "any color" (name/level
     // gated only). Match the Python semantics at
     // `digivolve_validator.py::perm_matches_req`.
-    if !req.card_colors.is_empty()
-        && !req.card_colors.iter().any(|c| meta.colors.contains(c))
-    {
+    if !req.card_colors.is_empty() && !req.card_colors.iter().any(|c| meta.colors.contains(c)) {
         return false;
     }
     if !req.name_contains.is_empty()
@@ -68,6 +66,17 @@ pub fn can_dna_digivolve(
     perm_b: &Permanent,
     data: &[CardData],
 ) -> bool {
+    matching_dna_cost(evo_meta, perm_a, perm_b, data).is_some()
+}
+
+/// Returns the first DNA cost whose material requirements are satisfied by
+/// `(perm_a, perm_b)`, accepting either printed material order.
+pub fn matching_dna_cost<'a>(
+    evo_meta: &'a CardData,
+    perm_a: &Permanent,
+    perm_b: &Permanent,
+    data: &[CardData],
+) -> Option<&'a DnaCost> {
     for cost in &evo_meta.dna_costs {
         let orderings = [
             (&cost.requirement1, &cost.requirement2),
@@ -75,11 +84,11 @@ pub fn can_dna_digivolve(
         ];
         for (ra, rb) in orderings {
             if perm_matches_req(perm_a, ra, data) && perm_matches_req(perm_b, rb, data) {
-                return true;
+                return Some(cost);
             }
         }
     }
-    false
+    None
 }
 
 /// Returns true if any unordered pair in `battle_area` is a valid DNA pair

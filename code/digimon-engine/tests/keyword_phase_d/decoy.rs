@@ -191,9 +191,7 @@ fn decoy_decline_lets_original_deletion_proceed() {
 /// is parked; deletion proceeds normally.
 #[test]
 fn decoy_does_not_self_redirect_when_self_is_subject() {
-    let mut r = DebugRunner::builder()
-        .add_card(decoy_card("DECOY"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(decoy_card("DECOY")).start();
 
     let decoy = r.place_on_field(0, "DECOY", None);
 

@@ -11,9 +11,7 @@
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{
-    CardColor, CardKind, Expiry, Keyword, ModifierType,
-};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, Keyword, ModifierType};
 use digimon_engine::modifiers::ModifierEntry;
 
 /// Digimon with an optional native printed keyword list.
@@ -74,10 +72,7 @@ fn reboot_digimon_unsuspends_on_opponents_turn() {
 
     // After the opponent's unsuspend phase, our Reboot Digimon should be
     // unsuspended even though it's not on the new turn player's side.
-    assert_eq!(
-        r.game.turn_player(), opp,
-        "turn rotated to opponent"
-    );
+    assert_eq!(r.game.turn_player(), opp, "turn rotated to opponent");
     assert!(
         !r.game.players[tp as usize].battle_area[reb.index as usize].is_suspended,
         "Reboot Digimon unsuspends at start of opponent's unsuspend phase"

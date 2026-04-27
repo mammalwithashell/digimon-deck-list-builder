@@ -26,7 +26,8 @@ cost: 0
 
 #[test]
 fn format_is_idempotent() {
-    let spec = parse(r#"
+    let spec = parse(
+        r#"
 card: ST2-13
 name: Hammer Spark
 kind: option
@@ -36,7 +37,8 @@ effects:
   - when: main_from_hand
     process:
       - gain_memory: 1
-"#);
+"#,
+    );
     let first = format_spec(&spec);
     let reparsed: CardSpec = serde_yml::from_str(&first).unwrap();
     let second = format_spec(&reparsed);
@@ -45,7 +47,8 @@ effects:
 
 #[test]
 fn format_preserves_top_level_key_order() {
-    let spec = parse(r#"
+    let spec = parse(
+        r#"
 card: X-1
 name: Test
 kind: digimon
@@ -54,7 +57,8 @@ color: [red]
 cost: 3
 dp: 2000
 traits: [Reptile]
-"#);
+"#,
+    );
     let formatted = format_spec(&spec);
     let card_idx = formatted.find("card:").unwrap();
     let name_idx = formatted.find("name:").unwrap();

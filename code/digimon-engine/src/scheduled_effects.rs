@@ -21,7 +21,7 @@ use digimon_dsl::compiled::CompiledStep;
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::{run_steps, RunOutcome};
+use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
 use crate::enums::{EffectTiming, PlayerId};
 use crate::game::Game;
@@ -44,6 +44,8 @@ pub struct ScheduledEffect {
     pub captured_bindings: Bindings,
     /// Turn number when this effect was scheduled.
     pub scheduled_at_turn: u16,
+    /// Runtime registry captured at schedule time.
+    pub runtime: StepRuntime,
 }
 
 #[derive(Debug, Clone)]
@@ -109,6 +111,7 @@ fn drain_scheduled_for_timing(game: &mut Game, t: EffectTiming, queued: Vec<Sche
             source_permanent,
             controller,
             captured_bindings,
+            runtime,
             ..
         } = eff;
         let mut bindings = captured_bindings;
@@ -125,7 +128,7 @@ fn drain_scheduled_for_timing(game: &mut Game, t: EffectTiming, queued: Vec<Sche
             "scheduled effect fired while a previous parked selection is still outstanding"
         );
         let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
-        let outcome = run_steps(&body, &mut ctx, &mut bindings);
+        let outcome = run_steps_with_runtime(&body, &mut ctx, &mut bindings, &runtime);
         if matches!(outcome, RunOutcome::Parked) {
             let mut remaining = still_pending;
             remaining.extend(iter);

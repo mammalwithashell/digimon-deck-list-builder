@@ -343,7 +343,10 @@ fn when_attacking_fires_for_attackers_battle_area() {
     r.play(0, 0); // ATK (hand slot 0)
     r.play(0, 0); // OBS (now the only card left in hand)
 
-    let attacker_handle = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let attacker_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let before = r.memory();
     // vortex=true bypasses summoning sickness (both were just played this turn).
     let _ = r.attack_player(attacker_handle, 1, /* vortex */ true);
@@ -394,7 +397,10 @@ fn end_of_attack_fires_for_all_players() {
     r.play(0, 0); // ATK
     r.play(0, 0); // OBS
 
-    let attacker_handle = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let attacker_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let before = r.memory();
     let _ = r.attack_player(attacker_handle, 1, true);
 
@@ -450,7 +456,10 @@ fn end_of_battle_fires_on_digimon_vs_digimon() {
     // Place DEF on player 1's field directly (bypasses the memory seesaw).
     let defender_h = r.place_on_field(1, "DEF", Some(0));
 
-    let attacker_h = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let attacker_h = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let before = r.memory();
     let _ = r.attack_digimon(attacker_h, defender_h, true);
 
@@ -549,7 +558,10 @@ fn on_any_deletion_fires_for_battle_deletion() {
     // Seed DEF directly on player 1's field (bypasses memory seesaw).
     let defender_h = r.place_on_field(1, "DEF", Some(0));
 
-    let attacker_h = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let attacker_h = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let before = r.memory();
     let _ = r.attack_digimon(attacker_h, defender_h, true);
 
@@ -979,8 +991,16 @@ fn on_digivolution_card_trashed_fires_on_return_to_hand() {
     let target = {
         let g = r.game_mut();
         let turn = g.turn_count;
-        let under_idx = g.card_data.iter().position(|c| c.card_id == "UNDER15").unwrap();
-        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP15").unwrap();
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER15")
+            .unwrap();
+        let top_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TOP15")
+            .unwrap();
         let i_under = g.next_card_index();
         let i_top = g.next_card_index();
         let under_src = CardSource::new(under_idx, 0, i_under);
@@ -990,13 +1010,19 @@ fn on_digivolution_card_trashed_fires_on_return_to_hand() {
         perm.card_sources.push(top_src);
         g.players[0].battle_area.push(perm);
         let idx = g.players[0].battle_area.len() - 1;
-        PermanentHandle { player: 0, index: idx as u8 }
+        PermanentHandle {
+            player: 0,
+            index: idx as u8,
+        }
     };
 
     let before = r.memory();
     // return_to_hand: TOP → hand, UNDER → trash, fires OnDigivolutionCardTrashed.
     let result = r.game_mut().return_to_hand(target);
-    assert!(result.is_some(), "return_to_hand should succeed on a 2-card stack");
+    assert!(
+        result.is_some(),
+        "return_to_hand should succeed on a 2-card stack"
+    );
 
     // OBS observed UNDER being trashed.
     assert!(
@@ -1011,9 +1037,9 @@ fn on_digivolution_card_trashed_fires_on_return_to_hand() {
 fn on_digivolution_card_trashed_fires_on_return_to_deck() {
     // Same setup as return_to_hand but calls return_to_deck.
     use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::StackPosition;
     use digimon_engine::permanent::Permanent;
     use digimon_engine::permanent::PermanentHandle;
-    use digimon_engine::enums::StackPosition;
 
     let filler: Vec<&str> = vec!["F"; 10];
     let mut r = DebugRunner::builder()
@@ -1032,8 +1058,16 @@ fn on_digivolution_card_trashed_fires_on_return_to_deck() {
     let target = {
         let g = r.game_mut();
         let turn = g.turn_count;
-        let under_idx = g.card_data.iter().position(|c| c.card_id == "UNDER15B").unwrap();
-        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP15B").unwrap();
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER15B")
+            .unwrap();
+        let top_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TOP15B")
+            .unwrap();
         let i_under = g.next_card_index();
         let i_top = g.next_card_index();
         let under_src = CardSource::new(under_idx, 0, i_under);
@@ -1042,7 +1076,10 @@ fn on_digivolution_card_trashed_fires_on_return_to_deck() {
         perm.card_sources.push(top_src);
         g.players[0].battle_area.push(perm);
         let idx = g.players[0].battle_area.len() - 1;
-        PermanentHandle { player: 0, index: idx as u8 }
+        PermanentHandle {
+            player: 0,
+            index: idx as u8,
+        }
     };
 
     let before = r.memory();

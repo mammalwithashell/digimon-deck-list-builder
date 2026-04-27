@@ -63,11 +63,21 @@ fn test_card_db() -> HashMap<String, CardData> {
 
 fn test_deck() -> Vec<String> {
     let mut deck = Vec::new();
-    for _ in 0..4 { deck.push("BT1-001".to_string()); }
-    for _ in 0..6 { deck.push("BT1-010".to_string()); }
-    for _ in 0..6 { deck.push("BT1-025".to_string()); }
-    for _ in 0..4 { deck.push("BT1-085".to_string()); }
-    for _ in 0..4 { deck.push("BT1-093".to_string()); }
+    for _ in 0..4 {
+        deck.push("BT1-001".to_string());
+    }
+    for _ in 0..6 {
+        deck.push("BT1-010".to_string());
+    }
+    for _ in 0..6 {
+        deck.push("BT1-025".to_string());
+    }
+    for _ in 0..4 {
+        deck.push("BT1-085".to_string());
+    }
+    for _ in 0..4 {
+        deck.push("BT1-093".to_string());
+    }
     deck
 }
 
@@ -119,7 +129,9 @@ fn game_rejects_out_of_range_digivolve_and_logs_reason() {
     let card_idx = game.next_card_index();
     let card = CardSource::new(data_idx, tp, card_idx);
     let turn = game.turn_count;
-    game.player_mut(tp).battle_area.push(Permanent::new(card, turn));
+    game.player_mut(tp)
+        .battle_area
+        .push(Permanent::new(card, turn));
 
     let action = encode_digivolve(20, 0);
     game.decode_action(action, tp);
@@ -160,7 +172,11 @@ fn recorder_captures_initial_state_after_start() {
 
     for p in [&init.player1, &init.player2] {
         assert_eq!(p.initial_hand.len(), 5, "opening hand is 5 cards");
-        assert_eq!(p.security_order.len(), 5, "security is 5 cards after mulligan");
+        assert_eq!(
+            p.security_order.len(),
+            5,
+            "security is 5 cards after mulligan"
+        );
         assert_eq!(p.digitama_library_order.len(), 4, "egg deck has 4 eggs");
     }
 }

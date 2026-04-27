@@ -9,7 +9,9 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType, PlayerId};
+use digimon_engine::enums::{
+    CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType, PlayerId,
+};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{AttackState, AttackTarget, PendingAttack};
 
@@ -85,7 +87,8 @@ fn install_modifier_as(
     value: i32,
     expiry: Expiry,
 ) {
-    r.game.set_effect_source_player_for_test(Some(effect_player));
+    r.game
+        .set_effect_source_player_for_test(Some(effect_player));
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, effect_player);
         ctx.add_modifier(target, modifier, value, expiry);
@@ -239,7 +242,10 @@ fn opponent_effect_de_digivolve_does_not_pop_progress_attacker_stack() {
     };
     r.game.set_effect_source_player_for_test(None);
 
-    assert_eq!(popped, 0, "de_digivolve must report 0 pops on Progress carrier");
+    assert_eq!(
+        popped, 0,
+        "de_digivolve must report 0 pops on Progress carrier"
+    );
     assert_eq!(
         r.game.players[0].battle_area[progress.index as usize]
             .card_sources
@@ -366,9 +372,18 @@ fn rule_driven_delete_still_removes_progress_attacker() {
 #[test]
 fn opponent_effect_cannot_unsuspend_does_not_freeze_progress_attacker() {
     let (mut r, progress, _opp) = setup_progress_attacker();
-    install_modifier_as(&mut r, 1, progress, ModifierType::CannotUnsuspend, 0, Expiry::EndOfOpponentsTurn);
+    install_modifier_as(
+        &mut r,
+        1,
+        progress,
+        ModifierType::CannotUnsuspend,
+        0,
+        Expiry::EndOfOpponentsTurn,
+    );
     assert!(
-        !r.game.modifiers.has(progress, ModifierType::CannotUnsuspend),
+        !r.game
+            .modifiers
+            .has(progress, ModifierType::CannotUnsuspend),
         "Progress attacker must not be frozen by opponent CannotUnsuspend"
     );
 }
@@ -376,7 +391,14 @@ fn opponent_effect_cannot_unsuspend_does_not_freeze_progress_attacker() {
 #[test]
 fn opponent_effect_cannot_attack_does_not_lock_progress_attacker() {
     let (mut r, progress, _opp) = setup_progress_attacker();
-    install_modifier_as(&mut r, 1, progress, ModifierType::CannotAttack, 0, Expiry::EndOfTurn);
+    install_modifier_as(
+        &mut r,
+        1,
+        progress,
+        ModifierType::CannotAttack,
+        0,
+        Expiry::EndOfTurn,
+    );
     assert!(
         !r.game.modifiers.has(progress, ModifierType::CannotAttack),
         "Progress attacker must not pick up opponent-effect CannotAttack lockdown"
@@ -386,7 +408,14 @@ fn opponent_effect_cannot_attack_does_not_lock_progress_attacker() {
 #[test]
 fn opponent_effect_dont_have_dp_does_not_apply_to_progress_attacker() {
     let (mut r, progress, _opp) = setup_progress_attacker();
-    install_modifier_as(&mut r, 1, progress, ModifierType::DontHaveDp, 0, Expiry::EndOfAttack);
+    install_modifier_as(
+        &mut r,
+        1,
+        progress,
+        ModifierType::DontHaveDp,
+        0,
+        Expiry::EndOfAttack,
+    );
     assert!(
         !r.game.modifiers.has(progress, ModifierType::DontHaveDp),
         "Progress attacker must not be DontHaveDp-clamped by opponent effect"
@@ -396,7 +425,14 @@ fn opponent_effect_dont_have_dp_does_not_apply_to_progress_attacker() {
 #[test]
 fn opponent_effect_negative_base_dp_does_not_apply_to_progress_attacker() {
     let (mut r, progress, _opp) = setup_progress_attacker();
-    install_modifier_as(&mut r, 1, progress, ModifierType::ChangeBaseDp, -2000, Expiry::EndOfTurn);
+    install_modifier_as(
+        &mut r,
+        1,
+        progress,
+        ModifierType::ChangeBaseDp,
+        -2000,
+        Expiry::EndOfTurn,
+    );
     assert_eq!(
         r.game.modifiers.sum(progress, ModifierType::ChangeBaseDp),
         0,
@@ -410,7 +446,14 @@ fn opponent_effect_positive_base_dp_also_does_not_apply_to_progress_attacker() {
     // the same reason positive ChangeDp is gated — CanNotBeAffected is
     // hostility-blind.
     let (mut r, progress, _opp) = setup_progress_attacker();
-    install_modifier_as(&mut r, 1, progress, ModifierType::ChangeBaseDp, 1000, Expiry::EndOfTurn);
+    install_modifier_as(
+        &mut r,
+        1,
+        progress,
+        ModifierType::ChangeBaseDp,
+        1000,
+        Expiry::EndOfTurn,
+    );
     assert_eq!(
         r.game.modifiers.sum(progress, ModifierType::ChangeBaseDp),
         0,
@@ -421,9 +464,18 @@ fn opponent_effect_positive_base_dp_also_does_not_apply_to_progress_attacker() {
 #[test]
 fn opponent_effect_negative_security_attack_does_not_apply_to_progress_attacker() {
     let (mut r, progress, _opp) = setup_progress_attacker();
-    install_modifier_as(&mut r, 1, progress, ModifierType::SecurityAttackChange, -1, Expiry::EndOfTurn);
+    install_modifier_as(
+        &mut r,
+        1,
+        progress,
+        ModifierType::SecurityAttackChange,
+        -1,
+        Expiry::EndOfTurn,
+    );
     assert_eq!(
-        r.game.modifiers.sum(progress, ModifierType::SecurityAttackChange),
+        r.game
+            .modifiers
+            .sum(progress, ModifierType::SecurityAttackChange),
         0,
         "Progress attacker must not receive opponent-effect SecurityAttackChange(-1)"
     );
@@ -446,7 +498,9 @@ fn opponent_effect_protective_modifier_does_not_apply_to_progress_attacker() {
         Expiry::EndOfTurn,
     );
     assert!(
-        !r.game.modifiers.has(progress, ModifierType::CannotBeDestroyedByEffect),
+        !r.game
+            .modifiers
+            .has(progress, ModifierType::CannotBeDestroyedByEffect),
         "Progress gate is source-side only — opponent-granted protection doesn't pass through"
     );
 }
@@ -454,7 +508,14 @@ fn opponent_effect_protective_modifier_does_not_apply_to_progress_attacker() {
 #[test]
 fn own_effect_cannot_attack_still_locks_progress_attacker() {
     let (mut r, progress, _opp) = setup_progress_attacker();
-    install_modifier_as(&mut r, 0, progress, ModifierType::CannotAttack, 0, Expiry::EndOfTurn);
+    install_modifier_as(
+        &mut r,
+        0,
+        progress,
+        ModifierType::CannotAttack,
+        0,
+        Expiry::EndOfTurn,
+    );
     assert!(
         r.game.modifiers.has(progress, ModifierType::CannotAttack),
         "own-sourced CannotAttack must still install on Progress carrier"
@@ -470,7 +531,14 @@ fn opponent_effect_negative_dp_applies_to_non_progress_attacker() {
     // modifiers land on a plain attacker. The gate must fire ONLY for
     // Progress carriers, not all attacking permanents.
     let (mut r, plain, _opp) = setup_plain_attacker();
-    install_modifier_as(&mut r, 1, plain, ModifierType::ChangeDp, -3000, Expiry::EndOfTurn);
+    install_modifier_as(
+        &mut r,
+        1,
+        plain,
+        ModifierType::ChangeDp,
+        -3000,
+        Expiry::EndOfTurn,
+    );
     assert_eq!(
         r.game.modifiers.sum(plain, ModifierType::ChangeDp),
         -3000,

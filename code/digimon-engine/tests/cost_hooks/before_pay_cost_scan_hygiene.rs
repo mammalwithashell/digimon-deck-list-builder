@@ -6,7 +6,7 @@
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
-use digimon_engine::debug_runner::{DebugRunner, make_test_card};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind};
 use std::sync::Arc;
@@ -100,8 +100,7 @@ fn scan_excludes_trashed_sources() {
 
     // Place A on field then delete it (simulate "trashed" state).
     let handle = r.place_on_field(0, "PERM-A", Some(0));
-    r.game_mut().players[handle.player as usize]
-        .delete_permanent(handle.index as usize);
+    r.game_mut().players[handle.player as usize].delete_permanent(handle.index as usize);
 
     // PERM-A is now in trash; battle_area is empty.
     assert_eq!(r.game.players[0].battle_area.len(), 0);

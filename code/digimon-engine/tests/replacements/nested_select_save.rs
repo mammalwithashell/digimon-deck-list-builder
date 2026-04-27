@@ -97,14 +97,12 @@ impl CardEffect for SaveLike {
                         let me_idx = me.index as usize;
                         let tamer_player = tamer.player;
                         let tamer_idx = tamer.index as usize;
-                        if let Some(top) = ctx.game.players[me_player as usize]
-                            .battle_area[me_idx]
+                        if let Some(top) = ctx.game.players[me_player as usize].battle_area[me_idx]
                             .card_sources
                             .last()
                             .cloned()
                         {
-                            ctx.game.players[tamer_player as usize]
-                                .battle_area[tamer_idx]
+                            ctx.game.players[tamer_player as usize].battle_area[tamer_idx]
                                 .card_sources
                                 .insert(0, top);
                         }
@@ -134,7 +132,9 @@ fn save_picks_tamer_and_cancels_deletion() {
 
     // Outer accept dialog is up.
     assert!(r.game.pending_selection.is_some());
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
 
     // Inner Tamer pick is up; pick the only Tamer.
     let pending = r.game.pending_selection.as_ref().expect("inner select");
@@ -194,9 +194,14 @@ fn save_with_no_tamers_does_not_offer() {
     let saved = r.place_on_field(0, "SAVE-D", None);
 
     r.game.delete_permanent_with_effects(saved);
-    assert!(r.game.pending_selection.is_some(), "outer accept still installed");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "outer accept still installed"
+    );
 
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
 
     // Inner select_own_permanent had no Tamer candidates → no PendingSelection
     // installed; user callback never ran; outcome stayed None.

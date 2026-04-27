@@ -4,8 +4,8 @@
 //! pack, then drive the engine behavior through `DebugRunner`.
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 

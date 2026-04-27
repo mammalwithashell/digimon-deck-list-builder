@@ -125,7 +125,9 @@ fn execute_attack_unsuspended_then_self_delete() {
         "MayAttack must be granted by Execute's EndOfYourTurn body"
     );
     assert!(
-        r.game.modifiers.has(exec, ModifierType::CanAttackUnsuspended),
+        r.game
+            .modifiers
+            .has(exec, ModifierType::CanAttackUnsuspended),
         "CanAttackUnsuspended must be granted by Execute's EndOfYourTurn body"
     );
     assert_eq!(
@@ -204,7 +206,9 @@ fn execute_no_self_delete_when_attack_declined() {
         "EndOfTurn-expiring modifiers must clear after rotation"
     );
     assert!(
-        !r.game.modifiers.has(exec, ModifierType::CanAttackUnsuspended),
+        !r.game
+            .modifiers
+            .has(exec, ModifierType::CanAttackUnsuspended),
         "EndOfTurn-expiring modifiers must clear after rotation"
     );
 
@@ -262,14 +266,18 @@ fn execute_attack_target_filter_includes_unsuspended() {
 
     // Phase must be EndOfTurnAction with the modifiers live.
     assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
-    assert!(r.game.modifiers.has(exec, ModifierType::CanAttackUnsuspended));
+    assert!(r
+        .game
+        .modifiers
+        .has(exec, ModifierType::CanAttackUnsuspended));
 
     // Build the mask for P0 and verify the bit for (attacker=EXEC,
     // target=DEF) is set despite DEF being unsuspended.
     let mask = digimon_engine::build_action_mask(&r.game, 0);
     let bit = encode_attack(exec.index as u16, def.index as u16) as usize;
     assert!(
-        bit >= ATTACK_START as usize && bit < ATTACK_START as usize + (TARGETS_PER_ATTACKER as usize) * 14,
+        bit >= ATTACK_START as usize
+            && bit < ATTACK_START as usize + (TARGETS_PER_ATTACKER as usize) * 14,
         "attack bit must be in the §4.6 attack range"
     );
     assert_eq!(

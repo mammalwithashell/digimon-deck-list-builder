@@ -18,12 +18,10 @@ use digimon_engine::dsl_cards::DslCardEffect;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::GamePhase;
 
-const DNA_TRIGGER_YAML: &str =
-    include_str!("../../cards/_examples/TST_DNA_TRIGGER.yaml");
+const DNA_TRIGGER_YAML: &str = include_str!("../../cards/_examples/TST_DNA_TRIGGER.yaml");
 
 fn build_dsl_trigger_effect() -> Arc<DslCardEffect> {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(DNA_TRIGGER_YAML).expect("YAML parses");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(DNA_TRIGGER_YAML).expect("YAML parses");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles cleanly");
     Arc::new(DslCardEffect::new(Arc::new(compiled)))
 }
@@ -34,8 +32,7 @@ fn dsl_on_dna_digivolve_fires_from_user_action_path() {
         .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))
         .add_card(make_test_card_with_level("TST-LV6", "SixDigi", 6))
         .add_card({
-            let mut card =
-                make_test_dna_card("TST-DNA-TRIGGER", "TestDnaTrigger", 5, 6, 0);
+            let mut card = make_test_dna_card("TST-DNA-TRIGGER", "TestDnaTrigger", 5, 6, 0);
             card.level = Some(7);
             card
         })
@@ -77,8 +74,7 @@ fn dsl_on_dna_digivolve_fires_from_effect_path() {
         .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))
         .add_card(make_test_card_with_level("TST-LV6", "SixDigi", 6))
         .add_card({
-            let mut card =
-                make_test_dna_card("TST-DNA-TRIGGER", "TestDnaTrigger", 5, 6, 0);
+            let mut card = make_test_dna_card("TST-DNA-TRIGGER", "TestDnaTrigger", 5, 6, 0);
             card.level = Some(7);
             card
         })

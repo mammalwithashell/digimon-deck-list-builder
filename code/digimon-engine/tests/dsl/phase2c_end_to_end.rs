@@ -200,7 +200,11 @@ fn select_then_if_opponents_turn_buffs_opponent_permanent() {
             .pending_selection
             .as_ref()
             .expect("SelectOpponentPermanent installed PendingSelection");
-        assert_eq!(pending.valid_action_ids.len(), 1, "one P0 permanent selectable");
+        assert_eq!(
+            pending.valid_action_ids.len(),
+            1,
+            "one P0 permanent selectable"
+        );
         (pending.valid_action_ids[0], pending.selecting_player)
     };
 

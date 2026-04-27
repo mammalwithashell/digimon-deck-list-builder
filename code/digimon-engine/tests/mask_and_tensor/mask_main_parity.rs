@@ -7,7 +7,9 @@
 //! §4.3 — Blitz attack exception (memory < 0)
 //! §4.4 — Raid + CAN_ATTACK_UNSUSPENDED target rule (unsuspended targets)
 
-use digimon_engine::action::{build_action_mask, encode_attack, DNA_DIGIVOLVE_START, SECURITY_TARGET};
+use digimon_engine::action::{
+    build_action_mask, encode_attack, DNA_DIGIVOLVE_START, SECURITY_TARGET,
+};
 use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, CardKind, Expiry, Keyword, ModifierType};
@@ -169,8 +171,8 @@ fn mask_blitz_can_attack_under_negative_memory() {
 
     // Simulate "digivolved this turn" on the attacker, and suspend the
     // opponent so there's a Digimon target available.
-    r.game.players[tp as usize].battle_area[attacker.index as usize]
-        .turn_digivolved = r.game.turn_count;
+    r.game.players[tp as usize].battle_area[attacker.index as usize].turn_digivolved =
+        r.game.turn_count;
     r.game.players[opp as usize].battle_area[0].is_suspended = true;
 
     r.game.enter_main_phase();
@@ -180,16 +182,28 @@ fn mask_blitz_can_attack_under_negative_memory() {
     let mask_no_blitz = build_action_mask(&r.game, tp);
     let sec_bit = encode_attack(attacker.index as u16, SECURITY_TARGET) as usize;
     let dig_bit = encode_attack(attacker.index as u16, 0) as usize;
-    assert_eq!(mask_no_blitz[sec_bit], 0.0, "no Blitz + memory<0 → no security attack");
-    assert_eq!(mask_no_blitz[dig_bit], 0.0, "no Blitz + memory<0 → no digimon attack");
+    assert_eq!(
+        mask_no_blitz[sec_bit], 0.0,
+        "no Blitz + memory<0 → no security attack"
+    );
+    assert_eq!(
+        mask_no_blitz[dig_bit], 0.0,
+        "no Blitz + memory<0 → no digimon attack"
+    );
 
     // Grant Blitz → both attack bits should light up.
-    r.game.modifiers.grant_keyword(
-        attacker, Keyword::Blitz, Expiry::EndOfTurn, tp,
-    );
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Blitz, Expiry::EndOfTurn, tp);
     let mask_blitz = build_action_mask(&r.game, tp);
-    assert_eq!(mask_blitz[sec_bit], 1.0, "Blitz + digivolved this turn → security");
-    assert_eq!(mask_blitz[dig_bit], 1.0, "Blitz + digivolved this turn → digimon");
+    assert_eq!(
+        mask_blitz[sec_bit], 1.0,
+        "Blitz + digivolved this turn → security"
+    );
+    assert_eq!(
+        mask_blitz[dig_bit], 1.0,
+        "Blitz + digivolved this turn → digimon"
+    );
 }
 
 /// Blitz only exempts memory<0 when the attacker digivolved *this* turn.
@@ -209,9 +223,9 @@ fn mask_blitz_without_digivolving_does_not_attack_under_negative_memory() {
 
     r.game.enter_main_phase();
     r.game.set_memory(-3);
-    r.game.modifiers.grant_keyword(
-        attacker, Keyword::Blitz, Expiry::EndOfTurn, tp,
-    );
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Blitz, Expiry::EndOfTurn, tp);
     // NOTE: no turn_digivolved assignment — attacker was placed as-is.
 
     let mask = build_action_mask(&r.game, tp);
@@ -251,16 +265,28 @@ fn mask_raid_targets_highest_dp_unsuspended() {
     let weak_bit = encode_attack(attacker.index as u16, weak_idx as u16) as usize;
     let strong_bit = encode_attack(attacker.index as u16, strong_idx as u16) as usize;
     let baseline = build_action_mask(&r.game, tp);
-    assert_eq!(baseline[weak_bit], 0.0, "no Raid → unsuspended weak is off-limits");
-    assert_eq!(baseline[strong_bit], 0.0, "no Raid → unsuspended strong is off-limits");
+    assert_eq!(
+        baseline[weak_bit], 0.0,
+        "no Raid → unsuspended weak is off-limits"
+    );
+    assert_eq!(
+        baseline[strong_bit], 0.0,
+        "no Raid → unsuspended strong is off-limits"
+    );
 
     // Grant Raid → only the highest-DP unsuspended target (STRONG) lights up.
-    r.game.modifiers.grant_keyword(
-        attacker, Keyword::Raid, Expiry::EndOfTurn, tp,
-    );
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Raid, Expiry::EndOfTurn, tp);
     let raid_mask = build_action_mask(&r.game, tp);
-    assert_eq!(raid_mask[strong_bit], 1.0, "Raid → highest-DP unsuspended is attackable");
-    assert_eq!(raid_mask[weak_bit], 0.0, "Raid → lower-DP unsuspended is NOT attackable");
+    assert_eq!(
+        raid_mask[strong_bit], 1.0,
+        "Raid → highest-DP unsuspended is attackable"
+    );
+    assert_eq!(
+        raid_mask[weak_bit], 0.0,
+        "Raid → lower-DP unsuspended is NOT attackable"
+    );
 }
 
 /// When multiple unsuspended enemies share the highest DP, Raid allows
@@ -283,16 +309,18 @@ fn mask_raid_allows_all_tied_for_highest() {
 
     r.game.enter_main_phase();
     r.game.set_memory(3);
-    r.game.modifiers.grant_keyword(
-        attacker, Keyword::Raid, Expiry::EndOfTurn, tp,
-    );
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Raid, Expiry::EndOfTurn, tp);
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, twin_a as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, twin_a as u16) as usize],
+        1.0,
         "Raid → first tied-for-max target is attackable",
     );
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, twin_b as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, twin_b as u16) as usize],
+        1.0,
         "Raid → second tied-for-max target is also attackable",
     );
 }
@@ -320,16 +348,23 @@ fn mask_can_attack_unsuspended_modifier_allows_all_unsuspended() {
     r.game.set_memory(3);
     r.game.modifiers.add(
         attacker,
-        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::CanAttackUnsuspended, 1, Expiry::EndOfTurn, tp),
+        digimon_engine::modifiers::ModifierEntry::simple(
+            ModifierType::CanAttackUnsuspended,
+            1,
+            Expiry::EndOfTurn,
+            tp,
+        ),
     );
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize],
+        1.0,
         "CAN_ATTACK_UNSUSPENDED → lower-DP unsuspended is attackable",
     );
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize],
+        1.0,
         "CAN_ATTACK_UNSUSPENDED → higher-DP unsuspended is attackable",
     );
 }
@@ -362,11 +397,7 @@ fn make_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
 }
 
 /// A Digimon hand card carrying DNA costs — used as the evolution target.
-fn make_dna_digimon(
-    id: &str,
-    color: CardColor,
-    dna_costs: Vec<DnaCost>,
-) -> CardData {
+fn make_dna_digimon(id: &str, color: CardColor, dna_costs: Vec<DnaCost>) -> CardData {
     CardData {
         card_id: id.to_string(),
         card_name: id.to_string(),
@@ -552,18 +583,35 @@ fn mask_cannot_play_from_hand_suppresses_all_hand_bits() {
 
     // Baseline: both hand cards are playable (affordable + Digimon kind).
     let mask_baseline = build_action_mask(&r.game, 0);
-    assert_eq!(mask_baseline[0], 1.0, "HAND-A should be playable without the modifier");
-    assert_eq!(mask_baseline[1], 1.0, "HAND-B should be playable without the modifier");
+    assert_eq!(
+        mask_baseline[0], 1.0,
+        "HAND-A should be playable without the modifier"
+    );
+    assert_eq!(
+        mask_baseline[1], 1.0,
+        "HAND-B should be playable without the modifier"
+    );
 
     // Grant CannotPlayFromHand to the blocker.
     r.game.modifiers.add(
         blocker,
-        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::CannotPlayFromHand, 1, Expiry::EndOfTurn, 0),
+        digimon_engine::modifiers::ModifierEntry::simple(
+            ModifierType::CannotPlayFromHand,
+            1,
+            Expiry::EndOfTurn,
+            0,
+        ),
     );
 
     let mask_blocked = build_action_mask(&r.game, 0);
-    assert_eq!(mask_blocked[0], 0.0, "HAND-A suppressed while modifier is active");
-    assert_eq!(mask_blocked[1], 0.0, "HAND-B suppressed while modifier is active");
+    assert_eq!(
+        mask_blocked[0], 0.0,
+        "HAND-A suppressed while modifier is active"
+    );
+    assert_eq!(
+        mask_blocked[1], 0.0,
+        "HAND-B suppressed while modifier is active"
+    );
 }
 
 // ─── §4.7b CANNOT_DIGIVOLVE ────────────────────────────────────────────
@@ -597,12 +645,20 @@ fn mask_cannot_digivolve_suppresses_digivolve_bits_on_base() {
     // Baseline: evo bit to base[0] is emitted (evo_cost matches).
     let baseline = build_action_mask(&r.game, 0);
     let evo_bit = encode_digivolve(0 as u16, base.index as u16) as usize;
-    assert_eq!(baseline[evo_bit], 1.0, "baseline digivolve bit should be set");
+    assert_eq!(
+        baseline[evo_bit], 1.0,
+        "baseline digivolve bit should be set"
+    );
 
     // Grant CannotDigivolve to the base.
     r.game.modifiers.add(
         base,
-        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::CannotDigivolve, 1, Expiry::EndOfTurn, 0),
+        digimon_engine::modifiers::ModifierEntry::simple(
+            ModifierType::CannotDigivolve,
+            1,
+            Expiry::EndOfTurn,
+            0,
+        ),
     );
 
     let blocked = build_action_mask(&r.game, 0);
@@ -636,13 +692,21 @@ fn mask_cannot_attack_target_suppresses_digimon_attack_bit() {
     let baseline = build_action_mask(&r.game, tp);
     let atk_bit = encode_attack(attacker.index as u16, defender.index as u16) as usize;
     let sec_bit = encode_attack(attacker.index as u16, SECURITY_TARGET) as usize;
-    assert_eq!(baseline[atk_bit], 1.0, "baseline: suspended defender is attackable");
+    assert_eq!(
+        baseline[atk_bit], 1.0,
+        "baseline: suspended defender is attackable"
+    );
     assert_eq!(baseline[sec_bit], 1.0, "baseline: security is attackable");
 
     // Grant CannotAttackTarget to defender.
     r.game.modifiers.add(
         defender,
-        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::CannotAttackTarget, 1, Expiry::EndOfTurn, opp),
+        digimon_engine::modifiers::ModifierEntry::simple(
+            ModifierType::CannotAttackTarget,
+            1,
+            Expiry::EndOfTurn,
+            opp,
+        ),
     );
 
     let blocked = build_action_mask(&r.game, tp);

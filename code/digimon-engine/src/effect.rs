@@ -509,10 +509,7 @@ impl EffectBuilder {
         self
     }
 
-    pub fn process(
-        mut self,
-        f: impl Fn(&mut EffectContext) + Send + Sync + 'static,
-    ) -> Self {
+    pub fn process(mut self, f: impl Fn(&mut EffectContext) + Send + Sync + 'static) -> Self {
         self.inner.process = Some(Box::new(f));
         self
     }

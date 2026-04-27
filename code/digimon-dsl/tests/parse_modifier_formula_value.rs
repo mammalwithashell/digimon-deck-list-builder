@@ -7,7 +7,8 @@
 
 use digimon_dsl::compile::compile;
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledFormula, CompiledModifierValue, CompiledPerSelector, CompiledStep,
+    CompiledClause, CompiledFormula, CompiledModifierValue, CompiledPerSelector, CompiledPlayerRef,
+    CompiledStep, CompiledZone,
 };
 use digimon_dsl::spec::CardSpec;
 
@@ -148,5 +149,50 @@ effects:
             other => panic!("expected Formula(BasePerDelta), got {other:?}"),
         },
         other => panic!("expected AddModifier, got {other:?}"),
+    }
+}
+
+#[test]
+fn card_count_in_zone_formula_lowers_player_and_zone_payload() {
+    let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 6
+color: [red]
+cost: 8
+dp: 9000
+effects:
+  - when: when_attacking
+    process:
+      - add_dp_modifier:
+          target: self
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  of: opponent
+                  zone: trash
+              delta: 1000
+          expiry: end_of_attack
+"#;
+    let step = compile_first_step(yaml);
+    match step {
+        CompiledStep::AddDpModifier { value, .. } => match value {
+            CompiledModifierValue::Formula(CompiledFormula::BasePerDelta { base, per, delta }) => {
+                assert_eq!(base, 0);
+                assert_eq!(
+                    per,
+                    CompiledPerSelector::CardCountInZone {
+                        of: CompiledPlayerRef::Opponent,
+                        zone: CompiledZone::Trash,
+                    }
+                );
+                assert_eq!(delta, 1000);
+            }
+            other => panic!("expected Formula(BasePerDelta), got {other:?}"),
+        },
+        other => panic!("expected AddDpModifier, got {other:?}"),
     }
 }

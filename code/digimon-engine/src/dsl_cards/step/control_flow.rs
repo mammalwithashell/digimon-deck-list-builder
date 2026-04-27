@@ -9,7 +9,7 @@ use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
-use crate::dsl_cards::step::{run_steps, RunOutcome};
+use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
 
 /// Returns `Some(outcome)` if `step` is a control-flow verb whose body
@@ -22,11 +22,12 @@ pub fn try_run(
     step: &CompiledStep,
     ctx: &mut EffectContext<'_>,
     bindings: &mut Bindings,
+    runtime: &StepRuntime,
 ) -> Option<RunOutcome> {
     match step {
         CompiledStep::Optional(body) => {
             // Phase 2c: always run the body. Opt-out UX lands in 2e.
-            Some(run_steps(body, ctx, bindings))
+            Some(run_steps_with_runtime(body, ctx, bindings, runtime))
         }
         CompiledStep::If {
             condition,
@@ -43,7 +44,7 @@ pub fn try_run(
                 )
             };
             let body = if cond_holds { then } else { else_branch };
-            Some(run_steps(body, ctx, bindings))
+            Some(run_steps_with_runtime(body, ctx, bindings, runtime))
         }
         _ => None,
     }

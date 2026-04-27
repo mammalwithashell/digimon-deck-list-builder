@@ -308,10 +308,7 @@ fn armor_purge_top_fires_on_digivolution_card_trashed() {
 
     struct ObserverEffect;
     impl CardEffect for ObserverEffect {
-        fn effects(
-            &self,
-            card: digimon_engine::card_source::CardHandle,
-        ) -> Vec<Effect> {
+        fn effects(&self, card: digimon_engine::card_source::CardHandle) -> Vec<Effect> {
             vec![Effect::on_digivolution_card_trashed(card)
                 .name("count source-trash fires")
                 .process(|ctx| {

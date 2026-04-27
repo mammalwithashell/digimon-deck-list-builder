@@ -17,14 +17,12 @@ static OFFICIAL_ENG_RESTRICTION: LazyLock<CardRestriction> = LazyLock::new(|| {
 
     // 47 Restricted cards (max 1 copy)
     for id in [
-        "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110",
-        "BT14-002", "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069",
-        "BT19-040", "BT2-047", "BT2-069", "BT3-054", "BT3-103", "BT4-104",
-        "BT4-111", "BT6-100", "BT6-104", "BT7-038", "BT7-064", "BT7-069",
-        "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068",
-        "EX2-039", "EX2-070", "EX3-057", "EX4-006", "EX4-019", "EX4-030",
-        "EX5-015", "EX5-018", "EX5-062", "P-008", "P-025", "P-029",
-        "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
+        "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110", "BT14-002",
+        "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069", "BT19-040", "BT2-047",
+        "BT2-069", "BT3-054", "BT3-103", "BT4-104", "BT4-111", "BT6-100", "BT6-104", "BT7-038",
+        "BT7-064", "BT7-069", "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068",
+        "EX2-039", "EX2-070", "EX3-057", "EX4-006", "EX4-019", "EX4-030", "EX5-015", "EX5-018",
+        "EX5-062", "P-008", "P-025", "P-029", "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
     ] {
         card_limits.insert(id.to_string(), 1);
     }
@@ -39,7 +37,10 @@ static OFFICIAL_ENG_RESTRICTION: LazyLock<CardRestriction> = LazyLock::new(|| {
         ),
     ];
 
-    CardRestriction { card_limits, choice_groups }
+    CardRestriction {
+        card_limits,
+        choice_groups,
+    }
 });
 
 /// Card-copy restrictions and mutual-exclusivity groups for a format.

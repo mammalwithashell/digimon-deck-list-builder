@@ -46,7 +46,7 @@ fn return_to_hand_moves_permanent_to_owner_hand() {
         .add_card(card.clone())
         .hand(0, &["T-RTH"])
         .memory(5) // pre-fund so the 3-cost play is affordable
-        .start();  // advance past Mulligan into turn 1
+        .start(); // advance past Mulligan into turn 1
 
     // Capture hand size before playing (net-zero round-trip baseline).
     let hand_before = runner.game.players[0].hand.len();
@@ -59,7 +59,9 @@ fn return_to_hand_moves_permanent_to_owner_hand() {
     assert_eq!(runner.game.players[0].hand.len(), hand_before - 1);
 
     let handle = runner.perm_handle(0, field_index);
-    let src_card = runner.game.players[0].battle_area[field_index].top_card().handle();
+    let src_card = runner.game.players[0].battle_area[field_index]
+        .top_card()
+        .handle();
 
     let step = CompiledStep::ReturnToHand {
         target: CompiledBindingRef::Named("tgt".into()),
@@ -190,7 +192,9 @@ fn de_digivolve_amount_one_pops_one_source() {
             .expect("T-TOP should be registered");
         let card_index = runner.game.next_card_index();
         let top_src = digimon_engine::card_source::CardSource::new(data_idx, 0, card_index);
-        runner.game.players[0].battle_area[0].card_sources.push(top_src);
+        runner.game.players[0].battle_area[0]
+            .card_sources
+            .push(top_src);
     }
     assert_eq!(
         runner.game.players[0].battle_area[0].stack_size(),

@@ -3,7 +3,9 @@ use digimon_engine::selection::{SelectionKind, UnionZoneSet};
 
 #[test]
 fn new_selection_kinds_exist() {
-    let _ = SelectionKind::UnionZone { zones: UnionZoneSet::HAND | UnionZoneSet::TRASH };
+    let _ = SelectionKind::UnionZone {
+        zones: UnionZoneSet::HAND | UnionZoneSet::TRASH,
+    };
     let _ = SelectionKind::OrderedPermutation { remaining: 3 };
     let _ = SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 };
     let _ = GamePhase::SelectUnion;

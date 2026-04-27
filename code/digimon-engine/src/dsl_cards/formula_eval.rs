@@ -48,9 +48,10 @@ use digimon_dsl::compiled::{
     CompiledZone,
 };
 
-use crate::effect_context::EffectContext;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{CardColor, PlayerId};
-use crate::permanent::PermanentHandle;
+use crate::permanent::{Permanent, PermanentHandle};
 
 // Compile-time guard for the `DigivolutionColorCount` u8 bitmask in
 // `evaluate_per`. `1u8 << n` is undefined behavior for `n >= 8`. Today
@@ -134,6 +135,92 @@ pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentH
     }
 }
 
+pub fn evaluate_with_raw(
+    f: &CompiledFormula,
+    ctx: &EffectContext<'_>,
+    target: PermanentHandle,
+    raw: &EngineRawRustRegistry,
+) -> i32 {
+    if let CompiledFormula::RawRust(name) = f {
+        if let Some(f) = raw.formula_fn(name) {
+            let read = ctx.as_read();
+            return f(&read, target);
+        }
+        if let Some(value) = ctx.game.formula_extensions.evaluate(name, ctx, target) {
+            return value;
+        }
+    }
+    let read = ctx.as_read();
+    evaluate_read_with_raw(f, &read, target, raw)
+}
+
+pub fn evaluate_read(
+    f: &CompiledFormula,
+    ctx: &EffectReadContext<'_>,
+    target: PermanentHandle,
+) -> i32 {
+    evaluate_read_with_raw(f, ctx, target, &EngineRawRustRegistry::new())
+}
+
+pub fn evaluate_read_with_raw(
+    f: &CompiledFormula,
+    ctx: &EffectReadContext<'_>,
+    target: PermanentHandle,
+    raw: &EngineRawRustRegistry,
+) -> i32 {
+    match f {
+        CompiledFormula::Literal(n) => *n,
+        CompiledFormula::BasePerDelta { base, per, delta } => {
+            let count = evaluate_per_read(*per, ctx, target);
+            base + count * delta
+        }
+        CompiledFormula::FloorDiv(args) => {
+            if args.len() != 2 {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "[debug] formula_eval: FloorDiv with {} operands (expected 2); returning 0.",
+                    args.len()
+                );
+                return 0;
+            }
+            let l = evaluate_read_with_raw(&args[0], ctx, target, raw);
+            let r = evaluate_read_with_raw(&args[1], ctx, target, raw);
+            if r == 0 {
+                0
+            } else {
+                l.div_euclid(r)
+            }
+        }
+        CompiledFormula::Max(args) => args
+            .iter()
+            .map(|a| evaluate_read_with_raw(a, ctx, target, raw))
+            .max()
+            .unwrap_or(0),
+        CompiledFormula::Min(args) => args
+            .iter()
+            .map(|a| evaluate_read_with_raw(a, ctx, target, raw))
+            .min()
+            .unwrap_or(0),
+        CompiledFormula::Aggregate(sel) => {
+            evaluate_aggregate_read(*sel, CompiledPlayerRef::You, ctx)
+        }
+        CompiledFormula::AggregateScoped { selector, scope } => {
+            evaluate_aggregate_read(*selector, *scope, ctx)
+        }
+        CompiledFormula::RawRust(name) => {
+            if let Some(f) = raw.formula_fn(name) {
+                return f(ctx, target);
+            }
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "[debug] formula_eval: RawRust(\"{}\") not registered; returning 0.",
+                name
+            );
+            0
+        }
+    }
+}
+
 fn evaluate_per(sel: CompiledPerSelector, ctx: &EffectContext<'_>, target: PermanentHandle) -> i32 {
     match sel {
         CompiledPerSelector::StackSize => {
@@ -184,10 +271,59 @@ fn evaluate_per(sel: CompiledPerSelector, ctx: &EffectContext<'_>, target: Perma
     }
 }
 
+fn evaluate_per_read(
+    sel: CompiledPerSelector,
+    ctx: &EffectReadContext<'_>,
+    target: PermanentHandle,
+) -> i32 {
+    match sel {
+        CompiledPerSelector::StackSize => target_permanent_read(ctx, target)
+            .map(|perm| perm.card_sources.len() as i32)
+            .unwrap_or(0),
+        CompiledPerSelector::MaterialCount => target_permanent_read(ctx, target)
+            .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
+            .unwrap_or(0),
+        CompiledPerSelector::AllyCount => ctx
+            .game
+            .player(target.player)
+            .battle_area
+            .len()
+            .saturating_sub(1) as i32,
+        CompiledPerSelector::DigivolutionColorCount => {
+            let Some(perm) = target_permanent_read(ctx, target) else {
+                return 0;
+            };
+            let data = &ctx.game.card_data;
+            let mut seen: u8 = 0;
+            for src in &perm.card_sources {
+                for c in src.colors(data) {
+                    seen |= 1u8 << (*c as u8);
+                }
+            }
+            seen.count_ones() as i32
+        }
+        CompiledPerSelector::CardCountInZone => 0,
+        CompiledPerSelector::CardCountInZoneScoped { zone, of } => players_for_ref_read(of, ctx)
+            .into_iter()
+            .map(|player| count_zone_read(zone, player, ctx))
+            .sum(),
+    }
+}
+
 fn target_permanent<'a>(
     ctx: &'a EffectContext<'_>,
     target: PermanentHandle,
 ) -> Option<&'a crate::permanent::Permanent> {
+    ctx.game
+        .player(target.player)
+        .battle_area
+        .get(target.index as usize)
+}
+
+fn target_permanent_read<'a>(
+    ctx: &'a EffectReadContext<'_>,
+    target: PermanentHandle,
+) -> Option<&'a Permanent> {
     ctx.game
         .player(target.player)
         .battle_area
@@ -203,7 +339,49 @@ fn players_for_ref(of: CompiledPlayerRef, ctx: &EffectContext<'_>) -> Vec<Player
     }
 }
 
+fn players_for_ref_read(of: CompiledPlayerRef, ctx: &EffectReadContext<'_>) -> Vec<PlayerId> {
+    match of {
+        CompiledPlayerRef::You => vec![ctx.player],
+        CompiledPlayerRef::Opponent => vec![ctx.opponent_id()],
+        CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
+        CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
+    }
+}
+
 fn count_zone(zone: CompiledZone, player: PlayerId, ctx: &EffectContext<'_>) -> i32 {
+    let player_state = ctx.game.player(player);
+    let count = match zone {
+        CompiledZone::Hand => player_state.hand.len(),
+        CompiledZone::Deck => player_state.deck.len(),
+        CompiledZone::Trash => player_state.trash.len(),
+        CompiledZone::BattleArea => player_state.battle_area.len(),
+        CompiledZone::Security => player_state.security.len(),
+        CompiledZone::Breeding => usize::from(player_state.breeding_area.is_some()),
+        CompiledZone::DigiEggDeck => player_state.digitama_deck.len(),
+        CompiledZone::Reveal => ctx
+            .game
+            .revealed_cards
+            .iter()
+            .filter(|card| card.owner == player)
+            .count(),
+        CompiledZone::Material => {
+            let battle_materials = player_state
+                .battle_area
+                .iter()
+                .map(|perm| perm.card_sources.len().saturating_sub(1))
+                .sum::<usize>();
+            let breeding_materials = player_state
+                .breeding_area
+                .as_ref()
+                .map(|perm| perm.card_sources.len().saturating_sub(1))
+                .unwrap_or(0);
+            battle_materials + breeding_materials
+        }
+    };
+    count as i32
+}
+
+fn count_zone_read(zone: CompiledZone, player: PlayerId, ctx: &EffectReadContext<'_>) -> i32 {
     let player_state = ctx.game.player(player);
     let count = match zone {
         CompiledZone::Hand => player_state.hand.len(),
@@ -253,6 +431,25 @@ fn evaluate_aggregate(
     }
 }
 
+fn evaluate_aggregate_read(
+    sel: CompiledAggregateSelector,
+    scope: CompiledPlayerRef,
+    ctx: &EffectReadContext<'_>,
+) -> i32 {
+    use CompiledAggregateSelector as A;
+    let values = players_for_ref_read(scope, ctx)
+        .into_iter()
+        .flat_map(|player| {
+            let len = ctx.game.player(player).battle_area.len();
+            (0..len).filter_map(move |index| aggregate_value_read(sel, player, index, ctx))
+        });
+
+    match sel {
+        A::LowestDp | A::LowestLevel => values.min().unwrap_or(0),
+        A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
+    }
+}
+
 fn aggregate_value(
     sel: CompiledAggregateSelector,
     player: PlayerId,
@@ -273,5 +470,26 @@ fn aggregate_value(
             .get(index)?
             .level(&ctx.game.card_data)
             .map(i32::from),
+    }
+}
+
+fn aggregate_value_read(
+    sel: CompiledAggregateSelector,
+    player: PlayerId,
+    index: usize,
+    ctx: &EffectReadContext<'_>,
+) -> Option<i32> {
+    let handle = PermanentHandle {
+        player,
+        index: index as u8,
+    };
+    let perm = ctx.game.player(player).battle_area.get(index)?;
+    match sel {
+        CompiledAggregateSelector::LowestDp | CompiledAggregateSelector::HighestDp => {
+            ctx.game.effective_dp(handle)
+        }
+        CompiledAggregateSelector::LowestLevel | CompiledAggregateSelector::HighestLevel => {
+            perm.level(ctx.card_data()).map(i32::from)
+        }
     }
 }

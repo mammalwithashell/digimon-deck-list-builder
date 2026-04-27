@@ -276,9 +276,7 @@ fn standard_option_trash_subject_and_cause_are_correct() {
     // Witness receives (subject, cause) on each fire; we then assert them.
     let recorded: Arc<Mutex<Option<(ReplacementSubject, ReplacementCause)>>> =
         Arc::new(Mutex::new(None));
-    struct SubjectRecorder(
-        Arc<Mutex<Option<(ReplacementSubject, ReplacementCause)>>>,
-    );
+    struct SubjectRecorder(Arc<Mutex<Option<(ReplacementSubject, ReplacementCause)>>>);
     impl CardEffect for SubjectRecorder {
         fn effects(&self, card: CardHandle) -> Vec<Effect> {
             let slot = self.0.clone();

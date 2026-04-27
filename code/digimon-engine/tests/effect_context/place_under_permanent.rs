@@ -90,7 +90,12 @@ fn push_to_trash(r: &mut DebugRunner, player: u8, card_id: &str) -> CardHandle {
 
 /// Helper: push a source card onto an existing permanent's stack
 /// (makes it the new top card).
-fn push_source_on_top(r: &mut DebugRunner, perm_player: u8, perm_idx: usize, card_id: &str) -> CardHandle {
+fn push_source_on_top(
+    r: &mut DebugRunner,
+    perm_player: u8,
+    perm_idx: usize,
+    card_id: &str,
+) -> CardHandle {
     let data_idx = r
         .game
         .card_data
@@ -126,7 +131,11 @@ fn place_from_hand_lands_at_bottom_of_stack() {
     let tuck_handle = push_to_hand(&mut r, tp, "TUCK-CARD");
 
     // Pre-condition checks.
-    assert_eq!(r.game.players[tp as usize].hand.len(), 1, "hand has 1 card before");
+    assert_eq!(
+        r.game.players[tp as usize].hand.len(),
+        1,
+        "hand has 1 card before"
+    );
     assert_eq!(
         r.game.players[tp as usize].battle_area[target_handle.index as usize]
             .card_sources
@@ -141,7 +150,11 @@ fn place_from_hand_lands_at_bottom_of_stack() {
     }
 
     // Post-condition: hand emptied.
-    assert_eq!(r.game.players[tp as usize].hand.len(), 0, "hand emptied after tuck");
+    assert_eq!(
+        r.game.players[tp as usize].hand.len(),
+        0,
+        "hand emptied after tuck"
+    );
 
     // Post-condition: target has 2 sources, TUCK-CARD at index 0 (bottom).
     let target_perm = &r.game.players[tp as usize].battle_area[target_handle.index as usize];
@@ -180,7 +193,11 @@ fn place_from_trash_lands_at_bottom_of_stack() {
     // Pre-populate trash (mimics Save: card was just deleted → moved to trash).
     let save_handle = push_to_trash(&mut r, tp, "SAVE-CARD");
 
-    assert_eq!(r.game.players[tp as usize].trash.len(), 1, "trash has 1 card before");
+    assert_eq!(
+        r.game.players[tp as usize].trash.len(),
+        1,
+        "trash has 1 card before"
+    );
     assert_eq!(
         r.game.players[tp as usize].battle_area[target_handle.index as usize]
             .card_sources
@@ -195,11 +212,19 @@ fn place_from_trash_lands_at_bottom_of_stack() {
     }
 
     // Trash emptied.
-    assert_eq!(r.game.players[tp as usize].trash.len(), 0, "trash emptied after tuck");
+    assert_eq!(
+        r.game.players[tp as usize].trash.len(),
+        0,
+        "trash emptied after tuck"
+    );
 
     // Target gained a bottom source.
     let tamer_perm = &r.game.players[tp as usize].battle_area[target_handle.index as usize];
-    assert_eq!(tamer_perm.card_sources.len(), 2, "tamer has 2 sources after tuck");
+    assert_eq!(
+        tamer_perm.card_sources.len(),
+        2,
+        "tamer has 2 sources after tuck"
+    );
     assert_eq!(
         tamer_perm.card_sources[0].card_id(&r.game.card_data),
         "SAVE-CARD",

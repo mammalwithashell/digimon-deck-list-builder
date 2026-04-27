@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use digimon_engine::action::space::*;
 use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::*;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::enums::*;
@@ -63,11 +63,21 @@ fn test_card_db() -> HashMap<String, CardData> {
 
 fn test_deck() -> Vec<String> {
     let mut deck = Vec::new();
-    for _ in 0..4 { deck.push("BT1-001".to_string()); }
-    for _ in 0..6 { deck.push("BT1-010".to_string()); }
-    for _ in 0..6 { deck.push("BT1-025".to_string()); }
-    for _ in 0..4 { deck.push("BT1-085".to_string()); }
-    for _ in 0..4 { deck.push("BT1-093".to_string()); }
+    for _ in 0..4 {
+        deck.push("BT1-001".to_string());
+    }
+    for _ in 0..6 {
+        deck.push("BT1-010".to_string());
+    }
+    for _ in 0..6 {
+        deck.push("BT1-025".to_string());
+    }
+    for _ in 0..4 {
+        deck.push("BT1-085".to_string());
+    }
+    for _ in 0..4 {
+        deck.push("BT1-093".to_string());
+    }
     deck
 }
 
@@ -120,7 +130,11 @@ fn tensor_hand_card_ids() {
     let me = game.player(0);
     for i in 0..me.hand.len() {
         let id = registry.get_index(&me.hand[i].card_id(&game.card_data));
-        assert!(id > 0, "Hand card {} should have non-zero registry index", i);
+        assert!(
+            id > 0,
+            "Hand card {} should have non-zero registry index",
+            i
+        );
         assert_eq!(t[hand_start + i], id as f32);
     }
     // Slots beyond hand size should be 0
@@ -272,7 +286,10 @@ fn mask_main_phase_play_cards() {
 
     // At least one play action should be legal (we have memory 5 and cards costing 0-8)
     let has_legal_play = (0..PLAY_HAND_END as usize).any(|i| mask[i] > 0.0);
-    assert!(has_legal_play, "Should have at least one playable card with memory 5");
+    assert!(
+        has_legal_play,
+        "Should have at least one playable card with memory 5"
+    );
 
     // Specifically: an Agumon (cost 3) at memory 5 → 5 - 3 = 2 ≥ -10, legal
     let me = game.player(tp);
@@ -294,7 +311,10 @@ fn mask_main_no_attack_with_summoning_sickness() {
     let tp = game.turn_player();
 
     // Play Agumon
-    let agumon_idx = game.player(tp).hand.iter()
+    let agumon_idx = game
+        .player(tp)
+        .hand
+        .iter()
         .position(|c| c.card_id(&game.card_data) == "BT1-010");
     if let Some(idx) = agumon_idx {
         game.play_from_hand(tp, idx);
@@ -302,8 +322,10 @@ fn mask_main_no_attack_with_summoning_sickness() {
         let mask = build_action_mask(&game, tp);
         // Just-played Agumon (slot 0) should NOT be able to attack security
         let sec_atk = encode_attack(0, SECURITY_TARGET) as usize;
-        assert_eq!(mask[sec_atk], 0.0,
-            "Just-played Agumon should have summoning sickness");
+        assert_eq!(
+            mask[sec_atk], 0.0,
+            "Just-played Agumon should have summoning sickness"
+        );
     }
 }
 

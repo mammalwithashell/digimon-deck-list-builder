@@ -92,10 +92,7 @@ fn play_from_hand_free_returns_none_for_invalid_hand_index() {
         ctx.play_from_hand_free(0, 99) // out-of-bounds hand index
     };
 
-    assert!(
-        result.is_none(),
-        "out-of-bounds hand index returns None"
-    );
+    assert!(result.is_none(), "out-of-bounds hand index returns None");
     assert_eq!(runner.game.memory, 3, "memory untouched on failed play");
     assert_eq!(
         runner.game.players[0].battle_area.len(),

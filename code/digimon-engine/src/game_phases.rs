@@ -26,10 +26,7 @@ impl Game {
         );
         self.drain_effect_queue();
 
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            EffectTiming::UntilNextUnsuspend,
-        );
+        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::UntilNextUnsuspend);
 
         // Reset per-turn state
         self.player_mut(tp).new_turn();
@@ -98,9 +95,7 @@ impl Game {
             // uniquely identifies that moment — whoever the coin flip sat at
             // `turn_order[0]` is the turn player here. Don't hardcode tp == 0.
             SkipDraw::FirstPlayerOnly => self.turn_count == 1,
-            SkipDraw::AllRound1 => {
-                self.turn_count <= self.rules.player_count as u16
-            }
+            SkipDraw::AllRound1 => self.turn_count <= self.rules.player_count as u16,
             SkipDraw::None => false,
         };
         if !should_skip_draw {
@@ -212,10 +207,7 @@ impl Game {
 
         // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
         // EndOfOpponentsTurn after the printed-observer fan-out.
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            EffectTiming::EndOfOpponentsTurn,
-        );
+        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfOpponentsTurn);
         crate::scheduled_effects::fire_scheduled_for_timing(
             self,
             EffectTiming::EndOfOpponentsNextTurn,
@@ -314,9 +306,10 @@ impl Game {
         let Some(me) = self.players.get(player as usize) else {
             return false;
         };
-        me.battle_area.iter().enumerate().any(|(i, p)| {
-            i != overclock_index && p.top_card().is_digimon(&self.card_data)
-        })
+        me.battle_area
+            .iter()
+            .enumerate()
+            .any(|(i, p)| i != overclock_index && p.top_card().is_digimon(&self.card_data))
     }
 
     /// Activate `<Overclock>` on the turn player's battle-area permanent at
@@ -332,10 +325,7 @@ impl Game {
     /// [action_decoder.py:501-522](../digimon_gym/engine/game/action_decoder.py#L501).
     ///
     /// § Parity: §4.6c-residual.
-    pub fn activate_overclock(
-        &mut self,
-        overclock_index: usize,
-    ) -> Result<(), OverclockError> {
+    pub fn activate_overclock(&mut self, overclock_index: usize) -> Result<(), OverclockError> {
         use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
 
         if self.current_phase != GamePhase::EndOfTurnAction {
@@ -382,7 +372,10 @@ impl Game {
                 valid_action_ids.push(encode_attack(0, i as u16));
             }
         }
-        debug_assert!(!valid_action_ids.is_empty(), "has_overclock_sacrifice promised ≥1");
+        debug_assert!(
+            !valid_action_ids.is_empty(),
+            "has_overclock_sacrifice promised ≥1"
+        );
 
         let source_card = overclock_perm.top_card().handle();
         let opponent = self.next_clockwise(player);
@@ -424,10 +417,7 @@ impl Game {
                 }
 
                 // Fire the attack on the opponent player without suspending.
-                game.begin_attack_overclock(
-                    overclock_handle,
-                    AttackTarget::Player(opponent),
-                );
+                game.begin_attack_overclock(overclock_handle, AttackTarget::Player(opponent));
             }),
             on_decline: None,
         });
@@ -471,14 +461,8 @@ impl Game {
         // player) and `EndOfOpponentsTurn` (inactive players, fired
         // from `rotate_turn_player`). Both peer drains are wired
         // separately at their respective observer-fire sites.
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            EffectTiming::EndOfYourTurn,
-        );
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            EffectTiming::EndOfYourNextTurn,
-        );
+        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourTurn);
+        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourNextTurn);
     }
 
     /// Phase 8 Task 3: fire and trash every Delayed Option (across all
@@ -580,7 +564,10 @@ impl Game {
             // skip-set so we move on to siblings instead of looping on it
             // forever. A cancel-always replacement naturally re-fires at
             // subsequent turn ends when this scan runs again.
-            if self.find_delayed_permanent_by_key(key, ending_turn).is_some() {
+            if self
+                .find_delayed_permanent_by_key(key, ending_turn)
+                .is_some()
+            {
                 cancelled_keys.insert(key);
             }
         }

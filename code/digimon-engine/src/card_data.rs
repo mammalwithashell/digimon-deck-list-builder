@@ -28,7 +28,7 @@ pub struct DnaRequirement {
     #[serde(
         default,
         alias = "card_color",
-        deserialize_with = "deserialize_card_colors",
+        deserialize_with = "deserialize_card_colors"
     )]
     pub card_colors: Vec<CardColor>,
     /// Case-insensitive substring against `card_name`. Empty = no constraint.
@@ -230,7 +230,11 @@ impl CardData {
                     _ => None,
                 },
                 play_cost: raw_card.play_cost.unwrap_or(0).max(0) as u16,
-                colors: raw_card.card_colors.iter().map(|&c| parse_card_color(c)).collect(),
+                colors: raw_card
+                    .card_colors
+                    .iter()
+                    .map(|&c| parse_card_color(c))
+                    .collect(),
                 traits,
                 evo_costs: raw_card
                     .evo_costs
@@ -284,7 +288,9 @@ pub fn parse_printed_keywords(
         let mut remaining = text;
         while let Some(start) = remaining.find('＜') {
             let after_open = &remaining[start + '＜'.len_utf8()..];
-            let Some(end) = after_open.find('＞') else { break };
+            let Some(end) = after_open.find('＞') else {
+                break;
+            };
             let inside = &after_open[..end];
             remaining = &after_open[end + '＞'.len_utf8()..];
 
@@ -490,13 +496,15 @@ mod tests {
     #[test]
     fn parse_retaliation_and_scapegoat() {
         use crate::enums::Keyword;
-        let kws = parse_printed_keywords(
-            "＜Retaliation＞ ＜Scapegoat＞",
-            "",
-            "",
+        let kws = parse_printed_keywords("＜Retaliation＞ ＜Scapegoat＞", "", "");
+        assert!(
+            kws.contains(&Keyword::Retaliation),
+            "should parse <Retaliation>"
         );
-        assert!(kws.contains(&Keyword::Retaliation), "should parse <Retaliation>");
-        assert!(kws.contains(&Keyword::Scapegoat), "should parse <Scapegoat>");
+        assert!(
+            kws.contains(&Keyword::Scapegoat),
+            "should parse <Scapegoat>"
+        );
     }
 
     #[test]

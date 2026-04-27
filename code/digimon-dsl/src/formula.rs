@@ -1,8 +1,8 @@
 //! Formula primitives for scalar computations in predicates and clauses.
 //! Spec §3.10.
 
-use serde::{Deserialize, Serialize};
 use serde::ser::SerializeMap;
+use serde::{Deserialize, Serialize};
 
 use crate::common::PlayerRef;
 use crate::predicate::Zone;

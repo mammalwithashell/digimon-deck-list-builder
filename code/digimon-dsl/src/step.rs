@@ -116,6 +116,8 @@ pub enum StepSpec {
     // Selection
     SelectOwnPermanent(SelectFieldArgs),
     SelectOpponentPermanent(SelectFieldArgs),
+    SelectAnyPermanent(SelectFieldArgs),
+    SelectDnaPair(SelectDnaPairArgs),
     SelectHand(SelectZoneArgs),
     SelectTrash(SelectZoneArgs),
     SelectMaterial(SelectMaterialArgs),
@@ -209,6 +211,8 @@ impl Serialize for StepSpec {
             // Selection
             StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
             StepSpec::SelectOpponentPermanent(v) => kv!(s, "select_opponent_permanent", v),
+            StepSpec::SelectAnyPermanent(v) => kv!(s, "select_any_permanent", v),
+            StepSpec::SelectDnaPair(v) => kv!(s, "select_dna_pair", v),
             StepSpec::SelectHand(v) => kv!(s, "select_hand", v),
             StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
@@ -309,9 +313,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
-            "effect_initiated_digivolve" => {
-                StepSpec::EffectInitiatedDigivolve(map.next_value()?)
-            }
+            "effect_initiated_digivolve" => StepSpec::EffectInitiatedDigivolve(map.next_value()?),
             "effect_initiated_dna_digivolve" => {
                 StepSpec::EffectInitiatedDnaDigivolve(map.next_value()?)
             }
@@ -328,6 +330,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Selection
             "select_own_permanent" => StepSpec::SelectOwnPermanent(map.next_value()?),
             "select_opponent_permanent" => StepSpec::SelectOpponentPermanent(map.next_value()?),
+            "select_any_permanent" => StepSpec::SelectAnyPermanent(map.next_value()?),
+            "select_dna_pair" => StepSpec::SelectDnaPair(map.next_value()?),
             "select_hand" => StepSpec::SelectHand(map.next_value()?),
             "select_trash" => StepSpec::SelectTrash(map.next_value()?),
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
@@ -359,33 +363,67 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 return Err(de::Error::unknown_variant(
                     other,
                     &[
-                        "gain_memory", "lose_memory", "set_memory",
-                        "draw", "trash_from_top", "add_to_hand_from_deck",
-                        "add_to_hand_from_trash", "add_to_hand_from_reveal",
-                        "trash_from_hand_by_index", "trash_from_reveal",
-                        "return_to_deck_from_reveal", "shuffle_deck",
-                        "reveal_top_deck", "place_remainder_on_deck",
-                        "delete_permanent", "return_to_hand", "return_to_deck",
-                        "suspend", "unsuspend", "de_digivolve",
-                        "place_on_security", "play_token",
-                        "place_as_bottom_source", "trash_top_source", "hatch",
-                        "play_from_hand", "play_from_hand_free",
-                        "play_from_trash", "play_from_trash_free",
-                        "play_from_security", "play_from_materials",
+                        "gain_memory",
+                        "lose_memory",
+                        "set_memory",
+                        "draw",
+                        "trash_from_top",
+                        "add_to_hand_from_deck",
+                        "add_to_hand_from_trash",
+                        "add_to_hand_from_reveal",
+                        "trash_from_hand_by_index",
+                        "trash_from_reveal",
+                        "return_to_deck_from_reveal",
+                        "shuffle_deck",
+                        "reveal_top_deck",
+                        "place_remainder_on_deck",
+                        "delete_permanent",
+                        "return_to_hand",
+                        "return_to_deck",
+                        "suspend",
+                        "unsuspend",
+                        "de_digivolve",
+                        "place_on_security",
+                        "play_token",
+                        "place_as_bottom_source",
+                        "trash_top_source",
+                        "hatch",
+                        "play_from_hand",
+                        "play_from_hand_free",
+                        "play_from_trash",
+                        "play_from_trash_free",
+                        "play_from_security",
+                        "play_from_materials",
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
-                        "trash_top_security", "mark_security_face_up",
-                        "add_dp_modifier", "add_modifier", "grant_keyword",
-                        "select_own_permanent", "select_opponent_permanent",
-                        "select_hand", "select_trash", "select_material",
-                        "select_reveal", "select_security",
-                        "select_union_zone", "select_ordered_permutation",
-                        "select_count_capped_multi", "select_effect_choice",
+                        "trash_top_security",
+                        "mark_security_face_up",
+                        "add_dp_modifier",
+                        "add_modifier",
+                        "grant_keyword",
+                        "select_own_permanent",
+                        "select_opponent_permanent",
+                        "select_any_permanent",
+                        "select_dna_pair",
+                        "select_hand",
+                        "select_trash",
+                        "select_material",
+                        "select_reveal",
+                        "select_security",
+                        "select_union_zone",
+                        "select_ordered_permutation",
+                        "select_count_capped_multi",
+                        "select_effect_choice",
                         "as_selecting_player",
-                        "if", "for_each", "per_selected",
-                        "schedule_delayed", "optional",
-                        "cancel_replacement", "handle_replacement",
-                        "redirect_replacement", "substitute_replacement",
+                        "if",
+                        "for_each",
+                        "per_selected",
+                        "schedule_delayed",
+                        "optional",
+                        "cancel_replacement",
+                        "handle_replacement",
+                        "redirect_replacement",
+                        "substitute_replacement",
                         "raw_rust",
                     ],
                 ));
@@ -701,6 +739,20 @@ pub struct SelectFieldArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectDnaPairArgs {
+    pub left_filter: PredicateSpec,
+    pub right_filter: PredicateSpec,
+    pub bind_left_as: String,
+    pub bind_right_as: String,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

@@ -64,7 +64,12 @@ fn parse_args() -> Result<Args, String> {
         }
     }
     let path = path.ok_or("missing <path> argument")?;
-    Ok(Args { path, format, strict, cross_check_path })
+    Ok(Args {
+        path,
+        format,
+        strict,
+        cross_check_path,
+    })
 }
 
 #[derive(serde::Serialize, Debug)]
@@ -106,7 +111,9 @@ fn lint_file(
         "bt10_111_arm_digixros_wildcard_for_turn",
         "ad1_025_on_play_process",
     ]);
-    let ctx = ValidationContext { raw_rust: &registry };
+    let ctx = ValidationContext {
+        raw_rust: &registry,
+    };
     if let Err(errs) = validate(&spec, &ctx) {
         for e in errs {
             diags.push(Diagnostic {
@@ -140,7 +147,9 @@ fn walk_yaml(path: &Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let mut stack = vec![path.to_path_buf()];
     while let Some(d) = stack.pop() {
-        let Ok(iter) = std::fs::read_dir(&d) else { continue };
+        let Ok(iter) = std::fs::read_dir(&d) else {
+            continue;
+        };
         for entry in iter.flatten() {
             let p = entry.path();
             if p.is_dir() {
@@ -167,14 +176,18 @@ fn main() -> ExitCode {
     let adapter_opt = match &args.cross_check_path {
         Some(p) => Some(
             digimon_engine::dsl_bridge::RealCardDataAdapter::from_path(p).unwrap_or_else(|e| {
-                eprintln!("dsl-lint: failed to load cards.json from {}: {e}", p.display());
+                eprintln!(
+                    "dsl-lint: failed to load cards.json from {}: {e}",
+                    p.display()
+                );
                 std::process::exit(3);
             }),
         ),
         None => None,
     };
-    let adapter_dyn: Option<&dyn digimon_engine::dsl::loader::CardDataDb> =
-        adapter_opt.as_ref().map(|a| a as &dyn digimon_engine::dsl::loader::CardDataDb);
+    let adapter_dyn: Option<&dyn digimon_engine::dsl::loader::CardDataDb> = adapter_opt
+        .as_ref()
+        .map(|a| a as &dyn digimon_engine::dsl::loader::CardDataDb);
 
     let mut diags = Vec::new();
     for file in walk_yaml(&args.path) {

@@ -17,7 +17,7 @@
 use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::{resolve_player, run_steps, RunOutcome};
+use crate::dsl_cards::step::{resolve_player, run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
 
 /// Returns `Some(outcome)` if `step` is `AsSelectingPlayer`. Returns
@@ -26,13 +26,14 @@ pub fn try_run(
     step: &CompiledStep,
     ctx: &mut EffectContext<'_>,
     bindings: &mut Bindings,
+    runtime: &StepRuntime,
 ) -> Option<RunOutcome> {
     match step {
         CompiledStep::AsSelectingPlayer { of, body } => {
             let p = resolve_player(ctx, *of);
             let prev = ctx.override_selecting_player();
             ctx.set_override_selecting_player(Some(p));
-            let outcome = run_steps(body, ctx, bindings);
+            let outcome = run_steps_with_runtime(body, ctx, bindings, runtime);
             if matches!(outcome, RunOutcome::Synchronous) {
                 ctx.set_override_selecting_player(prev);
             }

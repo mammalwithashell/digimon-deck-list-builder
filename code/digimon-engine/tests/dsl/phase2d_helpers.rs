@@ -23,9 +23,7 @@ pub fn resolve_count_capped_picks(runner: &mut DebugRunner, picks: &[usize]) {
     for (step, &offset) in picks.iter().enumerate() {
         let (action_id, selecting_player) = {
             let pending = runner.game.pending_selection.as_ref().unwrap_or_else(|| {
-                panic!(
-                    "resolve_count_capped_picks: pending_selection vanished before pick {step}"
-                )
+                panic!("resolve_count_capped_picks: pending_selection vanished before pick {step}")
             });
             assert!(
                 offset < pending.valid_action_ids.len(),

@@ -41,8 +41,7 @@ effects:
           hand_index: revived
           cost_delta: free
 "#;
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(yaml).expect("YAML parses");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("YAML parses");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles cleanly");
 
     // Seed: TST-REV in P0's hand (the source of OnPlay), TST-TARGET in P0's

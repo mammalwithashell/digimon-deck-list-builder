@@ -328,11 +328,7 @@ fn counter_field_ability_fires_without_play_cost() {
 
     assert_eq!(*witness.lock().unwrap(), 1);
     assert_eq!(r.hand_size(1), hand_before, "no card consumed from hand");
-    assert_eq!(
-        r.trash_size(1),
-        trash_before,
-        "no card consumed to trash"
-    );
+    assert_eq!(r.trash_size(1), trash_before, "no card consumed to trash");
     // Field counter body gained +2 memory.
     assert_eq!(r.memory(), memory_before + 2);
 }

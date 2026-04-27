@@ -16,7 +16,7 @@
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
-use digimon_engine::debug_runner::{DebugRunner, make_test_card};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind};
 use std::sync::Arc;
@@ -111,7 +111,10 @@ fn static_plus_closure_reduction_and_pay_cost_stack_when_condition_passes() {
         .add_card(perm_a)
         .add_card(perm_b)
         .add_card(deck_card)
-        .deck(0, &["DECK-ETE", "DECK-ETE", "DECK-ETE", "DECK-ETE", "DECK-ETE"])
+        .deck(
+            0,
+            &["DECK-ETE", "DECK-ETE", "DECK-ETE", "DECK-ETE", "DECK-ETE"],
+        )
         .hand(0, &["TARGET-ETE"])
         .memory(5)
         .start();
@@ -122,9 +125,9 @@ fn static_plus_closure_reduction_and_pay_cost_stack_when_condition_passes() {
     r.place_on_field(0, "PERM-A-ETE", Some(0));
     r.place_on_field(0, "PERM-B-ETE", Some(0));
 
-    let deck_before = r.game.players[0].deck.len();     // 5
-    let trash_before = r.game.players[0].trash.len();   // 0
-    let memory_before = r.memory();                     // 5
+    let deck_before = r.game.players[0].deck.len(); // 5
+    let trash_before = r.game.players[0].trash.len(); // 0
+    let memory_before = r.memory(); // 5
 
     r.play(0, 0);
 
@@ -178,7 +181,10 @@ fn closure_reduction_and_pay_cost_skipped_when_condition_fails() {
         .add_card(perm_a)
         .add_card(perm_b)
         .add_card(deck_card)
-        .deck(0, &["DECK-CF2", "DECK-CF2", "DECK-CF2", "DECK-CF2", "DECK-CF2"])
+        .deck(
+            0,
+            &["DECK-CF2", "DECK-CF2", "DECK-CF2", "DECK-CF2", "DECK-CF2"],
+        )
         .hand(0, &["TARGET-CF2"])
         .memory(4) // fails B's condition (memory < 5)
         .start();
@@ -189,9 +195,9 @@ fn closure_reduction_and_pay_cost_skipped_when_condition_fails() {
     r.place_on_field(0, "PERM-A-CF2", Some(0));
     r.place_on_field(0, "PERM-B-CF2", Some(0));
 
-    let deck_before = r.game.players[0].deck.len();     // 5
-    let trash_before = r.game.players[0].trash.len();   // 0
-    let memory_before = r.memory();                     // 4
+    let deck_before = r.game.players[0].deck.len(); // 5
+    let trash_before = r.game.players[0].trash.len(); // 0
+    let memory_before = r.memory(); // 4
 
     r.play(0, 0);
 

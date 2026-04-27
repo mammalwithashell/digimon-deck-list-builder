@@ -12,7 +12,8 @@ use digimon_dsl::compiled::{CompiledPredicate, CompiledScope, CompiledStep};
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::run_steps;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::effect::Effect;
 use crate::enums::{Expiry, Keyword};
 
@@ -31,6 +32,26 @@ pub fn lower(
     exclude_cause: &[String],
     process: &[CompiledStep],
 ) -> Vec<Effect> {
+    lower_with_raw(
+        card,
+        scope,
+        _active_when,
+        _sources,
+        exclude_cause,
+        process,
+        Arc::new(EngineRawRustRegistry::new()),
+    )
+}
+
+pub fn lower_with_raw(
+    card: CardHandle,
+    scope: CompiledScope,
+    _active_when: Option<&CompiledPredicate>,
+    _sources: &[CompiledPredicate],
+    exclude_cause: &[String],
+    process: &[CompiledStep],
+    raw: Arc<EngineRawRustRegistry>,
+) -> Vec<Effect> {
     let mut builder = Effect::declarative(card)
         .name("Partition")
         .process(move |ctx| {
@@ -47,6 +68,7 @@ pub fn lower(
     if !process.is_empty() {
         let process_arc: Arc<[CompiledStep]> = Arc::from(process);
         let exclude_cause: Arc<[String]> = Arc::from(exclude_cause);
+        let runtime = StepRuntime::new(raw);
         let mut process_builder =
             Effect::on_deletion(card)
                 .name("Partition process")
@@ -56,7 +78,7 @@ pub fn lower(
                         return;
                     }
                     let mut bindings = Bindings::new();
-                    let _ = run_steps(&process_arc, ctx, &mut bindings);
+                    let _ = run_steps_with_runtime(&process_arc, ctx, &mut bindings, &runtime);
                 });
         if matches!(scope, CompiledScope::Inherited) {
             process_builder = process_builder.inherited();

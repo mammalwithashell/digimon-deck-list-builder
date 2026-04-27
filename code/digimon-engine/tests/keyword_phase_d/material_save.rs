@@ -23,10 +23,10 @@
 //! Tamer-only target filter — `is_tamer(&card_data)` excludes Digimon.
 //! Owner filter — opponent's Tamers are excluded.
 
+use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
     EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
 };
-use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
@@ -117,9 +117,8 @@ fn push_source_card(r: &mut DebugRunner, player: u8, field_index: usize, card_id
 }
 
 fn field_main_bit(field_index: usize) -> usize {
-    (FIELD_EFFECT_START
-        + field_index as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN)
+        as usize
 }
 
 // ─── Test 1: happy path — N=2, 3 sources, 1 Tamer ──────────────────────────

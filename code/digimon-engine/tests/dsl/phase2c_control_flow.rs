@@ -21,9 +21,7 @@ fn optional_runs_inner_body() {
     let src_card = runner.game.players[0].hand[0].handle();
     let memory_before = runner.game.memory;
 
-    let steps = vec![CompiledStep::Optional(vec![
-        CompiledStep::GainMemory(2),
-    ])];
+    let steps = vec![CompiledStep::Optional(vec![CompiledStep::GainMemory(2)])];
     let mut bindings = Bindings::new();
 
     {
@@ -146,8 +144,7 @@ fn if_with_empty_else_false_branch_is_noop() {
     }
 
     assert_eq!(
-        runner.game.memory,
-        memory_before,
+        runner.game.memory, memory_before,
         "If condition is false with empty else-branch — memory should be unchanged"
     );
 }

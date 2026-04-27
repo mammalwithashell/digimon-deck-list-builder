@@ -1,4 +1,7 @@
-use digimon_engine::dsl::{predicate::{PredicateSpec, Zone}, PlayerRef};
+use digimon_engine::dsl::{
+    predicate::{PredicateSpec, Zone},
+    PlayerRef,
+};
 
 fn parse(yaml: &str) -> PredicateSpec {
     serde_yml::from_str(yaml).unwrap()

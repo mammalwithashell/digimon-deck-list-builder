@@ -19,13 +19,15 @@ use digimon_engine::selection::OptionPlayResult;
 struct GainTwoMemory;
 impl CardEffect for GainTwoMemory {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
-        vec![Effect::on_play(card) // placeholder; overwritten by .option_main()
-            .name("Gain 2 memory")
-            .option_main()
-            .process(|ctx| {
-                ctx.gain_memory(2);
-            })
-            .build()]
+        vec![
+            Effect::on_play(card) // placeholder; overwritten by .option_main()
+                .name("Gain 2 memory")
+                .option_main()
+                .process(|ctx| {
+                    ctx.gain_memory(2);
+                })
+                .build(),
+        ]
     }
 }
 
@@ -35,13 +37,15 @@ struct OnUseOptionCounter(Arc<Mutex<u32>>);
 impl CardEffect for OnUseOptionCounter {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         let slot = self.0.clone();
-        vec![Effect::on_play(card) // placeholder timing; overwritten below
-            .name("OnUseOption witness")
-            .timing(digimon_engine::enums::EffectTiming::OnUseOption)
-            .process(move |_ctx| {
-                *slot.lock().unwrap() += 1;
-            })
-            .build()]
+        vec![
+            Effect::on_play(card) // placeholder timing; overwritten below
+                .name("OnUseOption witness")
+                .timing(digimon_engine::enums::EffectTiming::OnUseOption)
+                .process(move |_ctx| {
+                    *slot.lock().unwrap() += 1;
+                })
+                .build(),
+        ]
     }
 }
 
@@ -328,11 +332,7 @@ fn standard_option_with_target_selection_returns_pending() {
     assert!(r.game.pending_selection.is_some());
     assert!(r.game.pending_option.is_some());
     assert_eq!(
-        r.game
-            .pending_option
-            .as_ref()
-            .unwrap()
-            .resolution_phase,
+        r.game.pending_option.as_ref().unwrap().resolution_phase,
         digimon_engine::selection::OptionResolutionPhase::MainEffectDrain
     );
 

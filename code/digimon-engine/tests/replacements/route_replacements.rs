@@ -31,20 +31,12 @@ struct CancelOn(EffectTiming);
 impl CardEffect for CancelOn {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         let builder = match self.0 {
-            EffectTiming::WhenWouldBeReturnedToHand => {
-                Effect::when_would_be_returned_to_hand(card)
-            }
-            EffectTiming::WhenWouldBeReturnedToDeck => {
-                Effect::when_would_be_returned_to_deck(card)
-            }
+            EffectTiming::WhenWouldBeReturnedToHand => Effect::when_would_be_returned_to_hand(card),
+            EffectTiming::WhenWouldBeReturnedToDeck => Effect::when_would_be_returned_to_deck(card),
             EffectTiming::WhenWouldBeTrashed => Effect::when_would_be_trashed(card),
-            EffectTiming::WhenWouldBeDeDigivolved => {
-                Effect::when_would_be_de_digivolved(card)
-            }
+            EffectTiming::WhenWouldBeDeDigivolved => Effect::when_would_be_de_digivolved(card),
             EffectTiming::WhenWouldDraw => Effect::when_would_draw(card),
-            EffectTiming::WhenWouldPlaceInSecurity => {
-                Effect::when_would_place_in_security(card)
-            }
+            EffectTiming::WhenWouldPlaceInSecurity => Effect::when_would_place_in_security(card),
             _ => panic!("CancelOn: unsupported timing {:?}", self.0),
         };
         vec![builder
@@ -241,8 +233,7 @@ fn would_draw_cancel_prevents_card_movement() {
 
     // Call ctx.draw on behalf of player 0. Source context: the GATE permanent.
     let drawn = {
-        let mut ctx =
-            EffectContext::new(&mut r.game, CardHandle(999), Some(gate), 0);
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(999), Some(gate), 0);
         ctx.draw(0, 1)
     };
 
@@ -262,10 +253,7 @@ fn would_draw_still_respects_flood_gate_cannot_draw_by_effect() {
         .add_card(card("FILLER"))
         .deck(0, &["FILLER"; 5])
         .start();
-    r.register_effect(
-        "GATE",
-        Arc::new(DrawCancelWithSentinel(sentinel.clone())),
-    );
+    r.register_effect("GATE", Arc::new(DrawCancelWithSentinel(sentinel.clone())));
     let gate = r.place_on_field(0, "GATE", Some(0));
 
     // Install CannotDrawByEffect on player 0.
@@ -281,8 +269,7 @@ fn would_draw_still_respects_flood_gate_cannot_draw_by_effect() {
     );
 
     let drawn = {
-        let mut ctx =
-            EffectContext::new(&mut r.game, CardHandle(999), Some(gate), 0);
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(999), Some(gate), 0);
         ctx.draw(0, 1)
     };
 
@@ -322,12 +309,9 @@ fn would_place_in_security_redirect_to_trash() {
     let sec_before = r.game.player(0).security.len();
     let trash_before = r.game.player(0).trash.len();
 
-    let ok = r.game.place_on_security(
-        0,
-        CardSourceRef::Hand(0, 0),
-        StackPosition::Top,
-        false,
-    );
+    let ok = r
+        .game
+        .place_on_security(0, CardSourceRef::Hand(0, 0), StackPosition::Top, false);
 
     assert!(!ok, "redirect-to-trash → place_on_security returns false");
     assert_eq!(
@@ -379,7 +363,10 @@ fn would_be_trashed_from_hand_cancel_keeps_card_in_hand() {
         ctx.trash_from_hand_by_index(0, 0)
     };
 
-    assert!(result.is_none(), "cancel → trash_from_hand_by_index returns None");
+    assert!(
+        result.is_none(),
+        "cancel → trash_from_hand_by_index returns None"
+    );
     assert_eq!(
         r.game.player(0).hand.len(),
         hand_before,
@@ -397,9 +384,7 @@ fn would_be_trashed_from_hand_cancel_keeps_card_in_hand() {
 /// Cancel-on-WhenWouldBeDeDigivolved prevents any popping of the stack.
 #[test]
 fn would_be_de_digivolved_cancel_prevents_pops() {
-    let mut r = DebugRunner::builder()
-        .add_card(card("TARGET"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(card("TARGET")).start();
     r.register_effect(
         "TARGET",
         Arc::new(CancelOn(EffectTiming::WhenWouldBeDeDigivolved)),
@@ -423,8 +408,7 @@ fn would_be_de_digivolved_cancel_prevents_pops() {
             perm.card_sources.push(cs);
         }
     }
-    let stack_size_before =
-        r.game.players[0].battle_area[target.index as usize].stack_size();
+    let stack_size_before = r.game.players[0].battle_area[target.index as usize].stack_size();
 
     let popped = {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(999), Some(target), 0);
@@ -450,7 +434,13 @@ fn would_be_de_digivolved_substitute_targets_other_permanent() {
     r.register_effect("SUBBER", Arc::new(DeDigivolveSubstituteTo01));
     let subber = r.place_on_field(0, "SUBBER", Some(0));
     let victim = r.place_on_field(0, "VICTIM", Some(0));
-    assert_eq!(victim, PermanentHandle { player: 0, index: 1 });
+    assert_eq!(
+        victim,
+        PermanentHandle {
+            player: 0,
+            index: 1
+        }
+    );
 
     // Stack an extra source onto VICTIM so it has material to de-digivolve.
     {
@@ -466,10 +456,8 @@ fn would_be_de_digivolved_substitute_targets_other_permanent() {
         cs.card_index = idx;
         perm.card_sources.push(cs);
     }
-    let subber_stack_before =
-        r.game.players[0].battle_area[subber.index as usize].stack_size();
-    let victim_stack_before =
-        r.game.players[0].battle_area[victim.index as usize].stack_size();
+    let subber_stack_before = r.game.players[0].battle_area[subber.index as usize].stack_size();
+    let victim_stack_before = r.game.players[0].battle_area[victim.index as usize].stack_size();
     assert_eq!(victim_stack_before, 2);
 
     let popped = {
@@ -512,8 +500,7 @@ fn would_be_de_digivolved_custom_handled_returns_zero() {
         cs.card_index = idx;
         perm.card_sources.push(cs);
     }
-    let stack_before =
-        r.game.players[0].battle_area[target.index as usize].stack_size();
+    let stack_before = r.game.players[0].battle_area[target.index as usize].stack_size();
 
     let popped = {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(999), Some(target), 0);
@@ -527,4 +514,3 @@ fn would_be_de_digivolved_custom_handled_returns_zero() {
         "stack unchanged under custom-handled"
     );
 }
-

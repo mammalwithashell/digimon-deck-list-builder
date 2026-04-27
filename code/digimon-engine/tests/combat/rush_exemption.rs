@@ -139,7 +139,11 @@ fn freshly_played_with_vortex_can_attack() {
         digimon_engine::combat::AttackResult::AttackerWins,
         "vortex attack resolves combat normally"
     );
-    assert_eq!(r.battle_area_size(1), 0, "defender deleted by vortex attack");
+    assert_eq!(
+        r.battle_area_size(1),
+        0,
+        "defender deleted by vortex attack"
+    );
 }
 
 #[test]
@@ -184,7 +188,10 @@ fn mask_allows_rush_granted_attack_on_turn_played() {
     // `begin_turn` leaves us in Breeding; advance to Main so the attack-mask
     // branch runs.
     r.game.enter_main_phase();
-    assert!(r.game.memory >= 0, "turn player should have non-negative memory");
+    assert!(
+        r.game.memory >= 0,
+        "turn player should have non-negative memory"
+    );
 
     // Sanity: without Rush, the attack bit is off.
     let mask_no_rush = build_action_mask(&r.game, turn_player);

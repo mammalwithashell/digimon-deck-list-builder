@@ -69,9 +69,7 @@ fn push_to_hand(r: &mut DebugRunner, player: PlayerId, card_id: &str) -> CardHan
 #[test]
 fn as_selecting_player_routes_to_opponent_for_own_permanent() {
     // Controller is player 0 (turn player). Place two permanents for player 0.
-    let mut r = DebugRunner::builder()
-        .add_card(make_card("ALLY"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(make_card("ALLY")).start();
     let p0 = r.game.turn_player(); // 0
     let p1: PlayerId = 1 - p0;
 
@@ -140,7 +138,10 @@ fn as_selecting_player_routes_to_opponent_for_own_permanent() {
         .resolve_selection(p1, encode_attack(0, 0))
         .expect("p1 resolving is valid");
 
-    assert!(r.game.pending_selection.is_none(), "selection cleared after resolution");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "selection cleared after resolution"
+    );
 
     let handle = fired
         .lock()
@@ -163,9 +164,7 @@ fn as_selecting_player_routes_to_opponent_for_own_permanent() {
 /// - Resolving from opp fires the chosen branch
 #[test]
 fn as_selecting_player_routes_to_opponent_for_effect_choice() {
-    let mut r = DebugRunner::builder()
-        .add_card(make_card("X"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(make_card("X")).start();
     let p0 = r.game.turn_player();
     let opp: PlayerId = 1 - p0;
 
@@ -284,9 +283,7 @@ fn as_selecting_player_routes_to_opponent_for_hand() {
 /// must default to None and not affect direct calls.
 #[test]
 fn non_override_helper_still_uses_self_player() {
-    let mut r = DebugRunner::builder()
-        .add_card(make_card("A"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(make_card("A")).start();
     let p0 = r.game.turn_player();
 
     // Place a permanent for p0 to select.
@@ -325,9 +322,7 @@ fn non_override_helper_still_uses_self_player() {
 /// 3. Assert second selection's `selecting_player == p0`.
 #[test]
 fn nested_scopes_do_not_leak() {
-    let mut r = DebugRunner::builder()
-        .add_card(make_card("B"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(make_card("B")).start();
     let p0 = r.game.turn_player();
     let p1: PlayerId = 1 - p0;
 
@@ -360,17 +355,15 @@ fn nested_scopes_do_not_leak() {
         .resolve_selection(p1, encode_attack(0, 0))
         .expect("first resolution must succeed");
 
-    assert!(r.game.pending_selection.is_none(), "first selection cleared");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "first selection cleared"
+    );
 
     // Second install: direct call — no scope.
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, p0);
-        ctx.select_own_permanent(
-            "p0 chooses",
-            false,
-            |_g, _h| true,
-            |_ctx, _h| {},
-        );
+        ctx.select_own_permanent("p0 chooses", false, |_g, _h| true, |_ctx, _h| {});
     }
 
     // The second selection must use p0 (self.player), not the leaked p1.
@@ -393,9 +386,7 @@ fn nested_scopes_do_not_leak() {
 /// a subsequent direct call.
 #[test]
 fn empty_filter_scope_does_not_leak_override() {
-    let mut r = DebugRunner::builder()
-        .add_card(make_card("C"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(make_card("C")).start();
     let p0 = r.game.turn_player();
     let p1: PlayerId = 1 - p0;
 
@@ -406,8 +397,12 @@ fn empty_filter_scope_does_not_leak_override() {
     // Scope call with a filter that rejects everything → no-op.
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, p0);
-        ctx.as_selecting_player(p1)
-            .select_own_permanent("reject all", false, |_g, _h| false, |_ctx, _h| {});
+        ctx.as_selecting_player(p1).select_own_permanent(
+            "reject all",
+            false,
+            |_g, _h| false,
+            |_ctx, _h| {},
+        );
     }
 
     // No selection installed (empty filter).
@@ -423,12 +418,7 @@ fn empty_filter_scope_does_not_leak_override() {
     // Now a direct (no-scope) call; its selecting_player must be p0.
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, p0);
-        ctx.select_own_permanent(
-            "p0 picks",
-            false,
-            |_g, _h| true,
-            |_ctx, _h| {},
-        );
+        ctx.select_own_permanent("p0 picks", false, |_g, _h| true, |_ctx, _h| {});
     }
 
     let sel = r

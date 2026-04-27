@@ -199,7 +199,11 @@ fn piercing_stacks_with_security_attack_modifier() {
     let _ = r.attack_digimon(atk, def, false);
 
     // Defender wiped, then Piercing fires a 2-card security check.
-    assert_eq!(r.battle_area_size(1), 0, "defender wiped by DP 8000 vs 3000");
+    assert_eq!(
+        r.battle_area_size(1),
+        0,
+        "defender wiped by DP 8000 vs 3000"
+    );
     assert_eq!(
         r.security_count(1),
         1,

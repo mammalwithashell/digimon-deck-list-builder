@@ -137,7 +137,10 @@ fn play_from_materials_subtracts_memory_under_fixed_cost() {
         let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
         ctx.play_from_materials(perm_handle, 0, CostDelta::Fixed(2))
     };
-    assert!(result.is_some(), "play succeeds under affordable Fixed cost");
+    assert!(
+        result.is_some(),
+        "play succeeds under affordable Fixed cost"
+    );
 
     assert_eq!(
         runner.game.memory, 3,
