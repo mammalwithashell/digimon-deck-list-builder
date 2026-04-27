@@ -73,6 +73,11 @@ fn main() {
             deck_storage::decks_get,
             deck_storage::decks_put,
             deck_storage::decks_delete,
+            deck_storage::decks_update_library,
+            deck_storage::deck_folders_list,
+            deck_storage::deck_folders_create,
+            deck_storage::deck_folders_update,
+            deck_storage::deck_folders_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,6 +8,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { GamePage } from '@/pages/GamePage';
 import { DeckBuilderPage } from '@/pages/DeckBuilderPage';
+import { DeckLibraryPage } from '@/pages/DeckLibraryPage';
 import { LobbyPage } from '@/pages/LobbyPage';
 import { PatchNotesPage } from '@/pages/PatchNotesPage';
 import { UpdaterBridge } from '@/updater/UpdaterBridge';
@@ -58,7 +59,9 @@ export function App() {
           <Route element={<AuthGuard />}>
             <Route path="/lobby" element={<LobbyPage />} />
             <Route path="/game/:id?" element={<GamePage />} />
-            <Route path="/deckbuilder/:id?" element={<DeckBuilderPage />} />
+            <Route path="/deckbuilder" element={<DeckLibraryPage />} />
+            <Route path="/deckbuilder/new" element={<DeckBuilderPage />} />
+            <Route path="/deckbuilder/:id" element={<DeckBuilderPage />} />
           </Route>
           {!IS_DESKTOP && (
             <Route element={<RoleGuard allowedRoles={['admin']} />}>

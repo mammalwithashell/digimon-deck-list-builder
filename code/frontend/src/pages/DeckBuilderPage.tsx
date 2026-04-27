@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CardSearchPanel } from '@/components/deckbuilder/CardSearchPanel';
 import { DeckListPanel } from '@/components/deckbuilder/DeckListPanel';
 import { DeckStats } from '@/components/deckbuilder/DeckStats';
@@ -10,13 +11,31 @@ import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import { useAuthStore } from '@/stores/authStore';
 import * as deckApi from '@/api/deckApi';
 import * as deckStore from '@/storage/deckStore';
+import { getCardById } from '@/api/digimonCardApi';
+import type { DeckEntry } from '@/types/deck';
 
 // Desktop saves decks to the local Tauri-backed store; web keeps hitting
 // the hosted `/decks` API. The tested-cards allowlist + raw-validate calls
 // already branch inside `deckApi` itself, so they stay on `deckApi`.
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+const decks = IS_DESKTOP ? deckStore : deckApi;
+
+function groupCardIds(ids: string[], altArts: boolean[] = []): DeckEntry[] {
+  const counts = new Map<string, { cardId: string; isAltArt: boolean; count: number }>();
+  ids.forEach((cardId, i) => {
+    const isAltArt = !!altArts[i];
+    const key = `${cardId}|${isAltArt ? '1' : '0'}`;
+    const existing = counts.get(key);
+    if (existing) existing.count += 1;
+    else counts.set(key, { cardId, isAltArt, count: 1 });
+  });
+  return Array.from(counts.values());
+}
 
 export function DeckBuilderPage() {
+  const { id: routeDeckId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     deckName,
     setDeckName,
@@ -30,12 +49,20 @@ export function DeckBuilderPage() {
     selectedCardId,
     testedCardIds,
     setTestedCardIds,
+    loadDeck,
+    clearDeck,
   } = useDeckBuilderStore();
 
   const [showImport, setShowImport] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Alpha gate: fetch the tested-cards allowlist once per session.
+  useEffect(() => {
+    if (location.pathname.endsWith('/new')) {
+      clearDeck();
+    }
+  }, [location.pathname, clearDeck]);
+
   useEffect(() => {
     if (testedCardIds !== null) return;
     deckApi
@@ -47,6 +74,39 @@ export function DeckBuilderPage() {
         setTestedCardIds([]);
       });
   }, [testedCardIds, setTestedCardIds]);
+
+  useEffect(() => {
+    if (!routeDeckId) return;
+    let cancelled = false;
+
+    async function loadRouteDeck() {
+      try {
+        const deck = await decks.getDeck(routeDeckId!);
+        const mainEntries = groupCardIds(deck.main_deck, deck.main_deck_alt_arts);
+        const eggEntries = groupCardIds(deck.egg_deck, deck.egg_deck_alt_arts);
+        const allIds = [...new Set([...deck.main_deck, ...deck.egg_deck])];
+        const cardDataMap = new Map<string, Awaited<ReturnType<typeof getCardById>>>();
+        await Promise.allSettled(
+          allIds.map(async (id) => {
+            const data = await getCardById(id);
+            if (data) cardDataMap.set(id, data);
+          }),
+        );
+        for (const entry of [...mainEntries, ...eggEntries]) {
+          const data = cardDataMap.get(entry.cardId);
+          if (data) entry.cardData = data;
+        }
+        if (!cancelled) loadDeck(deck.id, deck.name, mainEntries, eggEntries);
+      } catch {
+        if (!cancelled) clearDeck();
+      }
+    }
+
+    void loadRouteDeck();
+    return () => {
+      cancelled = true;
+    };
+  }, [routeDeckId, loadDeck, clearDeck]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -76,6 +136,7 @@ export function DeckBuilderPage() {
           egg_deck_alt_arts: eggAlts,
         });
         setDeckId(saved.id);
+        if (!routeDeckId) navigate(`/deckbuilder/${saved.id}`, { replace: true });
       } else if (deckId) {
         await deckApi.updateDeck(deckId, {
           name: deckName,
@@ -94,6 +155,7 @@ export function DeckBuilderPage() {
           game_mode: 'standard',
         });
         setDeckId(created.id);
+        navigate(`/deckbuilder/${created.id}`, { replace: true });
       }
       setIsDirty(false);
     } catch {

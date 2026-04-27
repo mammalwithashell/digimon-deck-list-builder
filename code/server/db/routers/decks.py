@@ -6,18 +6,23 @@ import json
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.classifier.deck_tagger import tag_deck
 from server.db.auth import get_current_user
 from server.db.database import get_db
-from server.db.models import Deck, DeckVersion, User
+from server.db.models import Deck, DeckFolder, DeckVersion, User
 from server.db.schemas import (
     CreateDeckRequest,
+    CreateDeckFolderRequest,
+    DeckFolderResponse,
     DeckResponse,
     DeckSummary,
     UpdateDeckRequest,
+    UpdateDeckFolderRequest,
+    UpdateDeckLibraryRequest,
 )
 # validate_deck + CardRestriction stay on Python: the no_restriction game-mode
 # path passes an empty CardRestriction() to bypass restricted-list checks,
@@ -27,6 +32,8 @@ from engine_py_legacy.engine.data.deck_loader import validate_deck, RESTRICTED_L
 from digimon_engine import out_of_set_cards
 
 router = APIRouter(prefix="/decks", tags=["decks"])
+
+DEFAULT_FOLDER_NAMES = ("Tournament", "Experimental", "Casual")
 
 
 def _reject_untested_cards(main_deck: list[str], egg_deck: list[str]) -> None:
@@ -127,6 +134,7 @@ def _deck_to_response(deck: Deck) -> DeckResponse:
     return DeckResponse(
         id=deck.id,
         owner_id=deck.owner_id,
+        folder_id=deck.folder_id,
         name=deck.name,
         description=deck.description or "",
         game_mode=deck.game_mode,
@@ -139,12 +147,58 @@ def _deck_to_response(deck: Deck) -> DeckResponse:
         is_valid=bool(deck.is_valid),
         validation_errors=json.loads(deck.validation_errors) if deck.validation_errors else [],
         is_public=bool(deck.is_public),
+        is_pinned=bool(deck.is_pinned),
         tags=json.loads(deck.tags) if deck.tags else [],
         meta_tier=deck.meta_tier,
         meta_archetype=deck.meta_archetype,
         created_at=deck.created_at,
         updated_at=deck.updated_at,
     )
+
+
+def _deck_to_summary(deck: Deck) -> DeckSummary:
+    main_ids = json.loads(deck.main_deck)
+    egg_ids = json.loads(deck.egg_deck) if deck.egg_deck else []
+    tags = json.loads(deck.tags) if deck.tags else []
+    return DeckSummary(
+        id=deck.id,
+        name=deck.name,
+        description=deck.description or "",
+        game_mode=deck.game_mode,
+        is_valid=bool(deck.is_valid),
+        is_public=bool(deck.is_public),
+        is_pinned=bool(deck.is_pinned),
+        folder_id=deck.folder_id,
+        card_count=len(main_ids) + len(egg_ids),
+        main_count=len(main_ids),
+        egg_count=len(egg_ids),
+        tags=tags,
+        meta_tier=deck.meta_tier,
+        meta_archetype=deck.meta_archetype,
+        colors=[],
+        highest_level=None,
+        created_at=deck.created_at,
+        updated_at=deck.updated_at,
+    )
+
+
+async def _ensure_default_folders(user_id: str, db: AsyncSession) -> None:
+    result = await db.execute(select(func.count()).select_from(DeckFolder).where(DeckFolder.owner_id == user_id))
+    if (result.scalar() or 0) > 0:
+        return
+    for idx, name in enumerate(DEFAULT_FOLDER_NAMES):
+        db.add(DeckFolder(owner_id=user_id, name=name, sort_order=idx))
+    await db.commit()
+
+
+async def _get_owned_folder(folder_id: str, user_id: str, db: AsyncSession) -> DeckFolder:
+    result = await db.execute(
+        select(DeckFolder).where(DeckFolder.id == folder_id, DeckFolder.owner_id == user_id)
+    )
+    folder = result.scalar_one_or_none()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    return folder
 
 
 @router.post("", response_model=DeckResponse, status_code=status.HTTP_201_CREATED)
@@ -212,21 +266,7 @@ async def list_my_decks(
 
     result = await db.execute(query)
     decks = result.scalars().all()
-    return [
-        DeckSummary(
-            id=d.id,
-            name=d.name,
-            game_mode=d.game_mode,
-            is_valid=bool(d.is_valid),
-            is_public=bool(d.is_public),
-            card_count=len(json.loads(d.main_deck)) + len(json.loads(d.egg_deck) if d.egg_deck else []),
-            meta_tier=d.meta_tier,
-            meta_archetype=d.meta_archetype,
-            created_at=d.created_at,
-            updated_at=d.updated_at,
-        )
-        for d in decks
-    ]
+    return [_deck_to_summary(d) for d in decks]
 
 
 @router.get("/public", response_model=List[DeckSummary])
@@ -241,21 +281,102 @@ async def list_public_decks(
 
     result = await db.execute(query)
     decks = result.scalars().all()
-    return [
-        DeckSummary(
-            id=d.id,
-            name=d.name,
-            game_mode=d.game_mode,
-            is_valid=bool(d.is_valid),
-            is_public=True,
-            card_count=len(json.loads(d.main_deck)) + len(json.loads(d.egg_deck) if d.egg_deck else []),
-            meta_tier=d.meta_tier,
-            meta_archetype=d.meta_archetype,
-            created_at=d.created_at,
-            updated_at=d.updated_at,
-        )
-        for d in decks
-    ]
+    return [_deck_to_summary(d) for d in decks]
+
+
+@router.get("/folders", response_model=List[DeckFolderResponse])
+async def list_deck_folders(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await _ensure_default_folders(user.id, db)
+    result = await db.execute(
+        select(DeckFolder)
+        .where(DeckFolder.owner_id == user.id)
+        .order_by(DeckFolder.sort_order.asc(), DeckFolder.name.asc())
+    )
+    return result.scalars().all()
+
+
+@router.post("/folders", response_model=DeckFolderResponse, status_code=status.HTTP_201_CREATED)
+async def create_deck_folder(
+    request: CreateDeckFolderRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    folder = DeckFolder(owner_id=user.id, name=request.name.strip(), sort_order=request.sort_order)
+    db.add(folder)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Folder name already exists") from exc
+    await db.refresh(folder)
+    return folder
+
+
+@router.put("/folders/{folder_id}", response_model=DeckFolderResponse)
+async def update_deck_folder(
+    folder_id: str,
+    request: UpdateDeckFolderRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    folder = await _get_owned_folder(folder_id, user.id, db)
+    if request.name is not None:
+        folder.name = request.name.strip()
+    if request.sort_order is not None:
+        folder.sort_order = request.sort_order
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Folder name already exists") from exc
+    await db.refresh(folder)
+    return folder
+
+
+@router.delete("/folders/{folder_id}")
+async def delete_deck_folder(
+    folder_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    folder = await _get_owned_folder(folder_id, user.id, db)
+    await db.execute(
+        update(Deck)
+        .where(Deck.owner_id == user.id, Deck.folder_id == folder.id)
+        .values(folder_id=None)
+    )
+    await db.delete(folder)
+    await db.commit()
+    return {"status": "deleted"}
+
+
+@router.patch("/{deck_id}/library", response_model=DeckResponse)
+async def update_deck_library_fields(
+    deck_id: str,
+    request: UpdateDeckLibraryRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Deck).where(Deck.id == deck_id))
+    deck = result.scalar_one_or_none()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    if deck.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if "folder_id" in request.model_fields_set:
+        if request.folder_id is not None:
+            await _get_owned_folder(request.folder_id, user.id, db)
+        deck.folder_id = request.folder_id
+    if request.is_pinned is not None:
+        deck.is_pinned = 1 if request.is_pinned else 0
+
+    await db.commit()
+    await db.refresh(deck)
+    return _deck_to_response(deck)
 
 
 @router.get("/{deck_id}", response_model=DeckResponse)
