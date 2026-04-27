@@ -37,8 +37,8 @@ export function PermanentSlot({
 
   return (
     <div
-      className={`flex flex-col items-center gap-0.5 ${
-        isEffectSource ? 'animate-effect-pulse rounded' : ''
+      className={`ib-permanent-slot ${
+        isEffectSource ? 'animate-effect-pulse ib-permanent-slot--effect' : ''
       }`}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
@@ -61,8 +61,8 @@ export function PermanentSlot({
       />
       {/* Source count badge */}
       {perm.sourceCount > 1 && (
-        <div className="text-[8px] text-gray-400">
-          {perm.sourceCount} sources
+        <div className="ib-source-count">
+          x{perm.sourceCount}
         </div>
       )}
       <KeywordBadges keywords={perm.keywords} />

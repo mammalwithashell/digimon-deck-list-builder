@@ -45,10 +45,13 @@ export function PlayerHalf({
   isDraggingHandCard = false,
   canPlayDragged = false,
 }: PlayerHalfProps) {
+  const breedingClick = !isOpponent
+    ? onBreedingClick ?? (canMove ? onMove : undefined)
+    : undefined;
+
   return (
-    <div className={`flex items-center gap-3 px-2 ${isOpponent ? 'flex-row-reverse' : ''}`}>
-      {/* Left side zones */}
-      <div className="flex flex-col items-center gap-1">
+    <div className={`ib-player-half ${isOpponent ? 'ib-player-half--opp' : 'ib-player-half--you'}`}>
+      <div className="ib-player-half__raise">
         <EggDeck
           count={player.eggDeckCount}
           canHatch={canHatch && !isOpponent}
@@ -60,12 +63,11 @@ export function PlayerHalf({
           canDigivolveDrop={canDigivolveBreeding && !isOpponent}
           highlighted={highlightBreeding && !isOpponent}
           dropId={isOpponent ? 'breeding-slot-opponent' : 'breeding-slot'}
-          onClick={onBreedingClick ?? onMove}
+          onClick={breedingClick}
         />
       </div>
 
-      {/* Battle area */}
-      <div className="flex-1">
+      <div className="ib-player-half__battle">
         <BattleArea
           permanents={player.battleArea}
           isOpponent={isOpponent}
@@ -79,8 +81,7 @@ export function PlayerHalf({
         />
       </div>
 
-      {/* Right side zones */}
-      <div className="flex flex-col items-center gap-1">
+      <div className="ib-player-half__resources">
         <DeckPile count={player.deckCount} />
         <SecurityStack count={player.securityCount} isOpponent={isOpponent} />
         <TrashPile count={player.trashIds.length} onClick={onTrashClick} />
