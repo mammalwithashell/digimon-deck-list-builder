@@ -5,8 +5,11 @@ use std::collections::HashMap;
 
 use digimon_engine::action::ACTION_SPACE_SIZE;
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::tensor::TENSOR_SIZE;
 use digimon_engine::HeadlessRunner;
+
+use crate::dsl_card_data::card_data_from_compiled;
 
 fn test_card_db() -> HashMap<String, CardData> {
     let json = r#"{
@@ -50,6 +53,23 @@ fn test_deck() -> Vec<String> {
     for _ in 0..10 {
         deck.push("BT1-025".to_string());
     }
+    deck
+}
+
+fn dsl_slice_card_db() -> HashMap<String, CardData> {
+    ["BT15-003", "BT17-007", "BT17-015", "BT22-084", "AD1-025"]
+        .into_iter()
+        .map(|id| (id.to_string(), card_data_from_compiled(id)))
+        .collect()
+}
+
+fn dsl_slice_deck() -> Vec<String> {
+    let mut deck = Vec::new();
+    deck.extend(std::iter::repeat("BT15-003".to_string()).take(4));
+    deck.extend(std::iter::repeat("BT17-007".to_string()).take(12));
+    deck.extend(std::iter::repeat("BT17-015".to_string()).take(8));
+    deck.extend(std::iter::repeat("BT22-084".to_string()).take(8));
+    deck.extend(std::iter::repeat("AD1-025".to_string()).take(8));
     deck
 }
 
@@ -122,4 +142,35 @@ fn mulligan_accept_advances() {
     // Both kept → mulligan complete, turn 1 has begun.
     assert!(runner.mulligan_current_player().is_none());
     assert_eq!(runner.game.turn_count, 1);
+}
+
+#[test]
+fn headless_match_runs_with_embedded_dsl_omnimon_slice() {
+    let db = dsl_slice_card_db();
+    let mut runner = HeadlessRunner::new(
+        dsl_slice_deck(),
+        dsl_slice_deck(),
+        &db,
+        false,
+        false,
+        false,
+        Some(123),
+    )
+    .unwrap();
+
+    assert!(
+        runner
+            .game
+            .effects_for_card("BT22-084", CardHandle(0))
+            .is_some(),
+        "Game::new should register embedded DSL effects"
+    );
+
+    while let Some(player) = runner.mulligan_current_player() {
+        runner.accept_mulligan(player, true).unwrap();
+    }
+
+    let winner = runner.run_until_conclusion::<fn(&_, &[f32]) -> u16>(1000, None);
+    assert!(runner.is_game_over());
+    assert_ne!(winner, u8::MAX);
 }

@@ -42,7 +42,7 @@ fn play_from_hand_step_with_free_cost_delta_consumes_hand_and_keeps_memory() {
 
     // Bind "idx" → HandIndex(1) so PlayFromHand drops TST-B.
     let mut bindings = Bindings::new();
-    bindings.insert_hand_index("idx", 1);
+    bindings.insert_hand_index("idx", 0, 1);
 
     let step = CompiledStep::PlayFromHand {
         of: CompiledPlayerRef::You,
@@ -94,7 +94,7 @@ fn play_from_hand_free_step_consumes_hand_and_keeps_memory() {
     let battle_before = runner.game.players[0].battle_area.len();
 
     let mut bindings = Bindings::new();
-    bindings.insert_hand_index("idx", 0);
+    bindings.insert_hand_index("idx", 0, 0);
 
     let step = CompiledStep::PlayFromHandFree {
         of: CompiledPlayerRef::You,
@@ -199,7 +199,7 @@ fn play_from_trash_step_with_free_cost_delta_consumes_trash_and_keeps_memory() {
     let battle_before = runner.game.players[0].battle_area.len();
 
     let mut bindings = Bindings::new();
-    bindings.insert_trash_index("idx", 0);
+    bindings.insert_trash_index("idx", 0, 0);
 
     let step = CompiledStep::PlayFromTrash {
         of: CompiledPlayerRef::You,
@@ -258,7 +258,7 @@ fn play_from_trash_free_step_consumes_trash_and_keeps_memory() {
     // Bind by trash index (the dispatcher resolves the index → CardHandle
     // before calling `play_from_trash_free_unsuspended`).
     let mut bindings = Bindings::new();
-    bindings.insert_trash_index("idx", 0);
+    bindings.insert_trash_index("idx", 0, 0);
 
     let step = CompiledStep::PlayFromTrashFree {
         of: CompiledPlayerRef::You,

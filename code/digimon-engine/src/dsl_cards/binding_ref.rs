@@ -13,8 +13,8 @@ use crate::permanent::PermanentHandle;
 pub enum ResolvedBinding {
     Permanent(PermanentHandle),
     Card(CardHandle),
-    HandIndex { player: PlayerId, index: u16 },
-    TrashIndex { player: PlayerId, index: u16 },
+    HandIndex(PlayerId, u16),
+    TrashIndex(PlayerId, u16),
     Literal(i64),
     PermanentList(Vec<PermanentHandle>),
     CardList(Vec<CardHandle>),
@@ -34,11 +34,15 @@ pub fn resolve_binding_ref(
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
         | CompiledBindingRef::OfPermanent(name) => resolve_named(name, bindings),
-        CompiledBindingRef::EventTarget | CompiledBindingRef::EventCard => {
-            // Phase 2b: engine event context not yet wired to the DSL layer.
-            // Returns None so steps relying on these silently no-op.
-            None
-        }
+        CompiledBindingRef::EventTarget => ctx
+            .game
+            .current_trigger_context
+            .and_then(|t| t.target_permanent.map(ResolvedBinding::Permanent)),
+        CompiledBindingRef::EventCard => ctx
+            .game
+            .current_trigger_context
+            .and_then(|t| t.event_card.or(t.target_card))
+            .map(ResolvedBinding::Card),
     }
 }
 
@@ -46,12 +50,8 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
     match bindings.get(name)? {
         BindingValue::Permanent(h) => Some(ResolvedBinding::Permanent(h)),
         BindingValue::Card(h) => Some(ResolvedBinding::Card(h)),
-        BindingValue::HandIndex { player, index } => {
-            Some(ResolvedBinding::HandIndex { player, index })
-        }
-        BindingValue::TrashIndex { player, index } => {
-            Some(ResolvedBinding::TrashIndex { player, index })
-        }
+        BindingValue::HandIndex(p, i) => Some(ResolvedBinding::HandIndex(p, i)),
+        BindingValue::TrashIndex(p, i) => Some(ResolvedBinding::TrashIndex(p, i)),
         BindingValue::Literal(v) => Some(ResolvedBinding::Literal(v)),
         BindingValue::PermanentList(v) => Some(ResolvedBinding::PermanentList(v)),
         BindingValue::CardList(v) => Some(ResolvedBinding::CardList(v)),

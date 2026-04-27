@@ -139,6 +139,9 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::StartOfYourMainPhase => CompiledTiming::StartOfYourMainPhase,
         S::EndOfYourTurn => CompiledTiming::EndOfYourTurn,
         S::EndOfOpponentsTurn => CompiledTiming::EndOfOpponentsTurn,
+        S::EndOfYourNextTurn => CompiledTiming::EndOfYourNextTurn,
+        S::EndOfOpponentsNextTurn => CompiledTiming::EndOfOpponentsNextTurn,
+        S::UntilNextUnsuspend => CompiledTiming::UntilNextUnsuspend,
         S::OnAttackTargetChange => CompiledTiming::OnAttackTargetChange,
         S::MainFromHand => CompiledTiming::MainFromHand,
         S::MainOnField => CompiledTiming::MainOnField,
@@ -174,9 +177,9 @@ fn compile_per_selector(p: crate::formula::PerSelector) -> CompiledPerSelector {
         S::StackSize => CompiledPerSelector::StackSize,
         S::AllyCount => CompiledPerSelector::AllyCount,
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
-        S::CardCountInZone { of, zone } => CompiledPerSelector::CardCountInZone {
-            of: compile_player_ref(of),
-            zone: compile_zone(zone),
+        S::CardCountInZone(spec) => CompiledPerSelector::CardCountInZoneScoped {
+            zone: compile_zone(spec.zone),
+            of: compile_player_ref(spec.of),
         },
     }
 }
@@ -246,8 +249,15 @@ fn compile_formula(f: &crate::formula::FormulaSpec) -> CompiledFormula {
         FormulaSpec::Compound(CompoundFormula::Min(v)) => {
             CompiledFormula::Min(v.iter().map(compile_formula).collect())
         }
-        FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => {
-            CompiledFormula::Aggregate(compile_aggregate_selector(*a))
+        FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => CompiledFormula::AggregateScoped {
+            selector: compile_aggregate_selector(*a),
+            scope: CompiledPlayerRef::You,
+        },
+        FormulaSpec::Compound(CompoundFormula::AggregateScoped(spec)) => {
+            CompiledFormula::AggregateScoped {
+                selector: compile_aggregate_selector(spec.selector),
+                scope: compile_player_ref(spec.scope),
+            }
         }
         FormulaSpec::Compound(CompoundFormula::RawRust(s)) => CompiledFormula::RawRust(s.clone()),
     }
@@ -702,6 +712,12 @@ fn compile_declarative(
                 })
                 .collect(),
             exclude_cause: p.exclude_cause,
+            process: p
+                .process
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors))
+                .collect(),
             summary,
             summary_key,
         },
@@ -968,14 +984,6 @@ fn compile_step(
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),
         },
-        S::CancelLeave(_) => CompiledStep::CancelLeave,
-        S::HandleReplacement(_) => CompiledStep::HandleReplacement,
-        S::RedirectReplacement(a) => CompiledStep::RedirectReplacement {
-            destination: compile_zone(a.destination),
-        },
-        S::SubstitutePermanent(a) => CompiledStep::SubstitutePermanent {
-            target: compile_binding_ref(&a.target),
-        },
         S::Hatch(a) => CompiledStep::Hatch {
             of: compile_player_ref(a.of),
         },
@@ -1011,14 +1019,14 @@ fn compile_step(
         S::EffectInitiatedDigivolve(a) => CompiledStep::EffectInitiatedDigivolve {
             target: compile_binding_ref(&a.target),
             from_hand: compile_binding_ref(&a.from_hand),
-            cost: a.cost,
+            cost: compile_cost_delta(&a.cost),
             ignore_requirements: a.ignore_requirements,
         },
         S::EffectInitiatedDnaDigivolve(a) => CompiledStep::EffectInitiatedDnaDigivolve {
             target_a: compile_binding_ref(&a.target_a),
             target_b: compile_binding_ref(&a.target_b),
             from_hand: compile_binding_ref(&a.from_hand),
-            cost: a.cost,
+            cost: compile_cost_delta(&a.cost),
             ignore_requirements: a.ignore_requirements,
         },
 
@@ -1238,6 +1246,14 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.optional[{i}]"), card_id, errors))
                 .collect(),
         ),
+        S::CancelReplacement(_) => CompiledStep::CancelReplacement,
+        S::HandleReplacement(_) => CompiledStep::HandleReplacement,
+        S::RedirectReplacement(r) => CompiledStep::RedirectReplacement {
+            zone: compile_zone(r.zone),
+        },
+        S::SubstituteReplacement(s) => CompiledStep::SubstituteReplacement {
+            subject: compile_binding_ref(&s.subject),
+        },
         S::RawRust(r) => CompiledStep::RawRust {
             fn_name: r.fn_name.clone(),
             consumes: r.consumes.clone(),

@@ -8,7 +8,7 @@
 use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use crate::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
 
@@ -36,7 +36,12 @@ pub fn try_run(
         } => {
             let cond_holds = {
                 let rctx = ctx.as_read();
-                eval_predicate(condition, &rctx, PredicateSubject::None)
+                eval_predicate_with_bindings(
+                    condition,
+                    &rctx,
+                    PredicateSubject::None,
+                    Some(bindings),
+                )
             };
             let body = if cond_holds { then } else { else_branch };
             Some(run_steps_with_runtime(body, ctx, bindings, runtime))

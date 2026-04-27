@@ -451,7 +451,7 @@ fn evaluate_per_card_count_in_zone_counts_your_hand() {
     let ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
     let f = CompiledFormula::BasePerDelta {
         base: 0,
-        per: CompiledPerSelector::CardCountInZone {
+        per: CompiledPerSelector::CardCountInZoneScoped {
             of: CompiledPlayerRef::You,
             zone: CompiledZone::Hand,
         },
@@ -476,7 +476,7 @@ fn evaluate_per_card_count_in_zone_counts_opponent_trash() {
     let ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
     let f = CompiledFormula::BasePerDelta {
         base: 1,
-        per: CompiledPerSelector::CardCountInZone {
+        per: CompiledPerSelector::CardCountInZoneScoped {
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
         },

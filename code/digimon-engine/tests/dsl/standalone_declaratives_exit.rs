@@ -56,6 +56,7 @@ fn partition_clause() -> CompiledClause {
         active_when: None,
         sources: vec![],
         exclude_cause: vec![],
+        process: vec![],
         summary: None,
         summary_key: None,
     })

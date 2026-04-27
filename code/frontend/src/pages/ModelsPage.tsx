@@ -15,12 +15,11 @@ import {
 import * as deckStore from '@/storage/deckStore';
 import * as deckApi from '@/api/deckApi';
 import client from '@/api/client';
-import { createVsAiGame } from '@/api/gameApi';
+import { createVsAgentGame } from '@/api/gameApi';
 
 // Desktop builds resolve manifest/local-cache/contract through the embedded
-// Rust engine via Tauri; web builds have no local cache or engine of their
-// own — the hosted API is the sole authority, so we fetch the manifest
-// straight over HTTP and skip local-cache and compat-check concepts.
+// engine via Tauri. Web builds can browse the hosted manifest, but gameplay
+// is desktop-only.
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
 const MANIFEST_URL =
@@ -146,18 +145,25 @@ export function ModelsPage() {
     });
 
   const handleTryOnline = async (row: MergedRow) => {
+    if (!IS_DESKTOP) {
+      setError('Playing against local models is only available in the desktop client.');
+      return;
+    }
+    if (!row.local) {
+      setError('Download the model before playing against it.');
+      return;
+    }
     if (!playDeckId) {
       setError('Select a deck to play with first.');
       return;
     }
     await withBusy(row.id, async () => {
-      const deck = IS_DESKTOP
-        ? await deckStore.getDeck(playDeckId)
-        : await deckApi.getDeck(playDeckId);
+      await loadCached(row.id);
+      const deck = await deckStore.getDeck(playDeckId);
       // TODO(alpha+1): use `row.manifest?.deck_id` (see ManifestModel schema) to
       // pick the AI's intended deck. For alpha we mirror the user's deck so a
       // balanced matchup is at least possible.
-      const { game_id } = await createVsAiGame({
+      const { game_id } = await createVsAgentGame({
         modelId: row.id,
         userDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
         opponentDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
@@ -270,11 +276,11 @@ export function ModelsPage() {
                     <div className="flex justify-end gap-2">
                       {row.manifest && compatible && (
                         <button
-                          disabled={busy || !playDeckId}
+                          disabled={busy || !playDeckId || !IS_DESKTOP || !have}
                           onClick={() => void handleTryOnline(row)}
                           className="rounded bg-blue-600 px-2 py-1 text-xs hover:bg-blue-500 disabled:opacity-40"
                         >
-                          {busy ? 'Preparing…' : 'Try online'}
+                          {busy ? 'Preparing…' : 'Play'}
                         </button>
                       )}
                       {row.manifest && !have && compatible && (

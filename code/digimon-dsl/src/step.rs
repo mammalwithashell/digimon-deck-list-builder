@@ -92,10 +92,6 @@ pub enum StepSpec {
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
     TrashTopSource(TargetArg),
-    CancelLeave(EmptyArgs),
-    HandleReplacement(EmptyArgs),
-    RedirectReplacement(RedirectReplacementArgs),
-    SubstitutePermanent(TargetArg),
     Hatch(PlayerArg),
 
     // Play / digivolve
@@ -139,6 +135,12 @@ pub enum StepSpec {
     PerSelected(PerSelectedStep),
     ScheduleDelayed(ScheduleDelayedStep),
     Optional(OptionalStep),
+
+    // Replacement process outcomes
+    CancelReplacement(EmptyArgs),
+    HandleReplacement(EmptyArgs),
+    RedirectReplacement(RedirectReplacementArgs),
+    SubstituteReplacement(SubstituteReplacementArgs),
 
     // Escape hatch (step-level)
     RawRust(RawRustStep),
@@ -189,10 +191,6 @@ impl Serialize for StepSpec {
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
-            StepSpec::CancelLeave(v) => kv!(s, "cancel_leave", v),
-            StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
-            StepSpec::RedirectReplacement(v) => kv!(s, "redirect_replacement", v),
-            StepSpec::SubstitutePermanent(v) => kv!(s, "substitute_permanent", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
@@ -231,6 +229,11 @@ impl Serialize for StepSpec {
             StepSpec::PerSelected(v) => kv!(s, "per_selected", v),
             StepSpec::ScheduleDelayed(v) => kv!(s, "schedule_delayed", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
+            // Replacement process outcomes
+            StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
+            StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
+            StepSpec::RedirectReplacement(v) => kv!(s, "redirect_replacement", v),
+            StepSpec::SubstituteReplacement(v) => kv!(s, "substitute_replacement", v),
             // Escape hatch
             StepSpec::RawRust(v) => kv!(s, "raw_rust", v),
         }
@@ -301,10 +304,6 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
-            "cancel_leave" => StepSpec::CancelLeave(map.next_value()?),
-            "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
-            "redirect_replacement" => StepSpec::RedirectReplacement(map.next_value()?),
-            "substitute_permanent" => StepSpec::SubstitutePermanent(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
             // Play / digivolve
@@ -351,6 +350,12 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "schedule_delayed" => StepSpec::ScheduleDelayed(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
 
+            // Replacement process outcomes
+            "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
+            "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
+            "redirect_replacement" => StepSpec::RedirectReplacement(map.next_value()?),
+            "substitute_replacement" => StepSpec::SubstituteReplacement(map.next_value()?),
+
             // Escape hatch
             "raw_rust" => StepSpec::RawRust(map.next_value()?),
 
@@ -382,10 +387,6 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_token",
                         "place_as_bottom_source",
                         "trash_top_source",
-                        "cancel_leave",
-                        "handle_replacement",
-                        "redirect_replacement",
-                        "substitute_permanent",
                         "hatch",
                         "play_from_hand",
                         "play_from_hand_free",
@@ -419,6 +420,10 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "per_selected",
                         "schedule_delayed",
                         "optional",
+                        "cancel_replacement",
+                        "handle_replacement",
+                        "redirect_replacement",
+                        "substitute_replacement",
                         "raw_rust",
                     ],
                 ));
@@ -485,20 +490,26 @@ pub struct PlayerArg {
     pub of: PlayerRef,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
+#[serde(deny_unknown_fields)]
+pub struct EmptyArgs {}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct EmptyArgs {}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RedirectReplacementArgs {
-    pub destination: Zone,
+    pub zone: Zone,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SubstituteReplacementArgs {
+    pub subject: BindingRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -611,9 +622,9 @@ pub struct PlayFromHandArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum CostDelta {
+    Reduce { reduce: i32 },
     Keyword(CostDeltaKeyword),
     Literal(i32),
-    Reduce { reduce: i32 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -648,7 +659,7 @@ pub struct PlayFromSecurityArgs {
 pub struct EffectDigivolveArgs {
     pub target: BindingRef,
     pub from_hand: BindingRef,
-    pub cost: i32,
+    pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
 }
@@ -659,7 +670,7 @@ pub struct EffectDnaDigivolveArgs {
     pub target_a: BindingRef,
     pub target_b: BindingRef,
     pub from_hand: BindingRef,
-    pub cost: i32,
+    pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
 }

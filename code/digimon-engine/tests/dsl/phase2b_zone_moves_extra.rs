@@ -310,7 +310,7 @@ fn trash_from_hand_by_index_moves_card_from_hand_to_trash() {
         let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
         let mut bindings = Bindings::new();
         // Hand index 1 = TGT (the card we want to trash).
-        bindings.insert_hand_index("idx", 1);
+        bindings.insert_hand_index("idx", 0, 1);
 
         run_steps(
             &[CompiledStep::TrashFromHandByIndex {

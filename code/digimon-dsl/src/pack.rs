@@ -372,7 +372,8 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         }
         CompiledFormula::Literal(_)
         | CompiledFormula::BasePerDelta { .. }
-        | CompiledFormula::Aggregate(_) => {}
+        | CompiledFormula::Aggregate(_)
+        | CompiledFormula::AggregateScoped { .. } => {}
     }
 }
 

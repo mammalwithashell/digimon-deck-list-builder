@@ -19,6 +19,7 @@ pub use selections::{CountCappedZone, DistinctByMode, EffectContextSelectorScope
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::step::StepRuntime;
 use crate::enums::{
     EffectTiming, Expiry, Keyword, ModifierType, PlaySource, PlayerId, StackPosition,
 };
@@ -63,10 +64,6 @@ impl<'a> EffectReadContext<'a> {
 
     pub fn turn_count(&self) -> u16 {
         self.game.turn_count
-    }
-
-    pub fn dna_origin(&self) -> bool {
-        self.game.current_dna_origin.unwrap_or(false)
     }
 
     pub fn rules(&self) -> &Rules {
@@ -322,12 +319,7 @@ impl<'a> EffectContext<'a> {
         body: Vec<CompiledStep>,
         captured_bindings: Bindings,
     ) {
-        self.schedule_delayed_with_runtime(
-            when,
-            body,
-            captured_bindings,
-            crate::dsl_cards::step::StepRuntime::default(),
-        );
+        self.schedule_delayed_with_runtime(when, body, captured_bindings, StepRuntime::default());
     }
 
     pub fn schedule_delayed_with_runtime(
@@ -335,7 +327,7 @@ impl<'a> EffectContext<'a> {
         when: EffectTiming,
         body: Vec<CompiledStep>,
         captured_bindings: Bindings,
-        runtime: crate::dsl_cards::step::StepRuntime,
+        runtime: StepRuntime,
     ) {
         let entry = ScheduledEffect {
             when,
@@ -344,6 +336,7 @@ impl<'a> EffectContext<'a> {
             source_permanent: self.source_permanent,
             controller: self.player,
             captured_bindings,
+            scheduled_at_turn: self.game.turn_count,
             runtime,
         };
         self.game.scheduled_effects.push(entry);
@@ -357,10 +350,6 @@ impl<'a> EffectContext<'a> {
 
     pub fn turn_count(&self) -> u16 {
         self.game.turn_count
-    }
-
-    pub fn dna_origin(&self) -> bool {
-        self.game.current_dna_origin.unwrap_or(false)
     }
 
     pub fn rules(&self) -> &Rules {
@@ -1897,51 +1886,43 @@ impl<'a> EffectContext<'a> {
         )
     }
 
-    /// Effect-initiated DNA digivolve: consume `target_a` and `target_b`
-    /// from their owner's battle area, merge their digivolution stacks
-    /// underneath the `from_hand` card (which is removed from its owner's
-    /// hand and becomes the new top of stack), and place the resulting
-    /// permanent in the slot vacated by `target_a`.
+    /// Merge two existing battle-area permanents into a single permanent
+    /// topped with a card from hand. Effect-initiated DNA digivolve.
     ///
-    /// Card-text precedent: BT5-085 Omnimon — "DNA digivolve from your hand
-    /// without paying the memory cost" type effects (Phase 2f1 DSL
-    /// `EffectInitiatedDnaDigivolve` step lowering).
+    /// Delegates to `Game::dna_digivolve_inner` for the merge + triggers.
+    /// This wrapper handles the IR's two-knob shape (`cost: i32` separate
+    /// from `ignore_requirements: bool`) and the pay-memory-bypass branch
+    /// that fires when `ignore_requirements` is set and the printed cost
+    /// would otherwise dip below the memory floor.
     ///
-    /// ## Stack ordering
+    /// ## Stacking order
     ///
-    /// Final `card_sources` of the merged permanent:
-    ///   `target_a.card_sources ++ target_b.card_sources ++ [from_hand_card]`
+    /// `target_a.card_sources ++ target_b.card_sources ++ [from_hand]`.
+    /// `target_a` corresponds to `DnaCost::requirement1`. See
+    /// `Game::dna_digivolve_inner` for the canonical contract.
     ///
-    /// `target_a`'s entire stack is the lowest portion (oldest digivolution
-    /// sources at the bottom), `target_b`'s entire stack stacks on top of
-    /// `target_a`'s, and the `from_hand` card is the new top.
+    /// ## Triggers
+    ///
+    /// `WhenDigivolving` → `OnDnaDigivolve` → `OnDigivolve` (global),
+    /// each followed by a queue drain. See
+    /// `Game::dna_digivolve_inner` for the firing sequence.
     ///
     /// ## Semantics of `ignore_requirements`
     ///
-    /// `ignore_requirements: true` skips both the cost-check (the digivolve
-    /// runs even at the printed memory cost would be unaffordable) AND the
-    /// color/level/material-affinity validation (the engine effect drives
-    /// the DNA evolution irrespective of legality). The `cost` argument is
-    /// still applied to memory — passing `cost: 0` makes the merge free.
+    /// `ignore_requirements: true` skips the affordability floor — i.e. the
+    /// merge runs even when subtracting `cost` from memory would dip below
+    /// `rules.memory_range.0`. The `cost` argument is still subtracted —
+    /// `ignore_requirements` is not the same as "free". For
+    /// `cost: 0, ignore_requirements: true`, no memory mutation occurs.
     ///
     /// ## Defensive validation
     ///
     /// Returns `None` if:
-    /// - `target_a == target_b` (would consume the same permanent twice).
-    /// - Either `target_a` or `target_b` is out-of-range on its declared
-    ///   player's battle area.
-    /// - `from_hand` is not present in the corresponding player's hand.
+    /// - `target_a == target_b`
+    /// - either target's index is out of range on its player's battle area
+    /// - `from_hand` is not present in any player's hand
     /// - `cost > 0` and `!ignore_requirements` and the controller cannot
-    ///   pay the memory cost (no rollback in that case yet — early-out
-    ///   before any state mutation).
-    ///
-    /// On success the merged permanent's handle is returned. The slot
-    /// vacated by `target_b` is removed from the battle area (with shift
-    /// semantics), and the slot at `target_a`'s original index now holds
-    /// the merged permanent.
-    ///
-    /// Fires `WhenDigivolving`, `OnDnaDigivolve`, and `OnDigivolve` through
-    /// the same shared helper used by the canonical user-action DNA path.
+    ///   pay the memory cost (early-out before any state mutation)
     pub fn effect_initiated_dna_digivolve(
         &mut self,
         target_a: PermanentHandle,
@@ -1950,13 +1931,51 @@ impl<'a> EffectContext<'a> {
         cost: i32,
         ignore_requirements: bool,
     ) -> Option<PermanentHandle> {
-        self.game.dna_digivolve_from_hand_card(
-            target_a,
-            target_b,
-            from_hand,
-            cost,
-            ignore_requirements,
-        )
+        if target_a == target_b {
+            return None;
+        }
+        if (target_a.index as usize) >= self.game.player(target_a.player).battle_area.len() {
+            return None;
+        }
+        if (target_b.index as usize) >= self.game.player(target_b.player).battle_area.len() {
+            return None;
+        }
+
+        // Locate the from_hand card across all players' hands.
+        let mut hand_owner: Option<PlayerId> = None;
+        let mut hand_index: Option<usize> = None;
+        for pid in 0..self.game.players.len() {
+            if let Some(idx) = self.game.players[pid]
+                .hand
+                .iter()
+                .position(|c| c.handle() == from_hand)
+            {
+                hand_owner = Some(pid as PlayerId);
+                hand_index = Some(idx);
+                break;
+            }
+        }
+        let (hand_owner, hand_index) = (hand_owner?, hand_index?);
+
+        let effective_cost: u16 = cost.max(0) as u16;
+
+        // Memory: under ignore_requirements bypass the floor; otherwise let
+        // dna_digivolve_inner pay normally.
+        if ignore_requirements && effective_cost > 0 {
+            self.game.pay_memory_unchecked(effective_cost);
+            // Pass cost=0 to the inner so it doesn't double-pay.
+            self.game
+                .dna_digivolve_inner(target_a, target_b, hand_owner, hand_index, 0, false)
+        } else {
+            self.game.dna_digivolve_inner(
+                target_a,
+                target_b,
+                hand_owner,
+                hand_index,
+                effective_cost,
+                false,
+            )
+        }
     }
 
     // ─── Modifier registration ────────────────────────────────────────

@@ -5,6 +5,8 @@ use crate::enums::{Keyword, ModifierType};
 pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
     Some(match name {
         "CannotActivateSecurityEffects" => ModifierType::CannotActivateSecurityEffects,
+        "CannotPlayDigimonByEffect" => ModifierType::CannotPlayDigimonByEffect,
+        "IgnoreColorRequirement" => ModifierType::IgnoreColorRequirement,
         "CannotActivateMainEffects" => ModifierType::CannotActivateMainEffects,
         "CannotBeDestroyed" => ModifierType::CannotBeDestroyed,
         "CannotBeDestroyedByBattle" => ModifierType::CannotBeDestroyedByBattle,

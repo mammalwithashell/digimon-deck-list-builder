@@ -48,21 +48,18 @@ fn lower_cost_delta(d: Option<&digimon_dsl::compiled::CompiledCostDelta>) -> Cos
     }
 }
 
-/// Resolve a `source: CompiledBindingRef` to a `CardSourceRef`.
-/// Hand/trash positional bindings carry their zone owner, so cross-player
-/// source moves do not guess from the effect controller.
+/// Resolve a `source: CompiledBindingRef` to a `CardSourceRef`, defaulting the
+/// source-zone owner to `ctx.player` (the effect controller) for hand/trash
+/// binding kinds. Returns `None` if the binding can't be resolved or has an
+/// unsupported kind. See I2 above for the owner-heuristic limitation.
 fn resolve_card_source_ref(
     source: &digimon_dsl::compiled::CompiledBindingRef,
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
 ) -> Option<CardSourceRef> {
     match resolve_binding_ref(source, ctx, bindings)? {
-        ResolvedBinding::HandIndex { player, index } => {
-            Some(CardSourceRef::Hand(player, index as usize))
-        }
-        ResolvedBinding::TrashIndex { player, index } => {
-            Some(CardSourceRef::Trash(player, index as usize))
-        }
+        ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
+        ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),
         ResolvedBinding::Card(h) => Some(CardSourceRef::Reveal(h)),
         // DeckTop and other kinds: no IR binding produces them today.
         // Future: widen as IR evolves.
@@ -81,19 +78,19 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             hand_index,
             cost_delta,
         } => {
-            if let Some(ResolvedBinding::HandIndex { player, index }) =
+            if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
                 let delta = lower_cost_delta(cost_delta.as_ref());
-                let _ = ctx.play_from_hand_with_cost(player, index as usize, delta);
+                let _ = ctx.play_from_hand_with_cost(owner, i as usize, delta);
             }
             true
         }
         CompiledStep::PlayFromHandFree { of: _, hand_index } => {
-            if let Some(ResolvedBinding::HandIndex { player, index }) =
+            if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                let _ = ctx.play_from_hand_free(player, index as usize);
+                let _ = ctx.play_from_hand_free(owner, i as usize);
             }
             true
         }
@@ -104,25 +101,25 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             trash_index,
             cost_delta,
         } => {
-            if let Some(ResolvedBinding::TrashIndex { player, index }) =
+            if let Some(ResolvedBinding::TrashIndex(owner, i)) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
                 let delta = lower_cost_delta(cost_delta.as_ref());
-                let _ = ctx.play_from_trash_with_cost(player, index as usize, delta);
+                let _ = ctx.play_from_trash_with_cost(owner, i as usize, delta);
             }
             true
         }
         CompiledStep::PlayFromTrashFree { of: _, trash_index } => {
             // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
             // IR addresses by trash index so we must look up the handle.
-            if let Some(ResolvedBinding::TrashIndex { player, index }) =
+            if let Some(ResolvedBinding::TrashIndex(owner, i)) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
                 let handle: Option<CardHandle> = ctx
                     .game
-                    .player(player)
+                    .player(owner)
                     .trash
-                    .get(index as usize)
+                    .get(i as usize)
                     .map(|cs| cs.handle());
                 if let Some(h) = handle {
                     let _ = ctx.play_from_trash_free_unsuspended(h);
@@ -169,29 +166,19 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 _ => return true,
             };
             let (hand_owner, hand_index) = match resolve_binding_ref(from_hand, ctx, bindings) {
-                Some(ResolvedBinding::HandIndex { player, index }) => (player, index as usize),
+                Some(ResolvedBinding::HandIndex(p, i)) => (p, i as usize),
                 _ => return true,
             };
-            // The engine signature takes a `CostDelta`; the IR carries
-            // `cost: i32`. Map a positive cost to `CostDelta::Fixed(cost)`
-            // and `cost == 0` to `CostDelta::Free` so memory is genuinely
-            // unaffected.
-            //
-            // IR carries cost as i32, which can express Free (0) and Fixed(n) but not
-            // CostDelta::Reduce(n) (printed cost minus N). Phase 3 may widen the IR
-            // field if a card needs that semantics. cost == 0 collapses to Free
-            // (semantically identical for memory accounting).
-            debug_assert!(
-                *cost >= 0,
-                "EffectInitiatedDigivolve cost: i32 went negative"
+            let delta = lower_cost_delta(Some(cost));
+            // The effect runs on the target's controller (the digivolve is
+            // applied to `target` and the source is from that player's hand).
+            let player = target_handle.player;
+            debug_assert_eq!(
+                hand_owner, player,
+                "effect_initiated_digivolve hand binding player differs from target controller"
             );
-            let delta = if *cost == 0 {
-                CostDelta::Free
-            } else {
-                CostDelta::Fixed(*cost as i16)
-            };
             let _ = ctx.effect_initiated_digivolve(
-                hand_owner,
+                player,
                 hand_index,
                 target_handle,
                 delta,
@@ -216,10 +203,34 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             };
             let from_card = match resolve_binding_ref(from_hand, ctx, bindings) {
                 Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::HandIndex(owner, i)) => {
+                    match ctx.game.player(owner).hand.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
                 _ => return true,
             };
-            let _ =
-                ctx.effect_initiated_dna_digivolve(a, b, from_card, *cost, *ignore_requirements);
+            let cost = match lower_cost_delta(Some(cost)) {
+                CostDelta::Free => 0,
+                CostDelta::Fixed(n) => n,
+                CostDelta::Reduce(n) => {
+                    // DNA effect path still takes a final i32 cost. Until the
+                    // engine primitive is widened, `Reduce(n)` is interpreted
+                    // as "reduce printed DNA cost"; DNA printed-cost lookup is
+                    // not available here, so clamp to zero and keep the shape
+                    // ready for the primitive follow-up.
+                    debug_assert!(n >= 0, "negative DNA cost reduction is not meaningful");
+                    0
+                }
+            };
+            let _ = ctx.effect_initiated_dna_digivolve(
+                a,
+                b,
+                from_card,
+                cost as i32,
+                *ignore_requirements,
+            );
             true
         }
 

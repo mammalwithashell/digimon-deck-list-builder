@@ -12,7 +12,7 @@ pub mod modifiers;
 pub mod permanent_mutations;
 pub mod permanent_scan;
 pub mod play_digivolve;
-pub mod replacement_outcomes;
+pub mod replacement_outcome;
 pub mod schedule_delayed;
 pub mod selections;
 pub mod zone_moves;
@@ -106,9 +106,7 @@ fn park_outer_tail(
         "dsl_outer_tail overwrite: an earlier outer continuation \
          was never drained — likely a nested-park bug",
     );
-    ctx.game
-        .dsl_outer_tail
-        .replace((outer_tail, bindings.clone(), runtime.clone()));
+    ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone(), runtime.clone()));
 }
 
 /// Drain `Game::dsl_outer_tail` if a parked outer continuation is
@@ -218,9 +216,6 @@ pub fn run_step_with_runtime(
         }
         return;
     }
-    if replacement_outcomes::try_run(step, ctx, bindings) {
-        return;
-    }
     if memory::try_run(step, ctx) {
         return;
     }
@@ -240,6 +235,9 @@ pub fn run_step_with_runtime(
         return;
     }
     if schedule_delayed::try_run(step, ctx, bindings, runtime) {
+        return;
+    }
+    if replacement_outcome::try_run(step, ctx, bindings) {
         return;
     }
     // Phase 2d+: other families.

@@ -1,48 +1,60 @@
-//! Lower `CompiledDeclarativeClause::Partition` into a declarative engine
-//! `Effect` that grants `Keyword::Partition` to the source permanent.
+//! Lower `CompiledDeclarativeClause::Partition` into engine effects.
 //!
-//! Phase 1 scope granted the `Keyword::Partition` keyword and installed a
-//! declarative marker. Phase 3 reducer closeout applies the declarative
-//! gates at grant time so inactive or cause/source-excluded Partition clauses
-//! do not install the keyword.
+//! Phase 1 scope: grant the `Keyword::Partition` keyword and install a
+//! declarative marker. Full source-list enforcement is engine-side
+//! (replacement dispatch) and orthogonal to this lowering.
+//! `active_when` and `sources` are accepted but ignored for now. A configured
+//! process body is emitted as an `OnDeletion` body at the partition event.
 
-use digimon_dsl::compiled::{CompiledPredicate, CompiledScope};
+use std::sync::Arc;
+
+use digimon_dsl::compiled::{CompiledPredicate, CompiledScope, CompiledStep};
 
 use crate::card_source::CardHandle;
-use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::effect::Effect;
-use crate::effect_context::EffectContext;
 use crate::enums::{Expiry, Keyword};
-use crate::replacement::ReplacementCause;
 
 /// Lower a `Partition` declarative clause.
 ///
-/// Returns an `Effect` that grants `Keyword::Partition` to the source
-/// permanent when its declarative process fires.
+/// Returns effects that grant `Keyword::Partition` to the source permanent and,
+/// when `process` is present, run that body when the carrier is deleted.
+///
+/// `_active_when` and `_sources` are deferred to a future phase when
+/// engine-side dispatch enforces the source list.
 pub fn lower(
     card: CardHandle,
     scope: CompiledScope,
-    active_when: Option<&CompiledPredicate>,
-    sources: &[CompiledPredicate],
+    _active_when: Option<&CompiledPredicate>,
+    _sources: &[CompiledPredicate],
     exclude_cause: &[String],
-) -> Effect {
-    let active_when = active_when.cloned();
-    let sources = sources.to_vec();
-    let exclude_cause = exclude_cause
-        .iter()
-        .map(|cause| normalize_cause_key(cause))
-        .collect::<Vec<_>>();
+    process: &[CompiledStep],
+) -> Vec<Effect> {
+    lower_with_raw(
+        card,
+        scope,
+        _active_when,
+        _sources,
+        exclude_cause,
+        process,
+        Arc::new(EngineRawRustRegistry::new()),
+    )
+}
 
+pub fn lower_with_raw(
+    card: CardHandle,
+    scope: CompiledScope,
+    _active_when: Option<&CompiledPredicate>,
+    _sources: &[CompiledPredicate],
+    exclude_cause: &[String],
+    process: &[CompiledStep],
+    raw: Arc<EngineRawRustRegistry>,
+) -> Vec<Effect> {
     let mut builder = Effect::declarative(card)
         .name("Partition")
         .process(move |ctx| {
-            if !active_when_matches(active_when.as_ref(), ctx)
-                || !source_predicates_match(&sources, ctx)
-                || cause_is_excluded(&exclude_cause, ctx.deletion_cause())
-            {
-                return;
-            }
-
             let Some(handle) = ctx.source_permanent else {
                 return;
             };
@@ -51,84 +63,45 @@ pub fn lower(
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }
-    builder.build()
-}
+    let mut out = vec![builder.build()];
 
-fn active_when_matches(active_when: Option<&CompiledPredicate>, ctx: &EffectContext<'_>) -> bool {
-    let Some(predicate) = active_when else {
-        return true;
-    };
-    let read = ctx.as_read();
-    eval_predicate(predicate, &read, PredicateSubject::None)
-}
-
-fn source_predicates_match(sources: &[CompiledPredicate], ctx: &EffectContext<'_>) -> bool {
-    if sources.is_empty() {
-        return true;
+    if !process.is_empty() {
+        let process_arc: Arc<[CompiledStep]> = Arc::from(process);
+        let exclude_cause: Arc<[String]> = Arc::from(exclude_cause);
+        let runtime = StepRuntime::new(raw);
+        let mut process_builder =
+            Effect::on_deletion(card)
+                .name("Partition process")
+                .process(move |ctx| {
+                    let cause = ctx.deletion_cause();
+                    if cause_is_excluded(cause, &exclude_cause) {
+                        return;
+                    }
+                    let mut bindings = Bindings::new();
+                    let _ = run_steps_with_runtime(&process_arc, ctx, &mut bindings, &runtime);
+                });
+        if matches!(scope, CompiledScope::Inherited) {
+            process_builder = process_builder.inherited();
+        }
+        out.push(process_builder.build());
     }
 
-    let read = ctx.as_read();
-    let Some(handle) = read.source_permanent else {
-        return false;
-    };
-    let Some(permanent) = read
-        .game
-        .player(handle.player)
-        .battle_area
-        .get(handle.index as usize)
-    else {
-        return false;
-    };
-
-    let material_count = permanent.card_sources.len().saturating_sub(1);
-    sources.iter().all(|predicate| {
-        permanent
-            .card_sources
-            .iter()
-            .take(material_count)
-            .any(|source| eval_predicate(predicate, &read, PredicateSubject::Card(source.handle())))
-    })
+    out
 }
 
-fn cause_is_excluded(exclude_cause: &[String], cause: Option<ReplacementCause>) -> bool {
+fn cause_is_excluded(
+    cause: Option<crate::replacement::ReplacementCause>,
+    exclude: &[String],
+) -> bool {
     let Some(cause) = cause else {
         return false;
     };
-    let cause_key = normalize_cause_key(&format!("{cause:?}"));
-    exclude_cause.iter().any(|excluded| excluded == &cause_key)
-}
-
-fn normalize_cause_key(raw: &str) -> String {
-    let mut normalized = String::new();
-    let mut previous_was_separator = false;
-
-    for (index, ch) in raw.trim().chars().enumerate() {
-        if ch == '-' || ch == ' ' {
-            if !normalized.is_empty() && !previous_was_separator {
-                normalized.push('_');
-                previous_was_separator = true;
-            }
-            continue;
-        }
-
-        if ch == '_' {
-            if !normalized.is_empty() && !previous_was_separator {
-                normalized.push('_');
-                previous_was_separator = true;
-            }
-            continue;
-        }
-
-        if ch.is_ascii_uppercase() {
-            if index > 0 && !previous_was_separator {
-                normalized.push('_');
-            }
-            normalized.push(ch.to_ascii_lowercase());
-        } else {
-            normalized.push(ch.to_ascii_lowercase());
-        }
-        previous_was_separator = false;
-    }
-
-    normalized.trim_matches('_').to_string()
+    let normalized = match cause {
+        crate::replacement::ReplacementCause::Battle => "battle",
+        crate::replacement::ReplacementCause::OwnEffect => "own_effect",
+        crate::replacement::ReplacementCause::OpponentEffect => "opponent_effect",
+        crate::replacement::ReplacementCause::SecurityCheck => "security_check",
+        crate::replacement::ReplacementCause::Cost => "cost",
+    };
+    exclude.iter().any(|s| s == normalized)
 }

@@ -14,14 +14,15 @@ interface DraggableHandCardProps {
   highlighted: boolean;
   cardInfo?: HandCardInfo;
   onClick: () => void;
+  onHover?: (cardId: string | null) => void;
   onHoverIndex?: (index: number | null) => void;
 }
 
-function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, onClick, onHoverIndex }: DraggableHandCardProps) {
+function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, onClick, onHover, onHoverIndex }: DraggableHandCardProps) {
   const setHoveredCard = useGameStore((s) => s.setHoveredCard);
   const dragData: DragData = { type: 'hand-card', handIndex: index, cardId };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `hand-card-${index}`,
+    id: `hand-card-${isOpponent ? 'opponent' : 'player'}-${index}`,
     data: dragData,
     disabled: isOpponent,
   });
@@ -35,7 +36,7 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`relative transition-transform hover:-translate-y-2 ${isDragging ? 'opacity-30' : ''}`}
+      className={`ib-hand-card ${highlighted ? 'ib-hand-card--ready' : ''} ${isDragging ? 'ib-hand-card--dragging' : ''}`}
       style={{ marginLeft: index > 0 ? '-12px' : 0, zIndex: isDragging ? 100 : index }}
     >
       <Card
@@ -47,11 +48,13 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
         onMouseEnter={() => {
           if (!isOpponent) {
             setHoveredCard(cardId);
+            onHover?.(cardId);
             onHoverIndex?.(index);
           }
         }}
         onMouseLeave={() => {
           setHoveredCard(null);
+          onHover?.(null);
           onHoverIndex?.(null);
         }}
       />
@@ -61,9 +64,7 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
         <>
           {/* Play cost (top-left) */}
           <div
-            className="absolute top-0.5 left-0.5 flex items-center justify-center rounded-full
-                        w-[18px] h-[18px] text-[10px] font-bold text-white shadow-sm
-                        border border-white/30 pointer-events-none"
+            className="ib-hand-card__cost"
             style={{ backgroundColor: colorHex }}
           >
             {cardInfo.playCost}
@@ -71,28 +72,24 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
 
           {/* Level or type tag (top-right) */}
           {cardInfo.cardKind === CARD_KIND.Digimon && cardInfo.level != null && (
-            <div className="absolute top-0.5 right-0.5 text-[9px] font-bold text-yellow-300
-                            bg-black/60 rounded px-0.5 leading-tight pointer-events-none">
+            <div className="ib-hand-card__tag">
               Lv.{cardInfo.level}
             </div>
           )}
           {cardInfo.cardKind === CARD_KIND.Option && (
-            <div className="absolute top-0.5 right-0.5 text-[9px] font-bold text-purple-300
-                            bg-black/60 rounded px-0.5 leading-tight pointer-events-none">
+            <div className="ib-hand-card__tag ib-hand-card__tag--option">
               OPT
             </div>
           )}
           {cardInfo.cardKind === CARD_KIND.Tamer && (
-            <div className="absolute top-0.5 right-0.5 text-[9px] font-bold text-cyan-300
-                            bg-black/60 rounded px-0.5 leading-tight pointer-events-none">
+            <div className="ib-hand-card__tag ib-hand-card__tag--tamer">
               TMR
             </div>
           )}
 
           {/* DP (bottom-right) — Digimon only */}
           {cardInfo.cardKind === CARD_KIND.Digimon && cardInfo.dp != null && (
-            <div className="absolute bottom-0.5 right-0.5 text-[9px] font-bold text-white
-                            bg-black/60 rounded px-0.5 leading-tight pointer-events-none">
+            <div className="ib-hand-card__dp">
               {cardInfo.dp >= 1000 ? `${Math.round(cardInfo.dp / 1000)}K` : cardInfo.dp}
             </div>
           )}
@@ -118,10 +115,11 @@ export function HandZone({
   highlightedIndices,
   handCards,
   onCardClick,
+  onCardHover,
   onCardHoverIndex,
 }: HandZoneProps) {
   return (
-    <div className="flex justify-center gap-[-8px] py-1">
+    <div className={`ib-hand-zone ${isOpponent ? 'ib-hand-zone--opp' : 'ib-hand-zone--you'}`}>
       {cardIds.map((cardId, i) => (
         <DraggableHandCard
           key={`${cardId}-${i}`}
@@ -131,11 +129,12 @@ export function HandZone({
           highlighted={highlightedIndices?.has(i) ?? false}
           cardInfo={handCards?.[i]}
           onClick={() => onCardClick?.(i)}
+          onHover={onCardHover}
           onHoverIndex={onCardHoverIndex}
         />
       ))}
       {cardIds.length === 0 && (
-        <div className="text-xs text-gray-600 py-8">No cards in hand</div>
+        <div className="ib-hand-zone__empty">No cards in hand</div>
       )}
     </div>
   );

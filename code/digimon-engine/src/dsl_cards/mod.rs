@@ -8,6 +8,7 @@ pub mod binding_ref;
 pub mod bindings;
 pub mod expiry_map;
 pub mod formula_eval;
+pub mod formula_registry;
 pub mod lower_aura;
 pub mod lower_cost_reduction;
 pub mod lower_delay;
@@ -116,8 +117,8 @@ impl CardEffect for DslCardEffect {
                         pay_cost,
                         ..
                     } => {
-                        // Cost reductions currently lower for before-pay-cost scans
-                        // tied to the played/evolved card. Ally-played observer
+                        // Cost reductions lower for before-pay-cost scans tied
+                        // to the played/evolved card. Ally-played observer
                         // hooks are a separate trigger shape.
                         let timing_ok =
                             matches!(reduction_timing.as_deref(), None | Some("before_pay_cost"));
@@ -186,14 +187,17 @@ impl CardEffect for DslCardEffect {
                         active_when,
                         sources,
                         exclude_cause,
+                        process,
                         ..
                     } => {
-                        out.push(lower_partition::lower(
+                        out.extend(lower_partition::lower_with_raw(
                             card,
                             *scope,
                             active_when.as_ref(),
                             sources,
                             exclude_cause,
+                            process,
+                            self.raw.clone(),
                         ));
                     }
                     CompiledDeclarativeClause::Delay {

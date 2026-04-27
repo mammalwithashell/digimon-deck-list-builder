@@ -1,0 +1,1415 @@
+# `/batch-implement-cards-rust-dsl` Skill Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Build the `/batch-implement-cards-rust-dsl` Claude Code skill — an archetype- or pool-scoped TDD pipeline that produces YAML card specs at `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` plus DebugRunner tests at `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs`.
+
+**Architecture:** A markdown skill file at `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md` orchestrates a three-wave agent pipeline (Sonnet scout → Sonnet implementer/auditor → Opus reviewer) with per-card mode auto-detection (IMPLEMENT / AUDIT / SKIP). The skill delegates to existing tooling (`code/tools/resolve_deck.py`, the embedded DSL pack rebuilt by `build.rs`) and writes verdicts to a new `qa/qa-reports/validated_cards_dsl.json` tracker. No production code changes — the skill is the deliverable.
+
+**Tech Stack:** Markdown (the skill itself), inline Python via Bash for archetype resolution, JSON for verdict tracking. The skill drives Claude Code's `Agent` tool with `isolation: "worktree"` for parallel sub-agents.
+
+**Source spec:** `docs/superpowers/specs/2026-04-26-batch-implement-cards-rust-dsl-design.md` (committed; canonical for prompt-template content this plan transcribes).
+
+**Sibling reference:** `.claude/skills/batch-implement-cards-rust/SKILL.md` (the structural template — same orchestrator pattern, different output artifacts).
+
+---
+
+## File Structure
+
+| Path | Purpose | Created/Modified |
+|---|---|---|
+| `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md` | The skill itself — frontmatter + phases + prompts + appendix | Create |
+| `qa/qa-reports/validated_cards_dsl.json` | Per-card verdict tracker | Create with `{"version":1,"cards":{}}` |
+| `qa/dsl-vocab-gaps.md` | DSL-vocab-flavored BLOCKED tracker | Create with header |
+| `qa/archetype-qa/dsl/.gitkeep` | Per-archetype QA artifact directory | Create |
+
+No source code changes. The skill is markdown only; the engine, tests, tools, and trackers it operates on already exist.
+
+---
+
+## Task 1: Skeleton — directory, frontmatter, header, when-to-use, flags, quick-reference
+
+**Files:**
+- Create: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`
+
+This task lays down the skill's top-of-file scaffolding through the Quick Reference table, plus the initial tracker files. After this task, the skill is *registered* with Claude Code (will appear in the skills list) but has no implementation phases yet.
+
+- [ ] **Step 1: Create the skill directory and skeleton SKILL.md**
+
+```bash
+mkdir -p .claude/skills/batch-implement-cards-rust-dsl
+```
+
+Create `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md` with the following exact content:
+
+````markdown
+---
+name: batch-implement-cards-rust-dsl
+description: Archetype- or pool-scoped TDD pipeline that authors YAML card specs in `code/digimon-engine/cards/<set>/` plus DebugRunner tests in `code/digimon-engine/tests/cards_behavioral/<set>/`. Three-wave architecture (Sonnet scout → Sonnet implementer/auditor → Opus reviewer) with per-card mode auto-detection (IMPLEMENT for new YAML / AUDIT for existing YAML / SKIP for prior verdicts). Engine-gap and DSL-vocab-gap routed to separate trackers. Verdicts in `validated_cards_dsl.json`.
+argument-hint: <ARCHETYPE_NAME|--pool> [--cards CARD1,CARD2,...] [--batch-size N] [--report-only] [--implementer-model {sonnet,opus}] [--no-audit] [--skip-tests]
+---
+
+# Batch Implement Cards (Rust DSL) — Archetype/Pool-Scoped Test-First DSL Pipeline
+
+Author YAML card specs and behavioral tests for an entire archetype (or the curated DSL test pool) using the engine's declarative DSL. Cards are processed in batches of 4 with parallel sub-agents in isolated git worktrees: a Sonnet scout pre-curates context, a Sonnet implementer (or Sonnet auditor for existing YAML) writes tests-first then YAML, and an Opus reviewer audits each batch. **The orchestrator wires test-discovery `mod.rs` files** after merging — agents never touch shared registration.
+
+This is the DSL-flavored sibling of `/batch-implement-cards-rust`. Cards already implemented as hand-written Rust `CardEffect` structs are not affected; cards already shipping YAML are routed to AUDIT mode.
+
+## When to Use
+
+- Authoring DSL YAML for a new archetype on the Rust engine.
+- Running the curated `qa/dsl-test-pool.md` end-to-end (pattern-coverage smoke).
+- Auditing existing YAML for drift after a DSL phase lands new vocabulary.
+
+**Not for:** hand-written Rust `CardEffect` work (use `/batch-implement-cards-rust`). Not for Python scripts (use `/batch-fix-cards`). Not for gameplay testing (use `/gameplay-qa`). Not for full rewrites of drifted YAML (v1 is audit-only — emits diff proposals, does not modify shipping YAML).
+
+## Flags
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `--cards CARD1,CARD2,...` | unset | Explicit comma-separated card list. Wins over both archetype and `--pool`. |
+| `--batch-size N` | `4` | Per-batch worker count. |
+| `--report-only` | off | Phases 1–2 only — resolve, classify, plan, exit. No agents dispatched. |
+| `--implementer-model {sonnet,opus}` | `sonnet` | Escape hatch for hard archetypes. Scout stays Sonnet, reviewer stays Opus regardless. |
+| `--no-audit` | off | Skip AUDIT-mode dispatch for cards already shipping YAML. They become `SKIP`. |
+| `--skip-tests` | off | Emit YAML without behavioral tests. Strongly discouraged — breaks TDD discipline. |
+
+The positional argument is either an archetype name from `data/deck_library.json` or the literal token `--pool` (which targets every card in `qa/dsl-test-pool.md`).
+
+## Per-Card Mode (auto-detected)
+
+- **IMPLEMENT** — no YAML at `code/digimon-engine/cards/<set>/<CARD_ID>.yaml`. Full scout → implementer → reviewer pipeline.
+- **AUDIT** — YAML exists. Single Sonnet auditor → reviewer. No scout wave.
+- **SKIP** — prior `IMPLEMENTED` or `AUDITED-OK` verdict in `validated_cards_dsl.json`, or `--no-audit` is set and YAML exists.
+
+## Quick Reference
+
+| Resource | Path |
+|----------|------|
+| DSL test API (canonical for test patterns) | `docs/RUST_DSL_TEST_API.md` |
+| DSL syntax + compile pipeline | `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md` |
+| Engine API (`EffectContext`) | `docs/RUST_ENGINE_API.md` |
+| Production YAML directory | `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` |
+| Card test directory | `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs` |
+| Test discovery root | `code/digimon-engine/tests/cards_behavioral/main.rs` |
+| Test discovery per set | `code/digimon-engine/tests/cards_behavioral/<set>/mod.rs` |
+| Card metadata | `data/cards.json` |
+| Deck library | `data/deck_library.json` |
+| DSL test pool (curated) | `qa/dsl-test-pool.md` |
+| C# reference | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID_UNDERSCORE}.cs` |
+| Verdict tracker | `qa/qa-reports/validated_cards_dsl.json` |
+| Engine-gap tracker | `qa/archetype-qa/engine-gaps.md` |
+| DSL-vocab-gap tracker | `qa/dsl-vocab-gaps.md` |
+| Per-archetype QA artifact | `qa/archetype-qa/dsl/<archetype_slug>.md` |
+| Pool-progress artifact | `qa/dsl-test-pool-progress.md` |
+
+## Design spec
+
+`docs/superpowers/specs/2026-04-26-batch-implement-cards-rust-dsl-design.md`
+
+---
+````
+
+- [ ] **Step 2: Create the initial tracker files and directories**
+
+```bash
+mkdir -p qa/archetype-qa/dsl
+touch qa/archetype-qa/dsl/.gitkeep
+
+cat > qa/qa-reports/validated_cards_dsl.json <<'EOF'
+{
+  "version": 1,
+  "last_updated": "2026-04-26",
+  "cards": {}
+}
+EOF
+
+cat > qa/dsl-vocab-gaps.md <<'EOF'
+# DSL Vocabulary Gaps Tracker
+
+This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
+
+Format per entry:
+
+```
+## <CARD_ID> — <clause name>
+- Effect text: "..."
+- Missing DSL verb / step kind / predicate: ...
+- Lowers to engine API: <method on EffectContext that already exists>
+- Suggested DSL syntax: <YAML shape>
+- First reported: YYYY-MM-DD
+```
+EOF
+```
+
+- [ ] **Step 3: Verify the skill is discoverable**
+
+Run:
+```bash
+ls .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+ls qa/qa-reports/validated_cards_dsl.json qa/dsl-vocab-gaps.md qa/archetype-qa/dsl/.gitkeep
+```
+
+Expected: all four paths exist. Read the SKILL.md frontmatter and confirm `name: batch-implement-cards-rust-dsl`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md \
+        qa/qa-reports/validated_cards_dsl.json \
+        qa/dsl-vocab-gaps.md \
+        qa/archetype-qa/dsl/.gitkeep
+git commit -m "$(cat <<'MSG'
+skill: scaffold batch-implement-cards-rust-dsl skeleton
+
+Frontmatter, when-to-use, flags, quick-reference table, and per-card-mode
+section in place. Initial trackers seeded:
+- qa/qa-reports/validated_cards_dsl.json
+- qa/dsl-vocab-gaps.md
+- qa/archetype-qa/dsl/
+
+No phase content yet — subsequent tasks layer in Phase 1–5.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 2: Phase 1 — Resolve card pool
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md` (append "## Phase 1" section)
+
+This task adds the phase that classifies every input card as IMPLEMENT / AUDIT / SKIP. The phase content transcribes spec §4 Phase 1 with the inline Python helpers fully spelled out.
+
+- [ ] **Step 1: Append Phase 1 to SKILL.md**
+
+Append the following exactly to `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`:
+
+````markdown
+## Phase 1: Resolve Card Pool
+
+### 1a. Parse the positional argument
+
+Three resolution paths, in priority order:
+
+1. If `--cards` is set: use the explicit list verbatim. Skip both archetype and pool resolution.
+2. If the positional argument is `--pool`: parse `qa/dsl-test-pool.md`. The card IDs are in the first column of the markdown table under `## Pool`. Use this Python one-liner via Bash:
+
+   ```python
+   import re, pathlib
+   text = pathlib.Path("qa/dsl-test-pool.md").read_text()
+   # The pool table starts after "## Pool" and rows look like "| `BT9-092` ... |"
+   pool_section = text.split("## Pool", 1)[1].split("## ", 1)[0]
+   card_ids = re.findall(r"\|\s*`([A-Z0-9-]+)`\s+", pool_section)
+   print("\n".join(card_ids))
+   ```
+
+3. Otherwise: treat the positional as an archetype name and call `code/tools/resolve_deck.py`:
+
+   ```python
+   import sys; sys.path.insert(0, 'code')
+   from tools.resolve_deck import resolve_archetype
+   manifest = resolve_archetype('ARCHETYPE_NAME')
+   for c in manifest.unique_cards:
+       print(c.card_id)
+   ```
+
+   `manifest.unique_cards` yields `CardEntry` objects with `card_id`, `card_name`, `card_kind`, `level`, `colors`, `traits`, `dp`, `play_cost`, `evo_costs`, `effect_text`, `inherited_text`, `security_text`, `csharp_path`, `deck_frequency`. `manifest.meta_share` and `manifest.best_decklist` come from scraped tournament data. The Python-side `script_status` / `script_path` fields are **not used** — they belong to the legacy Python pipeline and are out of scope here.
+
+   If `resolve_archetype` raises `UnknownArchetype`, surface the message and tell the user to run:
+
+   ```bash
+   python code/tools/resolve_deck.py --list-archetypes --min-meta-share 0.01
+   ```
+
+   to find a valid archetype name. Exit cleanly.
+
+### 1b. Classify each card by YAML existence
+
+For each `card_id`, compute the lowercased set prefix and check whether YAML exists:
+
+```python
+def set_prefix(card_id: str) -> str:
+    # 'BT17-001' -> 'bt17'; 'P-117' -> 'p'; 'LM-029' -> 'lm'; 'AD1-025' -> 'ad1'
+    return card_id.split('-')[0].lower()
+```
+
+Then:
+
+```python
+import pathlib
+yaml_path = pathlib.Path(f"code/digimon-engine/cards/{set_prefix(card_id)}/{card_id}.yaml")
+mode = "AUDIT" if yaml_path.exists() else "IMPLEMENT"
+```
+
+If `--no-audit` is set and `mode == "AUDIT"`: change to `SKIP`.
+
+### 1c. Cross-check the verdict tracker
+
+Load `qa/qa-reports/validated_cards_dsl.json`. For each card:
+
+- If the entry's `status` is `IMPLEMENTED` or `AUDITED-OK`: change `mode` to `SKIP` (idempotency). Other verdicts (`PARTIAL`, `AUDITED-MISSING-TESTS`, `AUDITED-DRIFT`, `BLOCKED`) do **not** trigger SKIP — those cards are re-attempted on the next run.
+
+If the file is missing, treat as no prior verdicts; do not create the file here (Task 1 already created it).
+
+### 1d. Build the cross-archetype reverse map
+
+Scan `data/deck_library.json` to produce `{card_id: [archetype_name, ...]}`. This is used in the final report to surface "this card is also used by N other archetypes." Implementation:
+
+```python
+import json
+deck_lib = json.loads(pathlib.Path("data/deck_library.json").read_text())
+reverse = {}
+for archetype_name, archetype_data in deck_lib.items():
+    for decklist in archetype_data.get("decklists", []):
+        for entry in decklist.get("cards", []):
+            reverse.setdefault(entry["card_id"], set()).add(archetype_name)
+reverse = {k: sorted(v) for k, v in reverse.items()}
+```
+
+(Adjust the structural path if `deck_library.json` schema diverges; the actual schema lives in `code/tools/meta_loader.py`.)
+
+---
+````
+
+- [ ] **Step 2: Verify the section reads coherently**
+
+Read the file back and confirm Phase 1 follows the existing top sections without header-level conflicts (`## Phase 1` should be H2). Confirm the inline Python is syntactically valid (mentally — these aren't executed by the skill itself, just by the orchestrator at runtime).
+
+```bash
+grep -n "^## " .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+```
+
+Expected: section headers in order — Quick Reference, Design spec, Phase 1.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add Phase 1 — resolve card pool
+
+Three resolution paths (--cards / --pool / archetype name), YAML-existence
+classification, prior-verdict cross-check for idempotency, cross-archetype
+reverse map for the final report.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 3: Phase 2 — Batch and plan
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md` (append "## Phase 2" section)
+
+- [ ] **Step 1: Append Phase 2 to SKILL.md**
+
+```markdown
+## Phase 2: Batch and Plan
+
+### 2a. Group cards into batches
+
+Default batch size is `--batch-size` (default 4). Apply these grouping heuristics in order:
+
+1. Cards that reference each other by name in their printed text → same batch.
+2. A tamer + Digimon it explicitly buffs (by name match in the tamer's text) → same batch.
+3. An option card + the Digimon(s) it explicitly targets by name → same batch.
+4. Remaining slots filled in card-ID order.
+
+Mixed-mode batches are allowed: a single batch may contain both IMPLEMENT-mode and AUDIT-mode cards. The orchestrator dispatches the right wave per card in Phase 4.
+
+### 2b. Print plan and require approval
+
+Emit the plan table in this exact shape:
+
+```
+Archetype: <name or "DSL test pool">
+Total cards in pool: <N>
+IMPLEMENT (no YAML yet):     <n>
+AUDIT (existing YAML):       <n>
+SKIP (prior verdict):        <n>
+SKIP (--no-audit + YAML):    <n>
+
+To process: <m> → <ceil(m / batch_size)> batches of <batch_size>
+
+Batch 1: <ID1 [I|A]>, <ID2 [I|A]>, <ID3 [I|A]>, <ID4 [I|A]>
+Batch 2: ...
+...
+
+Note: [I] = IMPLEMENT, [A] = AUDIT
+```
+
+**Require explicit user confirmation before Phase 4.** If `--report-only` is set, exit cleanly here.
+
+---
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add Phase 2 — batch and plan
+
+Grouping heuristics mirror /batch-implement-cards-rust. Mixed-mode batches
+allowed (IMPLEMENT + AUDIT in one batch of 4). Plan table requires explicit
+user approval before Phase 4; --report-only short-circuits here.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 4: Phase 3 — Pre-read shared context + Phase 4A — Per-card context gather
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`
+
+These two phases are bookends around the agent waves: Phase 3 runs once per skill invocation, Phase 4A runs once per batch. They share enough structure to land in one task.
+
+- [ ] **Step 1: Append Phase 3 and Phase 4A**
+
+```markdown
+## Phase 3: Pre-Read Shared Context (orchestrator)
+
+Read these files **once** at the start of the skill run and hold them for embedding into every prompt in Phase 4:
+
+1. `docs/RUST_DSL_TEST_API.md` (full)
+2. The skill's positive-rules appendix (the section "Skill Positive-Rules Appendix" later in this file)
+3. `qa/archetype-qa/engine-gaps.md` (current engine gaps)
+4. `qa/dsl-vocab-gaps.md` (current DSL vocab gaps; was created during skill skeleton)
+
+The DSL spec (`docs/superpowers/specs/2026-04-21-card-scripting-dsl.md`, ~58K tokens) and `docs/RUST_ENGINE_API.md` are **cited as paths**, not embedded — workers `Read` them on demand.
+
+Pre-create directories if missing:
+
+```bash
+mkdir -p code/digimon-engine/cards
+mkdir -p code/digimon-engine/tests/cards_behavioral
+mkdir -p qa/archetype-qa/dsl
+```
+
+For each unique `<set>` in the planned cards (extracted via `set_prefix(card_id)`):
+
+```bash
+mkdir -p code/digimon-engine/cards/<set>
+mkdir -p code/digimon-engine/tests/cards_behavioral/<set>
+```
+
+### 3a. Pre-wire test discovery for the run (orchestrator)
+
+To let workers run their own tests during the TDD loop in 4C without touching shared state mid-flight, the orchestrator pre-wires `mod.rs` registrations for every non-skipped card in the run **before** dispatching the first batch. Workers can then `cargo test --test cards_behavioral -- <card_id_lower>` immediately.
+
+For each non-skipped card in this skill run:
+
+1. Ensure `code/digimon-engine/tests/cards_behavioral/<set>/mod.rs` exists. Append `mod <card_id_lower>;` if not already present.
+2. Ensure `code/digimon-engine/tests/cards_behavioral/main.rs` contains `mod <set>;` for this set. Append if missing.
+3. Ensure `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs` exists as an empty file (zero bytes) so the `mod` declaration resolves before the worker writes content. The empty file compiles as a no-op module.
+
+If a worker returns BLOCKED and writes nothing, the orchestrator removes the `mod <card_id_lower>;` line and deletes the empty `.rs` file at merge time (Phase 4E).
+
+**This pre-wire is the only orchestrator write to shared state before agents run.** All other shared-state mutations remain in Phase 4E.
+
+---
+
+## Phase 4: Batch Loop
+
+Repeat for each batch from Phase 2.
+
+### 4A. Per-Card Context Gather (orchestrator)
+
+For each card in the current batch, collect:
+
+1. **Card metadata** from `data/cards.json`:
+   - `card_name_eng`
+   - `effect_description_eng`
+   - `inherited_effect_description_eng`
+   - `security_effect_eng`
+   - `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`, `dna_costs`
+
+2. **DCGO C# reference**: glob `DCGO/Assets/Scripts/CardEffect/<SET>/*/<CARD_ID_UNDERSCORE>.cs` where `<CARD_ID_UNDERSCORE> = card_id.replace("-", "_")` (e.g. `BT15-003` → `BT15_003.cs`). Read the file body if found; record "absent" if not. Promo cards (`P-...`) frequently lack DCGO files; that is acceptable, the worker proceeds with printed text only.
+
+3. **Prior verdict** from `validated_cards_dsl.json` (if any).
+
+4. **AUDIT-mode only** — also read:
+   - `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` (the existing YAML body)
+   - `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs` if present (existing tests)
+
+`<card_id_lower>` is `card_id.replace("-", "_").lower()` (e.g. `BT15-003` → `bt15_003`, `P-117` → `p_117`, `LM-029` → `lm_029`, `AD1-025` → `ad1_025`).
+
+---
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add Phase 3 and Phase 4A — context pre-read and per-card gather
+
+Phase 3: read once and hold (test API doc, appendix, gap trackers); cite
+the DSL spec and engine API as paths for worker read-on-demand. Phase 4A:
+per-card metadata + DCGO C# + prior verdict; AUDIT mode also reads
+existing YAML + existing test file.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 5: Phase 4B — Scout prompt template
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`
+
+The scout pre-curates context per card so the implementer doesn't need to embed the full DSL spec.
+
+- [ ] **Step 1: Append Phase 4B**
+
+```markdown
+### 4B. Scout Wave (Sonnet, parallel — IMPLEMENT-mode cards only)
+
+For each IMPLEMENT-mode card in the batch, dispatch one Agent call. AUDIT-mode cards skip this wave entirely. All scout calls go in **a single assistant message** for true parallelism. Use `subagent_type: "general-purpose"`, model `sonnet`, no isolation (read-only).
+
+**Scout prompt template:**
+
+````
+You are a scout sub-agent for the /batch-implement-cards-rust-dsl skill. Your job is to pre-curate context for an implementer agent that will author the YAML card spec and behavioral tests for a single Digimon TCG card. The implementer is bounded by token budget — your brief replaces the need to embed the full DSL spec.
+
+# Your card
+
+Card ID: {{CARD_ID}}
+Card Name: {{CARD_NAME}}
+Card Kind: {{CARD_KIND}}
+Level: {{LEVEL}}    DP: {{DP}}    Play Cost: {{PLAY_COST}}
+Colors: {{COLORS}}
+Traits (type_eng): {{TRAITS}}
+Evo Costs: {{EVO_COSTS}}
+DNA Costs: {{DNA_COSTS}}
+
+## Effect text (authoritative)
+{{EFFECT_TEXT}}
+
+## Inherited effect text
+{{INHERITED_TEXT}}
+
+## Security effect text
+{{SECURITY_TEXT}}
+
+## DCGO C# reference (behavioral source of truth)
+Path: {{CSHARP_PATH}}
+```
+{{CSHARP_BODY}}
+```
+
+# Reference docs (cite paths — Read what you need, do not paste full bodies)
+
+- DSL test API (test patterns + anti-patterns): `docs/RUST_DSL_TEST_API.md`
+- DSL syntax + compile pipeline (vocabulary reference): `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md`
+- Engine API (`EffectContext` surface): `docs/RUST_ENGINE_API.md`
+- Existing shipping YAMLs: `code/digimon-engine/cards/`
+- Curated example pool: `code/digimon-engine/cards/_examples/`
+
+# Your task
+
+Produce a curated brief for the implementer. The brief must:
+
+1. **Classify the card's mechanics** against the pattern taxonomy in `docs/RUST_DSL_TEST_API.md` §4.3 (Groups A–H). List every applicable row tag.
+
+2. **Identify the DSL verbs / step kinds the implementer will need.** For each verb, cite the section of the DSL spec where it is defined. If the verb does not appear in the spec, mark it as a candidate DSL-vocab gap (do NOT speculate it exists).
+
+3. **Find 1–2 closest exemplar YAMLs** from `code/digimon-engine/cards/` (production) or `code/digimon-engine/cards/_examples/` (curated). Cite paths and a one-line "why this is the closest match."
+
+4. **Identify the target engine APIs.** For each DSL verb, name the `EffectContext` method it lowers to per `docs/RUST_ENGINE_API.md`.
+
+5. **Sketch behavioral test scope per `docs/RUST_DSL_TEST_API.md` §5.** Enumerate: structural assertions (clauses by scope/timing), per-branch behavioral tests, negative tests, OPT enforcement test (if applicable), event-log test (if applicable).
+
+6. **Pre-flight gap suspicion.** Emit one of:
+   - `NONE` — no gap suspected.
+   - `ENGINE-GAP: <description>` — engine lacks a primitive (the DSL verb you would use lowers to a method that does not exist in `EffectContext`).
+   - `DSL-GAP: <description>` — engine has the primitive but no DSL verb maps to it.
+   - `HYBRID: <description>` — both.
+   You may return any verdict here; the implementer will confirm or refute.
+
+# Source priority (for behavioral questions)
+
+1. Printed card text (above) — authoritative.
+2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
+3. DCGO C# (above) — implementation-detail tiebreaker only.
+
+Do NOT cite Python scripts (`code/engine_py_legacy/`) — they are out of scope for this skill.
+
+# Output format (return EXACTLY this structure, nothing else)
+
+```
+## Brief: {{CARD_ID}}
+
+### Pattern rows (test API §4.3)
+- <row tag>, <row tag>, ...
+
+### Required DSL verbs / step-kinds
+- <verb_name> → DSL spec §X.Y [+optional usage note]
+- ...
+
+### Closest exemplar YAMLs
+1. <path> — <one-line why>
+2. <path> — <one-line why>
+
+### Target engine APIs (from RUST_ENGINE_API.md)
+- EffectContext::<method_name>
+- ...
+
+### Behavioral test scope (test API §5)
+- Structural: <clause counts by scope/timing>
+- Per-branch: <enumerate>
+- Negative tests: <enumerate>
+- OPT lockout: <yes/no — if yes, which clause>
+- Event-log assertions: <yes/no — if yes, which events>
+
+### Pre-flight gap suspicion
+NONE | ENGINE-GAP: <description> | DSL-GAP: <description> | HYBRID: <description>
+```
+````
+
+The orchestrator validates that the returned brief contains all six section headings before passing it to the implementer. If validation fails, dispatch a single retry with the same prompt. If the retry also fails, fall back to embedding `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md` directly into the implementer prompt for that one card.
+
+**Pre-flight gap short-circuit:** if a scout returns `ENGINE-GAP`, `DSL-GAP`, or `HYBRID` with high confidence (the brief explicitly states the missing API/verb), the orchestrator MAY skip the implementer wave for that card and emit a `BLOCKED` verdict directly. The reviewer still confirms the gap in Phase 4D.
+
+---
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add Phase 4B — Sonnet scout prompt template
+
+Per-card scout pre-curates pattern rows, required DSL verbs (with spec
+section refs), exemplar YAML paths, target engine APIs, behavioral test
+scope, and pre-flight gap suspicion. Output validated for six section
+headings; one retry on parse failure, fallback to full-DSL-spec embed
+on second failure.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 6: Phase 4C — Implementer prompt (IMPLEMENT mode)
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`
+
+The implementer is the workhorse. It receives the scout brief plus a static context pack and authors tests-first then YAML.
+
+- [ ] **Step 1: Append the implementer prompt to Phase 4C**
+
+```markdown
+### 4C. Implementer / Auditor Wave
+
+For each non-skipped card in the batch, dispatch one Agent call in a single assistant message. Each agent runs with `isolation: "worktree"`. Model is `sonnet` by default; if `--implementer-model opus` was set, IMPLEMENT-mode workers use `opus`. AUDIT-mode workers always use `sonnet`.
+
+#### 4C.1 Implementer prompt (IMPLEMENT mode)
+
+````
+You are implementing a single Digimon TCG card effect using the engine's declarative YAML DSL via TDD.
+
+# Your card
+
+{{CARD_METADATA_BLOCK — same shape as the scout's per-card block}}
+
+## DCGO C# reference (behavioral source of truth)
+Path: {{CSHARP_PATH}}
+```
+{{CSHARP_BODY}}
+```
+
+## Prior verdict (if any)
+{{PRIOR_VERDICT_JSON}}
+
+# Scout brief
+{{SCOUT_BRIEF}}
+
+# Engine context pack
+
+## RUST_DSL_TEST_API.md (full — canonical for test patterns)
+{{RUST_DSL_TEST_API_BODY}}
+
+## Skill positive-rules appendix
+{{SKILL_POSITIVE_RULES_APPENDIX}}
+
+## Hybrid checklist (apply to every clause)
+The hybrid checklist is the union of:
+- All anti-patterns in `docs/RUST_DSL_TEST_API.md` §11 (already embedded above).
+- All positive rules in the appendix (already embedded above).
+
+## Current engine gaps (consult before declaring BLOCKED)
+{{ENGINE_GAPS_BODY}}
+
+## Current DSL vocab gaps (consult before declaring BLOCKED)
+{{DSL_VOCAB_GAPS_BODY}}
+
+## Read-on-demand
+- DSL spec (verb definitions, lowering rules): `docs/superpowers/specs/2026-04-21-card-scripting-dsl.md`
+- Engine API (`EffectContext`, `Effect`, modifier types, timing enums): `docs/RUST_ENGINE_API.md`
+
+When you need a specific verb's parameters or an `EffectContext` method signature, Read the relevant section of the document above. Do not guess.
+
+# Source priority (for behavioral questions)
+
+1. Printed card text — authoritative.
+2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
+3. DCGO C# — implementation-detail tiebreaker only.
+
+Do NOT cite Python scripts (`code/engine_py_legacy/`).
+
+# Your task
+
+Deliverables (and ONLY these — do NOT touch any `mod.rs`, `main.rs`, `cards.rs`, or any tracker file):
+
+1. `code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml` — the DSL card spec.
+2. `code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs` — DebugRunner behavioral tests.
+
+`{{CARD_ID_LOWER}}` is `{{CARD_ID}}.replace("-", "_").lower()` (e.g. `BT15-003` → `bt15_003`).
+
+## Workflow (TDD-strict — follow in order)
+
+**Step 1 — Decompose card text into numbered clauses.**
+For each clause, capture: (a) timing (OnPlay / WhenAttacking / Inherited / WhenRemoveField / Security / etc.), (b) exact text, (c) expected behavior, (d) DCGO mapping (which method in the C# reference, if any).
+
+**Step 2 — Write the test file FIRST.**
+
+Create `code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs` per the test API §5 pattern. The file header docstring is mandatory — verbatim card text + DCGO ref path + pattern row tags from the scout brief.
+
+Cover, at minimum:
+- Section 1: Structural assertions on `compiled_card` (clause count by scope, `when` vector, `optional`, `once_per_turn`).
+- Section 2: Condition gating — one positive AND one negative test per condition (splitting is non-negotiable).
+- Section 3: Behavioral outcome per clause, integrated through `play` / `attack` / `end_turn`.
+- Section 4: For cost-firing clauses, an event-log assertion via `events_since(checkpoint)`.
+- Section 5: For OPT clauses, an explicit lockout test (second activation gated; lockout clears after `end_turn`).
+
+Use `dsl_card("{{CARD_ID}}")` to register the card under test. Do NOT inline-paste production YAML.
+
+Use `digimon_engine::action::space::*` constants for action IDs. Do NOT hard-code.
+
+**Step 3 — Run the tests, confirm expected failures.**
+
+```bash
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- {{CARD_ID_LOWER}}
+```
+
+The orchestrator has pre-wired `tests/cards_behavioral/<set>/mod.rs` and `main.rs` so this command resolves your test file immediately. Confirm the tests fail with the expected reasons (the YAML doesn't exist yet, so the embedded pack lookup fails when `dsl_card("{{CARD_ID}}")` runs).
+
+**Step 4 — Author the YAML.**
+
+Create `code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml`. Start from one of the exemplar YAML(s) the scout cited as the closest match. Adapt the structure to the printed card text. Use only DSL verbs the scout cited (or that you have verified by Reading the DSL spec).
+
+If you discover a needed verb is not in the DSL spec, STOP and emit verdict `BLOCKED` with `gap_kind: dsl` (or `engine` / `hybrid` per the diagnosis below).
+
+**Step 5 — Re-run tests until green.**
+
+Iterate. If a test reveals a YAML bug, fix the YAML. If a test reveals a test bug, fix the test. Both are valid.
+
+**Step 6 — Faithfulness self-audit against the hybrid checklist.**
+
+For each item in `docs/RUST_DSL_TEST_API.md` §11 plus the skill positive-rules appendix, confirm compliance. Note any unresolved item in your verdict block.
+
+**Step 7 — Diagnose `gap_kind` if BLOCKED.**
+
+If you reached `BLOCKED`:
+- `gap_kind: engine` — the DSL would need a verb that lowers to an `EffectContext` method that does NOT exist (verify by reading `docs/RUST_ENGINE_API.md`).
+- `gap_kind: dsl` — the `EffectContext` method exists, but no DSL verb / step kind / predicate maps to it (verify by reading the DSL spec).
+- `gap_kind: hybrid` — both: a new DSL verb is needed AND a new engine method is needed.
+
+**Step 8 — Emit verdict.**
+
+# Verdicts
+
+- `IMPLEMENTED` — every clause implemented faithfully; all tests pass.
+- `PARTIAL` — core clauses work; some nuance deferred with explicit comment. Explain precisely what's missing and why.
+- `BLOCKED` — a required mechanic is unavailable. Set `gap_kind` per Step 7.
+
+**Never ship stubs, auto-selections, or silent drops.** If a clause requires a player choice the engine cannot yet surface, the card is BLOCKED — not PARTIAL.
+
+# Output format (return EXACTLY this structure)
+
+```
+## {{CARD_ID}} — {{CARD_NAME}}
+
+### Verdict: IMPLEMENTED | PARTIAL | BLOCKED
+### Gap kind (if BLOCKED): engine | dsl | hybrid
+### Scout-disagreement (if any): <description>
+
+### Clause analysis
+Clause 1 (<timing>): "<exact text>"
+  Expected: <behavior>
+  YAML location: <CARD_ID>.yaml lines X–Y
+  Tests: <test_fn_name_1>, <test_fn_name_2>, ...
+  Status: MATCH | PARTIAL | BLOCKED
+Clause 2 ...
+
+### Files written
+- code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml (N clauses, M lines)
+- code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs (N tests)
+
+### Test output (final cargo test summary, trimmed)
+<paste the relevant lines from your final cargo test run>
+
+### Engine gaps discovered (if any)
+## {{CARD_ID}} — <clause name>
+Missing API: <description>
+Suggested addition: <signature on EffectContext>
+
+### DSL vocab gaps discovered (if any)
+## {{CARD_ID}} — <clause name>
+Missing verb / step kind / predicate: <description>
+Lowers to engine API: <which existing EffectContext method>
+Suggested DSL syntax: <YAML shape>
+
+### New patterns worth documenting in RUST_DSL_TEST_API.md (if any)
+- <pattern>: <description>
+```
+````
+
+---
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add Phase 4C IMPLEMENT mode — implementer prompt template
+
+Sonnet (or Opus via flag) implementer with strict TDD ordering: tests
+first, then YAML, then iterate to green. Static context pack embeds
+the full DSL test API doc + skill appendix + gap trackers; DSL spec
+and engine API are read-on-demand. Output schema enforces gap_kind
+on BLOCKED verdicts so the orchestrator can route to the right tracker.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 7: Phase 4C — Auditor prompt (AUDIT mode)
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`
+
+The auditor handles cards that already ship YAML. It diffs printed text + DCGO against the YAML, inventories test coverage, and either approves, fills missing tests, or flags drift.
+
+- [ ] **Step 1: Append the auditor prompt to Phase 4C**
+
+```markdown
+#### 4C.2 Auditor prompt (AUDIT mode)
+
+AUDIT-mode workers always use `sonnet` (the `--implementer-model` flag does not affect them — auditing is a bounded task).
+
+````
+You are auditing an existing DSL YAML card spec for faithfulness against printed card text and DCGO C# behavioral reference. You may add missing behavioral tests but you must NOT modify the YAML — drift fixes are out of scope for v1 of this skill.
+
+# Your card
+
+{{CARD_METADATA_BLOCK}}
+
+## DCGO C# reference
+Path: {{CSHARP_PATH}}
+```
+{{CSHARP_BODY}}
+```
+
+## Existing YAML
+Path: `code/digimon-engine/cards/{{SET_LOWER}}/{{CARD_ID}}.yaml`
+```yaml
+{{EXISTING_YAML_BODY}}
+```
+
+## Existing tests (if any)
+Path: `code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs`
+```rust
+{{EXISTING_TEST_BODY_OR_ABSENT}}
+```
+
+# Engine context pack
+
+## RUST_DSL_TEST_API.md (full)
+{{RUST_DSL_TEST_API_BODY}}
+
+## Skill positive-rules appendix
+{{SKILL_POSITIVE_RULES_APPENDIX}}
+
+# Source priority (for behavioral questions)
+
+1. Printed card text — authoritative.
+2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
+3. DCGO C# — implementation-detail tiebreaker only.
+
+Do NOT cite Python scripts.
+
+# Your task
+
+1. **Faithfulness diff.** Walk every clause in the printed text. For each, locate the corresponding section in the YAML. Identify any:
+   - Silently dropped clauses (printed text says it, YAML doesn't model it).
+   - Missing branches (printed text offers a choice the YAML reduces to one option).
+   - Optionality mismatches (printed text "you may"; YAML mandatory, or vice versa).
+   - Condition gaps (printed text "if X"; YAML unconditional, or wrong condition).
+   - OPT misses ([Once Per Turn] in text but YAML lacks `once_per_turn: true`).
+
+2. **Behavioral fidelity diff against DCGO C#.** For nuances printed text doesn't pin down (e.g., processing order of an interaction, exact target eligibility), confirm the YAML matches DCGO. Per CLAUDE.md source priority, DCGO is a tiebreaker — printed text wins on disagreements. Note any printed-vs-DCGO disagreement explicitly.
+
+3. **Test coverage inventory.** Compare the existing test file (if any) against the test API §5 expected coverage:
+   - Section 1: structural assertions present? Cover every clause's scope/timing/optional/once_per_turn?
+   - Section 2: each condition has BOTH positive AND negative test?
+   - Section 3: each clause has at least one integrated behavioral test (driven through `play`/`attack`/`end_turn`)?
+   - Section 4: cost-firing clauses have event-log assertions?
+   - Section 5: OPT clauses have an explicit lockout test?
+
+4. **Emit verdict:**
+   - `AUDITED-OK` — YAML faithful, tests cover §5 expectations.
+   - `AUDITED-MISSING-TESTS` — YAML faithful, but tests are incomplete. Add the missing tests; emit the new file.
+   - `AUDITED-DRIFT` — YAML disagrees with printed text or DCGO. Emit a unified diff proposal but do NOT modify the YAML.
+   - `BLOCKED` — same diagnosis criteria as the implementer (gap_kind required).
+
+# Output format
+
+```
+## {{CARD_ID}} — {{CARD_NAME}} — AUDIT
+
+### Verdict: AUDITED-OK | AUDITED-MISSING-TESTS | AUDITED-DRIFT | BLOCKED
+### Gap kind (if BLOCKED): engine | dsl | hybrid
+
+### Faithfulness diff (if AUDITED-DRIFT or AUDITED-OK with notes)
+Clause 1 (<timing>): "<printed text>"
+  YAML says: <what's there>
+  Should say: <correction>
+  Source: printed text | DCGO C# line N
+
+(Repeat per drifted clause. If AUDITED-OK, this section may be empty or note "no drift detected.")
+
+### Test coverage inventory
+- Structural: <present | missing — list missing>
+- Condition gating: <present | missing — list>
+- Behavioral integrated: <present | missing — list>
+- Event-log (if applicable): <present | missing | n/a>
+- OPT lockout (if applicable): <present | missing | n/a>
+
+### Tests added (if AUDITED-MISSING-TESTS)
+- <test_fn_name_1>
+- <test_fn_name_2>
+
+### Files written/modified
+- code/digimon-engine/tests/cards_behavioral/{{SET_LOWER}}/{{CARD_ID_LOWER}}.rs (added N tests, total now M)
+[YAML unchanged.]
+```
+````
+
+---
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add Phase 4C AUDIT mode — auditor prompt template
+
+Sonnet auditor reads existing YAML + tests, diffs against printed text
+and DCGO. Emits one of AUDITED-OK / AUDITED-MISSING-TESTS / AUDITED-DRIFT
+/ BLOCKED. May add missing tests; never modifies YAML in v1 (full FIX
+mode is deferred). Drift fixes are diff proposals only.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 8: Phase 4D — Reviewer prompt
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`
+
+The reviewer is the only Opus agent in the pipeline. One per batch.
+
+- [ ] **Step 1: Append Phase 4D**
+
+```markdown
+### 4D. Review Wave (Opus, single agent, no isolation, read-only)
+
+After all worker agents in 4C return, the orchestrator copies their files out of the worktrees into the main tree (Phase 4E will document this; the reviewer reads from main tree). Then dispatch ONE Opus reviewer.
+
+**Reviewer prompt template:**
+
+````
+You are reviewing DSL YAML and behavioral tests authored by N worker agents in a TDD pipeline. Your job is to confirm faithfulness, completeness, and adherence to the hybrid checklist.
+
+# Engine context pack
+
+## RUST_DSL_TEST_API.md (full)
+{{RUST_DSL_TEST_API_BODY}}
+
+## Skill positive-rules appendix
+{{SKILL_POSITIVE_RULES_APPENDIX}}
+
+## Hybrid checklist
+The hybrid checklist is the union of `docs/RUST_DSL_TEST_API.md` §11 anti-patterns plus the positive rules in the appendix. Apply both in full to every card.
+
+# Per-card review materials
+
+For each card in this batch, you have:
+- The worker's verdict block (below).
+- The files they wrote: `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` and `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs`.
+- The card's authoritative metadata + printed text.
+- The DCGO C# reference body.
+
+{{PER_CARD_MATERIALS — for each card, repeat the metadata block + worker verdict + paths to written files}}
+
+# Source priority (for behavioral questions)
+
+1. Printed card text — authoritative.
+2. `docs/RULES_CONTEXT.md` and fandom wiki — keyword + interaction semantics.
+3. DCGO C# — implementation-detail tiebreaker only.
+
+# Your task — for each card, emit ONE of:
+
+```
+<CARD_ID>: APPROVED
+```
+
+or
+
+```
+<CARD_ID>: NEEDS-FIX
+  - Issue 1: <description> — Fix: <file:line directive>
+  - Issue 2: ...
+```
+
+Be precise — the orchestrator applies your fix directives verbatim. Each directive must specify exact file path, line range, and the change required.
+
+# What to check
+
+For IMPLEMENT-mode cards:
+- Hybrid checklist: every item applied. No silent drops, no auto-selections, no missing branches.
+- Test enumeration completeness against test API §5 (structural + per-clause + positive/negative + OPT + cost-firing where applicable).
+- Scout-vs-implementer disagreement: if scout flagged a gap and implementer disagreed, adjudicate. Check whether the engine API or DSL verb the implementer used actually exists.
+- Faithfulness: every clause in printed text is modeled in YAML; printed-vs-DCGO disagreements resolved per source priority.
+- TDD discipline: test file exists; tests are split positive/negative; behavioral tests are integrated (not just clause-isolated).
+
+For AUDIT-mode cards:
+- AUDITED-OK is real: re-walk the diff yourself; confirm no drift hidden.
+- AUDITED-MISSING-TESTS: confirm the added tests cover the gaps the auditor identified.
+- AUDITED-DRIFT: confirm the diff is correct. The orchestrator will NOT auto-apply YAML drift fixes in v1, but your confirmation routes the diff to the human triage workflow.
+- BLOCKED: same gap-kind discipline as implementer.
+````
+
+---
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add Phase 4D — Opus reviewer prompt template
+
+Single Opus reviewer per batch. Adjudicates scout-vs-implementer
+disagreements; applies hybrid checklist to every card; emits
+APPROVED or NEEDS-FIX with file:line directives the orchestrator
+applies verbatim.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 9: Phase 4E — Merge and wire + Phase 5 — Final report
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`
+
+These two phases are pure orchestrator logic — no agents. Bundling them keeps the orchestrator-side concerns in one task.
+
+- [ ] **Step 1: Append Phase 4E and Phase 5**
+
+```markdown
+### 4E. Merge and Wire (orchestrator)
+
+Steps in order:
+
+1. **Copy files out of worker worktrees into the main tree.** For each worker that did not return BLOCKED:
+   ```bash
+   cp <worktree>/code/digimon-engine/cards/<set>/<CARD_ID>.yaml \
+      code/digimon-engine/cards/<set>/<CARD_ID>.yaml
+   cp <worktree>/code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs \
+      code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs
+   ```
+   Reject worker output if it wrote files OUTSIDE the two expected paths. Re-dispatch once; on second drift, escalate.
+
+2. **Apply review fixes** for any `NEEDS-FIX` card. Each directive specifies file:line; apply verbatim.
+
+3. **Reconcile `code/digimon-engine/tests/cards_behavioral/<set>/mod.rs`.** The orchestrator pre-wired `mod <card_id_lower>;` lines in Phase 3a for every planned card in the run. After this batch's workers return:
+   - For any card with verdict BLOCKED that wrote no test file: remove that card's `mod <card_id_lower>;` line and delete the empty `<card_id_lower>.rs` placeholder.
+   - All other cards: leave the existing line in place — the worker filled in the file content.
+
+4. **Reconcile `code/digimon-engine/tests/cards_behavioral/main.rs`.** Same idea: if every card from a given set ended up BLOCKED with no test file written, remove the `mod <set>;` line and delete `<set>/mod.rs` (which is now empty). Otherwise leave it.
+
+5. **Run targeted batch tests:**
+
+   ```bash
+   cargo test --manifest-path code/digimon-engine/Cargo.toml \
+              --test cards_behavioral -- <set>
+   ```
+
+   On failure: dispatch ONE Sonnet "fix" agent with the failing output + the reviewer's directives (if any). Worktree-isolated. Allow it to modify only the same two file paths per card. Re-merge and re-run. If it still fails, escalate to the user with the failing output and exit. Do NOT loop.
+
+6. **Update `qa/qa-reports/validated_cards_dsl.json`.** Append one entry per processed card per the schema in §6 of the design spec. Bump `last_updated` to today's date.
+
+7. **Append batch summary to per-archetype QA artifact:**
+   - For archetype runs: `qa/archetype-qa/dsl/<archetype_slug>.md`. Create from template (§9 of design spec) on first batch; append batch row to the per-card table on subsequent batches.
+   - For `--pool` runs: `qa/dsl-test-pool-progress.md`. Single accumulating file, last verdict per card wins.
+
+8. **Append gap entries** to the right trackers:
+   - `gap_kind: engine` → `qa/archetype-qa/engine-gaps.md`
+   - `gap_kind: dsl` → `qa/dsl-vocab-gaps.md`
+   - `gap_kind: hybrid` → both, with cross-references in each entry
+
+9. **Print the batch summary table to the user:**
+
+   ```
+   Batch <N> complete (<n>/<total> cards)
+   | Card ID   | Mode      | Verdict             | Review   | Tests | Notes |
+   | <CARD>    | IMPLEMENT | IMPLEMENTED         | APPROVED | 7/7   | <one-line> |
+   | <CARD>    | AUDIT     | AUDITED-OK          | APPROVED | 5/5   | |
+   | <CARD>    | IMPLEMENT | BLOCKED (engine)    | APPROVED | 0/0   | <gap summary> |
+
+   Running totals: IMPLEMENTED=<n> AUDITED-OK=<n> ... BLOCKED=<n>
+   ```
+
+10. **Auto-continue to next batch.** The user can interrupt between batches.
+
+---
+
+## Phase 5: Final Report
+
+After all batches complete:
+
+1. **Whole-archetype summary** — counts by verdict (IMPLEMENTED, PARTIAL, AUDITED-OK, AUDITED-MISSING-TESTS, AUDITED-DRIFT, BLOCKED-engine, BLOCKED-dsl, BLOCKED-hybrid, SKIPPED).
+
+2. **Per-card results table** — `Card ID | Name | Mode | Verdict | Review | Tests | Notes`.
+
+3. **Files created/modified, grouped by set.**
+
+4. **Blocked cards split into two sections:** engine-gap blocked cards (with affected clauses + suggested API) and DSL-vocab-gap blocked cards (with affected clauses + suggested verb + the engine API it lowers to).
+
+5. **Full-suite green check:**
+
+   ```bash
+   cargo test --manifest-path code/digimon-engine/Cargo.toml
+   ```
+
+   Must pass. If not, the skill has left the tree broken — escalate without auto-fixing. The per-batch fix round in 4E.5 is the only fix loop.
+
+6. **Finalize per-archetype QA artifact** from this template at `qa/archetype-qa/dsl/<archetype_slug>.md`:
+
+   ```markdown
+   # Archetype DSL Implementation: {Archetype Name}
+   Date: {YYYY-MM-DD}
+   Total cards in pool: {N}
+   Processed this run: {M}
+   Pipeline: batch-implement-cards-rust-dsl
+
+   ## Summary
+   - IMPLEMENTED: {n}
+   - PARTIAL: {n}
+   - AUDITED-OK: {n}
+   - AUDITED-MISSING-TESTS: {n}
+   - AUDITED-DRIFT: {n}
+   - BLOCKED (engine): {n}
+   - BLOCKED (dsl): {n}
+   - BLOCKED (hybrid): {n}
+   - SKIPPED (prior verdict): {n}
+
+   ## Per-Card Verdicts
+   | Card ID | Name | Mode | Verdict | Review | Tests | Notes |
+   |---------|------|------|---------|--------|-------|-------|
+
+   ## Engine-Gap Blocked Cards
+   ### {CARD_ID} {card_name}
+   - Effect text: "..."
+   - Missing engine API: ...
+   - Suggested addition: ...
+
+   ## DSL-Vocab-Gap Blocked Cards
+   ### {CARD_ID} {card_name}
+   - Effect text: "..."
+   - Missing DSL verb: ...
+   - Lowers to engine API: ...
+   - Suggested DSL syntax: ...
+
+   ## New Patterns Discovered
+   - {pattern}: {description} — propose adding to RUST_DSL_TEST_API.md
+   ```
+
+   For `--pool` runs, finalize `qa/dsl-test-pool-progress.md` instead — same structure but without the per-archetype framing.
+
+---
+
+## Phase 6: Idempotency
+
+Re-running on the same archetype (or `--pool`) is safe: the `validated_cards_dsl.json` lookup in Phase 1c short-circuits cards with `IMPLEMENTED` or `AUDITED-OK` verdicts. Other verdicts (`PARTIAL`, `AUDITED-MISSING-TESTS`, `AUDITED-DRIFT`, `BLOCKED`) are re-attempted on the next run — the user is expected to address the underlying issue (engine gap closed, DSL vocab landed, drift triaged) before re-invocation.
+
+---
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add Phase 4E + Phase 5 + Phase 6
+
+Phase 4E orchestrator-side merge + wire: copy from worktrees, apply
+review fixes, register modules in mod.rs/main.rs, single fix-round on
+cargo failure, JSON tracker update, gap routing to engine vs DSL
+trackers, batch summary print.
+
+Phase 5 final report: full-suite green check, per-archetype QA artifact
+finalization, blocked-cards split engine vs dsl, --pool variant artifact.
+
+Phase 6 idempotency: re-runs safe; prior IMPLEMENTED/AUDITED-OK
+short-circuit; other verdicts re-attempted.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 10: Skill positive-rules appendix + tracker schema + invariants + known limitations
+
+**Files:**
+- Modify: `.claude/skills/batch-implement-cards-rust-dsl/SKILL.md`
+
+These four sections close out the skill: the appendix (referenced by the implementer/auditor/reviewer prompts), the verdict-JSON schema, the orchestrator invariants, and v1 limitations.
+
+- [ ] **Step 1: Append the appendix and the closing sections**
+
+```markdown
+## Skill Positive-Rules Appendix
+
+This appendix is the "C" half of the hybrid checklist. The "A" half is `docs/RUST_DSL_TEST_API.md` §11 (the anti-pattern list). Both halves are embedded into the implementer, auditor, and reviewer prompts in Phase 4.
+
+1. **TDD ordering is strict.** Tests are written before YAML. Test file must exist and fail before any YAML is authored. Implementer's verdict block must show the failing-test output before the passing-test output.
+2. **File header docstring is mandatory** (test API §5). Format: card text verbatim from `cards.json`, DCGO C# reference path, pattern row tags from §4.3.
+3. **One positive AND one negative test per condition.** Splitting is non-negotiable per test API §11.3. A single test asserting both directions is rejected.
+4. **Every clause gets ≥1 integrated test** driven through `play` / `attack` / `end_turn`. Clause-isolated `EffectContext` tests (per §7) are *additional*, not substitutes.
+5. **OPT clauses get an explicit lockout test** (test API §5 Section 5). Test that the second activation in the same turn is gated, and that the lockout clears after `end_turn`.
+6. **Cost-firing clauses get an event-log test** (test API §5 Section 4). When an effect's cost has side effects (trash security, lose security, deletion), assert the corresponding `GameEvent` fires via `events_since(checkpoint)`.
+7. **Use `dsl_card(id)`, never inline-paste production YAML** (test API §11.1). Inline fixtures are reserved for the cases enumerated in §10.
+8. **Use `digimon_engine::action::space::*` constants, never hard-code action IDs** (test API §11.12).
+9. **No approximations.** Every player choice surfaces through `pending_selection`. No `.iter().next()`, no `[0]`, no `min`/`max` over targets, no auto-resolutions of multi-option choices.
+10. **No Python references.** Do not cite `code/engine_py_legacy/`, do not import Python script structure as ground truth. Ground truth is printed text + `docs/RULES_CONTEXT.md` / fandom wiki + DCGO C#.
+11. **Engine-gap vs DSL-vocab-gap discipline.** Before declaring `BLOCKED`, confirm: does the engine *really* lack the primitive (read `docs/RUST_ENGINE_API.md`), or does only the DSL lack a verb that would lower to it (read the DSL spec)? Set `gap_kind` accordingly.
+12. **No `place_on_field` shortcuts when testing OnPlay paths** (test API §11.11). `place_on_field` is for post-play state only.
+13. **No `auto_resolve` through a multi-branch prompt when testing a specific branch** (test API §11.4). Use `execute_branch` / `execute_action`, then `auto_resolve` only after the branching choice is locked.
+
+---
+
+## `validated_cards_dsl.json` Schema
+
+```json
+{
+  "version": 1,
+  "last_updated": "YYYY-MM-DD",
+  "cards": {
+    "BT15-003": {
+      "card_name": "Nyaromon",
+      "validated_date": "YYYY-MM-DD",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Slice — Nokia/Greymon/Omnimon",
+      "yaml_path": "code/digimon-engine/cards/bt15/BT15-003.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_003.rs",
+      "test_count": 7,
+      "patterns": ["G4", "E2", "F5"],
+      "notes": "Inherited When Attacking + OPT + top/bottom branch"
+    }
+  }
+}
+```
+
+| Field | Domain |
+|---|---|
+| `status` | `IMPLEMENTED` / `PARTIAL` / `AUDITED-OK` / `AUDITED-MISSING-TESTS` / `AUDITED-DRIFT` / `BLOCKED` |
+| `gap_kind` | `null` / `"engine"` / `"dsl"` / `"hybrid"` (only set when `status == BLOCKED`) |
+| `patterns` | Array of test-API §4.3 row tags from the scout brief |
+
+The Python-side `qa/qa-reports/validated_cards.json` is **never modified**.
+
+---
+
+## Invariants (orchestrator enforces)
+
+- Workers never edit `main.rs`, any `mod.rs`, `cards.rs`, `validated_cards_dsl.json`, or any tracker file. Orchestrator owns all shared state. Worker output that touches forbidden paths is rejected and re-dispatched once; second drift escalates to user.
+- Card-ID conventions: YAML files use original-case dashed IDs (`BT15-003.yaml`); Rust test files use lowercase-underscore (`bt15_003.rs`). Pack registry key is the original-case ID (`"BT15-003"`).
+- The Python `qa/qa-reports/validated_cards.json` is never touched.
+- No Notion calls.
+- No Pinecone calls.
+
+---
+
+## Known Limitations (v1)
+
+- **No `--fix` mode.** `AUDITED-DRIFT` emits a diff proposal but does not modify YAML. Promoted to v1.1 when real drift is observed.
+- **No Notion sync.**
+- **No Pinecone retrieval.** Agents use scout brief + read-on-demand only.
+- **Single fix round per batch.** Orchestrator does one re-dispatch on cargo failure, then escalates.
+- **Workers cannot add a new test binary or new set's `mod.rs`.** Orchestrator-only territory.
+- **`--report-only` is plan-only.** Does not run scouts to pre-classify gaps.
+- **Sonnet implementer is default; Opus is the escape hatch via `--implementer-model opus`.** No automatic escalation on review-failure loops in v1; user re-dispatches by hand.
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+git commit -m "$(cat <<'MSG'
+skill(dsl): add positive-rules appendix, schema, invariants, limitations
+
+Positive-rules appendix is referenced (and embedded) by every Phase 4
+prompt. Verdict-JSON schema documents status + gap_kind + patterns.
+Invariants codify orchestrator-only file ownership; known limitations
+make v1 boundaries explicit.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+MSG
+)"
+```
+
+---
+
+## Task 11: Smoke verification — `--report-only --pool` dry run
+
+**Files:**
+- None modified — read-only validation.
+
+This task validates that the skill is invocable, classifies cards correctly, and exits cleanly without dispatching agents.
+
+- [ ] **Step 1: Verify the skill is registered and readable**
+
+```bash
+ls .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+head -20 .claude/skills/batch-implement-cards-rust-dsl/SKILL.md
+```
+
+Expected: file exists; first 20 lines include `name: batch-implement-cards-rust-dsl` and `argument-hint:` lines.
+
+- [ ] **Step 2: Verify pool table parsing works**
+
+Run the inline Python from Phase 1a against `qa/dsl-test-pool.md`:
+
+```bash
+python -c '
+import re, pathlib
+text = pathlib.Path("qa/dsl-test-pool.md").read_text()
+pool_section = text.split("## Pool", 1)[1].split("## ", 1)[0]
+card_ids = re.findall(r"\|\s*`([A-Z0-9-]+)`\s+", pool_section)
+print(f"Found {len(card_ids)} cards")
+for c in card_ids:
+    print(c)
+'
+```
+
+Expected: prints `Found N cards` (current pool size; per the test pool intro this is around 22 but may grow over time) followed by every card ID one per line. Confirms the parser shape used by the skill.
+
+- [ ] **Step 3: Verify YAML-existence classification**
+
+For each card from Step 2, check whether `code/digimon-engine/cards/<set>/<CARD_ID>.yaml` exists:
+
+```bash
+python -c '
+import re, pathlib
+text = pathlib.Path("qa/dsl-test-pool.md").read_text()
+pool_section = text.split("## Pool", 1)[1].split("## ", 1)[0]
+card_ids = re.findall(r"\|\s*`([A-Z0-9-]+)`\s+", pool_section)
+implement = []
+audit = []
+for c in card_ids:
+    set_prefix = c.split("-")[0].lower()
+    p = pathlib.Path(f"code/digimon-engine/cards/{set_prefix}/{c}.yaml")
+    (audit if p.exists() else implement).append(c)
+print(f"IMPLEMENT ({len(implement)}): {implement}")
+print(f"AUDIT ({len(audit)}): {audit}")
+'
+```
+
+Expected: every card classified as one or the other, no errors. Per the test pool's intro the Nokia/Greymon/Omnimon slice already ships YAML for ~5 cards; the remainder are IMPLEMENT until further runs land them.
+
+- [ ] **Step 4: Verify the verdict tracker is the right shape**
+
+```bash
+python -c '
+import json, pathlib
+data = json.loads(pathlib.Path("qa/qa-reports/validated_cards_dsl.json").read_text())
+assert data["version"] == 1
+assert "cards" in data and isinstance(data["cards"], dict)
+print("OK: validated_cards_dsl.json shape is valid")
+'
+```
+
+Expected: `OK: validated_cards_dsl.json shape is valid` and exit 0.
+
+- [ ] **Step 5: Verify the DSL vocab gap tracker exists**
+
+```bash
+head -5 qa/dsl-vocab-gaps.md
+```
+
+Expected: first line is `# DSL Vocabulary Gaps Tracker`.
+
+- [ ] **Step 6: Run the full skill suite (sanity — should still be green)**
+
+```bash
+cargo test --manifest-path code/digimon-engine/Cargo.toml
+```
+
+Expected: all engine tests pass. The skill has not modified any production code.
+
+- [ ] **Step 7: No commit needed for verification only**
+
+This task adds no new files. Confirm `git status` is clean.
+
+```bash
+git status --short
+```
+
+Expected: empty output.
+
+---
+
+## Final note for the executor
+
+This plan produces a skill *file* — not engine code. There are no compile-time tests of the skill's prompts; the only validation is the smoke run in Task 11 (verifies the orchestrator-side helpers work) plus the spec's §11 acceptance criteria, which can only be exercised by *running* the skill against real card data after this plan is complete. Those acceptance runs are out of scope for this plan — they happen post-merge as the first user-driven invocations.
+
+If a task feels like it's growing scope (e.g., wanting to also fix a YAML bug in `cards/_examples/`), stop and surface it. Each task should produce only the named SKILL.md edit + commit.

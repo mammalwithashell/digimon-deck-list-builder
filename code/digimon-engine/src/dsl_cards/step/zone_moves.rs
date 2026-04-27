@@ -20,24 +20,24 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;
             };
-            let default_player = resolve_player(ctx, *of);
+            let p = resolve_player(ctx, *of);
             // Resolve the trash slot → CardHandle → engine API. If the
             // binding is a CardHandle directly, pass it through.
-            let (player, handle) = match resolved {
-                ResolvedBinding::TrashIndex { player, index } => {
+            let (owner, handle) = match resolved {
+                ResolvedBinding::TrashIndex(owner, i) => {
                     let handle = ctx
                         .game
-                        .player(player)
+                        .player(owner)
                         .trash
-                        .get(index as usize)
+                        .get(i as usize)
                         .map(|cs| cs.handle());
-                    (player, handle)
+                    (owner, handle)
                 }
-                ResolvedBinding::Card(h) => (default_player, Some(h)),
-                _ => (default_player, None),
+                ResolvedBinding::Card(h) => (p, Some(h)),
+                _ => (p, None),
             };
             if let Some(h) = handle {
-                ctx.add_to_hand_from_trash(player, h);
+                ctx.add_to_hand_from_trash(owner, h);
             }
             true
         }
@@ -125,12 +125,17 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
 
-        CompiledStep::TrashFromHandByIndex { of: _, hand_index } => {
+        CompiledStep::TrashFromHandByIndex { of, hand_index } => {
             let Some(resolved) = resolve_binding_ref(hand_index, ctx, bindings) else {
                 return true;
             };
-            if let ResolvedBinding::HandIndex { player, index } = resolved {
-                ctx.trash_from_hand_by_index(player, index as usize);
+            let p = resolve_player(ctx, *of);
+            if let ResolvedBinding::HandIndex(owner, i) = resolved {
+                debug_assert_eq!(
+                    owner, p,
+                    "trash_from_hand_by_index used a binding from a different player than `of`"
+                );
+                ctx.trash_from_hand_by_index(owner, i as usize);
             }
             true
         }

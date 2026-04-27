@@ -110,6 +110,9 @@ pub enum Timing {
     StartOfYourMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
+    EndOfYourNextTurn,
+    EndOfOpponentsNextTurn,
+    UntilNextUnsuspend,
     OnAttackTargetChange,
     MainFromHand,
     MainOnField,
@@ -314,6 +317,8 @@ pub struct PartitionBody {
     pub sources: Vec<PredicateSpec>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclude_cause: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub process: Vec<StepSpec>,
 }
 
 /// Body for `kind: ace_overflow`.

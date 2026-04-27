@@ -9,6 +9,9 @@
 //! conditional effect).
 
 mod de_digivolve;
+#[path = "../support/dsl_card_data.rs"]
+mod dsl_card_data;
+mod dsl_omnimon_slice;
 mod test_cards;
 mod tokens;
 

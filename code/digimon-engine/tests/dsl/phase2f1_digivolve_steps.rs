@@ -4,7 +4,7 @@
 //! Each test drives the variant through `run_step` (synchronous family) and
 //! asserts the observable mutation matches the engine primitive.
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledStep};
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledCostDelta, CompiledStep};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -89,12 +89,12 @@ fn effect_initiated_digivolve_step_grows_target_stack_with_hand_card() {
 
     let mut bindings = Bindings::new();
     bindings.insert_permanent("tgt", target);
-    bindings.insert_hand_index("from", 0);
+    bindings.insert_hand_index("from", 0, 0);
 
     let step = CompiledStep::EffectInitiatedDigivolve {
         target: CompiledBindingRef::Named("tgt".into()),
         from_hand: CompiledBindingRef::Named("from".into()),
-        cost: 0,
+        cost: CompiledCostDelta::Literal(0),
         ignore_requirements: true,
     };
 
@@ -170,7 +170,7 @@ fn effect_initiated_dna_digivolve_step_merges_two_perms_with_card_handle_top() {
         target_a: CompiledBindingRef::Named("a".into()),
         target_b: CompiledBindingRef::Named("b".into()),
         from_hand: CompiledBindingRef::Named("from".into()),
-        cost: 0,
+        cost: CompiledCostDelta::Literal(0),
         ignore_requirements: true,
     };
 

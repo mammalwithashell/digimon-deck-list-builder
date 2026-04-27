@@ -1,4 +1,6 @@
-use digimon_engine::dsl::formula::{AggregateSelector, CompoundFormula, FormulaSpec, PerSelector};
+use digimon_engine::dsl::formula::{
+    AggregateSelector, CardCountInZoneSpec, CompoundFormula, FormulaSpec, PerSelector,
+};
 use digimon_engine::dsl::{predicate::Zone, PlayerRef};
 
 fn parse(yaml: &str) -> FormulaSpec {
@@ -37,10 +39,10 @@ delta: 1
             assert_eq!((base, delta), (0, 1));
             assert_eq!(
                 per,
-                PerSelector::CardCountInZone {
+                PerSelector::CardCountInZone(CardCountInZoneSpec {
                     of: PlayerRef::Opponent,
                     zone: Zone::Trash,
-                }
+                })
             );
         }
         _ => panic!("expected BasePerDelta"),

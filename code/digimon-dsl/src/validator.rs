@@ -510,7 +510,8 @@ fn validate_formula(
         }
         FormulaSpec::Literal(_)
         | FormulaSpec::BasePerDelta { .. }
-        | FormulaSpec::Compound(CompoundFormula::Aggregate(_)) => {}
+        | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
+        | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_)) => {}
     }
 }
 

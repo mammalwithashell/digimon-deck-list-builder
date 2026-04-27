@@ -26,6 +26,8 @@ impl Game {
         );
         self.drain_effect_queue();
 
+        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::UntilNextUnsuspend);
+
         // Reset per-turn state
         self.player_mut(tp).new_turn();
 
@@ -206,6 +208,10 @@ impl Game {
         // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
         // EndOfOpponentsTurn after the printed-observer fan-out.
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfOpponentsTurn);
+        crate::scheduled_effects::fire_scheduled_for_timing(
+            self,
+            EffectTiming::EndOfOpponentsNextTurn,
+        );
 
         // Advance turn
         self.turn_player_idx = (self.turn_player_idx + 1) % self.turn_order.len();
@@ -456,6 +462,7 @@ impl Game {
         // from `rotate_turn_player`). Both peer drains are wired
         // separately at their respective observer-fire sites.
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourTurn);
+        crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourNextTurn);
     }
 
     /// Phase 8 Task 3: fire and trash every Delayed Option (across all

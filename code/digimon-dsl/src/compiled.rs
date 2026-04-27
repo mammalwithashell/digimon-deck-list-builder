@@ -241,6 +241,10 @@ pub enum CompiledFormula {
     Max(Vec<CompiledFormula>),
     Min(Vec<CompiledFormula>),
     Aggregate(CompiledAggregateSelector),
+    AggregateScoped {
+        selector: CompiledAggregateSelector,
+        scope: CompiledPlayerRef,
+    },
     RawRust(String),
 }
 
@@ -250,9 +254,10 @@ pub enum CompiledPerSelector {
     StackSize,
     AllyCount,
     DigivolutionColorCount,
-    CardCountInZone {
-        of: CompiledPlayerRef,
+    CardCountInZone,
+    CardCountInZoneScoped {
         zone: CompiledZone,
+        of: CompiledPlayerRef,
     },
 }
 
@@ -336,6 +341,7 @@ pub enum CompiledDeclarativeClause {
         active_when: Option<CompiledPredicate>,
         sources: Vec<CompiledPredicate>,
         exclude_cause: Vec<String>,
+        process: Vec<CompiledStep>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -424,6 +430,9 @@ pub enum CompiledTiming {
     StartOfYourMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
+    EndOfYourNextTurn,
+    EndOfOpponentsNextTurn,
+    UntilNextUnsuspend,
     OnAttackTargetChange,
     MainFromHand,
     MainOnField,
@@ -531,14 +540,6 @@ pub enum CompiledStep {
     TrashTopSource {
         target: CompiledBindingRef,
     },
-    CancelLeave,
-    HandleReplacement,
-    RedirectReplacement {
-        destination: CompiledZone,
-    },
-    SubstitutePermanent {
-        target: CompiledBindingRef,
-    },
     Hatch {
         of: CompiledPlayerRef,
     },
@@ -569,14 +570,14 @@ pub enum CompiledStep {
     EffectInitiatedDigivolve {
         target: CompiledBindingRef,
         from_hand: CompiledBindingRef,
-        cost: i32,
+        cost: CompiledCostDelta,
         ignore_requirements: bool,
     },
     EffectInitiatedDnaDigivolve {
         target_a: CompiledBindingRef,
         target_b: CompiledBindingRef,
         from_hand: CompiledBindingRef,
-        cost: i32,
+        cost: CompiledCostDelta,
         ignore_requirements: bool,
     },
     TrashTopSecurity {
@@ -729,6 +730,14 @@ pub enum CompiledStep {
         body: Vec<CompiledStep>,
     },
     Optional(Vec<CompiledStep>),
+    CancelReplacement,
+    HandleReplacement,
+    RedirectReplacement {
+        zone: CompiledZone,
+    },
+    SubstituteReplacement {
+        subject: CompiledBindingRef,
+    },
     RawRust {
         fn_name: String,
         consumes: Vec<String>,

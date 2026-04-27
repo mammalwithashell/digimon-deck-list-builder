@@ -18,6 +18,7 @@ use std::collections::VecDeque;
 use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{EffectTiming, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
+use crate::trigger_context::TriggerContext;
 
 /// Bitset of zones for `SelectionKind::UnionZone`. Designed to be extended
 /// with additional zone bits in later Phase 4 tasks without breaking callers.
@@ -241,6 +242,7 @@ pub struct QueuedEffect {
     pub source_permanent: Option<PermanentHandle>,
     pub controller: PlayerId,
     pub timing: EffectTiming,
+    pub trigger_context: Option<TriggerContext>,
     pub effect_slot: u8,
     pub is_optional: bool,
     pub is_turn_player: bool,

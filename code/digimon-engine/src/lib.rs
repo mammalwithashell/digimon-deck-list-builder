@@ -40,6 +40,7 @@ pub mod scheduled_effects;
 pub mod selection;
 pub mod tensor;
 pub mod token_registry;
+pub mod trigger_context;
 
 // Re-export key types at crate root
 pub use crate::events::GameEvent;
@@ -72,3 +73,4 @@ pub use selection::{
 };
 pub use tensor::{build_tensor, TENSOR_SIZE};
 pub use token_registry::{TokenDef, TokenRegistry};
+pub use trigger_context::TriggerContext;
