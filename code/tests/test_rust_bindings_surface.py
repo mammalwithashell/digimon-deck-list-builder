@@ -94,6 +94,12 @@ class TestDeckTools:
         assert isinstance(result.errors, list)
         assert isinstance(result.warnings, list)
 
+    def test_validate_deck_for_game_mode_eden(self):
+        from digimon_engine import validate_deck_for_game_mode
+        result = validate_deck_for_game_mode(["BT3-097"] * 50, "eden")
+        assert result.is_valid is False
+        assert any("BT3-097" in error and "banned" in error for error in result.errors)
+
     def test_out_of_set_cards_returns_unknowns(self):
         from digimon_engine import out_of_set_cards
         # out_of_set_cards filters out cards in the tested-cards allowlist.
@@ -127,6 +133,14 @@ class TestRestrictedList:
         assert rl.card_limits.get("BT1-090") == 1
         # Choice groups exist
         assert len(rl.choice_groups) >= 1
+
+    def test_eden_restricted_list_known_entries(self):
+        from digimon_engine import eden_restricted_list
+        rl = eden_restricted_list()
+        assert rl.card_limits.get("BT3-097") == 0
+        assert rl.card_limits.get("BT1-107") == 1
+        assert rl.card_limits.get("BT6-085") == 4
+        assert rl.choice_groups == [(["EX4-015"], ["EX5-065"])]
 
 
 class TestExpandDeckDict:

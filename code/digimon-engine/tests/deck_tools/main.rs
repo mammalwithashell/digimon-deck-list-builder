@@ -4,7 +4,7 @@
 
 use digimon_engine::deck_tools::{
     card_database, classify_parsed, is_card_tested, out_of_set_cards, parse_deck, parse_text,
-    parse_tts, summarize_deck, tested_cards_sorted, validate_deck,
+    parse_tts, summarize_deck, tested_cards_sorted, validate_deck, validate_deck_for_game_mode,
 };
 
 // ─── Card ID pattern ───────────────────────────────────────────────────
@@ -236,6 +236,45 @@ fn is_banned_or_restricted(card_id: &str) -> bool {
         || CHOICE_GROUP_MEMBERS.contains(&card_id)
 }
 
+fn is_eden_restricted_or_choice_member(card_id: &str) -> bool {
+    const IDS: &[&str] = &[
+        "BT3-097", "BT9-103", "BT16-011", "EX4-008", "EX6-042", "BT12-092", "EX2-007", "BT15-082",
+        "BT1-107", "BT1-112", "BT2-039", "BT2-047", "BT2-069", "BT3-054", "BT3-058", "BT3-103",
+        "BT4-098", "BT4-109", "BT5-062", "BT6-085", "BT6-079", "BT6-100", "BT7-014", "BT7-025",
+        "BT7-021", "BT7-038", "BT7-064", "BT7-072", "BT7-075", "BT7-107", "BT8-095", "BT8-097",
+        "BT9-109", "BT11-064", "BT13-012", "BT14-002", "BT14-060", "BT14-093", "BT16-024",
+        "BT17-023", "BT17-065", "BT17-067", "BT17-075", "BT17-092", "BT18-087", "BT19-070",
+        "EX3-067", "EX5-048", "ST1-09", "EX4-015", "EX5-065",
+    ];
+    IDS.contains(&card_id)
+}
+
+fn make_eden_legal_deck() -> Vec<String> {
+    let db = card_database();
+    let mut candidates: Vec<&str> = db
+        .values()
+        .filter(|c| {
+            c.card_kind == 0
+                && matches!(c.rarity, 0 | 1)
+                && c.max_count_in_deck >= 4
+                && !is_eden_restricted_or_choice_member(&c.card_id)
+        })
+        .map(|c| c.card_id.as_str())
+        .collect();
+    candidates.sort_unstable();
+    let ids: Vec<&str> = candidates.into_iter().take(13).collect();
+    assert_eq!(ids.len(), 13, "need 13 EDEN-legal 4-copy Digimon");
+    let mut deck = Vec::with_capacity(50);
+    for cid in &ids {
+        for _ in 0..4 {
+            if deck.len() < 50 {
+                deck.push((*cid).to_string());
+            }
+        }
+    }
+    deck
+}
+
 #[test]
 fn validate_deck_accepts_a_legal_50_card_deck() {
     let deck = make_legal_deck();
@@ -330,6 +369,72 @@ fn validate_deck_warns_on_unknown_cards() {
     let result = validate_deck(&deck);
     // Unknown → warning, not an error (matches Python).
     assert!(result.warnings.iter().any(|w| w.contains("ZZZ-999")));
+}
+
+#[test]
+fn validate_eden_accepts_common_uncommon_deck() {
+    let deck = make_eden_legal_deck();
+    let result = validate_deck_for_game_mode(&deck, "eden").unwrap();
+    assert!(result.is_valid, "EDEN deck errors: {:?}", result.errors);
+}
+
+#[test]
+fn validate_eden_rejects_non_anomaly_rare() {
+    let mut deck = make_eden_legal_deck();
+    deck[0] = "AD1-001".to_string(); // Rare Digimon, not an anomaly category.
+    let result = validate_deck_for_game_mode(&deck, "eden").unwrap();
+    assert!(!result.is_valid);
+    assert!(result
+        .errors
+        .iter()
+        .any(|e| e.contains("AD1-001") && e.contains("EDEN format")));
+}
+
+#[test]
+fn validate_eden_allows_four_anomaly_cards() {
+    let mut deck = make_eden_legal_deck();
+    for slot in deck.iter_mut().take(4) {
+        *slot = "P-103".to_string(); // Promo Training option.
+    }
+    let result = validate_deck_for_game_mode(&deck, "eden").unwrap();
+    assert!(result.is_valid, "EDEN anomaly errors: {:?}", result.errors);
+}
+
+#[test]
+fn validate_eden_rejects_fifth_anomaly_card() {
+    let mut deck = make_eden_legal_deck();
+    for slot in deck.iter_mut().take(4) {
+        *slot = "P-103".to_string();
+    }
+    deck[4] = "LM-027".to_string(); // Promo Scramble option.
+    let result = validate_deck_for_game_mode(&deck, "eden").unwrap();
+    assert!(!result.is_valid);
+    assert!(result
+        .errors
+        .iter()
+        .any(|e| e.contains("EDEN Anomaly Protocol") && e.contains("got 5")));
+}
+
+#[test]
+fn validate_eden_uses_custom_banlist_and_pair() {
+    let mut banned_deck = make_eden_legal_deck();
+    banned_deck[0] = "BT3-097".to_string();
+    let banned = validate_deck_for_game_mode(&banned_deck, "eden").unwrap();
+    assert!(!banned.is_valid);
+    assert!(banned
+        .errors
+        .iter()
+        .any(|e| e.contains("BT3-097") && e.contains("banned")));
+
+    let mut pair_deck = make_eden_legal_deck();
+    pair_deck[0] = "EX4-015".to_string();
+    pair_deck[1] = "EX5-065".to_string();
+    let pair = validate_deck_for_game_mode(&pair_deck, "eden").unwrap();
+    assert!(!pair.is_valid);
+    assert!(pair
+        .errors
+        .iter()
+        .any(|e| e.contains("Choice restriction violated")));
 }
 
 // ─── summarize_deck ───────────────────────────────────────────────────

@@ -12,6 +12,7 @@ from digimon_engine import (
     parse_deck,
     summarize_deck,
     validate_deck,
+    validate_deck_for_game_mode,
 )
 from server.routers.schemas import DeckParseRequest, DeckValidateRequest
 
@@ -73,7 +74,10 @@ def deck_validate(request: DeckValidateRequest):
         if not card_ids:
             raise HTTPException(status_code=400, detail="Provide deck or main_deck/egg_deck")
 
-    result = validate_deck(card_ids)
+    if request.game_mode in {"standard", "edh_commander", "titan"}:
+        result = validate_deck(card_ids)
+    else:
+        result = validate_deck_for_game_mode(card_ids, request.game_mode)
     summary = summarize_deck(card_ids)
 
     # Alpha gate: reject decks with any card that lacks behavioral test

@@ -514,6 +514,7 @@ pub enum SkipDraw {
 pub enum GameMode {
     Standard,
     NoRestriction,
+    Eden,
     EdhCommander,
     Titan,
 }

@@ -48,6 +48,7 @@ class DeckValidateRequest(BaseModel):
     deck: Optional[str] = None
     main_deck: list[str] = Field(default_factory=list)
     egg_deck: list[str] = Field(default_factory=list)
+    game_mode: str = Field("standard", pattern=r"^(standard|eden|edh_commander|titan|no_restriction)$")
 
 
 class CreateDebugGameRequest(BaseModel):
