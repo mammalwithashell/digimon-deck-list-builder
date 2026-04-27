@@ -2,9 +2,7 @@
 //! its callback writes the picks into Bindings as CardList, and a
 //! follow-on PerSelected step iterates the picks.
 
-use digimon_dsl::compiled::{
-    CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone,
-};
+use digimon_dsl::compiled::{CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;

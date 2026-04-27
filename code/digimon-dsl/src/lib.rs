@@ -15,10 +15,10 @@
 //!   tests; the real registry lands in Phase 4.
 
 pub mod alt_path;
-pub mod compile;
-pub mod compiled;
 pub mod clause;
 pub mod common;
+pub mod compile;
+pub mod compiled;
 pub mod errors;
 pub mod formula;
 pub mod identity;

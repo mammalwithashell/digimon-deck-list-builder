@@ -7,7 +7,7 @@
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
-use digimon_engine::debug_runner::{DebugRunner, make_test_card};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind};
 use std::sync::Arc;
@@ -87,9 +87,7 @@ impl CardEffect for ConditionFalsePayCostPanics {
         vec![Effect::before_pay_cost(card)
             .name("condition false → pay_cost never fires")
             .condition(|_| false)
-            .pay_cost_fn(|_ctx| {
-                panic!("pay_cost_fn must not be called when condition is false")
-            })
+            .pay_cost_fn(|_ctx| panic!("pay_cost_fn must not be called when condition is false"))
             .cost_reduction_fn(|_| 2)
             .build()]
     }
@@ -133,7 +131,16 @@ fn pay_cost_fn_gates_reduction_in_play_path() {
         .add_card(reducer.clone())
         .add_card(deck_filler)
         // Give P0 5 deck cards — enough to pay the trash cost.
-        .deck(0, &["DECK-CARD", "DECK-CARD", "DECK-CARD", "DECK-CARD", "DECK-CARD"])
+        .deck(
+            0,
+            &[
+                "DECK-CARD",
+                "DECK-CARD",
+                "DECK-CARD",
+                "DECK-CARD",
+                "DECK-CARD",
+            ],
+        )
         .hand(0, &["TARGET-PC"])
         .memory(10)
         .start();

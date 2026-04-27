@@ -17,7 +17,7 @@ use crate::action::space::{
     PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, TARGETS_PER_ATTACKER, TRASH_EFFECT_END,
     TRASH_EFFECT_START,
 };
-use crate::enums::{CardKind, GamePhase, PlayerId, PlaySource};
+use crate::enums::{CardKind, GamePhase, PlaySource, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
@@ -145,7 +145,12 @@ impl Game {
             if field == BREEDING_TARGET {
                 self.digivolve_from_hand_onto_breeding(tp, hand as usize, PlaySource::ByDigivolve);
             } else {
-                self.digivolve_from_hand(tp, hand as usize, field as usize, PlaySource::ByDigivolve);
+                self.digivolve_from_hand(
+                    tp,
+                    hand as usize,
+                    field as usize,
+                    PlaySource::ByDigivolve,
+                );
             }
             return;
         }

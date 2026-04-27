@@ -80,12 +80,12 @@ fn printed_barrier_keyword_decline_allows_deletion() {
         0,
         "declined Barrier should allow deletion"
     );
+    assert_eq!(r.game.player(0).deck.len(), 5, "deck unchanged on decline");
     assert_eq!(
-        r.game.player(0).deck.len(),
-        5,
-        "deck unchanged on decline"
+        r.game.player(0).trash.len(),
+        1,
+        "the permanent itself goes to trash"
     );
-    assert_eq!(r.game.player(0).trash.len(), 1, "the permanent itself goes to trash");
 }
 
 /// Printed `<Evade>` auto-installs an optional `WhenWouldBeDeleted`
@@ -245,9 +245,5 @@ fn printed_keyword_effects_only_apply_to_permanents_on_field() {
         0,
         "FILLER should be deleted normally"
     );
-    assert_eq!(
-        r.game.player(0).hand.len(),
-        1,
-        "BARRIER_CARD still in hand"
-    );
+    assert_eq!(r.game.player(0).hand.len(), 1, "BARRIER_CARD still in hand");
 }

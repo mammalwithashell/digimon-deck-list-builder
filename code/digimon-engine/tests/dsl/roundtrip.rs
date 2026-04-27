@@ -21,7 +21,12 @@ fn registry_for_examples() -> StubRegistry {
 fn every_example_parses() {
     let (loaded, errors) = loader::load_dir_ok(&examples_dir());
     assert!(errors.is_empty(), "parse errors: {:#?}", errors);
-    assert_eq!(loaded.len(), 15, "expected 15 worked examples, got {}", loaded.len());
+    assert_eq!(
+        loaded.len(),
+        15,
+        "expected 15 worked examples, got {}",
+        loaded.len()
+    );
 }
 
 #[test]
@@ -37,7 +42,11 @@ fn every_example_validates() {
             }
         }
     }
-    assert!(failures.is_empty(), "validation failures:\n{}", failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "validation failures:\n{}",
+        failures.join("\n")
+    );
 }
 
 #[test]
@@ -46,7 +55,10 @@ fn every_example_round_trips() {
     for spec in specs {
         let formatted = format_spec(&spec);
         let reparsed: CardSpec = serde_yml::from_str(&formatted).unwrap_or_else(|e| {
-            panic!("{} failed to reparse:\n{}\nerror: {}", spec.card, formatted, e)
+            panic!(
+                "{} failed to reparse:\n{}\nerror: {}",
+                spec.card, formatted, e
+            )
         });
         assert_eq!(reparsed, spec, "round-trip mismatch for {}", spec.card);
     }

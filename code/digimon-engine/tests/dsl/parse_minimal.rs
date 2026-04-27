@@ -55,8 +55,13 @@ cost: 0
 bogus_field: true
 "#;
     let result: Result<digimon_engine::dsl::spec::CardSpec, _> = serde_yml::from_str(yaml);
-    assert!(result.is_err(), "CardSpec must reject unknown top-level fields");
+    assert!(
+        result.is_err(),
+        "CardSpec must reject unknown top-level fields"
+    );
     let err_msg = result.unwrap_err().to_string();
-    assert!(err_msg.contains("bogus_field") || err_msg.contains("unknown field"),
-            "error should mention the unknown field, got: {err_msg}");
+    assert!(
+        err_msg.contains("bogus_field") || err_msg.contains("unknown field"),
+        "error should mention the unknown field, got: {err_msg}"
+    );
 }

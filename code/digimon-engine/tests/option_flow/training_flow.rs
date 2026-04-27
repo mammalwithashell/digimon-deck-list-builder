@@ -136,7 +136,11 @@ fn training_parks_alongside_breeding() {
     assert_eq!(result, OptionPlayResult::Trashed);
     assert!(r.game.pending_option.is_none(), "pending_option cleared");
     assert_eq!(r.hand_size(0), 0, "option left hand");
-    assert_eq!(r.trash_size(0), 0, "training does NOT trash — it parks on field");
+    assert_eq!(
+        r.trash_size(0),
+        0,
+        "training does NOT trash — it parks on field"
+    );
     assert_eq!(
         r.battle_area_size(0),
         battle_before + 1,
@@ -181,10 +185,11 @@ fn training_trashes_on_breeding_promotion() {
     assert_eq!(result, OptionPlayResult::Trashed);
     assert_eq!(r.trash_size(0), 0, "training parked, not trashed");
     assert!(
-        r.game.player(0).battle_area.iter().any(|p| matches!(
-            p.option_state,
-            OptionState::Training { .. }
-        )),
+        r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Training { .. })),
         "training permanent on field"
     );
 
@@ -195,10 +200,11 @@ fn training_trashes_on_breeding_promotion() {
     assert!(r.game.move_from_breeding(0), "promote egg to battle_area");
 
     assert!(
-        !r.game.player(0).battle_area.iter().any(|p| matches!(
-            p.option_state,
-            OptionState::Training { .. }
-        )),
+        !r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Training { .. })),
         "training permanent gone after hatch"
     );
     assert_eq!(
@@ -233,10 +239,12 @@ fn training_persists_if_breeding_empty() {
 
     let result = r.game.play_option_from_hand(0, 0);
     assert_eq!(result, OptionPlayResult::Trashed);
-    let training_present = r.game.player(0).battle_area.iter().any(|p| matches!(
-        p.option_state,
-        OptionState::Training { .. }
-    ));
+    let training_present = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .any(|p| matches!(p.option_state, OptionState::Training { .. }));
     assert!(training_present, "parked");
 
     // End P0 turn; P1 plays through; back to P0.
@@ -246,10 +254,12 @@ fn training_persists_if_breeding_empty() {
     r.game.enter_main_phase();
 
     // Training still on field — no breeding promotion happened.
-    let training_still = r.game.player(0).battle_area.iter().any(|p| matches!(
-        p.option_state,
-        OptionState::Training { .. }
-    ));
+    let training_still = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .any(|p| matches!(p.option_state, OptionState::Training { .. }));
     assert!(training_still, "training persists with empty breeding");
     assert_eq!(r.trash_size(0), 0);
 }

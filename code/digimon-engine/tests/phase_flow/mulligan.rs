@@ -74,7 +74,10 @@ fn game_starts_in_mulligan_phase_with_first_player_pending() {
     let pending = game
         .mulligan_current_player()
         .expect("mulligan should be pending");
-    assert_eq!(pending, game.turn_order[0], "first decider is turn_order[0]");
+    assert_eq!(
+        pending, game.turn_order[0],
+        "first decider is turn_order[0]"
+    );
     assert_eq!(game.mulligan_pending.len(), 2);
     assert_eq!(game.mulligan_used, vec![false, false]);
     // Opening hands drawn; security not yet laid.
@@ -92,7 +95,10 @@ fn keep_decision_advances_to_next_player() {
 
     let second = game.mulligan_current_player().expect("one still pending");
     assert_ne!(second, first);
-    assert_eq!(game.mulligan_used[first as usize], false, "keep does not mark used");
+    assert_eq!(
+        game.mulligan_used[first as usize], false,
+        "keep does not mark used"
+    );
 }
 
 #[test]
@@ -104,7 +110,11 @@ fn mulligan_redraws_hand_to_starting_size() {
 
     game.accept_mulligan(first, false).unwrap();
 
-    assert_eq!(game.player(first).hand.len(), hand_before, "hand stays at starting size");
+    assert_eq!(
+        game.player(first).hand.len(),
+        hand_before,
+        "hand stays at starting size"
+    );
     assert_eq!(
         game.player(first).deck.len(),
         deck_before,
@@ -216,7 +226,9 @@ fn accept_mulligan_rejects_after_completion() {
     game.accept_mulligan(second, true).unwrap();
 
     // A third decision must be rejected.
-    let err = game.accept_mulligan(0, true).expect_err("should reject after done");
+    let err = game
+        .accept_mulligan(0, true)
+        .expect_err("should reject after done");
     assert!(err.contains("already complete"));
 }
 

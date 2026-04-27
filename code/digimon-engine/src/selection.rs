@@ -58,12 +58,10 @@ impl std::ops::BitOrAssign for UnionZoneSet {
 }
 
 /// Called when a selection resolves with a concrete action ID.
-pub type SelectionCallback =
-    Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
+pub type SelectionCallback = Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
 
 /// Called when an optional selection is declined via PASS.
-pub type DeclineCallback =
-    Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>;
+pub type DeclineCallback = Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>;
 
 /// Taxonomy of selection prompts. Mirrors the Python `PendingSelection.kind`
 /// tag — decoders use this plus `previous_phase` to route action IDs.
@@ -98,7 +96,6 @@ pub enum SelectionKind {
     // ── Phase 4 kinds ─────────────────────────────────────────────────────
     // Full mask + decoder + helper dispatch lands in Tasks 2-5. Defined
     // here so all downstream match arms compile from day one.
-
     /// Pick one card from a union of two or more zones (e.g. hand OR trash).
     /// `zones` is a `UnionZoneSet` bitfield indicating which zones are in
     /// scope. The action-space encoding for each zone is resolved in Task 2.

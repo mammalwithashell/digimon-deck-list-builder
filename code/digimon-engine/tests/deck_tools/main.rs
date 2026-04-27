@@ -3,8 +3,8 @@
 //! desktop and hosted API can't diverge on deck validation.
 
 use digimon_engine::deck_tools::{
-    card_database, classify_parsed, is_card_tested, out_of_set_cards, parse_deck,
-    parse_text, parse_tts, summarize_deck, tested_cards_sorted, validate_deck,
+    card_database, classify_parsed, is_card_tested, out_of_set_cards, parse_deck, parse_text,
+    parse_tts, summarize_deck, tested_cards_sorted, validate_deck,
 };
 
 // ─── Card ID pattern ───────────────────────────────────────────────────
@@ -162,7 +162,14 @@ fn classify_parsed_separates_eggs_and_unknown() {
         "ZZZ-999".to_string(), // duplicate unknown → only one warning
     ]);
     assert_eq!(parsed.egg_deck, vec![egg_id]);
-    assert_eq!(parsed.main_deck.iter().filter(|c| *c == &digimon_id).count(), 2);
+    assert_eq!(
+        parsed
+            .main_deck
+            .iter()
+            .filter(|c| *c == &digimon_id)
+            .count(),
+        2
+    );
     assert!(parsed.main_deck.contains(&"ZZZ-999".to_string()));
     assert_eq!(parsed.warnings.len(), 1);
     assert!(parsed.warnings[0].contains("ZZZ-999"));
@@ -182,9 +189,7 @@ fn make_legal_deck() -> Vec<String> {
     let mut candidates: Vec<&str> = db
         .values()
         .filter(|c| {
-            c.card_kind == 0
-                && c.max_count_in_deck >= 4
-                && !is_banned_or_restricted(&c.card_id)
+            c.card_kind == 0 && c.max_count_in_deck >= 4 && !is_banned_or_restricted(&c.card_id)
         })
         .map(|c| c.card_id.as_str())
         .collect();
@@ -193,7 +198,11 @@ fn make_legal_deck() -> Vec<String> {
     // limit (max 4). Instead pick 13 distinct legal ids, 4 copies each =
     // 52 — trim back to 50.
     let ids: Vec<&str> = candidates.into_iter().take(13).collect();
-    assert_eq!(ids.len(), 13, "need 13 unrestricted 4-copy Digimon in the DB");
+    assert_eq!(
+        ids.len(),
+        13,
+        "need 13 unrestricted 4-copy Digimon in the DB"
+    );
     let mut deck = Vec::with_capacity(50);
     for cid in &ids {
         for _ in 0..4 {
@@ -213,14 +222,12 @@ fn is_banned_or_restricted(card_id: &str) -> bool {
     // when the validator's lists change.
     const BANNED: &[&str] = &["BT2-090", "BT5-109", "EX5-065"];
     const RESTRICTED: &[&str] = &[
-        "BT1-090",  "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110",
-        "BT14-002", "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069",
-        "BT19-040", "BT2-047",  "BT2-069",  "BT3-054",  "BT3-103",  "BT4-104",
-        "BT4-111",  "BT6-100",  "BT6-104",  "BT7-038",  "BT7-064",  "BT7-069",
-        "BT7-072",  "BT7-107",  "BT9-098",  "BT9-099",  "EX1-021",  "EX1-068",
-        "EX2-039",  "EX2-070",  "EX3-057",  "EX4-006",  "EX4-019",  "EX4-030",
-        "EX5-015",  "EX5-018",  "EX5-062",  "P-008",    "P-025",    "P-029",
-        "P-030",    "P-123",    "P-130",    "ST2-13",   "ST9-09",
+        "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110", "BT14-002",
+        "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069", "BT19-040", "BT2-047",
+        "BT2-069", "BT3-054", "BT3-103", "BT4-104", "BT4-111", "BT6-100", "BT6-104", "BT7-038",
+        "BT7-064", "BT7-069", "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068",
+        "EX2-039", "EX2-070", "EX3-057", "EX4-006", "EX4-019", "EX4-030", "EX5-015", "EX5-018",
+        "EX5-062", "P-008", "P-025", "P-029", "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
     ];
     const CHOICE_GROUP_MEMBERS: &[&str] =
         &["EX2-007", "EX7-064", "BT20-037", "BT17-035", "EX8-037"];
@@ -246,7 +253,10 @@ fn validate_deck_rejects_wrong_main_size() {
     deck.pop();
     let result = validate_deck(&deck);
     assert!(!result.is_valid);
-    assert!(result.errors.iter().any(|e| e.contains("Main deck must be")));
+    assert!(result
+        .errors
+        .iter()
+        .any(|e| e.contains("Main deck must be")));
 }
 
 #[test]

@@ -3,8 +3,8 @@
 
 #[test]
 fn phase_1b_exit_criteria() {
-    let registry = digimon_engine::dsl_registry::from_embedded()
-        .expect("embedded registry must load");
+    let registry =
+        digimon_engine::dsl_registry::from_embedded().expect("embedded registry must load");
 
     // All 15 fixtures round-tripped through the pack.
     assert_eq!(registry.len(), 15);

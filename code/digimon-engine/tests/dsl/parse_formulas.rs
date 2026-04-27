@@ -1,6 +1,5 @@
-use digimon_engine::dsl::formula::{
-    AggregateSelector, CompoundFormula, FormulaSpec, PerSelector,
-};
+use digimon_engine::dsl::formula::{AggregateSelector, CompoundFormula, FormulaSpec, PerSelector};
+use digimon_engine::dsl::{predicate::Zone, PlayerRef};
 
 fn parse(yaml: &str) -> FormulaSpec {
     serde_yml::from_str(yaml).unwrap()
@@ -18,6 +17,31 @@ fn parse_base_per_delta() {
         FormulaSpec::BasePerDelta { base, per, delta } => {
             assert_eq!((base, delta), (15, -1));
             assert!(matches!(per, PerSelector::MaterialCount));
+        }
+        _ => panic!("expected BasePerDelta"),
+    }
+}
+
+#[test]
+fn parse_base_per_card_count_in_zone() {
+    let yaml = r#"
+base: 0
+per:
+  card_count_in_zone:
+    of: opponent
+    zone: trash
+delta: 1
+"#;
+    match parse(yaml) {
+        FormulaSpec::BasePerDelta { base, per, delta } => {
+            assert_eq!((base, delta), (0, 1));
+            assert_eq!(
+                per,
+                PerSelector::CardCountInZone {
+                    of: PlayerRef::Opponent,
+                    zone: Zone::Trash,
+                }
+            );
         }
         _ => panic!("expected BasePerDelta"),
     }

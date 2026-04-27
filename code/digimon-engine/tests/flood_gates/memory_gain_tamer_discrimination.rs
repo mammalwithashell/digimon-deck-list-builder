@@ -167,7 +167,12 @@ fn source_is_tamer_helper_returns_false_for_option_source() {
 
     // Options don't go on the field normally, but card_kind_for_handle scans
     // hand and trash too. Put the Option in hand so the scanner can find it.
-    let data_idx = r.game.card_data.iter().position(|c| c.card_id == "OPT-A").unwrap();
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "OPT-A")
+        .unwrap();
     let next = r.game.next_card_index();
     let option_card = CardSource::new(data_idx, tp, next);
     let source_handle = option_card.handle();
@@ -245,7 +250,13 @@ fn cannot_gain_memory_except_from_tamers_allows_tamer_source() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryExceptFromTamers, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotGainMemoryExceptFromTamers,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     {
@@ -280,7 +291,13 @@ fn cannot_gain_memory_except_from_tamers_blocks_digimon_source() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryExceptFromTamers, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotGainMemoryExceptFromTamers,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     {
@@ -309,7 +326,12 @@ fn cannot_gain_memory_except_from_tamers_blocks_option_source() {
     r.game.set_memory(0);
 
     // Put Option in hand so the scanner finds it.
-    let data_idx = r.game.card_data.iter().position(|c| c.card_id == "OPT-B").unwrap();
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "OPT-B")
+        .unwrap();
     let next = r.game.next_card_index();
     let option_card = CardSource::new(data_idx, tp, next);
     let opt_src = option_card.handle();
@@ -317,7 +339,13 @@ fn cannot_gain_memory_except_from_tamers_blocks_option_source() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryExceptFromTamers, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotGainMemoryExceptFromTamers,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     {
@@ -353,7 +381,13 @@ fn cannot_gain_memory_by_effect_blocks_even_tamer_source() {
     // Install the absolute blocker (not the Tamer-exception one).
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryByEffect, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotGainMemoryByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     {

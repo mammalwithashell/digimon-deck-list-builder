@@ -42,8 +42,7 @@ effects:
           body:
             - draw: { of: you, count: 1 }
 "#;
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(yaml).expect("YAML parses");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("YAML parses");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles cleanly");
 
     // Seed: TST-DEL in P0's hand (the source of OnPlay), plus two filler cards

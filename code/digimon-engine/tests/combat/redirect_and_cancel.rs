@@ -161,7 +161,13 @@ fn ctx_redirect_attack_rewrites_effective_target_and_fires_observer() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let def = r.place_on_field(1, "DEF", Some(0));
     let redir = r.place_on_field(1, "REDIR", Some(0));
-    assert_eq!(redir, PermanentHandle { player: 1, index: 1 });
+    assert_eq!(
+        redir,
+        PermanentHandle {
+            player: 1,
+            index: 1
+        }
+    );
 
     // Install the redirect on the attacker — fires OnAttack during its
     // own declaration and rewrites effective_target from DEF to REDIR.
@@ -183,7 +189,8 @@ fn ctx_redirect_attack_rewrites_effective_target_and_fires_observer() {
         "OnAttackTargetChange must fire on redirect_attack"
     );
     assert!(
-        log.iter().any(|t| matches!(t, AttackTarget::Digimon(h) if *h == redir)),
+        log.iter()
+            .any(|t| matches!(t, AttackTarget::Digimon(h) if *h == redir)),
         "witness must see effective_target == REDIR post-redirect (saw {:?})",
         log
     );
@@ -253,7 +260,10 @@ fn ctx_redirect_attack_validates_target_legality() {
         .start();
 
     // Invalid target: P1 index 99 — doesn't resolve to any permanent.
-    let invalid = PermanentHandle { player: 1, index: 99 };
+    let invalid = PermanentHandle {
+        player: 1,
+        index: 99,
+    };
     r.register_effect(
         "ATK",
         Arc::new(RedirectRecordingErr {
@@ -311,7 +321,10 @@ fn ctx_redirect_attack_invalid_without_active_attack() {
 
     // Synthesize a target handle — doesn't need to resolve to anything
     // for the NoActiveAttack check to fire first.
-    let dummy_target = PermanentHandle { player: 1, index: 0 };
+    let dummy_target = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
 
     let mut r = DebugRunner::builder()
         .add_card(card("ATK"))

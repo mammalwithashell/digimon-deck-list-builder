@@ -811,9 +811,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         // drain in `finalize_permanent_deletion` plays
                         // each from trash, free, unsuspended.
                         for handle in picks {
-                            ctx.game
-                                .pending_post_deletion_replays
-                                .push((owner, handle));
+                            ctx.game.pending_post_deletion_replays.push((owner, handle));
                         }
                     },
                 );
@@ -1113,9 +1111,10 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 };
                 let owner = me.player;
                 let battle = ctx.battle_area(owner);
-                battle.iter().enumerate().any(|(i, p)| {
-                    i as u8 != me.index && !p.is_tamer(&ctx.game.card_data)
-                })
+                battle
+                    .iter()
+                    .enumerate()
+                    .any(|(i, p)| i as u8 != me.index && !p.is_tamer(&ctx.game.card_data))
             })
             .replacement_process(|rctx| {
                 use crate::replacement::ReplacementSubject;
@@ -1274,12 +1273,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     // emitter to surface attack bits for this permanent.
                     ctx.game.modifiers.add(
                         me,
-                        ModifierEntry::simple(
-                            ModifierType::MayAttack,
-                            1,
-                            Expiry::EndOfTurn,
-                            owner,
-                        ),
+                        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, owner),
                     );
                     // Grant CanAttackUnsuspended — widens the §4.6 mask
                     // to include unsuspended-target attack bits, matching
@@ -1295,7 +1289,6 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     );
                 })
                 .build(),
-
             // (2) EndOfAttack — self-delete when the carrier was the
             //     attacker of the just-resolved attack.
             Effect::end_of_attack(card)
@@ -1327,10 +1320,8 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     // accurate per DCGO `Execute.cs:74-83` (the
                     // `DeleteSelfEffect` is the carrier's own
                     // queued ICardEffect, not a battle outcome).
-                    ctx.game.delete_permanent_with_cause(
-                        me,
-                        ReplacementCause::OwnEffect,
-                    );
+                    ctx.game
+                        .delete_permanent_with_cause(me, ReplacementCause::OwnEffect);
                 })
                 .build(),
         ],

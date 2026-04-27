@@ -47,11 +47,7 @@ fn seed_security(r: &mut DebugRunner, player: u8, card_id: &str, count: usize) {
 #[test]
 fn security_attack_plus_one_adds_one_check() {
     let mut r = DebugRunner::builder()
-        .add_card(fighter(
-            "ATK",
-            6000,
-            vec![Keyword::SecurityAttackPlus(1)],
-        ))
+        .add_card(fighter("ATK", 6000, vec![Keyword::SecurityAttackPlus(1)]))
         .add_card(fighter("SEC", 0, vec![]))
         .start();
 
@@ -73,11 +69,7 @@ fn security_attack_plus_one_adds_one_check() {
 #[test]
 fn security_attack_minus_one_gives_zero_checks() {
     let mut r = DebugRunner::builder()
-        .add_card(fighter(
-            "ATK",
-            6000,
-            vec![Keyword::SecurityAttackMinus(1)],
-        ))
+        .add_card(fighter("ATK", 6000, vec![Keyword::SecurityAttackMinus(1)]))
         .add_card(fighter("SEC", 0, vec![]))
         .start();
 
@@ -104,11 +96,7 @@ fn security_attack_minus_one_gives_zero_checks() {
 fn security_attack_keyword_stacks_with_modifier() {
     // Native keyword + modifier-granted SecurityAttackChange should sum.
     let mut r = DebugRunner::builder()
-        .add_card(fighter(
-            "ATK",
-            6000,
-            vec![Keyword::SecurityAttackPlus(1)],
-        ))
+        .add_card(fighter("ATK", 6000, vec![Keyword::SecurityAttackPlus(1)]))
         .add_card(fighter("SEC", 0, vec![]))
         .start();
 

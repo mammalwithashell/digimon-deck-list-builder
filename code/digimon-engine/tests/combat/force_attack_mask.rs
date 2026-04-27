@@ -40,7 +40,11 @@ fn make_digimon(id: &str, color: CardColor, dp: i32) -> CardData {
     }
 }
 
-fn grant_force_attack(r: &mut DebugRunner, target: digimon_engine::permanent::PermanentHandle, source: u8) {
+fn grant_force_attack(
+    r: &mut DebugRunner,
+    target: digimon_engine::permanent::PermanentHandle,
+    source: u8,
+) {
     r.game.modifiers.add(
         target,
         ModifierEntry::simple(ModifierType::ForceAttack, 1, Expiry::EndOfTurn, source),
@@ -79,16 +83,21 @@ fn force_attack_zeroes_non_attack_bits_when_active() {
 
     // Forced attacker's attack bits present.
     assert_eq!(
-        mask[encode_attack(forced.index as u16, defender.index as u16) as usize], 1.0,
+        mask[encode_attack(forced.index as u16, defender.index as u16) as usize],
+        1.0,
         "forced attacker must be able to attack the suspended defender",
     );
     assert_eq!(
-        mask[encode_attack(forced.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask[encode_attack(forced.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "forced attacker must be able to attack security",
     );
 
     // Every non-attack bit must be zeroed by the replacement.
-    assert_eq!(mask[0], 0.0, "PLAY_HAND bit 0 must be zeroed during ForceAttack");
+    assert_eq!(
+        mask[0], 0.0,
+        "PLAY_HAND bit 0 must be zeroed during ForceAttack"
+    );
     assert_eq!(mask[HATCH as usize], 0.0, "HATCH must be zeroed");
     assert_eq!(mask[PASS as usize], 0.0, "PASS must be zeroed");
 
@@ -118,11 +127,13 @@ fn force_attack_emits_attacks_for_all_forced_digimon() {
     let mask = build_action_mask(&r.game, tp);
 
     assert_eq!(
-        mask[encode_attack(a.index as u16, defender.index as u16) as usize], 1.0,
+        mask[encode_attack(a.index as u16, defender.index as u16) as usize],
+        1.0,
         "attacker A must retain its forced attack bit",
     );
     assert_eq!(
-        mask[encode_attack(b.index as u16, defender.index as u16) as usize], 1.0,
+        mask[encode_attack(b.index as u16, defender.index as u16) as usize],
+        1.0,
         "attacker B must retain its forced attack bit",
     );
 }
@@ -170,12 +181,14 @@ fn force_attack_respects_cannot_attack_target() {
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(forced.index as u16, defender.index as u16) as usize], 0.0,
+        mask[encode_attack(forced.index as u16, defender.index as u16) as usize],
+        0.0,
         "ForceAttack must skip CannotAttackTarget defenders",
     );
     // Security attack remains legal, so replacement still triggers.
     assert_eq!(
-        mask[encode_attack(forced.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask[encode_attack(forced.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "security attack still available under ForceAttack",
     );
     assert_eq!(mask[PASS as usize], 0.0, "PASS must still be zeroed");
@@ -206,11 +219,13 @@ fn force_attack_respects_raid_on_unsuspended_enemies() {
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(raider.index as u16, high.index as u16) as usize], 1.0,
+        mask[encode_attack(raider.index as u16, high.index as u16) as usize],
+        1.0,
         "Raid targets tied-for-highest unsuspended DP enemy",
     );
     assert_eq!(
-        mask[encode_attack(raider.index as u16, low.index as u16) as usize], 0.0,
+        mask[encode_attack(raider.index as u16, low.index as u16) as usize],
+        0.0,
         "Raid must not include the lower-DP unsuspended enemy",
     );
 }

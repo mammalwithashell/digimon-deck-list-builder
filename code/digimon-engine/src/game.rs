@@ -39,7 +39,10 @@ impl std::fmt::Display for OverclockError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::WrongPhase => write!(f, "activate_overclock called outside EndOfTurnAction"),
-            Self::Busy => write!(f, "activate_overclock called while a selection or attack is in flight"),
+            Self::Busy => write!(
+                f,
+                "activate_overclock called while a selection or attack is in flight"
+            ),
             Self::NotOverclock => write!(f, "permanent does not have <Overclock>"),
             Self::NoSacrifice => write!(f, "no sacrificeable Digimon available"),
             Self::InvalidIndex => write!(f, "overclock_index out of range"),
@@ -221,6 +224,12 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) current_deletion_cause: Option<crate::replacement::ReplacementCause>,
 
+    /// True while effects are being evaluated from a DNA digivolution event.
+    /// Consumed by the DSL `dna_origin` predicate for clauses like
+    /// "[When Digivolving] If DNA digivolving, ...".
+    #[doc(hidden)]
+    pub(crate) current_dna_origin: Option<bool>,
+
     /// Parked replacement state when a `WhenWouldBe*` replacement-process
     /// closure installs a nested player selection. Set by the dispatcher's
     /// post-process hook in `replacement::run_candidate_inner`; drained by
@@ -329,6 +338,7 @@ pub struct Game {
     pub dsl_outer_tail: Option<(
         Vec<digimon_dsl::compiled::CompiledStep>,
         crate::dsl_cards::bindings::Bindings,
+        crate::dsl_cards::step::StepRuntime,
     )>,
 
     /// Phase 2f4 Task 1 — one-shot delayed-effect queue. Entries are scheduled
@@ -361,12 +371,21 @@ impl Game {
             None => StdRng::from_entropy(),
         };
 
+        let mut effective_card_data = all_card_data.clone();
+        #[cfg(feature = "dsl-yaml-loader")]
+        if let Ok(dsl_registry) = crate::dsl_registry::from_embedded() {
+            crate::dsl_bridge::enrich_card_data_with_dsl_alt_paths(
+                &mut effective_card_data,
+                &dsl_registry,
+            );
+        }
+
         // Build card data store (flat vec, indexed by position)
         let mut card_data_store: Vec<CardData> = Vec::new();
         let mut data_index_map: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
 
-        for (card_id, data) in all_card_data {
+        for (card_id, data) in &effective_card_data {
             let idx = card_data_store.len();
             data_index_map.insert(card_id.clone(), idx);
             card_data_store.push(data.clone());
@@ -381,9 +400,9 @@ impl Game {
             let mut player = Player::new(player_id);
 
             for card_id in deck_ids {
-                let data_idx = data_index_map.get(card_id).ok_or_else(|| {
-                    format!("Card {} not found in card database", card_id)
-                })?;
+                let data_idx = data_index_map
+                    .get(card_id)
+                    .ok_or_else(|| format!("Card {} not found in card database", card_id))?;
 
                 let card_data = &card_data_store[*data_idx];
                 let card = CardSource::new(*data_idx, player_id, next_card_index);
@@ -469,6 +488,7 @@ impl Game {
             in_replacement_commit: false,
             effect_source_player: None,
             current_deletion_cause: None,
+            current_dna_origin: None,
             parked_replacement: None,
             in_counter_window: false,
             pending_deletion_resume: None,
@@ -516,11 +536,7 @@ impl Game {
     ///
     /// Returns `Err` if it's not this player's turn to decide or if mulligan
     /// is already complete.
-    pub fn accept_mulligan(
-        &mut self,
-        player: PlayerId,
-        keep: bool,
-    ) -> Result<(), &'static str> {
+    pub fn accept_mulligan(&mut self, player: PlayerId, keep: bool) -> Result<(), &'static str> {
         let Some(current) = self.mulligan_current_player() else {
             return Err("mulligan is already complete");
         };
@@ -632,13 +648,7 @@ impl Game {
         cause: crate::replacement::ReplacementCause,
         original_destination: Option<crate::enums::Zone>,
     ) -> crate::replacement::ReplacementOutcome {
-        crate::replacement::try_replace_impl(
-            self,
-            timing,
-            subject,
-            cause,
-            original_destination,
-        )
+        crate::replacement::try_replace_impl(self, timing, subject, cause, original_destination)
     }
 
     /// Infer the `ReplacementCause` for a deletion of `target_handle` given
@@ -709,10 +719,7 @@ impl Game {
     /// `digimon-engine/tests/` can simulate "opponent effect currently
     /// resolving" without driving the queue.
     #[doc(hidden)]
-    pub fn set_effect_source_player_for_test(
-        &mut self,
-        source: Option<crate::enums::PlayerId>,
-    ) {
+    pub fn set_effect_source_player_for_test(&mut self, source: Option<crate::enums::PlayerId>) {
         self.effect_source_player = source;
     }
 
@@ -752,11 +759,7 @@ impl Game {
 
     /// Get the next player clockwise from the given player.
     pub fn next_clockwise(&self, id: PlayerId) -> PlayerId {
-        let pos = self
-            .turn_order
-            .iter()
-            .position(|&p| p == id)
-            .unwrap_or(0);
+        let pos = self.turn_order.iter().position(|&p| p == id).unwrap_or(0);
         let next_pos = (pos + 1) % self.turn_order.len();
         self.turn_order[next_pos]
     }
@@ -1041,11 +1044,7 @@ impl Game {
     /// and regular digivolve pays memory at the call site. Mirrors
     /// Python's `can_digivolve(card, base_perm)` validator. Used by
     /// `combat::try_enter_counter` for §2.3 parity.
-    pub fn can_digivolve(
-        &self,
-        card: &CardSource,
-        perm: &crate::permanent::Permanent,
-    ) -> bool {
+    pub fn can_digivolve(&self, card: &CardSource, perm: &crate::permanent::Permanent) -> bool {
         let Some(base_level) = perm.top_card().level(&self.card_data) else {
             return false;
         };
@@ -1071,11 +1070,7 @@ impl Game {
     ///
     /// Returns `false` for out-of-range handles (e.g. player index or
     /// battle-area index doesn't exist) so callers don't need a guard.
-    pub fn has_keyword(
-        &self,
-        handle: PermanentHandle,
-        keyword: crate::enums::Keyword,
-    ) -> bool {
+    pub fn has_keyword(&self, handle: PermanentHandle, keyword: crate::enums::Keyword) -> bool {
         // Modifier-granted (end-of-turn grants, Ally buffs, etc.)
         if self.modifiers.has_keyword(handle, keyword) {
             return true;
@@ -1148,9 +1143,10 @@ impl Game {
             return false;
         }
         self.has_keyword(target, crate::enums::Keyword::Progress)
-            || self
-                .modifiers
-                .has(target, crate::enums::ModifierType::ImmunityToOpponentEffects)
+            || self.modifiers.has(
+                target,
+                crate::enums::ModifierType::ImmunityToOpponentEffects,
+            )
     }
 
     /// Returns `true` when an effect is currently resolving AND its
@@ -1164,10 +1160,7 @@ impl Game {
     ///   - the resolving effect's controller equals `target.player`.
     ///
     /// Phase B §B5.
-    pub fn opponent_sourced_mutation(
-        &self,
-        target: crate::permanent::PermanentHandle,
-    ) -> bool {
+    pub fn opponent_sourced_mutation(&self, target: crate::permanent::PermanentHandle) -> bool {
         match self.effect_source_player {
             Some(src) => src != target.player,
             None => false,
@@ -1179,10 +1172,7 @@ impl Game {
     /// Called by `resolve_player_security_loop` alongside the existing
     /// `ModifierType::SecurityAttackChange` sum so cards with only the
     /// printed keyword behave correctly without a hand-rolled script.
-    pub fn security_attack_keyword_bonus(
-        &self,
-        target: crate::permanent::PermanentHandle,
-    ) -> i32 {
+    pub fn security_attack_keyword_bonus(&self, target: crate::permanent::PermanentHandle) -> i32 {
         use crate::enums::Keyword;
         let Some(player) = self.players.get(target.player as usize) else {
             return 0;
@@ -1233,7 +1223,10 @@ impl Game {
         // without hand-authoring. Phase D Tasks 4-10 (Fragment(N), ArmorPurge,
         // Save, Decoy, Fortitude, Partition, MaterialSave(N)) are
         // auto-installed.
-        let registry_effects = self.effect_registry.get(card_id).map(|impl_| impl_.effects(handle));
+        let registry_effects = self
+            .effect_registry
+            .get(card_id)
+            .map(|impl_| impl_.effects(handle));
 
         // Look up CardData for this card_id. The vec scan is O(card_data_len)
         // but is only hit once per effect query, and `effects_for_card` is
@@ -1289,22 +1282,38 @@ impl Game {
             }
             // Battle area (card_sources stacks)
             for perm in &player.battle_area {
-                if let Some(cs) = perm.card_sources.iter().find(|c| c.card_index == target_index) {
+                if let Some(cs) = perm
+                    .card_sources
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
                     return Some(self.card_data[cs.data_index].card_kind);
                 }
                 // Linked cards (Tamer equipment)
-                if let Some(cs) = perm.linked_cards.iter().find(|c| c.card_index == target_index) {
+                if let Some(cs) = perm
+                    .linked_cards
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
                     return Some(self.card_data[cs.data_index].card_kind);
                 }
             }
             // Breeding area
             if let Some(breeding) = &player.breeding_area {
-                if let Some(cs) = breeding.card_sources.iter().find(|c| c.card_index == target_index) {
+                if let Some(cs) = breeding
+                    .card_sources
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
                     return Some(self.card_data[cs.data_index].card_kind);
                 }
             }
             // Security (e.g. when effect fires from security card)
-            if let Some(cs) = player.security.iter().find(|c| c.card_index == target_index) {
+            if let Some(cs) = player
+                .security
+                .iter()
+                .find(|c| c.card_index == target_index)
+            {
                 return Some(self.card_data[cs.data_index].card_kind);
             }
             // Deck (rare, but possible for mid-search effects)
@@ -1313,7 +1322,11 @@ impl Game {
             }
         }
         // Also check revealed_cards pool
-        if let Some(cs) = self.revealed_cards.iter().find(|c| c.card_index == target_index) {
+        if let Some(cs) = self
+            .revealed_cards
+            .iter()
+            .find(|c| c.card_index == target_index)
+        {
             return Some(self.card_data[cs.data_index].card_kind);
         }
         None
@@ -1338,26 +1351,46 @@ impl Game {
                 return Some(&self.card_data[cs.data_index]);
             }
             for perm in &player.battle_area {
-                if let Some(cs) = perm.card_sources.iter().find(|c| c.card_index == target_index) {
+                if let Some(cs) = perm
+                    .card_sources
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
                     return Some(&self.card_data[cs.data_index]);
                 }
-                if let Some(cs) = perm.linked_cards.iter().find(|c| c.card_index == target_index) {
+                if let Some(cs) = perm
+                    .linked_cards
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
                     return Some(&self.card_data[cs.data_index]);
                 }
             }
             if let Some(breeding) = &player.breeding_area {
-                if let Some(cs) = breeding.card_sources.iter().find(|c| c.card_index == target_index) {
+                if let Some(cs) = breeding
+                    .card_sources
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
                     return Some(&self.card_data[cs.data_index]);
                 }
             }
-            if let Some(cs) = player.security.iter().find(|c| c.card_index == target_index) {
+            if let Some(cs) = player
+                .security
+                .iter()
+                .find(|c| c.card_index == target_index)
+            {
                 return Some(&self.card_data[cs.data_index]);
             }
             if let Some(cs) = player.deck.iter().find(|c| c.card_index == target_index) {
                 return Some(&self.card_data[cs.data_index]);
             }
         }
-        if let Some(cs) = self.revealed_cards.iter().find(|c| c.card_index == target_index) {
+        if let Some(cs) = self
+            .revealed_cards
+            .iter()
+            .find(|c| c.card_index == target_index)
+        {
             return Some(&self.card_data[cs.data_index]);
         }
         None
@@ -1401,12 +1434,7 @@ impl Game {
                 continue;
             }
             if let Some(cond) = &effect.condition {
-                let ctx = EffectReadContext::new(
-                    self,
-                    source.handle(),
-                    Some(perm),
-                    perm.player,
-                );
+                let ctx = EffectReadContext::new(self, source.handle(), Some(perm), perm.player);
                 if !cond(&ctx) {
                     continue;
                 }
@@ -1518,8 +1546,8 @@ impl Game {
 
 #[cfg(test)]
 mod current_attacker_tests {
-    use crate::debug_runner::DebugRunner;
     use crate::card_data::CardData;
+    use crate::debug_runner::DebugRunner;
     use crate::enums::{CardColor, CardKind};
 
     fn card(id: &str) -> CardData {
@@ -1608,12 +1636,9 @@ mod current_attacker_tests {
         // Case 4: Progress granted via modifier also triggers.
         let plain = r.place_on_field(0, "OPP", None);
         assert!(!r.game.progress_excludes(plain, Some(1)));
-        r.game.modifiers.grant_keyword(
-            plain,
-            Keyword::Progress,
-            Expiry::EndOfTurn,
-            0,
-        );
+        r.game
+            .modifiers
+            .grant_keyword(plain, Keyword::Progress, Expiry::EndOfTurn, 0);
         r.game.pending_attack = Some(PendingAttack {
             attacker: plain,
             original_target: AttackTarget::Player(1),

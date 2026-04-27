@@ -196,11 +196,7 @@ fn etb_triggers_fire_on_free_play_from_trash() {
         1,
         "card is on field"
     );
-    assert_eq!(
-        r.game.players[tp as usize].trash.len(),
-        0,
-        "trash empty"
-    );
+    assert_eq!(r.game.players[tp as usize].trash.len(), 0, "trash empty");
 }
 
 // ─── Test 3: Card removed from trash after play ──────────────────────────────
@@ -299,10 +295,7 @@ fn returns_none_when_card_not_in_trash() {
     };
 
     // None returned, no permanent created, memory unchanged.
-    assert!(
-        result.is_none(),
-        "expected None when card is not in trash"
-    );
+    assert!(result.is_none(), "expected None when card is not in trash");
     assert_eq!(
         r.game.players[tp as usize].battle_area.len(),
         0,

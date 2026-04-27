@@ -61,11 +61,21 @@ fn test_card_db() -> HashMap<String, CardData> {
 
 fn test_deck() -> Vec<String> {
     let mut deck = Vec::new();
-    for _ in 0..4 { deck.push("BT1-001".to_string()); }
-    for _ in 0..6 { deck.push("BT1-010".to_string()); }
-    for _ in 0..6 { deck.push("BT1-025".to_string()); }
-    for _ in 0..4 { deck.push("BT1-085".to_string()); }
-    for _ in 0..4 { deck.push("BT1-093".to_string()); }
+    for _ in 0..4 {
+        deck.push("BT1-001".to_string());
+    }
+    for _ in 0..6 {
+        deck.push("BT1-010".to_string());
+    }
+    for _ in 0..6 {
+        deck.push("BT1-025".to_string());
+    }
+    for _ in 0..4 {
+        deck.push("BT1-085".to_string());
+    }
+    for _ in 0..4 {
+        deck.push("BT1-093".to_string());
+    }
     deck
 }
 
@@ -80,16 +90,26 @@ fn game_with_perm_on_field(base_card_id: &str) -> (Game, PlayerId) {
     game.enter_main_phase();
 
     let tp = game.turn_player();
-    let data_idx = game.card_data.iter().position(|d| d.card_id == base_card_id).unwrap();
+    let data_idx = game
+        .card_data
+        .iter()
+        .position(|d| d.card_id == base_card_id)
+        .unwrap();
     let card_idx = game.next_card_index();
     let card = CardSource::new(data_idx, tp, card_idx);
     let turn = game.turn_count;
-    game.player_mut(tp).battle_area.push(Permanent::new(card, turn));
+    game.player_mut(tp)
+        .battle_area
+        .push(Permanent::new(card, turn));
     (game, tp)
 }
 
 fn push_to_hand(game: &mut Game, player_id: PlayerId, card_id: &str) -> usize {
-    let data_idx = game.card_data.iter().position(|d| d.card_id == card_id).unwrap();
+    let data_idx = game
+        .card_data
+        .iter()
+        .position(|d| d.card_id == card_id)
+        .unwrap();
     let card_idx = game.next_card_index();
     let card = CardSource::new(data_idx, player_id, card_idx);
     game.player_mut(player_id).hand.push(card);
@@ -99,7 +119,7 @@ fn push_to_hand(game: &mut Game, player_id: PlayerId, card_id: &str) -> usize {
 #[test]
 fn decode_digivolve_basic_from_hand() {
     let (mut game, tp) = game_with_perm_on_field("BT1-010"); // Agumon Lv3
-    let hand_idx = push_to_hand(&mut game, tp, "BT1-025");    // Greymon Lv4
+    let hand_idx = push_to_hand(&mut game, tp, "BT1-025"); // Greymon Lv4
 
     // Pre-set positive memory so paying cost (2) doesn't cross zero and
     // trigger end_turn (which would flip the seesaw sign).
@@ -113,7 +133,11 @@ fn decode_digivolve_basic_from_hand() {
     let perm = &game.player(tp).battle_area[0];
     assert_eq!(perm.card_sources.len(), 2, "stack grew by 1");
     assert_eq!(perm.level(&game.card_data), Some(4));
-    assert_eq!(mem_before - game.memory, 2, "paid Greymon evo memory_cost=2");
+    assert_eq!(
+        mem_before - game.memory,
+        2,
+        "paid Greymon evo memory_cost=2"
+    );
     assert_eq!(perm.turn_digivolved, game.turn_count);
     // -1 for card consumed, +1 for draw after digivolve
     assert_eq!(game.player(tp).hand.len(), hand_before);
@@ -127,7 +151,10 @@ fn decode_digivolve_rejects_out_of_range_hand() {
     let action = encode_digivolve(99, 0);
     game.decode_action(action, tp);
     // No-op: the permanent stack must not have grown.
-    assert_eq!(game.player(tp).battle_area[0].card_sources.len(), stack_before);
+    assert_eq!(
+        game.player(tp).battle_area[0].card_sources.len(),
+        stack_before
+    );
 }
 
 #[test]
@@ -182,16 +209,26 @@ fn decode_dna_digivolve_installs_material_selection() {
     };
 
     // Put two Koromons on the field.
-    let koromon_idx = game.card_data.iter().position(|d| d.card_id == "BT1-001").unwrap();
+    let koromon_idx = game
+        .card_data
+        .iter()
+        .position(|d| d.card_id == "BT1-001")
+        .unwrap();
     for _ in 0..2 {
         let card_idx = game.next_card_index();
         let card = CardSource::new(koromon_idx, tp, card_idx);
         let turn = game.turn_count;
-        game.player_mut(tp).battle_area.push(Permanent::new(card, turn));
+        game.player_mut(tp)
+            .battle_area
+            .push(Permanent::new(card, turn));
     }
 
     // Give Agumon a DNA cost of two Lv2 Red materials.
-    let agumon_idx = game.card_data.iter().position(|d| d.card_id == "BT1-010").unwrap();
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|d| d.card_id == "BT1-010")
+        .unwrap();
     {
         use digimon_engine::card_data::{DnaCost, DnaRequirement};
         let meta = &mut game.card_data[agumon_idx];

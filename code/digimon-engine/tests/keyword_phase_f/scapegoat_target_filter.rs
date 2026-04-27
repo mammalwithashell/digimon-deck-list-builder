@@ -159,11 +159,7 @@ fn scapegoat_picker_filter_excludes_tamer() {
     assert!(names.contains(&"SCAP"), "SCAP should survive");
     assert!(names.contains(&"TAMER"), "TAMER should be untouched");
     assert!(!names.contains(&"ALLY"), "ALLY should be the substituted");
-    assert_eq!(
-        r.game.players[0].trash.len(),
-        1,
-        "ALLY should be in trash"
-    );
+    assert_eq!(r.game.players[0].trash.len(), 1, "ALLY should be in trash");
     assert_eq!(
         r.game.players[0].trash[0].card_id(&r.game.card_data),
         "ALLY",

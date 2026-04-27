@@ -30,9 +30,9 @@
 //!   controller (excludes the target itself).
 //! - `DigivolutionColorCount` — distinct colors across all `CardSource`s
 //!   in the target's stack.
-//! - `CardCountInZone` — currently returns 0; the IR has no zone payload
-//!   yet (Task 1 reviewer flag). Phase 3 will widen the IR to carry the
-//!   zone discriminator.
+//! - `CardCountInZone` — card count in the requested player/zone payload.
+//!   `battle_area` counts top-level permanents; `material` counts all
+//!   digivolution cards beneath battle-area permanents for the player.
 //!
 //! ## Aggregate selector semantics
 //!
@@ -42,11 +42,15 @@
 //!   controller's battle area (permanents whose top card has no level —
 //!   e.g. a Tamer or Option permanent — are skipped).
 
-use digimon_dsl::compiled::{CompiledAggregateSelector, CompiledFormula, CompiledPerSelector};
+use digimon_dsl::compiled::{
+    CompiledAggregateSelector, CompiledFormula, CompiledPerSelector, CompiledPlayerRef,
+    CompiledZone,
+};
 
-use crate::effect_context::EffectContext;
-use crate::enums::CardColor;
-use crate::permanent::PermanentHandle;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::effect_context::{EffectContext, EffectReadContext};
+use crate::enums::{CardColor, PlayerId};
+use crate::permanent::{Permanent, PermanentHandle};
 
 // Compile-time guard for the `DigivolutionColorCount` u8 bitmask in
 // `evaluate_per`. `1u8 << n` is undefined behavior for `n >= 8`. Today
@@ -65,10 +69,33 @@ const _: () = assert!(
 ///
 /// Aggregate selectors ignore `target` and operate on the *controller's*
 /// (`ctx.player`) battle area.
-pub fn evaluate(
+pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentHandle) -> i32 {
+    evaluate_with_raw(f, ctx, target, &EngineRawRustRegistry::new())
+}
+
+pub fn evaluate_with_raw(
     f: &CompiledFormula,
     ctx: &EffectContext<'_>,
     target: PermanentHandle,
+    raw: &EngineRawRustRegistry,
+) -> i32 {
+    let read = ctx.as_read();
+    evaluate_read_with_raw(f, &read, target, raw)
+}
+
+pub fn evaluate_read(
+    f: &CompiledFormula,
+    ctx: &EffectReadContext<'_>,
+    target: PermanentHandle,
+) -> i32 {
+    evaluate_read_with_raw(f, ctx, target, &EngineRawRustRegistry::new())
+}
+
+pub fn evaluate_read_with_raw(
+    f: &CompiledFormula,
+    ctx: &EffectReadContext<'_>,
+    target: PermanentHandle,
+    raw: &EngineRawRustRegistry,
 ) -> i32 {
     match f {
         CompiledFormula::Literal(n) => *n,
@@ -90,8 +117,8 @@ pub fn evaluate(
                 );
                 return 0;
             }
-            let l = evaluate(&args[0], ctx, target);
-            let r = evaluate(&args[1], ctx, target);
+            let l = evaluate_read_with_raw(&args[0], ctx, target, raw);
+            let r = evaluate_read_with_raw(&args[1], ctx, target, raw);
             if r == 0 {
                 0
             } else {
@@ -103,7 +130,7 @@ pub fn evaluate(
                 return 0;
             }
             args.iter()
-                .map(|a| evaluate(a, ctx, target))
+                .map(|a| evaluate_read_with_raw(a, ctx, target, raw))
                 .max()
                 .unwrap_or(0)
         }
@@ -112,22 +139,20 @@ pub fn evaluate(
                 return 0;
             }
             args.iter()
-                .map(|a| evaluate(a, ctx, target))
+                .map(|a| evaluate_read_with_raw(a, ctx, target, raw))
                 .min()
                 .unwrap_or(0)
         }
         CompiledFormula::Aggregate(sel) => evaluate_aggregate(*sel, ctx),
         CompiledFormula::RawRust(name) => {
-            // Phase 3 will wire raw_rust formula dispatch through
-            // `digimon_dsl::raw_rust_registry::RawRustRegistry`. For
-            // Phase 2f2 the registry only tracks names (no fn pointers
-            // to value-returning callables), so we silent-no-op to 0.
+            if let Some(f) = raw.formula_fn(name) {
+                return f(ctx, target);
+            }
             #[cfg(debug_assertions)]
             eprintln!(
                 "[debug] formula_eval: RawRust(\"{}\") not registered; returning 0. \
-                 Phase 3 will wire value-returning raw_rust callables through \
-                 `RawRustRegistry`; until then a pack referencing a raw_rust \
-                 formula is malformed for runtime evaluation.",
+                 A pack referencing a missing raw_rust formula is malformed \
+                 for runtime evaluation.",
                 name
             );
             0
@@ -137,27 +162,25 @@ pub fn evaluate(
 
 fn evaluate_per(
     sel: CompiledPerSelector,
-    ctx: &EffectContext<'_>,
+    ctx: &EffectReadContext<'_>,
     target: PermanentHandle,
 ) -> i32 {
-    let perm = match ctx
-        .game
-        .player(target.player)
-        .battle_area
-        .get(target.index as usize)
-    {
-        Some(p) => p,
-        None => return 0,
-    };
     match sel {
-        CompiledPerSelector::StackSize => perm.card_sources.len() as i32,
+        CompiledPerSelector::StackSize => target_permanent(ctx, target)
+            .map(|perm| perm.card_sources.len() as i32)
+            .unwrap_or(0),
         CompiledPerSelector::MaterialCount => {
             // Materials are the digivolution sources beneath the top card.
             // saturating_sub guards the (impossible) zero-source permanent.
-            perm.card_sources.len().saturating_sub(1) as i32
+            target_permanent(ctx, target)
+                .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
+                .unwrap_or(0)
         }
         CompiledPerSelector::AllyCount => {
             // Other permanents under the same controller (exclude self).
+            if target_permanent(ctx, target).is_none() {
+                return 0;
+            }
             ctx.game
                 .player(target.player)
                 .battle_area
@@ -166,6 +189,9 @@ fn evaluate_per(
         }
         CompiledPerSelector::DigivolutionColorCount => {
             // Distinct colors across every CardSource in the stack.
+            let Some(perm) = target_permanent(ctx, target) else {
+                return 0;
+            };
             let data = &ctx.game.card_data;
             let mut seen: u8 = 0;
             for src in &perm.card_sources {
@@ -175,16 +201,57 @@ fn evaluate_per(
             }
             seen.count_ones() as i32
         }
-        CompiledPerSelector::CardCountInZone => {
-            // The current IR has no zone payload on this selector
-            // (Task 1 reviewer flag). Phase 3 widens the IR; for now,
-            // silent no-op rather than panic on a malformed pack.
-            0
-        }
+        CompiledPerSelector::CardCountInZone { of, zone } => formula_players(ctx, of)
+            .into_iter()
+            .map(|player| count_cards_in_zone(ctx, player, zone))
+            .sum(),
     }
 }
 
-fn evaluate_aggregate(sel: CompiledAggregateSelector, ctx: &EffectContext<'_>) -> i32 {
+fn target_permanent<'a>(
+    ctx: &'a EffectReadContext<'_>,
+    target: PermanentHandle,
+) -> Option<&'a Permanent> {
+    ctx.game
+        .player(target.player)
+        .battle_area
+        .get(target.index as usize)
+}
+
+fn formula_players(ctx: &EffectReadContext<'_>, of: CompiledPlayerRef) -> Vec<PlayerId> {
+    match of {
+        CompiledPlayerRef::You => vec![ctx.player],
+        CompiledPlayerRef::Opponent => vec![ctx.opponent_id()],
+        CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
+        CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
+    }
+}
+
+fn count_cards_in_zone(ctx: &EffectReadContext<'_>, player: PlayerId, zone: CompiledZone) -> i32 {
+    let p = ctx.game.player(player);
+    match zone {
+        CompiledZone::Hand => p.hand.len() as i32,
+        CompiledZone::Deck => p.deck.len() as i32,
+        CompiledZone::Trash => p.trash.len() as i32,
+        CompiledZone::BattleArea => p.battle_area.len() as i32,
+        CompiledZone::Security => p.security.len() as i32,
+        CompiledZone::Breeding => i32::from(p.breeding_area.is_some()),
+        CompiledZone::Reveal => ctx
+            .game
+            .revealed_cards
+            .iter()
+            .filter(|card| card.owner == player)
+            .count() as i32,
+        CompiledZone::DigiEggDeck => p.digitama_deck.len() as i32,
+        CompiledZone::Material => p
+            .battle_area
+            .iter()
+            .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
+            .sum(),
+    }
+}
+
+fn evaluate_aggregate(sel: CompiledAggregateSelector, ctx: &EffectReadContext<'_>) -> i32 {
     let perms = &ctx.game.player(ctx.player).battle_area;
     if perms.is_empty() {
         return 0;

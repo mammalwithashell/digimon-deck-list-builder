@@ -6,20 +6,50 @@ use digimon_engine::enums::EffectTiming;
 
 #[test]
 fn compiled_timing_mapping_covers_common_triggered_timings() {
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::OnPlay), Some(EffectTiming::OnPlay));
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::WhenDigivolving), Some(EffectTiming::WhenDigivolving));
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::OnAttack), Some(EffectTiming::OnAttack));
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::EndOfYourTurn), Some(EffectTiming::EndOfYourTurn));
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::StartOfYourTurn), Some(EffectTiming::StartOfYourTurn));
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::OnSecurity), Some(EffectTiming::SecuritySkill));
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::MainFromHand), Some(EffectTiming::MainFromHand));
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::BeforePayCost), Some(EffectTiming::BeforePayCost));
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnPlay),
+        Some(EffectTiming::OnPlay)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::WhenDigivolving),
+        Some(EffectTiming::WhenDigivolving)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnAttack),
+        Some(EffectTiming::OnAttack)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::EndOfYourTurn),
+        Some(EffectTiming::EndOfYourTurn)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::StartOfYourTurn),
+        Some(EffectTiming::StartOfYourTurn)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnSecurity),
+        Some(EffectTiming::SecuritySkill)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::MainFromHand),
+        Some(EffectTiming::MainFromHand)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::BeforePayCost),
+        Some(EffectTiming::BeforePayCost)
+    );
 }
 
 #[test]
 fn compiled_timing_non_targets_return_none() {
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::OnAllyPlayed), None);
-    assert_eq!(compiled_timing_to_engine(CompiledTiming::OnOptionPlaced), None);
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnAllyPlayed),
+        None
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnOptionPlaced),
+        None
+    );
     assert_eq!(compiled_timing_to_engine(CompiledTiming::Delayed), None);
 }
 
@@ -32,7 +62,10 @@ use digimon_engine::permanent::PermanentHandle;
 #[test]
 fn bindings_round_trip_permanent_and_card_handles() {
     let mut b = Bindings::new();
-    let perm = PermanentHandle { player: 0, index: 2 };
+    let perm = PermanentHandle {
+        player: 0,
+        index: 2,
+    };
     let card = CardHandle(42);
     b.insert("tgt", BindingValue::Permanent(perm));
     b.insert("pick", BindingValue::Card(card));
@@ -116,7 +149,10 @@ fn triggered_clause_emits_one_effect_per_timing() {
     let dsl = DslCardEffect::new(Arc::new(fixture_on_play_gain_memory(1)));
     let effects = dsl.effects(CardHandle(0));
     assert_eq!(effects.len(), 1);
-    assert_eq!(effects[0].timing, digimon_engine::enums::EffectTiming::OnPlay);
+    assert_eq!(
+        effects[0].timing,
+        digimon_engine::enums::EffectTiming::OnPlay
+    );
     assert!(effects[0].on_play);
 }
 

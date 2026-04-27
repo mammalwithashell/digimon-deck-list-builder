@@ -120,7 +120,11 @@ fn multi_pick_then_per_selected_then_for_each_round_trip() {
     );
 
     // 2 picks → +2 memory + 2 cards drawn.
-    assert_eq!(runner.game.memory, memory_before + 2, "+2 memory from 2 picks");
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 2,
+        "+2 memory from 2 picks"
+    );
     assert_eq!(
         runner.game.players[0].hand.len(),
         hand_before + 2,
@@ -130,7 +134,11 @@ fn multi_pick_then_per_selected_then_for_each_round_trip() {
     // ForEach should run after the multi-pick resolves (outer-tail capture
     // from Task 7). Both P0 digimon should have +1000 DP this turn.
     // Base DP from make_test_card is 2000 → expect 3000 effective.
-    assert_eq!(runner.game.players[0].battle_area.len(), 2, "P0 has 2 digimon");
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        2,
+        "P0 has 2 digimon"
+    );
     for i in 0..runner.game.players[0].battle_area.len() {
         let h = runner.perm_handle(0, i);
         let dp = runner.game.effective_dp(h).expect("digimon DP");

@@ -174,8 +174,15 @@ fn filter_restricts_valid_action_ids() {
     }
 
     let sel = r.game.pending_selection.as_ref().unwrap();
-    assert_eq!(sel.valid_action_ids.len(), 2, "only 2 trash cards pass the filter");
-    assert!(sel.valid_action_ids.iter().all(|&id| id >= TRASH_EFFECT_START));
+    assert_eq!(
+        sel.valid_action_ids.len(),
+        2,
+        "only 2 trash cards pass the filter"
+    );
+    assert!(sel
+        .valid_action_ids
+        .iter()
+        .all(|&id| id >= TRASH_EFFECT_START));
 }
 
 // ── empty filter → no-op ─────────────────────────────────────────────────────
@@ -374,7 +381,14 @@ fn mandatory_rejects_pass() {
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
-        ctx.select_union_zone(tp, UnionZoneSet::HAND, "must pick", false, |_, _| true, |_, _| {});
+        ctx.select_union_zone(
+            tp,
+            UnionZoneSet::HAND,
+            "must pick",
+            false,
+            |_, _| true,
+            |_, _| {},
+        );
     }
 
     let err = r

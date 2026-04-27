@@ -3,6 +3,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::common::PlayerRef;
+use crate::predicate::Zone;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum FormulaSpec {
@@ -32,7 +35,7 @@ pub enum PerSelector {
     StackSize,
     AllyCount,
     DigivolutionColorCount,
-    CardCountInZone,
+    CardCountInZone { of: PlayerRef, zone: Zone },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]

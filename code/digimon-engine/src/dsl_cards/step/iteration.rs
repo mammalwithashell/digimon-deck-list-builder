@@ -10,7 +10,7 @@ use digimon_dsl::compiled::{CompiledBindingRef, CompiledStep};
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::permanent_scan::scan;
-use crate::dsl_cards::step::{run_steps, RunOutcome};
+use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
 
 /// Returns `Some(RunOutcome)` if `step` is an iteration verb. Returns
@@ -20,14 +20,19 @@ pub fn try_run(
     step: &CompiledStep,
     ctx: &mut EffectContext<'_>,
     bindings: &mut Bindings,
+    runtime: &StepRuntime,
 ) -> Option<RunOutcome> {
     match step {
-        CompiledStep::ForEach { over, bind_as, body } => {
+        CompiledStep::ForEach {
+            over,
+            bind_as,
+            body,
+        } => {
             let matches = scan(ctx, over);
             for handle in matches {
                 let mut iter_bindings = bindings.clone();
                 iter_bindings.insert_permanent(bind_as, handle);
-                let outcome = run_steps(body, ctx, &mut iter_bindings);
+                let outcome = run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime);
                 if matches!(outcome, RunOutcome::Parked) {
                     // v1 semantics: a parked iteration aborts remaining
                     // iterations. Faithful per-iteration resumption is
@@ -37,7 +42,11 @@ pub fn try_run(
             }
             Some(RunOutcome::Synchronous)
         }
-        CompiledStep::PerSelected { selection, bind_as, body } => {
+        CompiledStep::PerSelected {
+            selection,
+            bind_as,
+            body,
+        } => {
             let bref = CompiledBindingRef::Named(selection.clone());
             match resolve_binding_ref(&bref, ctx, bindings) {
                 Some(ResolvedBinding::PermanentList(v)) => {
@@ -45,7 +54,7 @@ pub fn try_run(
                         let mut iter_bindings = bindings.clone();
                         iter_bindings.insert_permanent(bind_as, h);
                         if matches!(
-                            run_steps(body, ctx, &mut iter_bindings),
+                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime),
                             RunOutcome::Parked
                         ) {
                             return Some(RunOutcome::Parked);
@@ -57,7 +66,7 @@ pub fn try_run(
                         let mut iter_bindings = bindings.clone();
                         iter_bindings.insert_card(bind_as, c);
                         if matches!(
-                            run_steps(body, ctx, &mut iter_bindings),
+                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime),
                             RunOutcome::Parked
                         ) {
                             return Some(RunOutcome::Parked);

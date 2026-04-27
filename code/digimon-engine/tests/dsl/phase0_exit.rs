@@ -33,12 +33,10 @@ fn phase_0_exit_criteria() {
         .expect("real cards.json adapter must load");
 
     for spec in &specs {
-        validate(spec, &ctx).unwrap_or_else(|errs| {
-            panic!("validation failed for {}: {:#?}", spec.card, errs)
-        });
-        cross_check(spec, &db).unwrap_or_else(|e| {
-            panic!("cross-check failed for {}: {}", spec.card, e)
-        });
+        validate(spec, &ctx)
+            .unwrap_or_else(|errs| panic!("validation failed for {}: {:#?}", spec.card, errs));
+        cross_check(spec, &db)
+            .unwrap_or_else(|e| panic!("cross-check failed for {}: {}", spec.card, e));
         let printed = format_spec(spec);
         let reparsed: CardSpec = serde_yml::from_str(&printed).unwrap_or_else(|e| {
             panic!("reparse of {} failed: {e}\nprinted:\n{printed}", spec.card)

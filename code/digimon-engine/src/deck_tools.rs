@@ -132,20 +132,18 @@ where
 // side drifts out of step.
 
 const BANNED_CARDS: &[&str] = &[
-    "BT2-090",   // Matt Ishida
-    "BT5-109",   // Mega Digimon Fusion!
-    "EX5-065",   // Sayo & Koh
+    "BT2-090", // Matt Ishida
+    "BT5-109", // Mega Digimon Fusion!
+    "EX5-065", // Sayo & Koh
 ];
 
 const RESTRICTED_CARDS: &[&str] = &[
-    "BT1-090",  "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110",
-    "BT14-002", "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069",
-    "BT19-040", "BT2-047",  "BT2-069",  "BT3-054",  "BT3-103",  "BT4-104",
-    "BT4-111",  "BT6-100",  "BT6-104",  "BT7-038",  "BT7-064",  "BT7-069",
-    "BT7-072",  "BT7-107",  "BT9-098",  "BT9-099",  "EX1-021",  "EX1-068",
-    "EX2-039",  "EX2-070",  "EX3-057",  "EX4-006",  "EX4-019",  "EX4-030",
-    "EX5-015",  "EX5-018",  "EX5-062",  "P-008",    "P-025",    "P-029",
-    "P-030",    "P-123",    "P-130",    "ST2-13",   "ST9-09",
+    "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110", "BT14-002", "BT14-084",
+    "BT15-057", "BT15-102", "BT16-011", "BT17-069", "BT19-040", "BT2-047", "BT2-069", "BT3-054",
+    "BT3-103", "BT4-104", "BT4-111", "BT6-100", "BT6-104", "BT7-038", "BT7-064", "BT7-069",
+    "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068", "EX2-039", "EX2-070",
+    "EX3-057", "EX4-006", "EX4-019", "EX4-030", "EX5-015", "EX5-018", "EX5-062", "P-008", "P-025",
+    "P-029", "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
 ];
 
 /// Choice groups: cards from side A and side B can't coexist in the same
@@ -213,8 +211,8 @@ fn is_card_id(s: &str) -> bool {
 /// Parse a TTS (Tabletop Simulator) deck export — JSON array of card ID
 /// strings. Non-card-ID entries (e.g. export headers) are filtered out.
 pub fn parse_tts(raw: &str) -> Result<Vec<String>, String> {
-    let data: serde_json::Value = serde_json::from_str(raw)
-        .map_err(|e| format!("Invalid TTS JSON: {e}"))?;
+    let data: serde_json::Value =
+        serde_json::from_str(raw).map_err(|e| format!("Invalid TTS JSON: {e}"))?;
     let arr = data
         .as_array()
         .ok_or_else(|| "TTS format expects a JSON array".to_string())?;
@@ -277,12 +275,10 @@ pub fn parse_deck(raw: &str) -> Result<Vec<String>, String> {
     if let Ok(ids) = parse_text(raw) {
         return Ok(ids);
     }
-    Err(
-        "Could not parse deck list. Expected either:\n  \
+    Err("Could not parse deck list. Expected either:\n  \
          - TTS format: JSON array like [\"BT24-017\", \"BT24-017\", ...]\n  \
          - Text format: lines like '4 Medusamon BT24-017'"
-            .to_string(),
-    )
+        .to_string())
 }
 
 pub fn summarize_deck(card_ids: &[String]) -> HashMap<String, u32> {
@@ -341,9 +337,7 @@ pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
 
     unknown_ids.sort();
     for uid in &unknown_ids {
-        warnings.push(format!(
-            "Unknown card ID: {uid} (not in card database)"
-        ));
+        warnings.push(format!("Unknown card ID: {uid} (not in card database)"));
     }
 
     if main_count != 50 {
@@ -352,9 +346,7 @@ pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
         ));
     }
     if egg_count > 5 {
-        errors.push(format!(
-            "Digi-Egg deck must be 0-5 cards (got {egg_count})"
-        ));
+        errors.push(format!("Digi-Egg deck must be 0-5 cards (got {egg_count})"));
     }
 
     // Iterate counts in sorted order so error messages are deterministic
@@ -432,9 +424,7 @@ pub fn classify_parsed(card_ids: Vec<String>) -> ParsedDeck {
         match db.get(&card_id) {
             None => {
                 if seen_unknown.insert(card_id.clone()) {
-                    warnings.push(format!(
-                        "Unknown card: {card_id} (not in card database)"
-                    ));
+                    warnings.push(format!("Unknown card: {card_id} (not in card database)"));
                 }
                 main_deck.push(card_id);
             }

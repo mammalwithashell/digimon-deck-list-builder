@@ -139,8 +139,7 @@ fn when_would_attack_cancel_aborts_declaration() {
     let def = r.place_on_field(1, "DEF", Some(0));
 
     let mem_before = r.memory();
-    let attacks_before = r.game.player(0).battle_area[atk.index as usize]
-        .attacks_this_turn;
+    let attacks_before = r.game.player(0).battle_area[atk.index as usize].attacks_this_turn;
 
     let result = r.attack_digimon(atk, def, false);
 
@@ -153,8 +152,7 @@ fn when_would_attack_cancel_aborts_declaration() {
     assert!(!atk_perm.is_suspended, "attacker must not be suspended");
     assert!(!atk_perm.is_attacking, "is_attacking cleared by cleanup");
     assert_eq!(
-        atk_perm.attacks_this_turn,
-        attacks_before,
+        atk_perm.attacks_this_turn, attacks_before,
         "attack count must NOT be bumped on cancelled declaration"
     );
     assert_eq!(r.memory(), mem_before, "memory unchanged on cancel");
@@ -173,8 +171,7 @@ fn when_would_be_attack_target_cancel_aborts() {
     let def = r.place_on_field(1, "DEF", Some(0));
 
     let def_index_before = def.index;
-    let atk_suspended_before = r.game.player(0).battle_area[atk.index as usize]
-        .is_suspended;
+    let atk_suspended_before = r.game.player(0).battle_area[atk.index as usize].is_suspended;
 
     let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::Cancelled);
@@ -182,7 +179,11 @@ fn when_would_be_attack_target_cancel_aborts() {
 
     // Defender still on field, untouched.
     assert!(
-        r.game.player(1).battle_area.get(def_index_before as usize).is_some(),
+        r.game
+            .player(1)
+            .battle_area
+            .get(def_index_before as usize)
+            .is_some(),
         "defender unchanged after target-side cancel"
     );
     // Attacker not suspended.
@@ -208,13 +209,16 @@ fn when_would_be_attack_target_substitute_redirects() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let def = r.place_on_field(1, "DEF", Some(0));
     let redir = r.place_on_field(1, "REDIR", Some(0));
-    assert_eq!(redir, PermanentHandle { player: 1, index: 1 });
+    assert_eq!(
+        redir,
+        PermanentHandle {
+            player: 1,
+            index: 1
+        }
+    );
 
     // Register REDIR handle into the substitute effect.
-    r.register_effect(
-        "DEF",
-        Arc::new(SubstituteTargetToHandle(redir)),
-    );
+    r.register_effect("DEF", Arc::new(SubstituteTargetToHandle(redir)));
     // Observer on P0 witnesses the retarget.
     let observed = Arc::new(Mutex::new(0u32));
     r.register_effect("OBS", Arc::new(SentinelOnTargetChange(observed.clone())));
@@ -275,7 +279,11 @@ fn optional_when_would_attack_emits_selection() {
     let def = r.place_on_field(1, "DEF", Some(0));
 
     let result = r.attack_digimon(atk, def, false);
-    assert_eq!(result, AttackResult::InProgress, "parks on optional replacement");
+    assert_eq!(
+        result,
+        AttackResult::InProgress,
+        "parks on optional replacement"
+    );
 
     let sel = r
         .game

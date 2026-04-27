@@ -6,7 +6,7 @@
 
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
-use digimon_engine::debug_runner::{DebugRunner, make_test_card};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming, PlaySource};
 use digimon_engine::permanent::Permanent;
@@ -129,12 +129,20 @@ fn closure_valued_cost_reduction_reads_live_state() {
     // Add 2 cards to player 0's trash directly.
     let game = r.game_mut();
     let filler_card1 = {
-        let idx = game.card_data.iter().position(|c| c.card_id == "FILLER").unwrap();
+        let idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "FILLER")
+            .unwrap();
         let ci = game.next_card_index();
         digimon_engine::card_source::CardSource::new(idx, 0, ci)
     };
     let filler_card2 = {
-        let idx = game.card_data.iter().position(|c| c.card_id == "FILLER").unwrap();
+        let idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "FILLER")
+            .unwrap();
         let ci = game.next_card_index();
         digimon_engine::card_source::CardSource::new(idx, 0, ci)
     };
@@ -332,8 +340,10 @@ fn digivolve_from_hand_applies_before_pay_cost_reduction() {
     r.game_mut().enter_main_phase();
 
     let memory_before = r.memory(); // 10
-    // Digivolve hand[0] (DIGI) onto field[0] (BASE); REDUCER is at field[1].
-    let ok = r.game_mut().digivolve_from_hand(0, 0, 0, PlaySource::ByDigivolve);
+                                    // Digivolve hand[0] (DIGI) onto field[0] (BASE); REDUCER is at field[1].
+    let ok = r
+        .game_mut()
+        .digivolve_from_hand(0, 0, 0, PlaySource::ByDigivolve);
     assert!(ok, "digivolve should succeed");
 
     // Effective cost = 3 - 2 = 1.
@@ -403,7 +413,9 @@ fn digivolve_onto_breeding_applies_before_pay_cost_reduction() {
     r.game_mut().enter_main_phase();
 
     let memory_before = r.memory(); // 10
-    let ok = r.game_mut().digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByDigivolve);
+    let ok = r
+        .game_mut()
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByDigivolve);
     assert!(ok, "digivolve onto breeding should succeed");
 
     // Effective cost = 3 - 1 = 2.
@@ -614,7 +626,7 @@ fn inherited_effect_in_stack_fires_from_under_position() {
             let ci0 = game.next_card_index();
             let ci1 = game.next_card_index();
             let under = CardSource::new(top_idx, 0, ci0); // TOP-SRC at under position
-            let top = CardSource::new(inh_idx, 0, ci1);   // INHERIT-SRC at top position
+            let top = CardSource::new(inh_idx, 0, ci1); // INHERIT-SRC at top position
             let turn = game.turn_count;
             let mut perm = Permanent::new(under, turn);
             perm.card_sources.push(top);

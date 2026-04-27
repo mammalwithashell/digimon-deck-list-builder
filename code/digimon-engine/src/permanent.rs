@@ -22,9 +22,16 @@ pub enum OptionState {
     /// `DelayEffect`. The value is computed at delay-installation time from
     /// the `DelayTrigger` + the current turn (Task 3 installs; Task 3 drives
     /// the end-of-turn scan).
-    Delayed { owner: PlayerId, trash_on_turn: u16 },
-    Linked { host: PermanentHandle },
-    Training { owner: PlayerId },
+    Delayed {
+        owner: PlayerId,
+        trash_on_turn: u16,
+    },
+    Linked {
+        host: PermanentHandle,
+    },
+    Training {
+        owner: PlayerId,
+    },
 }
 
 impl Default for OptionState {
@@ -97,12 +104,16 @@ impl Permanent {
 
     /// The top card of the digivolution stack.
     pub fn top_card(&self) -> &CardSource {
-        self.card_sources.last().expect("Permanent must have at least one card")
+        self.card_sources
+            .last()
+            .expect("Permanent must have at least one card")
     }
 
     /// Mutable reference to top card.
     pub fn top_card_mut(&mut self) -> &mut CardSource {
-        self.card_sources.last_mut().expect("Permanent must have at least one card")
+        self.card_sources
+            .last_mut()
+            .expect("Permanent must have at least one card")
     }
 
     /// Owner of this permanent (from top card).

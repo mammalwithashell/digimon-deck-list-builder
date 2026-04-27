@@ -56,6 +56,11 @@ pub fn eval_predicate(
             return false;
         }
     }
+    if let Some(want) = pred.dna_origin {
+        if rctx.dna_origin() != want {
+            return false;
+        }
+    }
 
     // Combinators — short-circuit on first failure.
     for child in &pred.all_of {
@@ -108,7 +113,10 @@ fn existential_any(ex: &CompiledExistential, rctx: &EffectReadContext<'_>) -> bo
     for p in existential_players(ex.of, rctx) {
         let n = rctx.game.player(p).battle_area.len();
         for i in 0..n {
-            let handle = PermanentHandle { player: p, index: i as u8 };
+            let handle = PermanentHandle {
+                player: p,
+                index: i as u8,
+            };
             if eval_predicate(&ex.predicate, rctx, PredicateSubject::Permanent(handle)) {
                 return true;
             }
@@ -123,7 +131,10 @@ fn existential_all(ex: &CompiledExistential, rctx: &EffectReadContext<'_>) -> bo
         let n = rctx.game.player(p).battle_area.len();
         for i in 0..n {
             any_seen = true;
-            let handle = PermanentHandle { player: p, index: i as u8 };
+            let handle = PermanentHandle {
+                player: p,
+                index: i as u8,
+            };
             if !eval_predicate(&ex.predicate, rctx, PredicateSubject::Permanent(handle)) {
                 return false;
             }

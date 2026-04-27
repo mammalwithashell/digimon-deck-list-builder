@@ -63,10 +63,7 @@ fn fixture_partition_with_sources(scope: CompiledScope) -> CompiledCard {
             CompiledDeclarativeClause::Partition {
                 scope,
                 active_when: None,
-                sources: vec![
-                    CompiledPredicate::default(),
-                    CompiledPredicate::default(),
-                ],
+                sources: vec![CompiledPredicate::default(), CompiledPredicate::default()],
                 exclude_cause: vec!["own_effect".into(), "battle".into()],
                 summary: Some("Partition into WarGreymon/MetalGarurumon".into()),
                 summary_key: None,
@@ -83,8 +80,15 @@ fn fixture_partition_with_sources(scope: CompiledScope) -> CompiledCard {
 fn partition_emits_one_declarative_effect_with_process() {
     let dsl = DslCardEffect::new(Arc::new(fixture_partition(CompiledScope::FaceUp)));
     let effects = dsl.effects(CardHandle(0));
-    assert_eq!(effects.len(), 1, "expected exactly one effect for Partition");
-    assert!(effects[0].declarative, "Partition effect must be declarative");
+    assert_eq!(
+        effects.len(),
+        1,
+        "expected exactly one effect for Partition"
+    );
+    assert!(
+        effects[0].declarative,
+        "Partition effect must be declarative"
+    );
     assert!(
         effects[0].process.is_some(),
         "Partition effect must have a process closure"
@@ -125,7 +129,9 @@ fn partition_face_up_scope_does_not_set_inherited_flag() {
 /// engine-side replacement dispatch, orthogonal to this lowering).
 #[test]
 fn partition_with_sources_and_excludes_still_emits_one_effect() {
-    let dsl = DslCardEffect::new(Arc::new(fixture_partition_with_sources(CompiledScope::FaceUp)));
+    let dsl = DslCardEffect::new(Arc::new(fixture_partition_with_sources(
+        CompiledScope::FaceUp,
+    )));
     let effects = dsl.effects(CardHandle(0));
     assert_eq!(
         effects.len(),

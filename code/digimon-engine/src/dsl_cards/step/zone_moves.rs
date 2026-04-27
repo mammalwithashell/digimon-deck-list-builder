@@ -14,29 +14,30 @@ use crate::effect_context::EffectContext;
 ///
 /// Changed in Task 5: third parameter is now `&mut Bindings` so that
 /// `RevealTopDeck` can produce a named binding for the revealed card.
-pub fn try_run(
-    step: &CompiledStep,
-    ctx: &mut EffectContext<'_>,
-    bindings: &mut Bindings,
-) -> bool {
+pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) -> bool {
     match step {
         CompiledStep::AddToHandFromTrash { of, card } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;
             };
-            let p = resolve_player(ctx, *of);
+            let default_player = resolve_player(ctx, *of);
             // Resolve the trash slot → CardHandle → engine API. If the
             // binding is a CardHandle directly, pass it through.
-            let handle = match resolved {
-                ResolvedBinding::TrashIndex(i) => {
-                    let player = ctx.game.player(p);
-                    player.trash.get(i as usize).map(|cs| cs.handle())
+            let (player, handle) = match resolved {
+                ResolvedBinding::TrashIndex { player, index } => {
+                    let handle = ctx
+                        .game
+                        .player(player)
+                        .trash
+                        .get(index as usize)
+                        .map(|cs| cs.handle());
+                    (player, handle)
                 }
-                ResolvedBinding::Card(h) => Some(h),
-                _ => None,
+                ResolvedBinding::Card(h) => (default_player, Some(h)),
+                _ => (default_player, None),
             };
             if let Some(h) = handle {
-                ctx.add_to_hand_from_trash(p, h);
+                ctx.add_to_hand_from_trash(player, h);
             }
             true
         }
@@ -57,7 +58,6 @@ pub fn try_run(
         }
 
         // ── Task 5: reveal-pool consumers ────────────────────────────────────
-
         CompiledStep::AddToHandFromReveal { of, card } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;
@@ -91,7 +91,12 @@ pub fn try_run(
             true
         }
 
-        CompiledStep::RevealTopDeck { of, count, zone: _, bind_as } => {
+        CompiledStep::RevealTopDeck {
+            of,
+            count,
+            zone: _,
+            bind_as,
+        } => {
             let p = resolve_player(ctx, *of);
             let handles = ctx.reveal_top_deck(p, *count);
             // Single-card reveal with a bind_as name: expose the card to
@@ -120,13 +125,12 @@ pub fn try_run(
             true
         }
 
-        CompiledStep::TrashFromHandByIndex { of, hand_index } => {
+        CompiledStep::TrashFromHandByIndex { of: _, hand_index } => {
             let Some(resolved) = resolve_binding_ref(hand_index, ctx, bindings) else {
                 return true;
             };
-            let p = resolve_player(ctx, *of);
-            if let ResolvedBinding::HandIndex(i) = resolved {
-                ctx.trash_from_hand_by_index(p, i as usize);
+            if let ResolvedBinding::HandIndex { player, index } = resolved {
+                ctx.trash_from_hand_by_index(player, index as usize);
             }
             true
         }

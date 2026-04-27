@@ -84,7 +84,10 @@ fn add_to_hand_from_reveal_consumes_card_binding() {
         "reveal pool should be drained after AddToHandFromReveal"
     );
     assert!(
-        runner.game.players[0].hand.iter().any(|cs| cs.handle() == revealed),
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|cs| cs.handle() == revealed),
         "revealed card should have landed in hand"
     );
 }
@@ -123,7 +126,10 @@ fn trash_from_reveal_moves_card_to_trash() {
         "reveal pool should be drained after TrashFromReveal"
     );
     assert!(
-        runner.game.players[0].trash.iter().any(|cs| cs.handle() == revealed),
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|cs| cs.handle() == revealed),
         "revealed card should be in trash"
     );
 }
@@ -209,15 +215,25 @@ fn reveal_top_deck_binds_single_card_by_name() {
     }
 
     // Deck should now be empty; reveal pool has one card.
-    assert!(runner.game.players[0].deck.is_empty(), "deck top was revealed");
-    assert_eq!(runner.game.revealed_cards.len(), 1, "one card in reveal pool");
+    assert!(
+        runner.game.players[0].deck.is_empty(),
+        "deck top was revealed"
+    );
+    assert_eq!(
+        runner.game.revealed_cards.len(),
+        1,
+        "one card in reveal pool"
+    );
     assert_eq!(runner.game.revealed_cards[0].handle(), deck_top_handle);
 
     // The binding should be set.
     let bound = bindings
         .get_card("revealed_card")
         .expect("RevealTopDeck should have set 'revealed_card' binding");
-    assert_eq!(bound, deck_top_handle, "binding should match the revealed card");
+    assert_eq!(
+        bound, deck_top_handle,
+        "binding should match the revealed card"
+    );
 }
 
 // ── 5. PlaceRemainderOnDeck ───────────────────────────────────────────────────
@@ -265,7 +281,11 @@ fn place_remainder_on_deck_installs_permutation_selection_and_resolves() {
 
     assert!(runner.game.pending_selection.is_none(), "selection cleared");
     assert!(runner.game.revealed_cards.is_empty(), "reveal pool drained");
-    assert_eq!(runner.game.players[0].deck.len(), 1, "card returned to deck");
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        1,
+        "card returned to deck"
+    );
     assert_eq!(
         runner.game.players[0].deck.last().unwrap().handle(),
         rem_handle,
@@ -302,9 +322,16 @@ fn trash_from_hand_by_index_moves_card_from_hand_to_trash() {
         );
     }
 
-    assert_eq!(runner.game.players[0].hand.len(), 1, "one card should remain in hand");
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        1,
+        "one card should remain in hand"
+    );
     assert!(
-        runner.game.players[0].trash.iter().any(|cs| cs.handle() == tgt_handle),
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|cs| cs.handle() == tgt_handle),
         "TGT should be in trash"
     );
 }
@@ -325,7 +352,9 @@ fn mark_security_face_up_sets_face_up_bit_for_security_card() {
 
     // Confirm the card starts face-down (not in face_up_security).
     assert!(
-        !runner.game.players[0].face_up_security.contains(&sec_handle.0),
+        !runner.game.players[0]
+            .face_up_security
+            .contains(&sec_handle.0),
         "security card should start face-down"
     );
 
@@ -345,7 +374,9 @@ fn mark_security_face_up_sets_face_up_bit_for_security_card() {
     }
 
     assert!(
-        runner.game.players[0].face_up_security.contains(&sec_handle.0),
+        runner.game.players[0]
+            .face_up_security
+            .contains(&sec_handle.0),
         "security card should now be marked face-up"
     );
 }

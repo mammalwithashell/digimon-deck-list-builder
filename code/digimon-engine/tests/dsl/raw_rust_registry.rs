@@ -3,7 +3,8 @@ use digimon_engine::dsl::spec::CardSpec;
 use digimon_engine::dsl::validator::{validate, ValidationContext};
 
 fn card_with_raw_rust(fn_name: &str) -> CardSpec {
-    let yaml = format!(r#"
+    let yaml = format!(
+        r#"
 card: BT10-111
 name: Shoutmon KV
 kind: digimon
@@ -14,7 +15,8 @@ dp: 4000
 effects:
   - kind: raw_rust
     fn: {fn_name}
-"#);
+"#
+    );
     serde_yml::from_str(&yaml).unwrap()
 }
 
@@ -52,5 +54,31 @@ effects:
     let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
     let reg = StubRegistry::empty();
     let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
-    assert!(errs.iter().any(|e| e.message.contains("unregistered_step_fn")));
+    assert!(errs
+        .iter()
+        .any(|e| e.message.contains("unregistered_step_fn")));
+}
+
+#[test]
+fn formula_level_raw_rust_checked_against_registry() {
+    let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    amount_fn:
+      raw_rust: unregistered_formula_fn
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+    assert!(errs
+        .iter()
+        .any(|e| e.message.contains("unregistered_formula_fn")));
 }

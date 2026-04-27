@@ -194,11 +194,7 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
     }
 }
 
-fn perm_dto(
-    game: &Game,
-    player: PlayerId,
-    index: usize,
-) -> PermanentDto {
+fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
     let perm = &game.player(player).battle_area[index];
     let handle = PermanentHandle {
         player,
@@ -219,7 +215,11 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
     let battle_area: Vec<PermanentDto> = (0..p.battle_area.len())
         .map(|i| perm_dto(game, id, i))
         .collect();
-    let hand: Vec<CardDto> = p.hand.iter().map(|c| card_dto(c, &game.card_data)).collect();
+    let hand: Vec<CardDto> = p
+        .hand
+        .iter()
+        .map(|c| card_dto(c, &game.card_data))
+        .collect();
     let breeding = p.breeding_area.as_ref().map(|perm| PermanentDto {
         field_index: 255, // breeding indicator
         top_card: card_dto(perm.top_card(), &game.card_data),
@@ -312,8 +312,13 @@ pub fn test_deck() -> Vec<String> {
     // 50 main deck + 5 eggs.
     let mut deck = Vec::with_capacity(55);
     let mains = [
-        "TEST-001", "TEST-002", "TEST-003", "TEST-004", "TEST-005",
-        "VANILLA-3K", "VANILLA-5K",
+        "TEST-001",
+        "TEST-002",
+        "TEST-003",
+        "TEST-004",
+        "TEST-005",
+        "VANILLA-3K",
+        "VANILLA-5K",
     ];
     // Fill to ~50 cards by repeating.
     for i in 0..50 {
@@ -329,9 +334,7 @@ pub fn test_deck() -> Vec<String> {
 
 /// Create a new 2-player game with built-in test cards.
 #[tauri::command]
-pub fn create_test_game(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<GameStateDto, String> {
+pub fn create_test_game(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
     let db = test_card_db();
     let decks = vec![test_deck(), test_deck()];
     let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
@@ -419,9 +422,7 @@ pub fn rust_attack_player(
 
 /// End the current turn.
 #[tauri::command]
-pub fn rust_end_turn(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<GameStateDto, String> {
+pub fn rust_end_turn(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
     let mut guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_mut().ok_or("No active game")?;
     game.end_turn();
@@ -430,9 +431,7 @@ pub fn rust_end_turn(
 
 /// Pass turn (memory to -3, then end turn).
 #[tauri::command]
-pub fn rust_pass_turn(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<GameStateDto, String> {
+pub fn rust_pass_turn(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
     let mut guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_mut().ok_or("No active game")?;
     game.pass_turn();
@@ -766,10 +765,8 @@ pub fn rust_step_game(
     run_agent_steps(game, &session_guard, &inference)?;
     let mask = action_mask_bytes(game);
     let pid = current_decision_player(game);
-    let is_human_turn = matches!(
-        decider_kind(&session_guard, pid),
-        PlayerKind::Human
-    ) || game.game_over;
+    let is_human_turn =
+        matches!(decider_kind(&session_guard, pid), PlayerKind::Human) || game.game_over;
     let is_over = game.game_over;
     Ok(StepResponseDto {
         state: game_state_dto(game),
@@ -821,9 +818,7 @@ pub fn run_agent_steps(
                     .player_model_ids
                     .get(pid as usize)
                     .and_then(|m| m.as_deref())
-                    .ok_or_else(|| {
-                        format!("trained agent for player {pid} has no model_id")
-                    })?;
+                    .ok_or_else(|| format!("trained agent for player {pid} has no model_id"))?;
                 let registry = session.registry.as_ref().ok_or_else(|| {
                     "inference: session has no card registry (game not created?)".to_string()
                 })?;
@@ -833,9 +828,8 @@ pub fn run_agent_steps(
                 inference.predict(model_id, &obs, &mask)?
             }
         };
-        let action_u16 = u16::try_from(action).map_err(|_| {
-            format!("agent returned out-of-range action {action}")
-        })?;
+        let action_u16 = u16::try_from(action)
+            .map_err(|_| format!("agent returned out-of-range action {action}"))?;
         game.decode_action(action_u16, pid);
     }
     Err(format!(
@@ -866,9 +860,7 @@ fn validate_shapes(obs: &[f32], mask: &[f32], model_id: &str) -> Result<(), Stri
 
 /// Read the current action mask.
 #[tauri::command]
-pub fn rust_get_mask(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<Vec<u8>, String> {
+pub fn rust_get_mask(state: tauri::State<'_, RustEngineState>) -> Result<Vec<u8>, String> {
     let guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_ref().ok_or("No active game")?;
     Ok(action_mask_bytes(game))
@@ -876,9 +868,7 @@ pub fn rust_get_mask(
 
 /// Read the accumulated log (empty for now — Rust engine doesn't log yet).
 #[tauri::command]
-pub fn rust_get_log(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<Vec<String>, String> {
+pub fn rust_get_log(state: tauri::State<'_, RustEngineState>) -> Result<Vec<String>, String> {
     let _guard = state.game.lock().map_err(|e| e.to_string())?;
     Ok(Vec::new())
 }
@@ -909,9 +899,7 @@ pub fn rust_surrender(
 /// time — but loaded ONNX policies stay in the inference cache since the
 /// next game will likely reuse them.
 #[tauri::command]
-pub fn rust_delete_game(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<(), String> {
+pub fn rust_delete_game(state: tauri::State<'_, RustEngineState>) -> Result<(), String> {
     let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
     let mut session_guard = state.session.lock().map_err(|e| e.to_string())?;
     *game_guard = None;
@@ -961,8 +949,7 @@ mod tests {
     fn dto_roundtrip_through_json() {
         let db = test_card_db();
         let decks = vec![test_deck(), test_deck()];
-        let mut game =
-            Game::new(&decks, &db, Rules::standard(), Some(42)).unwrap();
+        let mut game = Game::new(&decks, &db, Rules::standard(), Some(42)).unwrap();
         game.start_game();
         let dto = game_state_dto(&game);
         let json = serde_json::to_string(&dto).unwrap();

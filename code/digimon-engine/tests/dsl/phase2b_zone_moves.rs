@@ -111,7 +111,7 @@ fn select_hand_parks_selection_and_fires_callback() {
         .build();
 
     let src_handle = runner.game.players[0].hand[0].handle();
-    let tgt_handle = runner.game.players[0].hand[1].handle();
+    let _tgt_handle = runner.game.players[0].hand[1].handle();
 
     // A SelectHand with no tail — just installs a selection; the callback
     // fires with the chosen index (no further steps to run).
@@ -160,6 +160,67 @@ fn select_hand_parks_selection_and_fires_callback() {
 }
 
 #[test]
+fn selected_opponent_hand_index_trashes_from_bound_owner() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .add_card(make_test_card("OPP", "OPP"))
+        .hand(0, &["SRC"])
+        .hand(1, &["OPP"])
+        .build();
+
+    let src_handle = runner.game.players[0].hand[0].handle();
+    let opp_handle = runner.game.players[1].hand[0].handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
+        let mut bindings = Bindings::new();
+        let steps = vec![
+            CompiledStep::SelectHand {
+                of: CompiledPlayerRef::Opponent,
+                filter: CompiledPredicate::default(),
+                bind_as: Some("chosen".to_string()),
+                prompt: "Pick opponent hand".to_string(),
+                prompt_key: None,
+                optional: false,
+            },
+            CompiledStep::TrashFromHandByIndex {
+                of: CompiledPlayerRef::You,
+                hand_index: CompiledBindingRef::Named("chosen".to_string()),
+            },
+        ];
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    let (action_id, selecting_player) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("SelectHand installed a PendingSelection");
+        assert_eq!(pending.valid_action_ids.len(), 1);
+        (pending.valid_action_ids[0], pending.selecting_player)
+    };
+
+    runner
+        .game
+        .resolve_selection(selecting_player, action_id)
+        .expect("resolve opponent hand selection");
+
+    assert_eq!(runner.game.players[0].hand.len(), 1, "P0 hand is untouched");
+    assert!(
+        runner.game.players[1].hand.is_empty(),
+        "selected card leaves P1 hand even though tail used of=You"
+    );
+    assert!(
+        runner.game.players[1]
+            .trash
+            .iter()
+            .any(|cs| cs.handle() == opp_handle),
+        "selected P1 card lands in P1 trash"
+    );
+}
+
+#[test]
 fn select_own_permanent_parks_selection() {
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("DIG", "DIG"))
@@ -187,7 +248,13 @@ fn select_own_permanent_parks_selection() {
         "SelectOwnPermanent should install a PendingSelection"
     );
     assert_eq!(
-        runner.game.pending_selection.as_ref().unwrap().valid_action_ids.len(),
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids
+            .len(),
         1,
         "one permanent on field → one valid action"
     );
@@ -224,7 +291,13 @@ fn select_opponent_permanent_parks_selection() {
         "SelectOpponentPermanent should install a PendingSelection"
     );
     assert_eq!(
-        runner.game.pending_selection.as_ref().unwrap().valid_action_ids.len(),
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids
+            .len(),
         1,
         "one permanent on opponent's field → one valid action"
     );

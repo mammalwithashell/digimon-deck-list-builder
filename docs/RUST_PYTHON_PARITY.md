@@ -6,6 +6,19 @@
 
 **Scope:** Semantic differences in game state evolution given identical inputs. Architectural differences (e.g. compile-time vs dynamic effect registration) are listed separately and are not bugs.
 
+**DSL migration note:** As of card scripting DSL Phase 4 (2026-04-26),
+DSL-authored cards can delegate residual mechanics through engine-registered
+`raw_rust` functions at whole-clause, process-step, and formula granularity.
+The Phase 3 reducer carry-forward is also closed: replacement bodies,
+partition gates, any-permanent/DNA-pair selections, formula-backed cost
+reductions, pay-cost bodies, reduce-style cost deltas, and DSL DNA
+alt-path metadata now run through DSL lowering instead of bespoke card
+scripts.
+Production hand-written card modules are retired from
+`code/digimon-engine/src/cards/` except `test/`, `tokens/`,
+`keyword_effects.rs`, and `raw_rust/`; `code/tools/dsl_long_tail_report.py`
+is the guardrail for that boundary.
+
 **Reading guide:**
 
 - 🔴 **Parity-breaking** — given the same inputs, the two engines produce different game states. Must fix before claiming cross-engine correctness.
@@ -427,7 +440,12 @@ Rust (like Python's mask) does NOT currently track `_turn_activate_count` for Ha
 - `tests/dna_digivolve_user_action.rs` — user-action path (4 tests covering two-stage flow, memory cost, draw bonus, phase rejection)
 - `tests/dsl/phase2g_on_dna_digivolve.rs` — DSL `<OnDnaDigivolve>` clause from both paths
 
-**Known DSL schema gap:** `CardSpec` does not yet support authoring `dna_costs` in YAML — DNA-digivolve cards must supply cost data via the `CardData` ingest path. The OnDnaDigivolve *clause* is fully expressible in DSL via `when: on_dna_digivolve`; only the cost-data side is missing. Tracked separately.
+**DSL schema status:** `CardSpec` authors DNA requirements through
+`alt_paths: [{ kind: dna_digivolve, materials, cost }]`. The DSL bridge
+threads those compiled alt paths into `CardData::dna_costs`, which is the
+same runtime surface used by action masks and DNA execution. The
+OnDnaDigivolve *clause* remains expressible through
+`when: on_dna_digivolve`.
 
 ### 4.6 🟡 Interrupt-phase mask coverage — partial
 

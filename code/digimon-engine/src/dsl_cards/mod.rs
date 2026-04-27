@@ -18,6 +18,7 @@ pub mod lower_replacement;
 pub mod lower_triggered;
 pub mod modifier_map;
 pub mod predicate;
+pub mod raw_rust;
 pub mod step;
 pub mod timing_map;
 pub mod trigger_map;
@@ -29,15 +30,21 @@ use digimon_dsl::CardRegistry as DslCardRegistry;
 
 use crate::card_source::CardHandle;
 use crate::cards::CardEffectRegistry;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect::{CardEffect, Effect};
 
 pub struct DslCardEffect {
     compiled: Arc<CompiledCard>,
+    raw: Arc<EngineRawRustRegistry>,
 }
 
 impl DslCardEffect {
     pub fn new(compiled: Arc<CompiledCard>) -> Self {
-        Self { compiled }
+        Self::new_with_raw(compiled, Arc::new(EngineRawRustRegistry::new()))
+    }
+
+    pub fn new_with_raw(compiled: Arc<CompiledCard>, raw: Arc<EngineRawRustRegistry>) -> Self {
+        Self { compiled, raw }
     }
 
     pub fn compiled(&self) -> &CompiledCard {
@@ -60,15 +67,20 @@ impl CardEffect for DslCardEffect {
         'clause: for clause in &self.compiled.effects {
             match clause {
                 CompiledClause::Triggered(clause) => {
-                    out.extend(lower_triggered::lower(card, clause));
+                    out.extend(lower_triggered::lower_with_raw(
+                        card,
+                        clause,
+                        self.raw.clone(),
+                    ));
                 }
                 CompiledClause::Declarative(decl) => match decl {
                     CompiledDeclarativeClause::GrantKeyword {
-                        keyword, value, scope, ..
+                        keyword,
+                        value,
+                        scope,
+                        ..
                     } => {
-                        if let Some(e) =
-                            lower_grant_keyword::lower(card, keyword, *value, *scope)
-                        {
+                        if let Some(e) = lower_grant_keyword::lower(card, keyword, *value, *scope) {
                             out.push(e);
                         }
                     }
@@ -104,12 +116,11 @@ impl CardEffect for DslCardEffect {
                         pay_cost,
                         ..
                     } => {
-                        // Phase 1c scope: only when_playing_this + literal amount
-                        // + no pay_cost + no ally-played hook + before_pay_cost timing.
-                        let timing_ok = matches!(
-                            reduction_timing.as_deref(),
-                            None | Some("before_pay_cost")
-                        );
+                        // Cost reductions currently lower for before-pay-cost scans
+                        // tied to the played/evolved card. Ally-played observer
+                        // hooks are a separate trigger shape.
+                        let timing_ok =
+                            matches!(reduction_timing.as_deref(), None | Some("before_pay_cost"));
                         if !timing_ok {
                             continue 'clause;
                         }
@@ -119,20 +130,19 @@ impl CardEffect for DslCardEffect {
                         if when_any_ally_played.is_some() {
                             continue 'clause;
                         }
-                        if amount_fn.is_some() {
-                            continue 'clause;
-                        }
-                        if !pay_cost.is_empty() {
-                            continue 'clause;
-                        }
-                        if let Some(a) = *amount {
-                            out.push(lower_cost_reduction::lower(
+                        let amount_formula = amount_fn.clone().or_else(|| {
+                            (*amount).map(digimon_dsl::compiled::CompiledFormula::Literal)
+                        });
+                        if let Some(amount_formula) = amount_formula {
+                            out.push(lower_cost_reduction::lower_with_formula(
                                 card,
                                 *scope,
                                 active_when.clone(),
                                 condition.clone(),
                                 *once_per_turn,
-                                a,
+                                Some(amount_formula),
+                                pay_cost.clone(),
+                                self.raw.clone(),
                             ));
                         }
                     }
@@ -160,12 +170,13 @@ impl CardEffect for DslCardEffect {
                         process,
                         ..
                     } => {
-                        if let Some(e) = lower_replacement::lower(
+                        if let Some(e) = lower_replacement::lower_with_raw(
                             card,
                             *scope,
                             active_when.as_ref(),
                             trigger,
                             process,
+                            self.raw.clone(),
                         ) {
                             out.push(e);
                         }
@@ -192,13 +203,19 @@ impl CardEffect for DslCardEffect {
                         process,
                         ..
                     } => {
-                        out.push(lower_delay::lower(
+                        out.push(lower_delay::lower_with_raw(
                             card,
                             *scope,
                             active_when.as_ref(),
                             *trigger,
                             process,
+                            self.raw.clone(),
                         ));
+                    }
+                    CompiledDeclarativeClause::RawRust { fn_name, .. } => {
+                        if let Some(f) = self.raw.declarative_fn(fn_name) {
+                            out.extend(f(card));
+                        }
                     }
                     _ => {
                         // Other declarative clauses lowered in Tasks 7-8+.
@@ -219,8 +236,23 @@ pub fn register_dsl_cards(
     effect_registry: &mut CardEffectRegistry,
     dsl_registry: &DslCardRegistry,
 ) {
+    register_dsl_cards_with_raw(
+        effect_registry,
+        dsl_registry,
+        Arc::new(EngineRawRustRegistry::new()),
+    );
+}
+
+pub fn register_dsl_cards_with_raw(
+    effect_registry: &mut CardEffectRegistry,
+    dsl_registry: &DslCardRegistry,
+    raw: Arc<EngineRawRustRegistry>,
+) {
     for (card_id, compiled) in dsl_registry.iter() {
-        let dsl_effect = Arc::new(DslCardEffect::new(Arc::new(compiled.clone())));
+        let dsl_effect = Arc::new(DslCardEffect::new_with_raw(
+            Arc::new(compiled.clone()),
+            raw.clone(),
+        ));
         effect_registry.insert(card_id, dsl_effect);
     }
 }

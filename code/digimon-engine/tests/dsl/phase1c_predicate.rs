@@ -41,14 +41,22 @@ fn kind_predicate_matches_kind_on_subject_card() {
         kind: Some(CompiledCardKind::Digimon),
         ..Default::default()
     };
-    assert!(eval_predicate(&pred_digimon, &rctx, PredicateSubject::Card(card)));
+    assert!(eval_predicate(
+        &pred_digimon,
+        &rctx,
+        PredicateSubject::Card(card)
+    ));
 
     // Tamer predicate should not match a Digimon card.
     let pred_tamer = CompiledPredicate {
         kind: Some(CompiledCardKind::Tamer),
         ..Default::default()
     };
-    assert!(!eval_predicate(&pred_tamer, &rctx, PredicateSubject::Card(card)));
+    assert!(!eval_predicate(
+        &pred_tamer,
+        &rctx,
+        PredicateSubject::Card(card)
+    ));
 }
 
 #[test]
@@ -79,8 +87,14 @@ fn all_of_combinator_ands_children() {
     // should hold, so the outer all_of should pass.
     let pred = CompiledPredicate {
         all_of: vec![
-            CompiledPredicate { kind: Some(CompiledCardKind::Digimon), ..Default::default() },
-            CompiledPredicate { level_gte: Some(1), ..Default::default() },
+            CompiledPredicate {
+                kind: Some(CompiledCardKind::Digimon),
+                ..Default::default()
+            },
+            CompiledPredicate {
+                level_gte: Some(1),
+                ..Default::default()
+            },
         ],
         ..Default::default()
     };
@@ -96,8 +110,14 @@ fn all_of_combinator_short_circuits_on_false() {
     // Tamer predicate fails → all_of should fail even though second is fine.
     let pred = CompiledPredicate {
         all_of: vec![
-            CompiledPredicate { kind: Some(CompiledCardKind::Tamer), ..Default::default() },
-            CompiledPredicate { level_gte: Some(1), ..Default::default() },
+            CompiledPredicate {
+                kind: Some(CompiledCardKind::Tamer),
+                ..Default::default()
+            },
+            CompiledPredicate {
+                level_gte: Some(1),
+                ..Default::default()
+            },
         ],
         ..Default::default()
     };
@@ -113,8 +133,14 @@ fn any_of_combinator_ors_children() {
     // First child is wrong (Tamer), second is correct (Digimon) — should pass.
     let pred = CompiledPredicate {
         any_of: vec![
-            CompiledPredicate { kind: Some(CompiledCardKind::Tamer), ..Default::default() },
-            CompiledPredicate { kind: Some(CompiledCardKind::Digimon), ..Default::default() },
+            CompiledPredicate {
+                kind: Some(CompiledCardKind::Tamer),
+                ..Default::default()
+            },
+            CompiledPredicate {
+                kind: Some(CompiledCardKind::Digimon),
+                ..Default::default()
+            },
         ],
         ..Default::default()
     };
@@ -129,9 +155,10 @@ fn none_of_combinator_inverts_any_of() {
     let rctx = EffectReadContext::new(game, card, None, 0);
     // Card is Digimon, not Tamer — none_of[Tamer] should pass.
     let pred = CompiledPredicate {
-        none_of: vec![
-            CompiledPredicate { kind: Some(CompiledCardKind::Tamer), ..Default::default() },
-        ],
+        none_of: vec![CompiledPredicate {
+            kind: Some(CompiledCardKind::Tamer),
+            ..Default::default()
+        }],
         ..Default::default()
     };
     assert!(eval_predicate(&pred, &rctx, PredicateSubject::Card(card)));
@@ -145,9 +172,10 @@ fn none_of_fails_when_child_matches() {
     let rctx = EffectReadContext::new(game, card, None, 0);
     // Card IS Digimon — none_of[Digimon] should fail.
     let pred = CompiledPredicate {
-        none_of: vec![
-            CompiledPredicate { kind: Some(CompiledCardKind::Digimon), ..Default::default() },
-        ],
+        none_of: vec![CompiledPredicate {
+            kind: Some(CompiledCardKind::Digimon),
+            ..Default::default()
+        }],
         ..Default::default()
     };
     assert!(!eval_predicate(&pred, &rctx, PredicateSubject::Card(card)));

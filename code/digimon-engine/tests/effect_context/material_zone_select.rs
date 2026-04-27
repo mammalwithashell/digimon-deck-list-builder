@@ -90,7 +90,7 @@ fn material_zone_collects_permanent_card_sources() {
     {
         let perm = &r.game.players[tp as usize].battle_area[field_idx];
         assert_eq!(perm.card_sources.len(), 4);
-        assert_eq!(perm.top_card().card_id(& r.game.card_data), "TEST-MATZONE");
+        assert_eq!(perm.top_card().card_id(&r.game.card_data), "TEST-MATZONE");
     }
 
     let delivered: Arc<Mutex<Option<Vec<CardHandle>>>> = Arc::new(Mutex::new(None));

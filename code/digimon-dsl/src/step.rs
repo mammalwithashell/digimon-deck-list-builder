@@ -92,6 +92,10 @@ pub enum StepSpec {
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
     TrashTopSource(TargetArg),
+    CancelLeave(EmptyArgs),
+    HandleReplacement(EmptyArgs),
+    RedirectReplacement(RedirectReplacementArgs),
+    SubstitutePermanent(TargetArg),
     Hatch(PlayerArg),
 
     // Play / digivolve
@@ -116,6 +120,8 @@ pub enum StepSpec {
     // Selection
     SelectOwnPermanent(SelectFieldArgs),
     SelectOpponentPermanent(SelectFieldArgs),
+    SelectAnyPermanent(SelectFieldArgs),
+    SelectDnaPair(SelectDnaPairArgs),
     SelectHand(SelectZoneArgs),
     SelectTrash(SelectZoneArgs),
     SelectMaterial(SelectMaterialArgs),
@@ -183,6 +189,10 @@ impl Serialize for StepSpec {
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
+            StepSpec::CancelLeave(v) => kv!(s, "cancel_leave", v),
+            StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
+            StepSpec::RedirectReplacement(v) => kv!(s, "redirect_replacement", v),
+            StepSpec::SubstitutePermanent(v) => kv!(s, "substitute_permanent", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
@@ -203,6 +213,8 @@ impl Serialize for StepSpec {
             // Selection
             StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
             StepSpec::SelectOpponentPermanent(v) => kv!(s, "select_opponent_permanent", v),
+            StepSpec::SelectAnyPermanent(v) => kv!(s, "select_any_permanent", v),
+            StepSpec::SelectDnaPair(v) => kv!(s, "select_dna_pair", v),
             StepSpec::SelectHand(v) => kv!(s, "select_hand", v),
             StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
@@ -289,6 +301,10 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
+            "cancel_leave" => StepSpec::CancelLeave(map.next_value()?),
+            "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
+            "redirect_replacement" => StepSpec::RedirectReplacement(map.next_value()?),
+            "substitute_permanent" => StepSpec::SubstitutePermanent(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
             // Play / digivolve
@@ -298,9 +314,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
-            "effect_initiated_digivolve" => {
-                StepSpec::EffectInitiatedDigivolve(map.next_value()?)
-            }
+            "effect_initiated_digivolve" => StepSpec::EffectInitiatedDigivolve(map.next_value()?),
             "effect_initiated_dna_digivolve" => {
                 StepSpec::EffectInitiatedDnaDigivolve(map.next_value()?)
             }
@@ -317,6 +331,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Selection
             "select_own_permanent" => StepSpec::SelectOwnPermanent(map.next_value()?),
             "select_opponent_permanent" => StepSpec::SelectOpponentPermanent(map.next_value()?),
+            "select_any_permanent" => StepSpec::SelectAnyPermanent(map.next_value()?),
+            "select_dna_pair" => StepSpec::SelectDnaPair(map.next_value()?),
             "select_hand" => StepSpec::SelectHand(map.next_value()?),
             "select_trash" => StepSpec::SelectTrash(map.next_value()?),
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
@@ -342,31 +358,67 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 return Err(de::Error::unknown_variant(
                     other,
                     &[
-                        "gain_memory", "lose_memory", "set_memory",
-                        "draw", "trash_from_top", "add_to_hand_from_deck",
-                        "add_to_hand_from_trash", "add_to_hand_from_reveal",
-                        "trash_from_hand_by_index", "trash_from_reveal",
-                        "return_to_deck_from_reveal", "shuffle_deck",
-                        "reveal_top_deck", "place_remainder_on_deck",
-                        "delete_permanent", "return_to_hand", "return_to_deck",
-                        "suspend", "unsuspend", "de_digivolve",
-                        "place_on_security", "play_token",
-                        "place_as_bottom_source", "trash_top_source", "hatch",
-                        "play_from_hand", "play_from_hand_free",
-                        "play_from_trash", "play_from_trash_free",
-                        "play_from_security", "play_from_materials",
+                        "gain_memory",
+                        "lose_memory",
+                        "set_memory",
+                        "draw",
+                        "trash_from_top",
+                        "add_to_hand_from_deck",
+                        "add_to_hand_from_trash",
+                        "add_to_hand_from_reveal",
+                        "trash_from_hand_by_index",
+                        "trash_from_reveal",
+                        "return_to_deck_from_reveal",
+                        "shuffle_deck",
+                        "reveal_top_deck",
+                        "place_remainder_on_deck",
+                        "delete_permanent",
+                        "return_to_hand",
+                        "return_to_deck",
+                        "suspend",
+                        "unsuspend",
+                        "de_digivolve",
+                        "place_on_security",
+                        "play_token",
+                        "place_as_bottom_source",
+                        "trash_top_source",
+                        "cancel_leave",
+                        "handle_replacement",
+                        "redirect_replacement",
+                        "substitute_permanent",
+                        "hatch",
+                        "play_from_hand",
+                        "play_from_hand_free",
+                        "play_from_trash",
+                        "play_from_trash_free",
+                        "play_from_security",
+                        "play_from_materials",
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
-                        "trash_top_security", "mark_security_face_up",
-                        "add_dp_modifier", "add_modifier", "grant_keyword",
-                        "select_own_permanent", "select_opponent_permanent",
-                        "select_hand", "select_trash", "select_material",
-                        "select_reveal", "select_security",
-                        "select_union_zone", "select_ordered_permutation",
-                        "select_count_capped_multi", "select_effect_choice",
+                        "trash_top_security",
+                        "mark_security_face_up",
+                        "add_dp_modifier",
+                        "add_modifier",
+                        "grant_keyword",
+                        "select_own_permanent",
+                        "select_opponent_permanent",
+                        "select_any_permanent",
+                        "select_dna_pair",
+                        "select_hand",
+                        "select_trash",
+                        "select_material",
+                        "select_reveal",
+                        "select_security",
+                        "select_union_zone",
+                        "select_ordered_permutation",
+                        "select_count_capped_multi",
+                        "select_effect_choice",
                         "as_selecting_player",
-                        "if", "for_each", "per_selected",
-                        "schedule_delayed", "optional",
+                        "if",
+                        "for_each",
+                        "per_selected",
+                        "schedule_delayed",
+                        "optional",
                         "raw_rust",
                     ],
                 ));
@@ -437,6 +489,16 @@ pub struct PlayerArg {
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EmptyArgs {}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RedirectReplacementArgs {
+    pub destination: Zone,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -551,6 +613,7 @@ pub struct PlayFromHandArgs {
 pub enum CostDelta {
     Keyword(CostDeltaKeyword),
     Literal(i32),
+    Reduce { reduce: i32 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -665,6 +728,20 @@ pub struct SelectFieldArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectDnaPairArgs {
+    pub left_filter: PredicateSpec,
+    pub right_filter: PredicateSpec,
+    pub bind_left_as: String,
+    pub bind_right_as: String,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

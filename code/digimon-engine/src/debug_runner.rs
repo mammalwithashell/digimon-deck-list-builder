@@ -360,9 +360,7 @@ impl DebugRunnerBuilder {
     }
 
     fn build_inner(&mut self) -> DebugRunner {
-        let player_count = self
-            .player_count
-            .unwrap_or(self.rules.player_count);
+        let player_count = self.player_count.unwrap_or(self.rules.player_count);
 
         // We bypass Game::new because it shuffles/deals from decks, which loses
         // determinism. Instead, build an empty Game with the shared card_data and
@@ -413,29 +411,25 @@ impl DebugRunnerBuilder {
 
             if let Some(ids) = self.hands.get(&pid) {
                 for card_id in ids {
-                    let card =
-                        Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].hand.push(card);
                 }
             }
             if let Some(ids) = self.decks.get(&pid) {
                 for card_id in ids {
-                    let card =
-                        Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].deck.push(card);
                 }
             }
             if let Some(ids) = self.securities.get(&pid) {
                 for card_id in ids {
-                    let card =
-                        Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].security.push(card);
                 }
             }
             if let Some(ids) = self.digitamas.get(&pid) {
                 for card_id in ids {
-                    let card =
-                        Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
                     if card_data_store[card.data_index].card_kind != CardKind::DigiEgg {
                         // Allow non-eggs in digitama for tests, but warn via debug.
                     }

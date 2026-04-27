@@ -21,7 +21,7 @@ use digimon_dsl::compiled::CompiledStep;
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::run_steps;
+use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::effect_context::EffectContext;
 use crate::enums::{EffectTiming, PlayerId};
 use crate::game::Game;
@@ -42,6 +42,8 @@ pub struct ScheduledEffect {
     pub controller: PlayerId,
     /// Bindings captured at schedule time and replayed into the body.
     pub captured_bindings: Bindings,
+    /// Runtime registry captured at schedule time.
+    pub runtime: StepRuntime,
 }
 
 /// Drain every `ScheduledEffect` whose `when` matches `t`, running each body
@@ -69,6 +71,7 @@ pub fn fire_scheduled_for_timing(game: &mut Game, t: EffectTiming) {
             source_permanent,
             controller,
             captured_bindings,
+            runtime,
             ..
         } = eff;
         let mut bindings = captured_bindings;
@@ -86,7 +89,7 @@ pub fn fire_scheduled_for_timing(game: &mut Game, t: EffectTiming) {
              Phase 3 should add retry logic for multi-parking drains"
         );
         let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
-        let _outcome = run_steps(&body, &mut ctx, &mut bindings);
+        let _outcome = run_steps_with_runtime(&body, &mut ctx, &mut bindings, &runtime);
         // TODO(phase-3): if `_outcome == RunOutcome::Parked`, break and
         // resume the remaining queue once the parked selection resolves.
         // Today, scheduled bodies typically don't park; the debug_assert

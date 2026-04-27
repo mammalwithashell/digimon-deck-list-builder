@@ -24,7 +24,7 @@ fn source_ref_resolves_to_source_permanent_when_present() {
         .add_card(make_test_card("F", "F"))
         .hand(0, &["F"])
         .build();
-    let handle = runner.place_on_field(0, "F", None);  // NOTE signature: (player, card_id, turn_override)
+    let handle = runner.place_on_field(0, "F", None); // NOTE signature: (player, card_id, turn_override)
     let card = runner.game.players[0].battle_area[0].top_card().handle();
     let ctx = EffectContext::new(&mut runner.game, card, Some(handle), 0);
     let b = Bindings::new();
@@ -34,11 +34,17 @@ fn source_ref_resolves_to_source_permanent_when_present() {
 
 #[test]
 fn named_ref_looks_up_in_bindings() {
-    let mut runner = DebugRunner::builder().add_card(make_test_card("F", "F")).hand(0, &["F"]).build();
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("F", "F"))
+        .hand(0, &["F"])
+        .build();
     let card = runner.game.players[0].hand[0].handle();
     let ctx = EffectContext::new(&mut runner.game, card, None, 0);
     let mut b = Bindings::new();
-    let perm = PermanentHandle { player: 0, index: 3 };
+    let perm = PermanentHandle {
+        player: 0,
+        index: 3,
+    };
     b.insert("tgt", BindingValue::Permanent(perm));
     let r = resolve_binding_ref(&CompiledBindingRef::Named("tgt".into()), &ctx, &b);
     assert_eq!(r, Some(ResolvedBinding::Permanent(perm)));
@@ -46,7 +52,10 @@ fn named_ref_looks_up_in_bindings() {
 
 #[test]
 fn named_ref_missing_returns_none() {
-    let mut runner = DebugRunner::builder().add_card(make_test_card("F", "F")).hand(0, &["F"]).build();
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("F", "F"))
+        .hand(0, &["F"])
+        .build();
     let card = runner.game.players[0].hand[0].handle();
     let ctx = EffectContext::new(&mut runner.game, card, None, 0);
     let b = Bindings::new();

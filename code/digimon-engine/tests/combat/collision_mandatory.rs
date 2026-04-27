@@ -16,9 +16,7 @@ use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{
-    CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType,
-};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType};
 use digimon_engine::modifiers::ModifierEntry;
 
 fn strong_digimon(card_id: &str, dp: i32) -> digimon_engine::card_data::CardData {
@@ -110,12 +108,7 @@ fn collision_without_legal_blockers_falls_back_to_optional() {
     // a `CannotBlock` restriction.
     r.game.modifiers.add(
         def,
-        ModifierEntry::simple(
-            ModifierType::CannotBlock,
-            1,
-            Expiry::Permanent,
-            1,
-        ),
+        ModifierEntry::simple(ModifierType::CannotBlock, 1, Expiry::Permanent, 1),
     );
 
     let result = r.attack_digimon(atk, def, false);
@@ -148,12 +141,7 @@ fn collision_combined_with_cannot_block_excludes_restricted_blockers() {
     // CannotBlock forbids blocking outright).
     r.game.modifiers.add(
         def_c,
-        ModifierEntry::simple(
-            ModifierType::CannotBlock,
-            1,
-            Expiry::Permanent,
-            1,
-        ),
+        ModifierEntry::simple(ModifierType::CannotBlock, 1, Expiry::Permanent, 1),
     );
 
     let result = r.attack_digimon(atk, def_a, false);

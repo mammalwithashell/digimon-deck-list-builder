@@ -50,7 +50,10 @@ pub fn lower(
             for p in 0..n_players {
                 let m = rctx.game.player(p).battle_area.len();
                 for i in 0..m {
-                    let handle = PermanentHandle { player: p, index: i as u8 };
+                    let handle = PermanentHandle {
+                        player: p,
+                        index: i as u8,
+                    };
                     if eval_predicate(&target_arc, &rctx, PredicateSubject::Permanent(handle)) {
                         targets.push(handle);
                     }

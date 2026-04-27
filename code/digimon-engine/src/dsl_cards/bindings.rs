@@ -3,14 +3,15 @@
 use std::collections::HashMap;
 
 use crate::card_source::CardHandle;
+use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingValue {
     Permanent(PermanentHandle),
     Card(CardHandle),
-    HandIndex(u16),
-    TrashIndex(u16),
+    HandIndex { player: PlayerId, index: u16 },
+    TrashIndex { player: PlayerId, index: u16 },
     Literal(i64),
     PermanentList(Vec<PermanentHandle>),
     CardList(Vec<CardHandle>),
@@ -59,14 +60,28 @@ impl Bindings {
 
     pub fn get_hand_index(&self, name: &str) -> Option<u16> {
         match self.get(name)? {
-            BindingValue::HandIndex(i) => Some(i),
+            BindingValue::HandIndex { index, .. } => Some(index),
+            _ => None,
+        }
+    }
+
+    pub fn get_hand_index_for(&self, name: &str) -> Option<(PlayerId, u16)> {
+        match self.get(name)? {
+            BindingValue::HandIndex { player, index } => Some((player, index)),
             _ => None,
         }
     }
 
     pub fn get_trash_index(&self, name: &str) -> Option<u16> {
         match self.get(name)? {
-            BindingValue::TrashIndex(i) => Some(i),
+            BindingValue::TrashIndex { index, .. } => Some(index),
+            _ => None,
+        }
+    }
+
+    pub fn get_trash_index_for(&self, name: &str) -> Option<(PlayerId, u16)> {
+        match self.get(name)? {
+            BindingValue::TrashIndex { player, index } => Some((player, index)),
             _ => None,
         }
     }
@@ -87,11 +102,19 @@ impl Bindings {
     }
 
     pub fn insert_hand_index(&mut self, name: &str, i: u16) {
-        self.insert(name, BindingValue::HandIndex(i));
+        self.insert_hand_index_for(name, 0, i);
+    }
+
+    pub fn insert_hand_index_for(&mut self, name: &str, player: PlayerId, index: u16) {
+        self.insert(name, BindingValue::HandIndex { player, index });
     }
 
     pub fn insert_trash_index(&mut self, name: &str, i: u16) {
-        self.insert(name, BindingValue::TrashIndex(i));
+        self.insert_trash_index_for(name, 0, i);
+    }
+
+    pub fn insert_trash_index_for(&mut self, name: &str, player: PlayerId, index: u16) {
+        self.insert(name, BindingValue::TrashIndex { player, index });
     }
 
     pub fn insert_literal(&mut self, name: &str, v: i64) {
@@ -146,8 +169,14 @@ mod tests {
     #[test]
     fn permanent_list_round_trip() {
         let mut b = Bindings::new();
-        let h0 = PermanentHandle { player: 0, index: 0 };
-        let h1 = PermanentHandle { player: 1, index: 3 };
+        let h0 = PermanentHandle {
+            player: 0,
+            index: 0,
+        };
+        let h1 = PermanentHandle {
+            player: 1,
+            index: 3,
+        };
         b.insert_permanent_list("targets", vec![h0, h1]);
         let got = b.get_permanent_list("targets").expect("set");
         assert_eq!(got, vec![h0, h1]);
@@ -167,7 +196,10 @@ mod tests {
     #[test]
     fn list_clone_is_deep() {
         let mut b = Bindings::new();
-        let h0 = PermanentHandle { player: 0, index: 0 };
+        let h0 = PermanentHandle {
+            player: 0,
+            index: 0,
+        };
         b.insert_permanent_list("xs", vec![h0]);
         let cloned = b.clone();
         b.insert_permanent_list("xs", vec![]); // mutate original
@@ -179,5 +211,17 @@ mod tests {
         let mut b = Bindings::new();
         b.insert_literal("branch", 1);
         assert_eq!(b.get_literal("branch"), Some(1));
+    }
+
+    #[test]
+    fn hand_and_trash_indices_keep_owner() {
+        let mut b = Bindings::new();
+        b.insert_hand_index_for("hand", 1, 3);
+        b.insert_trash_index_for("trash", 1, 7);
+
+        assert_eq!(b.get_hand_index("hand"), Some(3));
+        assert_eq!(b.get_hand_index_for("hand"), Some((1, 3)));
+        assert_eq!(b.get_trash_index("trash"), Some(7));
+        assert_eq!(b.get_trash_index_for("trash"), Some((1, 7)));
     }
 }

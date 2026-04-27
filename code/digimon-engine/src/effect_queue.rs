@@ -120,7 +120,10 @@ impl Game {
                 .filter_map(|(i, qe)| (qe.controller == chooser).then_some(i))
                 .collect();
 
-            debug_assert!(!bundle.is_empty(), "next_chooser returned a player with no queued effects");
+            debug_assert!(
+                !bundle.is_empty(),
+                "next_chooser returned a player with no queued effects"
+            );
 
             if bundle.len() == 1 {
                 // Single trigger — auto-fire, no prompt.
@@ -165,12 +168,19 @@ impl Game {
             // Cap at HAND_MAIN_LIMIT (30) to fit the reused 30-59 action
             // range. Overflow auto-fires in collection order after the prompt
             // completes (rare; see the cap handling inside install_*).
-            let any_mandatory = bundle
-                .iter()
-                .any(|&i| !self.effect_queue[i].is_optional);
+            let any_mandatory = bundle.iter().any(|&i| !self.effect_queue[i].is_optional);
             self.install_trigger_order_selection(chooser, &bundle, !any_mandatory);
             return;
         }
+    }
+
+    /// Drain triggered effects while exposing the DNA-origin bit to condition
+    /// and process contexts. The previous value is restored after the drain.
+    pub(crate) fn drain_effect_queue_with_dna_origin(&mut self, dna_origin: bool) {
+        let prev = self.current_dna_origin;
+        self.current_dna_origin = Some(dna_origin);
+        self.drain_effect_queue();
+        self.current_dna_origin = prev;
     }
 
     // ─── Internal helpers ───────────────────────────────────────────
@@ -258,7 +268,12 @@ impl Game {
             .players
             .get(handle.player as usize)
             .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|p| matches!(p.option_state, crate::permanent::OptionState::Training { .. }))
+            .map(|p| {
+                matches!(
+                    p.option_state,
+                    crate::permanent::OptionState::Training { .. }
+                )
+            })
             .unwrap_or(false);
 
         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
@@ -355,7 +370,12 @@ impl Game {
             .players
             .get(handle.player as usize)
             .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|p| matches!(p.option_state, crate::permanent::OptionState::Training { .. }))
+            .map(|p| {
+                matches!(
+                    p.option_state,
+                    crate::permanent::OptionState::Training { .. }
+                )
+            })
             .unwrap_or(false);
         if !self_is_training {
             let training_sources: Vec<(String, crate::card_source::CardHandle)> = {
@@ -497,12 +517,8 @@ impl Game {
         let skip_condition = qe.timing == EffectTiming::SecuritySkill;
         if !skip_condition {
             if let Some(cond) = &effect.condition {
-                let ctx = EffectContext::new(
-                    self,
-                    qe.source_card,
-                    qe.source_permanent,
-                    qe.controller,
-                );
+                let ctx =
+                    EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
                 if !cond(&ctx.as_read()) {
                     return;
                 }
@@ -522,24 +538,16 @@ impl Game {
         // cards needing selection-gated pay-costs should fold the selection
         // into `process` instead. See Phase 5 non-goals.
         if let Some(pay_cost) = &effect.pay_cost_fn {
-            let mut ctx = EffectContext::new(
-                self,
-                qe.source_card,
-                qe.source_permanent,
-                qe.controller,
-            );
+            let mut ctx =
+                EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
             if !pay_cost(&mut ctx) {
                 return; // cost not paid; skip process (silent abort, mirrors failed condition)
             }
         }
 
         if let Some(process) = &effect.process {
-            let mut ctx = EffectContext::new(
-                self,
-                qe.source_card,
-                qe.source_permanent,
-                qe.controller,
-            );
+            let mut ctx =
+                EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
             process(&mut ctx);
         }
     }
@@ -579,7 +587,11 @@ impl Game {
                     "{} slot {} ({})",
                     qe.card_id,
                     qe.effect_slot,
-                    if qe.is_optional { "optional" } else { "mandatory" },
+                    if qe.is_optional {
+                        "optional"
+                    } else {
+                        "mandatory"
+                    },
                 ),
                 action_id,
             });
@@ -756,7 +768,9 @@ impl Game {
     ///   window for Option self-trash).
     /// - `Done`: terminal.
     fn advance_pending_option(&mut self) {
-        let Some(pending) = self.pending_option.as_ref() else { return };
+        let Some(pending) = self.pending_option.as_ref() else {
+            return;
+        };
         if !self.effect_queue.is_empty() {
             return;
         }
@@ -783,7 +797,10 @@ impl Game {
                 // the original trash should proceed). Take the parked
                 // pending_option back and commit the outcome via the
                 // shared helper, then cleanup and advance the turn state.
-                let pending = self.pending_option.take().expect("parked by dispose_option");
+                let pending = self
+                    .pending_option
+                    .take()
+                    .expect("parked by dispose_option");
                 let outcome = self
                     .replacement_pending_outcome
                     .take()

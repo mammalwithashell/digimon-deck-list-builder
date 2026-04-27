@@ -21,15 +21,11 @@
 //! `Some(42)` as the RNG seed. The game will always end with the same winner
 //! from the same initial state, so the test is not flaky.
 
+use digimon_engine::{card_registry::CardRegistry, game::Game, rules::Rules};
 use digimon_tcg::engine_commands::{
     run_agent_steps, test_card_db, test_deck, GameSession, PlayerKind,
 };
 use digimon_tcg::inference_state::InferenceState;
-use digimon_engine::{
-    card_registry::CardRegistry,
-    game::Game,
-    rules::Rules,
-};
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -136,8 +132,8 @@ fn test_offline_human_game_does_not_auto_advance() {
 /// Tauri frontend to misread the mask array.
 #[test]
 fn test_action_mask_has_correct_size_after_game_start() {
-    use digimon_tcg::engine_commands::GameSession as Gs;
     use digimon_engine::action::{build_action_mask, space::ACTION_SPACE_SIZE};
+    use digimon_tcg::engine_commands::GameSession as Gs;
 
     let (game, _registry) = build_started_game();
 

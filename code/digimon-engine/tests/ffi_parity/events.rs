@@ -18,7 +18,9 @@ fn memory_change_event_emitted_on_gain_memory() {
 
     let events = r.game.drain_events();
     assert!(
-        events.iter().any(|e| matches!(e, GameEvent::MemoryChange { delta: 2, .. })),
+        events
+            .iter()
+            .any(|e| matches!(e, GameEvent::MemoryChange { delta: 2, .. })),
         "gain_memory(2) should emit MemoryChange {{ delta: 2 }}; got {:?}",
         events,
     );
@@ -39,7 +41,11 @@ fn play_and_memory_events_emitted_on_play() {
     let has_memory = events
         .iter()
         .any(|e| matches!(e, GameEvent::MemoryChange { .. }));
-    assert!(has_play, "expected a Play event after r.play(); got {:?}", events);
+    assert!(
+        has_play,
+        "expected a Play event after r.play(); got {:?}",
+        events
+    );
     assert!(
         has_memory,
         "expected MemoryChange events (pay cost + OnPlay gain); got {:?}",

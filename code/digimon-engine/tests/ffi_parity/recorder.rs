@@ -47,8 +47,7 @@ fn recording_has_expected_top_level_keys() {
         .take(5)
         .chain(std::iter::repeat("ST1-03".to_string()).take(45))
         .collect();
-    let mut r =
-        HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(42)).unwrap();
+    let mut r = HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(42)).unwrap();
     // Complete mulligan first (both players keep)
     r.step(0);
     r.step(0);
@@ -57,14 +56,20 @@ fn recording_has_expected_top_level_keys() {
     r.step(62);
     r.step(62);
 
-    let rec = r.get_recording().expect("recorder enabled → recording present");
+    let rec = r
+        .get_recording()
+        .expect("recorder enabled → recording present");
     for key in [
         "initial_state",
         "actions",
         "total_actions",
         "tensor_snapshots_count",
     ] {
-        assert!(rec.as_object().unwrap().contains_key(key), "missing {:?}", key);
+        assert!(
+            rec.as_object().unwrap().contains_key(key),
+            "missing {:?}",
+            key
+        );
     }
     // tensor_snapshots is omitted when empty (record_tensors=false)
     assert!(!rec.as_object().unwrap().contains_key("tensor_snapshots"));
@@ -78,8 +83,7 @@ fn recording_has_expected_top_level_keys() {
 fn recording_initial_state_has_both_players() {
     let db = minimal_db();
     let deck = test_deck();
-    let mut r =
-        HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(7)).unwrap();
+    let mut r = HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(7)).unwrap();
     // Must call step() at least once so the lazy capture fires after mulligan.
     // Action 0 = mulligan-keep for player 1; step again for player 2.
     r.step(0); // player 1 keeps mulligan
@@ -94,7 +98,12 @@ fn recording_initial_state_has_both_players() {
 
     // Verify ISO-8601 timestamp format (YYYY-MM-DDTHH:MM:SS+00:00 = 25 chars).
     let ts = init["timestamp"].as_str().unwrap();
-    assert_eq!(ts.len(), 25, "timestamp should be 25-char ISO-8601: {:?}", ts);
+    assert_eq!(
+        ts.len(),
+        25,
+        "timestamp should be 25-char ISO-8601: {:?}",
+        ts
+    );
     assert_eq!(&ts[19..], "+00:00");
 
     for key in [
@@ -130,8 +139,7 @@ fn recording_returns_none_when_disabled() {
     let db = minimal_db();
     let deck = test_deck();
     // record_actions=false → no recorder
-    let r =
-        HeadlessRunner::new(deck.clone(), deck, &db, false, false, false, Some(1)).unwrap();
+    let r = HeadlessRunner::new(deck.clone(), deck, &db, false, false, false, Some(1)).unwrap();
     assert!(r.get_recording().is_none());
 }
 
@@ -142,8 +150,7 @@ fn lazy_capture_fires_on_pre_action_window() {
         .take(5)
         .chain(std::iter::repeat("ST1-03".to_string()).take(45))
         .collect();
-    let mut r =
-        HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(11)).unwrap();
+    let mut r = HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(11)).unwrap();
 
     // Complete mulligan via step (both players keep)
     r.step(0);
@@ -154,7 +161,10 @@ fn lazy_capture_fires_on_pre_action_window() {
 
     let rec = r.get_recording().expect("recorder enabled");
     let init = &rec["initial_state"];
-    assert!(init.is_object(), "initial_state must be populated after mulligan");
+    assert!(
+        init.is_object(),
+        "initial_state must be populated after mulligan"
+    );
     assert_eq!(
         init["player1"]["security_order"].as_array().unwrap().len(),
         5
@@ -162,7 +172,9 @@ fn lazy_capture_fires_on_pre_action_window() {
     // Confirm the recorded action sequence includes the post-mulligan step.
     let actions = rec["actions"].as_array().unwrap();
     assert!(
-        actions.iter().any(|a| a["action_id"] == serde_json::json!(62)),
+        actions
+            .iter()
+            .any(|a| a["action_id"] == serde_json::json!(62)),
         "expected a post-mulligan PASS action in actions[]"
     );
 }

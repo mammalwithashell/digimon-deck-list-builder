@@ -107,11 +107,7 @@ fn test_003_dp_modifier_expires_end_of_turn() {
     let p0 = r.turn_player();
     r.game.modifiers.expire_end_of_turn(p0);
 
-    assert_eq!(
-        r.dp_of(h_ally),
-        Some(2000),
-        "modifier should have expired"
-    );
+    assert_eq!(r.dp_of(h_ally), Some(2000), "modifier should have expired");
 }
 
 /// TEST-004: "When Digivolving: Gain 2 memory if opponent has any Digimon."
@@ -140,14 +136,12 @@ fn test_004_condition_true_when_opponent_has_digimon() {
 
     // With no opponent Digimon on field, condition should be false.
     let mut game = r.game;
-    let ctx = digimon_engine::effect_context::EffectContext::new(
-        &mut game,
-        card_handle,
-        None,
-        0,
-    );
+    let ctx = digimon_engine::effect_context::EffectContext::new(&mut game, card_handle, None, 0);
     let cond = when_dig.condition.as_ref().unwrap();
-    assert!(!cond(&ctx.as_read()), "condition should be false (no opp Digimon)");
+    assert!(
+        !cond(&ctx.as_read()),
+        "condition should be false (no opp Digimon)"
+    );
 }
 
 #[test]
@@ -177,22 +171,16 @@ fn test_004_condition_true_then_gains_memory() {
 
     let m_before = r.memory();
     {
-        let ctx = digimon_engine::effect_context::EffectContext::new(
-            &mut r.game,
-            handle,
-            None,
-            0,
-        );
+        let ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, handle, None, 0);
         let cond = when_dig.condition.as_ref().unwrap();
-        assert!(cond(&ctx.as_read()), "condition should be true (opp has Digimon)");
+        assert!(
+            cond(&ctx.as_read()),
+            "condition should be true (opp has Digimon)"
+        );
     }
     {
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(
-            &mut r.game,
-            handle,
-            None,
-            0,
-        );
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, handle, None, 0);
         let process = when_dig.process.as_ref().unwrap();
         process(&mut ctx);
     }
@@ -221,12 +209,7 @@ fn test_005_on_deletion_loses_memory() {
     assert!(on_del.on_deletion);
 
     let m_before = r.memory();
-    let mut ctx = digimon_engine::effect_context::EffectContext::new(
-        &mut r.game,
-        handle,
-        None,
-        0,
-    );
+    let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, handle, None, 0);
     let process = on_del.process.as_ref().unwrap();
     process(&mut ctx);
     assert_eq!(r.memory(), m_before - 1, "should lose 1 memory on deletion");
@@ -278,7 +261,12 @@ fn test_003_persistent_modifier_does_not_expire() {
     // Add a permanent +500 manually.
     r.game.modifiers.add(
         h,
-        digimon_engine::modifiers::ModifierEntry::simple(ModifierType::ChangeDp, 500, Expiry::Permanent, 0),
+        digimon_engine::modifiers::ModifierEntry::simple(
+            ModifierType::ChangeDp,
+            500,
+            Expiry::Permanent,
+            0,
+        ),
     );
     assert_eq!(r.dp_of(h), Some(2500));
 

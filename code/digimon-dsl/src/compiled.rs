@@ -250,7 +250,10 @@ pub enum CompiledPerSelector {
     StackSize,
     AllyCount,
     DigivolutionColorCount,
-    CardCountInZone,
+    CardCountInZone {
+        of: CompiledPlayerRef,
+        zone: CompiledZone,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -443,59 +446,294 @@ pub enum CompiledStep {
     GainMemory(i32),
     LoseMemory(i32),
     SetMemory(i32),
-    Draw { of: CompiledPlayerRef, count: u8 },
-    TrashFromTop { of: CompiledPlayerRef, count: u8 },
-    AddToHandFromDeck { of: CompiledPlayerRef, card: CompiledBindingRef },
-    AddToHandFromTrash { of: CompiledPlayerRef, card: CompiledBindingRef },
-    AddToHandFromReveal { of: CompiledPlayerRef, card: CompiledBindingRef },
-    TrashFromHandByIndex { of: CompiledPlayerRef, hand_index: CompiledBindingRef },
-    TrashFromReveal { of: CompiledPlayerRef, card: CompiledBindingRef },
-    ReturnToDeckFromReveal { of: CompiledPlayerRef, card: CompiledBindingRef, position: CompiledStackPosition },
-    ShuffleDeck { of: CompiledPlayerRef },
-    RevealTopDeck { of: CompiledPlayerRef, count: u8, zone: Option<CompiledZone>, bind_as: Option<String> },
-    PlaceRemainderOnDeck { of: CompiledPlayerRef, position: CompiledStackPosition },
-    DeletePermanent { target: CompiledBindingRef },
-    ReturnToHand { target: CompiledBindingRef },
-    ReturnToDeck { target: CompiledBindingRef, position: CompiledStackPosition, include_sources: bool },
-    Suspend { target: CompiledBindingRef },
-    Unsuspend { target: CompiledBindingRef },
-    DeDigivolve { target: CompiledBindingRef, amount: Option<u8>, stop_at_level: Option<u8> },
-    PlaceOnSecurity { of: CompiledPlayerRef, source: CompiledBindingRef, position: CompiledStackPosition, face_up: bool },
-    PlayToken { controller: CompiledPlayerRef, token_name: String },
-    PlaceAsBottomSource { source: CompiledBindingRef, target: CompiledBindingRef },
-    TrashTopSource { target: CompiledBindingRef },
-    Hatch { of: CompiledPlayerRef },
-    PlayFromHand { of: CompiledPlayerRef, hand_index: CompiledBindingRef, cost_delta: Option<CompiledCostDelta> },
-    PlayFromHandFree { of: CompiledPlayerRef, hand_index: CompiledBindingRef },
-    PlayFromTrash { of: CompiledPlayerRef, trash_index: CompiledBindingRef, cost_delta: Option<CompiledCostDelta> },
-    PlayFromTrashFree { of: CompiledPlayerRef, trash_index: CompiledBindingRef },
+    Draw {
+        of: CompiledPlayerRef,
+        count: u8,
+    },
+    TrashFromTop {
+        of: CompiledPlayerRef,
+        count: u8,
+    },
+    AddToHandFromDeck {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
+    AddToHandFromTrash {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
+    AddToHandFromReveal {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
+    TrashFromHandByIndex {
+        of: CompiledPlayerRef,
+        hand_index: CompiledBindingRef,
+    },
+    TrashFromReveal {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
+    ReturnToDeckFromReveal {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        position: CompiledStackPosition,
+    },
+    ShuffleDeck {
+        of: CompiledPlayerRef,
+    },
+    RevealTopDeck {
+        of: CompiledPlayerRef,
+        count: u8,
+        zone: Option<CompiledZone>,
+        bind_as: Option<String>,
+    },
+    PlaceRemainderOnDeck {
+        of: CompiledPlayerRef,
+        position: CompiledStackPosition,
+    },
+    DeletePermanent {
+        target: CompiledBindingRef,
+    },
+    ReturnToHand {
+        target: CompiledBindingRef,
+    },
+    ReturnToDeck {
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+        include_sources: bool,
+    },
+    Suspend {
+        target: CompiledBindingRef,
+    },
+    Unsuspend {
+        target: CompiledBindingRef,
+    },
+    DeDigivolve {
+        target: CompiledBindingRef,
+        amount: Option<u8>,
+        stop_at_level: Option<u8>,
+    },
+    PlaceOnSecurity {
+        of: CompiledPlayerRef,
+        source: CompiledBindingRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
+    PlayToken {
+        controller: CompiledPlayerRef,
+        token_name: String,
+    },
+    PlaceAsBottomSource {
+        source: CompiledBindingRef,
+        target: CompiledBindingRef,
+    },
+    TrashTopSource {
+        target: CompiledBindingRef,
+    },
+    CancelLeave,
+    HandleReplacement,
+    RedirectReplacement {
+        destination: CompiledZone,
+    },
+    SubstitutePermanent {
+        target: CompiledBindingRef,
+    },
+    Hatch {
+        of: CompiledPlayerRef,
+    },
+    PlayFromHand {
+        of: CompiledPlayerRef,
+        hand_index: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
+    },
+    PlayFromHandFree {
+        of: CompiledPlayerRef,
+        hand_index: CompiledBindingRef,
+    },
+    PlayFromTrash {
+        of: CompiledPlayerRef,
+        trash_index: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
+    },
+    PlayFromTrashFree {
+        of: CompiledPlayerRef,
+        trash_index: CompiledBindingRef,
+    },
     PlayFromSecurity,
-    PlayFromMaterials { target: CompiledBindingRef, source_index: CompiledBindingRef, cost_delta: Option<CompiledCostDelta> },
-    EffectInitiatedDigivolve { target: CompiledBindingRef, from_hand: CompiledBindingRef, cost: i32, ignore_requirements: bool },
-    EffectInitiatedDnaDigivolve { target_a: CompiledBindingRef, target_b: CompiledBindingRef, from_hand: CompiledBindingRef, cost: i32, ignore_requirements: bool },
-    TrashTopSecurity { of: CompiledPlayerRef },
-    MarkSecurityFaceUp { of: CompiledPlayerRef, card: CompiledBindingRef },
-    AddDpModifier { target: CompiledBindingRef, value: CompiledModifierValue, expiry: String },
-    AddModifier { target: CompiledModifierTarget, modifier: String, value: CompiledModifierValue, expiry: String },
-    GrantKeyword { target: CompiledBindingRef, keyword: String, expiry: String, value: Option<i32> },
-    SelectOwnPermanent { filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
-    SelectOpponentPermanent { filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
-    SelectHand { of: CompiledPlayerRef, filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
-    SelectTrash { of: CompiledPlayerRef, filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
-    SelectMaterial { of_permanent: CompiledBindingRef, filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
-    SelectReveal { of: CompiledPlayerRef, filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
-    SelectSecurity { of: CompiledPlayerRef, filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
-    SelectUnionZone { of: CompiledPlayerRef, zones: Vec<CompiledZone>, filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional: bool },
-    SelectOrderedPermutation { items: CompiledBindingRef, bind_as: Option<String>, prompt: String, prompt_key: Option<String> },
-    SelectCountCappedMulti { of: CompiledPlayerRef, zone: CompiledZone, max: u8, filter: CompiledPredicate, bind_as: Option<String>, prompt: String, prompt_key: Option<String>, optional_zero: bool, distinct_by: Option<CompiledDistinctBy> },
-    SelectEffectChoice { labels: Vec<String>, bind_as: Option<String>, prompt: String, prompt_key: Option<String> },
-    AsSelectingPlayer { of: CompiledPlayerRef, body: Vec<CompiledStep> },
-    If { condition: CompiledPredicate, then: Vec<CompiledStep>, else_branch: Vec<CompiledStep> },
-    ForEach { over: CompiledPredicate, bind_as: String, body: Vec<CompiledStep> },
-    PerSelected { selection: String, bind_as: String, body: Vec<CompiledStep> },
-    ScheduleDelayed { when: CompiledTiming, body: Vec<CompiledStep> },
+    PlayFromMaterials {
+        target: CompiledBindingRef,
+        source_index: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
+    },
+    EffectInitiatedDigivolve {
+        target: CompiledBindingRef,
+        from_hand: CompiledBindingRef,
+        cost: i32,
+        ignore_requirements: bool,
+    },
+    EffectInitiatedDnaDigivolve {
+        target_a: CompiledBindingRef,
+        target_b: CompiledBindingRef,
+        from_hand: CompiledBindingRef,
+        cost: i32,
+        ignore_requirements: bool,
+    },
+    TrashTopSecurity {
+        of: CompiledPlayerRef,
+    },
+    MarkSecurityFaceUp {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
+    AddDpModifier {
+        target: CompiledBindingRef,
+        value: CompiledModifierValue,
+        expiry: String,
+    },
+    AddModifier {
+        target: CompiledModifierTarget,
+        modifier: String,
+        value: CompiledModifierValue,
+        expiry: String,
+    },
+    GrantKeyword {
+        target: CompiledBindingRef,
+        keyword: String,
+        expiry: String,
+        value: Option<i32>,
+    },
+    SelectOwnPermanent {
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectOpponentPermanent {
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectAnyPermanent {
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectDnaPair {
+        left_filter: CompiledPredicate,
+        right_filter: CompiledPredicate,
+        bind_left_as: String,
+        bind_right_as: String,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectHand {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectTrash {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectMaterial {
+        of_permanent: CompiledBindingRef,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectReveal {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectSecurity {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectUnionZone {
+        of: CompiledPlayerRef,
+        zones: Vec<CompiledZone>,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    SelectOrderedPermutation {
+        items: CompiledBindingRef,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+    },
+    SelectCountCappedMulti {
+        of: CompiledPlayerRef,
+        zone: CompiledZone,
+        max: u8,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional_zero: bool,
+        distinct_by: Option<CompiledDistinctBy>,
+    },
+    SelectEffectChoice {
+        labels: Vec<String>,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+    },
+    AsSelectingPlayer {
+        of: CompiledPlayerRef,
+        body: Vec<CompiledStep>,
+    },
+    If {
+        condition: CompiledPredicate,
+        then: Vec<CompiledStep>,
+        else_branch: Vec<CompiledStep>,
+    },
+    ForEach {
+        over: CompiledPredicate,
+        bind_as: String,
+        body: Vec<CompiledStep>,
+    },
+    PerSelected {
+        selection: String,
+        bind_as: String,
+        body: Vec<CompiledStep>,
+    },
+    ScheduleDelayed {
+        when: CompiledTiming,
+        body: Vec<CompiledStep>,
+    },
     Optional(Vec<CompiledStep>),
-    RawRust { fn_name: String, consumes: Vec<String>, binds: Vec<String> },
+    RawRust {
+        fn_name: String,
+        consumes: Vec<String>,
+        binds: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -522,6 +760,7 @@ pub enum CompiledCostDelta {
     Free,
     Printed,
     Literal(i32),
+    Reduce(i32),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -579,8 +818,14 @@ mod tests {
         // couldn't handle.
         let pred = CompiledPredicate {
             any_of: vec![
-                CompiledPredicate { name_contains: Some("Greymon".into()), ..Default::default() },
-                CompiledPredicate { name_contains: Some("Garurumon".into()), ..Default::default() },
+                CompiledPredicate {
+                    name_contains: Some("Greymon".into()),
+                    ..Default::default()
+                },
+                CompiledPredicate {
+                    name_contains: Some("Garurumon".into()),
+                    ..Default::default()
+                },
             ],
             ..Default::default()
         };

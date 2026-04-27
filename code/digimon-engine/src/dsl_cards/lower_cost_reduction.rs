@@ -1,23 +1,35 @@
 //! Lower `CompiledDeclarativeClause::CostReduction`.
 //!
-//! Phase 1c supports only the `when_playing_this: true` + literal `amount`
-//! shape. Emission caveats:
-//!
-//! * The engine's `scan_before_pay_cost_reduction` only inspects battle_area
-//!   cards, so `when_playing_this: true` reductions DO NOT fire from hand
-//!   today. The Effect is still emitted with correct shape; it will activate
-//!   once the engine-side scan extends to the acting player's hand (tracked
-//!   for Phase 2).
-//! * `amount_fn`, `pay_cost`, `when_any_ally_played`, and non-`before_pay_cost`
-//!   timings are skipped — caller should not emit in those cases.
+//! Phase 3 supports literal and formula-backed amounts plus synchronous
+//! `pay_cost` bodies. The engine's `scan_before_pay_cost_reduction` still
+//! scans battle-area cards, so reducers authored for hand-only activation
+//! rely on the engine-side scan semantics.
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledPredicate, CompiledScope};
+use digimon_dsl::compiled::{CompiledFormula, CompiledPredicate, CompiledScope, CompiledStep};
 
 use crate::card_source::CardHandle;
+use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect::Effect;
+use crate::effect_context::EffectReadContext;
+
+fn evaluate_amount(
+    formula: &CompiledFormula,
+    rctx: &EffectReadContext<'_>,
+    raw: &EngineRawRustRegistry,
+) -> i32 {
+    match rctx.source_permanent {
+        Some(target) => formula_eval::evaluate_read_with_raw(formula, rctx, target, raw),
+        None => match formula {
+            CompiledFormula::Literal(n) => *n,
+            _ => 0,
+        },
+    }
+}
 
 pub fn lower(
     card: CardHandle,
@@ -27,8 +39,34 @@ pub fn lower(
     once_per_turn: bool,
     amount: i32,
 ) -> Effect {
+    lower_with_formula(
+        card,
+        scope,
+        active_when,
+        condition,
+        once_per_turn,
+        Some(CompiledFormula::Literal(amount)),
+        vec![],
+        Arc::new(EngineRawRustRegistry::new()),
+    )
+}
+
+pub fn lower_with_formula(
+    card: CardHandle,
+    scope: CompiledScope,
+    active_when: Option<CompiledPredicate>,
+    condition: Option<CompiledPredicate>,
+    once_per_turn: bool,
+    amount_fn: Option<CompiledFormula>,
+    pay_cost: Vec<CompiledStep>,
+    raw: Arc<EngineRawRustRegistry>,
+) -> Effect {
     let active_when = active_when.map(Arc::new);
     let condition = condition.map(Arc::new);
+    let amount_fn = amount_fn.map(Arc::new);
+    let pay_cost: Arc<[CompiledStep]> = Arc::from(pay_cost);
+    let runtime = StepRuntime::new(raw);
+    let amount_runtime = runtime.clone();
 
     let mut builder = Effect::before_pay_cost(card).name("Cost reduction");
     if matches!(scope, CompiledScope::Inherited) {
@@ -48,7 +86,19 @@ pub fn lower(
                 return 0;
             }
         }
-        amount
+        amount_fn
+            .as_ref()
+            .map(|f| evaluate_amount(f, rctx, amount_runtime.raw()))
+            .unwrap_or(0)
     });
+    if !pay_cost.is_empty() {
+        builder = builder.pay_cost_fn(move |ctx| {
+            let mut bindings = crate::dsl_cards::bindings::Bindings::new();
+            matches!(
+                run_steps_with_runtime(pay_cost.as_ref(), ctx, &mut bindings, &runtime),
+                RunOutcome::Synchronous
+            )
+        });
+    }
     builder.build()
 }

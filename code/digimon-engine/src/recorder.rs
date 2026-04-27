@@ -101,20 +101,15 @@ impl GameRecorder {
     /// `deck_lists` is `(deck1_card_ids, deck2_card_ids)` — the original
     /// pre-shuffle submission lists. The runner passes these in because
     /// the game only retains the shuffled order.
-    pub fn capture_initial_state(
-        &mut self,
-        game: &Game,
-        deck_lists: (&[String], &[String]),
-    ) {
+    pub fn capture_initial_state(&mut self, game: &Game, deck_lists: (&[String], &[String])) {
         let p1 = &game.players[0];
         let p2 = &game.players[1];
 
-        let to_ids =
-            |v: &[crate::card_source::CardSource]| -> Vec<String> {
-                v.iter()
-                    .map(|c| c.card_id(&game.card_data).to_string())
-                    .collect()
-            };
+        let to_ids = |v: &[crate::card_source::CardSource]| -> Vec<String> {
+            v.iter()
+                .map(|c| c.card_id(&game.card_data).to_string())
+                .collect()
+        };
 
         self.initial = Some(InitialState {
             first_player_id: game.turn_order[0],
@@ -144,12 +139,7 @@ impl GameRecorder {
 
     /// Record an action. Call BEFORE `Game::decode_action`. Returns the
     /// index of the pushed entry so `finalize_action` can update it.
-    pub fn record_action(
-        &mut self,
-        game: &Game,
-        action_id: u16,
-        player_id: PlayerId,
-    ) -> usize {
+    pub fn record_action(&mut self, game: &Game, action_id: u16, player_id: PlayerId) -> usize {
         self.step_counter += 1;
         let entry = RecordedAction {
             step_number: self.step_counter,
@@ -176,12 +166,7 @@ impl GameRecorder {
     }
 
     /// Capture tensor snapshot. No-op when `record_tensors` is false.
-    pub fn record_tensor(
-        &mut self,
-        player_id: PlayerId,
-        tensor: Vec<f32>,
-        action_mask: Vec<f32>,
-    ) {
+    pub fn record_tensor(&mut self, player_id: PlayerId, tensor: Vec<f32>, action_mask: Vec<f32>) {
         if !self.record_tensors {
             return;
         }
@@ -280,10 +265,7 @@ impl GameRecorder {
     }
 }
 
-fn player_initial_json(
-    p: &PlayerInitialState,
-    py_pid: &dyn Fn(PlayerId) -> i64,
-) -> Value {
+fn player_initial_json(p: &PlayerInitialState, py_pid: &dyn Fn(PlayerId) -> i64) -> Value {
     json!({
         "player_id": py_pid(p.player_id),
         "deck_list": p.deck_list,

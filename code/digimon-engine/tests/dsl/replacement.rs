@@ -53,7 +53,11 @@ fn when_would_be_deleted_emits_replacement_effect() {
         CompiledScope::FaceUp,
     )));
     let effects = dsl.effects(CardHandle(0));
-    assert_eq!(effects.len(), 1, "expected one effect for when_would_be_deleted");
+    assert_eq!(
+        effects.len(),
+        1,
+        "expected one effect for when_would_be_deleted"
+    );
     assert_eq!(effects[0].timing, EffectTiming::WhenWouldBeDeleted);
     assert!(
         effects[0].replacement_process.is_some(),
@@ -167,7 +171,10 @@ fn inherited_scope_sets_inherited_flag_on_effect() {
     )));
     let effects = dsl.effects(CardHandle(0));
     assert_eq!(effects.len(), 1);
-    assert!(effects[0].inherited, "scope: Inherited should set the inherited flag");
+    assert!(
+        effects[0].inherited,
+        "scope: Inherited should set the inherited flag"
+    );
 }
 
 #[test]
@@ -207,14 +214,32 @@ fn trigger_map_covers_all_nine_known_triggers() {
     use digimon_engine::dsl_cards::trigger_map::lookup_replacement_trigger;
     let known = [
         ("when_would_be_deleted", EffectTiming::WhenWouldBeDeleted),
-        ("when_would_leave_battle_area", EffectTiming::WhenWouldLeaveBattleArea),
-        ("when_would_be_returned_to_hand", EffectTiming::WhenWouldBeReturnedToHand),
-        ("when_would_be_returned_to_deck", EffectTiming::WhenWouldBeReturnedToDeck),
+        (
+            "when_would_leave_battle_area",
+            EffectTiming::WhenWouldLeaveBattleArea,
+        ),
+        (
+            "when_would_be_returned_to_hand",
+            EffectTiming::WhenWouldBeReturnedToHand,
+        ),
+        (
+            "when_would_be_returned_to_deck",
+            EffectTiming::WhenWouldBeReturnedToDeck,
+        ),
         ("when_would_be_trashed", EffectTiming::WhenWouldBeTrashed),
-        ("when_would_be_de_digivolved", EffectTiming::WhenWouldBeDeDigivolved),
-        ("when_would_lose_security", EffectTiming::WhenWouldLoseSecurity),
+        (
+            "when_would_be_de_digivolved",
+            EffectTiming::WhenWouldBeDeDigivolved,
+        ),
+        (
+            "when_would_lose_security",
+            EffectTiming::WhenWouldLoseSecurity,
+        ),
         ("when_would_draw", EffectTiming::WhenWouldDraw),
-        ("when_would_place_in_security", EffectTiming::WhenWouldPlaceInSecurity),
+        (
+            "when_would_place_in_security",
+            EffectTiming::WhenWouldPlaceInSecurity,
+        ),
     ];
     for (name, expected) in &known {
         assert_eq!(

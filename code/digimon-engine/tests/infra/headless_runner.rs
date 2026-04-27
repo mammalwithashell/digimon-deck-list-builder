@@ -69,16 +69,8 @@ fn new_runner_starts_in_mulligan() {
 #[test]
 fn mask_and_tensor_sizes_match_layout() {
     let db = test_card_db();
-    let runner = HeadlessRunner::new(
-        test_deck(),
-        test_deck(),
-        &db,
-        false,
-        false,
-        false,
-        Some(1),
-    )
-    .unwrap();
+    let runner =
+        HeadlessRunner::new(test_deck(), test_deck(), &db, false, false, false, Some(1)).unwrap();
 
     assert_eq!(runner.get_action_mask().len(), ACTION_SPACE_SIZE);
     assert_eq!(runner.get_board_tensor(None).len(), TENSOR_SIZE);
@@ -89,16 +81,8 @@ fn mask_and_tensor_sizes_match_layout() {
 #[test]
 fn step_is_noop_after_game_over() {
     let db = test_card_db();
-    let mut runner = HeadlessRunner::new(
-        test_deck(),
-        test_deck(),
-        &db,
-        false,
-        false,
-        false,
-        Some(7),
-    )
-    .unwrap();
+    let mut runner =
+        HeadlessRunner::new(test_deck(), test_deck(), &db, false, false, false, Some(7)).unwrap();
 
     runner.game.declare_winner(1);
     assert!(runner.is_game_over());
@@ -112,16 +96,8 @@ fn step_is_noop_after_game_over() {
 #[test]
 fn default_policy_reaches_conclusion() {
     let db = test_card_db();
-    let mut runner = HeadlessRunner::new(
-        test_deck(),
-        test_deck(),
-        &db,
-        false,
-        false,
-        false,
-        Some(99),
-    )
-    .unwrap();
+    let mut runner =
+        HeadlessRunner::new(test_deck(), test_deck(), &db, false, false, false, Some(99)).unwrap();
 
     // No explicit policy — runner falls back to PASS-everything.
     // The game should terminate within the turn cap, either by deck-out
@@ -134,16 +110,8 @@ fn default_policy_reaches_conclusion() {
 #[test]
 fn mulligan_accept_advances() {
     let db = test_card_db();
-    let mut runner = HeadlessRunner::new(
-        test_deck(),
-        test_deck(),
-        &db,
-        false,
-        false,
-        false,
-        Some(3),
-    )
-    .unwrap();
+    let mut runner =
+        HeadlessRunner::new(test_deck(), test_deck(), &db, false, false, false, Some(3)).unwrap();
 
     let first = runner.mulligan_current_player().expect("mulligan pending");
     runner.accept_mulligan(first, true).unwrap();

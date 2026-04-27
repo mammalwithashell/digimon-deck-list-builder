@@ -82,9 +82,7 @@ fn grant_keyword_unknown_name_skips_emission() {
     assert!(dsl.effects(card).is_empty());
 }
 
-use digimon_dsl::compiled::{
-    CompiledGrantKeywordValue, CompiledPlayerRef, CompiledPredicate,
-};
+use digimon_dsl::compiled::{CompiledGrantKeywordValue, CompiledPlayerRef, CompiledPredicate};
 
 fn fixture_aura_self_dp(amount: i32) -> CompiledCard {
     CompiledCard {
@@ -122,7 +120,10 @@ fn self_aura_with_dp_modifier_sets_static_dp_field() {
     let effects = dsl.effects(CardHandle(0));
     assert_eq!(effects.len(), 1);
     assert_eq!(effects[0].dp_modifier, 2000);
-    assert!(effects[0].inherited, "scope: inherited should set the inherited flag");
+    assert!(
+        effects[0].inherited,
+        "scope: inherited should set the inherited flag"
+    );
 }
 
 fn fixture_aura_filtered(
@@ -228,8 +229,9 @@ fn cost_reduction_when_playing_this_emits_before_pay_cost_effect() {
 fn cost_reduction_without_literal_amount_skips_emission() {
     // amount_fn path is Phase 2+ — drop for now.
     let mut c = fixture_cost_reduction(0, None);
-    if let CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { amount, .. }) =
-        &mut c.effects[0]
+    if let CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction {
+        amount, ..
+    }) = &mut c.effects[0]
     {
         *amount = None;
     }
@@ -255,7 +257,10 @@ fn fixture_flood_gate(modifier: &str, target: CompiledPredicate) -> CompiledCard
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::FloodGate {
                 scope: CompiledScope::FaceUp,
-                active_when: Some(CompiledPredicate { your_turn: Some(true), ..Default::default() }),
+                active_when: Some(CompiledPredicate {
+                    your_turn: Some(true),
+                    ..Default::default()
+                }),
                 modifier: modifier.into(),
                 target,
                 summary: None,
@@ -311,8 +316,7 @@ fn ace_overflow_is_none_when_unset() {
 
 #[test]
 fn register_dsl_cards_inserts_every_pack_card_into_registry() {
-    let pack = digimon_engine::dsl_registry::from_embedded()
-        .expect("embedded pack loads");
+    let pack = digimon_engine::dsl_registry::from_embedded().expect("embedded pack loads");
     let mut effects = digimon_engine::cards::CardEffectRegistry::new();
     digimon_engine::dsl_cards::register_dsl_cards(&mut effects, &pack);
     assert_eq!(effects.len(), pack.len());
@@ -327,6 +331,12 @@ fn register_dsl_cards_inserts_every_pack_card_into_registry() {
 #[test]
 fn build_registry_contains_both_dsl_and_hand_written_cards() {
     let registry = digimon_engine::cards::build_registry();
-    assert!(registry.get("TEST-001").is_some(), "hand-written TEST-001 present");
-    assert!(registry.get("ST2-13").is_some(), "DSL-authored ST2-13 present");
+    assert!(
+        registry.get("TEST-001").is_some(),
+        "hand-written TEST-001 present"
+    );
+    assert!(
+        registry.get("ST2-13").is_some(),
+        "DSL-authored ST2-13 present"
+    );
 }

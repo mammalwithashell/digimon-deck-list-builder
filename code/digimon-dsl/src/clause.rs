@@ -119,7 +119,9 @@ pub enum Timing {
     Delayed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum ClauseScope {
     #[default]
@@ -211,9 +213,7 @@ impl DeclarativeClause {
         );
 
         Ok(match self.kind {
-            DeclarativeKind::Aura => {
-                TypedDeclarativeBody::Aura(serde_yml::from_value(value)?)
-            }
+            DeclarativeKind::Aura => TypedDeclarativeBody::Aura(serde_yml::from_value(value)?),
             DeclarativeKind::CostReduction => {
                 TypedDeclarativeBody::CostReduction(serde_yml::from_value(value)?)
             }
@@ -229,9 +229,7 @@ impl DeclarativeClause {
             DeclarativeKind::GrantKeyword => {
                 TypedDeclarativeBody::GrantKeyword(serde_yml::from_value(value)?)
             }
-            DeclarativeKind::Delay => {
-                TypedDeclarativeBody::Delay(serde_yml::from_value(value)?)
-            }
+            DeclarativeKind::Delay => TypedDeclarativeBody::Delay(serde_yml::from_value(value)?),
             DeclarativeKind::FloodGate => {
                 TypedDeclarativeBody::FloodGate(serde_yml::from_value(value)?)
             }

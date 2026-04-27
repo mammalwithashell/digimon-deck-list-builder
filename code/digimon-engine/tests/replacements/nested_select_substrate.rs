@@ -13,7 +13,9 @@ use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, CardKind, Zone};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::replacement::{ParkedReplacement, ReplacementCause, ReplacementOutcome, ReplacementSubject};
+use digimon_engine::replacement::{
+    ParkedReplacement, ReplacementCause, ReplacementOutcome, ReplacementSubject,
+};
 
 fn fighter(id: &str) -> CardData {
     CardData {
@@ -81,7 +83,10 @@ fn handle_replacement_writes_custom_handled_to_parked_slot() {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
         ctx.handle_replacement();
     }
-    let outcome = r.game.parked_replacement_outcome_for_test().expect("slot still set");
+    let outcome = r
+        .game
+        .parked_replacement_outcome_for_test()
+        .expect("slot still set");
     assert_eq!(
         outcome,
         ReplacementOutcome::CustomHandled,
@@ -98,7 +103,10 @@ fn redirect_replacement_writes_redirected_outcome_to_parked_slot() {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
         ctx.redirect_replacement(Zone::Hand);
     }
-    let outcome = r.game.parked_replacement_outcome_for_test().expect("slot still set");
+    let outcome = r
+        .game
+        .parked_replacement_outcome_for_test()
+        .expect("slot still set");
     assert_eq!(
         outcome,
         ReplacementOutcome::Redirected(Zone::Hand),
@@ -119,7 +127,10 @@ fn substitute_replacement_writes_substituted_outcome_to_parked_slot() {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 0);
         ctx.substitute_replacement(ReplacementSubject::Permanent(other));
     }
-    let outcome = r.game.parked_replacement_outcome_for_test().expect("slot still set");
+    let outcome = r
+        .game
+        .parked_replacement_outcome_for_test()
+        .expect("slot still set");
     assert_eq!(
         outcome,
         ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)),
@@ -169,7 +180,9 @@ fn post_process_hook_installs_parked_replacement_when_select_called() {
         .start();
     r.register_effect(
         "PARK-TEST",
-        Arc::new(ParkingCard { installed: Arc::clone(&installed) }),
+        Arc::new(ParkingCard {
+            installed: Arc::clone(&installed),
+        }),
     );
     let parker = r.place_on_field(0, "PARK-TEST", None);
     let _other = r.place_on_field(0, "OTHER", None);
@@ -178,15 +191,27 @@ fn post_process_hook_installs_parked_replacement_when_select_called() {
     r.game.delete_permanent_with_effects(parker);
 
     // Outer optional-accept dialog is installed.
-    let pending = r.game.pending_selection.as_ref().expect("optional accept installed");
-    assert_eq!(pending.kind, digimon_engine::selection::SelectionKind::Replacement);
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("optional accept installed");
+    assert_eq!(
+        pending.kind,
+        digimon_engine::selection::SelectionKind::Replacement
+    );
 
     // Resolve the outer accept (REPLACEMENT_ACCEPT action).
     use digimon_engine::action::space::REPLACEMENT_ACCEPT;
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept ok");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept ok");
 
     // Process closure ran (installed flag set).
-    assert!(*installed.lock().unwrap(), "process closure should have run");
+    assert!(
+        *installed.lock().unwrap(),
+        "process closure should have run"
+    );
     // Inner select_own_permanent installed a fresh PendingSelection.
     assert!(r.game.pending_selection.is_some(), "inner select installed");
     // POST-PROCESS HOOK: parked_replacement populated.
@@ -237,7 +262,9 @@ fn post_callback_hook_drains_parked_and_commits_outcome() {
     r.game.delete_permanent_with_effects(parker);
 
     use digimon_engine::action::space::REPLACEMENT_ACCEPT;
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept ok");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept ok");
     assert!(
         r.game.parked_replacement_outcome_for_test().is_some(),
         "parked installed after accept"
@@ -247,7 +274,9 @@ fn post_callback_hook_drains_parked_and_commits_outcome() {
     let pending = r.game.pending_selection.as_ref().expect("inner select");
     let action = pending.valid_action_ids[0];
     let player = pending.selecting_player;
-    r.game.resolve_selection(player, action).expect("inner pick ok");
+    r.game
+        .resolve_selection(player, action)
+        .expect("inner pick ok");
 
     // POST-CALLBACK HOOK should have drained parked_replacement and committed.
     assert!(
@@ -299,7 +328,9 @@ fn default_none_when_callback_skips_outcome() {
 
     r.game.delete_permanent_with_effects(parker);
     use digimon_engine::action::space::REPLACEMENT_ACCEPT;
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
     let pending = r.game.pending_selection.as_ref().unwrap();
     let action = pending.valid_action_ids[0];
     let player = pending.selecting_player;
@@ -326,7 +357,10 @@ fn last_write_wins_on_multiple_outcome_setters() {
         ctx.redirect_replacement(Zone::Hand);
     }
 
-    let outcome = r.game.parked_replacement_outcome_for_test().expect("slot still set");
+    let outcome = r
+        .game
+        .parked_replacement_outcome_for_test()
+        .expect("slot still set");
     assert_eq!(
         outcome,
         ReplacementOutcome::Redirected(Zone::Hand),
@@ -347,9 +381,8 @@ fn single_outstanding_park_panics_on_double_install() {
                 .name("DOUBLE-PARK")
                 .optional()
                 .replacement_process(|rctx| {
-                    rctx.effect.select_own_permanent(
-                        "x", false, |_g, _h| true, |_ctx, _p| {},
-                    );
+                    rctx.effect
+                        .select_own_permanent("x", false, |_g, _h| true, |_ctx, _p| {});
                 })
                 .build()]
         }
@@ -411,7 +444,9 @@ fn synchronous_outcome_preserved_when_process_also_parks() {
 
     r.game.delete_permanent_with_effects(parker);
     use digimon_engine::action::space::REPLACEMENT_ACCEPT;
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
 
     let pending = r.game.pending_selection.as_ref().unwrap();
     let action = pending.valid_action_ids[0];

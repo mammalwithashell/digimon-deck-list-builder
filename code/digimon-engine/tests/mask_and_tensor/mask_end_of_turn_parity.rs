@@ -62,20 +62,25 @@ fn mask_vortex_emits_attacks_in_end_of_turn_phase() {
     // arm instead.
     r.game.players[opp as usize].battle_area[0].is_suspended = true;
 
-    r.game.modifiers.grant_keyword(
-        attacker, Keyword::Vortex, Expiry::EndOfTurn, tp,
-    );
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
     let mask = build_action_mask(&r.game, tp);
 
-    assert_eq!(mask[PASS as usize], 1.0, "PASS is always legal in EndOfTurnAction");
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask[PASS as usize], 1.0,
+        "PASS is always legal in EndOfTurnAction"
+    );
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "Vortex permits attacking security",
     );
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, def_idx as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, def_idx as u16) as usize],
+        1.0,
         "Vortex permits attacking enemy Digimon",
     );
 }
@@ -100,11 +105,13 @@ fn mask_vortex_without_keyword_only_emits_pass() {
 
     assert_eq!(mask[PASS as usize], 1.0);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 0.0,
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        0.0,
         "no Vortex keyword → no security attack",
     );
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, def_idx as u16) as usize], 0.0,
+        mask[encode_attack(attacker.index as u16, def_idx as u16) as usize],
+        0.0,
         "no Vortex keyword → no digimon attack",
     );
 }
@@ -126,14 +133,15 @@ fn mask_vortex_bypasses_summoning_sickness() {
     r.place_on_field(opp, "DEF", Some(0));
     r.game.players[opp as usize].battle_area[0].is_suspended = true;
 
-    r.game.modifiers.grant_keyword(
-        attacker, Keyword::Vortex, Expiry::EndOfTurn, tp,
-    );
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "Vortex must bypass summoning sickness (relies on can_attack(vortex=true))",
     );
 }
@@ -158,18 +166,20 @@ fn mask_vortex_targets_unsuspended_digimon_too() {
         p.is_suspended = false;
     }
 
-    r.game.modifiers.grant_keyword(
-        attacker, Keyword::Vortex, Expiry::EndOfTurn, tp,
-    );
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize],
+        1.0,
         "Vortex targets any enemy Digimon — weak (unsuspended) is valid",
     );
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize],
+        1.0,
         "Vortex targets any enemy Digimon — strong (unsuspended) is valid",
     );
 }
@@ -195,9 +205,9 @@ fn mask_vortex_respects_cannot_attack_target() {
     let attacker = r.place_on_field(tp, "ATK", Some(0));
     let defender = r.place_on_field(opp, "DEF", Some(0));
 
-    r.game.modifiers.grant_keyword(
-        attacker, Keyword::Vortex, Expiry::EndOfTurn, tp,
-    );
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
     r.game.modifiers.add(
         defender,
         ModifierEntry::simple(ModifierType::CannotAttackTarget, 1, Expiry::EndOfTurn, opp),
@@ -206,11 +216,13 @@ fn mask_vortex_respects_cannot_attack_target() {
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize], 0.0,
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        0.0,
         "Vortex must also honor CannotAttackTarget",
     );
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "Vortex security attack is unaffected by CannotAttackTarget",
     );
 }
@@ -233,12 +245,15 @@ fn mask_overclock_emits_sub_slot_0_bit_with_sacrifice_available() {
     let tp = r.game.turn_player();
     let oc = r.place_on_field(tp, "OC", Some(0));
     let _sac = r.place_on_field(tp, "SAC", Some(0));
-    r.game.modifiers.grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[overclock_bit(oc.index as usize)], 1.0,
+        mask[overclock_bit(oc.index as usize)],
+        1.0,
         "Overclock with at least one other Digimon must emit sub-slot 0",
     );
 }
@@ -252,12 +267,15 @@ fn mask_overclock_suppressed_when_no_sacrifice() {
 
     let tp = r.game.turn_player();
     let oc = r.place_on_field(tp, "OC", Some(0));
-    r.game.modifiers.grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[overclock_bit(oc.index as usize)], 0.0,
+        mask[overclock_bit(oc.index as usize)],
+        0.0,
         "no sacrifice available → Overclock bit must not emit",
     );
 }
@@ -283,11 +301,13 @@ fn mask_may_attack_emits_attack_bits_against_digimon_and_security() {
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "MayAttack permits attacking security",
     );
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        1.0,
         "MayAttack permits attacking any enemy Digimon",
     );
 }
@@ -315,7 +335,8 @@ fn mask_may_attack_respects_cannot_attack_target() {
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize], 0.0,
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        0.0,
         "MayAttack must honor CannotAttackTarget like Vortex does",
     );
 }
@@ -341,11 +362,13 @@ fn mask_force_attack_emits_attack_bits_in_eot() {
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "ForceAttack permits attacking security in EOT",
     );
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize], 1.0,
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        1.0,
         "ForceAttack permits attacking enemy Digimon in EOT",
     );
     // PASS is still emitted — execution-side enforcement of the "mandatory"

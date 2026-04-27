@@ -37,28 +37,32 @@ use crate::enums::CostDelta;
 ///   `Some(Printed)`     → `CostDelta::Reduce(0)`
 ///   `Some(Free)`        → `CostDelta::Free`
 ///   `Some(Literal(n))`  → `CostDelta::Fixed(n as i16)`
+///   `Some(Reduce(n))`   → `CostDelta::Reduce(n as i16)`
 fn lower_cost_delta(d: Option<&digimon_dsl::compiled::CompiledCostDelta>) -> CostDelta {
     use digimon_dsl::compiled::CompiledCostDelta;
     match d {
         None | Some(CompiledCostDelta::Printed) => CostDelta::Reduce(0),
         Some(CompiledCostDelta::Free) => CostDelta::Free,
         Some(CompiledCostDelta::Literal(n)) => CostDelta::Fixed(*n as i16),
+        Some(CompiledCostDelta::Reduce(n)) => CostDelta::Reduce(*n as i16),
     }
 }
 
-/// Resolve a `source: CompiledBindingRef` to a `CardSourceRef`, defaulting the
-/// source-zone owner to `ctx.player` (the effect controller) for hand/trash
-/// binding kinds. Returns `None` if the binding can't be resolved or has an
-/// unsupported kind. See I2 above for the owner-heuristic limitation.
+/// Resolve a `source: CompiledBindingRef` to a `CardSourceRef`.
+/// Hand/trash positional bindings carry their zone owner, so cross-player
+/// source moves do not guess from the effect controller.
 fn resolve_card_source_ref(
     source: &digimon_dsl::compiled::CompiledBindingRef,
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
 ) -> Option<CardSourceRef> {
-    let owner = ctx.player;
     match resolve_binding_ref(source, ctx, bindings)? {
-        ResolvedBinding::HandIndex(i) => Some(CardSourceRef::Hand(owner, i as usize)),
-        ResolvedBinding::TrashIndex(i) => Some(CardSourceRef::Trash(owner, i as usize)),
+        ResolvedBinding::HandIndex { player, index } => {
+            Some(CardSourceRef::Hand(player, index as usize))
+        }
+        ResolvedBinding::TrashIndex { player, index } => {
+            Some(CardSourceRef::Trash(player, index as usize))
+        }
         ResolvedBinding::Card(h) => Some(CardSourceRef::Reveal(h)),
         // DeckTop and other kinds: no IR binding produces them today.
         // Future: widen as IR evolves.
@@ -69,56 +73,56 @@ fn resolve_card_source_ref(
 /// Try to handle `step` as a play / digivolve / placement variant.
 /// Returns `true` if the variant was matched (regardless of whether the
 /// underlying engine call succeeded).
-pub fn try_run(
-    step: &CompiledStep,
-    ctx: &mut EffectContext<'_>,
-    bindings: &mut Bindings,
-) -> bool {
+pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) -> bool {
     match step {
         // ── Play primitives (hand) ────────────────────────────────────────
-        CompiledStep::PlayFromHand { of, hand_index, cost_delta } => {
-            let p = resolve_player(ctx, *of);
-            if let Some(ResolvedBinding::HandIndex(i)) =
+        CompiledStep::PlayFromHand {
+            of: _,
+            hand_index,
+            cost_delta,
+        } => {
+            if let Some(ResolvedBinding::HandIndex { player, index }) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
                 let delta = lower_cost_delta(cost_delta.as_ref());
-                let _ = ctx.play_from_hand_with_cost(p, i as usize, delta);
+                let _ = ctx.play_from_hand_with_cost(player, index as usize, delta);
             }
             true
         }
-        CompiledStep::PlayFromHandFree { of, hand_index } => {
-            let p = resolve_player(ctx, *of);
-            if let Some(ResolvedBinding::HandIndex(i)) =
+        CompiledStep::PlayFromHandFree { of: _, hand_index } => {
+            if let Some(ResolvedBinding::HandIndex { player, index }) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                let _ = ctx.play_from_hand_free(p, i as usize);
+                let _ = ctx.play_from_hand_free(player, index as usize);
             }
             true
         }
 
         // ── Play primitives (trash) ───────────────────────────────────────
-        CompiledStep::PlayFromTrash { of, trash_index, cost_delta } => {
-            let p = resolve_player(ctx, *of);
-            if let Some(ResolvedBinding::TrashIndex(i)) =
+        CompiledStep::PlayFromTrash {
+            of: _,
+            trash_index,
+            cost_delta,
+        } => {
+            if let Some(ResolvedBinding::TrashIndex { player, index }) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
                 let delta = lower_cost_delta(cost_delta.as_ref());
-                let _ = ctx.play_from_trash_with_cost(p, i as usize, delta);
+                let _ = ctx.play_from_trash_with_cost(player, index as usize, delta);
             }
             true
         }
-        CompiledStep::PlayFromTrashFree { of, trash_index } => {
-            let p = resolve_player(ctx, *of);
+        CompiledStep::PlayFromTrashFree { of: _, trash_index } => {
             // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
             // IR addresses by trash index so we must look up the handle.
-            if let Some(ResolvedBinding::TrashIndex(i)) =
+            if let Some(ResolvedBinding::TrashIndex { player, index }) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
                 let handle: Option<CardHandle> = ctx
                     .game
-                    .player(p)
+                    .player(player)
                     .trash
-                    .get(i as usize)
+                    .get(index as usize)
                     .map(|cs| cs.handle());
                 if let Some(h) = handle {
                     let _ = ctx.play_from_trash_free_unsuspended(h);
@@ -135,7 +139,11 @@ pub fn try_run(
             let _ = ctx.play_from_security(ctx.player);
             true
         }
-        CompiledStep::PlayFromMaterials { target, source_index, cost_delta } => {
+        CompiledStep::PlayFromMaterials {
+            target,
+            source_index,
+            cost_delta,
+        } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
@@ -150,13 +158,18 @@ pub fn try_run(
         }
 
         // ── Digivolve primitives ──────────────────────────────────────────
-        CompiledStep::EffectInitiatedDigivolve { target, from_hand, cost, ignore_requirements } => {
+        CompiledStep::EffectInitiatedDigivolve {
+            target,
+            from_hand,
+            cost,
+            ignore_requirements,
+        } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
             };
-            let hand_index = match resolve_binding_ref(from_hand, ctx, bindings) {
-                Some(ResolvedBinding::HandIndex(i)) => i as usize,
+            let (hand_owner, hand_index) = match resolve_binding_ref(from_hand, ctx, bindings) {
+                Some(ResolvedBinding::HandIndex { player, index }) => (player, index as usize),
                 _ => return true,
             };
             // The engine signature takes a `CostDelta`; the IR carries
@@ -168,17 +181,17 @@ pub fn try_run(
             // CostDelta::Reduce(n) (printed cost minus N). Phase 3 may widen the IR
             // field if a card needs that semantics. cost == 0 collapses to Free
             // (semantically identical for memory accounting).
-            debug_assert!(*cost >= 0, "EffectInitiatedDigivolve cost: i32 went negative");
+            debug_assert!(
+                *cost >= 0,
+                "EffectInitiatedDigivolve cost: i32 went negative"
+            );
             let delta = if *cost == 0 {
                 CostDelta::Free
             } else {
                 CostDelta::Fixed(*cost as i16)
             };
-            // The effect runs on the target's controller (the digivolve is
-            // applied to `target` and the source is from that player's hand).
-            let player = target_handle.player;
             let _ = ctx.effect_initiated_digivolve(
-                player,
+                hand_owner,
                 hand_index,
                 target_handle,
                 delta,
@@ -205,25 +218,36 @@ pub fn try_run(
                 Some(ResolvedBinding::Card(h)) => h,
                 _ => return true,
             };
-            let _ = ctx.effect_initiated_dna_digivolve(a, b, from_card, *cost, *ignore_requirements);
+            let _ =
+                ctx.effect_initiated_dna_digivolve(a, b, from_card, *cost, *ignore_requirements);
             true
         }
 
         // ── Token / placement ─────────────────────────────────────────────
-        CompiledStep::PlayToken { controller, token_name } => {
+        CompiledStep::PlayToken {
+            controller,
+            token_name,
+        } => {
             let p = resolve_player(ctx, *controller);
             let _ = ctx.play_token(p, token_name);
             true
         }
-        CompiledStep::PlaceOnSecurity { of, source, position, face_up } => {
+        CompiledStep::PlaceOnSecurity {
+            of,
+            source,
+            position,
+            face_up,
+        } => {
             let p = resolve_player(ctx, *of);
-            // TODO(2f-followup): BindingValue::HandIndex / TrashIndex carry no PlayerId,
-            // so we default the source-zone owner to ctx.player (effect controller).
-            // If a future card needs to place an opponent's hand card, the IR's
-            // BindingValue::HandIndex will need to widen to include a PlayerId, OR a
-            // new HandIndexFor variant must be added.
-            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else { return true; };
-            let _ = ctx.place_on_security(p, source_ref, super::map_stack_position(*position), *face_up);
+            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
+                return true;
+            };
+            let _ = ctx.place_on_security(
+                p,
+                source_ref,
+                super::map_stack_position(*position),
+                *face_up,
+            );
             true
         }
         CompiledStep::PlaceAsBottomSource { source, target } => {
@@ -231,18 +255,14 @@ pub fn try_run(
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
             };
-            // TODO(2f-followup): BindingValue::HandIndex / TrashIndex carry no PlayerId,
-            // so we default the source-zone owner to ctx.player (effect controller).
-            // If a future card needs to place an opponent's hand card, the IR's
-            // BindingValue::HandIndex will need to widen to include a PlayerId, OR a
-            // new HandIndexFor variant must be added.
-            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else { return true; };
+            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
+                return true;
+            };
             let _ = ctx.place_as_bottom_source(source_ref, target_handle);
             true
         }
         CompiledStep::TrashTopSource { target } => {
-            if let Some(ResolvedBinding::Permanent(h)) =
-                resolve_binding_ref(target, ctx, bindings)
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
                 let _ = ctx.trash_top_source(h);
             }

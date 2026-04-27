@@ -160,10 +160,7 @@ impl CardDataDb for CardDataDbStub {
 /// Cross-check a `CardSpec` against a `CardDataDb`. Verifies name, kind,
 /// level, DP, cost, and colors match the structured data. Returns a
 /// `ValidationError` on the first discrepancy (fail-fast, not aggregate).
-pub fn cross_check(
-    spec: &CardSpec,
-    db: &dyn CardDataDb,
-) -> Result<(), ValidationError> {
+pub fn cross_check(spec: &CardSpec, db: &dyn CardDataDb) -> Result<(), ValidationError> {
     let row = db.lookup(&spec.card).ok_or_else(|| ValidationError {
         card_id: spec.card.clone(),
         path: "card".into(),
@@ -174,10 +171,7 @@ pub fn cross_check(
         return Err(ValidationError {
             card_id: spec.card.clone(),
             path: "name".into(),
-            message: format!(
-                "name mismatch: yaml={} cards.json={}",
-                spec.name, row.name
-            ),
+            message: format!("name mismatch: yaml={} cards.json={}", spec.name, row.name),
         });
     }
     if row.kind != spec.kind {
@@ -204,10 +198,7 @@ pub fn cross_check(
         return Err(ValidationError {
             card_id: spec.card.clone(),
             path: "dp".into(),
-            message: format!(
-                "dp mismatch: yaml={:?} cards.json={:?}",
-                spec.dp, row.dp
-            ),
+            message: format!("dp mismatch: yaml={:?} cards.json={:?}", spec.dp, row.dp),
         });
     }
     if row.cost != spec.cost {

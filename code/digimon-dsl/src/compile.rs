@@ -17,17 +17,13 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         .alt_paths
         .iter()
         .enumerate()
-        .map(|(i, ap)| {
-            compile_alt_path(ap, &format!("alt_paths[{i}]"), &spec.card, &mut errors)
-        })
+        .map(|(i, ap)| compile_alt_path(ap, &format!("alt_paths[{i}]"), &spec.card, &mut errors))
         .collect();
     let effects = spec
         .effects
         .iter()
         .enumerate()
-        .map(|(i, c)| {
-            compile_clause(c, &format!("effects[{i}]"), &spec.card, &mut errors)
-        })
+        .map(|(i, c)| compile_clause(c, &format!("effects[{i}]"), &spec.card, &mut errors))
         .collect();
 
     if !errors.is_empty() {
@@ -178,7 +174,10 @@ fn compile_per_selector(p: crate::formula::PerSelector) -> CompiledPerSelector {
         S::StackSize => CompiledPerSelector::StackSize,
         S::AllyCount => CompiledPerSelector::AllyCount,
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
-        S::CardCountInZone => CompiledPerSelector::CardCountInZone,
+        S::CardCountInZone { of, zone } => CompiledPerSelector::CardCountInZone {
+            of: compile_player_ref(of),
+            zone: compile_zone(zone),
+        },
     }
 }
 
@@ -198,6 +197,7 @@ fn compile_cost_delta(c: &crate::step::CostDelta) -> CompiledCostDelta {
         CostDelta::Keyword(CostDeltaKeyword::Free) => CompiledCostDelta::Free,
         CostDelta::Keyword(CostDeltaKeyword::Printed) => CompiledCostDelta::Printed,
         CostDelta::Literal(n) => CompiledCostDelta::Literal(*n),
+        CostDelta::Reduce { reduce } => CompiledCostDelta::Reduce(*reduce),
     }
 }
 
@@ -249,9 +249,7 @@ fn compile_formula(f: &crate::formula::FormulaSpec) -> CompiledFormula {
         FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => {
             CompiledFormula::Aggregate(compile_aggregate_selector(*a))
         }
-        FormulaSpec::Compound(CompoundFormula::RawRust(s)) => {
-            CompiledFormula::RawRust(s.clone())
-        }
+        FormulaSpec::Compound(CompoundFormula::RawRust(s)) => CompiledFormula::RawRust(s.clone()),
     }
 }
 
@@ -455,9 +453,7 @@ fn compile_alt_path(
             .materials
             .iter()
             .enumerate()
-            .map(|(i, m)| {
-                compile_material(m, &format!("{prefix}.materials[{i}]"), card_id, errors)
-            })
+            .map(|(i, m)| compile_material(m, &format!("{prefix}.materials[{i}]"), card_id, errors))
             .collect(),
         cost: ap.cost.as_ref().map(compile_cost),
         stacks_unsuspended: ap.stacks_unsuspended,
@@ -542,7 +538,9 @@ fn compile_cost(c: &crate::alt_path::CostSpec) -> CompiledCost {
     use crate::alt_path::{CostSpec, FormulaCost};
     match c {
         CostSpec::Literal(n) => CompiledCost::Literal(*n),
-        CostSpec::Formula(FormulaCost { formula }) => CompiledCost::Formula(compile_formula(formula)),
+        CostSpec::Formula(FormulaCost { formula }) => {
+            CompiledCost::Formula(compile_formula(formula))
+        }
     }
 }
 
@@ -556,9 +554,7 @@ fn compile_clause(
 ) -> CompiledClause {
     use crate::clause::ClauseSpec as C;
     match c {
-        C::Triggered(t) => {
-            CompiledClause::Triggered(compile_triggered(t, prefix, card_id, errors))
-        }
+        C::Triggered(t) => CompiledClause::Triggered(compile_triggered(t, prefix, card_id, errors)),
         C::Declarative(d) => match d.typed_body() {
             Ok(body) => {
                 CompiledClause::Declarative(compile_declarative(d, body, prefix, card_id, errors))
@@ -594,12 +590,14 @@ fn compile_triggered(
     CompiledTriggeredClause {
         when,
         scope: compile_scope(t.scope),
-        active_when: t.active_when.as_ref().map(|p| {
-            compile_predicate(p, &format!("{prefix}.active_when"), card_id, errors)
-        }),
-        condition: t.condition.as_ref().map(|p| {
-            compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)
-        }),
+        active_when: t
+            .active_when
+            .as_ref()
+            .map(|p| compile_predicate(p, &format!("{prefix}.active_when"), card_id, errors)),
+        condition: t
+            .condition
+            .as_ref()
+            .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
         optional: t.optional,
         once_per_turn: t.once_per_turn,
         max_per_turn: t.max_per_turn,
@@ -623,9 +621,10 @@ fn compile_declarative(
 ) -> CompiledDeclarativeClause {
     use crate::clause::TypedDeclarativeBody as B;
     let scope = compile_scope(d.scope);
-    let active_when = d.active_when.as_ref().map(|p| {
-        compile_predicate(p, &format!("{prefix}.active_when"), card_id, errors)
-    });
+    let active_when = d
+        .active_when
+        .as_ref()
+        .map(|p| compile_predicate(p, &format!("{prefix}.active_when"), card_id, errors));
     let summary = d.summary.clone();
     let summary_key = d.summary_key.clone();
 
@@ -656,9 +655,10 @@ fn compile_declarative(
                     errors,
                 )
             }),
-            condition: c.condition.as_ref().map(|p| {
-                compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)
-            }),
+            condition: c
+                .condition
+                .as_ref()
+                .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
             once_per_turn: c.once_per_turn,
             amount: c.amount,
             amount_fn: c.amount_fn.as_ref().map(compile_formula),
@@ -685,9 +685,7 @@ fn compile_declarative(
                 .process
                 .iter()
                 .enumerate()
-                .map(|(i, s)| {
-                    compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors)
-                })
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors))
                 .collect(),
             summary,
             summary_key,
@@ -728,9 +726,7 @@ fn compile_declarative(
                 .process
                 .iter()
                 .enumerate()
-                .map(|(i, s)| {
-                    compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors)
-                })
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors))
                 .collect(),
             summary,
             summary_key,
@@ -972,6 +968,14 @@ fn compile_step(
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),
         },
+        S::CancelLeave(_) => CompiledStep::CancelLeave,
+        S::HandleReplacement(_) => CompiledStep::HandleReplacement,
+        S::RedirectReplacement(a) => CompiledStep::RedirectReplacement {
+            destination: compile_zone(a.destination),
+        },
+        S::SubstitutePermanent(a) => CompiledStep::SubstitutePermanent {
+            target: compile_binding_ref(&a.target),
+        },
         S::Hatch(a) => CompiledStep::Hatch {
             of: compile_player_ref(a.of),
         },
@@ -1059,6 +1063,32 @@ fn compile_step(
         S::SelectOpponentPermanent(a) => CompiledStep::SelectOpponentPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            prompt_key: a.prompt_key.clone(),
+            optional: a.optional,
+        },
+        S::SelectAnyPermanent(a) => CompiledStep::SelectAnyPermanent {
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            prompt_key: a.prompt_key.clone(),
+            optional: a.optional,
+        },
+        S::SelectDnaPair(a) => CompiledStep::SelectDnaPair {
+            left_filter: compile_predicate(
+                &a.left_filter,
+                &format!("{prefix}.left_filter"),
+                card_id,
+                errors,
+            ),
+            right_filter: compile_predicate(
+                &a.right_filter,
+                &format!("{prefix}.right_filter"),
+                card_id,
+                errors,
+            ),
+            bind_left_as: a.bind_left_as.clone(),
+            bind_right_as: a.bind_right_as.clone(),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
@@ -1205,9 +1235,7 @@ fn compile_step(
         S::Optional(o) => CompiledStep::Optional(
             o.0.iter()
                 .enumerate()
-                .map(|(i, s)| {
-                    compile_step(s, &format!("{prefix}.optional[{i}]"), card_id, errors)
-                })
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.optional[{i}]"), card_id, errors))
                 .collect(),
         ),
         S::RawRust(r) => CompiledStep::RawRust {

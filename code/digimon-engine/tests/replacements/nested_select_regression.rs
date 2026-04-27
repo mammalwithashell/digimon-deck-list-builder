@@ -46,7 +46,9 @@ fn barrier_synchronous_process_unchanged() {
 
     r.game.delete_permanent_with_effects(b);
     assert!(r.game.pending_selection.is_some());
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept Barrier");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Barrier");
 
     // Barrier: trash top of deck, cancel deletion.
     assert_eq!(
@@ -76,7 +78,9 @@ fn evade_synchronous_process_unchanged() {
 
     r.game.delete_permanent_with_effects(e);
     assert!(r.game.pending_selection.is_some());
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept Evade");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Evade");
 
     // Evade: redirect to deck bottom.
     assert_eq!(

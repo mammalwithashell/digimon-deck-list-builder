@@ -162,10 +162,7 @@ fn save_and_decoy_coexist_on_one_printed_only_card() {
         .pending_selection
         .as_ref()
         .expect("Decoy outer accept dialog should be parked for ally deletion");
-    assert!(
-        pending.is_optional,
-        "Decoy is optional ('may' substitute)"
-    );
+    assert!(pending.is_optional, "Decoy is optional ('may' substitute)");
     assert_eq!(pending.selecting_player, 0);
 
     // Accept the Decoy substitute.
@@ -338,10 +335,7 @@ fn save_and_fortitude_compose_when_save_is_declined() {
         1,
         "Fortitude replay produces a fresh stack — no sources under DUAL-SF"
     );
-    assert!(
-        !dual_perm.is_suspended,
-        "Fortitude replay is unsuspended"
-    );
+    assert!(!dual_perm.is_suspended, "Fortitude replay is unsuspended");
     assert!(
         r.game.players[0]
             .trash

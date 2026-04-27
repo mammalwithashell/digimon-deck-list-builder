@@ -297,7 +297,11 @@ fn fragment_does_not_fire_on_neighbor_deletion() {
         "exactly 1 card (the neighbor) was added to trash"
     );
     assert_eq!(
-        r.game.players[0].trash.last().unwrap().card_id(&r.game.card_data),
+        r.game.players[0]
+            .trash
+            .last()
+            .unwrap()
+            .card_id(&r.game.card_data),
         "NEIGHBOR",
         "the trashed card is the neighbor"
     );
@@ -379,4 +383,3 @@ fn fragment_2_declining_outer_accept_proceeds_with_plain_deletion() {
         );
     }
 }
-

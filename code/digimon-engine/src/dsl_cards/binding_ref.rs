@@ -6,14 +6,15 @@ use digimon_dsl::compiled::CompiledBindingRef;
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::{BindingValue, Bindings};
 use crate::effect_context::EffectContext;
+use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolvedBinding {
     Permanent(PermanentHandle),
     Card(CardHandle),
-    HandIndex(u16),
-    TrashIndex(u16),
+    HandIndex { player: PlayerId, index: u16 },
+    TrashIndex { player: PlayerId, index: u16 },
     Literal(i64),
     PermanentList(Vec<PermanentHandle>),
     CardList(Vec<CardHandle>),
@@ -45,8 +46,12 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
     match bindings.get(name)? {
         BindingValue::Permanent(h) => Some(ResolvedBinding::Permanent(h)),
         BindingValue::Card(h) => Some(ResolvedBinding::Card(h)),
-        BindingValue::HandIndex(i) => Some(ResolvedBinding::HandIndex(i)),
-        BindingValue::TrashIndex(i) => Some(ResolvedBinding::TrashIndex(i)),
+        BindingValue::HandIndex { player, index } => {
+            Some(ResolvedBinding::HandIndex { player, index })
+        }
+        BindingValue::TrashIndex { player, index } => {
+            Some(ResolvedBinding::TrashIndex { player, index })
+        }
         BindingValue::Literal(v) => Some(ResolvedBinding::Literal(v)),
         BindingValue::PermanentList(v) => Some(ResolvedBinding::PermanentList(v)),
         BindingValue::CardList(v) => Some(ResolvedBinding::CardList(v)),
@@ -62,7 +67,10 @@ mod tests {
     #[test]
     fn resolves_permanent_list() {
         let mut b = Bindings::new();
-        let h = PermanentHandle { player: 0, index: 0 };
+        let h = PermanentHandle {
+            player: 0,
+            index: 0,
+        };
         b.insert_permanent_list("xs", vec![h]);
 
         let r = resolve_named("xs", &b).expect("named binding");

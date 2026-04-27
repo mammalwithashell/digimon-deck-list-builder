@@ -95,7 +95,11 @@ fn auto_commits_at_max() {
 
     // Step 1: picked=0 — 3 hand picks available, PASS not available yet
     {
-        let sel = r.game.pending_selection.as_ref().expect("step 1 must park selection");
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("step 1 must park selection");
         assert_eq!(
             sel.kind,
             SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 },
@@ -122,7 +126,11 @@ fn auto_commits_at_max() {
 
     // Step 2: picked=1 — card 0 excluded, PASS now available (via is_optional)
     {
-        let sel = r.game.pending_selection.as_ref().expect("step 2 must park selection");
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("step 2 must park selection");
         assert_eq!(
             sel.kind,
             SelectionKind::CountCappedMultiSelect { max: 2, picked: 1 },
@@ -161,7 +169,11 @@ fn auto_commits_at_max() {
     );
 
     // Callback delivered [card_0, card_2]
-    let result = delivered.lock().unwrap().take().expect("callback must fire on auto-commit");
+    let result = delivered
+        .lock()
+        .unwrap()
+        .take()
+        .expect("callback must fire on auto-commit");
     assert_eq!(
         result,
         vec![h0, h2],
@@ -209,7 +221,11 @@ fn pass_commits_early_when_picked_ge_1() {
 
     // Now PASS is available (picked=1 >= 1) — gated via is_optional
     {
-        let sel = r.game.pending_selection.as_ref().expect("step 2 must park selection");
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("step 2 must park selection");
         assert_eq!(
             sel.kind,
             SelectionKind::CountCappedMultiSelect { max: 3, picked: 1 }
@@ -223,10 +239,17 @@ fn pass_commits_early_when_picked_ge_1() {
     // Submit PASS → early commit
     r.game.resolve_selection(tp, PASS).unwrap();
 
-    assert!(r.game.pending_selection.is_none(), "no selection after PASS commit");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no selection after PASS commit"
+    );
     assert_ne!(r.game.current_phase, GamePhase::SelectBudgeted);
 
-    let result = delivered.lock().unwrap().take().expect("callback must fire on PASS commit");
+    let result = delivered
+        .lock()
+        .unwrap()
+        .take()
+        .expect("callback must fire on PASS commit");
     assert_eq!(result, vec![h1], "callback must deliver [card_1]");
 }
 
@@ -263,7 +286,11 @@ fn pass_rejected_when_picked_zero_and_not_optional() {
     // PASS must not be available at picked=0 with is_optional_zero=false
     // is_optional == false means PASS is not gated
     {
-        let sel = r.game.pending_selection.as_ref().expect("selection must be installed");
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("selection must be installed");
         assert_eq!(
             sel.is_optional, false,
             "is_optional must be false at picked=0 (not optional)"
@@ -287,7 +314,10 @@ fn pass_rejected_when_picked_zero_and_not_optional() {
     );
 
     // Selection must still be pending
-    assert!(r.game.pending_selection.is_some(), "selection must remain after rejected PASS");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "selection must remain after rejected PASS"
+    );
 }
 
 // ── Test 4: optional_zero_allows_pass_at_start ───────────────────────────────
@@ -327,7 +357,11 @@ fn optional_zero_allows_pass_at_start() {
 
     // PASS must be available at picked=0 when is_optional_zero=true — gated via is_optional
     {
-        let sel = r.game.pending_selection.as_ref().expect("selection must be installed");
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("selection must be installed");
         assert!(
             sel.is_optional,
             "is_optional must be true at picked=0 when is_optional_zero=true"
@@ -341,7 +375,10 @@ fn optional_zero_allows_pass_at_start() {
     // Resolve PASS → callback delivered empty Vec
     r.game.resolve_selection(tp, PASS).unwrap();
 
-    assert!(r.game.pending_selection.is_none(), "no selection after PASS at step 0");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no selection after PASS at step 0"
+    );
     assert_ne!(r.game.current_phase, GamePhase::SelectBudgeted);
 
     let result = delivered
@@ -349,7 +386,10 @@ fn optional_zero_allows_pass_at_start() {
         .unwrap()
         .take()
         .expect("callback must fire on PASS at step 0 (optional)");
-    assert!(result.is_empty(), "callback must deliver empty Vec on optional PASS at start");
+    assert!(
+        result.is_empty(),
+        "callback must deliver empty Vec on optional PASS at start"
+    );
 }
 
 // ── Test 5: picked_items_excluded_from_next_step ─────────────────────────────
@@ -390,7 +430,10 @@ fn picked_items_excluded_from_next_step() {
             3,
             "all 3 hand cards must be offered at step 1"
         );
-        assert!(!sel.is_optional, "is_optional must be false at step 1 (PASS not available)");
+        assert!(
+            !sel.is_optional,
+            "is_optional must be false at step 1 (PASS not available)"
+        );
     }
 
     // Pick card 0
@@ -481,12 +524,26 @@ fn trash_zone_uses_correct_range() {
 
     // Push cards directly into trash
     {
-        let data_idx0 = r.game.card_data.iter().position(|c| c.card_id == "T0").unwrap();
-        let data_idx1 = r.game.card_data.iter().position(|c| c.card_id == "T1").unwrap();
+        let data_idx0 = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "T0")
+            .unwrap();
+        let data_idx1 = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "T1")
+            .unwrap();
         let ci0 = r.game.next_card_index();
-        r.game.players[tp as usize].trash.push(CardSource::new(data_idx0, tp, ci0));
+        r.game.players[tp as usize]
+            .trash
+            .push(CardSource::new(data_idx0, tp, ci0));
         let ci1 = r.game.next_card_index();
-        r.game.players[tp as usize].trash.push(CardSource::new(data_idx1, tp, ci1));
+        r.game.players[tp as usize]
+            .trash
+            .push(CardSource::new(data_idx1, tp, ci1));
     }
 
     {
@@ -503,7 +560,11 @@ fn trash_zone_uses_correct_range() {
         );
     }
 
-    let sel = r.game.pending_selection.as_ref().expect("selection must be installed");
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("selection must be installed");
     assert_eq!(r.game.current_phase, GamePhase::SelectBudgeted);
 
     // All valid_action_ids must be in TRASH_EFFECT range

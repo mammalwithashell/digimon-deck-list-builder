@@ -5,7 +5,8 @@
 //! a target permanent handle.
 
 use digimon_dsl::compiled::{
-    CompiledAggregateSelector, CompiledFormula, CompiledPerSelector,
+    CompiledAggregateSelector, CompiledFormula, CompiledPerSelector, CompiledPlayerRef,
+    CompiledZone,
 };
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -30,7 +31,12 @@ fn one_digimon_on_field(card_id: &str) -> (DebugRunner, PermanentHandle) {
 
 /// Push an extra `CardSource` (using the same CardData) onto the
 /// digivolution stack of the permanent at `(player, perm_index)`.
-fn push_extra_source_same_data(runner: &mut DebugRunner, player: u8, perm_index: usize, card_id: &str) {
+fn push_extra_source_same_data(
+    runner: &mut DebugRunner,
+    player: u8,
+    perm_index: usize,
+    card_id: &str,
+) {
     let data_idx = runner
         .game
         .card_data
@@ -431,22 +437,52 @@ fn evaluate_per_digivolution_color_count() {
     assert_eq!(evaluate(&f, &ctx, target), 2);
 }
 
-// ─── 13. CardCountInZone (placeholder) ───────────────────────────────
+// ─── 13. CardCountInZone ─────────────────────────────────────────────
 
 #[test]
-fn evaluate_per_card_count_in_zone_returns_zero_until_ir_widens() {
-    // The IR currently has no zone payload on `CardCountInZone`. Phase 3
-    // will widen it; the evaluator silent-no-ops to 0 in the meantime so
-    // a malformed pack does not crash the engine.
-    let (mut runner, target) = one_digimon_on_field("T-CZ");
+fn evaluate_per_card_count_in_zone_counts_your_hand() {
+    let card = make_test_card("T-CZ-H", "T-CZ-H");
+    let mut runner = DebugRunner::builder()
+        .add_card(card)
+        .hand(0, &["T-CZ-H", "T-CZ-H", "T-CZ-H"])
+        .build();
+    let target = runner.place_on_field(0, "T-CZ-H", None);
     let src_card = runner.game.players[0].battle_area[0].top_card().handle();
     let ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
     let f = CompiledFormula::BasePerDelta {
         base: 0,
-        per: CompiledPerSelector::CardCountInZone,
+        per: CompiledPerSelector::CardCountInZone {
+            of: CompiledPlayerRef::You,
+            zone: CompiledZone::Hand,
+        },
         delta: 100,
     };
-    assert_eq!(evaluate(&f, &ctx, target), 0);
+    assert_eq!(evaluate(&f, &ctx, target), 300);
+}
+
+#[test]
+fn evaluate_per_card_count_in_zone_counts_opponent_trash() {
+    let card = make_test_card("T-CZ-T", "T-CZ-T");
+    let mut runner = DebugRunner::builder()
+        .add_card(card)
+        .hand(1, &["T-CZ-T", "T-CZ-T"])
+        .build();
+    let target = runner.place_on_field(0, "T-CZ-T", None);
+    while let Some(card) = runner.game.players[1].hand.pop() {
+        runner.game.players[1].trash.push(card);
+    }
+
+    let src_card = runner.game.players[0].battle_area[0].top_card().handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+    let f = CompiledFormula::BasePerDelta {
+        base: 1,
+        per: CompiledPerSelector::CardCountInZone {
+            of: CompiledPlayerRef::Opponent,
+            zone: CompiledZone::Trash,
+        },
+        delta: 10,
+    };
+    assert_eq!(evaluate(&f, &ctx, target), 21);
 }
 
 // ─── Defensive: missing target permanent ─────────────────────────────

@@ -169,9 +169,15 @@ fn callback_receives_decoded_source_index() {
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), Some(oc), tp);
-        ctx.select_material(oc, "pick any", false, |_, _| true, move |_, source_index| {
-            *slot.lock().unwrap() = Some(source_index);
-        });
+        ctx.select_material(
+            oc,
+            "pick any",
+            false,
+            |_, _| true,
+            move |_, source_index| {
+                *slot.lock().unwrap() = Some(source_index);
+            },
+        );
     }
 
     // Resolve with the action ID for source index 2 (MID2 — a material, not the top).
@@ -225,9 +231,15 @@ fn optional_select_material_accepts_pass() {
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), Some(oc), tp);
-        ctx.select_material(oc, "optional", true, |_, _| true, |_, _| {
-            panic!("callback must NOT fire on decline");
-        });
+        ctx.select_material(
+            oc,
+            "optional",
+            true,
+            |_, _| true,
+            |_, _| {
+                panic!("callback must NOT fire on decline");
+            },
+        );
     }
 
     r.game
@@ -256,9 +268,15 @@ fn single_source_permanent_offers_no_materials() {
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), Some(oc), tp);
-        ctx.select_material(oc, "no materials", true, |_, _| true, move |_, _| {
-            *counter.lock().unwrap() += 1;
-        });
+        ctx.select_material(
+            oc,
+            "no materials",
+            true,
+            |_, _| true,
+            move |_, _| {
+                *counter.lock().unwrap() += 1;
+            },
+        );
     }
 
     assert!(

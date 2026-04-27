@@ -12,6 +12,7 @@ pub mod modifiers;
 pub mod permanent_mutations;
 pub mod permanent_scan;
 pub mod play_digivolve;
+pub mod replacement_outcomes;
 pub mod schedule_delayed;
 pub mod selections;
 pub mod zone_moves;
@@ -19,8 +20,10 @@ pub mod zone_moves;
 use digimon_dsl::compiled::CompiledPlayerRef;
 use digimon_dsl::compiled::CompiledStackPosition;
 use digimon_dsl::compiled::CompiledStep;
+use std::sync::Arc;
 
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect_context::EffectContext;
 use crate::enums::PlayerId;
 use crate::enums::StackPosition;
@@ -59,6 +62,27 @@ pub enum RunOutcome {
     Parked,
 }
 
+#[derive(Clone, Debug)]
+pub struct StepRuntime {
+    raw: Arc<EngineRawRustRegistry>,
+}
+
+impl Default for StepRuntime {
+    fn default() -> Self {
+        Self::new(Arc::new(EngineRawRustRegistry::new()))
+    }
+}
+
+impl StepRuntime {
+    pub fn new(raw: Arc<EngineRawRustRegistry>) -> Self {
+        Self { raw }
+    }
+
+    pub fn raw(&self) -> &EngineRawRustRegistry {
+        &self.raw
+    }
+}
+
 /// Park the outer-slice tail (steps that follow the just-parked control-
 /// flow / iteration step) onto `Game::dsl_outer_tail` so the eventual
 /// selection-callback can resume it via `drain_dsl_outer_tail`.
@@ -71,6 +95,7 @@ fn park_outer_tail(
     bindings: &Bindings,
     steps: &[CompiledStep],
     i: usize,
+    runtime: &StepRuntime,
 ) {
     let outer_tail = steps[i + 1..].to_vec();
     if outer_tail.is_empty() {
@@ -81,7 +106,9 @@ fn park_outer_tail(
         "dsl_outer_tail overwrite: an earlier outer continuation \
          was never drained — likely a nested-park bug",
     );
-    ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone()));
+    ctx.game
+        .dsl_outer_tail
+        .replace((outer_tail, bindings.clone(), runtime.clone()));
 }
 
 /// Drain `Game::dsl_outer_tail` if a parked outer continuation is
@@ -101,9 +128,9 @@ fn park_outer_tail(
 /// running the outer tail; the inner body's chained selects already saw
 /// the override via the parked-callback's reconstructed ctx (Task 1).
 pub(crate) fn drain_dsl_outer_tail(cb_ctx: &mut EffectContext<'_>) {
-    if let Some((outer_tail, mut outer_b)) = cb_ctx.game.dsl_outer_tail.take() {
+    if let Some((outer_tail, mut outer_b, runtime)) = cb_ctx.game.dsl_outer_tail.take() {
         cb_ctx.set_override_selecting_player(None);
-        run_steps(&outer_tail, cb_ctx, &mut outer_b);
+        run_steps_with_runtime(&outer_tail, cb_ctx, &mut outer_b, &runtime);
     }
 }
 
@@ -121,31 +148,40 @@ pub fn run_steps(
     ctx: &mut EffectContext<'_>,
     bindings: &mut Bindings,
 ) -> RunOutcome {
+    run_steps_with_runtime(steps, ctx, bindings, &StepRuntime::default())
+}
+
+pub fn run_steps_with_runtime(
+    steps: &[CompiledStep],
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+    runtime: &StepRuntime,
+) -> RunOutcome {
     let mut i = 0;
     while i < steps.len() {
         let step = &steps[i];
 
-        if let Some(outcome) = control_flow::try_run(step, ctx, bindings) {
+        if let Some(outcome) = control_flow::try_run(step, ctx, bindings, runtime) {
             if matches!(outcome, RunOutcome::Parked) {
-                park_outer_tail(ctx, bindings, steps, i);
+                park_outer_tail(ctx, bindings, steps, i, runtime);
                 return RunOutcome::Parked;
             }
             i += 1;
             continue;
         }
 
-        if let Some(outcome) = as_selecting_player::try_run(step, ctx, bindings) {
+        if let Some(outcome) = as_selecting_player::try_run(step, ctx, bindings, runtime) {
             if matches!(outcome, RunOutcome::Parked) {
-                park_outer_tail(ctx, bindings, steps, i);
+                park_outer_tail(ctx, bindings, steps, i, runtime);
                 return RunOutcome::Parked;
             }
             i += 1;
             continue;
         }
 
-        if let Some(outcome) = iteration::try_run(step, ctx, bindings) {
+        if let Some(outcome) = iteration::try_run(step, ctx, bindings, runtime) {
             if matches!(outcome, RunOutcome::Parked) {
-                park_outer_tail(ctx, bindings, steps, i);
+                park_outer_tail(ctx, bindings, steps, i, runtime);
                 return RunOutcome::Parked;
             }
             i += 1;
@@ -153,12 +189,12 @@ pub fn run_steps(
         }
 
         // Selection steps install the remainder as their callback and return.
-        if selections::try_install(step, &steps[i + 1..], ctx, bindings.clone()) {
+        if selections::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
             return RunOutcome::Parked;
         }
 
         // Synchronous families — execute and advance.
-        run_step(step, ctx, bindings);
+        run_step_with_runtime(step, ctx, bindings, runtime);
         i += 1;
     }
     RunOutcome::Synchronous
@@ -167,6 +203,24 @@ pub fn run_steps(
 /// Dispatch a compiled step to its family-specific handler. Unhandled
 /// steps are silently skipped in Phase 2a; Phase 2b/c/d add more families.
 pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) {
+    run_step_with_runtime(step, ctx, bindings, &StepRuntime::default());
+}
+
+pub fn run_step_with_runtime(
+    step: &CompiledStep,
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+    runtime: &StepRuntime,
+) {
+    if let CompiledStep::RawRust { fn_name, .. } = step {
+        if let Some(f) = runtime.raw().step_fn(fn_name) {
+            f(ctx, bindings);
+        }
+        return;
+    }
+    if replacement_outcomes::try_run(step, ctx, bindings) {
+        return;
+    }
     if memory::try_run(step, ctx) {
         return;
     }
@@ -179,13 +233,13 @@ pub fn run_step(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut
     if permanent_mutations::try_run(step, ctx, bindings) {
         return;
     }
-    if modifiers::try_run(step, ctx, bindings) {
+    if modifiers::try_run(step, ctx, bindings, runtime) {
         return;
     }
     if play_digivolve::try_run(step, ctx, bindings) {
         return;
     }
-    if schedule_delayed::try_run(step, ctx, bindings) {
+    if schedule_delayed::try_run(step, ctx, bindings, runtime) {
         return;
     }
     // Phase 2d+: other families.

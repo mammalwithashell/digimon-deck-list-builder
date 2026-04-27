@@ -18,8 +18,8 @@ impl OnnxPolicy for OnnxMlpPolicy {
     fn predict(&mut self, obs: &[f32], mask: &[f32]) -> Result<usize, InferenceError> {
         let obs_arr = Array2::from_shape_vec((1, obs.len()), obs.to_vec())
             .map_err(|e| InferenceError::ShapeMismatch(e.to_string()))?;
-        let obs_value = Value::from_array(obs_arr)
-            .map_err(|e| InferenceError::RuntimeFailed(e.to_string()))?;
+        let obs_value =
+            Value::from_array(obs_arr).map_err(|e| InferenceError::RuntimeFailed(e.to_string()))?;
         let outputs = self
             .session
             .run(ort::inputs!["obs" => obs_value])
