@@ -122,6 +122,7 @@ class PlayerType(Enum):
 
 class GameMode(Enum):
     Standard = "standard"
+    Eden = "eden"
     EDHCommander = "edh_commander"
     Titan = "titan"
     NoRestriction = "no_restriction"

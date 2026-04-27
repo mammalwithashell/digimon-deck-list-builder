@@ -320,6 +320,20 @@ fn validate_deck(card_ids: Vec<String>) -> PyDeckValidationResult {
 }
 
 #[pyfunction]
+fn validate_deck_for_game_mode(
+    card_ids: Vec<String>,
+    game_mode: &str,
+) -> PyResult<PyDeckValidationResult> {
+    let result = deck_tools::validate_deck_for_game_mode(&card_ids, game_mode)
+        .map_err(PyValueError::new_err)?;
+    Ok(PyDeckValidationResult {
+        is_valid: result.is_valid,
+        errors: result.errors,
+        warnings: result.warnings,
+    })
+}
+
+#[pyfunction]
 fn out_of_set_cards(card_ids: Vec<String>) -> Vec<String> {
     deck_tools::out_of_set_cards(card_ids.iter().cloned())
         .into_iter()
@@ -350,6 +364,11 @@ impl From<CardRestriction> for PyCardRestriction {
 #[pyfunction]
 fn restricted_list() -> PyCardRestriction {
     CardRestriction::official_eng().into()
+}
+
+#[pyfunction]
+fn eden_restricted_list() -> PyCardRestriction {
+    CardRestriction::eden().into()
 }
 
 #[pyfunction]
@@ -827,9 +846,11 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse_deck, m)?)?;
     m.add_function(wrap_pyfunction!(summarize_deck, m)?)?;
     m.add_function(wrap_pyfunction!(validate_deck, m)?)?;
+    m.add_function(wrap_pyfunction!(validate_deck_for_game_mode, m)?)?;
     m.add_function(wrap_pyfunction!(out_of_set_cards, m)?)?;
     m.add_class::<PyCardRestriction>()?;
     m.add_function(wrap_pyfunction!(restricted_list, m)?)?;
+    m.add_function(wrap_pyfunction!(eden_restricted_list, m)?)?;
     m.add_function(wrap_pyfunction!(expand_deck_dict, m)?)?;
     m.add_class::<CardKind>()?;
     m.add_class::<GamePhase>()?;

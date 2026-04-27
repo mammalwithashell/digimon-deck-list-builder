@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use digimon_engine::deck_tools::{
     classify_parsed, out_of_set_cards, parse_deck, summarize_deck, tested_cards_sorted,
-    validate_deck,
+    validate_deck_for_game_mode,
 };
 use serde::{Deserialize, Serialize};
 
@@ -56,6 +56,7 @@ pub fn rust_parse_deck(deck: String) -> Result<ParseDeckDto, String> {
 pub fn rust_validate_deck_raw(
     main_deck: Vec<String>,
     egg_deck: Vec<String>,
+    game_mode: Option<String>,
 ) -> Result<ValidateDeckDto, String> {
     let mut card_ids = Vec::with_capacity(main_deck.len() + egg_deck.len());
     card_ids.extend_from_slice(&main_deck);
@@ -64,7 +65,8 @@ pub fn rust_validate_deck_raw(
         return Err("Provide deck or main_deck/egg_deck".to_string());
     }
 
-    let result = validate_deck(&card_ids);
+    let result =
+        validate_deck_for_game_mode(&card_ids, game_mode.as_deref().unwrap_or("standard"))?;
     let summary = summarize_deck(&card_ids);
     let total_cards = card_ids.len();
 

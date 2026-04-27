@@ -8,6 +8,7 @@ from engine_py_legacy.engine.data.deck_loader import (
     RE_CARD_ID,
     CardRestriction,
     DeckValidationResult,
+    EDEN_RESTRICTED_LIST,
     RESTRICTED_LIST,
     expand_deck_dict,
     parse_deck,
@@ -15,6 +16,7 @@ from engine_py_legacy.engine.data.deck_loader import (
     parse_tts,
     summarize_deck,
     validate_deck,
+    validate_deck_for_game_mode,
 )
 from engine_py_legacy.engine.data.card_database import CardDatabase
 
@@ -306,6 +308,18 @@ class TestRestrictedListData:
         assert len(RESTRICTED_LIST.card_limits) == 50
 
 
+class TestEdenRestrictedListData:
+    """Tests for EDEN Format 1.1.1 restriction data."""
+
+    def test_known_banned_and_limited_cards(self):
+        assert EDEN_RESTRICTED_LIST.card_limits["BT3-097"] == 0
+        assert EDEN_RESTRICTED_LIST.card_limits["BT1-107"] == 1
+        assert EDEN_RESTRICTED_LIST.card_limits["BT6-085"] == 4
+
+    def test_banned_pair(self):
+        assert EDEN_RESTRICTED_LIST.choice_groups == [(["EX4-015"], ["EX5-065"])]
+
+
 # ─── Deck Validation ─────────────────────────────────────────────────
 
 def _make_valid_deck() -> list:
@@ -325,6 +339,18 @@ def _make_valid_deck() -> list:
     )
     assert len(main) == 50
     return eggs + main
+
+
+def _make_eden_valid_deck() -> list:
+    main = (
+        ["BT1-010"] * 4 + ["BT1-011"] * 4 + ["BT1-012"] * 4 +
+        ["BT1-013"] * 4 + ["BT1-014"] * 4 + ["BT1-015"] * 4 +
+        ["BT1-016"] * 4 + ["BT1-017"] * 4 + ["BT1-018"] * 4 +
+        ["BT1-019"] * 4 + ["BT1-020"] * 4 + ["BT1-021"] * 4 +
+        ["BT1-022"] * 2
+    )
+    assert len(main) == 50
+    return main
 
 
 class TestValidateDeck:
@@ -450,6 +476,40 @@ class TestValidateDeck:
         deck = _make_valid_deck()
         result = validate_deck(deck, restricted_list=no_restrictions)
         assert result.is_valid
+
+    def test_eden_rejects_non_anomaly_rare(self):
+        deck = _make_eden_valid_deck()
+        deck[0] = "AD1-001"
+        result = validate_deck_for_game_mode(deck, "eden")
+        assert not result.is_valid
+        assert any("AD1-001" in e and "EDEN format" in e for e in result.errors)
+
+    def test_eden_allows_four_anomalies(self):
+        deck = _make_eden_valid_deck()
+        deck[:4] = ["P-103"] * 4
+        result = validate_deck_for_game_mode(deck, "eden")
+        assert result.is_valid, result.errors
+
+    def test_eden_rejects_fifth_anomaly(self):
+        deck = _make_eden_valid_deck()
+        deck[:5] = ["P-103", "P-103", "P-103", "P-103", "LM-027"]
+        result = validate_deck_for_game_mode(deck, "eden")
+        assert not result.is_valid
+        assert any("EDEN Anomaly Protocol" in e and "got 5" in e for e in result.errors)
+
+    def test_eden_custom_banlist_and_pair(self):
+        banned_deck = _make_eden_valid_deck()
+        banned_deck[0] = "BT3-097"
+        banned = validate_deck_for_game_mode(banned_deck, "eden")
+        assert not banned.is_valid
+        assert any("BT3-097" in e and "banned" in e for e in banned.errors)
+
+        pair_deck = _make_eden_valid_deck()
+        pair_deck[0] = "EX4-015"
+        pair_deck[1] = "EX5-065"
+        pair = validate_deck_for_game_mode(pair_deck, "eden")
+        assert not pair.is_valid
+        assert any("Choice restriction violated" in e for e in pair.errors)
 
 
 # ─── Integration: Full Medusamon Deck ────────────────────────────────

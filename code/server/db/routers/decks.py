@@ -29,7 +29,7 @@ from server.db.schemas import (
 # and the Rust binding only exposes the official-ENG list path. Tracked in
 # RUST_PYTHON_PARITY.md.
 from engine_py_legacy.engine.data.deck_loader import validate_deck, RESTRICTED_LIST, CardRestriction
-from digimon_engine import out_of_set_cards
+from digimon_engine import out_of_set_cards, validate_deck_for_game_mode
 
 router = APIRouter(prefix="/decks", tags=["decks"])
 
@@ -64,6 +64,10 @@ def _validate_for_mode(card_ids: list[str], game_mode: str, titan_role: str | No
     if game_mode == "no_restriction":
         # Only check deck size and card existence — no restricted list
         result = validate_deck(card_ids, restricted_list=CardRestriction())
+        return result.is_valid, result.errors
+
+    if game_mode == "eden":
+        result = validate_deck_for_game_mode(card_ids, "eden")
         return result.is_valid, result.errors
 
     if game_mode == "titan":
@@ -255,7 +259,7 @@ async def create_deck(
 
 @router.get("", response_model=List[DeckSummary])
 async def list_my_decks(
-    game_mode: Optional[str] = Query(None, pattern=r"^(standard|edh_commander|titan|no_restriction)$"),
+    game_mode: Optional[str] = Query(None, pattern=r"^(standard|eden|edh_commander|titan|no_restriction)$"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -271,7 +275,7 @@ async def list_my_decks(
 
 @router.get("/public", response_model=List[DeckSummary])
 async def list_public_decks(
-    game_mode: Optional[str] = Query(None, pattern=r"^(standard|edh_commander|titan|no_restriction)$"),
+    game_mode: Optional[str] = Query(None, pattern=r"^(standard|eden|edh_commander|titan|no_restriction)$"),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(Deck).where(Deck.is_public == 1)

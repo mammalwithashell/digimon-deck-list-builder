@@ -140,6 +140,7 @@ export async function validateDeckRaw(
     ? await invokeTauri<BackendValidateDeckResponse>('rust_validate_deck_raw', {
         mainDeck,
         eggDeck,
+        gameMode: gameMode ?? 'standard',
       })
     : (
         await client.post<BackendValidateDeckResponse>('/decks/validate', {

@@ -430,7 +430,7 @@ class EngineBacklogResponse(BaseModel):
 class CreateDeckRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: str = ""
-    game_mode: str = Field(..., pattern=r"^(standard|edh_commander|titan|no_restriction)$")
+    game_mode: str = Field(..., pattern=r"^(standard|eden|edh_commander|titan|no_restriction)$")
     titan_role: Optional[str] = Field(None, pattern=r"^(titan|team)$")
     main_deck: List[str]  # Card ID strings
     egg_deck: List[str] = []
