@@ -17,8 +17,7 @@ export interface PlayFormat {
 
 export const ENGINE_STANDARD_ONLY_REASON = 'Engine supports Standard only in this build';
 
-export const PLAY_FORMATS: PlayFormat[] = [
-  {
+const STANDARD_FORMAT: PlayFormat = {
     id: 'standard',
     name: 'STANDARD',
     tagline: 'The official ruleset',
@@ -26,7 +25,10 @@ export const PLAY_FORMATS: PlayFormat[] = [
     deckLabel: '50 cards',
     populationPct: 84,
     enabled: true,
-  },
+};
+
+export const PLAY_FORMATS: PlayFormat[] = [
+  STANDARD_FORMAT,
   {
     id: 'titan',
     name: 'TITAN',
@@ -80,7 +82,7 @@ export const PLAY_FORMATS: PlayFormat[] = [
 ];
 
 export function getPlayFormat(formatId: string | null | undefined): PlayFormat {
-  return PLAY_FORMATS.find((format) => format.id === formatId) ?? PLAY_FORMATS[0];
+  return PLAY_FORMATS.find((format) => format.id === formatId) ?? STANDARD_FORMAT;
 }
 
 export function canUseDeckForFormat(

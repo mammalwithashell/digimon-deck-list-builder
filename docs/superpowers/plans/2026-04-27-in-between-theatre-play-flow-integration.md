@@ -528,7 +528,7 @@ git commit -m "feat: add play format catalog"
 - Create: `code/frontend/src/features/play/playApi.ts`
 - Test: `code/frontend/src/features/play/playFlowStore.test.ts`
 
-- [ ] **Step 1: Write play flow store tests**
+- [x] **Step 1: Write play flow store tests**
 
 Create `code/frontend/src/features/play/playFlowStore.test.ts`:
 
@@ -566,7 +566,7 @@ describe('playFlowStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run the store test and verify it fails**
+- [x] **Step 2: Run the store test and verify it fails**
 
 Run:
 
@@ -577,7 +577,7 @@ npm test -- src/features/play/playFlowStore.test.ts
 
 Expected: fail because `playFlowStore.ts` does not exist.
 
-- [ ] **Step 3: Implement play flow store**
+- [x] **Step 3: Implement play flow store**
 
 Create `code/frontend/src/features/play/playFlowStore.ts`:
 
@@ -652,7 +652,7 @@ export const usePlayFlowStore = create<PlayFlowState>()(
 );
 ```
 
-- [ ] **Step 4: Implement play API adapter**
+- [x] **Step 4: Implement play API adapter**
 
 Create `code/frontend/src/features/play/playApi.ts`:
 
@@ -747,7 +747,7 @@ export async function createBotGame(params: {
 }
 ```
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run:
 
