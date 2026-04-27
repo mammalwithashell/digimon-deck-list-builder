@@ -21,7 +21,7 @@ use digimon_dsl::compiled::CompiledStep;
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::run_steps;
+use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
 use crate::enums::{EffectTiming, PlayerId};
 use crate::game::Game;
@@ -42,6 +42,16 @@ pub struct ScheduledEffect {
     pub controller: PlayerId,
     /// Bindings captured at schedule time and replayed into the body.
     pub captured_bindings: Bindings,
+    /// Turn number when this effect was scheduled.
+    pub scheduled_at_turn: u16,
+    /// Runtime registry captured at schedule time.
+    pub runtime: StepRuntime,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScheduledDrainTail {
+    pub timing: EffectTiming,
+    pub remaining: Vec<ScheduledEffect>,
 }
 
 /// Drain every `ScheduledEffect` whose `when` matches `t`, running each body
@@ -54,12 +64,44 @@ pub struct ScheduledEffect {
 ///
 /// Non-matching effects remain queued.
 pub fn fire_scheduled_for_timing(game: &mut Game, t: EffectTiming) {
-    // Take the entire queue. Effects scheduled during firing go to the
-    // (now empty) `game.scheduled_effects`; we re-append them at the end.
     let queued = std::mem::take(&mut game.scheduled_effects);
+    drain_scheduled_for_timing(game, t, queued);
+}
+
+pub fn resume_scheduled_drain(game: &mut Game) {
+    let Some(tail) = game.scheduled_drain_tail.take() else {
+        return;
+    };
+    drain_scheduled_for_timing(game, tail.timing, tail.remaining);
+}
+
+fn can_fire_scheduled(effect: &ScheduledEffect, current_turn: u16) -> bool {
+    match effect.when {
+        EffectTiming::EndOfYourNextTurn
+        | EffectTiming::EndOfOpponentsNextTurn
+        | EffectTiming::UntilNextUnsuspend => current_turn > effect.scheduled_at_turn,
+        _ => true,
+    }
+}
+
+fn timing_controller_matches(game: &Game, effect: &ScheduledEffect) -> bool {
+    match effect.when {
+        EffectTiming::EndOfYourNextTurn | EffectTiming::UntilNextUnsuspend => {
+            effect.controller == game.turn_player()
+        }
+        EffectTiming::EndOfOpponentsNextTurn => effect.controller != game.turn_player(),
+        _ => true,
+    }
+}
+
+fn drain_scheduled_for_timing(game: &mut Game, t: EffectTiming, queued: Vec<ScheduledEffect>) {
     let mut still_pending: Vec<ScheduledEffect> = Vec::new();
-    for eff in queued {
-        if eff.when != t {
+    let mut iter = queued.into_iter().peekable();
+    while let Some(eff) = iter.next() {
+        if eff.when != t
+            || !can_fire_scheduled(&eff, game.turn_count)
+            || !timing_controller_matches(game, &eff)
+        {
             still_pending.push(eff);
             continue;
         }
@@ -69,6 +111,7 @@ pub fn fire_scheduled_for_timing(game: &mut Game, t: EffectTiming) {
             source_permanent,
             controller,
             captured_bindings,
+            runtime,
             ..
         } = eff;
         let mut bindings = captured_bindings;
@@ -82,15 +125,19 @@ pub fn fire_scheduled_for_timing(game: &mut Game, t: EffectTiming) {
         // replace this with break-and-resume retry logic.
         debug_assert!(
             game.dsl_outer_tail.is_none(),
-            "scheduled effect fired while a previous parked selection is still outstanding; \
-             Phase 3 should add retry logic for multi-parking drains"
+            "scheduled effect fired while a previous parked selection is still outstanding"
         );
         let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
-        let _outcome = run_steps(&body, &mut ctx, &mut bindings);
-        // TODO(phase-3): if `_outcome == RunOutcome::Parked`, break and
-        // resume the remaining queue once the parked selection resolves.
-        // Today, scheduled bodies typically don't park; the debug_assert
-        // above catches the rare case where they do.
+        let outcome = run_steps_with_runtime(&body, &mut ctx, &mut bindings, &runtime);
+        if matches!(outcome, RunOutcome::Parked) {
+            let mut remaining = still_pending;
+            remaining.extend(iter);
+            ctx.game.scheduled_drain_tail = Some(ScheduledDrainTail {
+                timing: t,
+                remaining,
+            });
+            return;
+        }
     }
     // Restore non-matching effects, then append any newly-scheduled effects
     // that landed during firing (these go to the back of the queue).

@@ -259,9 +259,7 @@ fn counter_then_block_sequence() {
     // First prompt: CounterTiming.
     assert_eq!(r.current_phase(), GamePhase::CounterTiming);
 
-    r.game
-        .resolve_selection(1, PASS)
-        .expect("decline counter");
+    r.game.resolve_selection(1, PASS).expect("decline counter");
 
     // Second prompt: BlockTiming.
     let sel = r

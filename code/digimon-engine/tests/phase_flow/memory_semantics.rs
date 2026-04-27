@@ -27,8 +27,16 @@ fn pay_memory_does_not_end_turn_on_negative() {
     let ok = r.game.pay_memory(5);
     assert!(ok, "5 should be affordable (memory_range is -10..10)");
     assert_eq!(r.memory(), -2);
-    assert_eq!(r.turn_player(), tp_before, "pay_memory must not switch turn");
-    assert_eq!(r.turn_count(), turn_before, "pay_memory must not bump turn count");
+    assert_eq!(
+        r.turn_player(),
+        tp_before,
+        "pay_memory must not switch turn"
+    );
+    assert_eq!(
+        r.turn_count(),
+        turn_before,
+        "pay_memory must not bump turn count"
+    );
 }
 
 #[test]
@@ -86,7 +94,11 @@ fn pass_turn_preserves_negative_overflow() {
     r.game.set_memory(-4);
     r.game.pass_turn();
     // pass_turn must NOT overwrite -4 with -3; end_turn negates -4 → +4.
-    assert_eq!(r.memory(), 4, "overflow must carry through as +4 for the next player");
+    assert_eq!(
+        r.memory(),
+        4,
+        "overflow must carry through as +4 for the next player"
+    );
 }
 
 // ── §1.2 — end_turn negates memory; no clamp ─────────────────────────
@@ -96,7 +108,11 @@ fn end_turn_negates_positive_memory() {
     let mut r = empty_runner();
     r.game.set_memory(7);
     r.game.end_turn();
-    assert_eq!(r.memory(), -7, "+7 on active player's side becomes -7 from new perspective");
+    assert_eq!(
+        r.memory(),
+        -7,
+        "+7 on active player's side becomes -7 from new perspective"
+    );
 }
 
 #[test]
@@ -104,7 +120,11 @@ fn end_turn_negates_negative_memory() {
     let mut r = empty_runner();
     r.game.set_memory(-5);
     r.game.end_turn();
-    assert_eq!(r.memory(), 5, "-5 (on next player's side) becomes +5 from their perspective");
+    assert_eq!(
+        r.memory(),
+        5,
+        "-5 (on next player's side) becomes +5 from their perspective"
+    );
 }
 
 #[test]
@@ -134,7 +154,11 @@ fn end_turn_swing_back_keeps_turn_with_same_player() {
 
     // Swing-back triggered: memory went from -3 to +2 during OnEndTurn.
     assert_eq!(r.memory(), 2, "TEST-006 should have added 5 to -3 → +2");
-    assert_eq!(r.turn_player(), tp_before, "turn must stay with the same player");
+    assert_eq!(
+        r.turn_player(),
+        tp_before,
+        "turn must stay with the same player"
+    );
     assert_eq!(r.turn_count(), turn_before, "turn count must not advance");
     assert_eq!(
         r.current_phase(),
@@ -221,5 +245,9 @@ fn play_from_hand_does_not_auto_end_turn_on_negative_memory() {
     let tp_before = r.turn_player();
     r.play(0, 0);
     assert_eq!(r.memory(), -2);
-    assert_eq!(r.turn_player(), tp_before, "turn must not advance during play");
+    assert_eq!(
+        r.turn_player(),
+        tp_before,
+        "turn must not advance during play"
+    );
 }

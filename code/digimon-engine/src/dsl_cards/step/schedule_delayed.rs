@@ -18,6 +18,7 @@
 use digimon_dsl::compiled::CompiledStep;
 
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::step::StepRuntime;
 use crate::dsl_cards::timing_map::compiled_timing_to_engine;
 use crate::effect_context::EffectContext;
 
@@ -29,11 +30,17 @@ pub fn try_run(
     step: &CompiledStep,
     ctx: &mut EffectContext<'_>,
     bindings: &Bindings,
+    runtime: &StepRuntime,
 ) -> bool {
     match step {
         CompiledStep::ScheduleDelayed { when, body } => {
             if let Some(t) = compiled_timing_to_engine(*when) {
-                ctx.schedule_delayed(t, body.clone(), bindings.clone());
+                ctx.schedule_delayed_with_runtime(
+                    t,
+                    body.clone(),
+                    bindings.clone(),
+                    runtime.clone(),
+                );
             }
             true
         }

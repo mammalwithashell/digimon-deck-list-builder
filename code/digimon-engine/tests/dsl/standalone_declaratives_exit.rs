@@ -56,6 +56,7 @@ fn partition_clause() -> CompiledClause {
         active_when: None,
         sources: vec![],
         exclude_cause: vec![],
+        process: vec![],
         summary: None,
         summary_key: None,
     })
@@ -179,9 +180,9 @@ fn combined_card_with_all_three_clauses_emits_three_effects() {
     );
 
     // Assert each expected shape appears among the emitted effects.
-    let has_replacement = effects.iter().any(|e| {
-        e.timing == EffectTiming::WhenWouldBeDeleted && e.replacement_process.is_some()
-    });
+    let has_replacement = effects
+        .iter()
+        .any(|e| e.timing == EffectTiming::WhenWouldBeDeleted && e.replacement_process.is_some());
     assert!(
         has_replacement,
         "No Replacement effect (WhenWouldBeDeleted + replacement_process) found among {} effects",

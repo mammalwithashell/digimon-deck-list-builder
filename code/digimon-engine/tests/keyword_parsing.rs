@@ -136,8 +136,8 @@ fn parser_fragment_bare_digit() {
 
 // ─── Game::has_keyword integration tests ───────────────────────────────────
 
-use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, CardKind, Expiry};
 use digimon_engine::permanent::PermanentHandle;
 
@@ -167,16 +167,23 @@ fn digimon_with_text(card_id: &str, effect_text: &str) -> CardData {
 #[test]
 fn game_has_keyword_sees_native_printed() {
     let mut r = DebugRunner::builder()
-        .add_card(digimon_with_text("NATIVE_RUSH", "\u{ff1c}Rush\u{ff1e} (...)"))
+        .add_card(digimon_with_text(
+            "NATIVE_RUSH",
+            "\u{ff1c}Rush\u{ff1e} (...)",
+        ))
         .hand(0, &["NATIVE_RUSH"])
         .memory(5)
         .start();
 
     r.play(0, 0);
-    let handle = PermanentHandle { player: 0, index: 0 };
+    let handle = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
 
     assert!(
-        r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush),
+        r.game_mut()
+            .has_keyword(handle, digimon_engine::enums::Keyword::Rush),
         "Game::has_keyword should see native printed Rush"
     );
 }
@@ -190,7 +197,10 @@ fn game_has_keyword_sees_modifier_granted() {
         .start();
 
     r.play(0, 0);
-    let handle = PermanentHandle { player: 0, index: 0 };
+    let handle = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     r.game_mut().modifiers.grant_keyword(
         handle,
         digimon_engine::enums::Keyword::Rush,
@@ -198,7 +208,9 @@ fn game_has_keyword_sees_modifier_granted() {
         0,
     );
 
-    assert!(r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush));
+    assert!(r
+        .game_mut()
+        .has_keyword(handle, digimon_engine::enums::Keyword::Rush));
 }
 
 #[test]
@@ -210,15 +222,25 @@ fn game_has_keyword_false_when_neither() {
         .start();
 
     r.play(0, 0);
-    let handle = PermanentHandle { player: 0, index: 0 };
-    assert!(!r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush));
+    let handle = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
+    assert!(!r
+        .game_mut()
+        .has_keyword(handle, digimon_engine::enums::Keyword::Rush));
 }
 
 #[test]
 fn game_has_keyword_bad_handle_returns_false() {
     let mut r = DebugRunner::builder().start();
-    let handle = PermanentHandle { player: 0, index: 99 };
-    assert!(!r.game_mut().has_keyword(handle, digimon_engine::enums::Keyword::Rush));
+    let handle = PermanentHandle {
+        player: 0,
+        index: 99,
+    };
+    assert!(!r
+        .game_mut()
+        .has_keyword(handle, digimon_engine::enums::Keyword::Rush));
 }
 
 // ─── Phase 3 Task 3 behavioral regression tests ────────────────────────────
@@ -227,7 +249,10 @@ fn game_has_keyword_bad_handle_returns_false() {
 fn native_printed_rush_allows_same_turn_attack() {
     // A freshly-played Digimon with native printed Rush can attack
     // on the same turn (normally summoning-sickness blocks this).
-    let mut atk = digimon_with_text("R", "\u{ff1c}Rush\u{ff1e} (This Digimon can attack the turn it comes into play.)");
+    let mut atk = digimon_with_text(
+        "R",
+        "\u{ff1c}Rush\u{ff1e} (This Digimon can attack the turn it comes into play.)",
+    );
     atk.level = Some(5);
     atk.dp = Some(8000);
 
@@ -242,7 +267,10 @@ fn native_printed_rush_allows_same_turn_attack() {
         .start();
 
     r.play(0, 0);
-    let handle = PermanentHandle { player: 0, index: 0 };
+    let handle = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     assert!(
         r.game_mut().can_attack(handle, false),
         "native printed Rush should allow fresh-turn attack"
@@ -274,7 +302,10 @@ fn native_printed_jamming_survives_losing_security_battle() {
         .start();
 
     r.play(0, 0);
-    let handle = PermanentHandle { player: 0, index: 0 };
+    let handle = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let _ = r.attack_player(handle, 1, true);
 
     assert!(
@@ -287,11 +318,7 @@ fn native_printed_jamming_survives_losing_security_battle() {
 fn parser_material_save_parametric() {
     use digimon_engine::enums::Keyword;
     let kws = parse_printed_keywords("\u{ff1c}Material Save 2\u{ff1e} (...)", "", "");
-    assert!(
-        kws.contains(&Keyword::MaterialSave(2)),
-        "got {:?}",
-        kws
-    );
+    assert!(kws.contains(&Keyword::MaterialSave(2)), "got {:?}", kws);
 }
 
 #[test]
@@ -300,5 +327,8 @@ fn parser_material_save_no_alias_to_save() {
     // it must either produce MaterialSave(1) or not parse at all.
     use digimon_engine::enums::Keyword;
     let kws = parse_printed_keywords("\u{ff1c}Material Save\u{ff1e}", "", "");
-    assert!(!kws.contains(&Keyword::Save), "must not alias MaterialSave -> Save");
+    assert!(
+        !kws.contains(&Keyword::Save),
+        "must not alias MaterialSave -> Save"
+    );
 }

@@ -18,12 +18,12 @@ pub fn lower(
     let kw = lookup_keyword(keyword_name, value)?;
     let label = format!("Grant {keyword_name}");
 
-    let mut builder: EffectBuilder = Effect::declarative(card)
-        .name(&label)
-        .process(move |ctx| {
-            let Some(handle) = ctx.source_permanent else { return; };
-            ctx.grant_keyword(handle, kw, Expiry::Permanent);
-        });
+    let mut builder: EffectBuilder = Effect::declarative(card).name(&label).process(move |ctx| {
+        let Some(handle) = ctx.source_permanent else {
+            return;
+        };
+        ctx.grant_keyword(handle, kw, Expiry::Permanent);
+    });
 
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();

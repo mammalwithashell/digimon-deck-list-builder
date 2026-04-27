@@ -3,7 +3,7 @@
 //! `digimon-engine-py`, but the Rust half is validated here so failures
 //! don't have to travel through Python to be diagnosed.
 
-mod selection_view;
 mod events;
-mod ui_json;
 mod recorder;
+mod selection_view;
+mod ui_json;

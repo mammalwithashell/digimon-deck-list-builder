@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use digimon_engine::action::build_action_mask;
+use digimon_engine::action::explain::{explain_action, ActionExplanation};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::combat::AttackResult;
@@ -194,11 +195,7 @@ fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -
     }
 }
 
-fn perm_dto(
-    game: &Game,
-    player: PlayerId,
-    index: usize,
-) -> PermanentDto {
+fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
     let perm = &game.player(player).battle_area[index];
     let handle = PermanentHandle {
         player,
@@ -219,7 +216,11 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
     let battle_area: Vec<PermanentDto> = (0..p.battle_area.len())
         .map(|i| perm_dto(game, id, i))
         .collect();
-    let hand: Vec<CardDto> = p.hand.iter().map(|c| card_dto(c, &game.card_data)).collect();
+    let hand: Vec<CardDto> = p
+        .hand
+        .iter()
+        .map(|c| card_dto(c, &game.card_data))
+        .collect();
     let breeding = p.breeding_area.as_ref().map(|perm| PermanentDto {
         field_index: 255, // breeding indicator
         top_card: card_dto(perm.top_card(), &game.card_data),
@@ -312,8 +313,13 @@ pub fn test_deck() -> Vec<String> {
     // 50 main deck + 5 eggs.
     let mut deck = Vec::with_capacity(55);
     let mains = [
-        "TEST-001", "TEST-002", "TEST-003", "TEST-004", "TEST-005",
-        "VANILLA-3K", "VANILLA-5K",
+        "TEST-001",
+        "TEST-002",
+        "TEST-003",
+        "TEST-004",
+        "TEST-005",
+        "VANILLA-3K",
+        "VANILLA-5K",
     ];
     // Fill to ~50 cards by repeating.
     for i in 0..50 {
@@ -329,9 +335,7 @@ pub fn test_deck() -> Vec<String> {
 
 /// Create a new 2-player game with built-in test cards.
 #[tauri::command]
-pub fn create_test_game(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<GameStateDto, String> {
+pub fn create_test_game(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
     let db = test_card_db();
     let decks = vec![test_deck(), test_deck()];
     let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
@@ -419,9 +423,7 @@ pub fn rust_attack_player(
 
 /// End the current turn.
 #[tauri::command]
-pub fn rust_end_turn(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<GameStateDto, String> {
+pub fn rust_end_turn(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
     let mut guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_mut().ok_or("No active game")?;
     game.end_turn();
@@ -430,9 +432,7 @@ pub fn rust_end_turn(
 
 /// Pass turn (memory to -3, then end turn).
 #[tauri::command]
-pub fn rust_pass_turn(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<GameStateDto, String> {
+pub fn rust_pass_turn(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
     let mut guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_mut().ok_or("No active game")?;
     game.pass_turn();
@@ -505,6 +505,27 @@ pub struct GameEventDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TensorSummaryDto {
+    pub player_id: PlayerId,
+    pub tensor_size: usize,
+    pub mask_size: usize,
+    pub legal_action_count: usize,
+    pub turn_count: u16,
+    pub phase: String,
+    pub memory: i16,
+    pub tensor_head: Vec<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionTraceDto {
+    pub actor: String,
+    pub player_id: PlayerId,
+    pub action_id: u16,
+    pub decoded: ActionExplanation,
+    pub tensor_summary: Option<TensorSummaryDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActionResponseDto {
     pub state: GameStateDto,
     pub action_mask: Vec<u8>,
@@ -512,6 +533,7 @@ pub struct ActionResponseDto {
     pub logs: Vec<String>,
     pub events: Vec<GameEventDto>,
     pub action_context: serde_json::Value,
+    pub action_traces: Vec<ActionTraceDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -529,6 +551,7 @@ pub struct StepResponseDto {
     pub events: Vec<GameEventDto>,
     pub is_human_turn: bool,
     pub is_game_over: bool,
+    pub action_traces: Vec<ActionTraceDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -729,8 +752,17 @@ pub fn rust_submit_action(
     let pid = current_decision_player(game);
     let action_u16 = u16::try_from(action)
         .map_err(|_| format!("action {action} is out of range for a u16 action ID"))?;
+    let mask_before = build_action_mask(game, pid);
+    let human_trace = action_trace_for(
+        game,
+        "human",
+        pid,
+        action_u16,
+        optional_tensor_summary_for(game, pid, session_guard.registry.as_ref(), &mask_before),
+    );
     game.decode_action(action_u16, pid);
-    run_agent_steps(game, &session_guard, &inference)?;
+    let mut action_traces = vec![human_trace];
+    action_traces.extend(run_agent_steps(game, &session_guard, &inference)?);
     let events = drain_events(game);
     let mask = action_mask_bytes(game);
     let is_over = game.game_over;
@@ -741,6 +773,7 @@ pub fn rust_submit_action(
         logs: Vec::new(),
         events,
         action_context: serde_json::json!({}),
+        action_traces,
     })
 }
 
@@ -763,13 +796,11 @@ pub fn rust_step_game(
     let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
     let session_guard = state.session.lock().map_err(|e| e.to_string())?;
     let game = ensure_game(&mut game_guard)?;
-    run_agent_steps(game, &session_guard, &inference)?;
+    let action_traces = run_agent_steps(game, &session_guard, &inference)?;
     let mask = action_mask_bytes(game);
     let pid = current_decision_player(game);
-    let is_human_turn = matches!(
-        decider_kind(&session_guard, pid),
-        PlayerKind::Human
-    ) || game.game_over;
+    let is_human_turn =
+        matches!(decider_kind(&session_guard, pid), PlayerKind::Human) || game.game_over;
     let is_over = game.game_over;
     Ok(StepResponseDto {
         state: game_state_dto(game),
@@ -778,6 +809,7 @@ pub fn rust_step_game(
         events: Vec::new(),
         is_human_turn,
         is_game_over: is_over,
+        action_traces,
     })
 }
 
@@ -800,42 +832,54 @@ pub fn run_agent_steps(
     game: &mut Game,
     session: &GameSession,
     inference: &InferenceState,
-) -> Result<(), String> {
+) -> Result<Vec<ActionTraceDto>, String> {
     // Cap iterations defensively so a bug in mask generation can't turn this
     // into an infinite spin. Normal games resolve in far fewer than this.
     const MAX_AGENT_STEPS: usize = 10_000;
+    let mut traces = Vec::new();
     for _ in 0..MAX_AGENT_STEPS {
         if game.game_over {
-            return Ok(());
+            return Ok(traces);
         }
         let pid = current_decision_player(game);
         let kind = decider_kind(session, pid);
-        let action = match kind {
-            PlayerKind::Human => return Ok(()),
+        let (actor, action) = match kind {
+            PlayerKind::Human => return Ok(traces),
             PlayerKind::Greedy => {
-                let mask = build_action_mask(game, pid);
-                digimon_engine::policies::greedy_action(game, &mask) as usize
+                let mask_before = build_action_mask(game, pid);
+                (
+                    "agent_greedy",
+                    digimon_engine::policies::greedy_action(game, &mask_before) as usize,
+                )
             }
             PlayerKind::Trained => {
                 let model_id = session
                     .player_model_ids
                     .get(pid as usize)
                     .and_then(|m| m.as_deref())
-                    .ok_or_else(|| {
-                        format!("trained agent for player {pid} has no model_id")
-                    })?;
+                    .ok_or_else(|| format!("trained agent for player {pid} has no model_id"))?;
                 let registry = session.registry.as_ref().ok_or_else(|| {
                     "inference: session has no card registry (game not created?)".to_string()
                 })?;
                 let obs = build_tensor(game, pid, registry);
-                let mask = build_action_mask(game, pid);
-                validate_shapes(&obs, &mask, model_id)?;
-                inference.predict(model_id, &obs, &mask)?
+                let mask_before = build_action_mask(game, pid);
+                validate_shapes(&obs, &mask_before, model_id)?;
+                (
+                    "agent_trained",
+                    inference.predict(model_id, &obs, &mask_before)?,
+                )
             }
         };
-        let action_u16 = u16::try_from(action).map_err(|_| {
-            format!("agent returned out-of-range action {action}")
-        })?;
+        let action_u16 = u16::try_from(action)
+            .map_err(|_| format!("agent returned out-of-range action {action}"))?;
+        let mask_before = build_action_mask(game, pid);
+        traces.push(action_trace_for(
+            game,
+            actor,
+            pid,
+            action_u16,
+            optional_tensor_summary_for(game, pid, session.registry.as_ref(), &mask_before),
+        ));
         game.decode_action(action_u16, pid);
     }
     Err(format!(
@@ -864,21 +908,76 @@ fn validate_shapes(obs: &[f32], mask: &[f32], model_id: &str) -> Result<(), Stri
     Ok(())
 }
 
+fn tensor_summary_for(
+    game: &Game,
+    player_id: PlayerId,
+    registry: &CardRegistry,
+    mask: &[f32],
+) -> TensorSummaryDto {
+    let tensor = build_tensor(game, player_id, registry);
+    TensorSummaryDto {
+        player_id,
+        tensor_size: tensor.len(),
+        mask_size: mask.len(),
+        legal_action_count: mask.iter().filter(|&&v| v > 0.0).count(),
+        turn_count: game.turn_count,
+        phase: format!("{:?}", game.current_phase),
+        memory: game.memory,
+        tensor_head: tensor.iter().take(16).copied().collect(),
+    }
+}
+
+fn optional_tensor_summary_for(
+    game: &Game,
+    player_id: PlayerId,
+    registry: Option<&CardRegistry>,
+    mask: &[f32],
+) -> Option<TensorSummaryDto> {
+    registry.map(|registry| tensor_summary_for(game, player_id, registry, mask))
+}
+
+fn action_trace_for(
+    game: &Game,
+    actor: &str,
+    player_id: PlayerId,
+    action_id: u16,
+    tensor_summary: Option<TensorSummaryDto>,
+) -> ActionTraceDto {
+    ActionTraceDto {
+        actor: actor.to_string(),
+        player_id,
+        action_id,
+        decoded: explain_action(game, player_id, action_id),
+        tensor_summary,
+    }
+}
+
 /// Read the current action mask.
 #[tauri::command]
-pub fn rust_get_mask(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<Vec<u8>, String> {
+pub fn rust_get_mask(state: tauri::State<'_, RustEngineState>) -> Result<Vec<u8>, String> {
     let guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_ref().ok_or("No active game")?;
     Ok(action_mask_bytes(game))
 }
 
+#[tauri::command]
+pub fn rust_get_board_tensor_summary(
+    state: tauri::State<'_, RustEngineState>,
+    player_id: PlayerId,
+) -> Result<TensorSummaryDto, String> {
+    let game_guard = state.game.lock().map_err(|e| e.to_string())?;
+    let session_guard = state.session.lock().map_err(|e| e.to_string())?;
+    let game = game_guard.as_ref().ok_or("No active game")?;
+    let registry = session_guard.registry.as_ref().ok_or_else(|| {
+        "tensor summary: session has no card registry (game not created?)".to_string()
+    })?;
+    let mask = build_action_mask(game, player_id);
+    Ok(tensor_summary_for(game, player_id, registry, &mask))
+}
+
 /// Read the accumulated log (empty for now — Rust engine doesn't log yet).
 #[tauri::command]
-pub fn rust_get_log(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<Vec<String>, String> {
+pub fn rust_get_log(state: tauri::State<'_, RustEngineState>) -> Result<Vec<String>, String> {
     let _guard = state.game.lock().map_err(|e| e.to_string())?;
     Ok(Vec::new())
 }
@@ -909,9 +1008,7 @@ pub fn rust_surrender(
 /// time — but loaded ONNX policies stay in the inference cache since the
 /// next game will likely reuse them.
 #[tauri::command]
-pub fn rust_delete_game(
-    state: tauri::State<'_, RustEngineState>,
-) -> Result<(), String> {
+pub fn rust_delete_game(state: tauri::State<'_, RustEngineState>) -> Result<(), String> {
     let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
     let mut session_guard = state.session.lock().map_err(|e| e.to_string())?;
     *game_guard = None;
@@ -961,8 +1058,7 @@ mod tests {
     fn dto_roundtrip_through_json() {
         let db = test_card_db();
         let decks = vec![test_deck(), test_deck()];
-        let mut game =
-            Game::new(&decks, &db, Rules::standard(), Some(42)).unwrap();
+        let mut game = Game::new(&decks, &db, Rules::standard(), Some(42)).unwrap();
         game.start_game();
         let dto = game_state_dto(&game);
         let json = serde_json::to_string(&dto).unwrap();
@@ -1012,6 +1108,7 @@ mod tests {
             logs: Vec::new(),
             events: Vec::<GameEventDto>::new(),
             action_context: serde_json::json!({}),
+            action_traces: Vec::new(),
         };
 
         assert_eq!(
@@ -1082,6 +1179,116 @@ mod tests {
     }
 
     #[test]
+    fn tensor_summary_reports_engine_contract() {
+        let (game, registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        let mask = digimon_engine::action::build_action_mask(&game, pid);
+        let summary = tensor_summary_for(&game, pid, &registry, &mask);
+
+        assert_eq!(summary.player_id, pid);
+        assert_eq!(summary.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
+        assert_eq!(
+            summary.mask_size,
+            digimon_engine::action::space::ACTION_SPACE_SIZE
+        );
+        assert_eq!(summary.tensor_size, 1375);
+        assert_eq!(summary.mask_size, 2168);
+        assert!(summary.legal_action_count > 0);
+        assert_eq!(summary.phase, format!("{:?}", game.current_phase));
+    }
+
+    #[test]
+    fn action_trace_serializes_human_action_context() {
+        let (mut game, registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        let mask = digimon_engine::action::build_action_mask(&game, pid);
+        let trace = action_trace_for(
+            &game,
+            "human",
+            pid,
+            digimon_engine::action::space::PASS,
+            Some(tensor_summary_for(&game, pid, &registry, &mask)),
+        );
+
+        assert_eq!(trace.actor, "human");
+        assert_eq!(trace.player_id, pid);
+        assert_eq!(trace.action_id, digimon_engine::action::space::PASS);
+        assert_eq!(
+            trace.decoded.kind,
+            digimon_engine::action::explain::ActionKind::Pass
+        );
+        assert!(trace.tensor_summary.is_some());
+
+        let json = serde_json::to_string(&trace).unwrap();
+        assert!(json.contains("\"actor\":\"human\""));
+        assert!(json.contains("\"tensor_size\":1375"));
+        assert!(json.contains("\"mask_size\":2168"));
+
+        game.decode_action(digimon_engine::action::space::PASS, pid);
+    }
+
+    #[test]
+    fn action_response_includes_human_trace() {
+        let (mut game, registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        let mask_before = digimon_engine::action::build_action_mask(&game, pid);
+        let action = digimon_engine::action::space::PASS;
+        let human_trace = action_trace_for(
+            &game,
+            "human",
+            pid,
+            action,
+            Some(tensor_summary_for(&game, pid, &registry, &mask_before)),
+        );
+        game.decode_action(action, pid);
+
+        let resp = ActionResponseDto {
+            state: game_state_dto(&game),
+            action_mask: action_mask_bytes(&game),
+            is_game_over: game.game_over,
+            logs: Vec::new(),
+            events: Vec::<GameEventDto>::new(),
+            action_context: serde_json::json!({}),
+            action_traces: vec![human_trace],
+        };
+
+        assert_eq!(resp.action_traces.len(), 1);
+        assert_eq!(resp.action_traces[0].actor, "human");
+        assert_eq!(resp.action_traces[0].action_id, action);
+    }
+
+    #[test]
+    fn action_response_allows_human_trace_without_registry() {
+        let (mut game, _registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+        let mask_before = digimon_engine::action::build_action_mask(&game, pid);
+        let action = digimon_engine::action::space::PASS;
+        let human_trace = action_trace_for(
+            &game,
+            "human",
+            pid,
+            action,
+            optional_tensor_summary_for(&game, pid, None, &mask_before),
+        );
+        game.decode_action(action, pid);
+
+        let resp = ActionResponseDto {
+            state: game_state_dto(&game),
+            action_mask: action_mask_bytes(&game),
+            is_game_over: game.game_over,
+            logs: Vec::new(),
+            events: Vec::<GameEventDto>::new(),
+            action_context: serde_json::json!({}),
+            action_traces: vec![human_trace],
+        };
+
+        assert_eq!(resp.action_traces.len(), 1);
+        assert_eq!(resp.action_traces[0].actor, "human");
+        assert_eq!(resp.action_traces[0].action_id, action);
+        assert!(resp.action_traces[0].tensor_summary.is_none());
+    }
+
+    #[test]
     fn run_agent_steps_stops_when_current_decider_is_human() {
         let (mut game, registry) = build_playable_game();
         let session = GameSession {
@@ -1091,8 +1298,9 @@ mod tests {
         };
         let inference = InferenceState::default();
         let before = (game.turn_count, game.current_phase);
-        run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
         let after = (game.turn_count, game.current_phase);
+        assert!(traces.is_empty());
         assert_eq!(before, after, "human seat should not advance state");
     }
 
@@ -1108,10 +1316,32 @@ mod tests {
             player_model_ids: vec![None, None],
         };
         let inference = InferenceState::default();
-        run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        assert!(!traces.is_empty());
+        assert!(traces.iter().all(|trace| trace.actor.starts_with("agent_")));
         assert!(
             game.game_over,
             "two greedy agents should play the game to completion"
+        );
+    }
+
+    #[test]
+    fn run_agent_steps_greedy_traces_without_registry() {
+        let (mut game, _registry) = build_playable_game();
+        let session = GameSession {
+            registry: None,
+            player_kinds: vec![PlayerKind::Greedy, PlayerKind::Greedy],
+            player_model_ids: vec![None, None],
+        };
+        let inference = InferenceState::default();
+        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+
+        assert!(!traces.is_empty());
+        assert!(traces.iter().all(|trace| trace.actor == "agent_greedy"));
+        assert!(traces.iter().all(|trace| trace.tensor_summary.is_none()));
+        assert!(
+            game.game_over,
+            "two greedy agents should still play to completion without registry"
         );
     }
 
@@ -1146,7 +1376,9 @@ mod tests {
         };
 
         let before_pid = current_decision_player(&game);
-        run_agent_steps(&mut game, &session, &inference).unwrap();
+        let traces = run_agent_steps(&mut game, &session, &inference).unwrap();
+        assert!(!traces.is_empty());
+        assert!(traces.iter().all(|trace| trace.actor.starts_with("agent_")));
         // After the trained seat's turn the loop should have left us on a
         // human decider (or the game should be over).
         assert!(

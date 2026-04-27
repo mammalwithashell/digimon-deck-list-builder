@@ -4,7 +4,9 @@
 //! Each test drives the variant through `run_step` (synchronous family) and
 //! asserts the observable mutation matches the engine primitive.
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledPlayerRef, CompiledStackPosition, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledPlayerRef, CompiledStackPosition, CompiledStep,
+};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -26,7 +28,7 @@ fn place_on_security_step_moves_hand_card_to_security_top() {
     let security_before = runner.game.players[0].security.len();
 
     let mut bindings = Bindings::new();
-    bindings.insert_hand_index("src", 0);
+    bindings.insert_hand_index("src", 0, 0);
 
     let step = CompiledStep::PlaceOnSecurity {
         of: CompiledPlayerRef::You,
@@ -85,7 +87,7 @@ fn place_as_bottom_source_step_tucks_hand_card_under_target_permanent() {
     let hand_before = runner.game.players[0].hand.len();
 
     let mut bindings = Bindings::new();
-    bindings.insert_hand_index("src", 0);
+    bindings.insert_hand_index("src", 0, 0);
     bindings.insert_permanent("tgt", target);
 
     let step = CompiledStep::PlaceAsBottomSource {
@@ -121,6 +123,114 @@ fn place_as_bottom_source_step_tucks_hand_card_under_target_permanent() {
         perm.top_card().handle(),
         original_top_h,
         "the original top card must still be on top"
+    );
+}
+
+#[test]
+fn place_as_bottom_source_uses_bound_hand_owner() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("T-PERM", "TargetPerm"))
+        .add_card(make_test_card("P0-HAND", "P0Hand"))
+        .add_card(make_test_card("P1-HAND", "P1Hand"))
+        .hand(0, &["P0-HAND"])
+        .hand(1, &["P1-HAND"])
+        .memory(5)
+        .start();
+
+    let target = runner.place_on_field(0, "T-PERM", None);
+    let p0_hand_handle = runner.game.players[0].hand[0].handle();
+    let p1_hand_handle = runner.game.players[1].hand[0].handle();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_hand_index_for("src", 1, 0);
+    bindings.insert_permanent("tgt", target);
+
+    let step = CompiledStep::PlaceAsBottomSource {
+        source: CompiledBindingRef::Named("src".into()),
+        target: CompiledBindingRef::Named("tgt".into()),
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, p0_hand_handle, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(runner.game.players[0].hand.len(), 1, "P0 hand is untouched");
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|cs| cs.handle() == p0_hand_handle),
+        "P0 hand card remains in hand"
+    );
+    assert!(
+        runner.game.players[1].hand.is_empty(),
+        "P1 hand source is consumed"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[target.index as usize].card_sources[0].handle(),
+        p1_hand_handle,
+        "P1 hand card is tucked under the P0 target"
+    );
+}
+
+#[test]
+fn place_on_security_uses_bound_trash_owner() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .add_card(make_test_card("P0-TRASH", "P0Trash"))
+        .add_card(make_test_card("P1-TRASH", "P1Trash"))
+        .hand(0, &["SRC"])
+        .memory(5)
+        .start();
+
+    let src_handle = runner.game.players[0].hand[0].handle();
+    for (player, card_id) in [(0, "P0-TRASH"), (1, "P1-TRASH")] {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .unwrap();
+        let card_index = runner.game.next_card_index();
+        runner.game.players[player]
+            .trash
+            .push(CardSource::new(data_idx, player as u8, card_index));
+    }
+    let p0_trash_handle = runner.game.players[0].trash[0].handle();
+    let p1_trash_handle = runner.game.players[1].trash[0].handle();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_trash_index_for("src", 1, 0);
+
+    let step = CompiledStep::PlaceOnSecurity {
+        of: CompiledPlayerRef::You,
+        source: CompiledBindingRef::Named("src".into()),
+        position: CompiledStackPosition::Top,
+        face_up: false,
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.players[0].trash.len(),
+        1,
+        "P0 trash is untouched"
+    );
+    assert_eq!(runner.game.players[0].trash[0].handle(), p0_trash_handle);
+    assert!(
+        runner.game.players[1].trash.is_empty(),
+        "P1 trash source is consumed"
+    );
+    assert!(
+        runner.game.players[0]
+            .security
+            .iter()
+            .any(|cs| cs.handle() == p1_trash_handle),
+        "P1 trash card is placed into P0 security"
     );
 }
 

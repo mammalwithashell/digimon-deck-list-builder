@@ -93,7 +93,13 @@ fn substitute_replacement_applies() {
         .start();
     let handle = r.place_on_field(0, "TEST-P7-SUBSTITUTE", Some(0));
     let other = r.place_on_field(0, "FILLER", Some(0));
-    assert_eq!(other, PermanentHandle { player: 0, index: 1 });
+    assert_eq!(
+        other,
+        PermanentHandle {
+            player: 0,
+            index: 1
+        }
+    );
 
     let outcome = r.game.try_replace(
         EffectTiming::WhenWouldBeDeleted,
@@ -126,7 +132,11 @@ fn custom_handled_replacement_applies() {
         None,
     );
     assert_eq!(outcome, ReplacementOutcome::CustomHandled);
-    assert_eq!(r.game.player(0).deck.len(), 2, "top of deck should be trashed");
+    assert_eq!(
+        r.game.player(0).deck.len(),
+        2,
+        "top of deck should be trashed"
+    );
     assert_eq!(r.game.player(0).trash.len(), 1);
 }
 

@@ -71,7 +71,10 @@ fn draw_step_pulls_cards_into_hand() {
         let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
         let mut b = Bindings::new();
         run_step(
-            &CompiledStep::Draw { of: CompiledPlayerRef::You, count: 2 },
+            &CompiledStep::Draw {
+                of: CompiledPlayerRef::You,
+                count: 2,
+            },
             &mut ctx,
             &mut b,
         );
@@ -90,7 +93,10 @@ fn trash_from_top_moves_deck_to_trash() {
         let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
         let mut b = Bindings::new();
         run_step(
-            &CompiledStep::TrashFromTop { of: CompiledPlayerRef::You, count: 1 },
+            &CompiledStep::TrashFromTop {
+                of: CompiledPlayerRef::You,
+                count: 1,
+            },
             &mut ctx,
             &mut b,
         );
@@ -108,7 +114,9 @@ fn shuffle_deck_step_preserves_card_count() {
         let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
         let mut b = Bindings::new();
         run_step(
-            &CompiledStep::ShuffleDeck { of: CompiledPlayerRef::You },
+            &CompiledStep::ShuffleDeck {
+                of: CompiledPlayerRef::You,
+            },
             &mut ctx,
             &mut b,
         );

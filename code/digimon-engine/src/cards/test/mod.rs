@@ -69,16 +69,34 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-027", Arc::new(test_027::Test027));
     registry.insert("TEST-028", Arc::new(test_028::Test028));
     registry.insert("TEST-P7-CANCEL", Arc::new(test_phase7_cancel::TestP7Cancel));
-    registry.insert("TEST-P7-CANCEL2", Arc::new(test_phase7_cancel2::TestP7Cancel2));
+    registry.insert(
+        "TEST-P7-CANCEL2",
+        Arc::new(test_phase7_cancel2::TestP7Cancel2),
+    );
     registry.insert(
         "TEST-P7-GUARD-SENTINEL",
         Arc::new(test_phase7_guard_sentinel::TestP7GuardSentinel),
     );
-    registry.insert("TEST-P7-HANDLED", Arc::new(test_phase7_handled::TestP7Handled));
-    registry.insert("TEST-P7-OPTIONAL", Arc::new(test_phase7_optional::TestP7Optional));
-    registry.insert("TEST-P7-RECURSE", Arc::new(test_phase7_recurse::TestP7Recurse));
-    registry.insert("TEST-P7-REDIRECT", Arc::new(test_phase7_redirect::TestP7Redirect));
-    registry.insert("TEST-P7-SUBSTITUTE", Arc::new(test_phase7_substitute::TestP7Substitute));
+    registry.insert(
+        "TEST-P7-HANDLED",
+        Arc::new(test_phase7_handled::TestP7Handled),
+    );
+    registry.insert(
+        "TEST-P7-OPTIONAL",
+        Arc::new(test_phase7_optional::TestP7Optional),
+    );
+    registry.insert(
+        "TEST-P7-RECURSE",
+        Arc::new(test_phase7_recurse::TestP7Recurse),
+    );
+    registry.insert(
+        "TEST-P7-REDIRECT",
+        Arc::new(test_phase7_redirect::TestP7Redirect),
+    );
+    registry.insert(
+        "TEST-P7-SUBSTITUTE",
+        Arc::new(test_phase7_substitute::TestP7Substitute),
+    );
 
     // Suppress unused warning on ModifierType (referenced via add_dp_modifier helper).
     let _ = ModifierType::ChangeDp;

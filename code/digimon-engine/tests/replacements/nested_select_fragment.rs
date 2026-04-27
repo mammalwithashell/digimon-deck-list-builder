@@ -110,11 +110,7 @@ impl CardEffect for FragmentLike {
                         {
                             let p = &ctx.game.players[controller as usize];
                             for h in &picks {
-                                if let Some(idx) = p
-                                    .hand
-                                    .iter()
-                                    .position(|c| c.handle() == *h)
-                                {
+                                if let Some(idx) = p.hand.iter().position(|c| c.handle() == *h) {
                                     indices.push(idx);
                                 }
                             }
@@ -149,7 +145,9 @@ fn fragment_2_picks_two_cards_and_cancels() {
 
     r.game.delete_permanent_with_effects(frag);
     assert!(r.game.pending_selection.is_some(), "outer accept up");
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("accept");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
 
     // Multi-pick chain: 2 picks. Each pick uses the first valid action ID.
     for _ in 0..FRAGMENT_N {

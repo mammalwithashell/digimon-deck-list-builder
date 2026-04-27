@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import type {
+  ActionTrace,
   GameState,
   GameEvent,
   GamePhase,
   PlayerState,
   PendingSelection,
   PendingAttack,
+  TensorSummary,
 } from '@/types/game';
 
 interface GameStore {
@@ -31,6 +33,8 @@ interface GameStore {
   hoveredCard: string | null;
   logs: string[];
   events: GameEvent[];
+  actionTraces: ActionTrace[];
+  latestTensorSummary: TensorSummary | null;
   activeEffectSlot: number | null;
   activeEffectPlayer: number | null;
   playerLabels: Record<number, string>;
@@ -46,6 +50,9 @@ interface GameStore {
   clearLogs: () => void;
   appendEvents: (newEvents: GameEvent[]) => void;
   clearEvents: () => void;
+  appendActionTraces: (traces: ActionTrace[]) => void;
+  setLatestTensorSummary: (summary: TensorSummary | null) => void;
+  clearActionTraces: () => void;
   setActiveEffect: (slot: number | null, player: number | null) => void;
   reset: () => void;
 }
@@ -68,6 +75,8 @@ const initialState = {
   hoveredCard: null,
   logs: [],
   events: [],
+  actionTraces: [],
+  latestTensorSummary: null,
   activeEffectSlot: null,
   activeEffectPlayer: null,
   playerLabels: { 1: 'Player 1', 2: 'Player 2' },
@@ -103,6 +112,16 @@ export const useGameStore = create<GameStore>((set) => ({
   appendEvents: (newEvents) =>
     set((s) => ({ events: [...s.events, ...newEvents] })),
   clearEvents: () => set({ events: [] }),
+  appendActionTraces: (traces) =>
+    set((s) => {
+      const latestTraceWithTensor = [...traces].reverse().find((trace) => trace.tensorSummary);
+      return {
+        actionTraces: [...s.actionTraces, ...traces].slice(-20),
+        latestTensorSummary: latestTraceWithTensor?.tensorSummary ?? s.latestTensorSummary,
+      };
+    }),
+  setLatestTensorSummary: (summary) => set({ latestTensorSummary: summary }),
+  clearActionTraces: () => set({ actionTraces: [], latestTensorSummary: null }),
   setActiveEffect: (slot, player) =>
     set({ activeEffectSlot: slot, activeEffectPlayer: player }),
   reset: () => set(initialState),

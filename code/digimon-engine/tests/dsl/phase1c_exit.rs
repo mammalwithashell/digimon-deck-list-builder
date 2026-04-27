@@ -10,9 +10,11 @@ use digimon_engine::cards::build_registry;
 #[test]
 fn all_fixture_cards_register() {
     let registry = build_registry();
-    let pack = digimon_engine::dsl_registry::from_embedded()
-        .expect("embedded pack loads");
-    assert!(pack.len() >= 15, "at least 15 fixtures in the embedded pack");
+    let pack = digimon_engine::dsl_registry::from_embedded().expect("embedded pack loads");
+    assert!(
+        pack.len() >= 15,
+        "at least 15 fixtures in the embedded pack"
+    );
     for (card_id, _) in pack.iter() {
         assert!(
             registry.get(card_id).is_some(),

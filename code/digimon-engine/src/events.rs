@@ -98,10 +98,7 @@ pub enum GameEvent {
     },
 
     /// The game ended. `winner` is `None` on a draw.
-    GameOver {
-        seq: u64,
-        winner: Option<PlayerId>,
-    },
+    GameOver { seq: u64, winner: Option<PlayerId> },
 }
 
 impl GameEvent {

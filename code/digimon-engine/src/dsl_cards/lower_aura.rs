@@ -12,9 +12,7 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{
-    CompiledGrantKeywordValue, CompiledPredicate, CompiledScope,
-};
+use digimon_dsl::compiled::{CompiledGrantKeywordValue, CompiledPredicate, CompiledScope};
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::modifier_map::lookup_keyword;
@@ -39,9 +37,7 @@ pub fn lower(
         builder = builder.inherited();
     }
     if let Some(aw) = active_when.clone() {
-        builder = builder.condition(move |rctx| {
-            eval_predicate(&aw, rctx, PredicateSubject::None)
-        });
+        builder = builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
     }
 
     if is_self_aura {
@@ -69,7 +65,10 @@ pub fn lower(
             for p in 0..n_players {
                 let m = rctx.game.player(p).battle_area.len();
                 for i in 0..m {
-                    let handle = PermanentHandle { player: p, index: i as u8 };
+                    let handle = PermanentHandle {
+                        player: p,
+                        index: i as u8,
+                    };
                     if eval_predicate(&target_arc, &rctx, PredicateSubject::Permanent(handle)) {
                         matched.push(handle);
                     }

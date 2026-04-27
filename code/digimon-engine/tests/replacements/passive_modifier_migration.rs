@@ -48,8 +48,8 @@ impl CardEffect for OnPlayClosure {
     }
 }
 
-fn new_end_of_turn_slot()
--> Arc<Mutex<Option<Box<dyn FnMut(&mut digimon_engine::game::Game) + Send + Sync>>>> {
+fn new_end_of_turn_slot(
+) -> Arc<Mutex<Option<Box<dyn FnMut(&mut digimon_engine::game::Game) + Send + Sync>>>> {
     Arc::new(Mutex::new(None))
 }
 
@@ -123,7 +123,10 @@ fn cannot_be_returned_to_deck_allows_own_return() {
     let deck_before = r.game.player(0).deck.len();
     let ok = r.game.return_to_deck(victim, StackPosition::Bottom);
 
-    assert!(ok, "own-effect return should succeed (modifier doesn't gate it)");
+    assert!(
+        ok,
+        "own-effect return should succeed (modifier doesn't gate it)"
+    );
     assert_eq!(r.battle_area_size(0), 0, "victim left the field");
     assert_eq!(
         r.game.player(0).deck.len(),

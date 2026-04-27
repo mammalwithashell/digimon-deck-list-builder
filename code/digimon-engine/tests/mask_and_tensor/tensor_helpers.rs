@@ -118,7 +118,10 @@ fn inherited_buff_under_a_top_card_contributes() {
     let top = CardSource::new(data_idx, 0, next);
     r.game.digivolve_onto(0, 0, top);
 
-    let h = PermanentHandle { player: 0, index: 0 };
+    let h = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     assert_eq!(
         r.game.source_dp_contribution(h, 0),
         -3000,
@@ -147,7 +150,10 @@ fn non_inherited_buff_under_a_top_card_does_not_contribute() {
     let top = CardSource::new(data_idx, 0, next);
     r.game.digivolve_onto(0, 0, top);
 
-    let h = PermanentHandle { player: 0, index: 0 };
+    let h = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     assert_eq!(
         r.game.source_dp_contribution(h, 0),
         0,
@@ -174,7 +180,10 @@ fn unregistered_card_contributes_zero() {
         .add_card(make_test_card("UNKNOWN", "Unknown"))
         .start();
     // No place_on_field needed — we just pass an out-of-range handle.
-    let h = PermanentHandle { player: 0, index: 0 };
+    let h = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     assert_eq!(r.game.source_dp_contribution(h, 0), 0);
 }
 
@@ -194,9 +203,7 @@ fn opt_used_reflects_activation_count() {
     let mut r = fresh_runner();
     let h = r.place_on_field(0, "OPT", Some(0));
     // Manually record an activation (slot 0, the OPT effect).
-    let source_handle = r.game.players[0].battle_area[0]
-        .card_sources[0]
-        .handle();
+    let source_handle = r.game.players[0].battle_area[0].card_sources[0].handle();
     r.game.players[0].battle_area[0].record_activation(source_handle, 0);
     assert_eq!(r.game.opt_used(h), 1);
     assert_eq!(r.game.opt_total(h), 1);
@@ -209,9 +216,7 @@ fn opt_counts_persist_until_new_turn() {
     // during begin_turn). Simulate a turn reset and observe the counter.
     let mut r = fresh_runner();
     let h = r.place_on_field(0, "OPT", Some(0));
-    let source_handle = r.game.players[0].battle_area[0]
-        .card_sources[0]
-        .handle();
+    let source_handle = r.game.players[0].battle_area[0].card_sources[0].handle();
     r.game.players[0].battle_area[0].record_activation(source_handle, 0);
     assert_eq!(r.game.opt_used(h), 1);
 
@@ -236,7 +241,10 @@ fn opt_filters_inherited_vs_top_for_stack() {
     let top = CardSource::new(data_idx, 0, next);
     r.game.digivolve_onto(0, 0, top);
 
-    let h = PermanentHandle { player: 0, index: 0 };
+    let h = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     // OPT under a top card: its non-inherited OPT effect is filtered out.
     // DP-BUFF's only effect has max_per_turn = 0, so nothing counts.
     assert_eq!(r.game.opt_total(h), 0);

@@ -199,9 +199,8 @@ fn plant_trash(r: &mut DebugRunner, player: u8, card_id: &str) {
 }
 
 fn field_main_bit(field_index: usize) -> usize {
-    (FIELD_EFFECT_START
-        + field_index as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN)
+        as usize
 }
 
 // ─── [Hand] [Main] ────────────────────────────────────────────────────
@@ -233,7 +232,10 @@ fn hand_main_returns_false_when_no_matching_timing() {
     r.game.set_memory(0);
 
     let fired = r.game.activate_hand_main(0, 0);
-    assert!(!fired, "non-Main timing must not be consumed by activate_hand_main");
+    assert!(
+        !fired,
+        "non-Main timing must not be consumed by activate_hand_main"
+    );
     assert_eq!(r.game.memory, 0, "no effect must run");
 }
 
@@ -246,8 +248,14 @@ fn hand_main_returns_false_on_out_of_range_index() {
         .start();
     r.game.enter_main_phase();
 
-    assert!(!r.game.activate_hand_main(0, 99), "out-of-range slot must return false");
-    assert!(!r.game.activate_hand_main(99, 0), "out-of-range player must return false");
+    assert!(
+        !r.game.activate_hand_main(0, 99),
+        "out-of-range slot must return false"
+    );
+    assert!(
+        !r.game.activate_hand_main(99, 0),
+        "out-of-range player must return false"
+    );
 }
 
 #[test]
@@ -313,8 +321,14 @@ fn field_main_opt_exhausted_does_not_fire() {
     assert_eq!(r.game.memory, 5);
 
     let fired_again = r.game.activate_field_main(tp, handle.index as usize);
-    assert!(!fired_again, "OPT should gate a second activation in the same turn");
-    assert_eq!(r.game.memory, 5, "memory must not change on the second attempt");
+    assert!(
+        !fired_again,
+        "OPT should gate a second activation in the same turn"
+    );
+    assert_eq!(
+        r.game.memory, 5,
+        "memory must not change on the second attempt"
+    );
 }
 
 #[test]
@@ -487,8 +501,7 @@ fn mask_and_hand_decoder_agree_without_opt_tracking() {
 
     let mask_after = build_action_mask(&r.game, 0);
     assert_eq!(
-        mask_after[HAND_EFFECT_START as usize],
-        1.0,
+        mask_after[HAND_EFFECT_START as usize], 1.0,
         "hand [Main] has no OPT — bit must stay live post-fire"
     );
 }

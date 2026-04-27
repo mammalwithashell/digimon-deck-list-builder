@@ -54,9 +54,15 @@ fn test_card_db() -> HashMap<String, CardData> {
 
 fn test_deck() -> Vec<String> {
     let mut deck = Vec::new();
-    for _ in 0..6 { deck.push("BT1-001".to_string()); }
-    for _ in 0..10 { deck.push("BT1-010".to_string()); }
-    for _ in 0..10 { deck.push("BT1-025".to_string()); }
+    for _ in 0..6 {
+        deck.push("BT1-001".to_string());
+    }
+    for _ in 0..10 {
+        deck.push("BT1-010".to_string());
+    }
+    for _ in 0..10 {
+        deck.push("BT1-025".to_string());
+    }
     deck
 }
 
@@ -134,7 +140,11 @@ fn revealed_cards_populates_offset() {
     let (mut game, registry) = fresh_game();
 
     // Synthesize a revealed card by cloning the top of P0's deck.
-    let revealed = game.players[0].deck.last().cloned().expect("deck non-empty");
+    let revealed = game.players[0]
+        .deck
+        .last()
+        .cloned()
+        .expect("deck non-empty");
     let expected_id = registry.get_index(&revealed.card_id(&game.card_data)) as f32;
     game.revealed_cards.push(revealed);
 
@@ -142,7 +152,12 @@ fn revealed_cards_populates_offset() {
 
     assert_eq!(t[OFF_REVEALED], expected_id);
     for i in 1..MAX_REVEALED {
-        assert_eq!(t[OFF_REVEALED + i], 0.0, "unfilled reveal slot {} must be 0.0", i);
+        assert_eq!(
+            t[OFF_REVEALED + i],
+            0.0,
+            "unfilled reveal slot {} must be 0.0",
+            i
+        );
     }
 }
 
@@ -150,7 +165,11 @@ fn revealed_cards_populates_offset() {
 fn revealed_cards_cleared_on_turn_rotation() {
     let (mut game, registry) = fresh_game();
 
-    let revealed = game.players[0].deck.last().cloned().expect("deck non-empty");
+    let revealed = game.players[0]
+        .deck
+        .last()
+        .cloned()
+        .expect("deck non-empty");
     game.revealed_cards.push(revealed);
 
     // Sanity: reveal populated before rotation.

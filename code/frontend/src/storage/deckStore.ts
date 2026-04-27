@@ -45,7 +45,7 @@ export async function putDeck(deck: Partial<Deck> & {
   main_deck: string[];
   egg_deck: string[];
 }): Promise<Deck> {
-  // Fill required fields so the Rust struct deserializes cleanly.
+  // Fill required fields so the desktop deck struct deserializes cleanly.
   const now = new Date().toISOString();
   const full: Deck = {
     id: deck.id ?? '',

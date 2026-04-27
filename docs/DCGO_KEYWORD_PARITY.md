@@ -1,7 +1,9 @@
 # DCGO ↔ Rust Keyword Parity
 
-**Date:** 2026-04-24
-**Scope:** Cross-engine parity tracker for printed keyword behaviors. Compares the DCGO C# source-of-truth implementation (`DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/`) against the Rust engine's `Keyword` enum consumption surface (`code/digimon-engine/src/**/*.rs`).
+**Date:** 2026-04-26
+**Scope:** Cross-engine parity tracker for printed keyword behaviors. Compares the checked-out DCGO C# implementation at submodule commit `00e8670866a30a0bcfe8425e8f2c41403f5ce26d` against the Rust engine's keyword/parser/effect surfaces (`code/digimon-engine/src/**/*.rs`).
+
+The audit covers both DCGO shared behavior classes (`DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/`, 28 files) and keyword factory wrappers (`DCGO/Assets/Scripts/Script/CardEffectFactory/KeyWordEffects/`, 31 files). The factory-only wrappers currently matter because `Arts Digivolve`, `Blast Digivolution`, `Blast DNA Digivolution`, and `Link` do not all have matching Rust `Keyword` auto-install paths.
 
 Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that tracker catalogs semantic divergences in shared *subsystems* between Rust and Python; this tracker catalogs per-*keyword* behavioral fidelity against the C# source.
 
@@ -13,6 +15,7 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 - ❌ **Missing from enum** — DCGO has the keyword; Rust's `Keyword` enum does not.
 - 🟣 **Deferred** — wire-up blocked on a known infrastructure gap (usually nested-selection-in-replacement).
 - ⚪ **Parsed, no auto-install (intentional)** — the variant is parsed and available to hand-rolled scripts, but no `keyword_to_auto_effect` arm exists because real cards always pair the keyword with explicit effect text — auto-installing a generic effect would double-fire.
+- 🔵 **Substrate only** — Rust has a script-level builder/state-machine substrate for the behavior, but no native printed-keyword parse/auto-install from `CardData::keywords`.
 
 ## Summary table
 
@@ -26,6 +29,7 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Blitz | End-of-turn player attack if opponent has ≥1 memory | ✅ | Mask + action path |
 | Raid | Retarget to tied-for-highest-DP Digimon | ✅ | Both combat retarget and mask emission |
 | Alliance | Select ally, suspend it, +ally DP / +1 S-Attack | ✅ | `try_enter_alliance` — trait-match filter not yet enforced (tracked in RUST_ENGINE_GAPS) |
+| Link | Factory wrapper links a card from hand/battle area to an own Digimon host using `card.linkCondition` | 🔵 | Rust has `EffectBuilder::link(cost, filter)`, `OptionState::Linked`, `linked_cards`, `OnLink`, and `OnLinkedCardTrashed`; no native `Keyword::Link`, parser arm, `linkCondition` import, or generic auto-install from printed text. |
 | Vortex | End-of-turn attack bypassing summoning sickness and interrupts | ✅ | `can_attack(vortex=true)` + mask |
 | Overclock | End-of-turn bonus attack by sacrificing a trait-filtered ally | ✅ | `game_phases.rs:274/347` + mask |
 | Collision | Grants virtual Blocker to all opp Digimon during own attack | ✅ | `try_enter_block:1237` checks attacker-Collision |
@@ -43,7 +47,9 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Save | Place self under own Tamer as bottom source, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; optional `WhenWouldBeDeleted` replacement, Tamer pick + `ctx.place_card_under_permanent_bottom` + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/save.rs`. |
 | Fortitude | Play self from trash free + unsuspended when self-stack deleted, if sources available | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with source-count gate, `ctx.play_from_trash_free_unsuspended`. See `keyword_effects.rs` and `tests/keyword_phase_d/fortitude.rs`. |
 | Decoy | Redirect deletion of any same-controller ally to self | ✅ | Auto-installed in Phase D 2026-04-25; `WhenWouldBeDeleted` subscription on ally deletions, `ctx.substitute_replacement`. See `keyword_effects.rs` and `tests/keyword_phase_d/decoy.rs`. |
-| Blast Digivolve | `Blast Digivolve` counter-window play | 🔴 | Parsed as `Keyword::BlastDigivolve` (renamed Phase A §A2). Auto-install of `Effect::blast_digivolve` from the keyword is deferred (Phase D scope did not include BlastDigivolve). |
+| Blast Digivolve | Counter-window digivolution from hand when an opponent attacks | 🔴 | Parsed as `Keyword::BlastDigivolve`; Rust counter substrate and `EffectBuilder::blast_digivolve()` exist, but printed `CardData::keywords` alone does not make the hand card a counter candidate. Needs keyword-derived auto-install or data-driven script generation. |
+| Blast DNA Digivolve | Counter-window DNA digivolution using one field Digimon plus one hand Digimon named by `BlastDNACondition` | ❌ | DCGO factory-only wrapper. Rust has partial regular DNA-selection scaffolding, but no `Keyword::BlastDNADigivolve`, parser arm, `BlastDNACondition` data import, or counter-window hand+field DNA executor. |
+| Arts Digivolve | Option-resolution digivolve from executing area onto own battle/breeding Digimon | ❌ | DCGO factory-only wrapper. Rust has no `Keyword::ArtsDigivolve` parser/enum path and no generic option-resolution helper that digivolves the executing Option card onto a selected permanent. |
 | MaterialSave(count) | Move up-to-N own stack sources under another permanent — `[Main]` active skill | ✅ | Auto-installed in Phase D 2026-04-25; `MainOnField` effect with gate (≥1 source + ≥1 own Tamer), own-Tamer pick then source-pick via `CountCappedZone::Material`, tuck via `ctx.place_card_under_permanent_bottom`. See `keyword_effects.rs` and `tests/keyword_phase_d/material_save.rs`. |
 | MindLink | Attach Tamer card to a Digimon with empty Tamer slot | ✅ | Auto-installed in Phase F 2026-04-25; `MainOnField` Tamer skill picks an own non-Tamer non-token Digimon with no non-face-down Tamer source and tucks self underneath via `attach_tamer_to_digimon`. New `face_down: bool` field on `CardSource` honors DCGO's `IsFlipped` filter. See `keyword_effects.rs::Keyword::MindLink` arm and `tests/keyword_phase_f/mind_link.rs`. RULES_CONTEXT 16-27. |
 | Iceclad | Compare digivolution-card count instead of DP in battle (except vs Security Digimon); higher count wins, tie = both delete | ✅ | Combat-resolution branch in `combat::resolve_battle` swaps DP compare for `card_sources.len()` compare when either combatant has Iceclad (security battles unaffected — they route through `resolve_player_security_loop`). See `combat.rs:resolve_battle` and `tests/keyword_phase_f/iceclad.rs`. RULES_CONTEXT 16-34. |
@@ -62,7 +68,7 @@ Phase A landed the partial fix: the wrong `SecuritySkillDrain` gate was never re
 
 See the spec at [superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md](superpowers/specs/2026-04-24-dcgo-keyword-parity-design.md) §5 Phase A/B for the full plan.
 
-**`place_as_bottom_source` — reviewed, no gate.** Phase B's final code review flagged `EffectContext::place_as_bottom_source` as a candidate site. Verdict after cross-checking DCGO: not gated. DCGO's primitive [`Permanent.AddDigivolutionCardsBottom`](../DCGO/Assets/Scripts/Script/Permanent.cs#L1104) has no internal `CanNotBeAffected` check, and DCGO scripts that intentionally place a source under an opponent's Digimon (e.g. [EX10-059](../DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_059.cs#L218)) do not filter the target on `CanNotBeAffected` either. Adding a card under a stack is not "affecting" the target in DCGO's semantics — the TopCard's status is unchanged. Gating in Rust would over-restrict relative to DCGO. The decision is documented inline at [`effect_context/mod.rs::place_as_bottom_source`](../code/code/digimon-engine/src/effect_context/mod.rs).
+**`place_as_bottom_source` — reviewed, no gate.** Phase B's final code review flagged `EffectContext::place_as_bottom_source` as a candidate site. Verdict after cross-checking DCGO: not gated. DCGO's primitive [`Permanent.AddDigivolutionCardsBottom`](../DCGO/Assets/Scripts/Script/Permanent.cs#L1104) has no internal `CanNotBeAffected` check, and DCGO scripts that intentionally place a source under an opponent's Digimon (e.g. [EX10-059](../DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_059.cs#L218)) do not filter the target on `CanNotBeAffected` either. Adding a card under a stack is not "affecting" the target in DCGO's semantics — the TopCard's status is unchanged. Gating in Rust would over-restrict relative to DCGO. The decision is documented inline at [`effect_context/mod.rs::place_as_bottom_source`](../code/digimon-engine/src/effect_context/mod.rs).
 
 ### Progress — gate scope (Phase B + Phase E prep)
 
@@ -97,9 +103,23 @@ The gate's predicate is exactly DCGO's: target is the current Progress
 attacker AND source is the opposite player. No hostility classification,
 no sign check.
 
-### Blast keyword variant is dead code
+### Blast Digivolve — parser exists, native keyword is not consumed
 
-Resolved Phase A §A2 — renamed to `Keyword::BlastDigivolve`; auto-install remains deferred (not included in Phase D).
+Re-audited 2026-04-26 against DCGO `BlastDigivolution.cs` and Rust `combat.rs`.
+
+DCGO installs `BlastDigivolveEffect` from the factory wrapper. It triggers on an opponent permanent attack, checks that the card is in hand, selects one own battle-area Digimon that the hand card can digivolve onto, ignores memory payment, and then plays the card onto that permanent with ETB/WhenDigivolving effects enabled.
+
+Rust has the counter-window substrate: `try_enter_counter()` scans defender hand cards for effects with `blast_digivolve == true`, emits a `(hand_index, field_index)` candidate for each valid `can_digivolve` target, and `execute_blast_digivolve()` moves the card from hand onto the chosen permanent and fires `WhenDigivolving`. The missing bridge is native printed-keyword consumption: `parse_printed_keywords()` produces `Keyword::BlastDigivolve`, but `keyword_to_auto_effect()` does not synthesize an `Effect::declarative(card).blast_digivolve()` arm. Therefore hand-authored scripts work, but a card whose only representation is printed `<Blast Digivolve>` in `CardData::keywords` will not be offered in the Counter window.
+
+The next fix is small if normal Blast cards can be represented by existing evo costs: add a `Keyword::BlastDigivolve` auto-effect that returns a declarative effect with `.blast_digivolve()`, then cover it with a parsing-to-counter-window regression test.
+
+### Factory-only keyword wrappers — 2026-04-26 audit
+
+The previous tracker focused on `CardEffectCommons/KeyWordEffects/*.cs` and stated that Phase F closed all DCGO keyword gaps. That is accurate only for the 28 shared behavior classes. DCGO also has 31 factory wrappers. `Blast Digivolve` has parser + execution substrate but no native auto-install, and three additional factory-only keyword surfaces still lack native Rust keyword parity:
+
+- `ArtsDigivolve.cs`: option-resolution path for `<Arts Digivolve>`. It selects one own battle-area or breeding-area Digimon, then digivolves the executing Option card onto it. Rust currently has no enum/parser surface for this keyword and no generic helper equivalent to DCGO `DigivolveIntoExcecutingAreaCard`.
+- `BlastDNADigivolution.cs`: counter-window DNA path. It chooses one named field Digimon plus one named hand Digimon, materializes the hand source, then performs Jogress/DNA play for the blast card. Rust has regular DNA scaffolding comments/stubs, but not this counter-window hand+field DNA keyword.
+- `Link.cs`: active link action from hand or battle area into `ILinkCard`. Rust does have Link option mechanics (`EffectBuilder::link`, host selection, `OptionState::Linked`, sideways `.linked()` inheritance, `OnLink`, and linked-card trash cascade), but no native `Keyword::Link` and no data import equivalent to DCGO `card.linkCondition`. Current Rust parity is script-level only.
 
 ### Save / MaterialSave name collision
 
@@ -147,22 +167,24 @@ Ordered by archetype relevance to the alpha scope (Royal Knights, Jesmon GX, Roc
 
 ## Gap ranking (consolidated for scheduling)
 
-Ranked by alpha-archetype blast radius:
+Ranked by remaining native-keyword blast radius after the 2026-04-26 re-audit:
 
-1. ~~**Progress semantics fix**~~ — ✅ resolved Phase A + B. Selection-filter exclusion + opponent-mutation-site gating both landed.
-2. ~~**Fragment(N) wire-up**~~ — ✅ resolved Phase D 2026-04-25. Fragment(N), ArmorPurge, Partition all landed. Cascaded fix is complete.
-3. **SecurityAttackPlus/Minus auto-install** — printed on many cards across all archetypes; trivial to add.
-4. **Jamming scope widening** — affects any attacking Digimon losing a regular Digimon battle; tens of cards.
-5. ~~**Save distinct from MaterialSave**~~ — ✅ resolved Phase D 2026-04-25. Save, Decoy, Fortitude, MaterialSave(N) all auto-installed.
-6. ~~**Retaliation enum variant + replacement wire-up**~~ — ✅ resolved Phase E 2026-04-25. `OnDeletion` trigger auto-installed; Dark Masters archetype blocker cleared.
-7. ~~**Fortitude / DeDigivolve(N) parsed-form auto-install / Decoy**~~ — ✅ Fortitude + Decoy resolved Phase D 2026-04-25. DeDigivolve(N) auto-install resolved-as-no-op Phase E 2026-04-25 (zero bare printings; see ⚪ note in summary table).
-8. ~~**Execute / Iceclad / MindLink / Training**~~ — ✅ resolved Phase F 2026-04-25. All four enum-missing keywords wired (Execute + MindLink + Training auto-installs; Iceclad consumed at `combat::resolve_battle`). Plus the Phase E Scapegoat outer-dialog UX divergence closed via the new `replacement_condition` builder. ✅ resolved Phase F 2026-04-25.
+1. **Blast Digivolve native auto-install** — substrate already exists and tests cover script-driven blast; bridge `Keyword::BlastDigivolve` to `.blast_digivolve()` so printed keywords work without hand-authored script flags.
+2. **Link native data/parsing bridge** — Rust option-flow substrate is strong, but parity needs card data for link cost/host filters plus either `Keyword::Link` or a non-keyword card-data field that auto-installs `.link(cost, filter)`.
+3. **Arts Digivolve option-resolution helper** — requires a generic "digivolve executing Option card onto selected battle/breeding Digimon" primitive and parser/enum recognition.
+4. **Blast DNA Digivolve** — largest remaining factory-only gap; depends on real DNA/Jogress execution plus counter-window hand+field material selection.
+5. ~~**Progress semantics fix**~~ — ✅ resolved Phase A + B. Selection-filter exclusion + opponent-mutation-site gating both landed.
+6. ~~**Fragment(N) / ArmorPurge / Partition wire-up**~~ — ✅ resolved Phase D 2026-04-25.
+7. ~~**Save / Decoy / Fortitude / MaterialSave(N)**~~ — ✅ resolved Phase D 2026-04-25.
+8. ~~**Retaliation / Scapegoat**~~ — ✅ resolved Phase E 2026-04-25.
+9. ~~**Execute / Iceclad / MindLink / Training**~~ — ✅ resolved Phase F 2026-04-25.
+10. ~~**SecurityAttackPlus/Minus and Jamming**~~ — ✅ already resolved in the summary table; the previous gap-ranking entries were stale.
 
 ## Source citations
 
-- DCGO keyword implementations: `DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/*.cs` (behaviors) and `DCGO/Assets/Scripts/Script/CardEffectFactory/KeyWordEffects/*.cs` (factory wrappers). 28 files total.
-- Rust keyword enum: [`code/digimon-engine/src/enums.rs`](../code/code/digimon-engine/src/enums.rs) (`Keyword` ~line 265, `ModifierType::Grant*` ~line 355).
-- Native parsing: [`code/digimon-engine/src/card_data.rs::parse_printed_keywords`](../code/code/digimon-engine/src/card_data.rs).
-- Unified keyword query: [`code/digimon-engine/src/game.rs::has_keyword`](../code/code/digimon-engine/src/game.rs).
-- Auto-installed replacements: [`code/digimon-engine/src/cards/keyword_effects.rs`](../code/code/digimon-engine/src/cards/keyword_effects.rs).
-- Major consumption sites: [`code/digimon-engine/src/combat.rs`](../code/code/digimon-engine/src/combat.rs), [`code/digimon-engine/src/action/mask.rs`](../code/code/digimon-engine/src/action/mask.rs), [`code/digimon-engine/src/game_phases.rs`](../code/code/digimon-engine/src/game_phases.rs).
+- DCGO keyword implementations: `DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/*.cs` (28 shared behavior classes) and `DCGO/Assets/Scripts/Script/CardEffectFactory/KeyWordEffects/*.cs` (31 factory wrappers).
+- Rust keyword enum: [`code/digimon-engine/src/enums.rs`](../code/digimon-engine/src/enums.rs) (`Keyword`, `ModifierType::Grant*`).
+- Native parsing: [`code/digimon-engine/src/card_data.rs::parse_printed_keywords`](../code/digimon-engine/src/card_data.rs).
+- Unified keyword query: [`code/digimon-engine/src/game.rs::has_keyword`](../code/digimon-engine/src/game.rs).
+- Auto-installed replacements: [`code/digimon-engine/src/cards/keyword_effects.rs`](../code/digimon-engine/src/cards/keyword_effects.rs).
+- Major consumption sites: [`code/digimon-engine/src/combat.rs`](../code/digimon-engine/src/combat.rs), [`code/digimon-engine/src/action/mask.rs`](../code/digimon-engine/src/action/mask.rs), [`code/digimon-engine/src/game_phases.rs`](../code/digimon-engine/src/game_phases.rs), [`code/digimon-engine/src/effect.rs`](../code/digimon-engine/src/effect.rs).

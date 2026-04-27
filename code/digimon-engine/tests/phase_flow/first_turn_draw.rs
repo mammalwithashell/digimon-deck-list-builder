@@ -106,8 +106,7 @@ fn first_player_skip_still_works_after_mulligan_finalize() {
     // Need a deck large enough to absorb 5 hand + 5 security + more for the
     // post-finalize turn-1 draw test. 20 cards is plenty.
     let deck = vec!["FILLER".to_string(); 20];
-    let mut game =
-        Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(42)).unwrap();
+    let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(42)).unwrap();
 
     // Step through both keeps explicitly (not via start_game) to exercise
     // the real mulligan API.

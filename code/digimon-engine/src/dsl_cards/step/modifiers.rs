@@ -15,14 +15,13 @@
 //! `phase2f2_modifier_formula::add_dp_modifier_formula_large_value_passes_through`
 //! which guards against an unannounced narrowing change.
 
-use digimon_dsl::compiled::{
-    CompiledModifierTarget, CompiledModifierValue, CompiledStep,
-};
+use digimon_dsl::compiled::{CompiledModifierTarget, CompiledModifierValue, CompiledStep};
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::expiry_map::lookup_expiry;
 use crate::dsl_cards::formula_eval;
+use crate::dsl_cards::step::StepRuntime;
 use crate::effect_context::EffectContext;
 use crate::permanent::PermanentHandle;
 
@@ -41,10 +40,13 @@ fn resolve_modifier_value(
     value: &CompiledModifierValue,
     ctx: &EffectContext<'_>,
     target: PermanentHandle,
+    runtime: &StepRuntime,
 ) -> i32 {
     match value {
         CompiledModifierValue::Literal(n) => *n,
-        CompiledModifierValue::Formula(f) => formula_eval::evaluate(f, ctx, target),
+        CompiledModifierValue::Formula(f) => {
+            formula_eval::evaluate_with_raw(f, ctx, target, runtime.raw())
+        }
     }
 }
 
@@ -74,21 +76,35 @@ pub fn try_run(
     step: &CompiledStep,
     ctx: &mut EffectContext<'_>,
     bindings: &mut Bindings,
+    runtime: &StepRuntime,
 ) -> bool {
     match step {
-        CompiledStep::AddDpModifier { target, value, expiry } => {
-            let Some(expiry) = resolve_expiry("add_dp_modifier", expiry) else { return true; };
-            if let Some(ResolvedBinding::Permanent(h)) =
-                resolve_binding_ref(target, ctx, bindings)
+        CompiledStep::AddDpModifier {
+            target,
+            value,
+            expiry,
+        } => {
+            let Some(expiry) = resolve_expiry("add_dp_modifier", expiry) else {
+                return true;
+            };
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
-                let n = resolve_modifier_value(value, ctx, h);
+                let n = resolve_modifier_value(value, ctx, h, runtime);
                 ctx.add_dp_modifier(h, n, expiry);
             }
             true
         }
-        CompiledStep::AddModifier { target, modifier, value, expiry } => {
-            let Some(expiry) = resolve_expiry("add_modifier", expiry) else { return true; };
-            let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier) else {
+        CompiledStep::AddModifier {
+            target,
+            modifier,
+            value,
+            expiry,
+        } => {
+            let Some(expiry) = resolve_expiry("add_modifier", expiry) else {
+                return true;
+            };
+            let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier)
+            else {
                 return true;
             };
             match target {
@@ -96,7 +112,7 @@ pub fn try_run(
                     if let Some(ResolvedBinding::Permanent(h)) =
                         resolve_binding_ref(b, ctx, bindings)
                     {
-                        let n = resolve_modifier_value(value, ctx, h);
+                        let n = resolve_modifier_value(value, ctx, h, runtime);
                         ctx.add_modifier(h, modifier_ty, n, expiry);
                     }
                 }
@@ -107,19 +123,27 @@ pub fn try_run(
                     // against each matched permanent — NOT hoisted outside.
                     let matches = crate::dsl_cards::step::permanent_scan::scan(ctx, pred);
                     for h in matches {
-                        let n = resolve_modifier_value(value, ctx, h);
+                        let n = resolve_modifier_value(value, ctx, h, runtime);
                         ctx.add_modifier(h, modifier_ty, n, expiry);
                     }
                 }
             }
             true
         }
-        CompiledStep::GrantKeyword { target, keyword, expiry, value } => {
-            let Some(expiry) = resolve_expiry("grant_keyword", expiry) else { return true; };
+        CompiledStep::GrantKeyword {
+            target,
+            keyword,
+            expiry,
+            value,
+        } => {
+            let Some(expiry) = resolve_expiry("grant_keyword", expiry) else {
+                return true;
+            };
             let Some(kw) = crate::dsl_cards::modifier_map::lookup_keyword(keyword, *value) else {
                 return true;
             };
-            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings) {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
                 ctx.grant_keyword(h, kw, expiry);
             }
             true

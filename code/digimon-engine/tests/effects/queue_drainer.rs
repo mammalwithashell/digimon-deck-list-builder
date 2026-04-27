@@ -31,8 +31,10 @@ fn single_mandatory_trigger_auto_fires_without_prompt() {
     let mut r = setup_two_effects_on_turn_player(&["TEST-006"]);
     let memory_before = r.memory();
 
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     assert!(
@@ -52,8 +54,10 @@ fn single_mandatory_trigger_auto_fires_without_prompt() {
 fn two_mandatory_triggers_install_trigger_order_without_pass() {
     let mut r = setup_two_effects_on_turn_player(&["TEST-006", "TEST-008"]);
 
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     let sel = r
@@ -68,15 +72,21 @@ fn two_mandatory_triggers_install_trigger_order_without_pass() {
         !sel.is_optional,
         "mandatory-bearing bundles must not offer decline-all"
     );
-    assert_eq!(r.game.effect_queue.len(), 2, "queue still holds both entries");
+    assert_eq!(
+        r.game.effect_queue.len(),
+        2,
+        "queue still holds both entries"
+    );
 }
 
 /// PASS on a mandatory-bearing bundle is rejected as an invalid action.
 #[test]
 fn pass_rejected_when_bundle_has_mandatory() {
     let mut r = setup_two_effects_on_turn_player(&["TEST-006", "TEST-008"]);
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     let err = r
@@ -98,8 +108,10 @@ fn resolving_trigger_order_fires_choice_then_auto_fires_sibling() {
     let mut r = setup_two_effects_on_turn_player(&["TEST-006", "TEST-008"]);
     let memory_before = r.memory();
 
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     // Pick action_id = HAND_EFFECT_START + 0 → the first queued effect
@@ -124,8 +136,10 @@ fn optional_bundle_pass_clears_all_for_this_chooser() {
     let mut r = setup_two_effects_on_turn_player(&["TEST-007", "TEST-007"]);
     let memory_before = r.memory();
 
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     let sel = r
@@ -158,8 +172,10 @@ fn optional_pick_one_fires_then_sibling_auto_fires() {
     let mut r = setup_two_effects_on_turn_player(&["TEST-007", "TEST-007"]);
     let memory_before = r.memory();
 
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     r.game
@@ -193,10 +209,14 @@ fn turn_player_bundle_resolves_before_opponent() {
     let memory_before = r.memory();
 
     // Enqueue P0's triggers first, then P1's.
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(1));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(1),
+    );
     r.game.drain_effect_queue();
 
     // First prompt is for P0 — the turn player.
@@ -230,8 +250,10 @@ fn mixed_bundle_pass_becomes_legal_after_mandatory_cleared() {
     let mut r = setup_two_effects_on_turn_player(&["TEST-006", "TEST-007"]);
     let memory_before = r.memory();
 
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     // First prompt: mixed bundle with mandatory → no PASS.
@@ -261,8 +283,10 @@ fn mixed_bundle_pass_becomes_legal_after_mandatory_cleared() {
 #[test]
 fn wrong_player_rejected() {
     let mut r = setup_two_effects_on_turn_player(&["TEST-006", "TEST-008"]);
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     use digimon_engine::selection::SelectionError;

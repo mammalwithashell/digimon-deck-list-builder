@@ -6,14 +6,15 @@ use digimon_dsl::compiled::CompiledBindingRef;
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::{BindingValue, Bindings};
 use crate::effect_context::EffectContext;
+use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolvedBinding {
     Permanent(PermanentHandle),
     Card(CardHandle),
-    HandIndex(u16),
-    TrashIndex(u16),
+    HandIndex(PlayerId, u16),
+    TrashIndex(PlayerId, u16),
     Literal(i64),
     PermanentList(Vec<PermanentHandle>),
     CardList(Vec<CardHandle>),
@@ -33,11 +34,15 @@ pub fn resolve_binding_ref(
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
         | CompiledBindingRef::OfPermanent(name) => resolve_named(name, bindings),
-        CompiledBindingRef::EventTarget | CompiledBindingRef::EventCard => {
-            // Phase 2b: engine event context not yet wired to the DSL layer.
-            // Returns None so steps relying on these silently no-op.
-            None
-        }
+        CompiledBindingRef::EventTarget => ctx
+            .game
+            .current_trigger_context
+            .and_then(|t| t.target_permanent.map(ResolvedBinding::Permanent)),
+        CompiledBindingRef::EventCard => ctx
+            .game
+            .current_trigger_context
+            .and_then(|t| t.event_card.or(t.target_card))
+            .map(ResolvedBinding::Card),
     }
 }
 
@@ -45,8 +50,8 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
     match bindings.get(name)? {
         BindingValue::Permanent(h) => Some(ResolvedBinding::Permanent(h)),
         BindingValue::Card(h) => Some(ResolvedBinding::Card(h)),
-        BindingValue::HandIndex(i) => Some(ResolvedBinding::HandIndex(i)),
-        BindingValue::TrashIndex(i) => Some(ResolvedBinding::TrashIndex(i)),
+        BindingValue::HandIndex(p, i) => Some(ResolvedBinding::HandIndex(p, i)),
+        BindingValue::TrashIndex(p, i) => Some(ResolvedBinding::TrashIndex(p, i)),
         BindingValue::Literal(v) => Some(ResolvedBinding::Literal(v)),
         BindingValue::PermanentList(v) => Some(ResolvedBinding::PermanentList(v)),
         BindingValue::CardList(v) => Some(ResolvedBinding::CardList(v)),
@@ -62,7 +67,10 @@ mod tests {
     #[test]
     fn resolves_permanent_list() {
         let mut b = Bindings::new();
-        let h = PermanentHandle { player: 0, index: 0 };
+        let h = PermanentHandle {
+            player: 0,
+            index: 0,
+        };
         b.insert_permanent_list("xs", vec![h]);
 
         let r = resolve_named("xs", &b).expect("named binding");

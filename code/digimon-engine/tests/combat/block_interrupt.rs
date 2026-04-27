@@ -280,7 +280,10 @@ fn wrong_player_cannot_resolve_block() {
 
     r.attack_digimon(atk, def, false);
     use digimon_engine::selection::SelectionError;
-    let err = r.game.resolve_selection(0, PASS).expect_err("P0 not selector");
+    let err = r
+        .game
+        .resolve_selection(0, PASS)
+        .expect_err("P0 not selector");
     assert_eq!(err, SelectionError::WrongPlayer);
 }
 
@@ -313,7 +316,11 @@ fn collision_attacker_expands_blocker_pool_to_all_defenders() {
     // All three defender Digimon are candidates.
     assert_eq!(
         sel.valid_action_ids,
-        vec![encode_attack(0, 0), encode_attack(0, 1), encode_attack(0, 2)],
+        vec![
+            encode_attack(0, 0),
+            encode_attack(0, 1),
+            encode_attack(0, 2)
+        ],
     );
 }
 

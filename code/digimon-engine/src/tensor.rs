@@ -80,11 +80,7 @@ const OFF_SELECTION: usize = OFF_REVEALED + REVEALED_SIZE; // 1370
 ///   [1360-1369]   Revealed cards (10 card IDs, from `game.revealed_cards`)
 ///   [1370-1374]   Selection context
 /// ```
-pub fn build_tensor(
-    game: &Game,
-    player_id: PlayerId,
-    registry: &CardRegistry,
-) -> Vec<f32> {
+pub fn build_tensor(game: &Game, player_id: PlayerId, registry: &CardRegistry) -> Vec<f32> {
     let mut t = vec![0.0f32; TENSOR_SIZE];
 
     let (me_id, opp_id) = resolve_perspective(game, player_id);
@@ -98,32 +94,90 @@ pub fn build_tensor(
     // [3-9] reserved
 
     // --- My battle area ---
-    write_field(&mut t, OFF_MY_BATTLE, me_id, FIELD_SLOTS, game, &game.card_data, registry);
+    write_field(
+        &mut t,
+        OFF_MY_BATTLE,
+        me_id,
+        FIELD_SLOTS,
+        game,
+        &game.card_data,
+        registry,
+    );
 
     // --- Opp battle area ---
-    write_field(&mut t, OFF_OPP_BATTLE, opp_id, FIELD_SLOTS, game, &game.card_data, registry);
+    write_field(
+        &mut t,
+        OFF_OPP_BATTLE,
+        opp_id,
+        FIELD_SLOTS,
+        game,
+        &game.card_data,
+        registry,
+    );
 
     // --- My hand ---
-    write_card_ids(&mut t, OFF_MY_HAND, &me.hand, MAX_HAND, &game.card_data, registry);
+    write_card_ids(
+        &mut t,
+        OFF_MY_HAND,
+        &me.hand,
+        MAX_HAND,
+        &game.card_data,
+        registry,
+    );
 
     // --- Opp hand ---
-    write_card_ids(&mut t, OFF_OPP_HAND, &opp.hand, MAX_HAND, &game.card_data, registry);
+    write_card_ids(
+        &mut t,
+        OFF_OPP_HAND,
+        &opp.hand,
+        MAX_HAND,
+        &game.card_data,
+        registry,
+    );
 
     // --- My trash ---
-    write_card_ids(&mut t, OFF_MY_TRASH, &me.trash, MAX_TRASH, &game.card_data, registry);
+    write_card_ids(
+        &mut t,
+        OFF_MY_TRASH,
+        &me.trash,
+        MAX_TRASH,
+        &game.card_data,
+        registry,
+    );
 
     // --- Opp trash ---
-    write_card_ids(&mut t, OFF_OPP_TRASH, &opp.trash, MAX_TRASH, &game.card_data, registry);
+    write_card_ids(
+        &mut t,
+        OFF_OPP_TRASH,
+        &opp.trash,
+        MAX_TRASH,
+        &game.card_data,
+        registry,
+    );
 
     // --- My security (face-down = 0.0; face-up cards written when
     // `face_up_security` is populated by reveal effects). Matches Python's
     // `_write_security_ids`.
-    write_security_ids(&mut t, OFF_MY_SECURITY, me, MAX_SECURITY, &game.card_data, registry);
+    write_security_ids(
+        &mut t,
+        OFF_MY_SECURITY,
+        me,
+        MAX_SECURITY,
+        &game.card_data,
+        registry,
+    );
 
     // --- Opp security (face-down = 0.0). Face-up reveals against the
     // opponent populate `opp.face_up_security`, so mirror the my-security
     // writer.
-    write_security_ids(&mut t, OFF_OPP_SECURITY, opp, MAX_SECURITY, &game.card_data, registry);
+    write_security_ids(
+        &mut t,
+        OFF_OPP_SECURITY,
+        opp,
+        MAX_SECURITY,
+        &game.card_data,
+        registry,
+    );
 
     // --- My breeding ---
     // Breeding slot has no PermanentHandle (it's not in battle_area), so
@@ -131,12 +185,28 @@ pub fn build_tensor(
     // identically since eggs / in-training Digimon rarely have active
     // effects, but this is a minor residual gap for any that do.
     if let Some(ref perm) = me.breeding_area {
-        write_slot(&mut t, OFF_MY_BREEDING, perm, None, game, &game.card_data, registry);
+        write_slot(
+            &mut t,
+            OFF_MY_BREEDING,
+            perm,
+            None,
+            game,
+            &game.card_data,
+            registry,
+        );
     }
 
     // --- Opp breeding ---
     if let Some(ref perm) = opp.breeding_area {
-        write_slot(&mut t, OFF_OPP_BREEDING, perm, None, game, &game.card_data, registry);
+        write_slot(
+            &mut t,
+            OFF_OPP_BREEDING,
+            perm,
+            None,
+            game,
+            &game.card_data,
+            registry,
+        );
     }
 
     // --- Revealed cards ---
@@ -161,8 +231,8 @@ pub fn build_tensor(
         t[OFF_SELECTION] = game.current_phase.tensor_value();
     }
     if let Some(sel) = &game.pending_selection {
-        t[OFF_SELECTION + 1] = sel.valid_action_ids.len() as f32
-            / crate::action::space::ACTION_SPACE_SIZE as f32;
+        t[OFF_SELECTION + 1] =
+            sel.valid_action_ids.len() as f32 / crate::action::space::ACTION_SPACE_SIZE as f32;
         t[OFF_SELECTION + 2] = sel.selecting_player as f32;
     }
 
@@ -186,13 +256,21 @@ pub fn compute_positions() -> (Vec<usize>, Vec<usize>) {
 
     // My battle area
     for i in 0..FIELD_SLOTS {
-        slot_positions(off + i * SLOT_SIZE, &mut card_positions, &mut scalar_positions);
+        slot_positions(
+            off + i * SLOT_SIZE,
+            &mut card_positions,
+            &mut scalar_positions,
+        );
     }
     off += BATTLE_SIZE;
 
     // Opp battle area
     for i in 0..FIELD_SLOTS {
-        slot_positions(off + i * SLOT_SIZE, &mut card_positions, &mut scalar_positions);
+        slot_positions(
+            off + i * SLOT_SIZE,
+            &mut card_positions,
+            &mut scalar_positions,
+        );
     }
     off += BATTLE_SIZE;
 
@@ -318,8 +396,7 @@ fn write_slot(
         tensor[off] = registry.get_index(&src.card_id(card_data)) as f32;
         if let Some(h) = handle {
             tensor[off + 1] = game.source_opt_state(h, j);
-            tensor[off + 2] =
-                game.source_dp_contribution(h, j) as f32 / DP_NORM;
+            tensor[off + 2] = game.source_dp_contribution(h, j) as f32 / DP_NORM;
         }
     }
 }

@@ -5,7 +5,7 @@ use digimon_engine::selection::{OptionResolutionPhase, PendingOption};
 #[test]
 fn option_timings_exist() {
     let _ = EffectTiming::OnUseOption;
-    let _ = EffectTiming::OptionMain;       // already existed — smoke
+    let _ = EffectTiming::OptionMain; // already existed — smoke
     let _ = EffectTiming::DelayEffect;
     let _ = EffectTiming::OnLink;
     let _ = EffectTiming::OnLinkedCardTrashed;
@@ -26,9 +26,15 @@ fn option_state_default_is_standard() {
 
 #[test]
 fn option_state_variants_exist() {
-    let h = PermanentHandle { player: 0, index: 0 };
+    let h = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let _ = OptionState::Standard;
-    let _ = OptionState::Delayed { owner: 0, trash_on_turn: 5 };
+    let _ = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: 5,
+    };
     let _ = OptionState::Linked { host: h };
     let _ = OptionState::Training { owner: 0 };
 }

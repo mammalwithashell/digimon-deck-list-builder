@@ -120,11 +120,7 @@ fn test_021_plays_self_from_security() {
         1,
         "play_from_security put the card on the defender's field"
     );
-    assert_eq!(
-        r.security_count(1),
-        0,
-        "revealed card left security"
-    );
+    assert_eq!(r.security_count(1), 0, "revealed card left security");
     assert_eq!(
         r.trash_size(1),
         0,

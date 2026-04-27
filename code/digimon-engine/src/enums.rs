@@ -76,11 +76,11 @@ impl GamePhase {
     pub fn py_name(&self) -> &'static str {
         match self {
             GamePhase::Mulligan => "Mulligan",
-            GamePhase::Unsuspend => "Start",            // Python enum name
+            GamePhase::Unsuspend => "Start", // Python enum name
             GamePhase::Draw => "Draw",
             GamePhase::Breeding => "Breeding",
             GamePhase::Main => "Main",
-            GamePhase::EndTurn => "End",                // Python enum name
+            GamePhase::EndTurn => "End", // Python enum name
             GamePhase::SelectTarget => "SelectTarget",
             GamePhase::SelectMaterial => "SelectMaterial",
             GamePhase::SelectTrash => "SelectTrash",
@@ -136,6 +136,9 @@ pub enum EffectTiming {
     StartOfYourMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
+    EndOfYourNextTurn,
+    EndOfOpponentsNextTurn,
+    UntilNextUnsuspend,
     EndOfAttack,
     /// Fires when a battle resolves (DP comparison complete) but before
     /// `EndOfAttack`. Used for "if this Digimon wins/loses a battle" effects.

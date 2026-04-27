@@ -20,10 +20,7 @@ fn run_steps_with_no_selections_executes_all_steps_inline() {
         let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
         let mut b = Bindings::new();
         run_steps(
-            &[
-                CompiledStep::GainMemory(1),
-                CompiledStep::GainMemory(2),
-            ],
+            &[CompiledStep::GainMemory(1), CompiledStep::GainMemory(2)],
             &mut ctx,
             &mut b,
         );

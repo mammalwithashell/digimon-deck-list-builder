@@ -185,9 +185,8 @@ fn plant_trash(r: &mut DebugRunner, player: u8, card_id: &str) {
 
 // Helper: decode the Field [Main] bit for permanent at `field_index`.
 fn field_main_bit(field_index: usize) -> usize {
-    (FIELD_EFFECT_START
-        + field_index as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN)
+        as usize
 }
 
 // ─── [Hand] [Main] ────────────────────────────────────────────────────

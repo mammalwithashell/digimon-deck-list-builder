@@ -130,7 +130,14 @@ impl From<RustCardKind> for CardKind {
 /// match the **Python** convention (Start, End, SelectEffectChoice)
 /// rather than the Rust internal names (Unsuspend, EndTurn, EffectChoice)
 /// so callers post-Phase 3 cutover keep their existing identifiers.
-#[pyclass(module = "digimon_engine", name = "GamePhase", eq, eq_int, hash, frozen)]
+#[pyclass(
+    module = "digimon_engine",
+    name = "GamePhase",
+    eq,
+    eq_int,
+    hash,
+    frozen
+)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum GamePhase {
     Mulligan,
@@ -245,20 +252,24 @@ impl PyCard {
             play_cost: card.play_cost,
             colors: card.colors.iter().map(|c| format!("{:?}", c)).collect(),
             traits: card.traits.clone(),
-            evo_costs: card.evo_costs.iter().map(|ec| PyEvoCost {
-                card_color: match ec.card_color {
-                    0 => "Red".to_string(),
-                    1 => "Blue".to_string(),
-                    2 => "Yellow".to_string(),
-                    3 => "Green".to_string(),
-                    4 => "White".to_string(),
-                    5 => "Black".to_string(),
-                    6 => "Purple".to_string(),
-                    _ => format!("Unknown({})", ec.card_color),
-                },
-                level: ec.level,
-                memory_cost: ec.memory_cost,
-            }).collect(),
+            evo_costs: card
+                .evo_costs
+                .iter()
+                .map(|ec| PyEvoCost {
+                    card_color: match ec.card_color {
+                        0 => "Red".to_string(),
+                        1 => "Blue".to_string(),
+                        2 => "Yellow".to_string(),
+                        3 => "Green".to_string(),
+                        4 => "White".to_string(),
+                        5 => "Black".to_string(),
+                        6 => "Purple".to_string(),
+                        _ => format!("Unknown({})", ec.card_color),
+                    },
+                    level: ec.level,
+                    memory_cost: ec.memory_cost,
+                })
+                .collect(),
             effect_text: card.effect_text.clone(),
             inherited_text: card.inherited_text.clone(),
             security_text: card.security_text.clone(),
@@ -310,7 +321,9 @@ fn validate_deck(card_ids: Vec<String>) -> PyDeckValidationResult {
 
 #[pyfunction]
 fn out_of_set_cards(card_ids: Vec<String>) -> Vec<String> {
-    deck_tools::out_of_set_cards(card_ids.iter().cloned()).into_iter().collect()
+    deck_tools::out_of_set_cards(card_ids.iter().cloned())
+        .into_iter()
+        .collect()
 }
 
 /// Python-visible wrapper around `rules::CardRestriction`.
@@ -575,10 +588,7 @@ impl RustHeadlessGame {
                 let d = PyDict::new_bound(py);
                 d.set_item("kind", v.kind_str())?;
                 d.set_item("phase", v.previous_phase_str())?;
-                d.set_item(
-                    "selectingPlayer",
-                    (v.selecting_player as i64) + 1,
-                )?;
+                d.set_item("selectingPlayer", (v.selecting_player as i64) + 1)?;
                 d.set_item("validIndices", v.valid_action_ids.clone())?;
                 d.set_item("isOptional", v.is_optional)?;
                 d.set_item("prompt", v.prompt.clone())?;
@@ -601,10 +611,7 @@ impl RustHeadlessGame {
     /// `type`, `seq`, `player` (Python 1/2), `source_card_id`,
     /// `source_slot`, `target_card_id`, `target_slot`, `meta`. Matches
     /// Python `GameEvent.to_dict`.
-    fn get_events_since_last_step<'py>(
-        &mut self,
-        py: Python<'py>,
-    ) -> PyResult<Bound<'py, PyList>> {
+    fn get_events_since_last_step<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
         let drained = self.inner.game.drain_events();
         let list = PyList::empty_bound(py);
         for ev in drained {
@@ -635,9 +642,9 @@ impl RustHeadlessGame {
 
     /// Manual mulligan override. `pid` is the Python player_id (1 or 2).
     fn accept_mulligan(&mut self, pid: u8, keep: bool) -> PyResult<()> {
-        let rust_pid = pid.checked_sub(1).ok_or_else(|| {
-            PyValueError::new_err("player_id must be 1 or 2")
-        })?;
+        let rust_pid = pid
+            .checked_sub(1)
+            .ok_or_else(|| PyValueError::new_err("player_id must be 1 or 2"))?;
         self.inner
             .accept_mulligan(rust_pid, keep)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
@@ -712,14 +719,21 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
     let py_pid = |p: u8| -> i64 { (p as i64) + 1 };
 
     match ev {
-        GameEvent::MemoryChange { player, delta, total, .. } => {
+        GameEvent::MemoryChange {
+            player,
+            delta,
+            total,
+            ..
+        } => {
             d.set_item("player", py_pid(*player))?;
             let meta = PyDict::new_bound(py);
             meta.set_item("delta", *delta)?;
             meta.set_item("total", *total)?;
             d.set_item("meta", meta)?;
         }
-        GameEvent::TurnStart { player, turn_count, .. } => {
+        GameEvent::TurnStart {
+            player, turn_count, ..
+        } => {
             d.set_item("player", py_pid(*player))?;
             let meta = PyDict::new_bound(py);
             meta.set_item("turn_count", *turn_count)?;
@@ -731,12 +745,23 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             meta.set_item("phase", format!("{:?}", phase))?;
             d.set_item("meta", meta)?;
         }
-        GameEvent::Play { player, card_id, field_index, .. } => {
+        GameEvent::Play {
+            player,
+            card_id,
+            field_index,
+            ..
+        } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
             d.set_item("source_slot", *field_index)?;
         }
-        GameEvent::Digivolve { player, top_card_id, field_index, from_stack_top, .. } => {
+        GameEvent::Digivolve {
+            player,
+            top_card_id,
+            field_index,
+            from_stack_top,
+            ..
+        } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", top_card_id.as_str())?;
             d.set_item("source_slot", *field_index)?;
@@ -757,30 +782,30 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
                 d.set_item("target_slot", *t)?;
             }
             let meta = PyDict::new_bound(py);
-            meta.set_item(
-                "target_player",
-                target_player.map(|p| py_pid(p)),
-            )?;
+            meta.set_item("target_player", target_player.map(|p| py_pid(p)))?;
             d.set_item("meta", meta)?;
         }
-        GameEvent::Trash { player, card_id, .. } => {
+        GameEvent::Trash {
+            player, card_id, ..
+        } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
         }
-        GameEvent::Mill { player, card_id, .. } => {
+        GameEvent::Mill {
+            player, card_id, ..
+        } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
         }
-        GameEvent::SecurityReveal { defender, card_id, .. } => {
+        GameEvent::SecurityReveal {
+            defender, card_id, ..
+        } => {
             d.set_item("player", py_pid(*defender))?;
             d.set_item("source_card_id", card_id.as_str())?;
         }
         GameEvent::GameOver { winner, .. } => {
             let meta = PyDict::new_bound(py);
-            meta.set_item(
-                "winner",
-                winner.map(|w| py_pid(w)),
-            )?;
+            meta.set_item("winner", winner.map(|w| py_pid(w)))?;
             d.set_item("meta", meta)?;
         }
         _ => {

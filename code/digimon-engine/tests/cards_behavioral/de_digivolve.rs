@@ -27,7 +27,12 @@ fn lvl_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
 
 /// Push a fresh CardSource with `card_id` onto the owner's existing permanent's stack.
 fn push_on_stack(r: &mut DebugRunner, owner: u8, perm_idx: usize, card_id: &str) {
-    let data_idx = r.game.card_data.iter().position(|c| c.card_id == card_id).unwrap();
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap();
     let next = r.game.next_card_index();
     let cs = CardSource::new(data_idx, owner, next);
     let turn = r.game.turn_count;
@@ -51,7 +56,10 @@ fn de_digivolve_2_pops_two_and_stops_at_lvl3() {
     let base = r.place_on_field(1, "LVL3", Some(0));
     push_on_stack(&mut r, 1, base.index as usize, "LVL4");
     push_on_stack(&mut r, 1, base.index as usize, "LVL5");
-    assert_eq!(r.game.player(1).battle_area[base.index as usize].stack_size(), 3);
+    assert_eq!(
+        r.game.player(1).battle_area[base.index as usize].stack_size(),
+        3
+    );
     let trash_before = r.trash_size(1);
 
     r.play(0, 0);
@@ -59,8 +67,11 @@ fn de_digivolve_2_pops_two_and_stops_at_lvl3() {
     let perm = &r.game.player(1).battle_area[base.index as usize];
     assert_eq!(perm.stack_size(), 1, "popped 2, left the Lv3 base");
     assert_eq!(perm.top_card().card_id(&r.game.card_data), "LVL3");
-    assert_eq!(r.trash_size(1), trash_before + 2,
-        "both popped sources land in P1's trash");
+    assert_eq!(
+        r.trash_size(1),
+        trash_before + 2,
+        "both popped sources land in P1's trash"
+    );
 }
 
 #[test]
@@ -77,12 +88,19 @@ fn de_digivolve_unbounded_pops_whole_stack() {
 
     let base = r.place_on_field(1, "LVL3", Some(0));
     push_on_stack(&mut r, 1, base.index as usize, "LVL4");
-    assert_eq!(r.game.player(1).battle_area[base.index as usize].stack_size(), 2);
+    assert_eq!(
+        r.game.player(1).battle_area[base.index as usize].stack_size(),
+        2
+    );
 
     r.play(0, 0);
 
     let perm = &r.game.player(1).battle_area[base.index as usize];
-    assert_eq!(perm.stack_size(), 1, "unbounded pop leaves the base (stack_size >= 1 invariant)");
+    assert_eq!(
+        perm.stack_size(),
+        1,
+        "unbounded pop leaves the base (stack_size >= 1 invariant)"
+    );
     assert_eq!(perm.top_card().card_id(&r.game.card_data), "LVL3");
 }
 
@@ -100,6 +118,9 @@ fn de_digivolve_on_single_card_stack_is_noop() {
 
     r.play(0, 0);
 
-    assert_eq!(r.game.player(1).battle_area[base.index as usize].stack_size(), 1);
+    assert_eq!(
+        r.game.player(1).battle_area[base.index as usize].stack_size(),
+        1
+    );
     assert_eq!(r.trash_size(1), 0, "no pops, no trash entries");
 }

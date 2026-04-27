@@ -16,7 +16,10 @@ impl CardEffect for Test025 {
                 if ctx.battle_area(opp).is_empty() {
                     return;
                 }
-                let target = PermanentHandle { player: opp, index: 0 };
+                let target = PermanentHandle {
+                    player: opp,
+                    index: 0,
+                };
                 ctx.de_digivolve(target, None, None);
             })
             .build()]

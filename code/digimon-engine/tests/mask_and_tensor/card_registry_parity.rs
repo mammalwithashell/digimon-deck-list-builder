@@ -30,8 +30,7 @@ fn production_cards_json_roundtrips_through_registry() {
         return;
     };
 
-    let cards = CardData::load_from_file(&path)
-        .expect("failed to load cards.json");
+    let cards = CardData::load_from_file(&path).expect("failed to load cards.json");
 
     assert!(
         cards.len() > 100,
@@ -79,8 +78,7 @@ fn production_indices_are_unique() {
 
     // Build will panic if duplicate indices are present — but also assert it
     // explicitly with a clearer message.
-    let mut seen: std::collections::HashMap<u16, String> =
-        std::collections::HashMap::new();
+    let mut seen: std::collections::HashMap<u16, String> = std::collections::HashMap::new();
     for (id, data) in &cards {
         if let Some(prev) = seen.insert(data.index, id.clone()) {
             panic!(
@@ -106,10 +104,7 @@ fn production_cards_json_populates_dna_costs() {
     };
     let cards = CardData::load_from_file(&path).unwrap();
 
-    let with_dna: Vec<_> = cards
-        .values()
-        .filter(|c| !c.dna_costs.is_empty())
-        .collect();
+    let with_dna: Vec<_> = cards.values().filter(|c| !c.dna_costs.is_empty()).collect();
     assert!(
         with_dna.len() >= 50,
         "expected >=50 cards with structured dna_costs in cards.json, got {}. \
@@ -133,7 +128,9 @@ fn production_cards_json_populates_dna_costs() {
             assert!(
                 r1_set && r2_set,
                 "{} dna_costs[{}] has an empty requirement: {:?}",
-                c.card_id, i, dc,
+                c.card_id,
+                i,
+                dc,
             );
         }
     }

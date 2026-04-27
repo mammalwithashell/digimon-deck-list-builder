@@ -12,7 +12,9 @@ use std::sync::{Arc, Mutex};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming, Expiry, ModifierType};
+use digimon_engine::enums::{
+    CardColor, CardKind, DelayTrigger, EffectTiming, Expiry, ModifierType,
+};
 use digimon_engine::permanent::OptionState;
 use digimon_engine::selection::OptionPlayResult;
 
@@ -194,7 +196,10 @@ fn multi_turn_standard_then_delay_then_link_flow_end_to_end() {
         .deck(1, &["FILLER"; 10])
         .memory(0)
         .start();
-    r.register_effect("STD-OPT", Arc::new(StandardWitnessOnly(std_witness.clone())));
+    r.register_effect(
+        "STD-OPT",
+        Arc::new(StandardWitnessOnly(std_witness.clone())),
+    );
     r.register_effect(
         "DELAY-OPT",
         Arc::new(DelayDrawOneNextTurn(delay_witness.clone())),
@@ -420,7 +425,10 @@ fn rocks_plug_in_host_deletion_cascade() {
     // Host carries the OnDeletion witness — it fires BEFORE the host is
     // removed from battle_area (see `commit_permanent_deletion`), so the
     // observer lookup succeeds.
-    r.register_effect("HOST", Arc::new(OnDeletionWitness(on_deletion_witness.clone())));
+    r.register_effect(
+        "HOST",
+        Arc::new(OnDeletionWitness(on_deletion_witness.clone())),
+    );
     r.register_effect(
         "P0-WATCHER",
         Arc::new(OnLinkedTrashedWitness(on_linked_trashed_witness.clone())),
@@ -464,7 +472,11 @@ fn rocks_plug_in_host_deletion_cascade() {
     r.game.delete_permanent_with_effects(host);
 
     // Host gone.
-    assert_eq!(r.battle_area_size(0), 1, "only the watcher remains on P0 field");
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "only the watcher remains on P0 field"
+    );
     // Both linked cards + host top card landed in P0's trash.
     assert_eq!(
         r.trash_size(0),

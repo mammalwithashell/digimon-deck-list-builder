@@ -30,9 +30,8 @@ use crate::enums::{CardKind, EffectTiming, GamePhase, Keyword, ModifierType, Pla
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{
-    AttackState, AttackTarget, PendingAttack, PendingSecurity, PendingSelection,
-    SecurityPhase, SecurityResolutionState, SecurityRevealSnapshot, SelectionKind,
-    TriggerSource,
+    AttackState, AttackTarget, PendingAttack, PendingSecurity, PendingSelection, SecurityPhase,
+    SecurityResolutionState, SecurityRevealSnapshot, SelectionKind, TriggerSource,
 };
 
 /// Phase 9 Task 3 — taxonomy of Counter-window candidates. The broadened
@@ -193,7 +192,11 @@ impl Game {
     /// site without adding a persistent keyword (mirrors Python's
     /// `Permanent.can_attack(is_vortex=True)` — see RUST_PYTHON_PARITY §2.1).
     pub fn can_attack(&self, handle: PermanentHandle, vortex: bool) -> bool {
-        let perm = match self.player(handle.player).battle_area.get(handle.index as usize) {
+        let perm = match self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+        {
             Some(p) => p,
             None => return false,
         };
@@ -274,7 +277,9 @@ impl Game {
         attacker: PermanentHandle,
         target: AttackTarget,
     ) -> AttackResult {
-        self.begin_attack_impl(attacker, target, /* vortex = */ false, /* is_overclock = */ true)
+        self.begin_attack_impl(
+            attacker, target, /* vortex = */ false, /* is_overclock = */ true,
+        )
     }
 
     fn begin_attack_impl(
@@ -620,11 +625,7 @@ impl Game {
         }
         // The optional-accept path may have committed `cancel()` already —
         // pick that up here before firing the target-side replacement.
-        if self
-            .pending_attack
-            .as_ref()
-            .is_some_and(|pa| pa.cancelled)
-        {
+        if self.pending_attack.as_ref().is_some_and(|pa| pa.cancelled) {
             return WouldAttackOutcome::Cancelled;
         }
 
@@ -671,11 +672,7 @@ impl Game {
         if self.pending_selection.is_some() {
             return WouldAttackOutcome::Pending;
         }
-        if self
-            .pending_attack
-            .as_ref()
-            .is_some_and(|pa| pa.cancelled)
-        {
+        if self.pending_attack.as_ref().is_some_and(|pa| pa.cancelled) {
             return WouldAttackOutcome::Cancelled;
         }
 
@@ -696,10 +693,7 @@ impl Game {
     /// not re-check target legality. No-op if `pending_attack` is `None`
     /// or `new_target` equals the current `effective_target` (suppress
     /// redundant `OnAttackTargetChange` fan-out).
-    pub(crate) fn apply_attack_target_substitution(
-        &mut self,
-        new_target: AttackTarget,
-    ) {
+    pub(crate) fn apply_attack_target_substitution(&mut self, new_target: AttackTarget) {
         // No active attack — silent no-op (callers should have checked).
         let Some(pa) = self.pending_attack.as_mut() else {
             return;
@@ -979,9 +973,7 @@ impl Game {
             // above and must not double-emit as a HandOption).
             if card_kind == CardKind::Option {
                 let has_counter_option = effects.iter().any(|e| {
-                    e.counter
-                        && !e.blast_digivolve
-                        && e.timing == EffectTiming::CounterEffect
+                    e.counter && !e.blast_digivolve && e.timing == EffectTiming::CounterEffect
                 });
                 if has_counter_option {
                     // Color-match gate parity with Phase 8 Option play
@@ -1019,9 +1011,9 @@ impl Game {
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };
-            let has_field_counter = effects.iter().any(|e| {
-                e.counter && e.timing == EffectTiming::CounterEffect
-            });
+            let has_field_counter = effects
+                .iter()
+                .any(|e| e.counter && e.timing == EffectTiming::CounterEffect);
             if has_field_counter {
                 candidates.push(CounterCandidate::FieldAbility {
                     perm_index: f_idx as u8,
@@ -1040,12 +1032,11 @@ impl Game {
         let valid_action_ids: Vec<u16> = candidates
             .iter()
             .map(|c| match c {
-                CounterCandidate::Blast { hand_index, field_index } => {
-                    encode_digivolve(*hand_index as u16, *field_index as u16)
-                }
-                CounterCandidate::HandOption { hand_index } => {
-                    PLAY_HAND_START + *hand_index as u16
-                }
+                CounterCandidate::Blast {
+                    hand_index,
+                    field_index,
+                } => encode_digivolve(*hand_index as u16, *field_index as u16),
+                CounterCandidate::HandOption { hand_index } => PLAY_HAND_START + *hand_index as u16,
                 CounterCandidate::FieldAbility { perm_index } => {
                     encode_attack(0, *perm_index as u16)
                 }
@@ -1127,11 +1118,7 @@ impl Game {
                 hand_index,
                 field_index,
             } => {
-                self.execute_blast_digivolve(
-                    defender,
-                    hand_index as usize,
-                    field_index as usize,
-                );
+                self.execute_blast_digivolve(defender, hand_index as usize, field_index as usize);
             }
             CounterCandidate::HandOption { hand_index } => {
                 // Route through Phase 8's Option pipeline with the
@@ -1175,12 +1162,7 @@ impl Game {
     /// effect queue. No memory payment. `OnCounterTiming` (distinct from
     /// WhenDigivolving; fires before it in Python) is deferred — no pilot
     /// card needs it yet.
-    fn execute_blast_digivolve(
-        &mut self,
-        defender: PlayerId,
-        h_idx: usize,
-        f_idx: usize,
-    ) {
+    fn execute_blast_digivolve(&mut self, defender: PlayerId, h_idx: usize, f_idx: usize) {
         if h_idx >= self.player(defender).hand.len() {
             return;
         }
@@ -1233,8 +1215,7 @@ impl Game {
         // opponent Digimon is treated as having Blocker for this attack.
         // Mirrors Python's `_is_collision` check in
         // `permanent.py::can_be_blocker`.
-        let attacker_has_collision =
-            self.has_keyword(attacker, Keyword::Collision);
+        let attacker_has_collision = self.has_keyword(attacker, Keyword::Collision);
 
         let battle_area_len = self.player(defender_player).battle_area.len();
         let mut candidates: Vec<u8> = Vec::new();
@@ -1265,9 +1246,7 @@ impl Game {
             }
             // Blocker required UNLESS the attacker has Collision, which
             // grants Blocker to every opponent Digimon for this attack.
-            if !attacker_has_collision
-                && !self.has_keyword(h, Keyword::Blocker)
-            {
+            if !attacker_has_collision && !self.has_keyword(h, Keyword::Blocker) {
                 continue;
             }
             candidates.push(i as u8);
@@ -1518,11 +1497,7 @@ impl Game {
     /// Task 2 entry point that fires `OnAttackTargetChange` globally —
     /// then transitions to `AttackState::Battle` and re-enters the state
     /// machine.
-    fn install_raid_retarget_selection(
-        &mut self,
-        attacker: PermanentHandle,
-        candidates: Vec<u8>,
-    ) {
+    fn install_raid_retarget_selection(&mut self, attacker: PermanentHandle, candidates: Vec<u8>) {
         use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
 
         let attacker_player = attacker.player;
@@ -1613,10 +1588,7 @@ impl Game {
     /// `cleanup_attack` when the chain clears. Otherwise returns a
     /// terminal outcome that the caller routes through
     /// `cleanup_attack`.
-    fn enter_piercing_security_check(
-        &mut self,
-        attacker: PermanentHandle,
-    ) -> AttackResult {
+    fn enter_piercing_security_check(&mut self, attacker: PermanentHandle) -> AttackResult {
         let defender_player: PlayerId = 1 - attacker.player;
         self.resolve_player_security_loop(attacker, defender_player)
     }
@@ -1816,8 +1788,7 @@ impl Game {
                                 {
                                     self.delete_permanent_with_effects(attacker);
                                     if let Some(st) = self.security_resolution.as_mut() {
-                                        st.outcome_so_far =
-                                            AttackResult::AttackerDeletedBySecurity;
+                                        st.outcome_so_far = AttackResult::AttackerDeletedBySecurity;
                                     }
                                 }
                             }
@@ -1913,10 +1884,7 @@ impl Game {
                     // Post-observer finalization. `security_resolution` is
                     // still live; drain it now and decide the terminal
                     // outcome (or loop to the next card).
-                    let state = self
-                        .security_resolution
-                        .take()
-                        .expect("checked Some above");
+                    let state = self.security_resolution.take().expect("checked Some above");
                     let defender = state.defender;
                     let attacker_opt = state.attacker;
                     let remaining = state.checks_remaining;
@@ -2052,8 +2020,7 @@ impl Game {
     // ─── Private helpers ──────────────────────────────────────────────
 
     fn suspend_and_count_attack(&mut self, handle: PermanentHandle) {
-        let perm = &mut self.players[handle.player as usize].battle_area
-            [handle.index as usize];
+        let perm = &mut self.players[handle.player as usize].battle_area[handle.index as usize];
         perm.is_suspended = true;
         perm.attacks_this_turn = perm.attacks_this_turn.saturating_add(1);
     }
@@ -2069,10 +2036,7 @@ impl Game {
                 // attackable. Linked (Task 4) is attached sideways to its
                 // host and doesn't occupy a standalone permanent slot.
                 p.is_digimon(&self.card_data)
-                    && matches!(
-                        p.option_state,
-                        crate::permanent::OptionState::Standard
-                    )
+                    && matches!(p.option_state, crate::permanent::OptionState::Standard)
             })
             .unwrap_or(false)
     }
@@ -2312,9 +2276,9 @@ impl Game {
                 // after the drain via panic-safe guard.
                 let prior = self.current_deletion_cause;
                 self.current_deletion_cause = Some(cause);
-                let result = std::panic::catch_unwind(
-                    std::panic::AssertUnwindSafe(|| self.commit_permanent_deletion(handle)),
-                );
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    self.commit_permanent_deletion(handle)
+                }));
                 self.current_deletion_cause = prior;
                 if let Err(payload) = result {
                     std::panic::resume_unwind(payload);
@@ -2432,8 +2396,7 @@ impl Game {
                 .unwrap_or(false);
             if linked {
                 let taken = std::mem::take(
-                    &mut self.player_mut(handle.player).battle_area
-                        [handle.index as usize]
+                    &mut self.player_mut(handle.player).battle_area[handle.index as usize]
                         .linked_cards,
                 );
                 for card in taken {
@@ -2499,12 +2462,8 @@ impl Game {
                 let prev_source = self.effect_source_player;
                 self.effect_source_player = Some(controller);
                 {
-                    let mut ctx = crate::effect_context::EffectContext::new(
-                        self,
-                        card,
-                        None,
-                        controller,
-                    );
+                    let mut ctx =
+                        crate::effect_context::EffectContext::new(self, card, None, controller);
                     // `play_from_trash_free_unsuspended` returns None if the
                     // battle area is full or a CannotPlayDigimonByEffect
                     // modifier is active (DCGO `CanPlayAsNewPermanent` gate).
@@ -2547,5 +2506,4 @@ impl Game {
         };
         self.finalize_permanent_deletion(handle);
     }
-
 }

@@ -65,8 +65,7 @@ pub type ReplacementConditionFn =
 
 /// Closure type for replacement effect processes. Receives a
 /// ReplacementContext so the process can mutate state AND set the outcome.
-pub type ReplacementProcessFn =
-    Box<dyn Fn(&mut ReplacementContext<'_>) + Send + Sync + 'static>;
+pub type ReplacementProcessFn = Box<dyn Fn(&mut ReplacementContext<'_>) + Send + Sync + 'static>;
 
 /// Passed to Would* effect processes. `effect` is the underlying effect ctx;
 /// `cause`, `subject`, `original_destination` are snapshot event data; the
@@ -249,9 +248,7 @@ pub(crate) fn try_replace_impl(
     // single event).
     let key = (timing, subject);
     let blocked = if game.in_replacement_commit {
-        game.replacement_fired
-            .iter()
-            .any(|(_t, s)| *s == subject)
+        game.replacement_fired.iter().any(|(_t, s)| *s == subject)
     } else {
         game.replacement_fired.contains(&key)
     };
@@ -262,8 +259,7 @@ pub(crate) fn try_replace_impl(
 
     game.replacement_depth = game.replacement_depth.saturating_add(1);
 
-    let outcome =
-        try_replace_inner(game, timing, subject, cause, original_destination);
+    let outcome = try_replace_inner(game, timing, subject, cause, original_destination);
 
     game.replacement_depth = game.replacement_depth.saturating_sub(1);
     outcome
@@ -292,8 +288,7 @@ fn try_replace_inner(
     // TODO(phase-7-followup): when either side has >1 candidates, install a
     // TriggerOrder-style selection so the controller picks the order. v1
     // runs them in collection order.
-    let ordered: Vec<Candidate> =
-        own_reps.into_iter().chain(opp_reps.into_iter()).collect();
+    let ordered: Vec<Candidate> = own_reps.into_iter().chain(opp_reps.into_iter()).collect();
 
     // Walk candidates. Mandatory candidates compose (the last non-None
     // outcome wins for v1 — documented). Optional candidates install a
@@ -312,13 +307,7 @@ fn try_replace_inner(
     let mut acc_outcome = ReplacementOutcome::None;
     for cand in ordered {
         if cand.is_mandatory {
-            let o = run_mandatory_candidate(
-                game,
-                &cand,
-                subject,
-                cause,
-                original_destination,
-            );
+            let o = run_mandatory_candidate(game, &cand, subject, cause, original_destination);
             if o != ReplacementOutcome::None {
                 acc_outcome = o;
             }
@@ -531,12 +520,8 @@ fn passive_modifier_candidates(
                 }
             }
             if let Some(cond) = &entry.replacement_condition {
-                let read_ctx = EffectReadContext::new(
-                    game,
-                    CardHandle(0),
-                    Some(handle),
-                    handle.player,
-                );
+                let read_ctx =
+                    EffectReadContext::new(game, CardHandle(0), Some(handle), handle.player);
                 if !cond(&read_ctx, &subject) {
                     continue;
                 }
@@ -573,12 +558,7 @@ fn passive_modifier_candidates(
                 ReplacementSubject::Permanent(h) => Some(h),
                 _ => entry.source_permanent,
             };
-            let read_ctx = EffectReadContext::new(
-                game,
-                CardHandle(0),
-                source_perm,
-                target_player,
-            );
+            let read_ctx = EffectReadContext::new(game, CardHandle(0), source_perm, target_player);
             if !cond(&read_ctx, &subject) {
                 continue;
             }
@@ -611,7 +591,10 @@ fn run_mandatory_candidate(
     original_destination: Option<Zone>,
 ) -> ReplacementOutcome {
     match &cand.kind {
-        CandidateKind::EffectClosure { card_id, effect_slot } => run_candidate_inner(
+        CandidateKind::EffectClosure {
+            card_id,
+            effect_slot,
+        } => run_candidate_inner(
             game,
             card_id,
             cand.source_card,
@@ -752,9 +735,10 @@ fn install_optional_selection(
     // Passive modifiers are always mandatory — install_optional_selection
     // should never be reached for a PassiveCancel candidate.
     let (card_id, effect_slot) = match &cand.kind {
-        CandidateKind::EffectClosure { card_id, effect_slot } => {
-            (card_id.clone(), *effect_slot)
-        }
+        CandidateKind::EffectClosure {
+            card_id,
+            effect_slot,
+        } => (card_id.clone(), *effect_slot),
         CandidateKind::PassiveCancel => {
             debug_assert!(
                 false,
@@ -1079,17 +1063,11 @@ fn commit_deferred_outcome(
 /// cleanup, post-deletion replays drain, OnAnyDeletion) but bypasses
 /// `try_replace` because the replacement window has already been offered
 /// and declined.
-fn commit_permanent_deletion_no_replace(
-    game: &mut crate::game::Game,
-    handle: PermanentHandle,
-) {
+fn commit_permanent_deletion_no_replace(game: &mut crate::game::Game, handle: PermanentHandle) {
     use crate::enums::EffectTiming;
     use crate::selection::TriggerSource;
 
-    game.enqueue_triggered(
-        EffectTiming::OnDeletion,
-        TriggerSource::Permanent(handle),
-    );
+    game.enqueue_triggered(EffectTiming::OnDeletion, TriggerSource::Permanent(handle));
     game.drain_effect_queue();
 
     // Phase D Task 6 followup (2026-04-25): an OnDeletion handler may have

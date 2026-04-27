@@ -28,10 +28,17 @@ fn test_023_play_token_spawns_petrification() {
     assert_eq!(r.battle_area_size(0), 2, "test card + token");
 
     // Find the token by kind.
-    let token_perm = r.game.player(0).battle_area.iter().find(|p| {
-        p.top_card().card_kind(&r.game.card_data) == CardKind::Token
-    }).expect("token missing from battle_area");
-    assert_eq!(token_perm.top_card().card_name(&r.game.card_data), "Petrification Token");
+    let token_perm = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+        .expect("token missing from battle_area");
+    assert_eq!(
+        token_perm.top_card().card_name(&r.game.card_data),
+        "Petrification Token"
+    );
     assert_eq!(token_perm.base_dp(&r.game.card_data), Some(3000));
 }
 
@@ -48,9 +55,13 @@ fn token_delete_removes_from_game_not_trash() {
     r.play(0, 0);
     assert_eq!(r.trash_size(0), 0);
 
-    let token_field_idx = r.game.player(0).battle_area.iter().position(|p| {
-        p.top_card().card_kind(&r.game.card_data) == CardKind::Token
-    }).expect("token missing");
+    let token_field_idx = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+        .expect("token missing");
     r.game.players[0].delete_permanent(token_field_idx);
 
     // Battle area loses the token; trash does NOT gain it.
@@ -79,16 +90,29 @@ fn petrification_on_deletion_trashes_top_security() {
     let trash_before = r.trash_size(0);
 
     // Locate the token on P0's field.
-    let token_idx = r.game.player(0).battle_area.iter().position(|p| {
-        p.top_card().card_kind(&r.game.card_data) == CardKind::Token
-    }).expect("token missing");
+    let token_idx = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+        .expect("token missing");
 
     // Use the full deletion path so OnDeletion observers fire.
-    let handle = PermanentHandle { player: 0, index: token_idx as u8 };
+    let handle = PermanentHandle {
+        player: 0,
+        index: token_idx as u8,
+    };
     r.game.delete_permanent_with_effects(handle);
 
-    assert_eq!(r.security_count(0), sec_before - 1,
-        "Petrification OnDeletion trashed top of security");
-    assert_eq!(r.trash_size(0), trash_before + 1,
-        "the trashed security card landed in trash (token itself removed from game)");
+    assert_eq!(
+        r.security_count(0),
+        sec_before - 1,
+        "Petrification OnDeletion trashed top of security"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 1,
+        "the trashed security card landed in trash (token itself removed from game)"
+    );
 }

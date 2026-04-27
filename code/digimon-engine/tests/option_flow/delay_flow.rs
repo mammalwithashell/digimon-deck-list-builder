@@ -171,7 +171,11 @@ fn delay_parks_on_field_with_delayed_state() {
     assert_eq!(result, OptionPlayResult::Trashed);
     assert!(r.game.pending_option.is_none(), "pending_option cleared");
     assert_eq!(r.hand_size(0), 0, "card left hand");
-    assert_eq!(r.trash_size(0), 0, "delay does NOT trash — it parks on field");
+    assert_eq!(
+        r.trash_size(0),
+        0,
+        "delay does NOT trash — it parks on field"
+    );
     assert_eq!(
         r.battle_area_size(0),
         battle_before + 1,
@@ -231,7 +235,10 @@ fn delay_end_of_your_next_turn_fires_correctly() {
         .battle_area
         .iter()
         .any(|p| matches!(p.option_state, OptionState::Delayed { .. }));
-    assert!(delayed_still_there, "still parked after opponent-turn rollover");
+    assert!(
+        delayed_still_there,
+        "still parked after opponent-turn rollover"
+    );
 
     // Advance to Main on P1's turn, then end it. Still no fire.
     r.game.enter_main_phase();
@@ -243,7 +250,11 @@ fn delay_end_of_your_next_turn_fires_correctly() {
     assert_eq!(r.game.turn_player(), 0);
     r.game.enter_main_phase();
     r.end_turn();
-    assert_eq!(*witness.lock().unwrap(), 1, "DelayEffect fired at end of own next turn");
+    assert_eq!(
+        *witness.lock().unwrap(),
+        1,
+        "DelayEffect fired at end of own next turn"
+    );
 
     // Card trashed.
     let delayed_gone = !r
@@ -281,7 +292,11 @@ fn delay_end_of_this_turn_fires_same_turn() {
 
     r.end_turn();
 
-    assert_eq!(*witness.lock().unwrap(), 1, "DelayEffect fired at end of this turn");
+    assert_eq!(
+        *witness.lock().unwrap(),
+        1,
+        "DelayEffect fired at end of this turn"
+    );
     let delayed_gone = !r
         .game
         .player(0)
@@ -451,14 +466,8 @@ fn two_simultaneous_delays_one_cancelled_other_still_fires() {
         .hand(0, &["DELAY-A", "DELAY-B"])
         .memory(5)
         .start();
-    r.register_effect(
-        "DELAY-A",
-        Arc::new(DelayThisPlusCancel(witness_a.clone())),
-    );
-    r.register_effect(
-        "DELAY-B",
-        Arc::new(DelayThisTurnWitness(witness_b.clone())),
-    );
+    r.register_effect("DELAY-A", Arc::new(DelayThisPlusCancel(witness_a.clone())));
+    r.register_effect("DELAY-B", Arc::new(DelayThisTurnWitness(witness_b.clone())));
     r.place_on_field(0, "RED-MATCH", Some(0));
     advance_to_main(&mut r);
 
@@ -504,9 +513,5 @@ fn two_simultaneous_delays_one_cancelled_other_still_fires() {
         1,
         "exactly one delayed permanent remains (the cancelled one)"
     );
-    assert_eq!(
-        r.trash_size(0),
-        1,
-        "the non-cancelled delay was trashed"
-    );
+    assert_eq!(r.trash_size(0), 1, "the non-cancelled delay was trashed");
 }

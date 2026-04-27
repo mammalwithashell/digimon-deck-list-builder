@@ -6,7 +6,11 @@ fn parse(yaml: &str) -> CardSpec {
 }
 
 fn typed_body(spec: &CardSpec, idx: usize) -> TypedDeclarativeBody {
-    spec.effects[idx].as_declarative().unwrap().typed_body().unwrap()
+    spec.effects[idx]
+        .as_declarative()
+        .unwrap()
+        .typed_body()
+        .unwrap()
 }
 
 #[test]

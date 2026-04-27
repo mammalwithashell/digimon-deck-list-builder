@@ -6,9 +6,9 @@
 //! cache directory, and `fetch_manifest(base_url)` / `download(model)` take
 //! the URL from the manifest entry, so no `#[cfg(test)]` hacks are needed.
 
-use digimon_tcg::models::{ManifestModel, ModelsManager};
 use digimon_engine::action::space::ACTION_SPACE_SIZE;
 use digimon_engine::tensor::TENSOR_SIZE;
+use digimon_tcg::models::{ManifestModel, ModelsManager};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use tempfile::tempdir;
@@ -55,9 +55,7 @@ async fn test_download_verify_and_cache() {
     // a second network round-trip).
     Mock::given(method("GET"))
         .and(path("/null-agent-v0.onnx"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_bytes(fake_onnx.clone()),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(fake_onnx.clone()))
         .expect(1) // wiremock panics at drop if this isn't satisfied exactly
         .mount(&mock_srv)
         .await;
@@ -127,7 +125,10 @@ async fn test_download_verify_and_cache() {
     assert_eq!(on_disk, fake_onnx, "on-disk bytes must match the original");
 
     // meta.json must be present and round-trip cleanly.
-    assert!(mgr.meta_path("null-agent-v0").exists(), "meta.json must be written");
+    assert!(
+        mgr.meta_path("null-agent-v0").exists(),
+        "meta.json must be written"
+    );
     let cached_meta = mgr
         .local_meta("null-agent-v0")
         .expect("local_meta read ok")
@@ -194,7 +195,10 @@ async fn test_download_rejects_sha_mismatch() {
         fake_onnx.len() as u64,
     );
 
-    let err = mgr.download(&entry).await.expect_err("should fail on SHA mismatch");
+    let err = mgr
+        .download(&entry)
+        .await
+        .expect_err("should fail on SHA mismatch");
     assert!(
         err.to_string().contains("sha256 mismatch"),
         "error should mention sha256 mismatch, got: {err}"
@@ -202,7 +206,10 @@ async fn test_download_rejects_sha_mismatch() {
 
     // The partial `.tmp` file must be cleaned up.
     let tmp_path = mgr.model_dir("bad-model").join("policy.onnx.tmp");
-    assert!(!tmp_path.exists(), ".tmp file must be removed after SHA failure");
+    assert!(
+        !tmp_path.exists(),
+        ".tmp file must be removed after SHA failure"
+    );
 
     // The final file must not exist.
     assert!(
@@ -236,7 +243,10 @@ async fn test_download_rejects_size_mismatch() {
         fake_onnx.len() as u64 + 1, // wrong
     );
 
-    let err = mgr.download(&entry).await.expect_err("should fail on size mismatch");
+    let err = mgr
+        .download(&entry)
+        .await
+        .expect_err("should fail on size mismatch");
     assert!(
         err.to_string().contains("bytes"),
         "error should mention byte count mismatch, got: {err}"

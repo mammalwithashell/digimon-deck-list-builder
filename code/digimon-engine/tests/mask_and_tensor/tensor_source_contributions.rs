@@ -226,11 +226,8 @@ fn opt_total_and_opt_used_written_to_tensor() {
     assert!((t[opt_used_off] - 0.0).abs() < 1e-6);
 
     // Record an activation for slot 0 of source 0.
-    let source_handle = r.game.players[0].battle_area[h.index as usize]
-        .card_sources[0]
-        .handle();
-    r.game.players[0].battle_area[h.index as usize]
-        .record_activation(source_handle, 0);
+    let source_handle = r.game.players[0].battle_area[h.index as usize].card_sources[0].handle();
+    r.game.players[0].battle_area[h.index as usize].record_activation(source_handle, 0);
 
     let t = build_tensor(&r.game, 0, &reg);
     assert!((t[opt_total_off] - 1.0).abs() < 1e-6);
@@ -258,11 +255,8 @@ fn source_opt_state_reflects_availability_fraction() {
     );
 
     // Mark it used → state = 0.0.
-    let source_handle = r.game.players[0].battle_area[h.index as usize]
-        .card_sources[0]
-        .handle();
-    r.game.players[0].battle_area[h.index as usize]
-        .record_activation(source_handle, 0);
+    let source_handle = r.game.players[0].battle_area[h.index as usize].card_sources[0].handle();
+    r.game.players[0].battle_area[h.index as usize].record_activation(source_handle, 0);
     let t = build_tensor(&r.game, 0, &reg);
     assert!(
         (t[opt_state_off] - 0.0).abs() < 1e-6,

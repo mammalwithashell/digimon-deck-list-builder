@@ -21,7 +21,9 @@ fn add_dp_modifier_end_of_turn_raises_effective_dp() {
     let handle = runner.place_on_field(0, "T-DP", None);
     assert_eq!(runner.game.players[0].battle_area.len(), 1);
 
-    let base_dp = runner.effective_dp(handle).expect("T-DP should have a base DP");
+    let base_dp = runner
+        .effective_dp(handle)
+        .expect("T-DP should have a base DP");
 
     let src_card = runner.game.players[0].battle_area[0].top_card().handle();
 
@@ -38,7 +40,9 @@ fn add_dp_modifier_end_of_turn_raises_effective_dp() {
         run_step(&step, &mut ctx, &mut bindings);
     }
 
-    let after_dp = runner.effective_dp(handle).expect("permanent still on field");
+    let after_dp = runner
+        .effective_dp(handle)
+        .expect("permanent still on field");
     assert_eq!(
         after_dp,
         base_dp + 3000,
@@ -58,7 +62,9 @@ fn add_dp_modifier_with_bad_expiry_is_noop() {
     let handle = runner.place_on_field(0, "T-DPBAD", None);
     assert_eq!(runner.game.players[0].battle_area.len(), 1);
 
-    let base_dp = runner.effective_dp(handle).expect("T-DPBAD should have a base DP");
+    let base_dp = runner
+        .effective_dp(handle)
+        .expect("T-DPBAD should have a base DP");
 
     let src_card = runner.game.players[0].battle_area[0].top_card().handle();
 
@@ -75,10 +81,11 @@ fn add_dp_modifier_with_bad_expiry_is_noop() {
         run_step(&step, &mut ctx, &mut bindings);
     }
 
-    let after_dp = runner.effective_dp(handle).expect("permanent still on field");
+    let after_dp = runner
+        .effective_dp(handle)
+        .expect("permanent still on field");
     assert_eq!(
-        after_dp,
-        base_dp,
+        after_dp, base_dp,
         "effective DP should be unchanged after AddDpModifier with bad expiry"
     );
 }
@@ -113,7 +120,10 @@ fn add_modifier_cannot_attack_blocks_attack_flag() {
     }
 
     assert!(
-        runner.game.modifiers.has(handle, digimon_engine::enums::ModifierType::CannotAttack),
+        runner
+            .game
+            .modifiers
+            .has(handle, digimon_engine::enums::ModifierType::CannotAttack),
         "CannotAttack modifier should be registered on the target permanent"
     );
 }
@@ -149,7 +159,11 @@ fn add_modifier_unknown_modifier_string_is_noop() {
     // No modifier should be registered — the registry should have nothing for
     // the target since we started clean and dispatched an unknown modifier name.
     assert!(
-        runner.game.modifiers.get(handle, digimon_engine::enums::ModifierType::CannotAttack).is_empty(),
+        runner
+            .game
+            .modifiers
+            .get(handle, digimon_engine::enums::ModifierType::CannotAttack)
+            .is_empty(),
         "no modifier should be registered for an unknown modifier string"
     );
 }
@@ -188,7 +202,11 @@ fn add_modifier_filter_target_applies_to_match() {
 
     // Filter branch now applies the modifier to every battle-area match.
     assert!(
-        !runner.game.modifiers.get(handle, digimon_engine::enums::ModifierType::CannotAttack).is_empty(),
+        !runner
+            .game
+            .modifiers
+            .get(handle, digimon_engine::enums::ModifierType::CannotAttack)
+            .is_empty(),
         "Filter target branch should register CannotAttack on the matching permanent"
     );
 }
@@ -223,7 +241,9 @@ fn grant_keyword_blocker_is_queryable() {
     }
 
     assert!(
-        runner.game.has_keyword(handle, digimon_engine::enums::Keyword::Blocker),
+        runner
+            .game
+            .has_keyword(handle, digimon_engine::enums::Keyword::Blocker),
         "GrantKeyword Blocker should make has_keyword return true for the target"
     );
 }
@@ -259,7 +279,9 @@ fn grant_keyword_unknown_name_is_noop() {
 
     // No keyword granted — Blocker should not be present.
     assert!(
-        !runner.game.has_keyword(handle, digimon_engine::enums::Keyword::Blocker),
+        !runner
+            .game
+            .has_keyword(handle, digimon_engine::enums::Keyword::Blocker),
         "unknown keyword name should be a no-op: Blocker not granted"
     );
 }

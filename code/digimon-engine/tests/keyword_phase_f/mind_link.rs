@@ -60,9 +60,8 @@ fn push_source_card(r: &mut DebugRunner, player: u8, field_index: usize, card_id
 }
 
 fn field_main_bit(field_index: usize) -> usize {
-    (FIELD_EFFECT_START
-        + field_index as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN)
+        as usize
 }
 
 // ─── Test 1: happy path — Tamer attaches to Digimon with no Tamer source ───

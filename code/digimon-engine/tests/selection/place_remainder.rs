@@ -149,7 +149,10 @@ fn single_revealed_card_surfaces_one_choice_selection() {
     let deck = &r.game.players[p0 as usize].deck;
     assert_eq!(deck.len(), 1, "deck must have exactly 1 card");
     let placed_id = &r.game.card_data[deck[0].data_index].card_id;
-    assert_eq!(placed_id, "CARD-A", "CARD-A must be at library_cards[0] (bottom)");
+    assert_eq!(
+        placed_id, "CARD-A",
+        "CARD-A must be at library_cards[0] (bottom)"
+    );
 }
 
 // ─── Test 3: three cards to Top — ordered_vec[0] drawn first ─────────────────
@@ -199,18 +202,30 @@ fn three_cards_to_top_preserves_chosen_order() {
         .expect("step 3: pick A");
 
     assert!(r.game.pending_selection.is_none(), "no further selection");
-    assert!(r.game.revealed_cards.is_empty(), "reveal pool must be empty");
+    assert!(
+        r.game.revealed_cards.is_empty(),
+        "reveal pool must be empty"
+    );
 
     let deck = &r.game.players[p0 as usize].deck;
     assert_eq!(deck.len(), 3, "all 3 cards must be on the deck");
 
     // deck Vec: last index = top = drawn first = B.
     let top_id = &r.game.card_data[deck[2].data_index].card_id;
-    let mid_id  = &r.game.card_data[deck[1].data_index].card_id;
-    let bot_id  = &r.game.card_data[deck[0].data_index].card_id;
-    assert_eq!(top_id, "CARD-B", "deck top (index 2) must be CARD-B (chosen 1st)");
-    assert_eq!(mid_id, "CARD-C", "deck middle (index 1) must be CARD-C (chosen 2nd)");
-    assert_eq!(bot_id, "CARD-A", "deck bottom (index 0) must be CARD-A (chosen 3rd)");
+    let mid_id = &r.game.card_data[deck[1].data_index].card_id;
+    let bot_id = &r.game.card_data[deck[0].data_index].card_id;
+    assert_eq!(
+        top_id, "CARD-B",
+        "deck top (index 2) must be CARD-B (chosen 1st)"
+    );
+    assert_eq!(
+        mid_id, "CARD-C",
+        "deck middle (index 1) must be CARD-C (chosen 2nd)"
+    );
+    assert_eq!(
+        bot_id, "CARD-A",
+        "deck bottom (index 0) must be CARD-A (chosen 3rd)"
+    );
 }
 
 // ─── Test 4: three cards to Bottom — ordered_vec[0] drawn first ──────────────
@@ -267,16 +282,25 @@ fn three_cards_to_bottom_preserves_chosen_order() {
         .expect("step 3: pick A");
 
     assert!(r.game.pending_selection.is_none(), "no further selection");
-    assert!(r.game.revealed_cards.is_empty(), "reveal pool must be empty");
+    assert!(
+        r.game.revealed_cards.is_empty(),
+        "reveal pool must be empty"
+    );
 
     let deck = &r.game.players[p0 as usize].deck;
     assert_eq!(deck.len(), 3, "all 3 cards must be on the deck");
 
     // deck[0] = deepest/absolute bottom; deck[2] = closest-to-top among placed.
     let closest_top_id = &r.game.card_data[deck[2].data_index].card_id;
-    let mid_id          = &r.game.card_data[deck[1].data_index].card_id;
-    let deepest_id      = &r.game.card_data[deck[0].data_index].card_id;
-    assert_eq!(closest_top_id, "CARD-B", "deck[2] (closest-to-top) must be CARD-B (drawn first)");
+    let mid_id = &r.game.card_data[deck[1].data_index].card_id;
+    let deepest_id = &r.game.card_data[deck[0].data_index].card_id;
+    assert_eq!(
+        closest_top_id, "CARD-B",
+        "deck[2] (closest-to-top) must be CARD-B (drawn first)"
+    );
     assert_eq!(mid_id, "CARD-C", "deck[1] (middle) must be CARD-C");
-    assert_eq!(deepest_id, "CARD-A", "deck[0] (deepest) must be CARD-A (drawn last)");
+    assert_eq!(
+        deepest_id, "CARD-A",
+        "deck[0] (deepest) must be CARD-A (drawn last)"
+    );
 }

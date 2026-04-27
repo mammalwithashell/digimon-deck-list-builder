@@ -162,7 +162,9 @@ fn scapegoat_parks_outer_dialog_on_opponent_effect_with_candidate() {
     }
 
     // Decline path — original deletion proceeds.
-    r.game.resolve_selection(0, PASS).expect("decline Scapegoat");
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline Scapegoat");
 
     assert_eq!(
         r.game.players[0].battle_area.len(),

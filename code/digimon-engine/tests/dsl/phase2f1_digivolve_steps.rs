@@ -4,7 +4,7 @@
 //! Each test drives the variant through `run_step` (synchronous family) and
 //! asserts the observable mutation matches the engine primitive.
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledStep};
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledCostDelta, CompiledStep};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -74,7 +74,10 @@ fn effect_initiated_digivolve_step_grows_target_stack_with_hand_card() {
         let card_idx = g.next_card_index();
         let card = CardSource::new(data_idx, 0, card_idx);
         g.players[0].battle_area.push(Permanent::new(card, turn));
-        digimon_engine::permanent::PermanentHandle { player: 0, index: 0 }
+        digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: 0,
+        }
     };
 
     let memory_before = runner.game.memory;
@@ -86,12 +89,12 @@ fn effect_initiated_digivolve_step_grows_target_stack_with_hand_card() {
 
     let mut bindings = Bindings::new();
     bindings.insert_permanent("tgt", target);
-    bindings.insert_hand_index("from", 0);
+    bindings.insert_hand_index("from", 0, 0);
 
     let step = CompiledStep::EffectInitiatedDigivolve {
         target: CompiledBindingRef::Named("tgt".into()),
         from_hand: CompiledBindingRef::Named("from".into()),
-        cost: 0,
+        cost: CompiledCostDelta::Literal(0),
         ignore_requirements: true,
     };
 
@@ -121,7 +124,10 @@ fn effect_initiated_digivolve_step_grows_target_stack_with_hand_card() {
         "hand should shrink by 1"
     );
     // Memory unchanged with cost=0 / ignore_requirements=true.
-    assert_eq!(runner.game.memory, memory_before, "cost=0 keeps memory unchanged");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "cost=0 keeps memory unchanged"
+    );
 }
 
 // ─── EffectInitiatedDnaDigivolve ─────────────────────────────────────────────
@@ -164,7 +170,7 @@ fn effect_initiated_dna_digivolve_step_merges_two_perms_with_card_handle_top() {
         target_a: CompiledBindingRef::Named("a".into()),
         target_b: CompiledBindingRef::Named("b".into()),
         from_hand: CompiledBindingRef::Named("from".into()),
-        cost: 0,
+        cost: CompiledCostDelta::Literal(0),
         ignore_requirements: true,
     };
 
@@ -185,7 +191,10 @@ fn effect_initiated_dna_digivolve_step_merges_two_perms_with_card_handle_top() {
         0,
         "hand must be empty after DNA digivolve consumes the result card"
     );
-    assert_eq!(runner.game.memory, memory_before, "cost=0 keeps memory unchanged");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "cost=0 keeps memory unchanged"
+    );
 
     let merged = &runner.game.players[0].battle_area[0];
     // Top of the merged stack is the hand card.

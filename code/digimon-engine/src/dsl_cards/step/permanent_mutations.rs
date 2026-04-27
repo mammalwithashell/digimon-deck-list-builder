@@ -13,11 +13,7 @@ use crate::effect_context::EffectContext;
 
 /// Returns `true` if `step` is a permanent-mutation family handled here.
 /// Unknown steps fall through (the caller may try other families).
-pub fn try_run(
-    step: &CompiledStep,
-    ctx: &mut EffectContext<'_>,
-    bindings: &mut Bindings,
-) -> bool {
+pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) -> bool {
     match step {
         CompiledStep::DeletePermanent { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
@@ -47,7 +43,11 @@ pub fn try_run(
             }
             true
         }
-        CompiledStep::ReturnToDeck { target, position, include_sources: _ } => {
+        CompiledStep::ReturnToDeck {
+            target,
+            position,
+            include_sources: _,
+        } => {
             // Phase 2c: `include_sources=true` is modelled in CompiledStep but the
             // engine currently trashes lower sources regardless — there is no
             // stack-return API yet. Phase 2d must add one (faithful full-stack
@@ -58,7 +58,11 @@ pub fn try_run(
             }
             true
         }
-        CompiledStep::DeDigivolve { target, amount, stop_at_level } => {
+        CompiledStep::DeDigivolve {
+            target,
+            amount,
+            stop_at_level,
+        } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
                 // Engine signature is (target, stop_at_level, amount) — note stop_at_level

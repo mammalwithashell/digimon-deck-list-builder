@@ -3,14 +3,15 @@
 use std::collections::HashMap;
 
 use crate::card_source::CardHandle;
+use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingValue {
     Permanent(PermanentHandle),
     Card(CardHandle),
-    HandIndex(u16),
-    TrashIndex(u16),
+    HandIndex(PlayerId, u16),
+    TrashIndex(PlayerId, u16),
     Literal(i64),
     PermanentList(Vec<PermanentHandle>),
     CardList(Vec<CardHandle>),
@@ -59,14 +60,28 @@ impl Bindings {
 
     pub fn get_hand_index(&self, name: &str) -> Option<u16> {
         match self.get(name)? {
-            BindingValue::HandIndex(i) => Some(i),
+            BindingValue::HandIndex(_, i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn get_hand_index_with_player(&self, name: &str) -> Option<(PlayerId, u16)> {
+        match self.get(name)? {
+            BindingValue::HandIndex(p, i) => Some((p, i)),
             _ => None,
         }
     }
 
     pub fn get_trash_index(&self, name: &str) -> Option<u16> {
         match self.get(name)? {
-            BindingValue::TrashIndex(i) => Some(i),
+            BindingValue::TrashIndex(_, i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn get_trash_index_with_player(&self, name: &str) -> Option<(PlayerId, u16)> {
+        match self.get(name)? {
+            BindingValue::TrashIndex(p, i) => Some((p, i)),
             _ => None,
         }
     }
@@ -86,12 +101,20 @@ impl Bindings {
         self.insert(name, BindingValue::Card(h));
     }
 
-    pub fn insert_hand_index(&mut self, name: &str, i: u16) {
-        self.insert(name, BindingValue::HandIndex(i));
+    pub fn insert_hand_index(&mut self, name: &str, player: PlayerId, i: u16) {
+        self.insert(name, BindingValue::HandIndex(player, i));
     }
 
-    pub fn insert_trash_index(&mut self, name: &str, i: u16) {
-        self.insert(name, BindingValue::TrashIndex(i));
+    pub fn insert_hand_index_for(&mut self, name: &str, player: PlayerId, i: u16) {
+        self.insert_hand_index(name, player, i);
+    }
+
+    pub fn insert_trash_index(&mut self, name: &str, player: PlayerId, i: u16) {
+        self.insert(name, BindingValue::TrashIndex(player, i));
+    }
+
+    pub fn insert_trash_index_for(&mut self, name: &str, player: PlayerId, i: u16) {
+        self.insert_trash_index(name, player, i);
     }
 
     pub fn insert_literal(&mut self, name: &str, v: i64) {
@@ -128,26 +151,34 @@ mod tests {
     #[test]
     fn clone_preserves_slots() {
         let mut original = Bindings::new();
-        original.insert_hand_index("card_a", 3);
-        original.insert_trash_index("card_b", 7);
+        original.insert_hand_index("card_a", 0, 3);
+        original.insert_trash_index("card_b", 1, 7);
         original.insert("lit", BindingValue::Literal(42));
 
         let cloned = original.clone();
 
         assert_eq!(cloned.get_hand_index("card_a"), Some(3));
+        assert_eq!(cloned.get_hand_index_with_player("card_a"), Some((0, 3)));
         assert_eq!(cloned.get_trash_index("card_b"), Some(7));
+        assert_eq!(cloned.get_trash_index_with_player("card_b"), Some((1, 7)));
         assert_eq!(cloned.get_literal("lit"), Some(42));
         // Mutating original does not affect clone
         let mut original = original;
-        original.insert_hand_index("card_a", 99);
+        original.insert_hand_index("card_a", 0, 99);
         assert_eq!(cloned.get_hand_index("card_a"), Some(3));
     }
 
     #[test]
     fn permanent_list_round_trip() {
         let mut b = Bindings::new();
-        let h0 = PermanentHandle { player: 0, index: 0 };
-        let h1 = PermanentHandle { player: 1, index: 3 };
+        let h0 = PermanentHandle {
+            player: 0,
+            index: 0,
+        };
+        let h1 = PermanentHandle {
+            player: 1,
+            index: 3,
+        };
         b.insert_permanent_list("targets", vec![h0, h1]);
         let got = b.get_permanent_list("targets").expect("set");
         assert_eq!(got, vec![h0, h1]);
@@ -167,7 +198,10 @@ mod tests {
     #[test]
     fn list_clone_is_deep() {
         let mut b = Bindings::new();
-        let h0 = PermanentHandle { player: 0, index: 0 };
+        let h0 = PermanentHandle {
+            player: 0,
+            index: 0,
+        };
         b.insert_permanent_list("xs", vec![h0]);
         let cloned = b.clone();
         b.insert_permanent_list("xs", vec![]); // mutate original

@@ -56,8 +56,7 @@ effects:
                 value: -3000
                 expiry: end_of_turn
 "#;
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(yaml).expect("YAML parses");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("YAML parses");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles cleanly");
 
     // Seed: TST-VOTE in P0's hand (the OnPlay source, not yet on field), and
@@ -126,12 +125,8 @@ effects:
         runner.game.pending_selection.is_none(),
         "all selections should be resolved after P1's pick"
     );
-    let after_dp_a = runner
-        .effective_dp(perm_a)
-        .expect("perm A still on field");
-    let after_dp_b = runner
-        .effective_dp(perm_b)
-        .expect("perm B still on field");
+    let after_dp_a = runner.effective_dp(perm_a).expect("perm A still on field");
+    let after_dp_b = runner.effective_dp(perm_b).expect("perm B still on field");
     assert_eq!(
         after_dp_a,
         base_dp_a - 3000,

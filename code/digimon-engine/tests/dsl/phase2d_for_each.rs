@@ -1,9 +1,7 @@
 //! Phase 2d Task 4: ForEach iterates over a battle-area predicate scan
 //! and runs the body per match.
 
-use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledPlayerRef, CompiledPredicate, CompiledStep,
-};
+use digimon_dsl::compiled::{CompiledCardKind, CompiledPlayerRef, CompiledPredicate, CompiledStep};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_steps;

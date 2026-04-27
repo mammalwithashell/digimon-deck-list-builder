@@ -22,7 +22,7 @@ export function BreedingArea({
 }: BreedingAreaProps) {
   const dragData: DragData = { type: 'breeding-perm' };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: 'breeding-perm',
+    id: `${dropId}-perm`,
     data: dragData,
     disabled: !canMove,
   });
@@ -35,7 +35,8 @@ export function BreedingArea({
   const showDropHighlight = isOver && canDigivolveDrop;
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="ib-raise-zone">
+      <div className="ib-raise-zone__label">Raising</div>
       {permanent ? (
         <div
           ref={(node) => {
@@ -44,7 +45,7 @@ export function BreedingArea({
           }}
           {...listeners}
           {...attributes}
-          className={`${canMove ? 'ring-1 ring-green-400/50 rounded cursor-grab' : ''} ${showDropHighlight || highlighted ? 'ring-2 ring-purple-400 cursor-pointer' : ''} ${isDragging ? 'opacity-30' : ''}`}
+          className={`ib-raise-zone__perm ${canMove ? 'ib-raise-zone__perm--ready' : ''} ${showDropHighlight || highlighted ? 'ib-raise-zone__perm--target' : ''} ${isDragging ? 'opacity-30' : ''}`}
           onClick={onClick}
         >
           <PermanentSlot
@@ -56,14 +57,11 @@ export function BreedingArea({
       ) : (
         <div
           ref={setDropNodeRef}
-          className={`w-[96px] h-[134px] border border-dashed rounded flex items-center justify-center ${
-            showDropHighlight ? 'border-green-400 ring-2 ring-green-400/80' : 'border-gray-700/50'
-          }`}
+          className={`ib-raise-zone__empty ${showDropHighlight ? 'ib-raise-zone__empty--target' : ''}`}
         >
-          <span className="text-[9px] text-gray-600">Breeding</span>
+          <span>Empty</span>
         </div>
       )}
-      <span className="text-[9px] text-gray-500">Breeding</span>
     </div>
   );
 }
