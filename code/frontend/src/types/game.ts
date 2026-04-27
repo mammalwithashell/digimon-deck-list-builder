@@ -140,6 +140,66 @@ export interface GameEvent {
   meta: Record<string, unknown>;
 }
 
+export type ActionActor = 'human' | 'agent_greedy' | 'agent_trained' | string;
+
+export type DecodedActionKind =
+  | 'play'
+  | 'hand_effect'
+  | 'hatch'
+  | 'move'
+  | 'pass'
+  | 'dna_digivolve'
+  | 'attack'
+  | 'digivolve'
+  | 'field_effect'
+  | 'trash_effect'
+  | 'source_select'
+  | 'selection'
+  | 'unknown';
+
+export type DecodedActionZone =
+  | 'hand'
+  | 'battle'
+  | 'breeding'
+  | 'security'
+  | 'trash'
+  | 'source'
+  | 'revealed'
+  | 'effect_choice';
+
+export interface DecodedAction {
+  actionId: number;
+  playerId: number;
+  phase: string;
+  kind: DecodedActionKind;
+  label: string;
+  sourceZone: DecodedActionZone | null;
+  sourceIndex: number | null;
+  targetZone: DecodedActionZone | null;
+  targetIndex: number | null;
+  cardId: string | null;
+  cardName: string | null;
+}
+
+export interface TensorSummary {
+  playerId: number;
+  tensorSize: number;
+  maskSize: number;
+  legalActionCount: number;
+  turnCount: number;
+  phase: string;
+  memory: number;
+  tensorHead: number[];
+}
+
+export interface ActionTrace {
+  actor: ActionActor;
+  playerId: number;
+  actionId: number;
+  decoded: DecodedAction;
+  tensorSummary: TensorSummary | null;
+}
+
 export interface GameState {
   turnCount: number;
   currentPhase: GamePhase;

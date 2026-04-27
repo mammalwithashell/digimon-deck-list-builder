@@ -12,10 +12,13 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import type {
+  ActionTrace,
+  DecodedAction,
   GameEvent,
   GameState,
   PermanentInfo,
   PlayerState,
+  TensorSummary,
 } from '@/types/game';
 import { GamePhase } from '@/types/game';
 import type {
@@ -40,6 +43,7 @@ interface RustActionResponse {
   logs: string[];
   events: GameEvent[];
   action_context: Record<string, unknown>;
+  action_traces?: RustActionTrace[];
 }
 
 interface RustStepResponse {
@@ -49,6 +53,7 @@ interface RustStepResponse {
   events: GameEvent[];
   is_human_turn: boolean;
   is_game_over: boolean;
+  action_traces?: RustActionTrace[];
 }
 
 interface RustSurrenderResponse {
@@ -58,6 +63,39 @@ interface RustSurrenderResponse {
   events: GameEvent[];
   is_game_over: boolean;
   surrendered_by: number;
+}
+
+interface RustDecodedAction {
+  action_id: number;
+  player_id: number;
+  phase: string;
+  kind: DecodedAction['kind'];
+  label: string;
+  source_zone: DecodedAction['sourceZone'];
+  source_index: number | null;
+  target_zone: DecodedAction['targetZone'];
+  target_index: number | null;
+  card_id: string | null;
+  card_name: string | null;
+}
+
+interface RustTensorSummary {
+  player_id: number;
+  tensor_size: number;
+  mask_size: number;
+  legal_action_count: number;
+  turn_count: number;
+  phase: string;
+  memory: number;
+  tensor_head: number[];
+}
+
+interface RustActionTrace {
+  actor: string;
+  player_id: number;
+  action_id: number;
+  decoded: RustDecodedAction;
+  tensor_summary?: RustTensorSummary | null;
 }
 
 // ─── Frontend-facing response shapes (must mirror gameApi.ts) ────────
@@ -93,6 +131,7 @@ interface ActionResponse {
   logs?: string[];
   events?: GameEvent[];
   action_context?: Record<string, unknown>;
+  action_traces?: ActionTrace[];
 }
 
 interface StepResponse {
@@ -102,6 +141,7 @@ interface StepResponse {
   events?: GameEvent[];
   is_human_turn: boolean;
   is_game_over: boolean;
+  action_traces?: ActionTrace[];
 }
 
 interface SurrenderResponse {
@@ -271,6 +311,53 @@ export function dtoToGameState(dto: GameStateDto): GameState {
   };
 }
 
+export function toTensorSummary(summary: RustTensorSummary): TensorSummary {
+  return {
+    playerId: summary.player_id,
+    tensorSize: summary.tensor_size,
+    maskSize: summary.mask_size,
+    legalActionCount: summary.legal_action_count,
+    turnCount: summary.turn_count,
+    phase: summary.phase,
+    memory: summary.memory,
+    tensorHead: summary.tensor_head,
+  };
+}
+
+export function toDecodedAction(action: RustDecodedAction): DecodedAction {
+  return {
+    actionId: action.action_id,
+    playerId: action.player_id,
+    phase: action.phase,
+    kind: action.kind,
+    label: action.label,
+    sourceZone: action.source_zone,
+    sourceIndex: action.source_index,
+    targetZone: action.target_zone,
+    targetIndex: action.target_index,
+    cardId: action.card_id,
+    cardName: action.card_name,
+  };
+}
+
+export function toActionTrace(trace: RustActionTrace): ActionTrace {
+  return {
+    actor: trace.actor,
+    playerId: trace.player_id,
+    actionId: trace.action_id,
+    decoded: toDecodedAction(trace.decoded),
+    tensorSummary: trace.tensor_summary
+      ? toTensorSummary(trace.tensor_summary)
+      : null,
+  };
+}
+
+export function toActionTraces(
+  traces: RustActionTrace[] | undefined,
+): ActionTrace[] | undefined {
+  return traces?.map(toActionTrace);
+}
+
 // ─── Commands (mirror gameApi.ts exports) ─────────────────────────────
 
 export async function createGame(
@@ -323,6 +410,7 @@ export async function sendAction(
     logs: resp.logs,
     events: resp.events,
     action_context: resp.action_context,
+    action_traces: toActionTraces(resp.action_traces),
   };
 }
 
@@ -335,7 +423,22 @@ export async function stepGame(_gameId: string): Promise<StepResponse> {
     events: resp.events,
     is_human_turn: resp.is_human_turn,
     is_game_over: resp.is_game_over,
+    action_traces: toActionTraces(resp.action_traces),
   };
+}
+
+export async function getBoardTensorSummary(
+  _gameId: string,
+  playerId: number,
+): Promise<TensorSummary> {
+  const summary = await invoke<RustTensorSummary | null>(
+    'rust_get_board_tensor_summary',
+    { playerId },
+  );
+  if (!summary) {
+    throw new Error('Rust engine returned no board tensor summary');
+  }
+  return toTensorSummary(summary);
 }
 
 export async function getState(_gameId: string): Promise<GameState> {

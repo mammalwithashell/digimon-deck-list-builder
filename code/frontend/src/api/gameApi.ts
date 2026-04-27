@@ -1,5 +1,5 @@
 import client, { getGameClient } from './client';
-import type { GameState, GameEvent } from '@/types/game';
+import type { ActionTrace, GameState, GameEvent, TensorSummary } from '@/types/game';
 import * as rustGameApi from './rustGameApi';
 
 // Desktop builds dispatch every game API call through the in-process Rust
@@ -46,6 +46,7 @@ interface ActionResponse {
   logs?: string[];
   events?: GameEvent[];
   action_context?: Record<string, unknown>;
+  action_traces?: ActionTrace[];
 }
 
 interface StepResponse {
@@ -55,6 +56,7 @@ interface StepResponse {
   events?: GameEvent[];
   is_human_turn: boolean;
   is_game_over: boolean;
+  action_traces?: ActionTrace[];
 }
 
 export async function createGame(params: CreateGameParams): Promise<CreateGameResponse> {
@@ -97,6 +99,14 @@ export async function getLog(gameId: string): Promise<string[]> {
   const client = getGameClient();
   const { data } = await client.get<{ logs: string[] }>(`/games/${gameId}/logs`);
   return data.logs;
+}
+
+export async function getBoardTensorSummary(
+  gameId: string,
+  playerId: number,
+): Promise<TensorSummary> {
+  if (IS_DESKTOP) return rustGameApi.getBoardTensorSummary(gameId, playerId);
+  throw new Error('Board tensor summary is only available in the desktop client');
 }
 
 interface SurrenderResponse {
