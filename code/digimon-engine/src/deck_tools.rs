@@ -49,14 +49,26 @@ struct CardEntryRaw {
     #[serde(default)]
     card_name_eng: String,
     card_kind: u8,
-    #[serde(default)]
+    #[serde(default = "default_rarity")]
     rarity: u8,
     #[serde(default = "default_max_count")]
     max_count_in_deck: u32,
 }
 
+fn default_rarity() -> u8 {
+    u8::MAX
+}
+
 fn default_max_count() -> u32 {
     4
+}
+
+fn parse_rarity(raw: u8, card_id: &str) -> Rarity {
+    if raw == default_rarity() {
+        return Rarity::NoRarity;
+    }
+    Rarity::from_u8(raw)
+        .unwrap_or_else(|| panic!("cards.json has unknown rarity value {raw} for card {card_id}"))
 }
 
 #[derive(Deserialize)]
@@ -73,13 +85,14 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
             .expect("cards.json is malformed (compiled-in resource)");
         raw.into_iter()
             .map(|(k, v)| {
+                let rarity = parse_rarity(v.rarity, &k);
                 (
                     k,
                     CardSummary {
                         card_id: v.card_id,
                         card_name_eng: v.card_name_eng,
                         card_kind: v.card_kind,
-                        rarity: Rarity::from_u8(v.rarity),
+                        rarity,
                         max_count_in_deck: v.max_count_in_deck,
                     },
                 )
@@ -390,10 +403,10 @@ pub fn validate_deck_with_rules(card_ids: &[String], rules: &Rules) -> DeckValid
         }
     }
 
-    if let Some(allowed_rarities) = &rules.allowed_card_rarities {
+    if let Some(allowed_rarity_mask) = rules.allowed_card_rarity_mask {
         for (card_id, _) in &sorted_counts {
             if let Some(entity) = db.get(card_id.as_str()) {
-                if !allowed_rarities.contains(&entity.rarity) {
+                if !entity.rarity.is_in_mask(allowed_rarity_mask) {
                     errors.push(format!(
                         "{} ({}): rarity {} is not legal in this format",
                         card_id,
@@ -488,4 +501,20 @@ pub fn get_models_dir() -> std::path::PathBuf {
     std::env::var("ONNX_MODELS_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| std::path::PathBuf::from("models"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_rarity_sentinel_maps_to_no_rarity() {
+        assert_eq!(parse_rarity(default_rarity(), "TEST-001"), Rarity::NoRarity);
+    }
+
+    #[test]
+    #[should_panic(expected = "cards.json has unknown rarity value 42 for card TEST-001")]
+    fn invalid_rarity_value_panics() {
+        let _ = parse_rarity(42, "TEST-001");
+    }
 }
