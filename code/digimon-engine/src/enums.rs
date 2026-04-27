@@ -14,6 +14,49 @@ pub enum CardKind {
     Token,
 }
 
+/// Card rarity.
+///
+/// Variant order mirrors Python's `Rarity` enum in
+/// `digimon_gym/engine/data/enums.py` and the ingester's `RARITY_MAP`:
+/// C=0, U=1, R=2, SR=3, SEC=4, P=5, NoRarity=6.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Rarity {
+    C = 0,
+    U = 1,
+    R = 2,
+    SR = 3,
+    SEC = 4,
+    P = 5,
+    NoRarity = 6,
+}
+
+impl Rarity {
+    pub fn from_u8(raw: u8) -> Self {
+        match raw {
+            0 => Self::C,
+            1 => Self::U,
+            2 => Self::R,
+            3 => Self::SR,
+            4 => Self::SEC,
+            5 => Self::P,
+            6 => Self::NoRarity,
+            _ => Self::NoRarity,
+        }
+    }
+
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::C => "C",
+            Self::U => "U",
+            Self::R => "R",
+            Self::SR => "SR",
+            Self::SEC => "SEC",
+            Self::P => "P",
+            Self::NoRarity => "NoRarity",
+        }
+    }
+}
+
 /// Card color.
 ///
 /// Variant order mirrors Python's `CardColor` enum in
@@ -513,6 +556,7 @@ pub enum SkipDraw {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum GameMode {
     Standard,
+    Pauper,
     NoRestriction,
     EdhCommander,
     Titan,

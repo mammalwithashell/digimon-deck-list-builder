@@ -18,6 +18,9 @@ use std::sync::OnceLock;
 
 use serde::Deserialize;
 
+use crate::enums::{GameMode, Rarity};
+use crate::rules::Rules;
+
 // Data files — `include_str!` bakes the bytes into the crate, so there's no
 // separate resource-bundling step for desktop builds.
 const CARDS_JSON: &str = include_str!("../../../data/cards.json");
@@ -33,6 +36,8 @@ pub struct CardSummary {
     pub card_name_eng: String,
     /// Matches Python `CardKind`: 0=Digimon, 1=Tamer, 2=Option, 3=DigiEgg.
     pub card_kind: u8,
+    /// Matches Python `Rarity`: 0=C, 1=U, 2=R, 3=SR, 4=SEC, 5=P.
+    pub rarity: Rarity,
     /// Max copies allowed per deck. Defaults to 4; a handful of cards
     /// override it in the data file (e.g. starter-deck restrictions).
     pub max_count_in_deck: u32,
@@ -44,6 +49,8 @@ struct CardEntryRaw {
     #[serde(default)]
     card_name_eng: String,
     card_kind: u8,
+    #[serde(default)]
+    rarity: u8,
     #[serde(default = "default_max_count")]
     max_count_in_deck: u32,
 }
@@ -72,6 +79,7 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
                         card_id: v.card_id,
                         card_name_eng: v.card_name_eng,
                         card_kind: v.card_kind,
+                        rarity: Rarity::from_u8(v.rarity),
                         max_count_in_deck: v.max_count_in_deck,
                     },
                 )
@@ -124,45 +132,12 @@ where
     out
 }
 
-// ─── Restricted list ───────────────────────────────────────────────────
-//
-// Source: https://digimoncard.io/restricted-list. Must stay in sync with
-// `deck_loader.py::_BANNED / _RESTRICTED / _CHOICE_GROUPS`. Keeping the
-// entries in the same order as the Python file makes it obvious when one
-// side drifts out of step.
-
-const BANNED_CARDS: &[&str] = &[
-    "BT2-090", // Matt Ishida
-    "BT5-109", // Mega Digimon Fusion!
-    "EX5-065", // Sayo & Koh
-];
-
-const RESTRICTED_CARDS: &[&str] = &[
-    "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110", "BT14-002", "BT14-084",
-    "BT15-057", "BT15-102", "BT16-011", "BT17-069", "BT19-040", "BT2-047", "BT2-069", "BT3-054",
-    "BT3-103", "BT4-104", "BT4-111", "BT6-100", "BT6-104", "BT7-038", "BT7-064", "BT7-069",
-    "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068", "EX2-039", "EX2-070",
-    "EX3-057", "EX4-006", "EX4-019", "EX4-030", "EX5-015", "EX5-018", "EX5-062", "P-008", "P-025",
-    "P-029", "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
-];
-
-/// Choice groups: cards from side A and side B can't coexist in the same
-/// deck. Currently two groups:
-///   1. Mother D-Reaper vs Shoto Kazama
-///   2. Chaosmon: Valdur Arm vs Taomon + Sakuyamon (X Antibody)
-const CHOICE_GROUPS: &[(&[&str], &[&str])] = &[
-    (&["EX2-007"], &["EX7-064"]),
-    (&["BT20-037"], &["BT17-035", "EX8-037"]),
-];
-
-fn card_limit(card_id: &str) -> Option<u32> {
-    if BANNED_CARDS.contains(&card_id) {
-        return Some(0);
-    }
-    if RESTRICTED_CARDS.contains(&card_id) {
-        return Some(1);
-    }
-    None
+fn card_limit_with_restriction(rules: &Rules, card_id: &str) -> Option<u32> {
+    rules
+        .restriction
+        .card_limits
+        .get(card_id)
+        .map(|limit| u32::from(*limit))
 }
 
 // ─── Parsers ───────────────────────────────────────────────────────────
@@ -298,7 +273,7 @@ pub struct DeckValidationResult {
     pub warnings: Vec<String>,
 }
 
-/// Validate a flat card-id list against game rules + the restricted list.
+/// Validate a flat card-id list against standard game rules + the restricted list.
 ///
 /// Checks (order matches Python so error messages come out identically):
 ///   1. Unknown card warnings
@@ -307,6 +282,20 @@ pub struct DeckValidationResult {
 ///   4. Restricted list (banned → error, restricted → limit enforced)
 ///   5. Choice-group exclusivity
 pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
+    validate_deck_with_rules(card_ids, &Rules::standard())
+}
+
+/// Validate a flat card-id list against a named game mode.
+pub fn validate_deck_for_mode(
+    card_ids: &[String],
+    mode: GameMode,
+) -> Result<DeckValidationResult, String> {
+    let rules = Rules::for_mode(mode, None).map_err(|e| e.to_string())?;
+    Ok(validate_deck_with_rules(card_ids, &rules))
+}
+
+/// Validate a flat card-id list against explicit rules.
+pub fn validate_deck_with_rules(card_ids: &[String], rules: &Rules) -> DeckValidationResult {
     let db = card_database();
     let counts = summarize_deck(card_ids);
 
@@ -340,13 +329,17 @@ pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
         warnings.push(format!("Unknown card ID: {uid} (not in card database)"));
     }
 
-    if main_count != 50 {
+    if main_count != u32::from(rules.deck_size) {
         errors.push(format!(
-            "Main deck must be exactly 50 cards (got {main_count})"
+            "Main deck must be exactly {} cards (got {main_count})",
+            rules.deck_size
         ));
     }
-    if egg_count > 5 {
-        errors.push(format!("Digi-Egg deck must be 0-5 cards (got {egg_count})"));
+    if egg_count > u32::from(rules.egg_deck_max) {
+        errors.push(format!(
+            "Digi-Egg deck must be 0-{} cards (got {egg_count})",
+            rules.egg_deck_max
+        ));
     }
 
     // Iterate counts in sorted order so error messages are deterministic
@@ -365,9 +358,24 @@ pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
         }
     }
 
+    if rules.singleton {
+        for (card_id, count) in &sorted_counts {
+            let count = **count;
+            if count > 1 {
+                let name = db
+                    .get(card_id.as_str())
+                    .map(|e| e.card_name_eng.as_str())
+                    .unwrap_or(card_id.as_str());
+                errors.push(format!(
+                    "{card_id} ({name}): {count} copies exceeds singleton limit of 1"
+                ));
+            }
+        }
+    }
+
     for (card_id, count) in &sorted_counts {
         let count = **count;
-        if let Some(limit) = card_limit(card_id.as_str()) {
+        if let Some(limit) = card_limit_with_restriction(rules, card_id.as_str()) {
             let name = db
                 .get(card_id.as_str())
                 .map(|e| e.card_name_eng.as_str())
@@ -382,10 +390,29 @@ pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
         }
     }
 
+    if let Some(allowed_rarities) = &rules.allowed_card_rarities {
+        for (card_id, _) in &sorted_counts {
+            if let Some(entity) = db.get(card_id.as_str()) {
+                if !allowed_rarities.contains(&entity.rarity) {
+                    errors.push(format!(
+                        "{} ({}): rarity {} is not legal in this format",
+                        card_id,
+                        entity.card_name_eng,
+                        entity.rarity.code(),
+                    ));
+                }
+            }
+        }
+    }
+
     let deck_ids_set: HashSet<&str> = card_ids.iter().map(String::as_str).collect();
-    for (group_a, group_b) in CHOICE_GROUPS {
-        let has_a = group_a.iter().any(|cid| deck_ids_set.contains(cid));
-        let has_b = group_b.iter().any(|cid| deck_ids_set.contains(cid));
+    for (group_a, group_b) in &rules.restriction.choice_groups {
+        let has_a = group_a
+            .iter()
+            .any(|cid| deck_ids_set.contains(cid.as_str()));
+        let has_b = group_b
+            .iter()
+            .any(|cid| deck_ids_set.contains(cid.as_str()));
         if has_a && has_b {
             errors.push(format!(
                 "Choice restriction violated: cannot include cards from [{}] and [{}] in the same deck",

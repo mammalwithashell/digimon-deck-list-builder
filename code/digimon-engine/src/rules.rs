@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
 
-use crate::enums::{GameMode, SkipDraw, TitanRole};
+use crate::enums::{GameMode, Rarity, SkipDraw, TitanRole};
 
 /// Built once, cloned on each `CardRestriction::official_eng()` call — the data
 /// is effectively static config, so don't re-allocate the map and vectors every time.
@@ -98,6 +98,10 @@ pub struct Rules {
     pub max_turns: u16,
     pub skip_first_draw: SkipDraw,
     pub restriction: CardRestriction,
+    /// Optional format-level rarity gate. `None` means all rarities are legal.
+    /// Pauper uses `Some([C, U])`; otherwise it inherits standard rules.
+    #[serde(default)]
+    pub allowed_card_rarities: Option<Vec<Rarity>>,
 }
 
 impl Rules {
@@ -116,6 +120,16 @@ impl Rules {
             max_turns: 200,
             skip_first_draw: SkipDraw::FirstPlayerOnly,
             restriction: CardRestriction::official_eng(),
+            allowed_card_rarities: None,
+        }
+    }
+
+    /// Pauper format: standard 2-player rules and official ENG restrictions,
+    /// but only common and uncommon cards are legal.
+    pub fn pauper() -> Self {
+        Self {
+            allowed_card_rarities: Some(vec![Rarity::C, Rarity::U]),
+            ..Self::standard()
         }
     }
 
@@ -145,6 +159,7 @@ impl Rules {
             max_turns: 600,
             skip_first_draw: SkipDraw::AllRound1,
             restriction: CardRestriction::none(),
+            allowed_card_rarities: None,
         }
     }
 
@@ -165,6 +180,7 @@ impl Rules {
             max_turns: 400,
             skip_first_draw: SkipDraw::FirstPlayerOnly,
             restriction: CardRestriction::official_eng(),
+            allowed_card_rarities: None,
         }
     }
 
@@ -183,6 +199,7 @@ impl Rules {
             max_turns: 400,
             skip_first_draw: SkipDraw::FirstPlayerOnly,
             restriction: CardRestriction::official_eng(),
+            allowed_card_rarities: None,
         }
     }
 
@@ -194,6 +211,7 @@ impl Rules {
     pub fn for_mode(mode: GameMode, role: Option<TitanRole>) -> Result<Self, ForModeError> {
         match (mode, role) {
             (GameMode::Standard, None) => Ok(Self::standard()),
+            (GameMode::Pauper, None) => Ok(Self::pauper()),
             (GameMode::NoRestriction, None) => Ok(Self::no_restriction()),
             (GameMode::EdhCommander, None) => Ok(Self::edh()),
             (GameMode::Titan, Some(TitanRole::Boss)) => Ok(Self::titan_boss()),
@@ -254,6 +272,26 @@ mod tests {
         // 3 banned + 47 restricted = 50 entries
         assert_eq!(r.restriction.card_limits.len(), 50);
         assert_eq!(r.restriction.choice_groups.len(), 2);
+        assert!(r.allowed_card_rarities.is_none());
+    }
+
+    #[test]
+    fn pauper_matches_standard_except_rarity_gate() {
+        let r = Rules::pauper();
+        let std = Rules::standard();
+        assert_eq!(r.player_count, std.player_count);
+        assert_eq!(r.deck_size, std.deck_size);
+        assert_eq!(r.egg_deck_max, std.egg_deck_max);
+        assert_eq!(r.security_count, std.security_count);
+        assert_eq!(r.starting_hand, std.starting_hand);
+        assert_eq!(r.field_slots, std.field_slots);
+        assert_eq!(r.singleton, std.singleton);
+        assert_eq!(r.commander, std.commander);
+        assert_eq!(r.memory_range, std.memory_range);
+        assert_eq!(r.max_turns, std.max_turns);
+        assert_eq!(r.skip_first_draw, std.skip_first_draw);
+        assert_eq!(r.restriction, std.restriction);
+        assert_eq!(r.allowed_card_rarities, Some(vec![Rarity::C, Rarity::U]));
     }
 
     #[test]
@@ -261,6 +299,7 @@ mod tests {
         let r = Rules::no_restriction();
         assert!(r.restriction.card_limits.is_empty());
         assert!(r.restriction.choice_groups.is_empty());
+        assert!(r.allowed_card_rarities.is_none());
         // All other fields match standard()
         let std = Rules::standard();
         assert_eq!(r.player_count, std.player_count);
@@ -363,6 +402,10 @@ mod tests {
         assert_eq!(
             Rules::for_mode(GameMode::Standard, None).unwrap(),
             Rules::standard()
+        );
+        assert_eq!(
+            Rules::for_mode(GameMode::Pauper, None).unwrap(),
+            Rules::pauper()
         );
         assert_eq!(
             Rules::for_mode(GameMode::NoRestriction, None).unwrap(),
