@@ -57,11 +57,7 @@ impl ModifierEntry {
     /// defaults to `OpponentEffect` (printed text is "cannot be returned to
     /// the deck by your opponent's effects"), while `CannotBeDestroyed`
     /// defaults to `None` (cause-agnostic).
-    pub fn passive_replacement(
-        modifier: ModifierType,
-        expiry: Expiry,
-        source_player: u8,
-    ) -> Self {
+    pub fn passive_replacement(modifier: ModifierType, expiry: Expiry, source_player: u8) -> Self {
         Self {
             modifier,
             value: 0,
@@ -80,10 +76,7 @@ impl ModifierEntry {
     }
 
     /// Builder variant: attach a runtime `replacement_condition` closure.
-    pub fn with_condition(
-        mut self,
-        cond: crate::replacement::ReplacementConditionFn,
-    ) -> Self {
+    pub fn with_condition(mut self, cond: crate::replacement::ReplacementConditionFn) -> Self {
         self.replacement_condition = Some(cond);
         self
     }
@@ -173,10 +166,7 @@ impl PlayerModifierEntry {
     }
 
     /// Builder variant: attach a runtime `replacement_condition` closure.
-    pub fn with_condition(
-        mut self,
-        cond: crate::replacement::ReplacementConditionFn,
-    ) -> Self {
+    pub fn with_condition(mut self, cond: crate::replacement::ReplacementConditionFn) -> Self {
         self.replacement_condition = Some(cond);
         self
     }
@@ -326,9 +316,7 @@ impl ModifierRegistry {
     /// Expire modifiers at the end of an attack.
     pub fn expire_end_of_attack(&mut self) {
         for entries in self.permanent_modifiers.values_mut() {
-            entries.retain(|e| {
-                !matches!(e.expiry, Expiry::EndOfAttack | Expiry::EndOfBattle)
-            });
+            entries.retain(|e| !matches!(e.expiry, Expiry::EndOfAttack | Expiry::EndOfBattle));
         }
         for kws in self.permanent_keywords.values_mut() {
             kws.retain(|(_, expiry, _)| {
@@ -371,7 +359,10 @@ impl ModifierRegistry {
     }
 
     /// Iterate over all player-scoped modifier entries for `target_player`.
-    pub fn player_modifiers_iter(&self, target_player: PlayerId) -> impl Iterator<Item = &PlayerModifierEntry> {
+    pub fn player_modifiers_iter(
+        &self,
+        target_player: PlayerId,
+    ) -> impl Iterator<Item = &PlayerModifierEntry> {
         self.player_modifiers
             .get(&target_player)
             .map(|v| v.as_slice())
@@ -399,8 +390,7 @@ impl ModifierRegistry {
     pub fn expire_player_on_permanent_leave(&mut self, handle: PermanentHandle) {
         for entries in self.player_modifiers.values_mut() {
             entries.retain(|e| {
-                !(matches!(e.expiry, Expiry::UntilLeaveField)
-                    && e.source_permanent == Some(handle))
+                !(matches!(e.expiry, Expiry::UntilLeaveField) && e.source_permanent == Some(handle))
             });
         }
     }
@@ -418,12 +408,10 @@ mod tests {
     fn add_and_query() {
         let mut reg = ModifierRegistry::new();
         let target = h(0, 0);
-        reg.add(target, ModifierEntry::simple(
-            ModifierType::ChangeDp,
-            1000,
-            Expiry::EndOfTurn,
-            0,
-        ));
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::EndOfTurn, 0),
+        );
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 1000);
         assert!(reg.has(target, ModifierType::ChangeDp));
     }
@@ -441,18 +429,14 @@ mod tests {
     fn end_of_turn_expiry() {
         let mut reg = ModifierRegistry::new();
         let target = h(0, 0);
-        reg.add(target, ModifierEntry::simple(
-            ModifierType::ChangeDp,
-            1000,
-            Expiry::EndOfTurn,
-            0,
-        ));
-        reg.add(target, ModifierEntry::simple(
-            ModifierType::ChangeDp,
-            500,
-            Expiry::Permanent,
-            0,
-        ));
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::EndOfTurn, 0),
+        );
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 500, Expiry::Permanent, 0),
+        );
         reg.expire_end_of_turn(0);
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 500);
     }
@@ -461,12 +445,10 @@ mod tests {
     fn clear_on_leave_field() {
         let mut reg = ModifierRegistry::new();
         let target = h(0, 0);
-        reg.add(target, ModifierEntry::simple(
-            ModifierType::ChangeDp,
-            1000,
-            Expiry::Permanent,
-            0,
-        ));
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::Permanent, 0),
+        );
         reg.grant_keyword(target, Keyword::Rush, Expiry::Permanent, 0);
         reg.clear_permanent(target);
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 0);

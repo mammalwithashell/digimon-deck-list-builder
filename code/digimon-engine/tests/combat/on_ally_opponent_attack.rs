@@ -76,8 +76,7 @@ impl CardEffect for RecordAllyAttackAttacker {
 /// observer but MUST NOT fire because it's not an "ally" of the attacker.
 #[test]
 fn on_ally_attack_fires_on_same_controller_permanents_except_attacker() {
-    let ally_fires: Arc<Mutex<Vec<PermanentHandle>>> =
-        Arc::new(Mutex::new(Vec::new()));
+    let ally_fires: Arc<Mutex<Vec<PermanentHandle>>> = Arc::new(Mutex::new(Vec::new()));
 
     let mut r = DebugRunner::builder()
         .add_card(card("ATK"))
@@ -123,8 +122,7 @@ fn on_ally_attack_fires_on_same_controller_permanents_except_attacker() {
 /// Test 2 — OnOpponentAttack fires on the opposing controller's Digimon.
 #[test]
 fn on_opponent_attack_fires_on_opposite_controller() {
-    let opp_fires: Arc<Mutex<Vec<PermanentHandle>>> =
-        Arc::new(Mutex::new(Vec::new()));
+    let opp_fires: Arc<Mutex<Vec<PermanentHandle>>> = Arc::new(Mutex::new(Vec::new()));
 
     let mut r = DebugRunner::builder()
         .add_card(card("ATK"))
@@ -152,8 +150,7 @@ fn on_opponent_attack_fires_on_opposite_controller() {
 /// `ctx.game.pending_attack.attacker` at fire time.
 #[test]
 fn observers_see_attacker_via_ctx_helper() {
-    let seen_attackers: Arc<Mutex<Vec<PermanentHandle>>> =
-        Arc::new(Mutex::new(Vec::new()));
+    let seen_attackers: Arc<Mutex<Vec<PermanentHandle>>> = Arc::new(Mutex::new(Vec::new()));
 
     let mut r = DebugRunner::builder()
         .add_card(card("ATK"))

@@ -77,7 +77,10 @@ alt_paths:
     let ap = &spec.alt_paths[0];
     assert!(matches!(ap.kind, AltPathKind::DigiXros));
     assert_eq!(ap.materials.len(), 1);
-    assert!(matches!(ap.materials[0].repeat, Some(RepeatSpec::Keyword(_))));
+    assert!(matches!(
+        ap.materials[0].repeat,
+        Some(RepeatSpec::Keyword(_))
+    ));
     match &ap.cost {
         Some(CostSpec::Formula(_)) => {}
         other => panic!("expected formula cost, got {:?}", other),
@@ -139,8 +142,8 @@ alt_paths:
       - levle_eq: 6     # typo — silently dropped
         name_contains: Greymon
 "#;
-    let spec: digimon_engine::dsl::spec::CardSpec = serde_yml::from_str(yaml)
-        .expect("must parse despite typo (documents blindspot)");
+    let spec: digimon_engine::dsl::spec::CardSpec =
+        serde_yml::from_str(yaml).expect("must parse despite typo (documents blindspot)");
     // Material parsed with only the valid field populated; the typo is gone.
     let m = &spec.alt_paths[0].materials[0];
     assert_eq!(m.inline_filter.name_contains.as_deref(), Some("Greymon"));

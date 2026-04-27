@@ -1,4 +1,4 @@
-// Tauri-invoke wrappers for the Rust model manager (see src-tauri/src/models.rs).
+// Tauri-invoke wrappers for the desktop model manager (see src-tauri/src/models.rs).
 //
 // Only meaningful in desktop builds (VITE_BUILD_TARGET=desktop). On the web
 // build these commands don't exist — callers must gate on IS_DESKTOP before

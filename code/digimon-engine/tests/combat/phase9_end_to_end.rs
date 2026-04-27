@@ -144,7 +144,13 @@ fn counter_redirect_into_collision_forced_block_end_to_end() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let def_a = r.place_on_field(1, "DEF-A", Some(0));
     let def_b = r.place_on_field(1, "DEF-B", Some(0));
-    assert_eq!(def_b, PermanentHandle { player: 1, index: 1 });
+    assert_eq!(
+        def_b,
+        PermanentHandle {
+            player: 1,
+            index: 1
+        }
+    );
 
     // Counter Option redirects from DEF_A to DEF_B.
     r.register_effect(

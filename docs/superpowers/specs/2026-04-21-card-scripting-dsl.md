@@ -1006,6 +1006,18 @@ collapses two authoring surfaces (YAML + a separate Rust test file)
 into one, and lets LLM agents author behavioral coverage in the same
 edit as the effect they implement.
 
+**Implementation status (2026-04-26):** co-located YAML `tests:` blocks
+remain the target design, but they are not the active test authoring path
+yet. The current implementation uses hand-authored Rust tests that follow
+`docs/RUST_DSL_TEST_API.md`, backed by the curated real-card pool in
+`qa/dsl-test-pool.md`. The pool replaces the original "15 worked cards"
+test target for near-term coverage: it contains 22 cards spanning search,
+tamers, DigiXros/assembly, modifiers/flood gates, optionality,
+replacement/leave-field markers, DNA, and printed keywords. The first
+vertical slice (Nokia / Greymon / Omnimon) has landed with YAML fixtures,
+per-card behavioral tests, a mechanic-level aura test, and a headless
+runner smoke test using embedded DSL cards.
+
 The `/batch-implement-cards-rust` skill already mandates DebugRunner
 tests written *before* implementation; co-location enforces that
 discipline at the schema level — a card with `effects:` but no
@@ -1374,20 +1386,26 @@ rejected. Reasons:
 
 ### 6.2 raw_rust registry
 
-A global `CardEffectExtensionRegistry` holds named Rust fns authored
+An engine-owned `EngineRawRustRegistry` holds named Rust fns authored
 alongside the engine crate:
 
 ```
 digimon-engine/src/cards/raw_rust/
-├── mod.rs           # pub fn register_all(reg: &mut CardEffectExtensionRegistry)
-├── bt13_007.rs      # fn royal_knight_cost_reduction(ctx: &EffectReadContext) -> i32
-├── bt10_111.rs      # fn digixros_wildcard(ctx: &mut EffectContext, bindings: &BindingMap) -> BindingMap
+├── mod.rs           # pub fn build_registry() -> EngineRawRustRegistry
+├── bt13_007.rs      # fn royal_knight_cost_reduction(ctx: &EffectContext, target: PermanentHandle) -> i32
+├── bt10_111.rs      # fn digixros_wildcard(ctx: &mut EffectContext, bindings: &mut Bindings)
 └── ...
 ```
 
-`register_all()` runs once at crate startup. The registry is frozen
-before `CardRegistry::load()` so the DSL validator can resolve
-`raw_rust: fn_name` references.
+`build_registry()` runs once at crate startup. The registry is frozen
+before DSL card registration so the engine can resolve `raw_rust:
+fn_name` references for whole clauses, process steps, formulas, and
+scheduled bodies.
+
+Implementation note: formula raw_rust receives `(&EffectContext,
+PermanentHandle)` so it shares the same target-resolution point as
+`formula_eval::evaluate_with_raw`. Functions that only need read-only
+state must treat the context as read-only.
 
 ### 6.3 Granularity (locked: hybrid both-levels)
 
@@ -1599,8 +1617,9 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   DNA digivolve — asymmetric IR shapes; (d) `EffectInitiatedDigivolve`
   carries `cost: i32`, which can express `Free (0)` and `Fixed(n)` but
   not `Reduce(n)` — a Phase 3 IR-widening concern. Tracked follow-ups:
-  fire `OnDnaDigivolve` from both this primitive and the canonical
-  user-action path once `TODO(dna-digivolve-execute)` lands; widen
+  ~~fire `OnDnaDigivolve` from both this primitive and the canonical
+  user-action path once `TODO(dna-digivolve-execute)` lands~~ resolved
+  2026-04-26 (see `RUST_PYTHON_PARITY.md` §4.5e); widen
   `BindingValue::HandIndex` / `TrashIndex` to carry a `PlayerId` so
   placement steps can target opponent zones. Defers to 2f2+: formula
   values in `add_modifier`, `AsSelectingPlayer` override-persistence,
@@ -1740,6 +1759,34 @@ tensor+mask stream through 20 random game seeds is byte-identical.
   enum-match-only design as `compiled_timing_to_engine` to eliminate
   that class of bug.
 
+## DSL test-plan status
+
+**Current source of truth (2026-04-26):** use
+`docs/RUST_DSL_TEST_API.md` for how to write DSL card tests and
+`qa/dsl-test-pool.md` for which real cards anchor the coverage pool.
+The original "15 worked examples" in §10 remain useful design examples,
+but the near-term executable test plan is the 22-card pool.
+
+Landed test infrastructure:
+
+| Area | Status |
+|---|---|
+| DebugRunner DSL helpers | Landed: embedded DSL card loading, inline YAML loading, compiled-card inspection, pending-selection views, branch execution, auto-resolve, and event-log helpers. |
+| Example YAML pool | Landed under `code/digimon-engine/cards/_examples/` for all 22 pool cards. These are fixtures/examples, not yet production `cards/<set>/<card_id>.yaml` files. |
+| First vertical slice | Landed: Nokia / Agumon / WarGreymon / Omnimon / Tai & Matt fixture coverage, including per-card behavioral tests, a Nokia aura mechanic test, and a headless embedded-pack smoke test. |
+| Co-located YAML `tests:` generator | Not implemented yet. Keep authoring Rust tests per `docs/RUST_DSL_TEST_API.md` until this generator lands. |
+| Production card migration | Not started at scale. The current pool proves loader/compiler/runtime/test harness viability before moving YAML from `_examples` into production set folders. |
+
+Next test-plan steps:
+
+1. Promote the next small subset of pool cards from example fixtures to
+   production-style per-card behavioral tests, keeping one file per card
+   under `tests/cards_behavioral/<set>/`.
+2. Fill branch/negative-path coverage for the first slice where the smoke
+   tests currently only prove the happy path.
+3. Add the YAML `tests:` generator after the Rust test patterns settle;
+   generated tests should match the semantics described in §3.14.
+
 ## Phase 2 status
 
 **Phase 2 is feature-complete (sub-phases 2a–2f4 landed 2026-04-23
@@ -1777,8 +1824,26 @@ tail of replacement-effect cards (Evade, Partition, EX5-015).
 **TDD:** each new primitive gets a behavioral test *before* its
 lowering lands. Parity suite expands.
 
+**Progress (2026-04-26):** sub-phases 3a through 3e have landed in the
+engine/DSL infra test suite. Phase 3d now covers raw-rust formula
+dispatch, `CardCountInZone` zone/player payloads, aggregate scope,
+event predicates/bindings backed by trigger context, and next-turn
+scheduled generation checks. Phase 3e now covers scheduled-drain
+resume after DSL selections and `OnDnaDigivolve` wiring for both
+effect-initiated and user-action DNA paths.
+
 **Exit criteria:** ~3,000 cards retired (75%). Hand-written card
 footprint capped at ~1,000.
+
+**Phase 3 reducer status (2026-04-26):** LANDED. Replacement process
+bodies now lower through the shared DSL step runtime, replacement
+`active_when` gates are honored, partition `active_when` / source /
+cause gates are applied, common selection reducers (`select_any_permanent`,
+`select_dna_pair`) are available, cost deltas can express printed-cost
+reductions, formula-backed cost reductions and synchronous `pay_cost`
+bodies lower without `raw_rust`, and DSL DNA alt-path metadata can enrich
+the engine `CardData::dna_costs` surface consumed by action masks and DNA
+execution.
 
 ### 7.5 Phase 4 — raw_rust escape hatch + long tail
 
@@ -1793,6 +1858,14 @@ tested as a unit before wiring).
 **Exit criteria:** ≥99% DSL+raw_rust coverage; hand-written
 `CardEffect` crate entirely retired except for the raw_rust fns.
 
+**Phase 4 status (2026-04-26):** LANDED.
+`EngineRawRustRegistry` supports whole-clause, process-step, and
+formula-level raw_rust dispatch. Step runtime is threaded through nested
+DSL execution, selection continuations, delayed scheduling, and scheduled
+body replay. The residual hand-written production card surface now lives
+under `code/digimon-engine/src/cards/raw_rust/`; `src/cards/` no longer
+contains production set modules outside the raw_rust shell.
+
 ### 7.6 Retirement schedule for `digimon-engine/src/cards/`
 
 ```
@@ -1801,7 +1874,9 @@ Phase 1 (end)   src/cards/  unchanged   same — no cards retired yet
 Phase 2 (end)   src/cards/  shrinks     first 500 migrate; tests/*.rs rewritten
 Phase 3 (end)   src/cards/  shrinks     ~3000 migrate
 Phase 4 (end)   src/cards/  becomes     src/cards/raw_rust/*.rs + src/cards/test/*.rs
-                             a thin shell for test cards + ~120 raw_rust fns
+                             + src/cards/tokens/*.rs + keyword_effects.rs
+                             a thin shell for tests, tokens, keyword auto-effects,
+                             and ~120 raw_rust fns
 ```
 
 ## 7a. Distribution — build-time compilation, no YAML on desktop

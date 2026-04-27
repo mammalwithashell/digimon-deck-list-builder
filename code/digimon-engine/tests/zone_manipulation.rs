@@ -43,7 +43,9 @@ fn play_from_hand_free_ignores_printed_cost() {
     assert_eq!(r.memory(), 0);
     assert_eq!(r.hand_size(0), 1);
 
-    let result = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Free, PlaySource::ByHand);
+    let result = r
+        .game_mut()
+        .play_from_hand_with_cost(0, 0, CostDelta::Free, PlaySource::ByHand);
 
     assert_eq!(result, Some(0), "play should succeed at free cost");
     assert_eq!(r.hand_size(0), 0, "card leaves hand");
@@ -60,7 +62,9 @@ fn play_from_hand_reduce_subtracts_from_cost() {
         .start();
 
     let before = r.memory();
-    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Reduce(4), PlaySource::ByHand);
+    let res = r
+        .game_mut()
+        .play_from_hand_with_cost(0, 0, CostDelta::Reduce(4), PlaySource::ByHand);
     assert_eq!(res, Some(0));
     assert_eq!(r.memory(), before - 2, "6 - 4 = 2 memory paid");
 }
@@ -74,7 +78,9 @@ fn play_from_hand_reduce_clamps_at_zero() {
         .start();
 
     let before = r.memory();
-    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Reduce(10), PlaySource::ByHand);
+    let res =
+        r.game_mut()
+            .play_from_hand_with_cost(0, 0, CostDelta::Reduce(10), PlaySource::ByHand);
     assert_eq!(res, Some(0));
     assert_eq!(r.memory(), before, "reducing below 0 pays 0, not negative");
 }
@@ -88,8 +94,14 @@ fn play_from_hand_fixed_pays_exactly() {
         .start();
 
     let before = r.memory();
-    let res = r.game_mut().play_from_hand_with_cost(0, 0, CostDelta::Fixed(5), PlaySource::ByHand);
-    assert_eq!(res, Some(0), "fixed cost 5 at memory 0 is affordable (goes to -5)");
+    let res = r
+        .game_mut()
+        .play_from_hand_with_cost(0, 0, CostDelta::Fixed(5), PlaySource::ByHand);
+    assert_eq!(
+        res,
+        Some(0),
+        "fixed cost 5 at memory 0 is affordable (goes to -5)"
+    );
     assert_eq!(r.memory(), before - 5, "exactly 5 memory paid");
 }
 
@@ -261,7 +273,11 @@ fn reveal_top_deck_populates_reveal_pool() {
             .map(|c| c.card_id(&g.card_data).to_string())
             .collect()
     };
-    assert_eq!(card_ids, vec!["C".to_string(), "B".to_string()], "revealed top-first");
+    assert_eq!(
+        card_ids,
+        vec!["C".to_string(), "B".to_string()],
+        "revealed top-first"
+    );
 }
 
 #[test]
@@ -288,7 +304,11 @@ fn return_to_hand_moves_top_card_to_hand_and_sources_to_trash() {
     let handle = {
         let g = r.game_mut();
         let turn = g.turn_count;
-        let under_data = g.card_data.iter().position(|c| c.card_id == "UNDER").unwrap();
+        let under_data = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER")
+            .unwrap();
         let top_data = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
         let idx_under = g.next_card_index();
         let idx_top = g.next_card_index();
@@ -297,7 +317,10 @@ fn return_to_hand_moves_top_card_to_hand_and_sources_to_trash() {
         let mut perm = digimon_engine::permanent::Permanent::new(under, turn);
         perm.card_sources.push(top);
         g.players[0].battle_area.push(perm);
-        digimon_engine::permanent::PermanentHandle { player: 0, index: 0 }
+        digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: 0,
+        }
     };
 
     let returned = r.game_mut().return_to_hand(handle);
@@ -321,9 +344,12 @@ fn return_to_hand_moves_top_card_to_hand_and_sources_to_trash() {
 #[test]
 fn return_to_hand_bad_handle_returns_none() {
     let mut r = DebugRunner::builder().start();
-    let returned = r.game_mut().return_to_hand(
-        digimon_engine::permanent::PermanentHandle { player: 0, index: 99 }
-    );
+    let returned = r
+        .game_mut()
+        .return_to_hand(digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: 99,
+        });
     assert!(returned.is_none());
 }
 
@@ -335,11 +361,20 @@ use digimon_engine::permanent::PermanentHandle;
 fn seed_single_card_permanent(r: &mut DebugRunner, card_id: &str) -> PermanentHandle {
     let g = r.game_mut();
     let turn = g.turn_count;
-    let data_idx = g.card_data.iter().position(|c| c.card_id == card_id).unwrap();
+    let data_idx = g
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap();
     let card_idx = g.next_card_index();
     let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
-    g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
-    PermanentHandle { player: 0, index: 0 }
+    g.players[0]
+        .battle_area
+        .push(digimon_engine::permanent::Permanent::new(card, turn));
+    PermanentHandle {
+        player: 0,
+        index: 0,
+    }
 }
 
 #[test]
@@ -357,7 +392,12 @@ fn return_to_deck_top_places_on_top() {
     assert_eq!(r.deck_size(0), 3);
     let top_id = {
         let g = r.game_mut();
-        g.player(0).deck.last().unwrap().card_id(&g.card_data).to_string()
+        g.player(0)
+            .deck
+            .last()
+            .unwrap()
+            .card_id(&g.card_data)
+            .to_string()
     };
     assert_eq!(top_id, "TOP");
 }
@@ -375,7 +415,12 @@ fn return_to_deck_bottom_places_at_position_zero() {
     assert!(ok);
     let bottom_id = {
         let g = r.game_mut();
-        g.player(0).deck.first().unwrap().card_id(&g.card_data).to_string()
+        g.player(0)
+            .deck
+            .first()
+            .unwrap()
+            .card_id(&g.card_data)
+            .to_string()
     };
     assert_eq!(bottom_id, "BOTTOM");
 }
@@ -409,7 +454,10 @@ fn return_to_deck_random_inserts_somewhere() {
 fn return_to_deck_bad_handle_returns_false() {
     let mut r = DebugRunner::builder().start();
     let ok = r.game_mut().return_to_deck(
-        PermanentHandle { player: 0, index: 99 },
+        PermanentHandle {
+            player: 0,
+            index: 99,
+        },
         StackPosition::Top,
     );
     assert!(!ok);
@@ -483,7 +531,9 @@ fn return_to_deck_from_reveal_top_puts_card_on_top() {
     let revealed = r.game_mut().reveal_top_deck(0, 2);
     let first = revealed[0];
 
-    let ok = r.game_mut().return_to_deck_from_reveal(0, first, StackPosition::Top);
+    let ok = r
+        .game_mut()
+        .return_to_deck_from_reveal(0, first, StackPosition::Top);
     assert!(ok);
     // Card back on top of now-1-card deck.
     assert_eq!(r.deck_size(0), 1);
@@ -496,24 +546,32 @@ fn reveal_mover_missing_handle_is_noop() {
     let bogus = digimon_engine::card_source::CardHandle(u16::MAX);
     assert!(!r.game_mut().add_to_hand_from_reveal(0, bogus));
     assert!(!r.game_mut().trash_from_reveal(0, bogus));
-    assert!(!r.game_mut().return_to_deck_from_reveal(0, bogus, StackPosition::Top));
+    assert!(!r
+        .game_mut()
+        .return_to_deck_from_reveal(0, bogus, StackPosition::Top));
 }
 
 // ─── place_as_bottom_source ───────────────────────────────────────────────────
 
 use digimon_engine::enums::CardSourceRef;
 
-fn seed_single_card_permanent_with_id(
-    r: &mut DebugRunner,
-    card_id: &str,
-) -> PermanentHandle {
+fn seed_single_card_permanent_with_id(r: &mut DebugRunner, card_id: &str) -> PermanentHandle {
     let g = r.game_mut();
     let turn = g.turn_count;
-    let data_idx = g.card_data.iter().position(|c| c.card_id == card_id).unwrap();
+    let data_idx = g
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap();
     let card_idx = g.next_card_index();
     let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
-    g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
-    PermanentHandle { player: 0, index: 0 }
+    g.players[0]
+        .battle_area
+        .push(digimon_engine::permanent::Permanent::new(card, turn));
+    PermanentHandle {
+        player: 0,
+        index: 0,
+    }
 }
 
 #[test]
@@ -526,7 +584,9 @@ fn place_as_bottom_source_from_hand_stacks_under_target() {
 
     let target = seed_single_card_permanent_with_id(&mut r, "BASE");
 
-    let ok = r.game_mut().place_as_bottom_source(CardSourceRef::Hand(0, 0), target);
+    let ok = r
+        .game_mut()
+        .place_as_bottom_source(CardSourceRef::Hand(0, 0), target);
     assert!(ok);
     assert_eq!(r.hand_size(0), 0);
 
@@ -555,20 +615,28 @@ fn place_as_bottom_source_from_trash() {
     // Seed trash
     {
         let g = r.game_mut();
-        let data_idx = g.card_data.iter().position(|c| c.card_id == "DEAD").unwrap();
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "DEAD")
+            .unwrap();
         let card_idx = g.next_card_index();
         let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
         g.player_mut(0).trash.push(card);
     }
     assert_eq!(r.trash_size(0), 1);
 
-    let ok = r.game_mut().place_as_bottom_source(CardSourceRef::Trash(0, 0), target);
+    let ok = r
+        .game_mut()
+        .place_as_bottom_source(CardSourceRef::Trash(0, 0), target);
     assert!(ok);
     assert_eq!(r.trash_size(0), 0);
 
     let bottom_id = {
         let g = r.game_mut();
-        g.player(0).battle_area[0].card_sources[0].card_id(&g.card_data).to_string()
+        g.player(0).battle_area[0].card_sources[0]
+            .card_id(&g.card_data)
+            .to_string()
     };
     assert_eq!(bottom_id, "DEAD");
 }
@@ -584,13 +652,17 @@ fn place_as_bottom_source_from_deck_top() {
     let target = seed_single_card_permanent_with_id(&mut r, "BASE");
     assert_eq!(r.deck_size(0), 1);
 
-    let ok = r.game_mut().place_as_bottom_source(CardSourceRef::DeckTop(0), target);
+    let ok = r
+        .game_mut()
+        .place_as_bottom_source(CardSourceRef::DeckTop(0), target);
     assert!(ok);
     assert_eq!(r.deck_size(0), 0);
 
     let bottom_id = {
         let g = r.game_mut();
-        g.player(0).battle_area[0].card_sources[0].card_id(&g.card_data).to_string()
+        g.player(0).battle_area[0].card_sources[0]
+            .card_id(&g.card_data)
+            .to_string()
     };
     assert_eq!(bottom_id, "TOP");
 }
@@ -607,13 +679,17 @@ fn place_as_bottom_source_from_reveal() {
     let revealed = r.game_mut().reveal_top_deck(0, 1);
     let handle = revealed[0];
 
-    let ok = r.game_mut().place_as_bottom_source(CardSourceRef::Reveal(handle), target);
+    let ok = r
+        .game_mut()
+        .place_as_bottom_source(CardSourceRef::Reveal(handle), target);
     assert!(ok);
     assert_eq!(r.game_mut().revealed_cards.len(), 0);
 
     let bottom_id = {
         let g = r.game_mut();
-        g.player(0).battle_area[0].card_sources[0].card_id(&g.card_data).to_string()
+        g.player(0).battle_area[0].card_sources[0]
+            .card_id(&g.card_data)
+            .to_string()
     };
     assert_eq!(bottom_id, "RV");
 }
@@ -625,9 +701,15 @@ fn place_as_bottom_source_bad_source_index_returns_false() {
         .start();
     let target = seed_single_card_permanent_with_id(&mut r, "BASE");
 
-    assert!(!r.game_mut().place_as_bottom_source(CardSourceRef::Hand(0, 99), target));
-    assert!(!r.game_mut().place_as_bottom_source(CardSourceRef::Trash(0, 99), target));
-    assert!(!r.game_mut().place_as_bottom_source(CardSourceRef::DeckTop(0), target)); // empty deck
+    assert!(!r
+        .game_mut()
+        .place_as_bottom_source(CardSourceRef::Hand(0, 99), target));
+    assert!(!r
+        .game_mut()
+        .place_as_bottom_source(CardSourceRef::Trash(0, 99), target));
+    assert!(!r
+        .game_mut()
+        .place_as_bottom_source(CardSourceRef::DeckTop(0), target)); // empty deck
 }
 
 // ─── effect_initiated_digivolve ───────────────────────────────────────────────
@@ -686,11 +768,20 @@ fn effect_initiated_digivolve_places_card_on_target_for_free() {
     let target = {
         let g = r.game_mut();
         let turn = g.turn_count;
-        let data_idx = g.card_data.iter().position(|c| c.card_id == "BASE3").unwrap();
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BASE3")
+            .unwrap();
         let card_idx = g.next_card_index();
         let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
-        g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
-        PermanentHandle { player: 0, index: 0 }
+        g.players[0]
+            .battle_area
+            .push(digimon_engine::permanent::Permanent::new(card, turn));
+        PermanentHandle {
+            player: 0,
+            index: 0,
+        }
     };
 
     let memory_before = r.memory();
@@ -743,20 +834,38 @@ fn effect_initiated_digivolve_ignore_color_bypasses_color_check() {
         let data_idx = g.card_data.iter().position(|c| c.card_id == "B3").unwrap();
         let card_idx = g.next_card_index();
         let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
-        g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
-        PermanentHandle { player: 0, index: 0 }
+        g.players[0]
+            .battle_area
+            .push(digimon_engine::permanent::Permanent::new(card, turn));
+        PermanentHandle {
+            player: 0,
+            index: 0,
+        }
     };
 
     // With ignore_color = false, should fail (Red base vs Blue evo cost).
     let ok_strict = r.game_mut().effect_initiated_digivolve(
-        0, 0, target, CostDelta::Free, false, PlaySource::ByEffect,
+        0,
+        0,
+        target,
+        CostDelta::Free,
+        false,
+        PlaySource::ByEffect,
     );
-    assert!(!ok_strict, "color mismatch should block without ignore_color");
+    assert!(
+        !ok_strict,
+        "color mismatch should block without ignore_color"
+    );
     assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
 
     // With ignore_color = true, should succeed.
     let ok_loose = r.game_mut().effect_initiated_digivolve(
-        0, 0, target, CostDelta::Free, true, PlaySource::ByEffect,
+        0,
+        0,
+        target,
+        CostDelta::Free,
+        true,
+        PlaySource::ByEffect,
     );
     assert!(ok_loose, "ignore_color bypasses color check");
     assert_eq!(r.hand_size(0), 0, "EVO moved to stack");
@@ -790,14 +899,27 @@ fn effect_initiated_digivolve_bad_level_returns_false() {
         let data_idx = g.card_data.iter().position(|c| c.card_id == "B3").unwrap();
         let card_idx = g.next_card_index();
         let card = digimon_engine::card_source::CardSource::new(data_idx, 0, card_idx);
-        g.players[0].battle_area.push(digimon_engine::permanent::Permanent::new(card, turn));
-        PermanentHandle { player: 0, index: 0 }
+        g.players[0]
+            .battle_area
+            .push(digimon_engine::permanent::Permanent::new(card, turn));
+        PermanentHandle {
+            player: 0,
+            index: 0,
+        }
     };
 
     let ok = r.game_mut().effect_initiated_digivolve(
-        0, 0, target, CostDelta::Free, true, PlaySource::ByEffect,
+        0,
+        0,
+        target,
+        CostDelta::Free,
+        true,
+        PlaySource::ByEffect,
     );
-    assert!(!ok, "level mismatch should return false even with ignore_color=true");
+    assert!(
+        !ok,
+        "level mismatch should return false even with ignore_color=true"
+    );
     assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
 }
 
@@ -895,17 +1017,19 @@ fn place_on_security_bottom_places_at_index_zero() {
         .security(0, &["FILLER", "FILLER"])
         .start();
 
-    let ok = r.game_mut().place_on_security(
-        0,
-        CardSourceRef::Hand(0, 0),
-        StackPosition::Bottom,
-        false,
-    );
+    let ok =
+        r.game_mut()
+            .place_on_security(0, CardSourceRef::Hand(0, 0), StackPosition::Bottom, false);
     assert!(ok);
     // security is Vec; bottom = index 0
     let bottom_id = {
         let g = r.game_mut();
-        g.player(0).security.first().unwrap().card_id(&g.card_data).to_string()
+        g.player(0)
+            .security
+            .first()
+            .unwrap()
+            .card_id(&g.card_data)
+            .to_string()
     };
     assert_eq!(bottom_id, "BOT");
 }
@@ -913,11 +1037,8 @@ fn place_on_security_bottom_places_at_index_zero() {
 #[test]
 fn place_on_security_bad_source_returns_false() {
     let mut r = DebugRunner::builder().start();
-    let ok = r.game_mut().place_on_security(
-        0,
-        CardSourceRef::Hand(0, 99),
-        StackPosition::Top,
-        false,
-    );
+    let ok =
+        r.game_mut()
+            .place_on_security(0, CardSourceRef::Hand(0, 99), StackPosition::Top, false);
     assert!(!ok);
 }

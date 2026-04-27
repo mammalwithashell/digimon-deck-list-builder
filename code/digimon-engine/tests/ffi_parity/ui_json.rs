@@ -40,7 +40,11 @@ fn player_ids_use_python_convention() {
     assert_eq!(value["player1"]["id"], serde_json::json!(1));
     assert_eq!(value["player2"]["id"], serde_json::json!(2));
     let cp = value["currentPlayer"].as_i64().unwrap();
-    assert!(cp == 1 || cp == 2, "currentPlayer must be 1 or 2, got {}", cp);
+    assert!(
+        cp == 1 || cp == 2,
+        "currentPlayer must be 1 or 2, got {}",
+        cp
+    );
 }
 
 #[test]
@@ -82,7 +86,9 @@ fn pending_selection_serializes_when_installed() {
     r.play(0, 0);
 
     let value = to_ui_json(&r.game);
-    let ps = value["pendingSelection"].as_object().expect("pendingSelection is object");
+    let ps = value["pendingSelection"]
+        .as_object()
+        .expect("pendingSelection is object");
     assert_eq!(ps["selectingPlayer"], serde_json::json!(1));
     assert!(ps["validIndices"].is_array());
     assert_eq!(ps["isOptional"], serde_json::json!(true));
@@ -111,7 +117,11 @@ fn current_phase_is_integer_matching_python() {
     let value = to_ui_json(&r.game);
     // Python's GamePhase enum integer values must match. Breeding is
     // phase 3 in Python's enum.
-    assert!(value["currentPhase"].is_i64(), "currentPhase must be int, got {:?}", value["currentPhase"]);
+    assert!(
+        value["currentPhase"].is_i64(),
+        "currentPhase must be int, got {:?}",
+        value["currentPhase"]
+    );
 }
 
 #[test]
@@ -123,7 +133,9 @@ fn colors_emitted_as_python_int_values() {
         .hand(0, &["TEST-001"])
         .start();
     let value = to_ui_json(&r.game);
-    let hand_cards = value["player1"]["handCards"].as_array().expect("handCards is array");
+    let hand_cards = value["player1"]["handCards"]
+        .as_array()
+        .expect("handCards is array");
     assert!(!hand_cards.is_empty(), "expected at least one hand card");
     let colors = hand_cards[0]["colors"].as_array().expect("colors is array");
     assert!(!colors.is_empty(), "expected at least one color");
@@ -134,7 +146,11 @@ fn colors_emitted_as_python_int_values() {
         colors[0]
     );
     // Red == 0 in Python's CardColor enum
-    assert_eq!(colors[0], serde_json::json!(0), "Red must map to Python value 0");
+    assert_eq!(
+        colors[0],
+        serde_json::json!(0),
+        "Red must map to Python value 0"
+    );
 }
 
 #[test]

@@ -54,8 +54,7 @@ effects:
           prompt: "Return a card from trash"
       - add_to_hand_from_trash: { of: you, card: pick }
 "#;
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(yaml).expect("valid YAML");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("valid YAML");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles");
 
     // Seed: DSL-E2E-002 in player 0's hand, TGT in player 0's trash.
@@ -138,8 +137,7 @@ effects:
           optional: true
       - add_to_hand_from_trash: { of: you, card: pick }
 "#;
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(yaml).expect("valid YAML");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("valid YAML");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles");
 
     // Player 0 has a hand card but an empty trash.

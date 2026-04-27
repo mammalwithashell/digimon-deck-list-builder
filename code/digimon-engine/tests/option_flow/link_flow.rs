@@ -154,11 +154,7 @@ fn link_installs_host_selection() {
         "pending_option carries through LinkSelectHost"
     );
     assert_eq!(
-        r.game
-            .pending_option
-            .as_ref()
-            .unwrap()
-            .resolution_phase,
+        r.game.pending_option.as_ref().unwrap().resolution_phase,
         digimon_engine::selection::OptionResolutionPhase::LinkSelectHost
     );
     // Not yet attached.
@@ -422,14 +418,17 @@ fn linked_card_not_targetable_by_attack_or_delete() {
     // standalone) does not get a bit because no such slot exists in
     // P0.battle_area.
     let mask = build_action_mask(&r.game, 1);
-    let bit_phantom = digimon_engine::action::space::encode_attack(attacker.index as u16, 1)
-        as usize;
+    let bit_phantom =
+        digimon_engine::action::space::encode_attack(attacker.index as u16, 1) as usize;
     assert_eq!(
         mask[bit_phantom], 0.0,
         "no attack bit for a non-existent slot"
     );
     // Direct attack to the phantom linked slot must also be rejected.
-    let phantom = digimon_engine::permanent::PermanentHandle { player: 0, index: 1 };
+    let phantom = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 1,
+    };
     let attack_out = r.game.attack_digimon(attacker, phantom, false);
     assert_eq!(attack_out, digimon_engine::combat::AttackResult::Invalid);
 }

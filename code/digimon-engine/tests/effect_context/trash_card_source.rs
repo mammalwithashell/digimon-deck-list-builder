@@ -83,7 +83,11 @@ fn trash_card_source_removes_mid_stack_card() {
         let perm = &r.game.players[tp as usize].battle_area[perm_idx];
         assert_eq!(perm.card_sources.len(), 3, "3-card stack before");
     }
-    assert_eq!(r.game.players[tp as usize].trash.len(), 0, "trash empty before");
+    assert_eq!(
+        r.game.players[tp as usize].trash.len(),
+        0,
+        "trash empty before"
+    );
 
     // Apply trash_card_source targeting MID-SOURCE.
     {
@@ -135,15 +139,15 @@ fn trash_card_source_removes_bottom_card() {
     let perm_idx = perm_handle.index as usize;
 
     // Capture BASE handle before pushing TOP.
-    let base_handle = r.game.players[tp as usize].battle_area[perm_idx]
-        .card_sources[0]
-        .handle();
+    let base_handle = r.game.players[tp as usize].battle_area[perm_idx].card_sources[0].handle();
 
     push_source_on_top(&mut r, tp, perm_idx, "TOP");
 
     // Pre-condition: 2-card stack.
     assert_eq!(
-        r.game.players[tp as usize].battle_area[perm_idx].card_sources.len(),
+        r.game.players[tp as usize].battle_area[perm_idx]
+            .card_sources
+            .len(),
         2
     );
 

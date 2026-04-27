@@ -88,7 +88,13 @@ fn raid_attacker_retargets_when_original_target_leaves() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let _def = r.place_on_field(1, "DEF", Some(0));
     let victim = r.place_on_field(1, "VICTIM", Some(0));
-    assert_eq!(victim, PermanentHandle { player: 1, index: 1 });
+    assert_eq!(
+        victim,
+        PermanentHandle {
+            player: 1,
+            index: 1
+        }
+    );
 
     // Attacker has Raid; OnAttack deletes the declared target (VICTIM).
     r.game
@@ -183,7 +189,13 @@ fn non_raid_attacker_fizzles_without_retarget() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let _def = r.place_on_field(1, "DEF", Some(0));
     let victim = r.place_on_field(1, "VICTIM", Some(0));
-    assert_eq!(victim, PermanentHandle { player: 1, index: 1 });
+    assert_eq!(
+        victim,
+        PermanentHandle {
+            player: 1,
+            index: 1
+        }
+    );
 
     // NO Raid keyword on attacker. OnAttack still deletes the declared target.
     r.register_effect("ATK", Arc::new(DeleteOnAttack(victim)));
@@ -225,7 +237,13 @@ fn raid_retarget_fires_on_attack_target_change() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     let _def = r.place_on_field(1, "DEF", Some(0));
     let victim = r.place_on_field(1, "VICTIM", Some(0));
-    assert_eq!(victim, PermanentHandle { player: 1, index: 1 });
+    assert_eq!(
+        victim,
+        PermanentHandle {
+            player: 1,
+            index: 1
+        }
+    );
 
     r.game
         .modifiers
@@ -248,7 +266,10 @@ fn raid_retarget_fires_on_attack_target_change() {
         .resolve_selection(0, retarget_action)
         .expect("attacker's controller resolves Raid retarget");
 
-    let def_after_retarget = PermanentHandle { player: 1, index: 0 };
+    let def_after_retarget = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
     let log = witness_log.lock().unwrap().clone();
     assert!(
         log.iter()
@@ -257,4 +278,3 @@ fn raid_retarget_fires_on_attack_target_change() {
         log
     );
 }
-

@@ -83,16 +83,8 @@ fn on_block_fires_globally_when_blocker_declared() {
         .resolve_selection(1, block_action)
         .expect("declare blocker");
 
-    assert_eq!(
-        *p0_count.lock().unwrap(),
-        1,
-        "P0 witness saw OnBlock fire"
-    );
-    assert_eq!(
-        *p1_count.lock().unwrap(),
-        1,
-        "P1 witness saw OnBlock fire"
-    );
+    assert_eq!(*p0_count.lock().unwrap(), 1, "P0 witness saw OnBlock fire");
+    assert_eq!(*p1_count.lock().unwrap(), 1, "P1 witness saw OnBlock fire");
 }
 
 /// Test 2 — OnBlock observer reads `effective_target` post-declare: it
@@ -126,10 +118,7 @@ fn on_block_sees_post_declare_state() {
         .expect("declare blocker");
 
     let entries = log.lock().unwrap().clone();
-    assert!(
-        !entries.is_empty(),
-        "OnBlock observer should fire"
-    );
+    assert!(!entries.is_empty(), "OnBlock observer should fire");
     // Every observation should see the blocker as effective_target, not DEF.
     for t in &entries {
         match t {

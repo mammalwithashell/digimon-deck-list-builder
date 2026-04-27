@@ -34,10 +34,7 @@ fn retaliation_deletes_winner_when_self_loses_battle() {
     };
     let retal = retaliation_card("RETAL", 3000);
 
-    let mut r = DebugRunner::builder()
-        .add_card(atk)
-        .add_card(retal)
-        .start();
+    let mut r = DebugRunner::builder().add_card(atk).add_card(retal).start();
 
     // Pass Some(0) for turn_played_override to bypass summoning sickness
     // (turn_count == 1 after start_game(); turn_played == 0 < 1 → not fresh).
@@ -100,7 +97,11 @@ fn retaliation_does_not_fire_on_effect_deletion() {
         "BYSTANDER must survive — Retaliation must not fire on OpponentEffect deletion"
     );
     assert_eq!(r.game.players[1].trash.len(), 0);
-    assert_eq!(r.game.players[0].trash.len(), 1, "RETAL is trashed normally");
+    assert_eq!(
+        r.game.players[0].trash.len(),
+        1,
+        "RETAL is trashed normally"
+    );
 }
 
 // ─── Test 3: cause gate — own-effect deletion does NOT fire Retaliation ──────
@@ -127,7 +128,11 @@ fn retaliation_does_not_fire_on_own_effect_deletion() {
         1,
         "BYSTANDER must survive — Retaliation must not fire on OwnEffect deletion"
     );
-    assert_eq!(r.game.players[0].trash.len(), 1, "RETAL is trashed normally");
+    assert_eq!(
+        r.game.players[0].trash.len(),
+        1,
+        "RETAL is trashed normally"
+    );
 }
 
 // ─── Test 4: mutual destruction ──────────────────────────────────────────────
@@ -142,10 +147,7 @@ fn retaliation_handles_mutual_destruction() {
     let r1 = retaliation_card("R1", 4000);
     let r2 = retaliation_card("R2", 4000);
 
-    let mut r = DebugRunner::builder()
-        .add_card(r1)
-        .add_card(r2)
-        .start();
+    let mut r = DebugRunner::builder().add_card(r1).add_card(r2).start();
 
     let r1_h = r.place_on_field(0, "R1", Some(0));
     let r2_h = r.place_on_field(1, "R2", Some(0));

@@ -18,7 +18,9 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::cards::CardEffectRegistry;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType};
+use digimon_engine::enums::{
+    CardColor, CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType,
+};
 use digimon_engine::modifiers::PlayerModifierEntry;
 
 // ─── Helper card factories ────────────────────────────────────────────────────
@@ -82,7 +84,13 @@ fn cannot_play_from_hand_player_scoped_zeroes_hand_bits_for_target_player() {
     // Install player-scoped CannotPlayFromHand on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotPlayFromHand, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayFromHand,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     let mask_p0 = build_action_mask(&r.game, tp);
@@ -122,7 +130,13 @@ fn player_scoped_mask_gates_are_symmetric_per_player() {
     // Install CannotPlayFromHand on the OPPONENT (not the turn player).
     r.game.modifiers.add_player_modifier(
         opp,
-        PlayerModifierEntry::simple(ModifierType::CannotPlayFromHand, 0, Expiry::Permanent, None, tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayFromHand,
+            0,
+            Expiry::Permanent,
+            None,
+            tp,
+        ),
     );
 
     // Turn player's hand bit should still be 1.0 (they are unaffected).
@@ -158,7 +172,8 @@ fn cannot_attack_player_scoped_zeroes_attack_bits() {
     // Verify attack bits are lit before installing the modifier.
     let mask_before = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask_before[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask_before[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "security attack should be available before CannotAttack"
     );
 
@@ -203,7 +218,8 @@ fn cannot_attack_only_affects_target_player() {
 
     let mask_tp = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask_tp[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask_tp[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "turn player's security-attack bit should be unaffected when CannotAttack is on opponent"
     );
 }
@@ -229,7 +245,9 @@ fn cannot_attack_also_gates_end_of_turn_attack_bits() {
     let defender = r.place_on_field(opp, "DEF", Some(0));
 
     // Grant Vortex keyword so the EndOfTurnAction arm would normally emit attack bits.
-    r.game.modifiers.grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
 
     // Enter EndOfTurnAction.
     r.game.current_phase = GamePhase::EndOfTurnAction;
@@ -237,11 +255,13 @@ fn cannot_attack_also_gates_end_of_turn_attack_bits() {
     // Confirm attack bits ARE lit before blocking (validates the test setup).
     let mask_before = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask_before[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize], 1.0,
+        mask_before[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
         "Vortex should emit security-attack bit in EndOfTurnAction before CannotAttack"
     );
     assert_eq!(
-        mask_before[encode_attack(attacker.index as u16, defender.index as u16) as usize], 1.0,
+        mask_before[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        1.0,
         "Vortex should emit digimon-attack bit in EndOfTurnAction before CannotAttack"
     );
 
@@ -284,9 +304,8 @@ fn field_main_registry() -> CardEffectRegistry {
 }
 
 fn field_main_bit(field_index: usize) -> usize {
-    (FIELD_EFFECT_START
-        + field_index as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN)
+        as usize
 }
 
 /// Install CannotActivateMainEffects on the turn player → all FIELD_EFFECT bits must be zero.
@@ -317,7 +336,13 @@ fn cannot_activate_main_effects_zeroes_field_effect_bits() {
     // Step 2: install CannotActivateMainEffects on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotActivateMainEffects, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotActivateMainEffects,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     // Step 3: all FIELD_EFFECT bits must now be zero — modifier suppressed the live bit.

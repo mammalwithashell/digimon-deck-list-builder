@@ -28,6 +28,7 @@ use crate::permanent::PermanentHandle;
 use crate::selection::{
     EffectChoiceEntry, PendingSelection, QueuedEffect, SelectionKind, TriggerSource,
 };
+use crate::trigger_context::TriggerContext;
 
 /// Max iterations the drainer will take before aborting a suspected infinite
 /// chain. Matches Python's `_resolve_effect_stack` limit.
@@ -45,7 +46,8 @@ impl Game {
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
         match source {
             TriggerSource::Permanent(handle) => {
-                self.enqueue_from_permanent(timing, handle);
+                let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                self.enqueue_from_permanent(timing, handle, Some(trigger_context));
             }
             TriggerSource::PlayerBattleArea(player) => {
                 // Snapshot indices up-front. Firing an effect via the drainer
@@ -56,11 +58,13 @@ impl Game {
                         player,
                         index: i as u8,
                     };
-                    self.enqueue_from_permanent(timing, handle);
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
             TriggerSource::SecurityRevealed { defender, card } => {
-                self.enqueue_from_security_card(timing, defender, card);
+                let trigger_context = self.trigger_context_for_source(&source, None);
+                self.enqueue_from_security_card(timing, defender, card, Some(trigger_context));
             }
             TriggerSource::OnSecurityCheck { defender, .. } => {
                 // Observer timing: scan every permanent in the defender's
@@ -75,7 +79,8 @@ impl Game {
                         player: defender,
                         index: i as u8,
                     };
-                    self.enqueue_from_permanent(timing, handle);
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
         }
@@ -120,7 +125,10 @@ impl Game {
                 .filter_map(|(i, qe)| (qe.controller == chooser).then_some(i))
                 .collect();
 
-            debug_assert!(!bundle.is_empty(), "next_chooser returned a player with no queued effects");
+            debug_assert!(
+                !bundle.is_empty(),
+                "next_chooser returned a player with no queued effects"
+            );
 
             if bundle.len() == 1 {
                 // Single trigger — auto-fire, no prompt.
@@ -165,15 +173,69 @@ impl Game {
             // Cap at HAND_MAIN_LIMIT (30) to fit the reused 30-59 action
             // range. Overflow auto-fires in collection order after the prompt
             // completes (rare; see the cap handling inside install_*).
-            let any_mandatory = bundle
-                .iter()
-                .any(|&i| !self.effect_queue[i].is_optional);
+            let any_mandatory = bundle.iter().any(|&i| !self.effect_queue[i].is_optional);
             self.install_trigger_order_selection(chooser, &bundle, !any_mandatory);
             return;
         }
     }
 
+    /// Drain triggered effects while exposing the DNA-origin bit to condition
+    /// and process contexts. The previous value is restored after the drain.
+    pub(crate) fn drain_effect_queue_with_dna_origin(&mut self, dna_origin: bool) {
+        let prev = self.current_dna_origin;
+        self.current_dna_origin = Some(dna_origin);
+        self.drain_effect_queue();
+        self.current_dna_origin = prev;
+    }
+
     // ─── Internal helpers ───────────────────────────────────────────
+
+    fn trigger_context_for_source(
+        &self,
+        source: &TriggerSource,
+        source_permanent: Option<PermanentHandle>,
+    ) -> TriggerContext {
+        match *source {
+            TriggerSource::Permanent(handle) => TriggerContext {
+                target_permanent: Some(handle),
+                target_card: self.top_card_handle(handle),
+                source_player: Some(handle.player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::PlayerBattleArea(player) => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::SecurityRevealed { defender, card } => TriggerContext {
+                target_card: Some(card),
+                event_card: Some(card),
+                source_player: Some(defender),
+                was_security_skill: true,
+                ..TriggerContext::default()
+            },
+            TriggerSource::OnSecurityCheck {
+                attacker,
+                defender,
+                revealed_card,
+                ..
+            } => TriggerContext {
+                target_permanent: Some(attacker),
+                target_card: Some(revealed_card),
+                event_card: Some(revealed_card),
+                source_player: Some(defender),
+                was_security_skill: false,
+            },
+        }
+    }
+
+    fn top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
+        self.players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.top_card().handle())
+    }
 
     /// Collect `SecuritySkill` effects off a revealed security card. The
     /// card is expected to be parked in `Game.pending_security` (popped off
@@ -185,6 +247,7 @@ impl Game {
         timing: EffectTiming,
         defender: PlayerId,
         card: CardHandle,
+        trigger_context: Option<TriggerContext>,
     ) {
         let Some(pending) = self.pending_security.as_ref() else {
             return;
@@ -217,6 +280,7 @@ impl Game {
                 source_permanent: None,
                 controller: defender,
                 timing,
+                trigger_context,
                 effect_slot: slot as u8,
                 is_optional: effect.optional,
                 is_turn_player,
@@ -235,7 +299,12 @@ impl Game {
     /// controller and source-permanent, but with `source_card` pointing at
     /// the linked card so the re-lookup in `run_queued_effect_inner` finds
     /// the right script.
-    fn enqueue_from_permanent(&mut self, timing: EffectTiming, handle: PermanentHandle) {
+    fn enqueue_from_permanent(
+        &mut self,
+        timing: EffectTiming,
+        handle: PermanentHandle,
+        trigger_context: Option<TriggerContext>,
+    ) {
         let Some(perm) = self
             .players
             .get(handle.player as usize)
@@ -258,7 +327,12 @@ impl Game {
             .players
             .get(handle.player as usize)
             .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|p| matches!(p.option_state, crate::permanent::OptionState::Training { .. }))
+            .map(|p| {
+                matches!(
+                    p.option_state,
+                    crate::permanent::OptionState::Training { .. }
+                )
+            })
             .unwrap_or(false);
 
         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
@@ -274,6 +348,7 @@ impl Game {
                     source_permanent: Some(handle),
                     controller: handle.player,
                     timing,
+                    trigger_context,
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
@@ -315,6 +390,7 @@ impl Game {
                     source_permanent: Some(handle),
                     controller: handle.player,
                     timing,
+                    trigger_context,
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
@@ -355,7 +431,12 @@ impl Game {
             .players
             .get(handle.player as usize)
             .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|p| matches!(p.option_state, crate::permanent::OptionState::Training { .. }))
+            .map(|p| {
+                matches!(
+                    p.option_state,
+                    crate::permanent::OptionState::Training { .. }
+                )
+            })
             .unwrap_or(false);
         if !self_is_training {
             let training_sources: Vec<(String, crate::card_source::CardHandle)> = {
@@ -395,6 +476,7 @@ impl Game {
                         source_permanent: Some(handle),
                         controller: handle.player,
                         timing,
+                        trigger_context,
                         effect_slot: slot as u8,
                         is_optional: effect.optional,
                         is_turn_player,
@@ -434,8 +516,11 @@ impl Game {
         // effect queues another effect that recursively drains before this
         // one returns).
         let prev_effect_source = self.effect_source_player;
+        let prev_trigger_context = self.current_trigger_context;
         self.effect_source_player = Some(qe.controller);
+        self.current_trigger_context = qe.trigger_context;
         let out = self.run_queued_effect_inner(qe);
+        self.current_trigger_context = prev_trigger_context;
         self.effect_source_player = prev_effect_source;
         out
     }
@@ -497,12 +582,8 @@ impl Game {
         let skip_condition = qe.timing == EffectTiming::SecuritySkill;
         if !skip_condition {
             if let Some(cond) = &effect.condition {
-                let ctx = EffectContext::new(
-                    self,
-                    qe.source_card,
-                    qe.source_permanent,
-                    qe.controller,
-                );
+                let ctx =
+                    EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
                 if !cond(&ctx.as_read()) {
                     return;
                 }
@@ -522,24 +603,16 @@ impl Game {
         // cards needing selection-gated pay-costs should fold the selection
         // into `process` instead. See Phase 5 non-goals.
         if let Some(pay_cost) = &effect.pay_cost_fn {
-            let mut ctx = EffectContext::new(
-                self,
-                qe.source_card,
-                qe.source_permanent,
-                qe.controller,
-            );
+            let mut ctx =
+                EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
             if !pay_cost(&mut ctx) {
                 return; // cost not paid; skip process (silent abort, mirrors failed condition)
             }
         }
 
         if let Some(process) = &effect.process {
-            let mut ctx = EffectContext::new(
-                self,
-                qe.source_card,
-                qe.source_permanent,
-                qe.controller,
-            );
+            let mut ctx =
+                EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
             process(&mut ctx);
         }
     }
@@ -579,7 +652,11 @@ impl Game {
                     "{} slot {} ({})",
                     qe.card_id,
                     qe.effect_slot,
-                    if qe.is_optional { "optional" } else { "mandatory" },
+                    if qe.is_optional {
+                        "optional"
+                    } else {
+                        "mandatory"
+                    },
                 ),
                 action_id,
             });
@@ -701,6 +778,10 @@ impl Game {
             crate::replacement::try_drain_parked_replacement_with_guard(self);
         }
 
+        if self.pending_selection.is_none() {
+            crate::scheduled_effects::resume_scheduled_drain(self);
+        }
+
         // If the callback parked a fresh selection, leave the drainer alone.
         // Otherwise resume — this covers both the normal post-callback case
         // and the `TriggerOrder` "continue picking the next bundle entry"
@@ -756,7 +837,9 @@ impl Game {
     ///   window for Option self-trash).
     /// - `Done`: terminal.
     fn advance_pending_option(&mut self) {
-        let Some(pending) = self.pending_option.as_ref() else { return };
+        let Some(pending) = self.pending_option.as_ref() else {
+            return;
+        };
         if !self.effect_queue.is_empty() {
             return;
         }
@@ -783,7 +866,10 @@ impl Game {
                 // the original trash should proceed). Take the parked
                 // pending_option back and commit the outcome via the
                 // shared helper, then cleanup and advance the turn state.
-                let pending = self.pending_option.take().expect("parked by dispose_option");
+                let pending = self
+                    .pending_option
+                    .take()
+                    .expect("parked by dispose_option");
                 let outcome = self
                     .replacement_pending_outcome
                     .take()

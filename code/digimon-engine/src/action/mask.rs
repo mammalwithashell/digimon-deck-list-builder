@@ -105,21 +105,16 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
                 let attacker = &me.battle_area[i];
-                let handle = PermanentHandle { player: player_id, index: i as u8 };
-                if !can_basic_attack(
-                    attacker,
-                    handle,
-                    game.turn_count,
-                    &game.card_data,
-                    game,
-                ) {
+                let handle = PermanentHandle {
+                    player: player_id,
+                    index: i as u8,
+                };
+                if !can_basic_attack(attacker, handle, game.turn_count, &game.card_data, game) {
                     continue;
                 }
                 let memory_ok = game.memory >= 0 || {
-                    let digivolved_this_turn =
-                        attacker.turn_digivolved == game.turn_count;
-                    digivolved_this_turn
-                        && game.has_keyword(handle, Keyword::Blitz)
+                    let digivolved_this_turn = attacker.turn_digivolved == game.turn_count;
+                    digivolved_this_turn && game.has_keyword(handle, Keyword::Blitz)
                 };
                 if !memory_ok {
                     continue;
@@ -212,7 +207,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let max_field = me.battle_area.len().min(FIELD_SLOTS);
                 for f in 0..max_field {
                     let base_perm = &me.battle_area[f];
-                    let base_handle = PermanentHandle { player: player_id, index: f as u8 };
+                    let base_handle = PermanentHandle {
+                        player: player_id,
+                        index: f as u8,
+                    };
                     // §4.7b CANNOT_DIGIVOLVE — suppress the bit if the
                     // base permanent carries an active CannotDigivolve
                     // modifier. Python's `{'digivolving_card': card}`
@@ -288,12 +286,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         continue;
                     }
                     if let Some(cond) = &effect.condition {
-                        let ctx = EffectReadContext::new(
-                            game,
-                            card.handle(),
-                            None,
-                            player_id,
-                        );
+                        let ctx = EffectReadContext::new(game, card.handle(), None, player_id);
                         if !cond(&ctx) {
                             continue;
                         }
@@ -331,8 +324,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     }
                     let is_under = source_index + 1 < stack_size;
                     let card_id = source.card_id(&game.card_data);
-                    let Some(effects) = game.effects_for_card(card_id, source.handle())
-                    else {
+                    let Some(effects) = game.effects_for_card(card_id, source.handle()) else {
                         continue;
                     };
                     for (slot, effect) in effects.iter().enumerate() {
@@ -395,9 +387,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // `Game::has_keyword` would short-circuit on a `battle_area`
                     // lookup and never reach the breeding-area permanent.
                     let top_data = &game.card_data[top.data_index];
-                    if top_data.keywords.contains(&Keyword::Training)
-                        && !breeding.is_suspended
-                    {
+                    if top_data.keywords.contains(&Keyword::Training) && !breeding.is_suspended {
                         // Gate the bit ONLY on the printed keyword + suspension
                         // — we deliberately don't run the `<Training>` effect's
                         // own `condition` closure here because
@@ -429,12 +419,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         continue;
                     }
                     if let Some(cond) = &effect.condition {
-                        let ctx = EffectReadContext::new(
-                            game,
-                            card.handle(),
-                            None,
-                            player_id,
-                        );
+                        let ctx = EffectReadContext::new(game, card.handle(), None, player_id);
                         if !cond(&ctx) {
                             continue;
                         }
@@ -756,13 +741,7 @@ fn apply_force_attack_mask_replacement(
         if !game.modifiers.has(handle, ModifierType::ForceAttack) {
             continue;
         }
-        if !can_basic_attack(
-            attacker,
-            handle,
-            game.turn_count,
-            &game.card_data,
-            game,
-        ) {
+        if !can_basic_attack(attacker, handle, game.turn_count, &game.card_data, game) {
             continue;
         }
 

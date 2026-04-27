@@ -1,7 +1,5 @@
 use digimon_engine::enums::{EffectTiming, Keyword};
-use digimon_engine::replacement::{
-    ReplacementCause, ReplacementOutcome, ReplacementSubject,
-};
+use digimon_engine::replacement::{ReplacementCause, ReplacementOutcome, ReplacementSubject};
 use digimon_engine::selection::SelectionKind;
 
 #[test]
@@ -51,7 +49,10 @@ fn replacement_subject_variants_exist() {
     use digimon_engine::card_source::CardHandle;
     use digimon_engine::enums::Zone;
     use digimon_engine::permanent::PermanentHandle;
-    let _ = ReplacementSubject::Permanent(PermanentHandle { player: 0, index: 0 });
+    let _ = ReplacementSubject::Permanent(PermanentHandle {
+        player: 0,
+        index: 0,
+    });
     let _ = ReplacementSubject::Card(CardHandle(0), Zone::Hand);
     let _ = ReplacementSubject::Player(0);
 }

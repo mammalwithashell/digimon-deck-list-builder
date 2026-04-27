@@ -173,14 +173,19 @@ impl Game {
                 return None;
             }
             let card = &player.hand[hand_index];
-            (card.play_cost(&self.card_data), card.card_kind(&self.card_data))
+            (
+                card.play_cost(&self.card_data),
+                card.card_kind(&self.card_data),
+            )
         };
 
         // Phase 6: CannotPlayDigimonByEffect — when source is ByEffect and the
         // card is a Digimon, gate on the player-scoped modifier.
         if source == PlaySource::ByEffect
             && card_kind == CardKind::Digimon
-            && self.modifiers.player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
+            && self
+                .modifiers
+                .player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
         {
             return None;
         }
@@ -276,14 +281,19 @@ impl Game {
                 return None;
             }
             let card = &player.trash[trash_index];
-            (card.play_cost(&self.card_data), card.card_kind(&self.card_data))
+            (
+                card.play_cost(&self.card_data),
+                card.card_kind(&self.card_data),
+            )
         };
 
         // Phase 6: CannotPlayDigimonByEffect — when source is ByEffect and the
         // card is a Digimon, gate on the player-scoped modifier.
         if source == PlaySource::ByEffect
             && card_kind == CardKind::Digimon
-            && self.modifiers.player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
+            && self
+                .modifiers
+                .player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
         {
             return None;
         }
@@ -373,11 +383,7 @@ impl Game {
     /// Shared Option-play pipeline. Forks only on source zone — every other
     /// step (cost, OnUseOption + OptionMain, dispose) is identical between
     /// hand- and trash-sourced plays.
-    fn play_option_core(
-        &mut self,
-        player_id: PlayerId,
-        source: OptionSource,
-    ) -> OptionPlayResult {
+    fn play_option_core(&mut self, player_id: PlayerId, source: OptionSource) -> OptionPlayResult {
         debug_assert!(
             self.pending_option.is_none(),
             "reentrant Option play while another is mid-resolution"
@@ -413,7 +419,11 @@ impl Game {
             if !crate::action::mask::option_color_match_available(card, player, &self.card_data) {
                 return OptionPlayResult::Invalid;
             }
-            (card.handle(), card.play_cost(&self.card_data), card.card_id(&self.card_data).to_string())
+            (
+                card.handle(),
+                card.play_cost(&self.card_data),
+                card.card_id(&self.card_data).to_string(),
+            )
         };
 
         // 3. Compute + pay cost (Phase 5 BeforePayCost hooks).
@@ -508,6 +518,7 @@ impl Game {
                 source_permanent: None,
                 controller: owner,
                 timing: EffectTiming::OptionMain,
+                trigger_context: None,
                 effect_slot: slot as u8,
                 is_optional: effect.optional,
                 is_turn_player,
@@ -544,6 +555,7 @@ impl Game {
                 source_permanent: None,
                 controller: owner,
                 timing: EffectTiming::CounterEffect,
+                trigger_context: None,
                 effect_slot: slot as u8,
                 is_optional: effect.optional,
                 is_turn_player,
@@ -575,7 +587,9 @@ impl Game {
     /// - **Training** — park as `OptionState::Training` on the owner's
     ///   battle_area.
     pub(crate) fn dispose_option(&mut self) {
-        let Some(pending) = self.pending_option.take() else { return };
+        let Some(pending) = self.pending_option.take() else {
+            return;
+        };
 
         let card_id = pending.card.card_id(&self.card_data).to_string();
         let effects = self
@@ -593,8 +607,7 @@ impl Game {
                 // disposed as part of the play cost/resolution). Source
                 // zone is Hand — reflects where the Option came from.
                 let card_handle = pending.card.handle();
-                let subject =
-                    ReplacementSubject::Card(card_handle, crate::enums::Zone::Hand);
+                let subject = ReplacementSubject::Card(card_handle, crate::enums::Zone::Hand);
                 let outcome = self.try_replace(
                     EffectTiming::WhenWouldBeTrashed,
                     subject,
@@ -643,10 +656,7 @@ impl Game {
                         if !perm.is_digimon(&self.card_data) {
                             continue;
                         }
-                        if !matches!(
-                            perm.option_state,
-                            crate::permanent::OptionState::Standard
-                        ) {
+                        if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
                             continue;
                         }
                         let handle = PermanentHandle {
@@ -658,12 +668,8 @@ impl Game {
                             true,
                             |link_effect| {
                                 if let Some(f) = &link_effect.link_filter {
-                                    let read_ctx = EffectReadContext::new(
-                                        self,
-                                        source_card,
-                                        None,
-                                        owner,
-                                    );
+                                    let read_ctx =
+                                        EffectReadContext::new(self, source_card, None, owner);
                                     f(&read_ctx, handle)
                                 } else {
                                     true
@@ -822,7 +828,9 @@ impl Game {
     /// in the candidate list at selection install-time, but we re-check the
     /// handle is still live in case an intervening effect moved things.
     pub(crate) fn attach_linked_card(&mut self, host: PermanentHandle) {
-        let Some(pending) = self.pending_option.take() else { return };
+        let Some(pending) = self.pending_option.take() else {
+            return;
+        };
 
         // If the host vanished (e.g. deleted mid-selection by an interposing
         // effect), fall back to trashing the Option — mirrors other
@@ -968,10 +976,7 @@ impl Game {
             player: player_id,
             index: field_index as u8,
         };
-        self.enqueue_triggered(
-            EffectTiming::OnPlay,
-            TriggerSource::Permanent(handle),
-        );
+        self.enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(handle));
         self.drain_effect_queue();
     }
 
@@ -1122,12 +1127,8 @@ impl Game {
                     perm.record_activation(source_handle, slot as u8);
                 }
                 if let Some(process) = &effect.process {
-                    let mut ctx = EffectContext::new(
-                        self,
-                        source_handle,
-                        Some(perm_handle),
-                        player_id,
-                    );
+                    let mut ctx =
+                        EffectContext::new(self, source_handle, Some(perm_handle), player_id);
                     process(&mut ctx);
                 }
                 return true;
@@ -1211,12 +1212,7 @@ impl Game {
             // is the only thing the condition checks, and we've already
             // re-verified it.
             if let Some(process) = &effect.process {
-                let mut ctx = EffectContext::new(
-                    self,
-                    top_handle,
-                    Some(perm_handle),
-                    player_id,
-                );
+                let mut ctx = EffectContext::new(self, top_handle, Some(perm_handle), player_id);
                 process(&mut ctx);
             }
             return true;
@@ -1342,7 +1338,11 @@ impl Game {
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
                 let deck_len = self.player(player_id).deck.len();
-                let idx = if deck_len == 0 { 0 } else { self.rng.gen_range(0..=deck_len) };
+                let idx = if deck_len == 0 {
+                    0
+                } else {
+                    self.rng.gen_range(0..=deck_len)
+                };
                 self.player_mut(player_id).deck.insert(idx, taken);
             }
         }
@@ -1448,7 +1448,10 @@ impl Game {
             }
         }
 
-        let perm = self.player_mut(handle.player).battle_area.remove(handle.index as usize);
+        let perm = self
+            .player_mut(handle.player)
+            .battle_area
+            .remove(handle.index as usize);
 
         let mut sources = perm.card_sources;
         let Some(top) = sources.pop() else {
@@ -1572,7 +1575,10 @@ impl Game {
             }
         }
 
-        let mut perm = self.player_mut(player_id).battle_area.remove(handle.index as usize);
+        let mut perm = self
+            .player_mut(player_id)
+            .battle_area
+            .remove(handle.index as usize);
 
         let Some(top) = perm.card_sources.pop() else {
             return false;
@@ -1588,7 +1594,11 @@ impl Game {
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
                 let deck_len = self.player(player_id).deck.len();
-                let idx = if deck_len == 0 { 0 } else { self.rng.gen_range(0..=deck_len) };
+                let idx = if deck_len == 0 {
+                    0
+                } else {
+                    self.rng.gen_range(0..=deck_len)
+                };
                 self.player_mut(player_id).deck.insert(idx, top);
             }
         }
@@ -1773,7 +1783,8 @@ impl Game {
             return false;
         }
         let Some(breeding) = player.breeding_area.as_ref() else {
-            self.logger.log("[Rejected] digivolve_breeding: breeding area is empty");
+            self.logger
+                .log("[Rejected] digivolve_breeding: breeding area is empty");
             return false;
         };
 
@@ -1904,19 +1915,35 @@ impl Game {
 
         for pid in 0..player_count {
             // --- hand ---
-            if let Some(pos) = self.players[pid].hand.iter().position(|c| c.handle() == handle) {
+            if let Some(pos) = self.players[pid]
+                .hand
+                .iter()
+                .position(|c| c.handle() == handle)
+            {
                 return Some(self.players[pid].hand.remove(pos));
             }
             // --- trash ---
-            if let Some(pos) = self.players[pid].trash.iter().position(|c| c.handle() == handle) {
+            if let Some(pos) = self.players[pid]
+                .trash
+                .iter()
+                .position(|c| c.handle() == handle)
+            {
                 return Some(self.players[pid].trash.remove(pos));
             }
             // --- deck ---
-            if let Some(pos) = self.players[pid].deck.iter().position(|c| c.handle() == handle) {
+            if let Some(pos) = self.players[pid]
+                .deck
+                .iter()
+                .position(|c| c.handle() == handle)
+            {
                 return Some(self.players[pid].deck.remove(pos));
             }
             // --- security ---
-            if let Some(pos) = self.players[pid].security.iter().position(|c| c.handle() == handle) {
+            if let Some(pos) = self.players[pid]
+                .security
+                .iter()
+                .position(|c| c.handle() == handle)
+            {
                 return Some(self.players[pid].security.remove(pos));
             }
             // --- battle_area permanent stacks ---
@@ -1932,7 +1959,11 @@ impl Game {
             }
             // --- breeding_area ---
             if let Some(ref breeding) = self.players[pid].breeding_area {
-                if let Some(src_pos) = breeding.card_sources.iter().position(|c| c.handle() == handle) {
+                if let Some(src_pos) = breeding
+                    .card_sources
+                    .iter()
+                    .position(|c| c.handle() == handle)
+                {
                     return Some(
                         self.players[pid]
                             .breeding_area
@@ -1946,7 +1977,11 @@ impl Game {
         }
 
         // --- revealed_cards transient pool ---
-        if let Some(pos) = self.revealed_cards.iter().position(|c| c.handle() == handle) {
+        if let Some(pos) = self
+            .revealed_cards
+            .iter()
+            .position(|c| c.handle() == handle)
+        {
             return Some(self.revealed_cards.remove(pos));
         }
 
@@ -1988,7 +2023,10 @@ impl Game {
     fn scan_before_pay_cost_reduction(&mut self, acting_player: crate::enums::PlayerId) -> i32 {
         // Phase 6: if the acting player has CannotReducePlayCost, suppress all
         // cost reductions entirely. Mirrors DCGO's per-player flood-gate.
-        if self.modifiers.player_has(acting_player, ModifierType::CannotReducePlayCost) {
+        if self
+            .modifiers
+            .player_has(acting_player, ModifierType::CannotReducePlayCost)
+        {
             return 0;
         }
         // Pre-snapshot all source identities to avoid holding any borrow on
@@ -2011,8 +2049,9 @@ impl Game {
                         player: player_id,
                         index: perm_idx as u8,
                     };
-                    let stack_size =
-                        self.player(player_id).battle_area[perm_idx].card_sources.len();
+                    let stack_size = self.player(player_id).battle_area[perm_idx]
+                        .card_sources
+                        .len();
                     for source_idx in 0..stack_size {
                         let source =
                             &self.player(player_id).battle_area[perm_idx].card_sources[source_idx];
@@ -2049,12 +2088,8 @@ impl Game {
                 // Step 1: evaluate condition — construct and drop the read
                 // context immediately so no immutable borrow lingers.
                 let cond_ok = if let Some(cond) = &effect.condition {
-                    let ctx = EffectReadContext::new(
-                        self,
-                        src_handle,
-                        Some(perm_handle),
-                        player_id,
-                    );
+                    let ctx =
+                        EffectReadContext::new(self, src_handle, Some(perm_handle), player_id);
                     cond(&ctx) // ctx dropped at end of this block
                 } else {
                     true
@@ -2066,12 +2101,8 @@ impl Game {
                 // Step 2: compute the reduction amount — construct and drop
                 // the read context immediately.
                 let reduction = if let Some(reduction_fn) = &effect.cost_reduction_fn {
-                    let ctx = EffectReadContext::new(
-                        self,
-                        src_handle,
-                        Some(perm_handle),
-                        player_id,
-                    );
+                    let ctx =
+                        EffectReadContext::new(self, src_handle, Some(perm_handle), player_id);
                     reduction_fn(&ctx).max(0) // ctx dropped at end of this block
                 } else {
                     effect.cost_reduction.max(0)
@@ -2083,12 +2114,8 @@ impl Game {
                 // mutable context construction does not conflict with the
                 // `effect` reference above.
                 if let Some(pay_cost_fn) = &effect.pay_cost_fn {
-                    let mut ctx = EffectContext::new(
-                        self,
-                        src_handle,
-                        Some(perm_handle),
-                        player_id,
-                    );
+                    let mut ctx =
+                        EffectContext::new(self, src_handle, Some(perm_handle), player_id);
                     let paid = pay_cost_fn(&mut ctx);
                     if !paid {
                         // Cost not paid → skip this effect's reduction.
@@ -2105,14 +2132,12 @@ impl Game {
     }
 
     /// Install a `SelectMaterial` pending selection for DNA digivolve.
-    /// Python parity for `_initiate_dna_digivolve(hand_idx)`. The
-    /// second-material selection + actual digivolve execution is stubbed
-    /// inside the callback and tracked as `TODO(dna-digivolve-execute)`.
-    pub fn initiate_dna_digivolve(
-        &mut self,
-        player_id: PlayerId,
-        hand_index: usize,
-    ) -> bool {
+    /// Drives a two-stage resolution: stage 1 picks the first material;
+    /// stage 2 (installed by the stage-1 callback) picks the second
+    /// material. Stage 2 resolves into `Game::dna_digivolve_inner`,
+    /// computes the matching `DnaCost` via `get_dna_stacking_order`,
+    /// applies `BeforePayCost` reductions, and pays memory.
+    pub fn initiate_dna_digivolve(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
         if self.current_phase != GamePhase::Main {
             self.logger.log(&format!(
                 "[Rejected] initiate_dna_digivolve: not in Main phase (phase={:?})",
@@ -2195,19 +2220,184 @@ impl Game {
             source_card,
             source_permanent: None,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                // TODO(dna-digivolve-execute): decode first material
-                // index, install second-material selection, and on its
-                // resolution remove both materials from battle_area,
-                // create a new permanent carrying the evo card with
-                // both materials in the stack, pay the DnaCost
-                // memory_cost, fire WhenDigivolving. See
-                // `action_decoder.py::_dna_select_second` +
-                // `player.dna_digivolve` for the Python reference.
-                let _ = (game, action_id);
+                // Stage 1 resolution: action_id is the chosen first-material
+                // battle_area index for `selecting_player`.
+                let first_idx = action_id as usize;
+                let first_player = selecting_player;
+                let evo_hand_index = hand_index;
+
+                // Defensive: validate the first index against the
+                // controller's current battle_area (it could have shifted
+                // since selection was installed if a triggered effect
+                // removed a permanent during the install drain).
+                if first_idx >= game.player(first_player).battle_area.len() {
+                    game.logger.log(&format!(
+                        "[Rejected] dna_digivolve stage 1: first index {} out of range (battle_area size={})",
+                        first_idx,
+                        game.player(first_player).battle_area.len()
+                    ));
+                    return;
+                }
+                if evo_hand_index >= game.player(first_player).hand.len() {
+                    game.logger.log(&format!(
+                        "[Rejected] dna_digivolve stage 1: evo hand index {} out of range (hand size={})",
+                        evo_hand_index,
+                        game.player(first_player).hand.len()
+                    ));
+                    return;
+                }
+
+                // Build valid second-material list for the chosen first.
+                let evo_meta =
+                    &game.card_data[game.player(first_player).hand[evo_hand_index].data_index];
+                let second_targets = crate::dna_digivolve::get_valid_dna_second_targets(
+                    evo_meta,
+                    first_idx,
+                    &game.player(first_player).battle_area,
+                    &game.card_data,
+                );
+                if second_targets.is_empty() {
+                    game.logger.log(&format!(
+                        "[Rejected] dna_digivolve stage 1: no valid second-material targets for first index {}",
+                        first_idx
+                    ));
+                    return;
+                }
+
+                // Install stage-2 selection. previous_phase was Main when
+                // stage-1 was installed; we preserve it through the chain
+                // so the final resolution returns to Main.
+                game.pending_selection = Some(PendingSelection {
+                    kind: SelectionKind::Material,
+                    selecting_player: first_player,
+                    previous_phase,
+                    valid_action_ids: second_targets,
+                    is_optional: false,
+                    prompt: "Select second DNA material".to_string(),
+                    effect_choices: None,
+                    source_card,
+                    source_permanent: None,
+                    callback: Box::new(move |game: &mut Game, action_id: u16| {
+                        let second_idx = action_id as usize;
+                        game.resolve_dna_digivolve_stage2(
+                            first_player,
+                            first_idx,
+                            second_idx,
+                            evo_hand_index,
+                        );
+                    }),
+                    on_decline: None,
+                });
+                // resolve_generic_selection restored current_phase to
+                // previous_phase (Main) before invoking this callback. We
+                // re-flip it back to SelectMaterial so the action mask
+                // reflects the live stage-2 prompt.
+                game.current_phase = GamePhase::SelectMaterial;
             }),
             on_decline: None,
         });
         true
+    }
+
+    /// Stage-2 resolution of `Game::initiate_dna_digivolve`'s two-stage
+    /// selection chain. Receives the chosen second-material `battle_area`
+    /// index and the captured stage-1 state. Re-resolves the matching
+    /// `DnaCost` orientation, applies `BeforePayCost` reductions, calls
+    /// `Game::dna_digivolve_inner`, and triggers the auto-end-of-turn
+    /// check (mirroring `digivolve_from_hand`).
+    ///
+    /// Defensively re-validates indices because triggered effects fired
+    /// during stage-1 install can mutate the battle area between selection
+    /// install and resolution.
+    ///
+    /// Failure paths log `[Rejected] ...` via `self.logger` and return
+    /// without mutating game state. The `pending_selection` was already
+    /// consumed by `resolve_generic_selection` before this method ran.
+    pub(crate) fn resolve_dna_digivolve_stage2(
+        &mut self,
+        first_player: PlayerId,
+        first_idx: usize,
+        second_idx: usize,
+        evo_hand_index: usize,
+    ) {
+        if second_idx >= self.player(first_player).battle_area.len() {
+            self.logger.log(&format!(
+                "[Rejected] resolve_dna_digivolve_stage2: second index {} out of range (battle_area size={})",
+                second_idx,
+                self.player(first_player).battle_area.len()
+            ));
+            return;
+        }
+        if first_idx == second_idx {
+            self.logger
+                .log("[Rejected] resolve_dna_digivolve_stage2: first and second indices are equal");
+            return;
+        }
+        if evo_hand_index >= self.player(first_player).hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] resolve_dna_digivolve_stage2: evo hand index {} out of range (hand size={})",
+                evo_hand_index,
+                self.player(first_player).hand.len()
+            ));
+            return;
+        }
+
+        let evo_meta = &self.card_data[self.player(first_player).hand[evo_hand_index].data_index];
+        let battle = &self.player(first_player).battle_area;
+        let perm_first = &battle[first_idx];
+        let perm_second = &battle[second_idx];
+
+        let stacking = crate::dna_digivolve::get_dna_stacking_order(
+            evo_meta,
+            perm_first,
+            perm_second,
+            &self.card_data,
+        );
+        let Some((first_is_top, dna_cost)) = stacking else {
+            self.logger.log(
+                "[Rejected] resolve_dna_digivolve_stage2: no matching DnaCost for chosen pair",
+            );
+            return;
+        };
+        let printed_cost = dna_cost.memory_cost;
+
+        let (target_a, target_b) = if first_is_top {
+            (
+                PermanentHandle {
+                    player: first_player,
+                    index: first_idx as u8,
+                },
+                PermanentHandle {
+                    player: first_player,
+                    index: second_idx as u8,
+                },
+            )
+        } else {
+            (
+                PermanentHandle {
+                    player: first_player,
+                    index: second_idx as u8,
+                },
+                PermanentHandle {
+                    player: first_player,
+                    index: first_idx as u8,
+                },
+            )
+        };
+
+        let total_reduction = self.scan_before_pay_cost_reduction(first_player);
+        let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
+
+        let _ = self.dna_digivolve_inner(
+            target_a,
+            target_b,
+            first_player,
+            evo_hand_index,
+            effective_cost,
+            true,
+        );
+
+        self.check_turn_end();
     }
 
     /// Move a card from `source` to `player_id`'s security stack at the given
@@ -2292,9 +2482,7 @@ impl Game {
                 // Redirect: card goes to its owner's trash instead of
                 // security. Take the source and route it.
                 let taken = match source {
-                    crate::enums::CardSourceRef::Hand(p, i) => {
-                        self.player_mut(p).hand.remove(i)
-                    }
+                    crate::enums::CardSourceRef::Hand(p, i) => self.player_mut(p).hand.remove(i),
                     crate::enums::CardSourceRef::Trash(source_p, source_i) => {
                         // Task 4 v1: cross-player trash-to-trash redirects are rare
                         // in printed cards (a trash-to-security play being redirected
@@ -2317,8 +2505,7 @@ impl Game {
                         c
                     }
                     crate::enums::CardSourceRef::Reveal(h) => {
-                        let Some(idx) =
-                            self.revealed_cards.iter().position(|c| c.handle() == h)
+                        let Some(idx) = self.revealed_cards.iter().position(|c| c.handle() == h)
                         else {
                             return false;
                         };
@@ -2391,13 +2578,19 @@ impl Game {
                 // Split-borrow: read length from immutable borrow first, then
                 // mutably insert — mirrors the pattern in return_to_deck.
                 let sec_len = self.player(player_id).security.len();
-                let idx = if sec_len == 0 { 0 } else { self.rng.gen_range(0..=sec_len) };
+                let idx = if sec_len == 0 {
+                    0
+                } else {
+                    self.rng.gen_range(0..=sec_len)
+                };
                 self.player_mut(player_id).security.insert(idx, taken);
             }
         }
 
         if face_up {
-            self.player_mut(player_id).face_up_security.insert(face_up_key);
+            self.player_mut(player_id)
+                .face_up_security
+                .insert(face_up_key);
         }
         true
     }
@@ -2453,9 +2646,8 @@ impl Game {
             let target_player = self.player(target.player);
             let perm = &target_player.battle_area[target.index as usize];
             let Some(base_level) = perm.top_card().level(&self.card_data) else {
-                self.logger.log(
-                    "[Rejected] effect_initiated_digivolve: target top card has no level",
-                );
+                self.logger
+                    .log("[Rejected] effect_initiated_digivolve: target top card has no level");
                 return false;
             };
             let base_colors = perm.top_card().colors(&self.card_data);

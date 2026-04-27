@@ -33,7 +33,9 @@ pub struct SilentLogger;
 impl GameLogger for SilentLogger {
     fn log(&mut self, _message: &str) {}
     fn log_verbose(&mut self, _message: &str) {}
-    fn get_logs(&self) -> Vec<String> { Vec::new() }
+    fn get_logs(&self) -> Vec<String> {
+        Vec::new()
+    }
     fn clear(&mut self) {}
 }
 
@@ -50,7 +52,9 @@ impl VerboseLogger {
 }
 
 impl Default for VerboseLogger {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GameLogger for VerboseLogger {
@@ -60,6 +64,10 @@ impl GameLogger for VerboseLogger {
     fn log_verbose(&mut self, message: &str) {
         self.logs.push(format!("[VERBOSE] {}", message));
     }
-    fn get_logs(&self) -> Vec<String> { self.logs.clone() }
-    fn clear(&mut self) { self.logs.clear(); }
+    fn get_logs(&self) -> Vec<String> {
+        self.logs.clone()
+    }
+    fn clear(&mut self) {
+        self.logs.clear();
+    }
 }

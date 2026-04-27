@@ -8,12 +8,21 @@ use digimon_dsl::compiled::{CompiledScope, CompiledTriggeredClause};
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
-use crate::dsl_cards::step::run_steps;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::timing_map::compiled_timing_to_engine;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::EffectTiming;
 
 pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> {
+    lower_with_raw(card, clause, Arc::new(EngineRawRustRegistry::new()))
+}
+
+pub fn lower_with_raw(
+    card: CardHandle,
+    clause: &CompiledTriggeredClause,
+    raw: Arc<EngineRawRustRegistry>,
+) -> Vec<Effect> {
     let mut out = Vec::new();
     for t in &clause.when {
         let Some(engine_timing) = compiled_timing_to_engine(*t) else {
@@ -28,6 +37,7 @@ pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> 
         let once_per_turn = clause.once_per_turn;
         let max_per_turn = clause.max_per_turn;
         let summary = clause.summary.clone();
+        let raw_for_process = raw.clone();
 
         let mut builder = new_builder(card, engine_timing);
         if matches!(scope, CompiledScope::Inherited) {
@@ -74,7 +84,8 @@ pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> 
             // a selection step if one is encountered — installing the tail
             // as the selection's resolve callback so it continues once the
             // player picks a target.
-            run_steps(process_steps.as_slice(), ctx, &mut bindings);
+            let runtime = StepRuntime::new(raw_for_process.clone());
+            run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
         });
 
         out.push(builder.build());

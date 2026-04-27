@@ -139,7 +139,10 @@ fn permutation_then_opponent_union_zone_tech_flow() {
     //   player 0 deck is empty.
     let top3 = r.game.reveal_top_deck(p0, 3);
     assert_eq!(top3.len(), 3, "deck must have had 3 cards to reveal");
-    assert!(r.game.players[p0 as usize].deck.is_empty(), "deck must be empty after reveal");
+    assert!(
+        r.game.players[p0 as usize].deck.is_empty(),
+        "deck must be empty after reveal"
+    );
 
     // top3[0] = DECK-A (was top), top3[1] = DECK-B, top3[2] = DECK-C.
     // These handles are not passed directly to place_remainder_on_deck (it reads
@@ -174,7 +177,10 @@ fn permutation_then_opponent_union_zone_tech_flow() {
 
     // Step 1 — remaining = 3, pick DECK-C (index 2 in [A, B, C])
     {
-        let sel = r.game.pending_selection.as_ref()
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
             .expect("step 1: selection must be installed");
         assert_eq!(
             sel.kind,
@@ -182,16 +188,28 @@ fn permutation_then_opponent_union_zone_tech_flow() {
             "step 1 kind must be OrderedPermutation {{ remaining: 3 }}"
         );
         assert_eq!(sel.valid_action_ids.len(), 3, "step 1 must offer 3 choices");
-        assert_eq!(r.game.current_phase, GamePhase::SelectPermutation, "phase must be SelectPermutation");
-        assert_eq!(sel.selecting_player, p0, "permutation selects player must be p0 (the controller)");
+        assert_eq!(
+            r.game.current_phase,
+            GamePhase::SelectPermutation,
+            "phase must be SelectPermutation"
+        );
+        assert_eq!(
+            sel.selecting_player, p0,
+            "permutation selects player must be p0 (the controller)"
+        );
         // DECK-C is at index 2 → SEL_REVEAL_START + 2
         assert!(sel.valid_action_ids.contains(&(SEL_REVEAL_START + 2)));
     }
-    r.game.resolve_selection(p0, SEL_REVEAL_START + 2).expect("step 1 resolve");
+    r.game
+        .resolve_selection(p0, SEL_REVEAL_START + 2)
+        .expect("step 1 resolve");
 
     // Step 2 — remaining = 2, pick DECK-B (index 1 in [A, B])
     {
-        let sel = r.game.pending_selection.as_ref()
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
             .expect("step 2: selection must be installed");
         assert_eq!(
             sel.kind,
@@ -203,22 +221,33 @@ fn permutation_then_opponent_union_zone_tech_flow() {
         // Remaining is [A, B]; DECK-B is at index 1 → SEL_REVEAL_START + 1
         assert!(sel.valid_action_ids.contains(&(SEL_REVEAL_START + 1)));
     }
-    r.game.resolve_selection(p0, SEL_REVEAL_START + 1).expect("step 2 resolve");
+    r.game
+        .resolve_selection(p0, SEL_REVEAL_START + 1)
+        .expect("step 2 resolve");
 
     // Step 3 — remaining = 1, only DECK-A left
     {
-        let sel = r.game.pending_selection.as_ref()
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
             .expect("step 3: selection must be installed");
         assert_eq!(
             sel.kind,
             SelectionKind::OrderedPermutation { remaining: 1 },
             "step 3 kind must be OrderedPermutation {{ remaining: 1 }}"
         );
-        assert_eq!(sel.valid_action_ids.len(), 1, "step 3 must offer exactly 1 choice");
+        assert_eq!(
+            sel.valid_action_ids.len(),
+            1,
+            "step 3 must offer exactly 1 choice"
+        );
         assert_eq!(r.game.current_phase, GamePhase::SelectPermutation);
         assert!(sel.valid_action_ids.contains(&SEL_REVEAL_START));
     }
-    r.game.resolve_selection(p0, SEL_REVEAL_START).expect("step 3 resolve");
+    r.game
+        .resolve_selection(p0, SEL_REVEAL_START)
+        .expect("step 3 resolve");
 
     // ─── 4b. Install opponent union-zone (separate step after permutation) ────
     //
@@ -229,21 +258,24 @@ fn permutation_then_opponent_union_zone_tech_flow() {
     // original test.
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, p0);
-        ctx.as_selecting_player(p1)
-            .select_union_zone(
-                p0,
-                UnionZoneSet::HAND | UnionZoneSet::TRASH,
-                "Opponent: choose a card from your opponent's hand or trash",
-                false,
-                |_, _| true,
-                move |resolve_ctx, chosen_handle| {
-                    let player_ref = resolve_ctx.game.player(p0);
-                    if let Some(idx) = player_ref.hand.iter().position(|c| c.handle() == chosen_handle) {
-                        resolve_ctx.game.trash_from_hand_by_index(p0, idx);
-                    }
-                    *union_zone_slot.lock().unwrap() = Some(chosen_handle);
-                },
-            );
+        ctx.as_selecting_player(p1).select_union_zone(
+            p0,
+            UnionZoneSet::HAND | UnionZoneSet::TRASH,
+            "Opponent: choose a card from your opponent's hand or trash",
+            false,
+            |_, _| true,
+            move |resolve_ctx, chosen_handle| {
+                let player_ref = resolve_ctx.game.player(p0);
+                if let Some(idx) = player_ref
+                    .hand
+                    .iter()
+                    .position(|c| c.handle() == chosen_handle)
+                {
+                    resolve_ctx.game.trash_from_hand_by_index(p0, idx);
+                }
+                *union_zone_slot.lock().unwrap() = Some(chosen_handle);
+            },
+        );
     }
 
     // ─── 5. Post-permutation assertions ──────────────────────────────────────
@@ -269,7 +301,10 @@ fn permutation_then_opponent_union_zone_tech_flow() {
 
     // Union-zone selection must be installed.
     {
-        let sel = r.game.pending_selection.as_ref()
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
             .expect("union-zone selection must be installed after permutation");
         assert_eq!(
             sel.kind,
@@ -278,7 +313,10 @@ fn permutation_then_opponent_union_zone_tech_flow() {
             },
             "kind must be UnionZone {{ HAND | TRASH }}"
         );
-        assert_eq!(sel.selecting_player, p1, "opponent (p1) must be the selector");
+        assert_eq!(
+            sel.selecting_player, p1,
+            "opponent (p1) must be the selector"
+        );
         assert_eq!(r.game.current_phase, GamePhase::SelectUnion);
         // 2 hand cards + 2 trash cards = 4 valid actions.
         assert_eq!(
@@ -287,10 +325,22 @@ fn permutation_then_opponent_union_zone_tech_flow() {
             "valid_action_ids must cover 2 hand + 2 trash = 4 total; got {:?}",
             sel.valid_action_ids
         );
-        assert!(sel.valid_action_ids.contains(&PLAY_HAND_START),       "hand slot 0 must be valid");
-        assert!(sel.valid_action_ids.contains(&(PLAY_HAND_START + 1)), "hand slot 1 must be valid");
-        assert!(sel.valid_action_ids.contains(&TRASH_EFFECT_START),          "trash slot 0 must be valid");
-        assert!(sel.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)),   "trash slot 1 must be valid");
+        assert!(
+            sel.valid_action_ids.contains(&PLAY_HAND_START),
+            "hand slot 0 must be valid"
+        );
+        assert!(
+            sel.valid_action_ids.contains(&(PLAY_HAND_START + 1)),
+            "hand slot 1 must be valid"
+        );
+        assert!(
+            sel.valid_action_ids.contains(&TRASH_EFFECT_START),
+            "trash slot 0 must be valid"
+        );
+        assert!(
+            sel.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)),
+            "trash slot 1 must be valid"
+        );
     }
 
     // ─── 6. Mask-level routing check ─────────────────────────────────────────
@@ -323,10 +373,22 @@ fn permutation_then_opponent_union_zone_tech_flow() {
         "p1 must see exactly 4 legal actions (2 hand + 2 trash); got {:?}",
         legal_p1
     );
-    assert!(legal_p1.contains(&(PLAY_HAND_START as usize)),       "p1 mask: hand slot 0");
-    assert!(legal_p1.contains(&(PLAY_HAND_START as usize + 1)),   "p1 mask: hand slot 1");
-    assert!(legal_p1.contains(&(TRASH_EFFECT_START as usize)),          "p1 mask: trash slot 0");
-    assert!(legal_p1.contains(&(TRASH_EFFECT_START as usize + 1)),     "p1 mask: trash slot 1");
+    assert!(
+        legal_p1.contains(&(PLAY_HAND_START as usize)),
+        "p1 mask: hand slot 0"
+    );
+    assert!(
+        legal_p1.contains(&(PLAY_HAND_START as usize + 1)),
+        "p1 mask: hand slot 1"
+    );
+    assert!(
+        legal_p1.contains(&(TRASH_EFFECT_START as usize)),
+        "p1 mask: trash slot 0"
+    );
+    assert!(
+        legal_p1.contains(&(TRASH_EFFECT_START as usize + 1)),
+        "p1 mask: trash slot 1"
+    );
 
     // ─── 7. Opponent resolves — picks hand index 0 (HAND-0) ──────────────────
     //
@@ -344,8 +406,7 @@ fn permutation_then_opponent_union_zone_tech_flow() {
         "pending_selection must be None after all selections resolved"
     );
     assert_eq!(
-        r.game.current_phase,
-        phase_before,
+        r.game.current_phase, phase_before,
         "phase must be restored to what it was before the whole flow"
     );
 

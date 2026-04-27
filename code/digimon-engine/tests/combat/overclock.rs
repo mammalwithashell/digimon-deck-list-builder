@@ -156,7 +156,10 @@ fn decline_leaves_state_untouched() {
         "PASS must not delete any permanent"
     );
     let oc_perm = &r.game.player(tp).battle_area[oc.index as usize];
-    assert!(!oc_perm.is_suspended, "Overclock Digimon not suspended on decline");
+    assert!(
+        !oc_perm.is_suspended,
+        "Overclock Digimon not suspended on decline"
+    );
 
     // Still eligible next time — the Overclock bit can be re-emitted.
     assert!(r.game.has_end_of_turn_keywords(tp));
@@ -251,9 +254,7 @@ fn begin_attack_overclock_skips_suspend_directly() {
     let opp = 1 - tp;
     let oc = r.place_on_field(tp, "OC", Some(0));
 
-    let result = r
-        .game
-        .begin_attack_overclock(oc, AttackTarget::Player(opp));
+    let result = r.game.begin_attack_overclock(oc, AttackTarget::Player(opp));
     // Security exists by default (5 cards); attack resolves terminally
     // (attacker may be hit by a security Digimon, but for this card DP
     // we expect it to survive or deal a security — either way, the flag
@@ -312,7 +313,9 @@ fn action_id_decodes_correctly_when_sac_at_higher_index() {
     let sel = r.game.pending_selection.as_ref().unwrap();
     // Three sacrifices (slots 1, 2, 3) are legal.
     assert_eq!(sel.valid_action_ids.len(), 3);
-    assert!(sel.valid_action_ids.contains(&encode_attack(0, sac3.index as u16)));
+    assert!(sel
+        .valid_action_ids
+        .contains(&encode_attack(0, sac3.index as u16)));
 
     // Resolve with slot 3 specifically.
     let action = encode_attack(0, 3);

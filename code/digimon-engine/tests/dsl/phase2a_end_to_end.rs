@@ -26,8 +26,7 @@ effects:
     process:
       - gain_memory: 1
 "#;
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(yaml).expect("valid YAML");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("valid YAML");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles");
 
     let mut runner = DebugRunner::builder()

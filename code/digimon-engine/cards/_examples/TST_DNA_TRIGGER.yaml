@@ -1,0 +1,12 @@
+card: TST-DNA-TRIGGER
+name: TestDnaTrigger
+kind: digimon
+level: 7
+color: [red]
+cost: 0
+dp: 8000
+
+effects:
+  - when: on_dna_digivolve
+    process:
+      - draw: { of: you, count: 1 }

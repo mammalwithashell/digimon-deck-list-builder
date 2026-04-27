@@ -40,8 +40,12 @@ fn select_material_binds_picked_source_handle() {
     let m1_card_index = runner.game.next_card_index();
     let m0 = CardSource::new(m0_data_idx, 0, m0_card_index);
     let m1 = CardSource::new(m1_data_idx, 0, m1_card_index);
-    runner.game.players[0].battle_area[0].card_sources.insert(0, m0);
-    runner.game.players[0].battle_area[0].card_sources.insert(0, m1);
+    runner.game.players[0].battle_area[0]
+        .card_sources
+        .insert(0, m0);
+    runner.game.players[0].battle_area[0]
+        .card_sources
+        .insert(0, m1);
 
     let perm_handle = runner.perm_handle(0, 0);
     let src_card = runner.game.players[0].hand[0].handle();

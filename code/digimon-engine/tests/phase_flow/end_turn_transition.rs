@@ -55,7 +55,10 @@ fn end_turn_parks_in_eot_phase_when_vortex_present() {
 
     assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
     assert_eq!(r.game.turn_player(), tp, "turn must not rotate yet");
-    assert_eq!(r.game.turn_count, turn_before, "turn_count must not advance");
+    assert_eq!(
+        r.game.turn_count, turn_before,
+        "turn_count must not advance"
+    );
 }
 
 #[test]
@@ -152,7 +155,11 @@ fn end_turn_rotates_through_when_no_eot_keywords() {
     let turn_before = r.game.turn_count;
     r.game.end_turn();
 
-    assert_eq!(r.game.turn_player(), opp, "rotation must happen with no EOT keywords");
+    assert_eq!(
+        r.game.turn_player(),
+        opp,
+        "rotation must happen with no EOT keywords"
+    );
     assert_eq!(r.game.turn_count, turn_before + 1);
     assert_ne!(r.game.current_phase, GamePhase::EndOfTurnAction);
 }

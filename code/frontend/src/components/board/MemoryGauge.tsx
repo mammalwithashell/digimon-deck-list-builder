@@ -10,10 +10,12 @@ interface MemoryGaugeProps {
   currentPhase: GamePhase;
   /** Preview cost — positive means memory moves toward opponent */
   previewCost?: number | null;
+  /** Latest decoded action label for the action pill */
+  latestActionLabel?: string | null;
 }
 
 /** DCGO-style diamond memory gauge. Player's memory is always on the LEFT. */
-export function MemoryGauge({ value, localPlayer, currentPhase, previewCost }: MemoryGaugeProps) {
+export function MemoryGauge({ value, localPlayer, currentPhase, previewCost, latestActionLabel }: MemoryGaugeProps) {
   // Normalize: positive = local player has memory (shown on left)
   const orientedValue = localPlayer === 1 ? value : -value;
 
@@ -30,124 +32,96 @@ export function MemoryGauge({ value, localPlayer, currentPhase, previewCost }: M
   const badgeText = showPhaseBadge ? phaseName.toUpperCase() : '';
 
   return (
-    <div className="flex items-center justify-center gap-0 py-3 px-2 select-none">
-      {/* Player side (left) — orange/red */}
-      {leftSegments.map((seg) => {
-        const isActive = orientedValue >= seg;
-        const isExact = orientedValue === seg;
-        const isPreviewTarget = previewValue != null && previewValue === seg;
-        // Ghost trail: segments between current and preview that will become active/inactive
-        const isPreviewTrail = previewValue != null && previewValue > orientedValue
-          && seg > orientedValue && seg <= previewValue;
-        return (
-          <Diamond
-            key={`L${seg}`}
-            number={seg}
-            isActive={isActive}
-            isExact={isExact}
-            side="player"
-            isPreviewTarget={isPreviewTarget}
-            isPreviewTrail={isPreviewTrail}
-          />
-        );
-      })}
-
-      {/* Center zero + phase badge */}
-      <div className="flex flex-col items-center mx-1 relative">
-        <div
-          className={`w-7 h-7 rotate-45 flex items-center justify-center rounded-sm border-2 ${
-            orientedValue === 0
-              ? 'bg-yellow-400 border-yellow-300 shadow-[0_0_12px_rgba(250,204,21,0.6)]'
-              : previewValue === 0
-                ? 'bg-yellow-400/40 border-yellow-300/50 animate-pulse'
-                : 'bg-gray-600 border-gray-500'
-          }`}
-        >
-          <span
-            className={`-rotate-45 text-[10px] font-black ${
-              orientedValue === 0 ? 'text-gray-900' : previewValue === 0 ? 'text-yellow-300' : 'text-gray-300'
-            }`}
-          >
-            0
-          </span>
-        </div>
-        {badgeText && (
-          <div className="absolute -bottom-5 whitespace-nowrap px-2 py-0.5 bg-gray-900/90 border border-gray-600 rounded text-[9px] font-bold text-amber-300 tracking-wider">
-            {badgeText}
-          </div>
-        )}
+    <div className="ib-gauge-frame">
+      <div className="ib-gauge-pill ib-gauge-pill--phase">
+        <span>Phase</span>
+        {badgeText || 'WAIT'}
       </div>
 
-      {/* Opponent side (right) — blue */}
-      {rightSegments.map((seg) => {
-        const isActive = orientedValue <= -seg;
-        const isExact = orientedValue === -seg;
-        const isPreviewTarget = previewValue != null && previewValue === -seg;
-        // Ghost trail: segments between current and preview that will become active
-        const isPreviewTrail = previewValue != null && previewValue < orientedValue
-          && -seg < orientedValue && -seg >= previewValue;
-        return (
-          <Diamond
-            key={`R${seg}`}
-            number={seg}
-            isActive={isActive}
-            isExact={isExact}
-            side="opponent"
-            isPreviewTarget={isPreviewTarget}
-            isPreviewTrail={isPreviewTrail}
+      <div className="ib-gauge-bar" aria-label={`Memory ${orientedValue}`}>
+        <div className="ib-gauge-label">Memory</div>
+        <div className="ib-gauge-segments">
+          {leftSegments.map((seg) => {
+            const isActive = orientedValue >= seg;
+            const isExact = orientedValue === seg;
+            const isPreviewTarget = previewValue != null && previewValue === seg;
+            const isPreviewTrail = previewValue != null && previewValue > orientedValue
+              && seg > orientedValue && seg <= previewValue;
+            return (
+              <GaugeSegment
+                key={`L${seg}`}
+                number={seg}
+                isActive={isActive}
+                isExact={isExact}
+                side="player"
+                isPreviewTarget={isPreviewTarget}
+                isPreviewTrail={isPreviewTrail}
+              />
+            );
+          })}
+
+          <GaugeSegment
+            number={0}
+            isActive={orientedValue === 0}
+            isExact={orientedValue === 0}
+            side="zero"
+            isPreviewTarget={previewValue === 0}
           />
-        );
-      })}
+
+          {rightSegments.map((seg) => {
+            const isActive = orientedValue <= -seg;
+            const isExact = orientedValue === -seg;
+            const isPreviewTarget = previewValue != null && previewValue === -seg;
+            const isPreviewTrail = previewValue != null && previewValue < orientedValue
+              && -seg < orientedValue && -seg >= previewValue;
+            return (
+              <GaugeSegment
+                key={`R${seg}`}
+                number={seg}
+                isActive={isActive}
+                isExact={isExact}
+                side="opponent"
+                isPreviewTarget={isPreviewTarget}
+                isPreviewTrail={isPreviewTrail}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="ib-gauge-pill ib-gauge-pill--action">
+        <span>Action</span>
+        {latestActionLabel ?? 'Resolve'}
+      </div>
     </div>
   );
 }
 
-interface DiamondProps {
+interface GaugeSegmentProps {
   number: number;
   isActive: boolean;
   isExact: boolean;
-  side: 'player' | 'opponent';
+  side: 'player' | 'opponent' | 'zero';
   isPreviewTarget?: boolean;
   isPreviewTrail?: boolean;
 }
 
-function Diamond({ number, isActive, isExact, side, isPreviewTarget, isPreviewTrail }: DiamondProps) {
-  const playerColors = {
-    active: 'bg-orange-500 border-orange-400',
-    inactive: 'bg-orange-900/30 border-orange-800/40',
-  };
-  const opponentColors = {
-    active: 'bg-blue-500 border-blue-400',
-    inactive: 'bg-blue-900/30 border-blue-800/40',
-  };
-
-  const colors = side === 'player' ? playerColors : opponentColors;
-  const colorClass = isActive ? colors.active : colors.inactive;
-  const glowClass = isExact
-    ? 'shadow-[0_0_12px_rgba(250,204,21,0.6)] ring-1 ring-yellow-300'
-    : '';
-  const previewClass = isPreviewTarget
-    ? 'ring-2 ring-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.7)] animate-pulse'
-    : isPreviewTrail
-      ? 'ring-1 ring-amber-400/50'
-      : '';
-  const showNumber = number % 5 === 0 || number === 1 || isExact || isPreviewTarget;
+function GaugeSegment({ number, isActive, isExact, side, isPreviewTarget, isPreviewTrail }: GaugeSegmentProps) {
+  const showNumber = number === 0 || number % 5 === 0 || number === 1 || isExact || isPreviewTarget;
 
   return (
-    <div className="flex flex-col items-center mx-[-2px]">
-      <div
-        className={`w-5 h-5 rotate-45 flex items-center justify-center rounded-[2px] border ${colorClass} ${glowClass} ${previewClass} transition-colors duration-200`}
-      >
-        {showNumber && (
-          <span
-            className={`-rotate-45 text-[8px] font-bold ${
-              isPreviewTarget ? 'text-amber-300' : isActive ? 'text-white' : 'text-gray-500'
-            }`}
-          >
-            {number}
-          </span>
-        )}
-      </div>
+    <div
+      className={[
+        'ib-gauge-seg',
+        `ib-gauge-seg--${side}`,
+        isActive ? 'is-active' : '',
+        isExact ? 'is-focal' : '',
+        isPreviewTarget ? 'is-ghost' : '',
+        isPreviewTrail ? 'is-trail' : '',
+        showNumber ? 'is-numbered' : 'is-tick',
+      ].filter(Boolean).join(' ')}
+    >
+      {showNumber ? number : ''}
     </div>
   );
 }

@@ -16,7 +16,9 @@ pub struct StubRegistry {
 }
 
 impl StubRegistry {
-    pub fn empty() -> Self { Self::default() }
+    pub fn empty() -> Self {
+        Self::default()
+    }
 
     pub fn with<I: IntoIterator<Item = &'static str>>(names: I) -> Self {
         Self {

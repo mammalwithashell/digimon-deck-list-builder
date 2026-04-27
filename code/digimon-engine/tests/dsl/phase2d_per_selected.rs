@@ -2,9 +2,7 @@
 //! SelectCountCappedMulti. Pattern: "for each card you picked, gain
 //! memory and draw 1".
 
-use digimon_dsl::compiled::{
-    CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone,
-};
+use digimon_dsl::compiled::{CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -102,11 +100,7 @@ fn per_selected_drives_body_once_per_pick() {
         runner.game.pending_selection.is_none(),
         "no selection must remain after final pick"
     );
-    assert_eq!(
-        runner.game.memory,
-        memory_before + 3,
-        "3 picks → +3 memory"
-    );
+    assert_eq!(runner.game.memory, memory_before + 3, "3 picks → +3 memory");
     assert_eq!(
         runner.game.players[0].hand.len(),
         hand_before + 3,

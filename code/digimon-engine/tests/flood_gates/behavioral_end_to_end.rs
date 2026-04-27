@@ -136,11 +136,19 @@ fn shamanmon_style_tamer_anchors_opponent_memory_gain() {
     // while it remains in play.
     r.game.modifiers.add_player_modifier(
         1,
-        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryExceptFromTamers, 0, Expiry::UntilLeaveField, Some(anchor_handle), 0),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotGainMemoryExceptFromTamers,
+            0,
+            Expiry::UntilLeaveField,
+            Some(anchor_handle),
+            0,
+        ),
     );
 
     assert!(
-        r.game.modifiers.player_has(1, ModifierType::CannotGainMemoryExceptFromTamers),
+        r.game
+            .modifiers
+            .player_has(1, ModifierType::CannotGainMemoryExceptFromTamers),
         "modifier must be installed on player 1 before any gates fire"
     );
 
@@ -160,8 +168,7 @@ fn shamanmon_style_tamer_anchors_opponent_memory_gain() {
     }
 
     assert_eq!(
-        r.game.memory,
-        memory_before_phase1,
+        r.game.memory, memory_before_phase1,
         "Phase 1: Digimon-sourced gain_memory must be blocked by \
          CannotGainMemoryExceptFromTamers (memory must stay at {})",
         memory_before_phase1
@@ -204,7 +211,9 @@ fn shamanmon_style_tamer_anchors_opponent_memory_gain() {
     }
 
     assert!(
-        !r.game.modifiers.player_has(1, ModifierType::CannotGainMemoryExceptFromTamers),
+        !r.game
+            .modifiers
+            .player_has(1, ModifierType::CannotGainMemoryExceptFromTamers),
         "Phase 3: deleting ANCHOR must expire the UntilLeaveField modifier on player 1"
     );
 

@@ -1,0 +1,21 @@
+card: BT14-009
+name: Gotsumon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Rock]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    active_when: { all_turns: true }
+    modifier: CannotPlayDigimonByEffect
+    target: { kind: digimon }
+    summary: "Players can't play Digimon by effects"

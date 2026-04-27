@@ -1,0 +1,40 @@
+card: BT9-092
+name: Cool Boy
+kind: tamer
+color: [white]
+cost: 2
+
+effects:
+  - when: on_play
+    summary: "Reveal 3; add X Antibody Digimon and Option"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - select_reveal:
+          of: you
+          bind_as: digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "X Antibody"
+          prompt: "Add an X Antibody Digimon"
+      - add_to_hand_from_reveal: { of: you, card: digimon }
+      - select_reveal:
+          of: you
+          bind_as: option
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "X Antibody"
+          prompt: "Add an X Antibody Option"
+      - add_to_hand_from_reveal: { of: you, card: option }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: raw_rust
+    fn: bt9_092_same_level_x_antibody_digivolve
+    triggers: [on_digivolve]
+
+  - when: on_security
+    process:
+      - play_from_security: {}

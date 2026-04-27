@@ -117,10 +117,7 @@ fn play_from_security_returns_none_for_empty_security() {
         ctx.play_from_security(0)
     };
 
-    assert!(
-        result.is_none(),
-        "empty security stack returns None"
-    );
+    assert!(result.is_none(), "empty security stack returns None");
     assert_eq!(runner.game.memory, 3, "memory untouched on empty-security");
     assert_eq!(
         runner.game.players[0].battle_area.len(),
@@ -142,9 +139,7 @@ fn play_from_security_clears_face_up_flag_when_top_was_face_up() {
 
     let src_handle = runner.game.players[0].security[0].handle();
     let card_index = runner.game.players[0].security[0].card_index;
-    runner.game.players[0]
-        .face_up_security
-        .insert(card_index);
+    runner.game.players[0].face_up_security.insert(card_index);
 
     assert!(
         runner.game.players[0]

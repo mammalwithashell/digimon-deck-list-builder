@@ -12,7 +12,9 @@ impl CardEffect for Test004 {
             .name("Gain 2 memory if opp has Digimon")
             .condition(|ctx| {
                 let opp = ctx.opponent_id();
-                ctx.battle_area(opp).iter().any(|p| p.is_digimon(ctx.card_data()))
+                ctx.battle_area(opp)
+                    .iter()
+                    .any(|p| p.is_digimon(ctx.card_data()))
             })
             .process(|ctx| {
                 ctx.gain_memory(2);

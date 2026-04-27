@@ -51,9 +51,10 @@ impl CardEffect for BattleOpponentCapture {
             .name("capture battle_opponent_of")
             .process(move |ctx| {
                 // Read the handle that was stored before the attack
-                let handle = self_handle_cell.lock().unwrap().expect(
-                    "self_handle must be set before attack fires",
-                );
+                let handle = self_handle_cell
+                    .lock()
+                    .unwrap()
+                    .expect("self_handle must be set before attack fires");
                 *result_cell.lock().unwrap() = Some(ctx.battle_opponent_of(handle));
             })
             .build()]

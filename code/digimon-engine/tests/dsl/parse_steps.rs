@@ -90,11 +90,13 @@ effects:
 
 #[test]
 fn parse_raw_rust_step() {
-    let step = parse_single_step(
-        "raw_rust: { fn: my_fn, consumes: [target], binds: [output] }",
-    );
+    let step = parse_single_step("raw_rust: { fn: my_fn, consumes: [target], binds: [output] }");
     match step {
-        StepSpec::RawRust(RawRustStep { fn_name, consumes, binds }) => {
+        StepSpec::RawRust(RawRustStep {
+            fn_name,
+            consumes,
+            binds,
+        }) => {
             assert_eq!(fn_name, "my_fn");
             assert_eq!(consumes, vec!["target".to_string()]);
             assert_eq!(binds, vec!["output".to_string()]);
@@ -120,12 +122,10 @@ fn add_modifier_target_as_binding_ref() {
         r#"add_modifier: { target: my_target, modifier: CannotAttack, value: 1, expiry: end_of_turn}"#,
     );
     match step {
-        StepSpec::AddModifier(args) => {
-            match args.target {
-                ModifierTarget::Binding(BindingRef::Named(n)) => assert_eq!(n, "my_target"),
-                other => panic!("expected binding, got {other:?}"),
-            }
-        }
+        StepSpec::AddModifier(args) => match args.target {
+            ModifierTarget::Binding(BindingRef::Named(n)) => assert_eq!(n, "my_target"),
+            other => panic!("expected binding, got {other:?}"),
+        },
         _ => panic!("expected AddModifier"),
     }
 }
@@ -136,14 +136,15 @@ fn add_modifier_target_as_predicate_filter() {
         r#"add_modifier: { target: { of: opponent, zone: [battle_area], kind: digimon }, modifier: CannotUnsuspend, value: 1, expiry: end_of_opponents_turn }"#,
     );
     match step {
-        StepSpec::AddModifier(args) => {
-            match args.target {
-                ModifierTarget::Filter(p) => {
-                    assert_eq!(p.zone, vec![digimon_engine::dsl::predicate::Zone::BattleArea]);
-                }
-                other => panic!("expected filter, got {other:?}"),
+        StepSpec::AddModifier(args) => match args.target {
+            ModifierTarget::Filter(p) => {
+                assert_eq!(
+                    p.zone,
+                    vec![digimon_engine::dsl::predicate::Zone::BattleArea]
+                );
             }
-        }
+            other => panic!("expected filter, got {other:?}"),
+        },
         _ => panic!("expected AddModifier"),
     }
 }

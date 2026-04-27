@@ -3,6 +3,7 @@
 //! redaction. These tests share the MaskParity / TensorParity scaffolding
 //! and benefit from being compiled as a single binary.
 
+mod action_explain;
 mod action_main_effects_parity;
 mod card_registry_parity;
 mod mask_end_of_turn_parity;

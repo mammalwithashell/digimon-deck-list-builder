@@ -1,19 +1,17 @@
 //! Card effect registry — maps card_id strings to their CardEffect implementation.
 //!
-//! Each set has its own submodule (e.g. `bt17/`) that registers all of its
-//! cards via a `register(registry)` fn. `build_registry()` calls every set's
-//! `register()` — one place to add a new set.
+//! Production card effects are DSL-authored and loaded from the embedded pack.
 //!
-//! Layout convention is one file per card, locked in in `src/cards/test/`:
-//! `cards/<set>/<card_id>.rs` exports a single `CardEffect` struct.
+//! This module remains as a thin shell for test effects, token printed
+//! abilities, keyword auto-effects, and raw-rust escape-hatch functions.
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::effect::CardEffect;
 
-pub mod bt17;
 pub mod keyword_effects;
+pub mod raw_rust;
 pub mod test;
 pub mod tokens;
 
@@ -64,11 +62,11 @@ impl CardEffectRegistry {
 }
 
 /// Build the default registry with all built-in card effects.
-/// Test cards are always included; production set modules register their cards here.
+/// Test cards and token printed abilities are always included. Production cards
+/// are registered from the embedded DSL pack below.
 pub fn build_registry() -> CardEffectRegistry {
     let mut registry = CardEffectRegistry::new();
     test::register(&mut registry);
-    bt17::register(&mut registry);
     tokens::register(&mut registry);
 
     // DSL-authored cards (embedded at build time via build.rs → cards.pack).
@@ -76,7 +74,15 @@ pub fn build_registry() -> CardEffectRegistry {
     #[cfg(feature = "dsl-yaml-loader")]
     {
         match crate::dsl_registry::from_embedded() {
-            Ok(pack) => crate::dsl_cards::register_dsl_cards(&mut registry, &pack),
+            Ok(pack) => {
+                let raw = Arc::new(raw_rust::build_registry());
+                if let Err(msg) =
+                    raw_rust::raw_rust_budget_status(raw.registered_fn_count(), pack.len())
+                {
+                    eprintln!("WARNING: {msg}");
+                }
+                crate::dsl_cards::register_dsl_cards_with_raw(&mut registry, &pack, raw);
+            }
             Err(e) => eprintln!("DSL embedded pack failed to load: {e}"),
         }
     }

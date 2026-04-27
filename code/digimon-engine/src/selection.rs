@@ -18,6 +18,7 @@ use std::collections::VecDeque;
 use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{EffectTiming, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
+use crate::trigger_context::TriggerContext;
 
 /// Bitset of zones for `SelectionKind::UnionZone`. Designed to be extended
 /// with additional zone bits in later Phase 4 tasks without breaking callers.
@@ -58,12 +59,10 @@ impl std::ops::BitOrAssign for UnionZoneSet {
 }
 
 /// Called when a selection resolves with a concrete action ID.
-pub type SelectionCallback =
-    Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
+pub type SelectionCallback = Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
 
 /// Called when an optional selection is declined via PASS.
-pub type DeclineCallback =
-    Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>;
+pub type DeclineCallback = Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>;
 
 /// Taxonomy of selection prompts. Mirrors the Python `PendingSelection.kind`
 /// tag — decoders use this plus `previous_phase` to route action IDs.
@@ -98,7 +97,6 @@ pub enum SelectionKind {
     // ── Phase 4 kinds ─────────────────────────────────────────────────────
     // Full mask + decoder + helper dispatch lands in Tasks 2-5. Defined
     // here so all downstream match arms compile from day one.
-
     /// Pick one card from a union of two or more zones (e.g. hand OR trash).
     /// `zones` is a `UnionZoneSet` bitfield indicating which zones are in
     /// scope. The action-space encoding for each zone is resolved in Task 2.
@@ -244,6 +242,7 @@ pub struct QueuedEffect {
     pub source_permanent: Option<PermanentHandle>,
     pub controller: PlayerId,
     pub timing: EffectTiming,
+    pub trigger_context: Option<TriggerContext>,
     pub effect_slot: u8,
     pub is_optional: bool,
     pub is_turn_player: bool,

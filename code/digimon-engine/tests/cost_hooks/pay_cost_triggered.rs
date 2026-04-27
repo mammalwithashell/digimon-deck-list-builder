@@ -6,7 +6,7 @@
 //! continues to `process`.
 
 use digimon_engine::card_source::CardHandle;
-use digimon_engine::debug_runner::{DebugRunner, make_test_card};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use std::sync::{Arc, Mutex};
 
@@ -106,7 +106,9 @@ fn pay_cost_returning_true_runs_process() {
 
     r.register_effect("PCTRUE", Arc::new(PayCostTrueGainsMemory));
 
-    let printed_cost = r.game.card_data
+    let printed_cost = r
+        .game
+        .card_data
         .iter()
         .find(|c| c.card_id == "PCTRUE")
         .map(|c| c.play_cost as i16)
@@ -122,7 +124,9 @@ fn pay_cost_returning_true_runs_process() {
         expected,
         "pay_cost_fn returning true should allow process to run and gain 1 memory; \
          expected {} - {} + 1 = {}",
-        memory_before, printed_cost, expected,
+        memory_before,
+        printed_cost,
+        expected,
     );
 }
 
@@ -141,7 +145,9 @@ fn pay_cost_returning_false_skips_process() {
 
     r.register_effect("PCFALSE", Arc::new(PayCostFalseSkipsProcess));
 
-    let printed_cost = r.game.card_data
+    let printed_cost = r
+        .game
+        .card_data
         .iter()
         .find(|c| c.card_id == "PCFALSE")
         .map(|c| c.play_cost as i16)
@@ -157,7 +163,9 @@ fn pay_cost_returning_false_skips_process() {
         expected,
         "pay_cost_fn returning false should silently abort; process must not run; \
          expected {} - {} = {}",
-        memory_before, printed_cost, expected,
+        memory_before,
+        printed_cost,
+        expected,
     );
 }
 
@@ -212,14 +220,16 @@ fn condition_gates_pay_cost() {
 
     r.register_effect("CONDGATE", Arc::new(ConditionFalsePayCostPanics));
 
-    let printed_cost = r.game.card_data
+    let printed_cost = r
+        .game
+        .card_data
         .iter()
         .find(|c| c.card_id == "CONDGATE")
         .map(|c| c.play_cost as i16)
         .unwrap_or(0);
 
     let memory_before = r.memory(); // 10
-    // This would panic inside the pay_cost_fn if the condition didn't gate it.
+                                    // This would panic inside the pay_cost_fn if the condition didn't gate it.
     r.play(0, 0);
 
     // No panic = condition correctly prevented pay_cost_fn from firing.
@@ -230,7 +240,9 @@ fn condition_gates_pay_cost() {
         expected,
         "condition(false) should gate pay_cost_fn; only play cost deducted; \
          expected {} - {} = {}",
-        memory_before, printed_cost, expected,
+        memory_before,
+        printed_cost,
+        expected,
     );
 }
 
@@ -249,7 +261,9 @@ fn pay_cost_without_process_field_is_noop() {
 
     r.register_effect("PCNOPROCESS", Arc::new(PayCostTrueNoProcess));
 
-    let printed_cost = r.game.card_data
+    let printed_cost = r
+        .game
+        .card_data
         .iter()
         .find(|c| c.card_id == "PCNOPROCESS")
         .map(|c| c.play_cost as i16)

@@ -27,7 +27,13 @@ use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::ModifierType;
 
 /// Push N-1 extra `CardSource`s onto a permanent so its stack_size == `target`.
-fn pad_stack_to(runner: &mut DebugRunner, player: u8, perm_index: usize, target: usize, card_id: &str) {
+fn pad_stack_to(
+    runner: &mut DebugRunner,
+    player: u8,
+    perm_index: usize,
+    target: usize,
+    card_id: &str,
+) {
     let data_idx = runner
         .game
         .card_data
@@ -83,7 +89,9 @@ fn add_dp_modifier_formula_value_resolves_against_target_stack_size() {
         run_steps(&[step], &mut ctx, &mut bindings);
     }
 
-    let after_dp = runner.effective_dp(handle).expect("permanent still on field");
+    let after_dp = runner
+        .effective_dp(handle)
+        .expect("permanent still on field");
     assert_eq!(
         after_dp,
         base_dp + 3000,
@@ -178,7 +186,9 @@ fn add_dp_modifier_literal_arm_unchanged() {
         run_steps(&[step], &mut ctx, &mut bindings);
     }
 
-    let after_dp = runner.effective_dp(handle).expect("permanent still on field");
+    let after_dp = runner
+        .effective_dp(handle)
+        .expect("permanent still on field");
     assert_eq!(
         after_dp,
         base_dp + 3000,
@@ -217,7 +227,9 @@ fn add_dp_modifier_formula_large_value_passes_through() {
         run_steps(&[step], &mut ctx, &mut bindings);
     }
 
-    let after_dp = runner.effective_dp(handle).expect("permanent still on field");
+    let after_dp = runner
+        .effective_dp(handle)
+        .expect("permanent still on field");
     assert_eq!(
         after_dp,
         base_dp + 40000,

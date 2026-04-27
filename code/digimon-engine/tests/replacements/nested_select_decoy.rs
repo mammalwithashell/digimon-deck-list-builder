@@ -98,9 +98,7 @@ impl CardEffect for DecoyLike {
                     false,
                     move |_g, h| h == me,
                     move |ctx, _picked| {
-                        ctx.substitute_replacement(
-                            ReplacementSubject::Permanent(me),
-                        );
+                        ctx.substitute_replacement(ReplacementSubject::Permanent(me));
                     },
                 );
             })
@@ -123,13 +121,17 @@ fn decoy_substitutes_self_for_ally_deletion() {
 
     // Outer accept dialog up.
     assert!(r.game.pending_selection.is_some());
-    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).expect("outer accept");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("outer accept");
 
     // Inner confirm prompt — pick the only valid action.
     let pending = r.game.pending_selection.as_ref().expect("confirm");
     let action = pending.valid_action_ids[0];
     let player = pending.selecting_player;
-    r.game.resolve_selection(player, action).expect("confirm pick");
+    r.game
+        .resolve_selection(player, action)
+        .expect("confirm pick");
 
     // Substitute outcome: ally survives, decoy is deleted in its place.
     assert_eq!(
@@ -138,7 +140,9 @@ fn decoy_substitutes_self_for_ally_deletion() {
         "exactly one permanent left after substitute"
     );
     assert_eq!(
-        r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data),
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
         "ALLY",
         "the ally is the survivor; decoy was deleted in its place"
     );

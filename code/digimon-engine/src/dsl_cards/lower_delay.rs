@@ -12,7 +12,8 @@ use digimon_dsl::compiled::{CompiledPredicate, CompiledScope, CompiledStep, Comp
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::run_step;
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::{DelayTrigger, EffectTiming};
 
@@ -30,18 +31,35 @@ pub fn lower(
     trigger: CompiledTiming,
     process_steps: &[CompiledStep],
 ) -> Effect {
+    lower_with_raw(
+        card,
+        scope,
+        _active_when,
+        trigger,
+        process_steps,
+        Arc::new(EngineRawRustRegistry::new()),
+    )
+}
+
+pub fn lower_with_raw(
+    card: CardHandle,
+    scope: CompiledScope,
+    _active_when: Option<&CompiledPredicate>,
+    trigger: CompiledTiming,
+    process_steps: &[CompiledStep],
+    raw: Arc<EngineRawRustRegistry>,
+) -> Effect {
     let delay_trigger = match trigger {
         CompiledTiming::EndOfYourTurn => DelayTrigger::EndOfThisTurn,
         _ => DelayTrigger::EndOfYourNextTurn,
     };
     let process_arc: Arc<[CompiledStep]> = Arc::from(process_steps);
+    let runtime = StepRuntime::new(raw);
     let mut builder = EffectBuilder::new(card, EffectTiming::DelayEffect)
         .delay(delay_trigger)
         .process(move |ctx| {
             let mut bindings = Bindings::new();
-            for s in process_arc.iter() {
-                run_step(s, ctx, &mut bindings);
-            }
+            let _ = run_steps_with_runtime(&process_arc, ctx, &mut bindings, &runtime);
         });
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();

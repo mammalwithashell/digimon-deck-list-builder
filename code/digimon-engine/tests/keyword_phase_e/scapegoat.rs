@@ -93,11 +93,7 @@ fn scapegoat_substitutes_ally_for_self_on_opponent_effect_deletion() {
         "SCAP",
         "SCAP should survive"
     );
-    assert_eq!(
-        r.game.players[0].trash.len(),
-        1,
-        "ALLY should be in trash"
-    );
+    assert_eq!(r.game.players[0].trash.len(), 1, "ALLY should be in trash");
     assert_eq!(
         r.game.players[0].trash[0].card_id(&r.game.card_data),
         "ALLY",
@@ -182,7 +178,9 @@ fn scapegoat_decline_proceeds_with_self_deletion() {
         assert!(pending.is_optional);
     }
 
-    r.game.resolve_selection(0, PASS).expect("decline Scapegoat");
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline Scapegoat");
 
     // SCAP gone, ALLY survives.
     assert_eq!(
@@ -197,11 +195,7 @@ fn scapegoat_decline_proceeds_with_self_deletion() {
         "ALLY",
         "ALLY is the surviving permanent"
     );
-    assert_eq!(
-        r.game.players[0].trash.len(),
-        1,
-        "SCAP should be in trash"
-    );
+    assert_eq!(r.game.players[0].trash.len(), 1, "SCAP should be in trash");
 }
 
 // ─── Test 4: no other own permanents — original deletion proceeds ────────────

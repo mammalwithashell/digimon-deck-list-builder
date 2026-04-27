@@ -17,8 +17,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{
-    CardColor, CardKind, CardSourceRef, CostDelta, Expiry, ModifierType, PlaySource,
-    StackPosition,
+    CardColor, CardKind, CardSourceRef, CostDelta, Expiry, ModifierType, PlaySource, StackPosition,
 };
 use digimon_engine::modifiers::PlayerModifierEntry;
 
@@ -110,25 +109,43 @@ fn cannot_play_digimon_by_effect_blocks_effect_initiated_play_but_not_hand_play(
     // Install CannotPlayDigimonByEffect on the turn player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     // Effect-initiated play: should be blocked → None.
-    let result = r.game.play_from_hand_with_cost(tp, 0, CostDelta::Free, PlaySource::ByEffect);
+    let result = r
+        .game
+        .play_from_hand_with_cost(tp, 0, CostDelta::Free, PlaySource::ByEffect);
     assert!(
         result.is_none(),
         "ByEffect play of Digimon must be blocked by CannotPlayDigimonByEffect"
     );
     // Card should still be in hand.
-    assert_eq!(r.game.player(tp).hand.len(), 1, "card should remain in hand after blocked play");
+    assert_eq!(
+        r.game.player(tp).hand.len(),
+        1,
+        "card should remain in hand after blocked play"
+    );
 
     // Player-action play (ByHand): must NOT be blocked.
-    let result_hand = r.game.play_from_hand_with_cost(tp, 0, CostDelta::Free, PlaySource::ByHand);
+    let result_hand = r
+        .game
+        .play_from_hand_with_cost(tp, 0, CostDelta::Free, PlaySource::ByHand);
     assert!(
         result_hand.is_some(),
         "ByHand play must succeed even when CannotPlayDigimonByEffect is installed"
     );
-    assert_eq!(r.game.player(tp).hand.len(), 0, "card should leave hand after ByHand play");
+    assert_eq!(
+        r.game.player(tp).hand.len(),
+        0,
+        "card should leave hand after ByHand play"
+    );
 }
 
 /// CannotPlayDigimonByEffect does not block a non-Digimon card played ByEffect.
@@ -147,11 +164,19 @@ fn cannot_play_digimon_by_effect_does_not_block_non_digimon() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     // Tamer played ByEffect should succeed — only Digimon is blocked.
-    let result = r.game.play_from_hand_with_cost(tp, 0, CostDelta::Free, PlaySource::ByEffect);
+    let result = r
+        .game
+        .play_from_hand_with_cost(tp, 0, CostDelta::Free, PlaySource::ByEffect);
     assert!(
         result.is_some(),
         "Tamer ByEffect play must succeed even under CannotPlayDigimonByEffect"
@@ -175,7 +200,13 @@ fn cannot_gain_memory_by_effect_blocks_ctx_gain_memory() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotGainMemoryByEffect, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotGainMemoryByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     // Construct a minimal EffectContext with a synthetic source handle.
@@ -209,7 +240,13 @@ fn cannot_draw_by_effect_blocks_ctx_draw() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotDrawByEffect, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotDrawByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     {
@@ -239,14 +276,23 @@ fn cannot_draw_by_effect_is_player_scoped() {
 
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotDrawByEffect, 0, Expiry::Permanent, None, opp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotDrawByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            opp,
+        ),
     );
 
     let opp_hand_before = r.game.player(opp).hand.len();
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(999), None, tp);
         let drawn = ctx.draw(opp, 1);
-        assert_eq!(drawn, 1, "draw for opponent must succeed (modifier is on tp, not opp)");
+        assert_eq!(
+            drawn, 1,
+            "draw for opponent must succeed (modifier is on tp, not opp)"
+        );
     }
     assert_eq!(r.game.player(opp).hand.len(), opp_hand_before + 1);
 }
@@ -261,9 +307,7 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
     struct CostReducer;
     impl CardEffect for CostReducer {
         fn effects(&self, card: CardHandle) -> Vec<Effect> {
-            vec![Effect::before_pay_cost(card)
-                .cost_reduction(3)
-                .build()]
+            vec![Effect::before_pay_cost(card).cost_reduction(3).build()]
         }
     }
 
@@ -311,12 +355,23 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
     // Install CannotReducePlayCost.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotReducePlayCost, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotReducePlayCost,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     let memory_before = r.game.memory;
-    let result = r.game.play_from_hand_with_cost(tp, 0, CostDelta::Reduce(0), PlaySource::ByHand);
-    assert!(result.is_some(), "play should succeed (memory is sufficient)");
+    let result = r
+        .game
+        .play_from_hand_with_cost(tp, 0, CostDelta::Reduce(0), PlaySource::ByHand);
+    assert!(
+        result.is_some(),
+        "play should succeed (memory is sufficient)"
+    );
 
     // With CannotReducePlayCost, effective cost must be the full printed cost (4),
     // NOT 1 (which would be printed - 3).
@@ -373,7 +428,13 @@ fn cannot_play_digimon_by_effect_blocks_security_trigger_play() {
     // Install CannotPlayDigimonByEffect on the defender (player 1).
     r.game.modifiers.add_player_modifier(
         1,
-        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 0),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            0,
+        ),
     );
 
     let atk = r.place_on_field(0, "ATK", Some(0));
@@ -420,7 +481,13 @@ fn cannot_add_security_by_effect_blocks_place_on_security() {
     // Install CannotAddSecurityByEffect on the acting player.
     r.game.modifiers.add_player_modifier(
         tp,
-        PlayerModifierEntry::simple(ModifierType::CannotAddSecurityByEffect, 0, Expiry::Permanent, None, 1 - tp),
+        PlayerModifierEntry::simple(
+            ModifierType::CannotAddSecurityByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
     );
 
     // Try to place the hand card (index 0) onto security via EffectContext.

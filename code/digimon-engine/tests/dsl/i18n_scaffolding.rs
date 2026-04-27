@@ -24,7 +24,10 @@ effects:
 "#;
     let spec = parse(yaml);
     let t = spec.effects[0].as_triggered().unwrap();
-    assert_eq!(t.summary.as_deref(), Some("Delete 8000 DP or digivolve Gabumon free"));
+    assert_eq!(
+        t.summary.as_deref(),
+        Some("Delete 8000 DP or digivolve Gabumon free")
+    );
     assert_eq!(t.summary_key.as_deref(), Some("BT17-015.onplay"));
 }
 

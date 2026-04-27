@@ -163,7 +163,11 @@ fn armor_purge_swaps_top_and_cancels_deletion() {
         "exactly 1 card was added to trash"
     );
     assert_eq!(
-        r.game.players[0].trash.last().unwrap().card_id(&r.game.card_data),
+        r.game.players[0]
+            .trash
+            .last()
+            .unwrap()
+            .card_id(&r.game.card_data),
         "ARMOR-TOP",
         "the trashed card is the previous top"
     );
@@ -362,7 +366,11 @@ fn armor_purge_does_not_fire_on_neighbor_deletion() {
     );
     // The trashed card is the neighbor.
     assert_eq!(
-        r.game.players[0].trash.last().unwrap().card_id(&r.game.card_data),
+        r.game.players[0]
+            .trash
+            .last()
+            .unwrap()
+            .card_id(&r.game.card_data),
         "NEIGHBOR",
         "the trashed card is the neighbor"
     );
@@ -460,13 +468,10 @@ fn armor_purge_fires_on_digivolution_card_trashed() {
     );
 
     // Sanity: the carrier survived with the promoted top.
-    let surviving = r
-        .game
-        .players[0]
+    let surviving = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BOTTOM")
         .expect("BOTTOM is now the top of the surviving carrier");
     assert_eq!(surviving.card_sources.len(), 1);
-
 }

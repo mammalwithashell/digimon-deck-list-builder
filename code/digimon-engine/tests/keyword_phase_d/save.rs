@@ -283,9 +283,7 @@ fn save_with_no_tamers_does_not_protect() {
     // No Tamer on field → the candidate filter for `select_own_permanent`
     // yields zero matches; the helper returns without parking any prompt.
     // Save's handler returns immediately. Carrier was deleted normally.
-    let mut r = DebugRunner::builder()
-        .add_card(save_card("SAVE-D"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(save_card("SAVE-D")).start();
 
     let saved = r.place_on_field(0, "SAVE-D", None);
 
@@ -427,9 +425,7 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
         .as_ref()
         .expect("Decoy optional dialog must be parked");
     assert!(pending.is_optional, "Decoy is optional");
-    r.game
-        .resolve_selection(0, PASS)
-        .expect("decline Decoy");
+    r.game.resolve_selection(0, PASS).expect("decline Decoy");
 
     // (4) After declining Decoy, the no-replace path ran: OnDeletion fired
     // and Save parked a Tamer-pick. The deferred guard MUST have stashed
@@ -468,10 +464,7 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
         "carrier finalized after the parked Save selection resolved"
     );
     let surviving = &r.game.players[0].battle_area[0];
-    assert_eq!(
-        surviving.top_card().card_id(&r.game.card_data),
-        "TAMER",
-    );
+    assert_eq!(surviving.top_card().card_id(&r.game.card_data), "TAMER",);
     assert_eq!(
         surviving.card_sources[0].card_id(&r.game.card_data),
         "DECOY-SAVE",
