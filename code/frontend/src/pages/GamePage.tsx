@@ -173,6 +173,7 @@ export function GamePage() {
         // PvP / vs-AI-online / spectator: WebSocket hook will send initial state
         store.setGameId(urlGameId);
         store.clearLogs();
+        store.clearActionTraces();
       } else {
         // Local mode: fetch state via HTTP
         (async () => {
@@ -185,6 +186,7 @@ export function GamePage() {
             store.setGameState(state);
             store.setActionMask(maskData);
             store.clearLogs();
+            store.clearActionTraces();
           } catch (err) {
             console.error('Failed to load game:', err);
           }
@@ -782,6 +784,8 @@ export function GamePage() {
               canPlayDragged={draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)}
               previewCost={previewCost}
               onHandCardHoverIndex={setHoveredHandIndex}
+              actionTraces={store.actionTraces}
+              latestTensorSummary={store.latestTensorSummary}
             />
             <DragOverlayCard cardId={draggedCardId} isOverValid={isOverValid} />
           </DndContext>
