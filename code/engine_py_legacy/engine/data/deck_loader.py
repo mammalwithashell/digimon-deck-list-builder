@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from engine_py_legacy.engine.data.card_database import CardDatabase
-from engine_py_legacy.engine.data.enums import CardKind
+from engine_py_legacy.engine.data.enums import CardKind, Rarity
 
 # ─── Card ID Pattern ─────────────────────────────────────────────────
 # Matches standard Digimon TCG card IDs: BT24-017, P-103, LM-027, ST1-01, EX8-037
@@ -106,6 +106,38 @@ _CHOICE_GROUPS: List[Tuple[List[str], List[str]]] = [
 RESTRICTED_LIST = CardRestriction(
     card_limits={**_BANNED, **_RESTRICTED},
     choice_groups=_CHOICE_GROUPS,
+)
+
+
+# EDEN Format 1.1.1 custom restricted list.
+# Source: "Digimon Card Game EDEN Format Rules & Guidance", version 1.1.1,
+# last updated 18/01/2025.
+_EDEN_BANNED = {
+    "BT3-097": 0,   # A Delicate Plan
+    "BT9-103": 0,   # Kongou
+    "BT16-011": 0,  # Garudamon (X Antibody)
+    "EX4-008": 0,   # BlackGrowlmon
+    "EX6-042": 0,   # RaijiLudomon
+    "BT12-092": 0,  # Marcus Damon
+    "EX2-007": 0,   # Mother D-Reaper (document spells this EX02-007)
+    "BT15-082": 0,  # Sora Takenouchi
+}
+
+_EDEN_RESTRICTED = {
+    "BT1-107": 1, "BT1-112": 1, "BT2-039": 1, "BT2-047": 1, "BT2-069": 1,
+    "BT3-054": 1, "BT3-058": 1, "BT3-103": 1, "BT4-098": 1, "BT4-109": 1,
+    "BT5-062": 1, "BT6-085": 4, "BT6-079": 1, "BT6-100": 1, "BT7-014": 1,
+    "BT7-025": 1, "BT7-021": 1, "BT7-038": 1, "BT7-064": 1, "BT7-072": 1,
+    "BT7-075": 1, "BT7-107": 1, "BT8-095": 1, "BT8-097": 1, "BT9-109": 1,
+    "BT11-064": 1, "BT13-012": 1, "BT14-002": 1, "BT14-060": 1,
+    "BT14-093": 1, "BT16-024": 1, "BT17-023": 1, "BT17-065": 1,
+    "BT17-067": 1, "BT17-075": 1, "BT17-092": 1, "BT18-087": 1,
+    "BT19-070": 1, "EX3-067": 1, "EX5-048": 1, "ST1-09": 1,
+}
+
+EDEN_RESTRICTED_LIST = CardRestriction(
+    card_limits={**_EDEN_BANNED, **_EDEN_RESTRICTED},
+    choice_groups=[(["EX4-015"], ["EX5-065"])],
 )
 
 
@@ -243,6 +275,46 @@ def summarize_deck(card_ids: List[str]) -> Dict[str, int]:
     return dict(Counter(card_ids))
 
 
+def _is_eden_anomaly(entity) -> bool:
+    """Return whether a non-C/U card fits EDEN's 4-card anomaly allowance."""
+    name = entity.card_name_eng.lower()
+    if entity.card_kind == CardKind.Tamer:
+        return entity.rarity in {Rarity.R, Rarity.P}
+    if entity.card_kind != CardKind.Option:
+        return False
+    if "memory boost" in name:
+        return entity.rarity in {Rarity.R, Rarity.SR, Rarity.P}
+    if "training" in name:
+        return entity.rarity == Rarity.P
+    if "scramble" in name:
+        return entity.rarity == Rarity.P
+    return False
+
+
+def _apply_eden_rarity_rules(
+    counts: Counter[str],
+    db: CardDatabase,
+    errors: List[str],
+) -> None:
+    anomaly_count = 0
+    for card_id, count in sorted(counts.items()):
+        entity = db.get_card(card_id)
+        if entity is None:
+            continue
+        if entity.card_kind == CardKind.DigiEgg or entity.rarity in {Rarity.C, Rarity.U}:
+            continue
+        if _is_eden_anomaly(entity):
+            anomaly_count += count
+            continue
+        errors.append(f"{card_id} ({entity.card_name_eng}): rarity is not legal in EDEN format")
+
+    if anomaly_count > 4:
+        errors.append(
+            "EDEN Anomaly Protocol allows at most 4 total rare/promo Tamers, "
+            f"Memory Boosts, Training Boosts, and Scrambles (got {anomaly_count})"
+        )
+
+
 # ─── Validation ──────────────────────────────────────────────────────
 
 @dataclass
@@ -356,4 +428,22 @@ def validate_deck(
         is_valid=len(errors) == 0,
         errors=errors,
         warnings=warnings,
+    )
+
+
+def validate_deck_for_game_mode(card_ids: List[str], game_mode: str) -> DeckValidationResult:
+    """Validate deck legality for a named game mode supported by deck tools."""
+    if game_mode in ("standard", ""):
+        return validate_deck(card_ids)
+    if game_mode != "eden":
+        raise ValueError(f"Unsupported deck validation game_mode: {game_mode}")
+
+    result = validate_deck(card_ids, restricted_list=EDEN_RESTRICTED_LIST)
+    errors = list(result.errors)
+    db = CardDatabase()
+    _apply_eden_rarity_rules(Counter(card_ids), db, errors)
+    return DeckValidationResult(
+        is_valid=len(errors) == 0,
+        errors=errors,
+        warnings=result.warnings,
     )

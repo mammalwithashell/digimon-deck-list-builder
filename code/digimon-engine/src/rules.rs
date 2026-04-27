@@ -45,6 +45,49 @@ static OFFICIAL_ENG_RESTRICTION: LazyLock<CardRestriction> = LazyLock::new(|| {
     }
 });
 
+/// EDEN Format 1.1.1 custom restricted list.
+///
+/// Source: "Digimon Card Game EDEN Format Rules & Guidance", version 1.1.1,
+/// last updated 18/01/2025.
+static EDEN_RESTRICTION: LazyLock<CardRestriction> = LazyLock::new(|| {
+    let mut card_limits = BTreeMap::new();
+
+    for id in [
+        "BT3-097",  // A Delicate Plan
+        "BT9-103",  // Kongou
+        "BT16-011", // Garudamon (X Antibody)
+        "EX4-008",  // BlackGrowlmon
+        "EX6-042",  // RaijiLudomon
+        "BT12-092", // Marcus Damon
+        "EX2-007",  // Mother D-Reaper (document spells this EX02-007)
+        "BT15-082", // Sora Takenouchi
+    ] {
+        card_limits.insert(id.to_string(), 0);
+    }
+
+    for id in [
+        "BT1-107", "BT1-112", "BT2-039", "BT2-047", "BT2-069", "BT3-054", "BT3-058", "BT3-103",
+        "BT4-098", "BT4-109", "BT5-062", "BT6-085", "BT6-079", "BT6-100", "BT7-014", "BT7-025",
+        "BT7-021", "BT7-038", "BT7-064", "BT7-072", "BT7-075", "BT7-107", "BT8-095", "BT8-097",
+        "BT9-109", "BT11-064", "BT13-012", "BT14-002", "BT14-060", "BT14-093", "BT16-024",
+        "BT17-023", "BT17-065", "BT17-067", "BT17-075", "BT17-092", "BT18-087", "BT19-070",
+        "EX3-067", "EX5-048", "ST1-09",
+    ] {
+        card_limits.insert(id.to_string(), 1);
+    }
+
+    // Eosmon BT6-085 is explicitly "limited to 4*" in EDEN. It is listed above
+    // only to keep the source order readable, so override it back to 4 copies.
+    card_limits.insert("BT6-085".to_string(), 4);
+
+    let choice_groups = vec![(vec!["EX4-015".to_string()], vec!["EX5-065".to_string()])];
+
+    CardRestriction {
+        card_limits,
+        choice_groups,
+    }
+});
+
 /// Card-copy restrictions and mutual-exclusivity groups for a format.
 /// Mirrors `digimon_gym/engine/data/deck_loader.py:CardRestriction`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,6 +123,16 @@ impl CardRestriction {
     /// Prefer this over `official_eng()` when you don't need ownership.
     pub fn official_eng_ref() -> &'static Self {
         &OFFICIAL_ENG_RESTRICTION
+    }
+
+    /// EDEN Format 1.1.1 custom restricted list.
+    pub fn eden() -> Self {
+        EDEN_RESTRICTION.clone()
+    }
+
+    /// Shared reference to the cached EDEN restricted list.
+    pub fn eden_ref() -> &'static Self {
+        &EDEN_RESTRICTION
     }
 }
 
@@ -140,6 +193,15 @@ impl Rules {
     pub fn no_restriction() -> Self {
         Self {
             restriction: CardRestriction::none(),
+            ..Self::standard()
+        }
+    }
+
+    /// EDEN common/uncommon format, using standard gameplay parameters plus
+    /// EDEN's custom deck legality and restricted list.
+    pub fn eden() -> Self {
+        Self {
+            restriction: CardRestriction::eden(),
             ..Self::standard()
         }
     }
@@ -215,6 +277,7 @@ impl Rules {
             (GameMode::Standard, None) => Ok(Self::standard()),
             (GameMode::Pauper, None) => Ok(Self::pauper()),
             (GameMode::NoRestriction, None) => Ok(Self::no_restriction()),
+            (GameMode::Eden, None) => Ok(Self::eden()),
             (GameMode::EdhCommander, None) => Ok(Self::edh()),
             (GameMode::Titan, Some(TitanRole::Boss)) => Ok(Self::titan_boss()),
             (GameMode::Titan, Some(TitanRole::Team)) => Ok(Self::titan_team()),
@@ -313,6 +376,26 @@ mod tests {
         assert_eq!(r.security_count, std.security_count);
         assert_eq!(r.starting_hand, std.starting_hand);
         assert_eq!(r.skip_first_draw, std.skip_first_draw);
+    }
+
+    #[test]
+    fn eden_settings_use_standard_gameplay() {
+        let r = Rules::eden();
+        let std = Rules::standard();
+        assert_eq!(r.player_count, std.player_count);
+        assert_eq!(r.deck_size, std.deck_size);
+        assert_eq!(r.egg_deck_max, std.egg_deck_max);
+        assert_eq!(r.security_count, std.security_count);
+        assert_eq!(r.skip_first_draw, std.skip_first_draw);
+    }
+
+    #[test]
+    fn eden_has_custom_restriction() {
+        let r = Rules::eden();
+        assert_eq!(r.restriction.card_limits.get("BT3-097"), Some(&0));
+        assert_eq!(r.restriction.card_limits.get("BT1-107"), Some(&1));
+        assert_eq!(r.restriction.card_limits.get("BT6-085"), Some(&4));
+        assert_eq!(r.restriction.choice_groups.len(), 1);
     }
 
     #[test]
@@ -416,6 +499,10 @@ mod tests {
         assert_eq!(
             Rules::for_mode(GameMode::NoRestriction, None).unwrap(),
             Rules::no_restriction()
+        );
+        assert_eq!(
+            Rules::for_mode(GameMode::Eden, None).unwrap(),
+            Rules::eden()
         );
         assert_eq!(
             Rules::for_mode(GameMode::EdhCommander, None).unwrap(),

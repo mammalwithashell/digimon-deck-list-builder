@@ -96,7 +96,7 @@ class Deck(Base):
     __tablename__ = "decks"
     __table_args__ = (
         CheckConstraint(
-            "game_mode IN ('standard', 'edh_commander', 'titan', 'no_restriction')",
+            "game_mode IN ('standard', 'eden', 'edh_commander', 'titan', 'no_restriction')",
             name="ck_decks_game_mode",
         ),
         CheckConstraint(
@@ -262,7 +262,7 @@ class GameSession(Base):
     __tablename__ = "game_sessions"
     __table_args__ = (
         CheckConstraint(
-            "game_mode IN ('standard', 'edh_commander', 'titan', 'no_restriction')",
+            "game_mode IN ('standard', 'eden', 'edh_commander', 'titan', 'no_restriction')",
             name="ck_game_sessions_mode",
         ),
         CheckConstraint(

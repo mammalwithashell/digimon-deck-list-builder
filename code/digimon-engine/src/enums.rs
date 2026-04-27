@@ -569,6 +569,7 @@ pub enum GameMode {
     Standard,
     Pauper,
     NoRestriction,
+    Eden,
     EdhCommander,
     Titan,
 }

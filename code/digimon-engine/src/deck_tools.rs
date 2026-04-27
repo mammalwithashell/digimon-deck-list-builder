@@ -19,7 +19,7 @@ use std::sync::OnceLock;
 use serde::Deserialize;
 
 use crate::enums::{GameMode, Rarity};
-use crate::rules::Rules;
+use crate::rules::CardRestriction;
 
 // Data files — `include_str!` bakes the bytes into the crate, so there's no
 // separate resource-bundling step for desktop builds.
@@ -55,12 +55,12 @@ struct CardEntryRaw {
     max_count_in_deck: u32,
 }
 
-fn default_rarity() -> u8 {
-    u8::MAX
-}
-
 fn default_max_count() -> u32 {
     4
+}
+
+fn default_rarity() -> u8 {
+    u8::MAX
 }
 
 fn parse_rarity(raw: u8, card_id: &str) -> Rarity {
@@ -145,12 +145,134 @@ where
     out
 }
 
-fn card_limit_with_restriction(rules: &Rules, card_id: &str) -> Option<u32> {
-    rules
-        .restriction
-        .card_limits
-        .get(card_id)
-        .map(|limit| u32::from(*limit))
+// ─── Restricted list ───────────────────────────────────────────────────
+//
+// Source: https://digimoncard.io/restricted-list. Must stay in sync with
+// `deck_loader.py::_BANNED / _RESTRICTED / _CHOICE_GROUPS`. Keeping the
+// entries in the same order as the Python file makes it obvious when one
+// side drifts out of step.
+
+const BANNED_CARDS: &[&str] = &[
+    "BT2-090", // Matt Ishida
+    "BT5-109", // Mega Digimon Fusion!
+    "EX5-065", // Sayo & Koh
+];
+
+const RESTRICTED_CARDS: &[&str] = &[
+    "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110", "BT14-002", "BT14-084",
+    "BT15-057", "BT15-102", "BT16-011", "BT17-069", "BT19-040", "BT2-047", "BT2-069", "BT3-054",
+    "BT3-103", "BT4-104", "BT4-111", "BT6-100", "BT6-104", "BT7-038", "BT7-064", "BT7-069",
+    "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068", "EX2-039", "EX2-070",
+    "EX3-057", "EX4-006", "EX4-019", "EX4-030", "EX5-015", "EX5-018", "EX5-062", "P-008", "P-025",
+    "P-029", "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
+];
+
+/// Choice groups: cards from side A and side B can't coexist in the same
+/// deck. Currently two groups:
+///   1. Mother D-Reaper vs Shoto Kazama
+///   2. Chaosmon: Valdur Arm vs Taomon + Sakuyamon (X Antibody)
+const CHOICE_GROUPS: &[(&[&str], &[&str])] = &[
+    (&["EX2-007"], &["EX7-064"]),
+    (&["BT20-037"], &["BT17-035", "EX8-037"]),
+];
+
+fn card_limit(card_id: &str) -> Option<u32> {
+    if BANNED_CARDS.contains(&card_id) {
+        return Some(0);
+    }
+    if RESTRICTED_CARDS.contains(&card_id) {
+        return Some(1);
+    }
+    None
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeckRuleset {
+    Standard,
+    NoRestriction,
+    Pauper,
+    Eden,
+}
+
+impl DeckRuleset {
+    pub fn from_game_mode(game_mode: &str) -> Option<Self> {
+        match game_mode {
+            "standard" | "" => Some(Self::Standard),
+            "no_restriction" => Some(Self::NoRestriction),
+            "pauper" => Some(Self::Pauper),
+            "eden" => Some(Self::Eden),
+            _ => None,
+        }
+    }
+
+    pub fn from_game_mode_enum(mode: GameMode) -> Option<Self> {
+        match mode {
+            GameMode::Standard => Some(Self::Standard),
+            GameMode::Pauper => Some(Self::Pauper),
+            GameMode::NoRestriction => Some(Self::NoRestriction),
+            GameMode::Eden => Some(Self::Eden),
+            GameMode::EdhCommander | GameMode::Titan => None,
+        }
+    }
+
+    fn restriction(self) -> Option<&'static CardRestriction> {
+        match self {
+            Self::Standard => None,
+            Self::NoRestriction => None,
+            Self::Pauper => None,
+            Self::Eden => Some(CardRestriction::eden_ref()),
+        }
+    }
+}
+
+fn format_card_limit(ruleset: DeckRuleset, card_id: &str) -> Option<u32> {
+    match ruleset {
+        DeckRuleset::Standard | DeckRuleset::Pauper => card_limit(card_id),
+        DeckRuleset::NoRestriction => None,
+        DeckRuleset::Eden => CardRestriction::eden_ref()
+            .card_limits
+            .get(card_id)
+            .map(|limit| u32::from(*limit)),
+    }
+}
+
+fn format_choice_groups(ruleset: DeckRuleset) -> Vec<(Vec<String>, Vec<String>)> {
+    match ruleset {
+        DeckRuleset::Standard | DeckRuleset::Pauper => CHOICE_GROUPS
+            .iter()
+            .map(|(a, b)| {
+                (
+                    a.iter().map(|s| (*s).to_string()).collect(),
+                    b.iter().map(|s| (*s).to_string()).collect(),
+                )
+            })
+            .collect(),
+        DeckRuleset::NoRestriction => Vec::new(),
+        DeckRuleset::Eden => ruleset
+            .restriction()
+            .expect("EDEN restriction must exist")
+            .choice_groups
+            .clone(),
+    }
+}
+
+fn is_common_or_uncommon(card: &CardSummary) -> bool {
+    matches!(card.rarity, Rarity::C | Rarity::U)
+}
+
+fn is_eden_anomaly(card: &CardSummary) -> bool {
+    let name = card.card_name_eng.to_ascii_lowercase();
+    match card.card_kind {
+        // Rare or promo Tamers.
+        1 => matches!(card.rarity, Rarity::R | Rarity::P),
+        // Rare/promo/SR Memory Boosts, promo Trainings, and promo Scrambles.
+        2 if name.contains("memory boost") => {
+            matches!(card.rarity, Rarity::R | Rarity::SR | Rarity::P)
+        }
+        2 if name.contains("training") => card.rarity == Rarity::P,
+        2 if name.contains("scramble") => card.rarity == Rarity::P,
+        _ => false,
+    }
 }
 
 // ─── Parsers ───────────────────────────────────────────────────────────
@@ -286,7 +408,16 @@ pub struct DeckValidationResult {
     pub warnings: Vec<String>,
 }
 
-/// Validate a flat card-id list against standard game rules + the restricted list.
+pub fn validate_deck_for_game_mode(
+    card_ids: &[String],
+    game_mode: &str,
+) -> Result<DeckValidationResult, String> {
+    let ruleset = DeckRuleset::from_game_mode(game_mode)
+        .ok_or_else(|| format!("Unsupported deck validation game_mode: {game_mode}"))?;
+    Ok(validate_deck_for_ruleset(card_ids, ruleset))
+}
+
+/// Validate a flat card-id list against game rules + the restricted list.
 ///
 /// Checks (order matches Python so error messages come out identically):
 ///   1. Unknown card warnings
@@ -295,20 +426,23 @@ pub struct DeckValidationResult {
 ///   4. Restricted list (banned → error, restricted → limit enforced)
 ///   5. Choice-group exclusivity
 pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
-    validate_deck_with_rules(card_ids, &Rules::standard())
+    validate_deck_for_ruleset(card_ids, DeckRuleset::Standard)
 }
 
-/// Validate a flat card-id list against a named game mode.
+/// Validate a flat card-id list against a named Rust game mode.
 pub fn validate_deck_for_mode(
     card_ids: &[String],
     mode: GameMode,
 ) -> Result<DeckValidationResult, String> {
-    let rules = Rules::for_mode(mode, None).map_err(|e| e.to_string())?;
-    Ok(validate_deck_with_rules(card_ids, &rules))
+    let ruleset = DeckRuleset::from_game_mode_enum(mode)
+        .ok_or_else(|| format!("Unsupported deck validation game mode: {mode:?}"))?;
+    Ok(validate_deck_for_ruleset(card_ids, ruleset))
 }
 
-/// Validate a flat card-id list against explicit rules.
-pub fn validate_deck_with_rules(card_ids: &[String], rules: &Rules) -> DeckValidationResult {
+pub fn validate_deck_for_ruleset(
+    card_ids: &[String],
+    ruleset: DeckRuleset,
+) -> DeckValidationResult {
     let db = card_database();
     let counts = summarize_deck(card_ids);
 
@@ -342,17 +476,13 @@ pub fn validate_deck_with_rules(card_ids: &[String], rules: &Rules) -> DeckValid
         warnings.push(format!("Unknown card ID: {uid} (not in card database)"));
     }
 
-    if main_count != u32::from(rules.deck_size) {
+    if main_count != 50 {
         errors.push(format!(
-            "Main deck must be exactly {} cards (got {main_count})",
-            rules.deck_size
+            "Main deck must be exactly 50 cards (got {main_count})"
         ));
     }
-    if egg_count > u32::from(rules.egg_deck_max) {
-        errors.push(format!(
-            "Digi-Egg deck must be 0-{} cards (got {egg_count})",
-            rules.egg_deck_max
-        ));
+    if egg_count > 5 {
+        errors.push(format!("Digi-Egg deck must be 0-5 cards (got {egg_count})"));
     }
 
     // Iterate counts in sorted order so error messages are deterministic
@@ -371,24 +501,9 @@ pub fn validate_deck_with_rules(card_ids: &[String], rules: &Rules) -> DeckValid
         }
     }
 
-    if rules.singleton {
-        for (card_id, count) in &sorted_counts {
-            let count = **count;
-            if count > 1 {
-                let name = db
-                    .get(card_id.as_str())
-                    .map(|e| e.card_name_eng.as_str())
-                    .unwrap_or(card_id.as_str());
-                errors.push(format!(
-                    "{card_id} ({name}): {count} copies exceeds singleton limit of 1"
-                ));
-            }
-        }
-    }
-
     for (card_id, count) in &sorted_counts {
         let count = **count;
-        if let Some(limit) = card_limit_with_restriction(rules, card_id.as_str()) {
+        if let Some(limit) = format_card_limit(ruleset, card_id.as_str()) {
             let name = db
                 .get(card_id.as_str())
                 .map(|e| e.card_name_eng.as_str())
@@ -403,23 +518,50 @@ pub fn validate_deck_with_rules(card_ids: &[String], rules: &Rules) -> DeckValid
         }
     }
 
-    if let Some(allowed_rarity_mask) = rules.allowed_card_rarity_mask {
-        for (card_id, _) in &sorted_counts {
-            if let Some(entity) = db.get(card_id.as_str()) {
-                if !entity.rarity.is_in_mask(allowed_rarity_mask) {
-                    errors.push(format!(
-                        "{} ({}): rarity {} is not legal in this format",
-                        card_id,
-                        entity.card_name_eng,
-                        entity.rarity.code(),
-                    ));
-                }
+    if ruleset == DeckRuleset::Eden {
+        let mut anomaly_count = 0u32;
+        for (card_id, count) in &sorted_counts {
+            let Some(entity) = db.get(card_id.as_str()) else {
+                continue;
+            };
+            if entity.card_kind == 3 || is_common_or_uncommon(entity) {
+                continue;
             }
+            if is_eden_anomaly(entity) {
+                anomaly_count += **count;
+                continue;
+            }
+            errors.push(format!(
+                "{} ({}): rarity is not legal in EDEN format",
+                card_id, entity.card_name_eng
+            ));
+        }
+        if anomaly_count > 4 {
+            errors.push(format!(
+                "EDEN Anomaly Protocol allows at most 4 total rare/promo Tamers, Memory Boosts, Training Boosts, and Scrambles (got {anomaly_count})"
+            ));
+        }
+    }
+
+    if ruleset == DeckRuleset::Pauper {
+        for (card_id, _) in &sorted_counts {
+            let Some(entity) = db.get(card_id.as_str()) else {
+                continue;
+            };
+            if entity.card_kind == 3 || is_common_or_uncommon(entity) {
+                continue;
+            }
+            errors.push(format!(
+                "{} ({}): rarity {} is not legal in Pauper format",
+                card_id,
+                entity.card_name_eng,
+                entity.rarity.code()
+            ));
         }
     }
 
     let deck_ids_set: HashSet<&str> = card_ids.iter().map(String::as_str).collect();
-    for (group_a, group_b) in &rules.restriction.choice_groups {
+    for (group_a, group_b) in format_choice_groups(ruleset) {
         let has_a = group_a
             .iter()
             .any(|cid| deck_ids_set.contains(cid.as_str()));
@@ -427,8 +569,13 @@ pub fn validate_deck_with_rules(card_ids: &[String], rules: &Rules) -> DeckValid
             .iter()
             .any(|cid| deck_ids_set.contains(cid.as_str()));
         if has_a && has_b {
+            let prefix = if ruleset == DeckRuleset::Eden {
+                "EDEN "
+            } else {
+                ""
+            };
             errors.push(format!(
-                "Choice restriction violated: cannot include cards from [{}] and [{}] in the same deck",
+                "{prefix}Choice restriction violated: cannot include cards from [{}] and [{}] in the same deck",
                 group_a.join(", "),
                 group_b.join(", "),
             ));
