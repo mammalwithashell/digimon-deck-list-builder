@@ -116,6 +116,34 @@ Last updated: 2026-03-17
 - **Suggested change:** When `effect.is_optional` is True, create a branch selection (accept/decline) before calling `on_process_callback`. This would expose the choice to the RL action space.
 - **Workaround:** Scripts use condition gates (e.g., `perm.is_suspended`) that prevent re-activation, effectively limiting to once per event. The auto-fire behavior is functionally correct but removes the agent's ability to strategically decline (e.g., keeping tamer unsuspended for a later, more valuable deletion).
 
+### Digivolution-Stack Inherited Triggered-Effect Dispatch (Rust Engine)  [G-INHERITED-DISPATCH]
+- **Discovered in:** Medusamon archetype, BT21-008 Elizamon DSL implementation (2026-04-27)
+- **Scope:** Rust engine (`code/digimon-engine/`) only. Python engine resolves inherited effects via `card_sources[:-1]` scanning in `_collect_triggered_effects`.
+- **Card(s):** BT21-008 Elizamon — inherited `[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory.` Almost all Lv3+ Digimon in this archetype have a similar inherited triggered effect; this gap blocks the inherited half of every one of them.
+- **Effect text:** any DSL clause with `scope: inherited` + a triggered timing.
+- **What's missing:** `enqueue_from_permanent` in `code/digimon-engine/src/effect_queue.rs` only collects effects from the **top card** of a permanent. It already handles two sideways-inheritance cases (Phase 8 Task 4: `linked_cards`; Phase 8 Task 5: `OptionState::Training`), but it does NOT iterate `card_sources[0..n-1]` (the digivolution stack below the top card) for `effect.inherited = true` triggered effects. Cards compiled with `scope: inherited` set `effect.inherited = true`, but no dispatch path fires them when this card is in someone else's digivolution stack.
+- **Affected cards:** every YAML card with `scope: inherited` and a triggered timing.
+- **Suggested change:** in `enqueue_from_permanent` after the top-card scan, iterate `perm.card_sources[0..len-1]`. For each source, call `effects_for_card` and collect effects where `effect.inherited && timing_flag_matches(effect, timing)`. Attribute the queued effect to the hosting permanent's controller and `source_permanent`, with `source_card` pointing at the digivolution source's card handle (same pattern as the linked-cards branch).
+- **Workaround:** None — BLOCKED.
+
+### `max_per_turn` (Once-Per-Turn) Not Enforced for Triggered Effects  [G-OPT-TRIGGERED]
+- **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
+- **Scope:** Rust engine.
+- **Card(s):** EX11-008 Elizamon (inherited OPT clause); applies to every DSL card with `once_per_turn: true` on a triggered clause.
+- **Effect text:** any clause that combines `[Once Per Turn]` with a non-Main triggered timing (`OnLoseSecurity`, `WhenAttacking`, `OnPlay`, `OnDigivolving`, etc.).
+- **What's missing:** `once_per_turn: true` in YAML correctly lowers to `Effect::max_per_turn = 1`, but `run_queued_effect_inner` in `effect_queue.rs` does NOT consult `max_per_turn` when dispatching triggered effects through the queue. OPT is enforced only for activated `Main*` effects in `game_actions.rs`. Triggered effects with OPT can therefore fire more than once per turn.
+- **Suggested change:** in the queue-drain path, before invoking each queued effect's process closure, consult `Permanent::activation_count(source_card, slot) >= effect.max_per_turn` (already tracked) and skip if exceeded; call `Permanent::record_activation` after a successful invocation.
+- **Workaround:** None — BLOCKED for tests; cards still partially work (the effect just over-fires).
+
+### `EffectTiming::OnMove` Missing  [G-ON-MOVE]
+- **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
+- **Scope:** Rust engine + DSL (hybrid; see `qa/dsl-vocab-gaps.md` for DSL half).
+- **Card(s):** EX11-008 Elizamon — `[When Moving] [On Play]` shared body. Other archetypes will surface this when their cards have similar When-Moving clauses.
+- **Effect text:** "[When Moving] 1 of your Digimon ... gains <Raid> and +3000 DP for the turn."
+- **What's missing:** `EffectTiming::OnMove` variant + dispatch hook in `game.move_from_breeding()` (similar to `fire_on_play`). DCGO maps to `EffectTiming.OnMove`; Rust has no equivalent. The closest existing variant `OnHatch` fires when an egg moves digitama→breeding for permanents already on field — different timing.
+- **Suggested change:** add `EffectTiming::OnMove` variant; in `Game::move_from_breeding`, after the move completes, fire `OnMove` for the moved permanent (same pattern as `OnPlay` from `play_from_hand`).
+- **Workaround:** None — BLOCKED. Implementer worked around by handling only the `[On Play]` half in YAML.
+
 <!-- Entry template:
 ### {Gap Title}
 - **Discovered in:** {archetype name} ({date})

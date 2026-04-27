@@ -1,5 +1,58 @@
 {
   "version": 1,
-  "last_updated": "2026-04-26",
-  "cards": {}
+  "last_updated": "2026-04-27",
+  "cards": {
+    "BT21-008": {
+      "card_name": "Elizamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-008.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_008.rs",
+      "test_count": 10,
+      "patterns": ["A1", "A2"],
+      "notes": "OnPlay reveal-3-and-pick implemented + tested. Inherited [Your Turn][OPT] OnLoseSecurity blocked by G-INHERITED-DISPATCH (digivolution-stack inherited triggered effects not enqueued). 8/10 active, 2 ignored."
+    },
+    "BT23-005": {
+      "card_name": "Elizamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_005.rs",
+      "test_count": 9,
+      "patterns": ["D2", "D4"],
+      "notes": "Inherited [Your Turn] +2000 DP aura implemented and tested (5 active tests). Cost-reduction-on-self-digivolve-into-trait clause blocked by DSL-vocab gap (CostReductionBody lacks when_this_digivolves_into + target_trait_has). 4 ignored."
+    },
+    "BT24-008": {
+      "card_name": "Elizamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-008.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_008.rs",
+      "test_count": 13,
+      "patterns": ["A4", "F9-adjacent"],
+      "notes": "OnPlay optional cost-as-trash → draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
+    },
+    "EX11-008": {
+      "card_name": "Elizamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-008.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_008.rs",
+      "test_count": 16,
+      "patterns": ["E1", "H9"],
+      "notes": "OnPlay grant-Raid+3000-DP implemented and tested with end-of-turn expiry (15 active tests). [When Moving] timing dropped pending G-ON-MOVE engine gap. Inherited OPT lockout test ignored pending G-OPT-TRIGGERED."
+    }
+  }
 }
