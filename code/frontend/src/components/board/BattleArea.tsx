@@ -18,9 +18,11 @@ interface DroppableSlotProps {
 
 function DroppableSlot({ slotIndex, isEmpty, isOpponent, isValidDrop, isDigivolveTarget, children, onClick }: DroppableSlotProps) {
   const dropType = isEmpty ? 'empty-field-slot' : 'occupied-field-slot';
+  const owner = isOpponent ? 'opponent' : 'player';
   const { isOver, setNodeRef } = useDroppable({
-    id: `field-slot-${slotIndex}`,
+    id: `field-slot-${owner}-${slotIndex}`,
     data: { type: dropType, slotIndex },
+    disabled: isOpponent,
   });
 
   const showDropHighlight = isOver && isValidDrop;
@@ -29,14 +31,14 @@ function DroppableSlot({ slotIndex, isEmpty, isOpponent, isValidDrop, isDigivolv
     <div
       ref={setNodeRef}
       data-testid={`field-slot-${isOpponent ? 'p2' : 'p1'}-${slotIndex}`}
-      data-slot-id={`${isOpponent ? 'opponent' : 'player'}-${slotIndex}`}
-      className={`rounded ${
+      data-slot-id={`${owner}-${slotIndex}`}
+      className={`ib-drop-slot ${
         showDropHighlight
           ? isEmpty
-            ? 'ring-2 ring-green-400'
-            : 'ring-2 ring-purple-400'
+            ? 'ib-drop-slot--play'
+            : 'ib-drop-slot--digivolve'
           : isDigivolveTarget
-            ? 'ring-2 ring-purple-400/60'
+            ? 'ib-drop-slot--digivolve-soft'
             : ''
       }`}
       onClick={onClick}
@@ -106,7 +108,7 @@ export function BattleArea({
   }, [permanents]);
 
   return (
-    <div className="grid grid-cols-6 gap-1 justify-center min-h-[276px] w-fit mx-auto">
+    <div className="ib-battle-area">
       {slots.map((i) => {
         const perm = permanents[i];
         const isEmpty = !perm;
@@ -130,8 +132,8 @@ export function BattleArea({
             onClick={() => onSlotClick?.(i)}
           >
             {isEmpty ? (
-              <div className="w-[96px] h-[134px] border border-dashed border-gray-700/30 rounded flex items-center justify-center">
-                <span className="text-[9px] text-gray-700">{i}</span>
+              <div className="ib-battle-slot ib-battle-slot--empty">
+                <span>SLOT {String(i + 1).padStart(2, '0')}</span>
               </div>
             ) : (
               <div className={animatingSlots.has(i) ? 'animate-card-play-in' : ''}>

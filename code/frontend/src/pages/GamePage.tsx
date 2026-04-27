@@ -11,7 +11,6 @@ import {
 } from '@dnd-kit/core';
 import { useGameStore } from '@/stores/gameStore';
 import { useActionMask } from '@/hooks/useActionMask';
-import { useGameActions } from '@/hooks/useGameActions';
 import { useEffectHighlight } from '@/hooks/useEffectHighlight';
 import { useDropZone, type DragData } from '@/hooks/useDropZone';
 import { GameBoard } from '@/components/board/GameBoard';
@@ -46,9 +45,10 @@ import {
   FIELD_SLOTS,
   SELECTION,
 } from '@/utils/constants';
-import { GamePhase, type PermanentInfo } from '@/types/game';
+import { GamePhase, type ActionTrace, type PermanentInfo } from '@/types/game';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+type ActionTraceResponse = { action_traces?: ActionTrace[] };
 // Desktop builds have no server-side Deck rows, so deck list/load must go
 // through the Tauri-backed deckStore. parseDeck / validateDeckRaw already
 // branch internally, so those stay on deckApiMod.
@@ -67,9 +67,9 @@ export function GamePage() {
 
 
   const store = useGameStore();
-  const { sendAction: httpSendAction } = useGameActions();
   useEffectHighlight();
   const parsedMask = useActionMask(store.actionMask);
+  const actionPendingRef = useRef(false);
 
   // WebSocket connection (active for PvP, vs-AI-online, and spectator modes)
   const wsOptions = useMemo<UseWebSocketGameOptions | null>(() => {
@@ -96,8 +96,47 @@ export function GamePage() {
 
   const ws = useWebSocketGame(wsOptions);
 
+  const appendResponseActionTraces = useCallback(
+    (response: ActionTraceResponse) => {
+      if (response.action_traces?.length) {
+        store.appendActionTraces(response.action_traces);
+      }
+    },
+    [store],
+  );
+
   // Use WebSocket sendAction for PvP / vs-AI-online / spectator; HTTP for local games.
-  const sendAction = useWebSocket ? ws.sendAction : httpSendAction;
+  const sendAction = useCallback(
+    async (actionId: number) => {
+      if (useWebSocket) {
+        ws.sendAction(actionId);
+        return;
+      }
+      if (!store.gameId || actionPendingRef.current) return;
+      actionPendingRef.current = true;
+
+      try {
+        const actionResult = await gameApi.sendAction(store.gameId, actionId);
+        store.setGameState(actionResult.state);
+        store.setActionMask(actionResult.action_mask);
+        if (actionResult.logs) store.appendLogs(actionResult.logs);
+        if (actionResult.events) store.appendEvents(actionResult.events);
+        appendResponseActionTraces(actionResult);
+
+        if (!actionResult.is_game_over) {
+          const stepResult = await gameApi.stepGame(store.gameId);
+          store.setGameState(stepResult.state);
+          store.setActionMask(stepResult.action_mask);
+          if (stepResult.logs) store.appendLogs(stepResult.logs);
+          if (stepResult.events) store.appendEvents(stepResult.events);
+          appendResponseActionTraces(stepResult);
+        }
+      } finally {
+        actionPendingRef.current = false;
+      }
+    },
+    [appendResponseActionTraces, store, useWebSocket, ws],
+  );
   const { savedDecks, setSavedDecks } = useDeckBuilderStore();
   const { getDropAction } = useDropZone(parsedMask);
 
@@ -134,6 +173,7 @@ export function GamePage() {
         // PvP / vs-AI-online / spectator: WebSocket hook will send initial state
         store.setGameId(urlGameId);
         store.clearLogs();
+        store.clearActionTraces();
       } else {
         // Local mode: fetch state via HTTP
         (async () => {
@@ -146,6 +186,7 @@ export function GamePage() {
             store.setGameState(state);
             store.setActionMask(maskData);
             store.clearLogs();
+            store.clearActionTraces();
           } catch (err) {
             console.error('Failed to load game:', err);
           }
@@ -226,6 +267,7 @@ export function GamePage() {
       if (result.player_labels) store.setPlayerLabels(result.player_labels);
       store.clearLogs();
       store.clearEvents();
+      store.clearActionTraces();
       store.setGameId(result.game_id);
 
       // Step once to handle initial agent turn if agent goes first
@@ -234,6 +276,7 @@ export function GamePage() {
       store.setActionMask(stepResult.action_mask);
       if (stepResult.logs) store.appendLogs(stepResult.logs);
       if (stepResult.events) store.appendEvents(stepResult.events);
+      appendResponseActionTraces(stepResult);
     } catch (err) {
       console.error('Failed to create game:', err);
       // If gameId was set but step failed, reset to avoid blank board
@@ -258,11 +301,12 @@ export function GamePage() {
       store.setActionMask(res.action_mask);
       if (res.logs) store.appendLogs(res.logs);
       if (res.events) store.appendEvents(res.events);
+      appendResponseActionTraces(res as typeof res & ActionTraceResponse);
       setSurrenderedBy(1);
     } catch {
       // Ignore errors (e.g. game already over)
     }
-  }, [store]);
+  }, [appendResponseActionTraces, store]);
 
   const handlePlayCard = useCallback(
     (handIndex: number) => {
@@ -740,6 +784,8 @@ export function GamePage() {
               canPlayDragged={draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)}
               previewCost={previewCost}
               onHandCardHoverIndex={setHoveredHandIndex}
+              actionTraces={store.actionTraces}
+              latestTensorSummary={store.latestTensorSummary}
             />
             <DragOverlayCard cardId={draggedCardId} isOverValid={isOverValid} />
           </DndContext>

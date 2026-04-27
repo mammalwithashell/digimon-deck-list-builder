@@ -5,7 +5,7 @@ interface SecurityStackProps {
   isOpponent: boolean;
 }
 
-export function SecurityStack({ count, isOpponent: _isOpponent }: SecurityStackProps) {
+export function SecurityStack({ count, isOpponent }: SecurityStackProps) {
   const prevCount = useRef(count);
   const [breaking, setBreaking] = useState(false);
 
@@ -20,18 +20,23 @@ export function SecurityStack({ count, isOpponent: _isOpponent }: SecurityStackP
   }, [count]);
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className={`ib-security ${isOpponent ? 'ib-security--opp' : 'ib-security--you'}`}>
+      <div className="ib-security__label">Security</div>
       <div
-        className={`w-[60px] h-[84px] bg-gradient-to-br from-purple-900 to-purple-700 border border-purple-600 rounded flex items-center justify-center relative overflow-hidden ${
+        className={`ib-security__shield ${
           breaking ? 'animate-security-break' : ''
         }`}
       >
-        <span className="text-xl font-bold text-purple-200">{count}</span>
+        <span>{String(count).padStart(2, '0')}</span>
         {breaking && (
           <div className="absolute inset-0 pointer-events-none animate-security-shatter" />
         )}
       </div>
-      <span className="text-[9px] text-gray-500">Security</span>
+      <div className="ib-security__tokens" aria-hidden="true">
+        {Array.from({ length: Math.min(count, 5) }).map((_, i) => (
+          <span key={i} className={i === 0 ? 'is-top' : ''} />
+        ))}
+      </div>
     </div>
   );
 }
