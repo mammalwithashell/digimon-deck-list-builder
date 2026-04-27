@@ -67,6 +67,12 @@ test.describe('Desktop launcher', () => {
 
   test('navigates launcher actions into existing app routes', async ({ page }) => {
     await openDesktopLauncher(page);
+    await page.getByRole('link', { name: /PRIMARY ACTION\s+PLAY/i }).click();
+    await expect(page).toHaveURL(/\/game/);
+    await expect(page.getByRole('heading', { name: 'Start a Game' })).toBeVisible();
+
+    await page.goto('/');
+    await openDesktopLauncher(page);
     await page.getByRole('link', { name: /Deck builder/i }).click();
     await expect(page).toHaveURL(/\/deckbuilder/);
   });

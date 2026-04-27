@@ -8,10 +8,10 @@ export function LauncherActions({ hasDecks }: LauncherActionsProps) {
   return (
     <>
       <div className="launcher-actions">
-        <Link className="launcher-action primary" to="/lobby">
+        <Link className="launcher-action primary" to="/game">
           <span className="launcher-action-label">// PRIMARY ACTION</span>
           <span className="launcher-action-name">PLAY</span>
-          <span className="launcher-action-desc">Quick match, room, or open queue.</span>
+          <span className="launcher-action-desc">Start a local match on the redesigned board.</span>
           <span className="launcher-action-meta">ENTER</span>
         </Link>
         <Link className="launcher-action" to={hasDecks ? '/deckbuilder' : '/deckbuilder?import=1'}>
@@ -23,7 +23,7 @@ export function LauncherActions({ hasDecks }: LauncherActionsProps) {
       </div>
       <div className="launcher-quick">
         <Link to="/patch-notes"><span>// Updates</span><b>Patch notes</b></Link>
-        <Link to="/models"><span>// Practice</span><b>Play vs AI</b></Link>
+        <Link to="/lobby"><span>// Online</span><b>Lobby</b></Link>
         <Link to="/deckbuilder"><span>// Build</span><b>Deck builder</b></Link>
       </div>
     </>
