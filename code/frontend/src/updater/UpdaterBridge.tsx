@@ -21,7 +21,7 @@ export function UpdaterBridge() {
   useEffect(() => {
     if (!IS_DESKTOP) return;
 
-    // 1. Listen for Rust-side force-update signal (min_version guard).
+      // 1. Listen for desktop-side force-update signal (min_version guard).
     const unlistenForce = listen<ForceUpdatePayload>('updater:force-update', (e) => {
       setForced(e.payload);
       setModalOpen(true);

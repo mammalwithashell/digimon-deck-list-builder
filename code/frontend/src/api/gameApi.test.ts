@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ActionTrace, TensorSummary } from '@/types/game';
 
-describe('rust trace types', () => {
+describe('engine trace types', () => {
   it('supports agent traces with tensor summaries', () => {
     const summary: TensorSummary = {
       playerId: 1,
