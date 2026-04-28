@@ -43,6 +43,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT16-082 | Ukkomon | IMPLEMENT | BLOCKED (hybrid) | 5 active / 11 ignored | Entire [Your Turn][OPT] trigger (OnMove) blocked by G-ON-MOVE. YAML uses on_play stub + raw_rust no-op. Structural shape (once_per_turn, active_when, scope) verified. |
 | BT21-007 | Agumon | IMPLEMENT | IMPLEMENTED | 14 active / 0 ignored | OnPlay optional trash-to-hand (Reptile/Dragonkin filter) + inherited [Your Turn] +2000 DP aura. 14/14 pass, 0 ignored. No engine gaps. |
 | BT21-013 | Agunimon | IMPLEMENT | PARTIAL | 9 active / 6 ignored | [WD] optional place Hybrid/Hero from hand/trash as bottom source ships (has_inherited: {} + select_effect_choice + if/then + place_as_bottom_source); [WA] effect-initiated digivolve cost -1 ships; inherited +2000 DP aura ships. 4 ignored G-WHEN-DIGIVOLVING-DISPATCH, 2 ignored filter-eval gaps. |
+| P-137 | Flamedramon | IMPLEMENT | IMPLEMENTED | 10 active / 2 ignored | (a) ArmorPurge keyword + (b) Raid keyword + (c) on_attack_target_change OPT → opponent adds top security to hand (raw_rust). Alt-path name_contains: Veemon. Hybrid gap G-ADD-TOP-SECURITY-TO-HAND (new). BT21-024.yaml restructured as side-fix (place_on_security moved inside as_selecting_player body). New gap G-SELECT-EMPTY-OUTER-TAIL documented. |
 
 ## Engine-Gap Blocked Cards / Clauses
 ### G-INHERITED-DISPATCH (Digivolution-Stack Inherited Triggered Dispatch)
