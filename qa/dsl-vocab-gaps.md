@@ -511,3 +511,75 @@ Format per entry:
 - Gap kind: dsl (engine stores `card_colors` on `CardData` and has full battle-area access; the DSL/lowering path just lacks the predicate leaf for a dynamic color-set intersection).
 - Workaround: `filter: { kind: tamer }` only — the "same color as any of your Digimon on the field" constraint is not enforced at selection time. Tests asserting color-mismatch rejection are `#[ignore = "pending: G-COLOR-MATCH-AGAINST-BOARD"]`. First card affected: P-206 Digital Gate Open Delay clause.
 - First reported: 2026-04-28 (P-206 Digital Gate Open batch-implement-cards-rust-dsl, Medusamon Batch 14)
+
+---
+
+## Royal Knights — `on_option_placed` timing lowerer  [G-OPTION-PLACED-TIMING]
+
+- Effect text: `BT13-007` King Drasil_7D6 inherited: "[Breeding] [Your Turn] [Once Per Turn] When an Option card with the [Royal Knight] trait is placed in the battle area, gain 1 memory."
+- Missing DSL verb / step kind / predicate: `when: on_option_placed` is accepted by the DSL compiler as `CompiledTiming::OnOptionPlaced`, but the Rust engine timing map returns `None` for it, so no `EffectTiming` is emitted and no clause can fire.
+- Companion engine gap: the Rust engine has no `EffectTiming::OnOptionPlaced` dispatch site when a Delay/Training/field Option is placed in the battle area. `BT13-110` Royal Knights of the Purge and `BT20-100` The Last Guardian both make this timing matter for the Royal Knights loop.
+- Lowers to engine API: needs a new `EffectTiming::OnOptionPlaced` (or equivalent observer timing) plus a dispatch after Option placement in `Game::dispose_option` / option placement helpers. The trigger context should identify the placed Option card and controller so `event_card_trait_has: "Royal Knight"` can be evaluated.
+- Suggested DSL syntax:
+  ```yaml
+  - scope: inherited
+    when: on_option_placed
+    active_when: { in_breeding: true }
+    once_per_turn: true
+    condition: { event_card_trait_has: "Royal Knight" }
+    process:
+      - gain_memory: 1
+  ```
+- Gap kind: hybrid (DSL has the token but no lowering target; engine lacks the timing dispatch).
+- Workaround: None faithful. The memory-gain trigger is omitted at runtime.
+- First reported: 2026-04-28 (Royal Knights archetype assessment)
+
+---
+
+## Royal Knights — selecting permanents in the breeding area  [G-BREEDING-PERMANENT-SELECTION]
+
+- Effect text: `BT20-083` Omekamon: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area." Similar Royal Knights effects target or play from the breeding-area King Drasil stack (`BT13-093`, `BT13-110`, `BT13-112`, `EX11-053`, `BT23-072`).
+- Missing DSL verb / step kind / predicate: `select_own_permanent` / `select_any_permanent` only scan `battle_area`, even when the YAML filter includes `zone: [breeding]`. There is no `select_own_breeding_permanent` step and no selection kind/action encoding for a breeding-area permanent.
+- Companion engine gap: `PendingSelection` currently represents field, hand, trash, reveal, security, material, and similar prompts, but not a breeding-area permanent handle. `PermanentHandle` also encodes battle-area indices; the breeding slot needs either a new handle variant or a dedicated selection path.
+- Lowers to engine API: after the engine exposes breeding-area selection, the existing `place_as_bottom_source`, `play_from_materials`, and `effect_initiated_digivolve` steps can consume the selected breeding permanent.
+- Suggested DSL syntax:
+  ```yaml
+  - select_own_permanent:
+      bind_as: kd
+      filter:
+        all_of:
+          - name_is: "King Drasil_7D6"
+          - zone: [breeding]
+      prompt: "Choose your King Drasil_7D6 in breeding"
+  ```
+  Alternatively, add an explicit sugar step:
+  ```yaml
+  - select_own_breeding_permanent:
+      bind_as: kd
+      filter: { name_is: "King Drasil_7D6" }
+  ```
+- Gap kind: hybrid (the YAML shape exists, but lowering/runtime selection ignore breeding).
+- Workaround: None faithful. Auto-targeting the only breeding permanent would hide a player-visible selection and violates the no-approximations policy.
+- First reported: 2026-04-28 (Royal Knights archetype assessment)
+
+---
+
+## BT8-097 / Royal Knights — formula filters for counted battle-area cards  [G-FORMULA-KIND-FILTER]
+
+- Effect text: `BT8-097` Crimson Blaze: "Reduce the memory cost of this card in your hand by 1 for each Digimon your opponent has in play."
+- Missing DSL verb / step kind / predicate: `card_count_in_zone` formulas can count a player's `battle_area`, but cannot apply a `kind: digimon` filter. The authored YAML therefore counts all opponent battle-area permanents, including Tamers and Option permanents, when computing the cost reduction.
+- Lowers to engine API: the engine can inspect each battle-area permanent and test `Permanent::is_digimon(&card_data)`; the formula DSL needs a filtered-count form that passes a compiled predicate into formula evaluation.
+- Suggested DSL syntax:
+  ```yaml
+  amount_fn:
+    base: 0
+    per:
+      card_count_in_zone:
+        of: opponent
+        zone: battle_area
+        filter: { kind: digimon }
+    delta: 1
+  ```
+- Gap kind: dsl (engine has the data; formula vocabulary lacks the filter).
+- Workaround: current YAML over-reduces when the opponent controls non-Digimon permanents.
+- First reported: 2026-04-28 (Royal Knights archetype assessment; surfaced by BT8-097 in Royal Knights lists)
