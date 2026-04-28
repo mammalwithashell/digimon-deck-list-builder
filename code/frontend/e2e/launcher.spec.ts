@@ -77,3 +77,24 @@ test.describe('Desktop launcher', () => {
     await expect(page).toHaveURL(/\/deckbuilder/);
   });
 });
+
+test.describe('Desktop launcher offline routing', () => {
+  test('desktop offline guest can navigate launcher mock routes without seeded auth', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: /PICK UP WHERE YOU LEFT OFF/i })).toBeVisible();
+
+    await page.getByRole('link', { name: /PRIMARY ACTION\s+PLAY/i }).click();
+    await expect(page).toHaveURL(/\/play$/);
+    await expect(page.getByRole('heading', { name: /CHOOSE YOUR\s+FORMAT/i })).toBeVisible();
+
+    await page.goto('/');
+    await page.getByRole('link', { name: /Deck builder/i }).click();
+    await expect(page).toHaveURL(/\/deckbuilder\/new$/);
+    await expect(page.getByRole('button', { name: 'Validate' })).toBeVisible();
+
+    await page.goto('/');
+    await page.locator('nav[aria-label="Tools"] a[href="/deckbuilder/new?import=1"]').click();
+    await expect(page).toHaveURL(/\/deckbuilder\/new\?import=1/);
+    await expect(page.getByText('Import / Export Deck')).toBeVisible();
+  });
+});
