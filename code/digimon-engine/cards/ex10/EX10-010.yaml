@@ -1,0 +1,130 @@
+card: EX10-010
+name: BlackWarGreymon
+kind: digimon
+level: 6
+color: [red, black]
+cost: 7
+dp: 12000
+traits: [Dragonkin]
+
+# ─── Inherited: Ace Overflow <-4> ────────────────────────────────────────────
+# "Ace Overflow <-4> (As this card moves from the field or under a card to an
+#  area other than those, lose 4 memory.)"
+ace_overflow: -4
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# Standard digivolve: from Lv.5 red, cost 4.
+# Blast Digivolve ([Hand][Counter]): burst_digivolve with marker:true, cost 0.
+# DCGO: BlastDigivolveEffect at OnCounterTiming.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
+effects:
+  # ─── Clause 1 — <Raid> (face-up keyword grant) ──────────────────────────────
+  # DCGO: RaidSelfEffect(isInheritedEffect: false)
+  - kind: grant_keyword
+    keyword: Raid
+
+  # ─── Clause 2 — <Reboot> (face-up keyword grant) ────────────────────────────
+  # DCGO: RebootSelfStaticEffect
+  - kind: grant_keyword
+    keyword: Reboot
+
+  # ─── Clause 3 — <Blocker> (face-up keyword grant) ───────────────────────────
+  # DCGO: BlockerSelfStaticEffect
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── Clause 4 — [On Play] [When Digivolving] Delete 1 opponent Digimon/Tamer ──
+  # "[On Play] [When Digivolving] Delete 1 of your opponent's play cost 7 or lower
+  #  Digimon or Tamers."
+  #
+  # Mandatory (DCGO: canNoSelect: false in SetUpActivateClass SharedActivateCoroutine).
+  # Target: opponent Digimon OR Tamer with play cost ≤ 7.
+  #
+  # KNOWN GAP G-PLAY-COST-LTE: `play_cost_lte` is not a valid predicate in
+  # PredicateSpec (digimon-dsl/src/predicate.rs). The cost filter cannot be expressed
+  # and is therefore OMITTED. The selection prompt will allow any opponent Digimon or
+  # Tamer to be selected (over-permissive). This is tracked in qa/dsl-vocab-gaps.md.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent Digimon or Tamer (play cost ≤7)"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          # G-PLAY-COST-LTE: play_cost_lte: 7 omitted — predicate not yet in DSL
+          prompt: "Delete an opponent's Digimon or Tamer (play cost 7 or lower)"
+      - delete_permanent: { target: tgt }
+
+  # ─── Clause 5 — [All Turns] +3000 DP while opp has ≥13000 DP Digimon ─────────
+  # "[All Turns] While your opponent has a Digimon with 13000 DP or more,
+  #  this Digimon gets +3000 DP."
+  #
+  # Modelled as a self-aura evaluated via source_dp_contribution.
+  # The active_when predicate `any_permanent: { of: opponent, kind: digimon, dp_gte: 13000 }`
+  # encodes the correct intent, but:
+  #
+  # KNOWN GAP G-PRED-DP-LTE (engine-gaps.md):
+  #   `dp_gte` / `dp_lte` are parsed but NOT evaluated in eval_permanent_fields
+  #   (code/digimon-engine/src/dsl_cards/predicate.rs). The condition therefore
+  #   fires whenever ANY opponent Digimon is present (ignores the 13000 DP threshold).
+  #   Tests for the correct gating behavior are #[ignore]d in ex10_010.rs until
+  #   eval_permanent_fields is extended to evaluate dp predicates.
+  #
+  # `all_turns: true` encodes the [All Turns] scope (fires on both players' turns).
+  - kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            # G-PRED-DP-LTE: dp_gte: 13000 is parsed but not evaluated by the engine
+            dp_gte: 13000
+    target: {}
+    dp_modifier: 3000
+    summary: "[All Turns] +3000 DP while opponent has a ≥13000 DP Digimon"
+
+  # ─── Clause 6 — [All Turns] Immunity while opp has ≥13000 DP Digimon ─────────
+  # "[All Turns] While your opponent has a Digimon with 13000 DP or more,
+  #  your opponent's Digimon's effects don't affect this Digimon."
+  #
+  # Modelled as a flood_gate with modifier: CannotBeAffected sharing the same
+  # active_when condition as Clause 5.
+  #
+  # KNOWN GAP 1 — lower_aura.rs modifier field not wired:
+  #   `modifier: CannotBeAffected` compiles into CompiledDeclarativeClause::Aura.modifier
+  #   but lower_aura::lower() does NOT accept or thread the modifier field; it is
+  #   silently ignored in mod.rs with `..`. The CannotBeAffected modifier is never
+  #   installed in the modifier registry.
+  #
+  # KNOWN GAP 2 — CannotBeAffected not enforced:
+  #   Even if ModifierType::CannotBeAffected were installed, it is not checked in the
+  #   engine's effect execution path (effect_context.rs / game.rs). Immunity cannot
+  #   be enforced until the engine checks this modifier before applying opponent effects.
+  #
+  # Tests for this clause are #[ignore = "pending: lower_aura.rs modifier not wired..."]
+  # in ex10_010.rs.
+  - kind: flood_gate
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            # G-PRED-DP-LTE: dp_gte: 13000 not evaluated by engine
+            dp_gte: 13000
+    modifier: CannotBeAffected
+    # Self-target: only affects this permanent (the carrier)
+    target: { card_number_is: "EX10-010" }
+    summary: "[All Turns] Immunity from opponent Digimon effects while opp has ≥13000 DP Digimon"

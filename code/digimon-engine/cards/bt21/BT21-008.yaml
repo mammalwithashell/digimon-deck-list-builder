@@ -1,0 +1,44 @@
+card: BT21-008
+name: Elizamon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Reptile, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "Reveal top 3; add 1 Reptile/Dragonkin + 1 LIBERATOR to hand"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - select_reveal:
+          of: you
+          bind_as: r1
+          optional: false
+          filter:
+            any_of:
+              - trait_has: Reptile
+              - trait_has: Dragonkin
+          prompt: "Add a Reptile / Dragonkin card to hand"
+      - add_to_hand_from_reveal: { of: you, card: r1 }
+      - select_reveal:
+          of: you
+          bind_as: r2
+          optional: false
+          filter: { trait_has: LIBERATOR }
+          prompt: "Add a LIBERATOR card to hand"
+      - add_to_hand_from_reveal: { of: you, card: r2 }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "Your Turn / OPT: when opponent's security is removed, gain 1 memory"
+    process:
+      - gain_memory: 1

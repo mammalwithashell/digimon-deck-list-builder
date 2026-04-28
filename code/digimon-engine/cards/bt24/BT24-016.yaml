@@ -6,10 +6,20 @@ color: [red]
 cost: 7
 dp: 7000
 traits: [Dragonkin, LIBERATOR]
+
+# Standard digivolution from any Lv4 (cost 3 from battlearea).
+# Alt activated-digivolve path: [Hand][Main] requires Owen Dreadnought in
+# play. Owen gate CANNOT be expressed as a `condition:` on the alt_path
+# because AltPathSpec has no `condition` field (DSL vocab gap — see
+# G-ALT-PATH-CONDITION). The gate is partially enforced by the `from:`
+# filter (Elizamon must be on field) and the `extra_cost` select_trash
+# (Dimetromon must be in trash). Owen presence is tracked as a runtime
+# semantic gap until AltPathSpec gains a `condition:` field.
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4 }
     cost: 3
+
   - kind: activated_digivolve
     from:
       of: you
@@ -22,12 +32,16 @@ alt_paths:
           of: you
           bind_as: source
           filter: { name_contains: "Dimetromon" }
-          prompt: "Place Dimetromon from trash as bottom source"
+          prompt: "Select a Dimetromon from trash to place as bottom source"
       - place_as_bottom_source:
           source: source
           target: { binding: activated_digivolve_target }
 
 effects:
+  # Clause 3: [When Digivolving][When Attacking][OPT]
+  # Opponent places 1 card from hand as their bottom security card,
+  # then you trash their top security card.
+  # Card text says opponent places (not optional for them), then you trash.
   - when: [when_digivolving, when_attacking]
     once_per_turn: true
     process:
@@ -38,14 +52,17 @@ effects:
                 of: opponent
                 bind_as: pick
                 filter: {}
-                prompt: "Place a card as your bottom security card"
+                prompt: "Place a card from your hand as your bottom security card"
       - place_on_security:
           of: opponent
-          source: { binding: pick }
+          source: { binding: pick, zone: hand }
           position: bottom
           face_up: false
       - trash_top_security: { of: opponent }
 
+  # Clause 4: Inherited [All Turns][OPT] OnOpponentSecurityRemoved
+  # You may play 1 5000 DP or lower Reptile or Dragonkin Digimon from
+  # your hand without paying its cost.
   - scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
@@ -62,5 +79,5 @@ effects:
               - any_of:
                   - trait_has: Reptile
                   - trait_has: Dragonkin
-          prompt: "Play a Reptile / Dragonkin Digimon free"
+          prompt: "Play a Reptile / Dragonkin Digimon (5000 DP or lower) without paying its cost"
       - play_from_hand_free: { of: you, hand_index: pick }

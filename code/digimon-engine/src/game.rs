@@ -1268,7 +1268,49 @@ impl Game {
         let top = perm.top_card();
         // `data_index` is a direct Vec index — O(1), no iteration needed.
         let card_data = &self.card_data[top.data_index];
-        card_data.keywords.contains(&keyword)
+        if card_data.keywords.contains(&keyword) {
+            return true;
+        }
+        // Inherited keyword grants from digivolution sources. Only cards
+        // under the top card contribute inherited text, and any active_when
+        // condition must pass before the keyword is considered live.
+        let stack_size = perm.card_sources.len();
+        let source_ids: Vec<(usize, String, crate::card_source::CardHandle)> = perm
+            .card_sources
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (i, s.card_id(&self.card_data).to_string(), s.handle()))
+            .collect();
+        for (source_index, src_id, src_handle) in source_ids {
+            let is_under = source_index + 1 < stack_size;
+            if !is_under {
+                continue;
+            }
+            let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
+                continue;
+            };
+            for effect in &effects {
+                if !effect.declarative || !effect.inherited {
+                    continue;
+                }
+                if effect.granted_keyword != Some(keyword) {
+                    continue;
+                }
+                if let Some(cond) = &effect.condition {
+                    let ctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        src_handle,
+                        Some(handle),
+                        handle.player,
+                    );
+                    if !cond(&ctx) {
+                        continue;
+                    }
+                }
+                return true;
+            }
+        }
+        false
     }
 
     /// Returns the `PermanentHandle` of the currently-attacking permanent,

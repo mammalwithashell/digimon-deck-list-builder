@@ -18,3 +18,27 @@ mod tokens;
 // Sample template for forthcoming hand-written production card tests.
 // Currently ignored pending the engine gaps that BT17-015 depends on.
 mod sample_bt17_015;
+
+// Per-set per-card test modules (added by /batch-implement-cards-rust-dsl)
+mod bt1;
+mod bt14;
+mod bt16;
+mod bt17;
+mod bt18;
+mod bt20;
+mod bt21;
+mod bt23;
+mod bt24;
+mod bt5;
+mod bt8;
+mod bt9;
+mod ex10;
+mod ex11;
+mod ex4;
+mod ex7;
+mod ex8;
+mod ex9;
+mod lm;
+mod p;
+mod st1;
+mod st22;

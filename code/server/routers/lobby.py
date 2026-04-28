@@ -44,7 +44,7 @@ class PendingGame(BaseModel):
     join_code: str
     host_user_id: str
     host_display_name: str
-    host_deck: list[str]
+    host_deck: list[str] = Field(default_factory=list)
     host_deck_raw: Optional[str] = None
     created_at: datetime
     is_public: bool = True
@@ -88,6 +88,32 @@ class JoinLobbyRequest(BaseModel):
     deck_raw: Optional[str] = None
 
 
+class SetLobbyDeckRequest(BaseModel):
+    deck: list[str] = Field(default_factory=list)
+    deck_raw: Optional[str] = None
+
+
+def _pending_game_state(pending: PendingGame) -> dict:
+    return {
+        "game_id": pending.game_id,
+        "join_code": pending.join_code,
+        "host_display_name": pending.host_display_name,
+        "host_deck_ready": bool(pending.host_deck),
+        "joiner_deck_ready": False,
+        "started": pending.game_id in active_games,
+        "allow_spectators": pending.allow_spectators,
+        "spectator_mode": pending.spectator_mode,
+    }
+
+
+def _parse_optional_deck(deck: list[str], deck_raw: Optional[str]) -> tuple[list[str], Optional[str]]:
+    try:
+        parsed = parse_deck(deck_raw) if deck_raw else deck
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Deck parsing error: {exc}") from exc
+    return parsed, deck_raw
+
+
 # ── Endpoints ────────────────────────────────────────────────────────────
 
 @router.post("/create")
@@ -98,13 +124,7 @@ async def create_lobby_game(
 ) -> dict:
     """Host creates a game and gets a join code.  Game is not started yet."""
     _prune_stale_lobbies()
-    # Validate deck
-    try:
-        deck = parse_deck(request.deck_raw) if request.deck_raw else request.deck
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=f"Deck parsing error: {exc}")
-    if not deck:
-        raise HTTPException(status_code=400, detail="A deck must be provided")
+    deck, deck_raw = _parse_optional_deck(request.deck, request.deck_raw)
 
     game_id = str(uuid4())
     join_code = _generate_join_code()
@@ -119,7 +139,7 @@ async def create_lobby_game(
         host_user_id=user.id,
         host_display_name=user.display_name or user.username,
         host_deck=deck,
-        host_deck_raw=request.deck_raw,
+        host_deck_raw=deck_raw,
         created_at=datetime.now(timezone.utc),
         is_public=request.is_public,
         allow_spectators=request.allow_spectators,
@@ -144,6 +164,50 @@ async def create_lobby_game(
     }
 
 
+@router.get("/{game_id}/state")
+async def get_lobby_game(game_id: str) -> dict:
+    """Return pending lobby readiness for the room screen."""
+    _prune_stale_lobbies()
+    pending = pending_games.get(game_id)
+    if pending is None:
+        if game_id in active_games:
+            return {
+                "game_id": game_id,
+                "join_code": None,
+                "host_display_name": None,
+                "host_deck_ready": True,
+                "joiner_deck_ready": True,
+                "started": True,
+            }
+        raise HTTPException(status_code=404, detail="Pending game not found")
+    return _pending_game_state(pending)
+
+
+@router.put("/{game_id}/deck")
+async def set_lobby_deck(
+    game_id: str,
+    request: SetLobbyDeckRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Host locks or replaces the deck for a pending lobby."""
+    _prune_stale_lobbies()
+    pending = pending_games.get(game_id)
+    if pending is None:
+        raise HTTPException(status_code=404, detail="Pending game not found")
+    if pending.host_user_id != user.id:
+        raise HTTPException(status_code=403, detail="Only the host can set this deck")
+
+    deck, deck_raw = _parse_optional_deck(request.deck, request.deck_raw)
+    if not deck:
+        raise HTTPException(status_code=400, detail="A deck must be provided")
+
+    pending.host_deck = deck
+    pending.host_deck_raw = deck_raw
+    pending_games[game_id] = pending
+    return _pending_game_state(pending)
+
+
 @router.post("/join/{join_code}")
 async def join_lobby_game(
     join_code: str,
@@ -158,6 +222,8 @@ async def join_lobby_game(
         raise HTTPException(status_code=404, detail="Game not found or already started")
 
     pending = pending_games[game_id]
+    if not pending.host_deck:
+        raise HTTPException(status_code=409, detail="Host deck is not locked yet")
 
     # Can't join your own game
     if pending.host_user_id == user.id:

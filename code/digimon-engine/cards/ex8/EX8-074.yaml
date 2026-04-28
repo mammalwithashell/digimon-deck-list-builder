@@ -1,0 +1,126 @@
+# EX8-074 MedievalGallantmon — Digimon, Lv.6, Black+Green, DP 11000, Cost 11.
+# Traits: Warrior, Witchelny, Vortex Warriors.
+#
+# Card text:
+# When this card would be played, by suspending 2 Digimon, reduce the play cost by 4.
+# <Alliance>
+# <Vortex>
+# [When Digivolving] You may suspend 1 Digimon. Then, you may delete 1 of your
+#   opponent's 8000 DP or lower Digimon. For each other suspended Digimon,
+#   add 3000 to this DP deletion effect's maximum.
+# [All Turns] [Once Per Turn] When Digimon are played, you may activate 1 of this
+#   Digimon's [When Digivolving] effects.
+card: EX8-074
+name: MedievalGallantmon
+kind: digimon
+level: 6
+color: [black, green]
+cost: 11
+dp: 11000
+traits: [Warrior, Witchelny, "Vortex Warriors"]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 4
+
+effects:
+  # ─── Clause 1: BeforePayCost — suspend 2 Digimon → -4 play cost ─────────────
+  #
+  # NOTE G-COUNT-LTE-EVAL: A `count_gte >= 2 unsuspended Digimon` condition would
+  # guard this clause, but `count_gte` evaluates always-TRUE in the current engine.
+  # Omitted here; partial protection is provided by the pay_cost selections which
+  # will find no valid candidates if fewer than 2 unsuspended Digimon exist.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 4
+    summary: "Suspend 2 Digimon, -4 play cost"
+    pay_cost:
+      - select_own_permanent:
+          bind_as: suspend_1
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Suspend 1 Digimon (cost 1/2)"
+      - suspend: { target: suspend_1 }
+      - select_own_permanent:
+          bind_as: suspend_2
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Suspend 1 Digimon (cost 2/2)"
+      - suspend: { target: suspend_2 }
+
+  # ─── Clause 2: <Alliance> keyword grant ────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Alliance
+
+  # ─── Clause 3: <Vortex> keyword grant ──────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Vortex
+
+  # ─── Clause 4: [When Digivolving] optional — suspend + delete ───────────────
+  #
+  # NOTE G-PRED-DP-LTE: dp_lte predicate on permanents is parsed but the engine
+  # predicate evaluator does not evaluate it yet for battle-area permanents.
+  # All opponent Digimon appear as valid targets until the gap closes.
+  # The raw_rust formula `ex8_074_suspended_dp_cap` computes 8000 + 3000 × (other
+  # suspended Digimon count) but is NOT yet registered in raw_rust/mod.rs —
+  # the dp_lte formula evaluates to 0 until registered (so all opp Digimon pass).
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] May suspend 1 Digimon; may delete opp Digimon (DP cap)"
+    process:
+      # Sub-clause A: optionally suspend 1 Digimon (any player's).
+      - select_any_permanent:
+          bind_as: suspend_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Suspend 1 Digimon (you may)"
+      - suspend: { target: suspend_target }
+      # Sub-clause B: optionally delete 1 opponent Digimon with DP <= cap.
+      - select_opponent_permanent:
+          bind_as: delete_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  raw_rust: ex8_074_suspended_dp_cap
+          prompt: "Delete opponent Digimon (DP <= 8000 + 3000 per other suspended)"
+      - delete_permanent: { target: delete_target }
+
+  # ─── Clause 5: [All Turns][OPT] on_enter_field_anyone ───────────────────────
+  #
+  # "[All Turns] [Once Per Turn] When Digimon are played, you may activate 1 of
+  # this Digimon's [When Digivolving] effects."
+  #
+  # NOTE G-ACTIVATE-CARD-WD-EFFECTS: No DSL verb to enumerate and re-activate a
+  # named card's [When Digivolving] effects. Inline duplication of Clause 4's
+  # process body is the documented workaround.
+  # NOTE G-OPT-TRIGGERED: once_per_turn lowers to max_per_turn=1 but is not
+  # consulted for triggered effects yet. OPT lockout test is #[ignore]'d.
+  - when: on_enter_field_anyone
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When Digimon played, activate WD effect"
+    process:
+      - select_any_permanent:
+          bind_as: suspend_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Suspend 1 Digimon (you may)"
+      - suspend: { target: suspend_target }
+      - select_opponent_permanent:
+          bind_as: delete_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  raw_rust: ex8_074_suspended_dp_cap
+          prompt: "Delete opponent Digimon (DP <= 8000 + 3000 per other suspended)"
+      - delete_permanent: { target: delete_target }

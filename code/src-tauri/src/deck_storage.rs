@@ -156,7 +156,7 @@ fn ensure_default_folders(path: &Path) -> Result<LibraryMetadata, String> {
             .collect();
         write_metadata(path, &metadata)?;
     }
-    metadata
+    Ok(metadata)
 }
 
 fn deck_summary(deck: Deck) -> DeckSummary {

@@ -107,7 +107,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           },
         });
       } catch {
-        // Offline: HomePage will render an offline banner and disable PvP.
         localStorage.removeItem('access_token');
         set({
           accessToken: null,

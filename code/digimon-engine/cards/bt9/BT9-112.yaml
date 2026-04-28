@@ -1,0 +1,118 @@
+card: BT9-112
+name: DeathXmon
+kind: digimon
+level: 7
+color: [black, purple]
+cost: 20
+dp: 15000
+traits: [Unanalyzable, X Program]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6 }
+    cost: 6
+
+effects:
+  # ─── Clause A: BeforePayCost — reduce play cost by 3 per opponent Digimon/Tamer ─
+  #
+  # Printed text: "When you would play this card, reduce its memory cost by 3 for
+  # each Digimon and Tamer your opponent has in play."
+  #
+  # DCGO: ChangeCostClass(EffectTiming.None).
+  #   count() = 3 * Enemy.GetBattleAreaPermanents().Count(p => p.IsDigimon || p.IsTamer)
+  #
+  # NOTE: card_count_in_zone counts ALL battle_area permanents (Digimon + Tamers)
+  # without a kind filter, matching the printed "each Digimon and Tamer" precisely.
+  # delta: 3 gives 3 memory reduction per opponent permanent.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount_fn:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: opponent
+          zone: battle_area
+      delta: 3
+    summary: "-3 per opponent Digimon/Tamer when played"
+
+  # ─── Clause B: [On Play][When Digivolving] <De-Digivolve 1> all opp Digimon,
+  #               then delete all opp ≤Lv4 Digimon ─────────────────────────────
+  #
+  # Printed text: "[On Play] [When Digivolving] <De-Digivolve 1> all of your
+  # opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)
+  # Then, delete all of your opponent's level 4 or lower Digimon."
+  #
+  # DCGO: ActivateClass(EffectTiming.OnEnterFieldAnyone), two copies:
+  #   - One checks CanTriggerOnPlay
+  #   - One checks CanTriggerWhenDigivolving
+  # Both share the same ActivateCoroutine:
+  #   1. for_each opp Digimon → IDegeneration(permanent, 1, ...)
+  #      (IDegeneration trashes TOP digivolution card; stops at level 3)
+  #   2. Filter opp Digimon with Level ≤ 4 AND HasLevel (base card has a level)
+  #   3. DestroyPermanentsClass(filtered list)
+  #
+  # Implementation:
+  # - Step 1: for_each over opponent Digimon → de_digivolve(target, amount:1, stop_at_level:3)
+  #   (snapshot of opponent Digimon at entry; de_digivolve drops top card in stack)
+  # - Step 2: for_each over opponent Digimon with level_lte:4 → delete_permanent
+  #   (fresh snapshot AFTER Step 1 completes; includes Digimon that dropped to Lv≤4)
+  #
+  # NOTE: The two for_each loops use snapshot semantics (§3.7.8 of DSL spec):
+  # the second for_each takes a new snapshot when it starts, AFTER the first
+  # for_each (de-digivolve) completes. This correctly captures any Digimon that
+  # dropped to ≤Lv4 as a result of de-digivolving.
+  - when: [on_play, when_digivolving]
+    summary: "<De-Digivolve 1> all opp Digimon, then delete all opp ≤Lv4"
+    process:
+      # Step 1: De-Digivolve 1 all opponent Digimon
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: digi
+          body:
+            - de_digivolve:
+                target: digi
+                amount: 1
+                stop_at_level: 3
+      # Step 2: delete all opponent Digimon at level 4 or lower
+      # (fresh snapshot after de-digivolve pass; captures newly-de-digivolved targets)
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_lte: 4
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }
+
+  # ─── Clause C: [End of Opponent's Turn][Once Per Turn]
+  #               delete all opp Digimon with lowest play cost ─────────────────
+  #
+  # Printed text: "[End of Opponent's Turn] [Once Per Turn]
+  # Delete all of your opponent's Digimon with the lowest play cost."
+  #
+  # DCGO: ActivateClass(EffectTiming.OnEndTurn)
+  #   CanUseCondition: IsExistOnBattleArea(card) && IsOpponentTurn(card)
+  #   SetHashString("Delete_BT9_112") → OPT enforcement
+  #   ActivateCoroutine: filter PermanentCondition = CardEffectCommons.IsMinCost(perm, Enemy, true)
+  #                      → DestroyPermanentsClass(filtered list)
+  #
+  # GAP G-PLAY-COST-LTE: No DSL predicate for play_cost_lte with aggregate formula.
+  # The DSL aggregate formula supports lowest_dp / highest_dp / lowest_level but NOT
+  # lowest_play_cost. Tracked in qa/dsl-vocab-gaps.md.
+  #
+  # Workaround: raw_rust step bt9_112_delete_lowest_cost_digimon implements the
+  # "find minimum play_cost among opp Digimon, delete all at that cost" logic.
+  # When G-PLAY-COST-LTE closes, replace with native DSL verb.
+  #
+  # GAP G-OPT-TRIGGERED: once_per_turn: true is compiled to Effect::max_per_turn=1
+  # but triggered OPT lockout is not yet enforced by run_queued_effect_inner.
+  # The clause will over-fire until that gap closes.
+  - when: end_of_opponents_turn
+    once_per_turn: true
+    summary: "Delete all opp Digimon with lowest play cost (once per turn)"
+    process:
+      - raw_rust: { fn: bt9_112_delete_lowest_cost_digimon }

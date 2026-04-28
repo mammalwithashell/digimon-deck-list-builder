@@ -2,7 +2,7 @@
 
 use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::{DelayTrigger, EffectTiming};
+use crate::enums::{DelayTrigger, EffectTiming, Keyword};
 use crate::permanent::PermanentHandle;
 
 /// Condition closures run during effect evaluation and during tensor-time
@@ -97,6 +97,7 @@ pub struct Effect {
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
     pub cost_reduction: i32,
+    pub granted_keyword: Option<Keyword>,
 
     /// When `true`, this effect's `dp_modifier` is applied to the opposing
     /// security Digimon's DP during the §2.5 security DP battle. Used for
@@ -132,6 +133,15 @@ pub struct Effect {
     /// host's controller. Set by `.linked()`. Phase 8 Task 4. Mirrors DCGO's
     /// "Plug-In gives the host this effect" semantics for Appmon-trait cards.
     pub linked: bool,
+
+    /// When `true`, this `BeforePayCost` cost-reduction effect is scoped to
+    /// "when THIS specific card is being played from hand."  The effect must
+    /// NOT fire when the card is already on the field and another card is being
+    /// played. Set by `.when_playing_this()` in the builder; enforced by
+    /// `scan_before_pay_cost_reduction` (which skips field-permanent sources
+    /// whose effect has this flag) and
+    /// `scan_before_pay_cost_reduction_for_hand_card` (which evaluates it).
+    pub when_playing_this: bool,
 }
 
 impl std::fmt::Debug for Effect {
@@ -391,6 +401,7 @@ impl EffectBuilder {
                 pay_cost_fn: None,
                 dp_modifier: 0,
                 cost_reduction: 0,
+                granted_keyword: None,
                 applies_to_opponent_security_dp: false,
                 replacement_process: None,
                 option_main: false,
@@ -399,8 +410,18 @@ impl EffectBuilder {
                 link_filter: None,
                 training: false,
                 linked: false,
+                when_playing_this: false,
             },
         }
+    }
+
+    /// Mark this `BeforePayCost` effect as "when THIS card is being played
+    /// from hand." The scan in `scan_before_pay_cost_reduction` will skip
+    /// this effect when the source is a field permanent; it is evaluated
+    /// separately in `scan_before_pay_cost_reduction_for_hand_card`.
+    pub fn when_playing_this(mut self) -> Self {
+        self.inner.when_playing_this = true;
+        self
     }
 
     fn on_play_flag(mut self) -> Self {
@@ -546,6 +567,11 @@ impl EffectBuilder {
 
     pub fn cost_reduction(mut self, n: i32) -> Self {
         self.inner.cost_reduction = n;
+        self
+    }
+
+    pub fn granted_keyword(mut self, keyword: Keyword) -> Self {
+        self.inner.granted_keyword = Some(keyword);
         self
     }
 

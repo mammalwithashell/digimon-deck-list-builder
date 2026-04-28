@@ -1,0 +1,52 @@
+card: BT24-008
+name: Elizamon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Reptile, LIBERATOR]
+
+effects:
+  # [On Play] By trashing 1 card with the [Reptile], [Dragonkin] or [LIBERATOR]
+  # trait from your hand, <Draw 2> (Draw 2 cards from your deck.)
+  #
+  # optional: true — the whole effect is optional (player may decline to pay cost).
+  # condition: gates activation when no eligible card in hand (requires Phase 3
+  #   count_gte evaluation on hand zone to take effect at runtime).
+  - when: on_play
+    optional: true
+    summary: "By trashing a Reptile/Dragonkin/LIBERATOR card from hand, Draw 2"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - trait_has: Reptile
+            - trait_has: Dragonkin
+            - trait_has: LIBERATOR
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Reptile
+              - trait_has: Dragonkin
+              - trait_has: LIBERATOR
+          prompt: "Trash a Reptile/Dragonkin/LIBERATOR card"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 2 }
+
+  # [Your Turn] [Once Per Turn] When your opponent's security stack is removed
+  # from, gain 1 memory.
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "When opponent's security removed on your turn, gain 1 memory"
+    process:
+      - gain_memory: 1

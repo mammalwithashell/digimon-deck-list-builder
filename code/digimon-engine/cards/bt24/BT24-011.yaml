@@ -1,0 +1,36 @@
+card: BT24-011
+name: Cyclonemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Dragonkin, Iliad, TS]
+
+# Digivolution: Lv.3 / 2 memory (standard path)
+# Alt-digivolve: any Lv.3 with TS trait / 2 memory (DCGO: AddSelfDigivolutionRequirementStaticEffect)
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  # Clause 1 — own Rush (face-up)
+  # DCGO: RushSelfStaticEffect(isInheritedEffect: false)
+  - kind: grant_keyword
+    keyword: Rush
+
+  # Clause 2 — own Raid (face-up)
+  # DCGO: RaidSelfEffect(isInheritedEffect: false)
+  - kind: grant_keyword
+    keyword: Raid
+
+  # Clause 3 — inherited Raid
+  # DCGO: RaidSelfEffect(isInheritedEffect: true)
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Raid

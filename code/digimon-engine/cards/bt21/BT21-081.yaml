@@ -1,0 +1,96 @@
+card: BT21-081
+name: Owen Dreadnought
+kind: tamer
+color: [red]
+cost: 3
+traits: [LIBERATOR]
+
+# Clause (a): [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#
+# Printed text: mandatory (no "you may"). DCGO: isOptional = false.
+# Condition: opponent has at least 1 Digimon on their battle area.
+#
+# Clause (b): [End of Your Turn] By suspending this Tamer, 1 of your Digimon with the
+# [Reptile] or [Dragonkin] trait gains <Piercing> for the turn.
+# Then, that Digimon attacks.
+#
+# "By suspending this Tamer" = cost → optional: true. DCGO: isOptional = true.
+#
+# Condition: Owen must be on field (zone: battle_area) AND unsuspended
+# (so the suspend cost can be paid). If no eligible Reptile/Dragonkin exists,
+# the condition gate (any_permanent) blocks activation.
+#
+# "Then, that Digimon attacks": BLOCKED — DSL-vocab gap. The engine has
+# ModifierType::MayAttack and ModifierType::ForceAttack but neither is
+# registered in lookup_modifier_type for use via add_modifier. Even if
+# MayAttack were registered, the DCGO uses SelectAttackEffect.SetCanNotSelectNotAttack
+# which is a mandatory (not optional) attack in the EOT effect window,
+# not a standard EndOfTurnAction optional attack. The attack step is
+# omitted here pending DSL vocabulary expansion. See qa/dsl-vocab-gaps.md.
+#
+# Clause (c): [Security] Play this card without paying the cost.
+# Standard play_from_security pattern — same as BT18-087, BT22-084, BT21-015.
+
+effects:
+  # ─── Clause (a): [Start of Your Main Phase] ──────────────────────────────────
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If opponent has Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  # ─── Clause (b): [End of Your Turn] ──────────────────────────────────────────
+  # optional: true — "By suspending this Tamer" is the activation cost.
+  # Condition: Owen must be on field and unsuspended (can pay cost);
+  # AND at least one Reptile/Dragonkin must be available to target.
+  # DCGO CanActivateCondition: IsExistOnBattleArea + CanActivateSuspendCostEffect
+  # AND HasMatchConditionPermanent(CanSelectCondition).
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] Suspend self → grant Piercing to Reptile/Dragonkin"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "BT21-081"
+            is_unsuspended: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - trait_has: Reptile
+              - trait_has: Dragonkin
+    process:
+      # Cost: suspend this tamer.
+      - suspend: { target: source }
+      # Select 1 Reptile/Dragonkin Digimon to receive Piercing.
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Reptile
+                  - trait_has: Dragonkin
+          prompt: "Choose a Reptile or Dragonkin Digimon to gain Piercing and attack"
+      # Grant Piercing for the turn.
+      - grant_keyword:
+          target: tgt
+          keyword: Piercing
+          expiry: end_of_turn
+      # "Then, that Digimon attacks."
+      # BLOCKED: no DSL verb for effect-initiated mandatory EOT attack on a specific
+      # Digimon. MayAttack and ForceAttack ModifierTypes are not in lookup_modifier_type.
+      # See qa/dsl-vocab-gaps.md DSL-GAP entry.
+
+  # ─── Clause (c): [Security] Play without paying the cost ─────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

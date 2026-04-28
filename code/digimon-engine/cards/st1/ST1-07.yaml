@@ -1,0 +1,34 @@
+card: ST1-07
+name: Greymon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 4000
+traits: [Dinosaur]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 2
+
+effects:
+  # Clause (a) — Inherited <Security A. +1>
+  # Printed text: "Inherited Effect <Security A. +1>
+  #               (This Digimon checks 1 additional security card.)"
+  #
+  # DCGO: CardEffectFactory.ChangeSelfSAttackStaticEffect(
+  #           changeValue: 1, isInheritedEffect: true, card: card, condition: null)
+  #
+  # scope: inherited — active only when this card is in the digivolution stack.
+  # The carrier Digimon (top card) inherits SecurityAttackPlus(1) via
+  # game.has_keyword() stack-walk (Batch 7 fix).
+  #
+  # NOTE: G-DECLARATIVE-KEYWORD applies to EffectTiming::Declarative for
+  # face-up own-scope grants; however, the inherited scope is resolved via
+  # has_keyword() stack-scan, which works today (BT24-011 inherited Raid
+  # uses the same mechanism).
+  - scope: inherited
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1

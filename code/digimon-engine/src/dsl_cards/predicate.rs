@@ -442,6 +442,7 @@ fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {
             | (CompiledCardKind::Tamer, CardKind::Tamer)
             | (CompiledCardKind::Option, CardKind::Option)
             | (CompiledCardKind::DigiEgg, CardKind::DigiEgg)
+            | (CompiledCardKind::Token, CardKind::Token)
     )
 }
 

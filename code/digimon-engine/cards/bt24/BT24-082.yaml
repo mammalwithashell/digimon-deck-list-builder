@@ -1,0 +1,131 @@
+card: BT24-082
+name: Owen Dreadnought
+kind: tamer
+color: [red]
+cost: 3
+traits: [LIBERATOR]
+
+# ─── Clause 1: [Start of Your Main Phase] ────────────────────────────────────
+#
+# "By returning this Tamer to the bottom of the deck, you may play 1 [Owen
+# Dreadnought] from your hand without paying the cost. Then, if you don't have
+# a Digimon, you may play 1 [Elizamon] from your trash without paying the cost."
+#
+# Printed text reads "you may" → optional: true.
+# DCGO: isOptional = true on the outer prompt; return-to-deck IS the activation
+# cost (performed before the play selections).
+#
+# The inner Owen hand-play is also optional (canNoSelect: true in DCGO).
+# The Elizamon trash-play is gated by no_permanent (no friendly Digimon on field)
+# and is also optional (canNoSelect: true in DCGO).
+#
+# ─── Clause 2: [Your Turn] on_digivolve ───────────────────────────────────────
+#
+# "When any of your Digimon digivolve into a [Reptile] or [Dragonkin] Digimon,
+# by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it
+# may attack."
+#
+# optional: true — "by suspending this Tamer" is the activation cost.
+# active_when: { your_turn: true } — [Your Turn] scoping.
+#
+# G-ON-DIGIVOLVE-TRAIT-FILTER [engine gap]:
+#   The `on_digivolve` trigger fires via TriggerSource::PlayerBattleArea, which
+#   makes every permanent in the owner's battle area an observer candidate. The
+#   trigger context does not carry a reference to the newly-digivolved permanent.
+#   Therefore:
+#     (a) The "digivolve into a [Reptile] or [Dragonkin]" trait check on the
+#         NEWLY-DIGIVOLVED card cannot be expressed — we approximate it with
+#         an `any_permanent` condition (a Reptile/Dragonkin must be on the field).
+#     (b) The DP modifier cannot target "that Digimon" (the newly-digivolved one);
+#         instead a select_own_permanent prompt lets the player pick from eligible
+#         Reptile/Dragonkin Digimon — a best-effort approximation.
+#   Tests for accurate per-digivolve-target filtering are #[ignore]'d pending
+#   TriggerContext::digivolve_target being added to PlayerBattleArea firing.
+#
+# G-MAY-ATTACK-NOW [hybrid gap]:
+#   "Then, it may attack" — no DSL verb or engine primitive for an immediate
+#   optional attack within effect resolution. ModifierType::MayAttack targets
+#   the EOT execute window, not an in-effect attack. This sub-clause is omitted.
+#   See qa/dsl-vocab-gaps.md.
+#
+# ─── Security clause ─────────────────────────────────────────────────────────
+#
+# Standard play_from_security pattern.
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] ─────────────────────────────────
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Main Phase] Return self to deck bottom → play Owen from hand free; if no Digimon play Elizamon from trash free"
+    process:
+      # Cost: return this tamer to the bottom of the deck.
+      # `source` resolves to CompiledBindingRef::Source → ctx.source_permanent (the tamer).
+      - return_to_deck: { target: source, position: bottom }
+      # Optional: play 1 Owen Dreadnought from hand without paying the cost.
+      - select_hand:
+          of: you
+          bind_as: owen
+          optional: true
+          filter: { name_contains: "Owen Dreadnought" }
+          prompt: "Play 1 Owen Dreadnought from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: owen }
+      # Conditional: if you don't have a Digimon, play 1 Elizamon from trash.
+      - if:
+          condition:
+            no_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_trash:
+                of: you
+                bind_as: elz
+                optional: true
+                filter: { name_contains: "Elizamon" }
+                prompt: "Play 1 Elizamon from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: elz }
+
+  # ─── Clause 2: [Your Turn] on_digivolve ──────────────────────────────────
+  # optional: true — "by suspending this Tamer" is the activation cost.
+  # Condition (approximation — G-ON-DIGIVOLVE-TRAIT-FILTER): requires a Reptile
+  # or Dragonkin Digimon to be present on field; the trait check should be on
+  # the newly-digivolved card, but the trigger context does not carry it.
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When Digimon digivolves into Reptile/Dragonkin, suspend self → +3000 DP for turn; may attack"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        any_of:
+          - trait_has: Reptile
+          - trait_has: Dragonkin
+    process:
+      # Cost: suspend this tamer.
+      # `source` resolves to CompiledBindingRef::Source → ctx.source_permanent (the tamer).
+      - suspend: { target: source }
+      # Select the Reptile/Dragonkin Digimon to receive +3000 DP.
+      # NOTE: Should be the newly-digivolved Digimon (G-ON-DIGIVOLVE-TRAIT-FILTER).
+      # We approximate with a player-choice selection among eligible Digimon.
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Reptile
+                  - trait_has: Dragonkin
+          prompt: "Choose a Reptile or Dragonkin Digimon to gain +3000 DP for the turn"
+      - add_dp_modifier:
+          target: tgt
+          value: 3000
+          expiry: end_of_turn
+      # "Then, it may attack." — omitted (G-MAY-ATTACK-NOW gap).
+
+  # ─── Security clause ────────────────────────────────────────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

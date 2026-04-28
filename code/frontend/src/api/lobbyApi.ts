@@ -23,8 +23,29 @@ interface JoinLobbyResponse {
   player_id: number;
 }
 
+export interface LobbyState {
+  game_id: string;
+  join_code: string | null;
+  host_display_name: string | null;
+  host_deck_ready: boolean;
+  joiner_deck_ready: boolean;
+  started: boolean;
+  allow_spectators?: boolean;
+  spectator_mode?: 'hidden' | 'open';
+}
+
 export async function createLobby(params: CreateLobbyParams): Promise<CreateLobbyResponse> {
   const { data } = await client.post<CreateLobbyResponse>('/lobby/create', params);
+  return data;
+}
+
+export async function getLobbyState(gameId: string): Promise<LobbyState> {
+  const { data } = await client.get<LobbyState>(`/lobby/${gameId}/state`);
+  return data;
+}
+
+export async function setLobbyDeck(gameId: string, params: JoinLobbyParams): Promise<LobbyState> {
+  const { data } = await client.put<LobbyState>(`/lobby/${gameId}/deck`, params);
   return data;
 }
 
