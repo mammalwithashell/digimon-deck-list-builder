@@ -71,6 +71,7 @@ agent config, runtime data, and project-level configs.
 ├── Dockerfile, Dockerfile.training, docker-compose*.yml, Caddyfile
 ├── .github/                       # CI workflows
 ├── .claude/                       # Agent skills + worktrees
+├── .codex/                        # Codex skills, including Rust DSL archetype readiness assessment
 ├── DCGO/                          # Git submodule — DCGO C# source (behavioral reference)
 ├── data/                          # Shared game data — source of truth for both engines
 │   ├── cards.json                 # Full card metadata (~4085 cards)
