@@ -33,8 +33,8 @@ export function LauncherDeckPanel({ decks, loaded }: LauncherDeckPanelProps) {
         ) : null}
       </div>
       <div className="launcher-panel-foot">
-        <Link className="launcher-btn accent" to="/deckbuilder?new=1">+ New Deck</Link>
-        <Link className="launcher-btn" to="/deckbuilder?import=1">Import</Link>
+        <Link className="launcher-btn accent" to="/deckbuilder/new">+ New Deck</Link>
+        <Link className="launcher-btn" to="/deckbuilder/new?import=1">Import</Link>
         <Link className="launcher-btn" to="/deckbuilder">View All →</Link>
       </div>
     </section>

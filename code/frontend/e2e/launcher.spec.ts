@@ -76,6 +76,20 @@ test.describe('Desktop launcher', () => {
     await page.getByRole('link', { name: /Deck builder/i }).click();
     await expect(page).toHaveURL(/\/deckbuilder/);
   });
+
+  test('opens deck panel shortcuts into the new builder routes', async ({ page }) => {
+    await openDesktopLauncher(page);
+
+    await page.locator('.launcher-panel-foot').getByRole('link', { name: /\+ New Deck/i }).click();
+    await expect(page).toHaveURL(/\/deckbuilder\/new$/);
+    await expect(page.getByText('CARD POOL')).toBeVisible();
+
+    await page.goto('/');
+    await openDesktopLauncher(page);
+    await page.locator('.launcher-panel-foot').getByRole('link', { name: /Import/i }).click();
+    await expect(page).toHaveURL(/\/deckbuilder\/new\?import=1/);
+    await expect(page.getByText('Import / Export Deck')).toBeVisible();
+  });
 });
 
 test.describe('Desktop launcher offline routing', () => {
@@ -90,7 +104,7 @@ test.describe('Desktop launcher offline routing', () => {
     await page.goto('/');
     await page.getByRole('link', { name: /Deck builder/i }).click();
     await expect(page).toHaveURL(/\/deckbuilder\/new$/);
-    await expect(page.getByRole('button', { name: 'Validate' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'VALIDATE' })).toBeVisible();
 
     await page.goto('/');
     await page.locator('nav[aria-label="Tools"] a[href="/deckbuilder/new?import=1"]').click();
