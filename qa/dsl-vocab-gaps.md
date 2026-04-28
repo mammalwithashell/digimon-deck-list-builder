@@ -410,3 +410,23 @@ Format per entry:
 - Gap kind: dsl (for inherited security context). Engine already handles the Main clause auto-placement; the gap is the inherited-security-context placement where `dispose_option` is not called.
 - Workaround: `process: []` (empty process) — clause is structurally present for dispatch routing; behavioral placement tests are `#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"]`. Affects P-035, P-103, BT24-089 (all use the same pattern).
 - First reported: 2026-04-28 (P-035 Red Memory Boost! batch-implement-cards-rust-dsl, Medusamon Batch 12). Same gap pre-existed in P-103.yaml and BT24-089.yaml without a tracker entry.
+
+---
+
+## P-206 — Board-color cross-reference predicate in Delay clause  [G-COLOR-MATCH-AGAINST-BOARD]
+
+- Effect text: "[Main] ＜Delay＞ … You may play 1 Tamer card with the same color as any of your Digimon on the field from your hand with the play cost reduced by 4."
+- Missing DSL verb / step kind / predicate: `color_matches_any_field_digimon` (or an equivalent dynamic board-color filter) — a `PredicateSpec` leaf that checks whether a candidate card's colors share at least one color with ANY Digimon currently in the controller's battle area. The existing `color_is` predicate accepts a fixed literal color token (e.g. `red`, `blue`, `white`) — it cannot perform a dynamic cross-reference against the set of colors currently present on field Digimon top cards. No `any_of_field_colors` or `matches_board_color` predicate variant exists in `PredicateSpec` in `digimon-dsl/src/predicate.rs`.
+- Root cause: the filter predicate must inspect runtime game state (the controller's battle area, specifically the colors of permanent top cards) during `select_hand` candidate evaluation — a dynamic query, not a static literal comparison. `eval_card_fields` in `code/digimon-engine/src/dsl_cards/predicate.rs` has no branch for this pattern.
+- Lowers to engine API: `CardData::card_colors` (already on `CardData`) read against the controller's `battle_area.iter().map(|p| card_data[p.top_card().data_index].card_colors)` collected set. No new engine method is needed — the gap is purely in the DSL predicate vocabulary.
+- Suggested DSL syntax:
+  ```yaml
+  filter:
+    all_of:
+      - kind: tamer
+      - color_matches_any_field_digimon: { of: you }   # NEW predicate leaf
+  ```
+  Implementation notes: (1) add `color_matches_any_field_digimon: Option<PlayerRef>` to `BoolPredicateSpec` in `digimon-dsl/src/predicate.rs`; (2) compile to `CompiledPredicate.color_matches_any_field_digimon`; (3) in `eval_card_fields`, collect the union of colors from the relevant player's battle-area top cards, then check if the candidate card's colors overlap. Requires threading `rctx.game` (already available in `eval_card_fields` via `EffectReadContext`) rather than a static literal.
+- Gap kind: dsl (engine stores `card_colors` on `CardData` and has full battle-area access; the DSL/lowering path just lacks the predicate leaf for a dynamic color-set intersection).
+- Workaround: `filter: { kind: tamer }` only — the "same color as any of your Digimon on the field" constraint is not enforced at selection time. Tests asserting color-mismatch rejection are `#[ignore = "pending: G-COLOR-MATCH-AGAINST-BOARD"]`. First card affected: P-206 Digital Gate Open Delay clause.
+- First reported: 2026-04-28 (P-206 Digital Gate Open batch-implement-cards-rust-dsl, Medusamon Batch 14)

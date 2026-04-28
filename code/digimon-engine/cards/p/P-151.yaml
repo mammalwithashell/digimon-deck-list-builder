@@ -1,0 +1,177 @@
+card: P-151
+name: "Digimon Liberator"
+kind: option
+color: [purple]
+cost: 3
+traits: [LIBERATOR]
+
+# ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────────
+#
+# "While you have [LIBERATOR] trait Digimon or Tamer, you can ignore this
+# card's color requirements."
+#
+# DCGO (EffectTiming.None):
+#   IgnoreColorConditionClass with:
+#     CanUseCondition: HasMatchConditionOwnersPermanent(card, HasLiberatorTrait)
+#       → checks battle area for permanent.IsDigimon || permanent.IsTamer with
+#         ContainsTraits("LIBERATOR")
+#     CardCondition: cardSource == card (applies to THIS card only)
+#
+# DSL modelling:
+#   kind: flood_gate, modifier: IgnoreColorRequirement
+#   active_when uses any_permanent to check for LIBERATOR Digimon or Tamer.
+#
+# KNOWN GAP G-IGNORE-COLOR-MASK:
+#   IgnoreColorRequirement modifier is compiled correctly but not enforced in
+#   code/digimon-engine/src/action/mask.rs (line 598 comment: "residual §4.2b
+#   work; absent here"). The flood_gate clause compiles and structural tests pass,
+#   but the modifier has zero runtime effect on the action mask until the gap closes.
+#   The condition target:{ card_number_is: "P-151" } restricts the bypass to this
+#   card only, matching DCGO's CardCondition.
+#   Tests for runtime enforcement are #[ignore = "pending: G-IGNORE-COLOR-MASK"].
+#
+# ─── Clause 1: [Main] ─────────────────────────────────────────────────────────
+#
+# "[Main] Reveal the top 3 cards of your deck. Add 1 card with the [LIBERATOR]
+# trait among them to your hand. Return the rest to the bottom of the deck in
+# any order. Then, you may play 1 card with the [LIBERATOR] trait and a play
+# cost of 3 or less from your hand without paying the cost."
+#
+# DCGO (EffectTiming.OptionSkill):
+#   ActivateCoroutine:
+#     (1) SimplifiedRevealDeckTopCardsAndSelect(
+#           revealCount: 3,
+#           simplifiedSelectCardConditions: [
+#             { canTargetCondition: SelectLiberatorTrait (ContainsTraits("LIBERATOR")),
+#               message: "Select 1 card with [LIBERATOR] trait.",
+#               mode: AddHand, maxCount: 1 }
+#           ],
+#           remainingCardsPlace: RemainingCardsPlace.DeckBottom)
+#     (2) SelectHandEffect:
+#           canTargetCondition: SelectPlayTarget
+#             → HasPlayCost && GetCostItself <= 3 && CanPlayAsNewPermanent && LIBERATOR
+#           canNoSelect: true (optional)
+#           maxCount: 1
+#           afterSelectCardCoroutine: PlaySelectedCard (payCost: false, activateETB: true)
+#
+# DSL modelling:
+#   (1) reveal_top_deck: count 3 → select_reveal (optional, filter trait_has: LIBERATOR)
+#       → add_to_hand_from_reveal → place_remainder_on_deck bottom
+#   (2) select_hand (optional, filter trait_has: LIBERATOR) → play_from_hand_free
+#
+# KNOWN GAP G-PLAY-COST-LTE:
+#   `play_cost_lte` predicate does not exist in PredicateSpec. The "cost ≤ 3"
+#   constraint cannot be enforced at selection time. The trait_has: LIBERATOR filter
+#   is expressed in YAML but select_hand uses an accept-all filter (Phase 2b).
+#   Tests for the cost-≤3 constraint are #[ignore = "pending: G-PLAY-COST-LTE"].
+#
+# ─── Clause 2: [Security] (inherited) ─────────────────────────────────────────
+#
+# "Security Effect [Security] Activate this card's [Main] effects."
+#
+# DCGO (EffectTiming.SecuritySkill):
+#   CardEffectCommons.AddActivateMainOptionSecurityEffect(card, ref cardEffects, ...)
+#   → adds a security-skill effect that replays the OptionSkill coroutine through
+#     the same SimplifiedRevealDeckTopCardsAndSelect + SelectHandEffect path.
+#
+# DSL modelling:
+#   scope: inherited, when: on_security
+#   process mirrors the Main clause steps exactly (same reveal + select + play body).
+#   This is the standard "[Security] Activate this card's [Main] effects" pattern
+#   (same as P-035, P-103, BT22-084, etc. that use AddActivateMainOptionSecurityEffect).
+
+effects:
+  # ─── Clause 0: Color bypass ───────────────────────────────────────────────
+  # "While you have [LIBERATOR] Digimon or Tamer, ignore this card's color requirements."
+  # DCGO: IgnoreColorConditionClass, CanUseCondition checks battle area for LIBERATOR
+  # Digimon/Tamer, CardCondition restricts to THIS card only.
+  # G-IGNORE-COLOR-MASK: compiled but not enforced in Rust action mask.
+  - kind: flood_gate
+    active_when:
+      any_of:
+        - any_permanent:
+            of: you
+            kind: digimon
+            trait_has: LIBERATOR
+        - any_permanent:
+            of: you
+            kind: tamer
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "P-151" }
+    summary: "While you have LIBERATOR Digimon/Tamer, ignore color requirements for this card"
+
+  # ─── Clause 1: [Main] ─────────────────────────────────────────────────────
+  # Reveal top 3, add 1 LIBERATOR to hand, place rest at bottom.
+  # Then, optionally play 1 LIBERATOR (cost ≤ 3) from hand for free.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 3; add 1 LIBERATOR to hand; then may play 1 LIBERATOR cost ≤3 free"
+    process:
+      # Step 1: Reveal top 3 cards of the deck.
+      - reveal_top_deck:
+          of: you
+          count: 3
+      # Step 2: Add 1 LIBERATOR trait card among revealed to hand.
+      # DCGO: canTargetCondition: ContainsTraits("LIBERATOR"), maxCount: 1, mode: AddHand
+      # DCGO does not mark this as canNoSelect=true (exactly 1 of 3 revealed may be LIBERATOR),
+      # but the select is optional if no LIBERATOR is in the top 3.
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            trait_has: LIBERATOR
+          prompt: "Select 1 card with the [LIBERATOR] trait to add to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      # Step 3: Return rest to bottom of deck in any order.
+      # place_remainder_on_deck internally calls select_ordered_permutation for "any order".
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # Step 4: Optionally play 1 LIBERATOR card (cost ≤ 3) from hand free.
+      # DCGO: SelectHandEffect, canNoSelect: true (optional), maxCount: 1,
+      #   canTargetCondition: HasPlayCost && GetCostItself <= 3 && CanPlayAsNewPermanent && LIBERATOR.
+      # G-PLAY-COST-LTE: play_cost_lte predicate not in PredicateSpec; cost ≤ 3 not enforced.
+      - select_hand:
+          of: you
+          bind_as: free_play_target
+          optional: true
+          filter:
+            # trait_has expressed; play_cost_lte: 3 omitted (G-PLAY-COST-LTE gap).
+            trait_has: LIBERATOR
+          prompt: "You may play 1 [LIBERATOR] card with cost 3 or less from your hand without paying its cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: free_play_target
+
+  # ─── Clause 2: [Security] (inherited) ─────────────────────────────────────
+  # "Security Effect [Security] Activate this card's [Main] effects."
+  # DCGO: AddActivateMainOptionSecurityEffect — replays the OptionSkill coroutine.
+  # The process mirrors Clause 1 exactly (same reveal + select + free-play body).
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] Activate [Main] effects (reveal top 3 + free-play)"
+    process:
+      # Mirror of Clause 1 process (DCGO: replay OptionSkill coroutine via SecuritySkill)
+      - reveal_top_deck:
+          of: you
+          count: 3
+      - select_reveal:
+          of: you
+          bind_as: sec_picked
+          optional: true
+          filter:
+            trait_has: LIBERATOR
+          prompt: "Select 1 card with the [LIBERATOR] trait to add to your hand"
+      - add_to_hand_from_reveal: { of: you, card: sec_picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # G-PLAY-COST-LTE: same gap as Clause 1; cost ≤ 3 not enforced.
+      - select_hand:
+          of: you
+          bind_as: sec_free_play_target
+          optional: true
+          filter:
+            trait_has: LIBERATOR
+          prompt: "You may play 1 [LIBERATOR] card with cost 3 or less from your hand without paying its cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: sec_free_play_target

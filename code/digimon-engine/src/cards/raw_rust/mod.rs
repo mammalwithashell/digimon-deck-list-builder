@@ -987,6 +987,83 @@ fn lm_027_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Binding
     // The engine has no EffectContext::add_security_option_to_hand() method.
 }
 
+/// EX7-074 Vortex Resonance — [Security] "Then, add this card to the hand."
+///
+/// No-op placeholder for G-ADD-OPTION-SELF-TO-HAND. Identical semantics to
+/// `lm_027_add_self_to_hand`: when the engine implements
+/// `EffectContext::add_security_option_to_hand()`, replace this with that call.
+fn ex7_074_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
+    // The engine has no EffectContext::add_security_option_to_hand() method.
+}
+
+/// P-206 Digital Gate Open — [Inherited][Security] "Then, add this card to the hand."
+///
+/// Printed effect: "[Security] You may play 1 Digimon card with a play cost of 3 or
+/// less from your hand or trash without paying the cost. Then, add this card to the hand."
+///
+/// DCGO analysis (P_206.cs, EffectTiming.SecuritySkill):
+///   `CardEffectCommons.AddThisCardToHand(card, activateClass)` — moves the
+///   currently-resolving Option card from security-resolution staging into the
+///   controller's hand instead of routing it to trash.
+///
+/// This function is a step no-op placeholder pending resolution of G-ADD-OPTION-SELF-TO-HAND:
+///
+/// **DSL gap**: No `add_this_option_to_hand` / `return_self_to_hand` step verb exists
+///   in `digimon-dsl/src/step.rs`. The `StepSpec` enum has no variant that maps to
+///   "find the currently-resolving security option card and move it to hand."
+///
+/// **Engine gap**: `EffectContext` has no `add_security_option_to_hand()` method.
+///   The security-resolution flow routes Option cards to trash via `dispose_option`.
+///   A hand-transfer variant must pop the card from the security staging area and
+///   push it to `player.hand` before `dispose_option` runs.
+///
+/// When G-ADD-OPTION-SELF-TO-HAND is closed:
+///   1. Add `EffectContext::add_security_option_to_hand()` to the engine.
+///   2. Add a `return_self_to_hand: {}` (or `add_this_option_to_hand: {}`) step verb
+///      to the DSL.
+///   3. Replace the `raw_rust: { fn: p_206_add_self_to_hand }` step in P-206.yaml
+///      with the native DSL verb.
+///   4. Remove this function and its registration.
+///
+/// Same pattern as `ex6_072_add_self_to_hand`, `st22_08_add_self_to_hand`,
+/// `lm_027_add_self_to_hand`, and `ex7_074_add_self_to_hand`.
+/// Tracked in `qa/dsl-vocab-gaps.md` under G-ADD-OPTION-SELF-TO-HAND.
+fn p_206_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
+    // The engine has no EffectContext::add_security_option_to_hand() method.
+}
+
+/// BT21-093 Raging Serpentine — cost reduction formula.
+///
+/// Returns 4 if the opponent has ≤3 security cards (per printed text); else 0.
+/// Tracked under G-OPP-SECURITY-COUNT-LTE in `qa/dsl-vocab-gaps.md` — the proper
+/// fix is a new `opponent_security_count_lte` predicate, after which this raw_rust
+/// shim can be replaced by `condition: { opponent_security_count_lte: 3 }, amount: 4`.
+fn bt21_093_cost_reduction_amount(
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    _target: crate::permanent::PermanentHandle,
+) -> i32 {
+    let opponent = 1 - rctx.player;
+    if rctx.game.player(opponent).security.len() <= 3 {
+        4
+    } else {
+        0
+    }
+}
+
+/// BT21-093 Raging Serpentine — Main + Security clause: delete 1 of opponent's
+/// highest-DP Digimon (mandatory if any eligible target).
+///
+/// No-op stub: the highest-DP-aggregate selection requires either a new DSL
+/// `aggregate: highest_dp` evaluator (G-PRED-DP-LTE family) or a manually
+/// installed `select_opponent_permanent` selection from raw Rust. Behavioral
+/// tests for this card are structural-only pending that work.
+fn bt21_093_delete_highest_dp_opponent(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    // No-op: pending G-PRED-DP-LTE (highest-DP aggregate predicate) +
+    // a raw_rust-driven selection installer.
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
@@ -1007,6 +1084,10 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_declarative("bt20_016_dna_on_deletion", bt20_016_dna_on_deletion);
     r.register_declarative("lm_027_delay_start_of_turn_noop", lm_027_delay_start_of_turn_noop);
     r.register_step("lm_027_add_self_to_hand", lm_027_add_self_to_hand);
+    r.register_step("ex7_074_add_self_to_hand", ex7_074_add_self_to_hand);
+    r.register_step("p_206_add_self_to_hand", p_206_add_self_to_hand);
+    r.register_formula("bt21_093_cost_reduction_amount", bt21_093_cost_reduction_amount);
+    r.register_step("bt21_093_delete_highest_dp_opponent", bt21_093_delete_highest_dp_opponent);
     r
 }
 

@@ -2,6 +2,22 @@
   "version": 1,
   "last_updated": "2026-04-28",
   "cards": {
+    "BT1-090": {
+      "card_name": "Gravity Crush",
+      "validated_date": "2026-04-28",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon Batch 13",
+      "yaml_path": "code/digimon-engine/cards/bt1/BT1-090.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt1/bt1_090.rs",
+      "test_count": 7,
+      "patterns": [
+        "B1-adjacent",
+        "schedule_delayed"
+      ],
+      "notes": "Option cost-0 Black. Single main_from_hand clause: gain_memory:2 immediate + schedule_delayed(when:end_of_your_turn, body:[lose_memory:2]). All 7 tests green (2 structural, 4 behavioral, 1 scheduling queue assertion). No engine gaps. Net memory swing is +2 activation / -2 EOT = 0 before seesaw flip. schedule_delayed landed Phase 2f4 (2026-04-26)."
+    },
     "P-035": {
       "card_name": "Red Memory Boost!",
       "validated_date": "2026-04-28",
@@ -753,6 +769,44 @@
         "B1"
       ],
       "notes": "17 active tests pass; 3 ignored pending gaps. Clause A (BeforePayCost cost reduction -1 per opp battle_area permanent) fully DSL-implemented via kind:cost_reduction with amount_fn/card_count_in_zone. Clause B ([Main] floodgate + delete): floodgate via raw_rust bt8_097_opp_cannot_play_digimon_by_effect (installs CannotPlayDigimonByEffect with EndOfOpponentsTurn expiry); delete sweep via for_each/dp_lte:6000. Clause C ([Security]) mirrors Clause B exactly. Gaps: G-PRED-DP-LTE (dp_lte predicate on permanents not evaluated at runtime — all Digimon pass filter), G-FOR-EACH-DELETE-INDEX-SHIFT (for_each snapshot indices become stale after first deletion; multi-delete only removes 1 of N), G-FORMULA-KIND-FILTER (card_count_in_zone counts Tamers in addition to Digimon — approximation noted in YAML). G-PLAYER-FLOOD-GATE-DSL is a known pre-existing gap; raw_rust bridge used correctly."
+    },
+    "P-151": {
+      "card_name": "Digimon Liberator",
+      "validated_date": "2026-04-28",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Medusamon Batch 13",
+      "yaml_path": "code/digimon-engine/cards/p/P-151.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_151.rs",
+      "test_count": 18,
+      "tests_passing": 15,
+      "tests_ignored": 3,
+      "patterns": [
+        "D3-color-bypass",
+        "A1-reveal-top-pick",
+        "A2-remainder-bottom",
+        "E2-optional-free-play"
+      ],
+      "notes": "Purple Option Cost 3, [LIBERATOR] trait. 3 clauses: (0) flood_gate IgnoreColorRequirement while LIBERATOR Digimon/Tamer on field — compiles structurally; runtime blocked by G-IGNORE-COLOR-MASK (2 tests ignored). (1) [Main] reveal_top_deck(3) + select_reveal(optional, trait_has:LIBERATOR) + add_to_hand_from_reveal + place_remainder_on_deck(bottom) + select_hand(optional, trait_has:LIBERATOR) + play_from_hand_free — all DSL-native, fully passes; cost-≤3 filter unenforced (G-PLAY-COST-LTE, 1 test ignored). (2) [Inherited][Security] mirrors Clause 1 process exactly — standard 'activate main effects' security pattern (same as P-035, BT22-084 etc.) using scope:inherited + when:on_security. 15 active tests pass (7 structural + 5 behavioral + 3 integration). Key patterns: activate_hand_main (P-035 pattern) used for all behavioral tests instead of runner.play() to avoid full auto-resolve consuming the option card. Reveal-pick test fixed: explicit execute_action(0, view.valid_action_ids[0]) drives the reveal selection rather than auto_resolve (which PASS-resolves optional selections). Gaps: G-IGNORE-COLOR-MASK, G-PLAY-COST-LTE."
+    },
+    "P-206": {
+      "card_name": "Digital Gate Open",
+      "validated_date": "2026-04-28",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Medusamon Batch 14",
+      "yaml_path": "code/digimon-engine/cards/p/P-206.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs",
+      "test_count": 25,
+      "patterns": [
+        "A1",
+        "Option-Delay",
+        "D3",
+        "Inherited-Security"
+      ],
+      "notes": "4-clause white Option (Cost 4): [Main] reveal top 3 + add 1 Digimon + 1 Tamer to hand + place rest at bottom; [Main]<Delay> optional play Tamer from hand cost -4; flood_gate IgnoreColorRequirement; [Inherited][Security] optional play Digimon cost ≤3 from hand or trash free + add self to hand. Active tests cover: structural (8), Main reveal accounting (4), Delay structural (1), flood_gate structural (1), inherited security structural (3), event-log deck-size (1). Tests ignored: (a) G-IGNORE-COLOR-MASK — IgnoreColorRequirement modifier compiles but not enforced in action/mask.rs (1 test); (b) G-PLACE-SELF-AS-OPTION-PERMANENT — battle-area count post-main and post-security (3 tests); (c) G-COLOR-MATCH-AGAINST-BOARD (NEW gap) — Delay clause color-match predicate missing from PredicateSpec; only kind:tamer filter enforced (2 tests); (d) G-PLAY-COST-LTE — cost ≤3 filter in security clause cannot be expressed in DSL (1 test); (e) G-ADD-OPTION-SELF-TO-HAND — 'add this card to hand' after security resolution requires raw_rust stub p_206_add_self_to_hand (registered, no-op). Raw_rust fn p_206_add_self_to_hand registered in src/cards/raw_rust/mod.rs. New DSL gap G-COLOR-MATCH-AGAINST-BOARD documented in qa/dsl-vocab-gaps.md."
     }
   }
 }

@@ -1,0 +1,248 @@
+card: P-206
+name: "Digital Gate Open"
+kind: option
+color: [white]
+cost: 4
+
+# ─── Clause 0: [Main] ──────────────────────────────────────────────────────────
+#
+# "Reveal the top 3 cards of your deck. Add 1 Digimon card and 1 Tamer card
+# among them to the hand. Return the rest to the bottom of the deck.
+# Then, place this card in the battle area."
+#
+# DCGO (EffectTiming.OptionSkill):
+#   SimplifiedRevealDeckTopCardsAndSelect(
+#     revealCount: 3,
+#     simplifiedSelectCardConditions: [
+#       { canTargetCondition: IsDigimon,   canNoSelect: true, maxCount: 1, mode: AddHand },
+#       { canTargetCondition: IsTamer,     canNoSelect: true, maxCount: 1, mode: AddHand },
+#     ],
+#     remainingCardsPlace: RemainingCardsPlace.DeckBottom)
+#   then PlaceDelayOptionCards(card, activateClass)
+#
+# DSL modelling:
+#   - when: main_from_hand
+#   - reveal_top_deck: { of: you, count: 3 }
+#   - select_reveal: { filter: { kind: digimon }, optional: true } → add_to_hand_from_reveal
+#   - select_reveal: { filter: { kind: tamer   }, optional: true } → add_to_hand_from_reveal
+#   - place_remainder_on_deck: { of: you, position: bottom }
+#   - "Then, place this card in battle area" — G-PLACE-SELF-AS-OPTION-PERMANENT:
+#     The engine infers option-as-permanent placement from the Delay clause presence
+#     (classify_option_subtype + dispose_option). No explicit DSL step needed for
+#     the Main clause auto-placement. Tests asserting battle-area count are #[ignore]'d.
+
+# ─── Clause 1: [Main] <Delay> ──────────────────────────────────────────────────
+#
+# "[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the
+# effect below.) · You may play 1 Tamer card with the same color as any of your
+# Digimon on the field from your hand with the play cost reduced by 4."
+#
+# DCGO (EffectTiming.OnDeclaration):
+#   CanDeclareOptionDelayEffect(card) → standard Delay
+#   CanSelectCardCondition: cardSource.IsTamer && cardSource.BaseCardColors intersects
+#     { all colors on field Digimon top cards } && CanPlayAsNewPermanent
+#   cost_delta: -4 (ChangeCostClass applied to selected card only, removed after play)
+#   canNoSelect: true (optional — player may decline)
+#
+# KNOWN GAP G-COLOR-MATCH-AGAINST-BOARD [DSL vocab gap]:
+#   "same color as any of your Digimon on the field" requires a filter predicate
+#   that cross-references the colors of permanents currently in the battle area.
+#   No such predicate exists in PredicateSpec — `color_is` accepts a fixed literal,
+#   not a dynamic board query. The `select_hand` verb therefore uses only `kind: tamer`
+#   filtering (cannot enforce the board-color constraint at selection time).
+#   Tests for the color-match enforcement are
+#   #[ignore = "pending: G-COLOR-MATCH-AGAINST-BOARD"].
+#
+# DSL modelling:
+#   - kind: delay  (maps to DelayTrigger::EndOfYourNextTurn)
+#   - process:
+#       select_hand: { filter: { kind: tamer }, optional: true }  ← G-COLOR-MATCH-AGAINST-BOARD
+#       play_from_hand: { cost_delta: -4 }
+#
+# Note: play_from_hand with cost_delta is the standard verb for reduced-cost plays
+# from hand. The Delay clause is "you may" → optional select_hand.
+
+# ─── Clause 2: Unconditional ignore-color [flood_gate] ─────────────────────────
+#
+# "You can ignore this card's color requirements."
+#
+# DCGO (EffectTiming.None):
+#   IgnoreColorConditionClass(cardCondition: cardSource == card)
+#   → unconditional; always active while this card is in hand (FaceUp is before-play state,
+#     which is the relevant scope for a "can you play this?" check).
+#
+# KNOWN GAP G-IGNORE-COLOR-MASK [engine gap]:
+#   `IgnoreColorRequirement` modifier compiles but is NOT enforced in
+#   `code/digimon-engine/src/action/mask.rs` (§4.2b residual work).
+#   The action mask ignores this modifier → zero runtime effect.
+#   Same gap as P-151, ST22-08.
+#
+# DSL modelling:
+#   - kind: flood_gate (declarative — applies while card is in a valid zone)
+#     scope: face_up (applies while card is in hand / about to be played)
+#     modifier: IgnoreColorRequirement
+#     target: { card_number_is: "P-206" }  ← self-targeted; unconditional
+#     active_when: { your_turn: true }       ← DCGO: no turn restriction, but
+#                                               ignore-color is only relevant during your_turn plays.
+#
+# Alternative: no active_when (always-on while in hand). Using your_turn to
+# match DCGO intent (you only play options on your turn).
+
+# ─── Clause 3: [Security] (inherited) ──────────────────────────────────────────
+#
+# "Security Effect [Security] You may play 1 Digimon card with a play cost of 3
+# or less from your hand or trash without paying the cost. Then, add this card
+# to the hand."
+#
+# DCGO (EffectTiming.SecuritySkill):
+#   CanSelectCardCondition: IsDigimon && HasPlayCost && BasePlayCostFromEntity <= 3
+#     && CanPlayAsNewPermanent
+#   If both hand and trash have candidates → "From hand" / "From trash" EffectChoice
+#   Otherwise auto-routes to the zone with candidates (SetBool)
+#   canNoSelect: true (optional)
+#   After play: AddThisCardToHand(card) — places the played Option in controller's hand.
+#
+# KNOWN GAP G-PLAY-COST-LTE [DSL vocab gap]:
+#   `play_cost_lte` predicate is missing from PredicateSpec. The "cost ≤ 3"
+#   filter cannot be enforced at selection time. select_hand and select_trash
+#   use accept-all filters (Phase 2b). Tests for cost-≤3 enforcement are
+#   #[ignore = "pending: G-PLAY-COST-LTE"].
+#
+# KNOWN GAP G-ADD-OPTION-SELF-TO-HAND [DSL vocab gap]:
+#   "Then, add this card to the hand" after security resolution has no DSL step
+#   verb. The raw_rust stub `p_206_add_self_to_hand` handles this (same pattern
+#   as ex6_072_add_self_to_hand and st22_08_add_self_to_hand).
+#
+# DSL modelling:
+#   - scope: inherited
+#   - when: on_security
+#   - optional: true ("you may")
+#   - process:
+#       select_effect_choice: "From hand" / "From trash"
+#       if (zone_choice == 0): select_hand + play_from_hand_free
+#       if (zone_choice == 1): select_trash + play_from_trash_free
+#       raw_rust: { fn: p_206_add_self_to_hand }   ← G-ADD-OPTION-SELF-TO-HAND
+#
+# Note: Same structural pattern as P-189's security clause, extended with the
+#       "add this card to hand" tail.
+
+effects:
+  # ─── Clause 0: [Main] ────────────────────────────────────────────────────────
+  # Reveal top 3, add 1 Digimon + 1 Tamer to hand, place rest at bottom.
+  # "Then, place this card in battle area" → G-PLACE-SELF-AS-OPTION-PERMANENT (implicit).
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 3; add 1 Digimon + 1 Tamer to hand; place rest at bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 3
+      # DCGO: IsDigimon, canNoSelect: true (optional), maxCount: 1, mode: AddHand
+      - select_reveal:
+          of: you
+          bind_as: digimon_pick
+          optional: true
+          filter:
+            kind: digimon
+          prompt: "Add 1 Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: digimon_pick }
+      # DCGO: IsTamer, canNoSelect: true (optional), maxCount: 1, mode: AddHand
+      - select_reveal:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            kind: tamer
+          prompt: "Add 1 Tamer card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: tamer_pick }
+      # Return the rest to deck bottom (select_ordered_permutation auto-handled).
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # "Then, place this card in the battle area" → engine infers via classify_option_subtype
+      # + dispose_option when it detects the Delay clause (kind: delay) below.
+      # No explicit DSL step needed for Main-clause placement.
+
+  # ─── Clause 1: [Main] <Delay> ─────────────────────────────────────────────
+  # Standard Delay: player may trash this card on or after the next turn.
+  # "You may play 1 Tamer card with the same color as any of your Digimon on
+  # the field from your hand with the play cost reduced by 4."
+  # G-COLOR-MATCH-AGAINST-BOARD: color-match-against-board predicate missing from DSL.
+  # select_hand uses only kind:tamer filter; board-color constraint unenforced.
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> You may play 1 Tamer from hand matching field Digimon color, cost -4"
+    process:
+      # DCGO: canNoSelect: true → optional: true ("you may")
+      # G-COLOR-MATCH-AGAINST-BOARD: color-match predicate missing; only kind:tamer filtered.
+      - select_hand:
+          of: you
+          bind_as: tamer_to_play
+          optional: true
+          filter:
+            kind: tamer
+          prompt: "You may play 1 Tamer card with the same color as any of your Digimon on the field"
+      # DCGO: PlayPermanentCards with payCost: true and a ChangeCostClass applying -4
+      # to the selected card only (removed immediately after play).
+      - play_from_hand:
+          of: you
+          hand_index: tamer_to_play
+          cost_delta: -4
+
+  # ─── Clause 2: Unconditional ignore-color ─────────────────────────────────
+  # "You can ignore this card's color requirements." (unconditional; no board condition)
+  # DCGO: IgnoreColorConditionClass(cardCondition: cardSource == card)
+  # G-IGNORE-COLOR-MASK: modifier compiles but not enforced in action mask.
+  # Same gap as P-151, ST22-08.
+  - kind: flood_gate
+    scope: face_up
+    active_when: { your_turn: true }
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "P-206" }
+
+  # ─── Clause 3: [Security] (inherited) ────────────────────────────────────
+  # "You may play 1 Digimon card with a play cost of 3 or less from your
+  # hand or trash without paying the cost. Then, add this card to the hand."
+  # DCGO: CanSelectCardCondition: IsDigimon && HasPlayCost && BasePlayCostFromEntity <= 3
+  #       "From hand" / "From trash" EffectChoice when both zones have candidates.
+  #       AddThisCardToHand(card) afterwards.
+  # G-PLAY-COST-LTE: cost-≤3 filter not expressible in DSL.
+  # G-ADD-OPTION-SELF-TO-HAND: "add this card to hand" requires raw_rust stub.
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Inherited][Security] You may play 1 Digimon cost ≤3 from hand or trash free; add self to hand"
+    process:
+      # DCGO: "From which area do you select?" EffectChoice when both zones have candidates.
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play a Digimon?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: false
+                filter:
+                  # G-PLAY-COST-LTE: play_cost_lte: 3 cannot be expressed; omitted.
+                  kind: digimon
+                prompt: "Select a Digimon card (cost ≤3) to play from hand"
+            - play_from_hand_free:
+                of: you
+                hand_index: picked_hand
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: false
+                filter:
+                  kind: digimon
+                prompt: "Select a Digimon card (cost ≤3) to play from trash"
+            - play_from_trash_free:
+                of: you
+                hand_index: picked_trash
+      # "Then, add this card to the hand." — G-ADD-OPTION-SELF-TO-HAND.
+      # raw_rust stub: same pattern as ex6_072_add_self_to_hand.
+      - raw_rust: { fn: p_206_add_self_to_hand }
