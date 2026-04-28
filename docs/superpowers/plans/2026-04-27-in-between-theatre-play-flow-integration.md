@@ -2246,7 +2246,7 @@ git commit -m "feat: add in between room lobby"
 - Modify: `code/frontend/src/pages/GamePage.tsx`
 - Test: `code/frontend/e2e/play-flow.spec.ts`
 
-- [ ] **Step 1: Add bot launch e2e**
+- [x] **Step 1: Add bot launch e2e**
 
 Append:
 
@@ -2279,7 +2279,7 @@ test('bot match starts local game route from deck selection', async ({ page }) =
 });
 ```
 
-- [ ] **Step 2: Run e2e and verify it fails**
+- [x] **Step 2: Run e2e and verify it fails**
 
 Run:
 
@@ -2290,7 +2290,7 @@ npm run e2e -- play-flow.spec.ts
 
 Expected: fail because bot mode currently routes directly to `/game` without creating a game.
 
-- [ ] **Step 3: Update DeckSelectPage bot launch**
+- [x] **Step 3: Update DeckSelectPage bot launch**
 
 Replace the confirm handler in `code/frontend/src/pages/DeckSelectPage.tsx` with:
 
@@ -2342,7 +2342,7 @@ Update button:
 </button>
 ```
 
-- [ ] **Step 4: Add GamePage launch metadata**
+- [x] **Step 4: Add GamePage launch metadata**
 
 In `code/frontend/src/pages/GamePage.tsx`, read play-flow metadata and pass labels to the board header already rendered by `GameBoard`:
 
@@ -2376,7 +2376,7 @@ if (result.player_labels) {
 }
 ```
 
-- [ ] **Step 5: Run e2e/build and commit**
+- [x] **Step 5: Run e2e/build and commit**
 
 Run:
 
@@ -2387,6 +2387,8 @@ npm run e2e -- play-flow.spec.ts game-loads.spec.ts
 ```
 
 Expected: play flow passes; `game-loads.spec.ts` passes when backend debug server is available. If backend is unavailable, record that explicitly in the commit notes. Commit:
+
+Verification note: `game-loads.spec.ts` could not run in this pass because no backend was listening on `localhost:8000` (`ECONNREFUSED` during `/auth/login`).
 
 ```bash
 git add code/frontend/src/pages/DeckSelectPage.tsx code/frontend/src/pages/GamePage.tsx code/frontend/e2e/play-flow.spec.ts

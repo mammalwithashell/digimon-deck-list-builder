@@ -35,6 +35,7 @@ import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as gameApi from '@/api/gameApi';
 import * as deckApiMod from '@/api/deckApi';
 import * as deckStore from '@/storage/deckStore';
+import { usePlayFlowStore } from '@/features/play/playFlowStore';
 import type { LocalModelMeta } from '@/api/desktopModelsApi';
 import {
   ACTION,
@@ -67,6 +68,7 @@ export function GamePage() {
 
 
   const store = useGameStore();
+  const { opponentMode } = usePlayFlowStore();
   useEffectHighlight();
   const parsedMask = useActionMask(store.actionMask);
   const actionPendingRef = useRef(false);
@@ -187,6 +189,10 @@ export function GamePage() {
             store.setActionMask(maskData);
             store.clearLogs();
             store.clearActionTraces();
+            store.setPlayerLabels({
+              1: 'YOU',
+              2: opponentMode === 'bot' ? 'GREEDY BOT' : 'OPPONENT',
+            });
           } catch (err) {
             console.error('Failed to load game:', err);
           }
@@ -264,7 +270,14 @@ export function GamePage() {
       // Set game state before gameId so the board has player data when it first renders
       store.setGameState(result.state);
       store.setActionMask(result.action_mask);
-      if (result.player_labels) store.setPlayerLabels(result.player_labels);
+      if (result.player_labels) {
+        store.setPlayerLabels(result.player_labels);
+      } else {
+        store.setPlayerLabels({
+          1: 'YOU',
+          2: agentType === 'greedy' ? 'GREEDY BOT' : 'OPPONENT',
+        });
+      }
       store.clearLogs();
       store.clearEvents();
       store.clearActionTraces();

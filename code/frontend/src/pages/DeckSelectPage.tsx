@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import * as library from '@/api/deckLibraryAdapter';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
 import { canUseDeckForFormat, getPlayFormat } from '@/features/play/formatCatalog';
+import { createBotGame } from '@/features/play/playApi';
 import { usePlayFlowStore } from '@/features/play/playFlowStore';
 import type { DeckSummary } from '@/types/deck';
 import './DeckSelectPage.css';
@@ -12,6 +13,7 @@ export function DeckSelectPage() {
   const { formatId, opponentMode, deckId, selectDeck } = usePlayFlowStore();
   const [decks, setDecks] = useState<DeckSummary[]>([]);
   const [search, setSearch] = useState('');
+  const [launching, setLaunching] = useState(false);
   const format = getPlayFormat(formatId);
   const selected = decks.find((deck) => deck.id === deckId) ?? decks[0] ?? null;
   const selectedLegality = selected ? canUseDeckForFormat(selected, formatId) : null;
@@ -35,8 +37,25 @@ export function DeckSelectPage() {
     );
   }, [decks, search]);
 
-  const nextPath =
-    opponentMode === 'room' ? '/play/room/new' : opponentMode === 'bot' ? '/game' : '/play/matching';
+  const handleConfirm = async () => {
+    if (!selected || !selectedLegality?.ok) return;
+    if (opponentMode === 'quick') {
+      navigate('/play/matching');
+      return;
+    }
+    if (opponentMode === 'room') {
+      navigate('/play/room/new');
+      return;
+    }
+    setLaunching(true);
+    try {
+      const deck = await library.getDeck(selected.id);
+      const response = await createBotGame({ deck, opponentDeck: deck });
+      navigate(`/game/${response.game_id}`);
+    } finally {
+      setLaunching(false);
+    }
+  };
 
   return (
     <InBetweenShell
@@ -102,10 +121,10 @@ export function DeckSelectPage() {
           <span>{selected ? selected.name : 'NO DECK SELECTED'}</span>
           <button
             type="button"
-            disabled={!selected || !selectedLegality?.ok}
-            onClick={() => navigate(nextPath)}
+            disabled={!selected || !selectedLegality?.ok || launching}
+            onClick={handleConfirm}
           >
-            USE THIS DECK
+            {launching ? 'LAUNCHING...' : 'USE THIS DECK'}
           </button>
         </div>
       </main>

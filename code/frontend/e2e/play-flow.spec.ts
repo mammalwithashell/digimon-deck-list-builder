@@ -146,4 +146,31 @@ test.describe('In Between play flow', () => {
     await expect(page).toHaveURL(/\/play\/room\/new/);
     await expect(page.getByText('ABC123', { exact: true })).toBeVisible();
   });
+
+  test('bot match starts local game route from deck selection', async ({ page }) => {
+    await mockDeckLibrary(page);
+    await page.route('**/games', (route) =>
+      route.fulfill({
+        json: {
+          game_id: 'game-bot',
+          state: {
+            turn_count: 1,
+            current_phase: 'Main',
+            memory: 0,
+            game_over: false,
+            winner: null,
+            players: [],
+          },
+          action_mask: [],
+        },
+      }),
+    );
+    await page.goto('/play');
+    await page.getByRole('button', { name: /BOT MATCH/i }).click();
+    await page.getByRole('button', { name: /STANDARD/i }).click();
+    await page.getByRole('button', { name: /ENTER FORMAT/i }).click();
+    await page.getByRole('button', { name: /EMBER VANGUARD/i }).click();
+    await page.getByRole('button', { name: /USE THIS DECK/i }).click();
+    await expect(page).toHaveURL(/\/game\/game-bot/);
+  });
 });

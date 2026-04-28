@@ -10,6 +10,10 @@ import { PLAY_FORMATS, formatToQueueType } from './formatCatalog';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
+function hasTauriBridge(): boolean {
+  return Boolean((globalThis as { isTauri?: boolean }).isTauri);
+}
+
 interface FormatDto {
   id: PlayFormatId;
   name: string;
@@ -83,9 +87,21 @@ export async function createBotGame(params: {
   deck: DeckResponse;
   opponentDeck: DeckResponse;
 }): Promise<{ game_id: string }> {
+  const deck1 = [...params.deck.egg_deck, ...params.deck.main_deck];
+  const deck2 = [...params.opponentDeck.egg_deck, ...params.opponentDeck.main_deck];
+  if (!hasTauriBridge()) {
+    const { data } = await client.post<{ game_id: string }>('/games', {
+      deck1,
+      deck2,
+      player1_type: 'human',
+      player2_type: 'agent',
+      player2_policy: 'greedy',
+    });
+    return { game_id: data.game_id };
+  }
   const response = await gameApi.createGame({
-    deck1: [...params.deck.egg_deck, ...params.deck.main_deck],
-    deck2: [...params.opponentDeck.egg_deck, ...params.opponentDeck.main_deck],
+    deck1,
+    deck2,
     player_kinds: ['human', 'greedy'],
     player_model_ids: [null, null],
   });
