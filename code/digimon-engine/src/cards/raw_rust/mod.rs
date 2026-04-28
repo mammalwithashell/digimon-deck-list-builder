@@ -284,6 +284,333 @@ fn ex8_074_suspended_dp_cap(
     8000 + 3000 * suspended_count
 }
 
+/// BT23-014 Gallantmon — [On Play][When Digivolving] opponent can't play Digimon or Tamers
+/// from trash until their turn ends.
+///
+/// Printed effect:
+/// "[On Play][When Digivolving] Until your opponent's turn ends, their effects can't play
+/// Digimon or Tamers from the trash."
+///
+/// DCGO analysis (BT23_014.cs, `SharedFloodGateActivateCoroutine`):
+///   - Creates a `CanNotPutFieldClass` that blocks cards satisfying:
+///     `IsExistInAnyTrash(cardSource) && (cardSource.IsDigimon || cardSource.IsTamer)`
+///   - The effect source must belong to the opponent: `cardEffect.EffectSourceCard.Owner == card.Owner.Enemy`
+///   - Added to `card.Owner.Enemy.UntilOwnerTurnEndEffects` — expires at end of opponent's turn.
+///
+/// Implementation:
+///   1. Install `CannotPlayDigimonByEffect` as a player-scoped modifier on the opponent with
+///      `Expiry::EndOfOpponentsTurn`. This blocks effect-initiated Digimon plays from any zone
+///      (hand or trash) via the gate in `play_from_hand_with_cost` and `play_from_trash_with_cost`.
+///   2. Install `CannotPlayTamerByEffect` (added in this batch) as a parallel player-scoped
+///      modifier on the opponent with the same expiry.
+///
+/// `EndOfOpponentsTurn` expiry uses `source_player == ctx.player` (the Gallantmon controller),
+/// so the modifier is cleared when the OTHER player's turn ends — i.e., the opponent's turn.
+fn bt23_014_opp_cannot_play_from_trash(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    use crate::enums::{Expiry, ModifierType};
+    use crate::modifiers::PlayerModifierEntry;
+
+    let opponent = ctx.opponent_id();
+    let source_player = ctx.player;
+
+    // Block opponent from playing Digimon by effect (covers hand + trash zones).
+    ctx.game.modifiers.add_player_modifier(
+        opponent,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::EndOfOpponentsTurn,
+            None,
+            source_player,
+        ),
+    );
+
+    // Block opponent from playing Tamers by effect (covers hand + trash zones).
+    ctx.game.modifiers.add_player_modifier(
+        opponent,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayTamerByEffect,
+            0,
+            Expiry::EndOfOpponentsTurn,
+            None,
+            source_player,
+        ),
+    );
+}
+
+/// BT23-014 Gallantmon — dynamic DP cap formula for the delete clause.
+///
+/// Printed text: "Delete 1 of your opponent's Digimon with 8000 DP or less.
+/// For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum."
+///
+/// Formula: `8000 + 2000 × (total permanents in opponent's battle area)`.
+/// "Their Digimon and Tamers" = all permanents in opponent's battle area
+/// (since only Digimon and Tamers occupy battle area slots).
+///
+/// The `target` argument is the candidate being filtered (an opponent's Digimon).
+/// `rctx.player` is the controller (who owns BT23-014).
+///
+/// NOTE G-PRED-DP-LTE: dp_lte with a formula is parsed but the predicate
+/// evaluator does not yet invoke the formula on permanents in non-security zones.
+/// Until that gap closes, this formula is registered but not called at runtime.
+fn bt23_014_dynamic_dp_cap(
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    _target: crate::permanent::PermanentHandle,
+) -> i32 {
+    let opponent = 1 - rctx.player; // player 0 or 1
+
+    // Count all permanents in opponent's battle area (Digimon + Tamers).
+    let count = rctx.game.player(opponent).battle_area.len() as i32;
+
+    8000 + 2000 * count
+}
+
+/// BT9-112 DeathXmon — [End of Opponent's Turn][Once Per Turn]
+/// delete all opponent Digimon with the lowest play cost.
+///
+/// Printed effect: "[End of Opponent's Turn] [Once Per Turn]
+/// Delete all of your opponent's Digimon with the lowest play cost."
+///
+/// DCGO analysis (BT9_112.cs, `ActivateClass(EffectTiming.OnEndTurn)`):
+///   - `CardEffectCommons.IsMinCost(perm, Enemy, true)` — finds the minimum
+///     play cost among the opponent's Digimon (isDigimon=true), then destroys
+///     all Digimon at that minimum cost via `DestroyPermanentsClass`.
+///
+/// Implementation:
+///   1. Collect all opponent Digimon from `ctx.game.player(opponent).battle_area`.
+///   2. Find the minimum `play_cost` among them.
+///   3. Collect `PermanentHandle`s of all opponent Digimon at that minimum cost.
+///   4. Delete each via `ctx.delete_permanent(handle)`.
+///
+/// GAP G-PLAY-COST-LTE: The DSL aggregate formula supports `lowest_dp`/`highest_dp`/
+/// `lowest_level` but not `lowest_play_cost`. This step implements the gap logic
+/// directly in Rust. When G-PLAY-COST-LTE is closed, replace the `raw_rust` step
+/// in BT9-112.yaml with a native DSL expression and remove this function.
+///
+/// GAP G-OPT-TRIGGERED: `once_per_turn: true` on triggered clauses compiles to
+/// `Effect::max_per_turn=1` but triggered OPT enforcement is not yet wired in
+/// `run_queued_effect_inner`. The clause will over-fire until that gap closes.
+///
+/// Tracked in `qa/dsl-vocab-gaps.md` under G-PLAY-COST-LTE.
+fn bt9_112_delete_lowest_cost_digimon(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    use crate::enums::CardKind;
+    use crate::permanent::PermanentHandle;
+
+    let opponent = ctx.opponent_id();
+
+    // Collect (handle, play_cost) for every opponent Digimon.
+    let digimon_costs: Vec<(PermanentHandle, u16)> = ctx
+        .game
+        .player(opponent)
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, perm)| {
+            let top = perm.top_card();
+            let data = &ctx.game.card_data[top.data_index];
+            if data.card_kind == CardKind::Digimon {
+                let handle = PermanentHandle {
+                    player: opponent,
+                    index: idx as u8,
+                };
+                Some((handle, data.play_cost))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Nothing to do if opponent has no Digimon.
+    if digimon_costs.is_empty() {
+        return;
+    }
+
+    // Find the minimum play cost.
+    let min_cost = digimon_costs
+        .iter()
+        .map(|(_, cost)| *cost)
+        .min()
+        .unwrap_or(0);
+
+    // Collect handles of all Digimon at the minimum cost.
+    let targets: Vec<PermanentHandle> = digimon_costs
+        .into_iter()
+        .filter(|(_, cost)| *cost == min_cost)
+        .map(|(handle, _)| handle)
+        .collect();
+
+    // Delete all matching Digimon (iterate in reverse index order so earlier
+    // deletions don't shift the indices of later targets).
+    let mut sorted_targets = targets;
+    sorted_targets.sort_by(|a, b| b.index.cmp(&a.index));
+    for handle in sorted_targets {
+        ctx.delete_permanent(handle);
+    }
+}
+
+/// BT17-018 Gallantmon: Crimson Mode — [On Play][When Digivolving] DP-budget multi-delete.
+///
+/// Printed effect: "Choose any number of your opponent's Digimon whose total DP
+/// adds up to 15000 or less and delete them."
+///
+/// DCGO analysis (BT17_018.cs, `SetUpActivateClass SharedActivateCoroutine`):
+///   - `canTargetConditionByPreSelectedList`: filters candidates based on running
+///     DP sum — after each pick, candidates whose DP would push the total above
+///     15000 are removed from the selectable list.
+///   - `canEndSelectCondition`: final validation that total DP ≤ 15000.
+///   - `canNoSelect: false`: must pick ≥1 when eligible targets exist.
+///   - `canEndNotMax: true`: can stop picking before all valid candidates are selected.
+///
+/// BLOCKED: G-DP-BUDGET-MULTI-SELECT
+///   The engine has no `select_opponent_permanent_multi_dp_budget` primitive.
+///   `select_count_capped_multi` caps pick COUNT, not DP sum. A proper
+///   implementation requires:
+///     1. Initial candidate list: all opponent Digimon.
+///     2. After each pick: subtract that Digimon's DP from remaining budget (15000 -
+///        sum_picked), re-filter candidates to those whose DP ≤ remaining budget.
+///     3. On PASS (or when no candidates remain): delete all picked Digimon.
+///   This multi-round incremental selection is not currently supported by
+///   `PendingSelection` — it would require a new selection kind or a looping
+///   raw_rust harness that re-installs selection each round.
+///
+/// Current approximation (no-approximations policy violation — noted for tracking):
+///   This function installs a SINGLE mandatory selection of ONE opponent Digimon
+///   with DP ≤ 15000 (i.e., effectively treats the 15000 budget as a filter on
+///   the single target). It does NOT support multi-pick. This violates the
+///   no-approximations policy for the multi-select aspect, but is the least bad
+///   option until G-DP-BUDGET-MULTI-SELECT closes.
+///
+/// When G-DP-BUDGET-MULTI-SELECT is closed, replace this function with a proper
+/// multi-round selection harness or a new engine primitive, and update BT17-018.yaml.
+///
+/// Tracked in qa/archetype-qa/engine-gaps.md under G-DP-BUDGET-MULTI-SELECT.
+fn bt17_018_delete_opp_digimon_dp_budget(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    use crate::enums::CardKind;
+
+    // Install a single mandatory selection of ONE opponent Digimon with DP ≤ 15000.
+    // BLOCKED: G-DP-BUDGET-MULTI-SELECT — full multi-pick with running DP-sum cap
+    // is not yet supported by the engine. This is a single-pick approximation only.
+    ctx.select_opponent_permanent(
+        "Select 1 of your opponent's Digimon to delete (DP ≤ 15000 budget; multi-pick pending G-DP-BUDGET-MULTI-SELECT)",
+        false, // mandatory (canNoSelect: false)
+        |game, h| {
+            // Filter: must be Digimon with DP ≤ 15000.
+            let perm = &game.player(h.player).battle_area[h.index as usize];
+            let top = perm.top_card();
+            let data = &game.card_data[top.data_index];
+            data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 15000
+        },
+        |ctx, selected| {
+            ctx.delete_permanent(selected);
+        },
+    );
+}
+
+/// BT17-018 Gallantmon: Crimson Mode — [When Attacking][Once Per Turn] security trash loop.
+///
+/// Printed effect: "[When Attacking] [Once Per Turn] For every 10 cards in both players'
+/// trash, trash 1 card from the top of your opponent's security stack."
+///
+/// DCGO analysis (BT17_018.cs, `ActivateClass(EffectTiming.OnAttack)`):
+///   - `count = (TrashCards.Count + Enemy.TrashCards.Count) / 10`
+///   - Loops `IDestroySecurity(enemyPlayer, count)` — trashes `count` security cards.
+///
+/// Implementation:
+///   1. Sum `ctx.trash(player).len() + ctx.trash(opponent).len()`.
+///   2. Compute `iterations = combined_trash_count / 10` (integer floor division).
+///   3. Loop `iterations` times calling `ctx.trash_top_security(opponent)`.
+///      Each call fires the `WhenWouldBeTrashed` replacement chain and returns `false`
+///      if the opponent's security is empty (early-exit guard).
+///
+/// DSL gap note: The `lose_count_bound` DSL verb described in the spec is not yet
+/// implemented in `digimon-dsl/src/step.rs`. When that verb is added, this raw_rust
+/// step can be replaced with a native DSL expression:
+///   ```yaml
+///   - lose_count_bound:
+///       count: { floor_div: [{ card_count_in_zone: { zone: trash, of: any } }, 10] }
+///       of: opponent
+///   ```
+/// Tracked in `qa/dsl-vocab-gaps.md`.
+///
+/// Once-per-turn enforcement: the [Once Per Turn] constraint is compiled into
+/// `once_per_turn: true` on the `WhenAttacking` clause. The DSL lowers this to
+/// `Effect::max_per_turn = 1`, but G-OPT-TRIGGERED means the engine does not
+/// enforce this limit for triggered effects. The step itself fires unconditionally
+/// until that gap closes.
+fn bt17_018_trash_security_per_ten_trash(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    let player = ctx.player;
+    let opponent = ctx.opponent_id();
+
+    // Sum both players' trash sizes.
+    let combined_trash = ctx.trash(player).len() + ctx.trash(opponent).len();
+
+    // floor(combined / 10) iterations.
+    let iterations = combined_trash / 10;
+
+    for _ in 0..iterations {
+        // Bail early if opponent has no security left.
+        if ctx.game.player(opponent).security.is_empty() {
+            break;
+        }
+        ctx.trash_top_security(opponent);
+    }
+}
+
+/// LM-021 Agumon - Bond of Bravery — [On Play][When Digivolving] DP-sum delete.
+///
+/// Printed effect: "Delete any number of your opponent's Digimon whose total DP
+/// adds up to equal or less than this Digimon's DP." (This Digimon has 14000 DP.)
+///
+/// DCGO analysis (LM_021.cs, `SelectPermanentEffect.SetUp`):
+///   - `canTargetConditionByPreSelectedList`: running DP-sum filter — after each
+///     pick, candidates whose DP would push the total above this Digimon's DP (14000)
+///     are removed from the selectable list.
+///   - `canEndSelectCondition`: final validation that total DP ≤ 14000.
+///   - `canNoSelect: false`: must pick ≥1 when eligible targets exist.
+///   - `canEndNotMax: true`: can stop picking before max candidates.
+///
+/// BLOCKED: G-MULTI-SELECT-OPP-DP-SUM (same root as G-DP-BUDGET-MULTI-SELECT)
+///   No DSL verb or engine primitive supports multi-select of opponent battle-area
+///   permanents with a running DP-sum cap. This function is a single-pick fallback
+///   (approximation: player picks one opponent Digimon and it is deleted).
+///
+/// When G-MULTI-SELECT-OPP-DP-SUM is closed, replace this raw_rust step in
+/// LM-021.yaml with a native DSL expression and remove this function.
+///
+/// Tracked in qa/archetype-qa/engine-gaps.md under G-MULTI-SELECT-OPP-DP-SUM.
+fn lm_021_delete_dp_sum(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    use crate::enums::CardKind;
+
+    let opponent = ctx.opponent_id();
+
+    // Check at least one eligible target (Digimon with DP ≤ 14000).
+    let has_target = ctx.game.player(opponent).battle_area.iter().any(|perm| {
+        let top = perm.top_card();
+        let data = &ctx.game.card_data[top.data_index];
+        data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 14000
+    });
+
+    if !has_target {
+        return;
+    }
+
+    // Single mandatory pick — fallback for G-MULTI-SELECT-OPP-DP-SUM.
+    // Full multi-pick with running DP-sum cap pending engine primitive support.
+    ctx.select_opponent_permanent(
+        "Select 1 of your opponent's Digimon to delete (DP ≤ 14000 budget; multi-pick pending G-MULTI-SELECT-OPP-DP-SUM)",
+        false, // mandatory (canNoSelect: false)
+        |game, h| {
+            let perm = &game.player(h.player).battle_area[h.index as usize];
+            let top = perm.top_card();
+            let data = &game.card_data[top.data_index];
+            data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 14000
+        },
+        |ctx, selected| {
+            ctx.delete_permanent(selected);
+        },
+    );
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
@@ -293,6 +620,12 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_declarative("bt5_008_opp_cannot_reduce_digivolve_cost", bt5_008_opp_cannot_reduce_digivolve_cost);
     r.register_step("p_137_opp_adds_top_security_to_hand", p_137_opp_adds_top_security_to_hand);
     r.register_formula("ex8_074_suspended_dp_cap", ex8_074_suspended_dp_cap);
+    r.register_step("bt23_014_opp_cannot_play_from_trash", bt23_014_opp_cannot_play_from_trash);
+    r.register_formula("bt23_014_dynamic_dp_cap", bt23_014_dynamic_dp_cap);
+    r.register_step("bt9_112_delete_lowest_cost_digimon", bt9_112_delete_lowest_cost_digimon);
+    r.register_step("bt17_018_delete_opp_digimon_dp_budget", bt17_018_delete_opp_digimon_dp_budget);
+    r.register_step("bt17_018_trash_security_per_ten_trash", bt17_018_trash_security_per_ten_trash);
+    r.register_step("lm_021_delete_dp_sum", lm_021_delete_dp_sum);
     r
 }
 

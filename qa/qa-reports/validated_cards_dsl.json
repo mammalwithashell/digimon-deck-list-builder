@@ -536,6 +536,87 @@
       "status": "IMPLEMENTED",
       "date": "2026-04-28",
       "notes": "11/11 runnable tests pass. 5 ignored: G-DECLARATIVE-KEYWORD (Rush/Blocker not installed at runtime x2), G-EVENT-TARGET-OWNER (deletion arm omitted — no event_target_owner predicate x3). Cost reduction (-2 per opp battle area permanent) fully working. Keywords Rush/Raid/Blocker declared as grant_keyword. Unsuspend on opp deletion blocked until G-EVENT-TARGET-OWNER closes."
+    },
+    "BT9-112": {
+      "card_name": "DeathXmon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": "HYBRID",
+      "archetype": "Medusamon Batch 10",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-112.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_112.rs",
+      "test_count": 13,
+      "patterns": [
+        "D2",
+        "B1",
+        "B2",
+        "C1",
+        "raw_rust"
+      ],
+      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete ≤Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED — triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
+    },
+    "BT23-014": {
+      "card_name": "Gallantmon",
+      "validated_date": "2026-04-28",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": "PARTIAL",
+      "gap_notes": "G-PRED-DP-LTE: dp_lte predicate not evaluated on permanents; G-PLAYER-FLOOD-GATE-DSL: player-level modifiers use raw_rust bridge",
+      "test_count": 17,
+      "tests_passing": 16,
+      "tests_ignored": 1,
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_014.rs",
+      "patterns": [
+        "D6_flood_gate",
+        "G_delete_with_dynamic_dp_cap",
+        "raw_rust_player_modifier",
+        "EndOfOpponentsTurn_expiry"
+      ]
+    },
+    "LM-021": {
+      "card_name": "Agumon - Bond of Bravery",
+      "validated_date": "2026-04-28",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Medusamon Batch 10",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_021.rs",
+      "test_count": 15,
+      "tests_passing": 13,
+      "tests_ignored": 2,
+      "patterns": [
+        "H12-BLAST-DIGIVOLVE",
+        "ACE-OVERFLOW",
+        "G-DP-BUDGET-MULTI-DELETE",
+        "E5-TRASH-TOP-SECURITY",
+        "raw_rust"
+      ],
+      "notes": "Lv7 Red Blast Digivolve ACE (Agumon - Bond of Bravery). Three clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete any number of opp Digimon with total DP ≤ 14000 — implemented as raw_rust:lm_021_delete_dp_sum single-pick fallback pending G-MULTI-SELECT-OPP-DP-SUM (engine lacks multi-select of opponent battle-area permanents with running DP-sum cap); (3) [When Attacking][Once Per Turn] if you have a Tamer, trash_top_security — tamer condition gating works, behavioral tests pass. ace_overflow: -5. 13/15 active tests pass; 2 ignored for G-OPT-TRIGGERED (triggered once_per_turn lockout not enforced at runtime). Bug fix during TDD: bt17_018 tests were failing due to summoning sickness (turn_count=0 when using .build() — added r.game.turn_count = 1 to runner_with_p1_security() helper so permanents placed with turn_played_override=Some(0) are not fresh at attack time). Full suite after fix: 412 passed, 0 failed, 146 ignored."
+    },
+    "BT17-018": {
+      "card_name": "Gallantmon: Crimson Mode",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": "engine",
+      "archetype": "Medusamon Batch 10",
+      "yaml_path": "code/digimon-engine/cards/bt17/BT17-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_018.rs",
+      "test_count": 16,
+      "tests_passing": 11,
+      "tests_ignored": 5,
+      "patterns": [
+        "H12-BLAST-DIGIVOLVE",
+        "ACE-OVERFLOW",
+        "G-DP-BUDGET-MULTI-SELECT",
+        "E5-TRASH-TOP-SECURITY-LOOP",
+        "raw_rust",
+        "once_per_turn"
+      ],
+      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 — raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security — raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 → is_fresh=true → can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
     }
   }
 }

@@ -190,6 +190,17 @@ impl Game {
             return None;
         }
 
+        // Phase 6: CannotPlayTamerByEffect — when source is ByEffect and the
+        // card is a Tamer, gate on the player-scoped modifier.
+        if source == PlaySource::ByEffect
+            && card_kind == CardKind::Tamer
+            && self
+                .modifiers
+                .player_has(player_id, ModifierType::CannotPlayTamerByEffect)
+        {
+            return None;
+        }
+
         // Phase 5 Task 2: scan BeforePayCost effects in battle area of both
         // players and accumulate cost reductions before paying memory.
         // Also scan the played card's own effects for `when_playing_this: true`
@@ -310,6 +321,17 @@ impl Game {
             && self
                 .modifiers
                 .player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
+        {
+            return None;
+        }
+
+        // Phase 6: CannotPlayTamerByEffect — when source is ByEffect and the
+        // card is a Tamer, gate on the player-scoped modifier.
+        if source == PlaySource::ByEffect
+            && card_kind == CardKind::Tamer
+            && self
+                .modifiers
+                .player_has(player_id, ModifierType::CannotPlayTamerByEffect)
         {
             return None;
         }

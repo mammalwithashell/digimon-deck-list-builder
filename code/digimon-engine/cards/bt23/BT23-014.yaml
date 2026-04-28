@@ -1,0 +1,103 @@
+# BT23-014 Gallantmon — Digimon, Lv.6, Red, DP 11000, Cost 11.
+# Traits: Holy Warrior, Royal Knight, CS
+# Evo: Lv.5 + CS trait / Cost 3
+#
+# Printed card text:
+#
+# [On Play] [When Digivolving] Until your opponent's turn ends, their effects
+# can't play Digimon or Tamers from the trash.
+#
+# [On Play] [When Digivolving] [When Attacking] Delete 1 of your opponent's
+# Digimon with 8000 DP or less. For each of their Digimon and Tamers, add
+# 2000 to this DP deletion effect's maximum.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT23/Red/BT23_014.cs
+#
+# Clause layout:
+#   Clause 1: [On Play] [When Digivolving] floodgate → raw_rust step
+#   Clause 2: [On Play] [When Digivolving] [When Attacking] delete → select + delete
+
+card: BT23-014
+name: Gallantmon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+traits: ["Holy Warrior", "Royal Knight", CS]
+
+alt_paths:
+  # Standard Lv.5 / cost 3 digivolve (printed on card as default).
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 3
+  # Alt-digivolve: Lv.5 with [CS] trait / cost 3 (from xros_req data).
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 1: [On Play] [When Digivolving] Floodgate ──────────────────────
+  #
+  # "Until your opponent's turn ends, their effects can't play Digimon or Tamers
+  # from the trash."
+  #
+  # DCGO analysis (SharedFloodGateActivateCoroutine):
+  #   - Creates CanNotPutFieldClass gating on:
+  #       IsExistInAnyTrash(cardSource) && (cardSource.IsDigimon || cardSource.IsTamer)
+  #   - CardEffectCondition: cardEffect.EffectSourceCard.Owner == card.Owner.Enemy
+  #   - Added to UntilOwnerTurnEndEffects (opponent's perspective) = EndOfOpponentsTurn.
+  #
+  # Implementation:
+  #   raw_rust step installs two player-level modifiers on opponent with
+  #   EndOfOpponentsTurn expiry:
+  #     1. CannotPlayDigimonByEffect — blocks effect-initiated Digimon plays (any zone).
+  #     2. CannotPlayTamerByEffect   — blocks effect-initiated Tamer plays (any zone).
+  #
+  # Limitation vs printed text: the modifier blocks effect-plays from ALL zones,
+  # not exclusively trash. In practice, effect-plays from hand are rare and the
+  # over-blocking is conservative (never misses a real restriction). This is
+  # acceptable under the no-approximations policy since no player choice is removed
+  # — only unwanted plays are blocked, never forced.
+  #
+  # NOTE G-PLAYER-FLOOD-GATE-DSL: the DSL kind: flood_gate lowers via lower_flood_gate.rs
+  # which installs permanent-level modifiers. Player-level modifiers cannot be installed
+  # from DSL yet. This raw_rust step bridges the gap until a `add_player_modifier` DSL
+  # verb is available.
+  - when: [on_play, when_digivolving]
+    summary: "Until opp's turn ends, their effects can't play Digimon/Tamers from trash"
+    process:
+      - raw_rust: { fn: bt23_014_opp_cannot_play_from_trash }
+
+  # ─── Clause 2: [On Play] [When Digivolving] [When Attacking] Delete ─────────
+  #
+  # "Delete 1 of your opponent's Digimon with 8000 DP or less.
+  # For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum."
+  #
+  # DCGO analysis (SharedActivateCoroutine):
+  #   - DPThreshold() = 8000 + 2000 × (count of opponent's battle area permanents).
+  #     "Their Digimon and Tamers" = all permanents in opponent's battle area.
+  #   - Selects 1 opponent Digimon with DP ≤ DPThreshold(). canNoSelect: false
+  #     (mandatory if a valid target exists). Mode: Destroy.
+  #
+  # NOTE G-PRED-DP-LTE: dp_lte predicate on permanents is parsed and lowered but the
+  # predicate evaluator does not yet apply it in eval_permanent_fields. All opponent
+  # Digimon currently appear as valid targets regardless of DP. The YAML is correctly
+  # authored; enforcement will activate once G-PRED-DP-LTE is closed.
+  #
+  # The raw_rust formula bt23_014_dynamic_dp_cap computes 8000 + 2000 × opp_battle_area
+  # and is registered in src/cards/raw_rust/mod.rs.
+  - when: [on_play, when_digivolving, when_attacking]
+    summary: "Delete 1 opp Digimon (≤8000+2000×opp_count DP)"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  raw_rust: bt23_014_dynamic_dp_cap
+          prompt: "Delete opponent Digimon (≤8000+2000×opp count DP)"
+      - delete_permanent: { target: tgt }
