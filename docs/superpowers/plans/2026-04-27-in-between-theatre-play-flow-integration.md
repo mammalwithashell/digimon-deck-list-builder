@@ -1335,7 +1335,7 @@ git commit -m "feat: add in between format selection"
 - Create: `code/frontend/src/pages/DeckSelectPage.css`
 - Modify: `code/frontend/e2e/play-flow.spec.ts`
 
-- [ ] **Step 1: Extend e2e for deck selection**
+- [x] **Step 1: Extend e2e for deck selection**
 
 Add deck API mocks and assertion to `code/frontend/e2e/play-flow.spec.ts`:
 
@@ -1407,7 +1407,7 @@ test('selects a legal deck and advances to matching', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: Run the e2e and verify it fails**
+- [x] **Step 2: Run the e2e and verify it fails**
 
 Run:
 
@@ -1418,7 +1418,7 @@ npm run e2e -- play-flow.spec.ts
 
 Expected: fail because `/play/deck` is not implemented.
 
-- [ ] **Step 3: Implement deck select page**
+- [x] **Step 3: Implement deck select page**
 
 Create `code/frontend/src/pages/DeckSelectPage.tsx`:
 
@@ -1526,7 +1526,7 @@ export function DeckSelectPage() {
 }
 ```
 
-- [ ] **Step 4: Add deck select CSS**
+- [x] **Step 4: Add deck select CSS**
 
 Create `code/frontend/src/pages/DeckSelectPage.css`:
 
@@ -1663,7 +1663,7 @@ Create `code/frontend/src/pages/DeckSelectPage.css`:
 }
 ```
 
-- [ ] **Step 5: Run e2e and commit**
+- [x] **Step 5: Run e2e and commit**
 
 Run:
 

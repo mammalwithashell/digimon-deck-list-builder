@@ -1,0 +1,147 @@
+.deck-select-main {
+  min-height: calc(100vh - 141px);
+  padding: 26px 32px 28px;
+}
+
+.deck-select-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid rgba(255, 122, 24, 0.35);
+  padding: 18px;
+  background: rgba(255, 122, 24, 0.06);
+}
+
+.deck-select-banner .label,
+.deck-select-toolbar a,
+.deck-confirm-bar,
+.deck-select-card .meta,
+.deck-select-card .legal,
+.deck-select-card .warn {
+  font-family: var(--ib-font-mono);
+}
+
+.deck-select-banner h1 {
+  margin: 4px 0;
+  color: #ff7a18;
+  font-family: var(--ib-font-display);
+}
+
+.deck-select-banner p {
+  margin: 0;
+  color: rgba(245, 241, 232, 0.66);
+}
+
+.deck-select-banner a,
+.deck-select-toolbar a {
+  color: #ffb05a;
+  text-decoration: none;
+}
+
+.deck-select-toolbar {
+  margin: 18px 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.deck-select-toolbar input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f5f1e8;
+  padding: 12px;
+}
+
+.deck-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.deck-select-card {
+  min-height: 190px;
+  display: grid;
+  gap: 9px;
+  text-align: left;
+  padding: 14px;
+  color: #f5f1e8;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.deck-select-card.selected {
+  border-color: #ff7a18;
+  box-shadow: 0 0 0 1px rgba(255, 122, 24, 0.5);
+}
+
+.deck-select-card.illegal {
+  opacity: 0.58;
+}
+
+.deck-select-card .glyph {
+  width: 62px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 122, 24, 0.45);
+  color: #ff7a18;
+  font-weight: 800;
+}
+
+.deck-select-card .name {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.deck-select-card .meta {
+  color: rgba(245, 241, 232, 0.56);
+}
+
+.deck-select-card .legal {
+  color: #4cd497;
+}
+
+.deck-select-card .warn {
+  color: #ffcc4a;
+}
+
+.deck-confirm-bar {
+  position: sticky;
+  bottom: 24px;
+  z-index: 2;
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: rgba(5, 6, 8, 0.94);
+  border: 1px solid rgba(255, 122, 24, 0.4);
+}
+
+.deck-confirm-bar button {
+  background: #ff7a18;
+  border: 0;
+  color: #090604;
+  font-weight: 800;
+  padding: 12px 18px;
+}
+
+.deck-confirm-bar button:disabled {
+  opacity: 0.42;
+}
+
+@media (max-width: 760px) {
+  .deck-select-main {
+    padding: 22px 18px;
+  }
+
+  .deck-select-banner,
+  .deck-select-toolbar,
+  .deck-confirm-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

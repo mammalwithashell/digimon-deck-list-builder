@@ -1,4 +1,60 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function mockDeckLibrary(page: Page) {
+  await page.route('**/decks/folders', (route) => route.fulfill({ json: [] }));
+  await page.route('**/decks', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'deck-1',
+          name: 'Ember Vanguard',
+          description: '',
+          game_mode: 'standard',
+          is_valid: true,
+          is_public: false,
+          is_pinned: false,
+          folder_id: null,
+          card_count: 54,
+          main_count: 50,
+          egg_count: 4,
+          tags: [],
+          meta_tier: 'rogue',
+          meta_archetype: 'Red Aggro',
+          colors: ['Red'],
+          highest_level: 6,
+          created_at: '2026-04-27T00:00:00.000Z',
+          updated_at: '2026-04-27T00:00:00.000Z',
+        },
+      ],
+    }),
+  );
+  await page.route('**/decks/deck-1', (route) =>
+    route.fulfill({
+      json: {
+        id: 'deck-1',
+        owner_id: 'guest_abc',
+        folder_id: null,
+        name: 'Ember Vanguard',
+        description: '',
+        game_mode: 'standard',
+        main_deck: Array(50).fill('BT1-001'),
+        egg_deck: Array(4).fill('BT1-002'),
+        main_deck_alt_arts: [],
+        egg_deck_alt_arts: [],
+        commander_id: null,
+        is_valid: true,
+        validation_errors: [],
+        is_public: false,
+        is_pinned: false,
+        tags: [],
+        meta_tier: 'rogue',
+        meta_archetype: 'Red Aggro',
+        created_at: '2026-04-27T00:00:00.000Z',
+        updated_at: '2026-04-27T00:00:00.000Z',
+      },
+    }),
+  );
+}
 
 test.describe('In Between play flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -45,5 +101,15 @@ test.describe('In Between play flow', () => {
     await page.getByRole('button', { name: /STANDARD/i }).click();
     await page.getByRole('button', { name: /ENTER FORMAT/i }).click();
     await expect(page).toHaveURL(/\/play\/deck/);
+  });
+
+  test('selects a legal deck and advances to matching', async ({ page }) => {
+    await mockDeckLibrary(page);
+    await page.goto('/play');
+    await page.getByRole('button', { name: /STANDARD/i }).click();
+    await page.getByRole('button', { name: /ENTER FORMAT/i }).click();
+    await page.getByRole('button', { name: /EMBER VANGUARD/i }).click();
+    await page.getByRole('button', { name: /USE THIS DECK/i }).click();
+    await expect(page).toHaveURL(/\/play\/matching/);
   });
 });
