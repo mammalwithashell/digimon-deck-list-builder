@@ -1,0 +1,4 @@
+interface:
+  display_name: "Assess Rust Engine Archetype"
+  short_description: "Assess DSL readiness for an archetype"
+  default_prompt: "Use $assess-rust-engine-archetype to assess whether the Rust engine DSL can implement this Digimon archetype and report gaps."
