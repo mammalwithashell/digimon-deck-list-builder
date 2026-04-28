@@ -6,6 +6,7 @@
 use digimon_tcg::deck_commands;
 use digimon_tcg::deck_storage;
 use digimon_tcg::engine_commands;
+use digimon_tcg::format_commands;
 use digimon_tcg::inference_state;
 use digimon_tcg::models;
 use digimon_tcg::updater;
@@ -79,6 +80,7 @@ fn main() {
             deck_storage::deck_folders_create,
             deck_storage::deck_folders_update,
             deck_storage::deck_folders_delete,
+            format_commands::formats_list,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

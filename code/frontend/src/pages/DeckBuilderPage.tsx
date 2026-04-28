@@ -1,67 +1,158 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { CardSearchPanel } from '@/components/deckbuilder/CardSearchPanel';
-import { DeckListPanel } from '@/components/deckbuilder/DeckListPanel';
-import { DeckStats } from '@/components/deckbuilder/DeckStats';
-import { DeckSelector } from '@/components/deckbuilder/DeckSelector';
-import { ValidationPanel } from '@/components/deckbuilder/ValidationPanel';
 import { ImportExport } from '@/components/deckbuilder/ImportExport';
-import { CardDetail } from '@/components/shared/CardDetail';
-import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
-import { useAuthStore } from '@/stores/authStore';
+import {
+  getBuilderDeck,
+  saveBuilderDeck,
+} from '@/features/deck-builder/deckBuilderAdapter';
+import { useCardImage } from '@/hooks/useCardImage';
+import {
+  builderCardColorClass,
+  deckEntriesToSlotArrays,
+  filterBuilderCards,
+  getBuilderCounts,
+  groupDeckEntriesForBuilder,
+  slotArraysToDeckEntries,
+  type BuilderCardFilters,
+} from '@/features/deck-builder/deckBuilderView';
+import { getCardById, searchCards } from '@/api/digimonCardApi';
 import * as deckApi from '@/api/deckApi';
-import * as deckStore from '@/storage/deckStore';
-import { getCardById } from '@/api/digimonCardApi';
-import type { DeckEntry } from '@/types/deck';
+import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
+import type { DigimonCardData } from '@/types/cards';
+import type { DeckEntry, DeckValidationResult } from '@/types/deck';
+import './DeckBuilderPage.css';
 
-// Desktop saves decks to the local Tauri-backed store; web keeps hitting
-// the hosted `/decks` API. The tested-cards allowlist + raw-validate calls
-// already branch inside `deckApi` itself, so they stay on `deckApi`.
-const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
-const decks = IS_DESKTOP ? deckStore : deckApi;
+const COLORS = ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Black', 'White'];
+const TYPES = ['all', 'Digimon', 'Digi-Egg', 'Tamer', 'Option'];
+const LEVELS = ['all', '2', '3', '4', '5', '6', '7'];
+const RARITIES = ['all', 'C', 'U', 'R', 'SR', 'SEC', 'P'];
 
-function groupCardIds(ids: string[], altArts: boolean[] = []): DeckEntry[] {
-  const counts = new Map<string, { cardId: string; isAltArt: boolean; count: number }>();
-  ids.forEach((cardId, i) => {
-    const isAltArt = !!altArts[i];
-    const key = `${cardId}|${isAltArt ? '1' : '0'}`;
-    const existing = counts.get(key);
-    if (existing) existing.count += 1;
-    else counts.set(key, { cardId, isAltArt, count: 1 });
+const DEFAULT_FILTERS: BuilderCardFilters = {
+  search: '',
+  colors: [],
+  type: 'all',
+  level: 'all',
+  rarity: 'all',
+  inheritedOnly: false,
+  securityOnly: false,
+};
+
+function cardButtonName(card: DigimonCardData): string {
+  return `${card.name} ${card.cardnumber}${card.isAltArt ? ' alt art' : ''}`;
+}
+
+function cardCount(entries: DeckEntry[], cardId: string): number {
+  return entries
+    .filter((entry) => entry.cardId === cardId)
+    .reduce((sum, entry) => sum + entry.count, 0);
+}
+
+function uniqueCards(cards: DigimonCardData[]): DigimonCardData[] {
+  const seen = new Set<string>();
+  return cards.filter((card) => {
+    const key = `${card.cardnumber}|${card.isAltArt ? '1' : '0'}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
-  return Array.from(counts.values());
+}
+
+function BuilderCardImage({
+  card,
+  className = '',
+}: {
+  card: DigimonCardData;
+  className?: string;
+}) {
+  const { src, isLoading, hasError } = useCardImage(card.cardnumber, card.isAltArt ?? false);
+  return (
+    <div className={`bld-card-image ${className}`}>
+      {!isLoading && !hasError && src ? (
+        <img src={src} alt={card.name} draggable={false} />
+      ) : (
+        <span>{isLoading ? 'LOADING ART' : card.name}</span>
+      )}
+    </div>
+  );
+}
+
+async function loadCardMap(cardIds: string[]): Promise<Map<string, DigimonCardData>> {
+  const pairs = await Promise.allSettled(
+    [...new Set(cardIds)].map(async (cardId) => [cardId, await getCardById(cardId)] as const),
+  );
+  const cardMap = new Map<string, DigimonCardData>();
+  for (const result of pairs) {
+    if (result.status === 'fulfilled' && result.value[1]) {
+      cardMap.set(result.value[0], result.value[1]);
+    }
+  }
+  return cardMap;
+}
+
+function ValidationPanelInline({
+  validationResult,
+}: {
+  validationResult: DeckValidationResult | null;
+}) {
+  if (!validationResult) return null;
+  if (validationResult.errors.length === 0 && validationResult.warnings.length === 0) {
+    return <div className="bld-validation good">Deck is valid</div>;
+  }
+  return (
+    <div className="bld-validation bad">
+      {validationResult.errors.map((error, index) => (
+        <p key={`e-${index}`}>ERROR: {error.message}</p>
+      ))}
+      {validationResult.warnings.map((warning, index) => (
+        <p key={`w-${index}`}>WARNING: {warning.message}</p>
+      ))}
+    </div>
+  );
 }
 
 export function DeckBuilderPage() {
   const { id: routeDeckId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const params = new URLSearchParams(location.search);
+  const returnToPlay = params.get('returnTo') === 'play';
   const {
     deckName,
     setDeckName,
     deckId,
     setDeckId,
+    loadDeck,
+    clearDeck,
     mainDeck,
     eggDeck,
     isDirty,
     setIsDirty,
+    validationResult,
     setValidationResult,
-    selectedCardId,
     testedCardIds,
     setTestedCardIds,
-    loadDeck,
-    clearDeck,
+    addCardToDeck,
+    removeCardFromDeck,
   } = useDeckBuilderStore();
 
   const [showImport, setShowImport] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeSection, setActiveSection] = useState<'main' | 'egg' | 'side'>('main');
+  const [builderFilters, setBuilderFilters] = useState<BuilderCardFilters>(DEFAULT_FILTERS);
+  const [cardPool, setCardPool] = useState<DigimonCardData[]>([]);
+  const [previewCard, setPreviewCard] = useState<DigimonCardData | null>(null);
+  const [notice, setNotice] = useState('');
 
-  // Alpha gate: fetch the tested-cards allowlist once per session.
   useEffect(() => {
-    if (location.pathname.endsWith('/new')) {
+    const nextParams = new URLSearchParams(location.search);
+    if (location.pathname.endsWith('/new') || nextParams.get('new') === '1') {
       clearDeck();
+      setPreviewCard(null);
+      setShowImport(nextParams.get('import') === '1');
+    } else if (nextParams.get('import') === '1') {
+      setShowImport(true);
     }
-  }, [location.pathname, clearDeck]);
+  }, [location.pathname, location.search, clearDeck]);
 
   useEffect(() => {
     if (testedCardIds !== null) return;
@@ -69,9 +160,9 @@ export function DeckBuilderPage() {
       .listTestedCards()
       .then(setTestedCardIds)
       .catch(() => {
-        // If the endpoint is unreachable, fall back to an empty set so
-        // the user sees no cards rather than the unrestricted pool.
-        setTestedCardIds([]);
+        // Desktop-mode browser tests do not have a Tauri bridge. Leave the
+        // gate open rather than turning the builder into a read-only shell.
+        setNotice('Tested-card gate unavailable');
       });
   }, [testedCardIds, setTestedCardIds]);
 
@@ -81,24 +172,25 @@ export function DeckBuilderPage() {
 
     async function loadRouteDeck() {
       try {
-        const deck = await decks.getDeck(routeDeckId!);
-        const mainEntries = groupCardIds(deck.main_deck, deck.main_deck_alt_arts);
-        const eggEntries = groupCardIds(deck.egg_deck, deck.egg_deck_alt_arts);
-        const allIds = [...new Set([...deck.main_deck, ...deck.egg_deck])];
-        const cardDataMap = new Map<string, Awaited<ReturnType<typeof getCardById>>>();
-        await Promise.allSettled(
-          allIds.map(async (id) => {
-            const data = await getCardById(id);
-            if (data) cardDataMap.set(id, data);
-          }),
+        const deck = await getBuilderDeck(routeDeckId!);
+        const cardMap = await loadCardMap([...deck.main_deck, ...deck.egg_deck]);
+        const mainEntries = slotArraysToDeckEntries(
+          deck.main_deck,
+          deck.main_deck_alt_arts,
+          cardMap,
         );
-        for (const entry of [...mainEntries, ...eggEntries]) {
-          const data = cardDataMap.get(entry.cardId);
-          if (data) entry.cardData = data;
+        const eggEntries = slotArraysToDeckEntries(deck.egg_deck, deck.egg_deck_alt_arts, cardMap);
+        if (!cancelled) {
+          loadDeck(deck.id, deck.name, mainEntries, eggEntries);
+          const loadedCards = Array.from(cardMap.values());
+          setCardPool((current) => uniqueCards([...loadedCards, ...current]));
+          setPreviewCard(loadedCards[0] ?? null);
         }
-        if (!cancelled) loadDeck(deck.id, deck.name, mainEntries, eggEntries);
       } catch {
-        if (!cancelled) clearDeck();
+        if (!cancelled) {
+          clearDeck();
+          setNotice('Unable to load deck');
+        }
       }
     }
 
@@ -108,132 +200,332 @@ export function DeckBuilderPage() {
     };
   }, [routeDeckId, loadDeck, clearDeck]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const search = builderFilters.search.trim();
+    const request = search
+      ? searchCards({ n: search, sort: 'name' })
+      : searchCards({ sort: 'name', series: 'Digimon Card Game' });
+
+    request
+      .then((results) => {
+        if (cancelled) return;
+        const allowed = testedCardIds && testedCardIds.size > 0
+          ? results.filter((card) => testedCardIds.has(card.cardnumber))
+          : results;
+        setCardPool((current) => uniqueCards([...allowed.slice(0, 96), ...current]).slice(0, 160));
+        setPreviewCard((current) => current ?? allowed[0] ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setNotice('Card search unavailable');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [builderFilters.search, testedCardIds]);
+
+  const counts = useMemo(() => getBuilderCounts(mainDeck, eggDeck), [mainDeck, eggDeck]);
+  const visibleCards = useMemo(
+    () => filterBuilderCards(cardPool, builderFilters).slice(0, 120),
+    [builderFilters, cardPool],
+  );
+  const activeCards = activeSection === 'egg' ? eggDeck : mainDeck;
+  const visibleSections = useMemo(() => groupDeckEntriesForBuilder(activeCards), [activeCards]);
+  const activeExpected = activeSection === 'egg' ? 5 : 50;
+
   const handleSave = async () => {
     setSaving(true);
+    setNotice('');
     try {
-      const mainIds = mainDeck.flatMap((e) => Array(e.count).fill(e.cardId) as string[]);
-      const eggIds = eggDeck.flatMap((e) => Array(e.count).fill(e.cardId) as string[]);
-      const mainAlts = mainDeck.flatMap(
-        (e) => Array(e.count).fill(!!e.isAltArt) as boolean[],
-      );
-      const eggAlts = eggDeck.flatMap(
-        (e) => Array(e.count).fill(!!e.isAltArt) as boolean[],
-      );
-
-      if (IS_DESKTOP) {
-        // Single write path on desktop: `putDeck` creates when `id` is
-        // empty and updates when present. Stamp the guest owner_id from
-        // the bootstrap cache so decks get associated with the caller.
-        const ownerId = useAuthStore.getState().user?.id ?? 'guest';
-        const saved = await deckStore.putDeck({
-          id: deckId ?? undefined,
-          owner_id: ownerId,
-          name: deckName,
-          game_mode: 'standard',
-          main_deck: mainIds,
-          egg_deck: eggIds,
-          main_deck_alt_arts: mainAlts,
-          egg_deck_alt_arts: eggAlts,
-        });
-        setDeckId(saved.id);
-        if (!routeDeckId) navigate(`/deckbuilder/${saved.id}`, { replace: true });
-      } else if (deckId) {
-        await deckApi.updateDeck(deckId, {
-          name: deckName,
-          main_deck: mainIds,
-          egg_deck: eggIds,
-          main_deck_alt_arts: mainAlts,
-          egg_deck_alt_arts: eggAlts,
-        });
-      } else {
-        const created = await deckApi.createDeck({
-          name: deckName,
-          main_deck: mainIds,
-          egg_deck: eggIds,
-          main_deck_alt_arts: mainAlts,
-          egg_deck_alt_arts: eggAlts,
-          game_mode: 'standard',
-        });
-        setDeckId(created.id);
-        navigate(`/deckbuilder/${created.id}`, { replace: true });
-      }
+      const mainSlots = deckEntriesToSlotArrays(mainDeck);
+      const eggSlots = deckEntriesToSlotArrays(eggDeck);
+      const saved = await saveBuilderDeck({
+        deckId,
+        name: deckName,
+        main_deck: mainSlots.ids,
+        egg_deck: eggSlots.ids,
+        main_deck_alt_arts: mainSlots.altArts,
+        egg_deck_alt_arts: eggSlots.altArts,
+        game_mode: 'standard',
+      });
+      setDeckId(saved.id);
       setIsDirty(false);
+      setNotice('Deck saved');
+      if (returnToPlay) {
+        navigate('/play/deck', { replace: true });
+      } else if (!deckId) {
+        navigate(`/deckbuilder/${saved.id}`, { replace: true });
+      }
     } catch {
-      // Ignore
+      setNotice('Save failed');
     } finally {
       setSaving(false);
     }
   };
 
   const handleValidate = async () => {
-    const mainIds = mainDeck.flatMap((e) => Array(e.count).fill(e.cardId) as string[]);
-    const eggIds = eggDeck.flatMap((e) => Array(e.count).fill(e.cardId) as string[]);
+    const mainSlots = deckEntriesToSlotArrays(mainDeck);
+    const eggSlots = deckEntriesToSlotArrays(eggDeck);
     try {
-      const result = await deckApi.validateDeckRaw(mainIds, eggIds);
+      const result = await deckApi.validateDeckRaw(mainSlots.ids, eggSlots.ids);
       setValidationResult(result);
+      setNotice(result.valid ? 'Deck valid' : 'Deck has issues');
     } catch {
-      // Ignore
+      setNotice('Validation unavailable');
     }
   };
 
+  const handleClear = () => {
+    clearDeck();
+    setPreviewCard(null);
+    setNotice('Deck cleared');
+  };
+
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col">
-      {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-gray-800 border-b border-gray-700">
-        <DeckSelector />
-        <input
-          type="text"
-          value={deckName}
-          onChange={(e) => setDeckName(e.target.value)}
-          className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={handleSave}
-          disabled={saving || !isDirty}
-          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-50 text-white text-sm rounded"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
-        <button
-          onClick={handleValidate}
-          className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"
-        >
-          Validate
-        </button>
-        <button
-          onClick={() => setShowImport(true)}
-          className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"
-        >
-          Import/Export
-        </button>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Left: Search panel */}
-        <div className="flex-[3] flex flex-col min-w-0 border-r border-gray-700">
-          <div className="flex-1 overflow-y-auto p-3">
-            <CardSearchPanel />
-          </div>
-          {/* Card detail below search */}
-          {selectedCardId && (
-            <div className="border-t border-gray-700 p-2 max-h-[280px] overflow-y-auto">
-              <CardDetail />
+    <div className="deck-builder-page">
+      <div className="deck-builder-app">
+        <div className="bld">
+          <header className="bld-top">
+            <div className="left">
+              <button type="button" className="back" onClick={() => navigate('/')}>
+                HOME
+              </button>
+              <button type="button" className="back" onClick={() => navigate('/deckbuilder')}>
+                LIBRARY
+              </button>
+              {returnToPlay && (
+                <button type="button" className="back" onClick={() => navigate('/play/deck')}>
+                  BACK TO PLAY
+                </button>
+              )}
+              <input
+                className="deck-name-input"
+                aria-label="Deck name"
+                value={deckName}
+                onChange={(event) => setDeckName(event.target.value)}
+              />
+              <span className="pill"><span className="v">{counts.main}</span>/50</span>
+              <span className="pill">EGG <span className="v">{counts.egg}</span>/5</span>
+              <span className="pill disabled">SIDE <span className="v">0</span>/15</span>
+              {notice && <span className="bld-notice">{notice}</span>}
             </div>
-          )}
-        </div>
 
-        {/* Right: Deck panel */}
-        <div className="flex-[1] flex flex-col min-w-[260px] max-w-[360px] p-3 gap-2">
-          <DeckStats />
-          <ValidationPanel />
-          <div className="flex-1 overflow-y-auto">
-            <DeckListPanel />
-          </div>
+            <div className="bld-counts">
+              <div className={`bld-count ${counts.egg >= 4 ? 'ok' : 'warn'}`}>
+                <span className="v">{counts.egg}</span>EGG
+              </div>
+              <div className="bld-count">
+                <span className="v player">{counts.digimon}</span>DIGIMON
+              </div>
+              <div className="bld-count">
+                <span className="v">{counts.tamer}</span>TAMER
+              </div>
+              <div className="bld-count">
+                <span className="v">{counts.option}</span>OPTION
+              </div>
+              <div className="bld-count split"><span className="v">{counts.lv2}</span>L2</div>
+              <div className="bld-count"><span className="v">{counts.lv3}</span>L3</div>
+              <div className="bld-count"><span className="v">{counts.lv4}</span>L4</div>
+              <div className="bld-count"><span className="v">{counts.lv5}</span>L5</div>
+              <div className="bld-count"><span className="v">{counts.lv6}</span>L6</div>
+              <div className="bld-count"><span className="v">{counts.lv7}</span>L7+</div>
+            </div>
+
+            <div className="right">
+              <button type="button" className="btn btn-good" onClick={handleSave} disabled={saving || !isDirty}>
+                {saving ? 'SAVING...' : 'SAVE'}
+              </button>
+              <button type="button" className="btn btn-opp" onClick={handleValidate}>VALIDATE</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowImport(true)}>IMPORT</button>
+              <button type="button" className="btn btn-danger" onClick={handleClear}>CLEAR</button>
+              <button type="button" className="btn btn-ghost" onClick={() => navigate('/')}>QUIT</button>
+            </div>
+          </header>
+
+          <section className="bld-filters" aria-label="Builder filters">
+            <div className="bld-filter color-filter">
+              <span className="l">COLOR</span>
+              <div className="bld-colors">
+                <button
+                  type="button"
+                  className={`chip all ${builderFilters.colors.length === 0 ? 'on' : ''}`}
+                  onClick={() => setBuilderFilters((current) => ({ ...current, colors: [] }))}
+                >
+                  ALL
+                </button>
+                {COLORS.map((color) => (
+                  <button
+                    type="button"
+                    key={color}
+                    className={`chip ${builderFilters.colors.includes(color) ? 'on' : ''} ${color.toLowerCase()}`}
+                    onClick={() => setBuilderFilters((current) => ({
+                      ...current,
+                      colors: current.colors.includes(color)
+                        ? current.colors.filter((item) => item !== color)
+                        : [...current.colors, color],
+                    }))}
+                  >
+                    {color[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="bld-filter">
+              <span className="l">TYPE</span>
+              <select value={builderFilters.type} onChange={(event) => setBuilderFilters((current) => ({ ...current, type: event.target.value }))}>
+                {TYPES.map((type) => <option key={type} value={type}>{type.toUpperCase()}</option>)}
+              </select>
+            </label>
+            <label className="bld-filter">
+              <span className="l">LEVEL</span>
+              <select value={builderFilters.level} onChange={(event) => setBuilderFilters((current) => ({ ...current, level: event.target.value }))}>
+                {LEVELS.map((level) => <option key={level} value={level}>{level === 'all' ? 'ALL' : `LV${level}`}</option>)}
+              </select>
+            </label>
+            <label className="bld-filter">
+              <span className="l">RARITY</span>
+              <select value={builderFilters.rarity} onChange={(event) => setBuilderFilters((current) => ({ ...current, rarity: event.target.value }))}>
+                {RARITIES.map((rarity) => <option key={rarity} value={rarity}>{rarity.toUpperCase()}</option>)}
+              </select>
+            </label>
+            <label className="bld-filter search">
+              <span className="l">SEARCH</span>
+              <input
+                placeholder="NAME, ID, KEYWORD..."
+                value={builderFilters.search}
+                onChange={(event) => setBuilderFilters((current) => ({ ...current, search: event.target.value }))}
+              />
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={builderFilters.inheritedOnly}
+                onChange={(event) => setBuilderFilters((current) => ({ ...current, inheritedOnly: event.target.checked }))}
+              />
+              INHERITED ONLY
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={builderFilters.securityOnly}
+                onChange={(event) => setBuilderFilters((current) => ({ ...current, securityOnly: event.target.checked }))}
+              />
+              SECURITY ONLY
+            </label>
+          </section>
+
+          <main className="bld-main">
+            <aside className="bld-preview">
+              {previewCard ? (
+                <>
+                  <div className="bld-preview-card">
+                    <div className={`frame ${builderCardColorClass(previewCard)}`}>
+                      <BuilderCardImage card={previewCard} />
+                      {previewCard.play_cost && <span className="cost">{previewCard.play_cost}</span>}
+                      {previewCard.level && <span className="lvl">L{previewCard.level}</span>}
+                      <span className="nm">{previewCard.name}</span>
+                      <span className="id">{previewCard.cardnumber}</span>
+                    </div>
+                  </div>
+                  <div className="bld-preview-meta">
+                    <div className="row"><span className="k">SET</span><span className="v">{previewCard.set_name || '-'}</span></div>
+                    <div className="row"><span className="k">RARITY</span><span className="v">{previewCard.cardrarity || '-'}</span></div>
+                    <div className="row"><span className="k">TYPE</span><span className="v">{previewCard.type}</span></div>
+                    <div className="row"><span className="k">IN DECK</span><span className="v">x{cardCount([...mainDeck, ...eggDeck], previewCard.cardnumber)}</span></div>
+                  </div>
+                  <div className="bld-preview-effect"><h6>MAIN EFFECT</h6><p>{previewCard.maineffect || 'No main effect text loaded.'}</p></div>
+                  {previewCard.soureeffect && <div className="bld-preview-effect"><h6 className="opp">INHERITED EFFECT</h6><p>{previewCard.soureeffect}</p></div>}
+                </>
+              ) : (
+                <div className="bld-empty">SEARCH OR SELECT A CARD</div>
+              )}
+            </aside>
+
+            <section className="bld-pool">
+              <div className="bld-pool-head">
+                <span>CARD POOL · <span className="v">{visibleCards.length}</span> RESULTS</span>
+                <div className="legend"><span><i className="in"></i>IN DECK</span><span><i className="hover"></i>HOVER</span></div>
+              </div>
+              <div className="bld-pool-grid">
+                {visibleCards.map((card) => {
+                  const count = cardCount([...mainDeck, ...eggDeck], card.cardnumber);
+                  const atCap = count >= 4;
+                  return (
+                    <button
+                      type="button"
+                      key={`${card.cardnumber}-${card.isAltArt ? 'alt' : 'base'}`}
+                      aria-label={cardButtonName(card)}
+                      aria-disabled={atCap}
+                      className={`bld-card ${builderCardColorClass(card)} ${count > 0 ? 'in-deck' : ''} ${atCap ? 'cap-reached' : ''} ${previewCard?.cardnumber === card.cardnumber ? 'preview' : ''}`}
+                      onMouseEnter={() => setPreviewCard(card)}
+                      onFocus={() => setPreviewCard(card)}
+                      onClick={() => {
+                        if (!atCap) addCardToDeck(card.cardnumber, card, card.isAltArt ?? false);
+                      }}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        removeCardFromDeck(card.cardnumber, card.isAltArt ?? false);
+                      }}
+                    >
+                      <BuilderCardImage card={card} />
+                      {card.play_cost && <span className="cost">{card.play_cost}</span>}
+                      {card.level && <span className="lvl">L{card.level}</span>}
+                      <span className="nm">{card.name}</span>
+                      <span className="id">{card.cardnumber}</span>
+                      {count > 0 && <span className="ct">{atCap ? 'MAX' : `x${count}`}</span>}
+                    </button>
+                  );
+                })}
+                {visibleCards.length === 0 && <div className="bld-empty pool-empty">NO CARDS MATCH FILTERS</div>}
+              </div>
+              <div className="bld-pool-foot"><span>CLICK = ADD · RIGHT-CLICK = REMOVE</span></div>
+            </section>
+
+            <aside className="bld-deck">
+              <div className="bld-deck-head"><span>DECK CONTENTS</span><span className="v">{counts.total}/55</span></div>
+              <div className="bld-deck-tabs">
+                <button type="button" className={activeSection === 'main' ? 'on' : ''} onClick={() => setActiveSection('main')}>MAIN <span className="ct">{counts.main}</span></button>
+                <button type="button" className={activeSection === 'egg' ? 'on' : ''} onClick={() => setActiveSection('egg')}>EGG <span className="ct">{counts.egg}</span></button>
+                <button type="button" className="disabled" disabled title="Sideboard is not supported in standard decks">SIDE <span className="ct">0</span></button>
+              </div>
+              <div className="bld-deck-list">
+                {activeSection === 'side' ? (
+                  <div className="bld-empty">SIDEBOARD NOT SUPPORTED IN STANDARD</div>
+                ) : (
+                  <section className="bld-section">
+                    <div className="bld-section-head"><span>{activeSection === 'egg' ? 'EGG DECK' : 'MAIN DECK'}</span><span className="ct">{activeCards.reduce((sum, entry) => sum + entry.count, 0)} / {activeExpected}</span></div>
+                    {visibleSections.map((section) => (
+                      <div key={section.label} className="bld-subsection">
+                        <div className="bld-subsection-head">{section.label} <span>{section.total}</span></div>
+                        {section.entries.map((entry) => {
+                          const totalCount = cardCount([...mainDeck, ...eggDeck], entry.cardId);
+                          return (
+                            <div key={`${entry.cardId}-${entry.isAltArt ? 'alt' : 'base'}`} className="bld-row" onMouseEnter={() => entry.cardData && setPreviewCard(entry.cardData)}>
+                              <span className="ct">x{entry.count}</span>
+                              <span className={`swatch ${builderCardColorClass(entry.cardData)}`} />
+                              <div className="nm">{entry.cardData?.name ?? entry.cardId}<small>{entry.cardId} · {entry.cardData?.type?.toUpperCase() ?? 'CARD'}</small></div>
+                              <span className="cost">{entry.cardData?.play_cost ? `C${entry.cardData.play_cost}` : '-'}</span>
+                              <span className="lvl">{entry.cardData?.level ? `L${entry.cardData.level}` : entry.cardData?.type === 'Option' ? 'OPT' : 'TMR'}</span>
+                              <div className="actions">
+                                <button type="button" onClick={() => removeCardFromDeck(entry.cardId, entry.isAltArt)}>-</button>
+                                <button type="button" disabled={totalCount >= 4} onClick={() => entry.cardData && addCardToDeck(entry.cardId, entry.cardData, entry.isAltArt)}>+</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                    {activeCards.length === 0 && <div className="bld-empty">EMPTY</div>}
+                  </section>
+                )}
+                <ValidationPanelInline validationResult={validationResult} />
+              </div>
+            </aside>
+          </main>
         </div>
+        <ImportExport isOpen={showImport} onClose={() => setShowImport(false)} />
       </div>
-
-      <ImportExport isOpen={showImport} onClose={() => setShowImport(false)} />
     </div>
   );
 }

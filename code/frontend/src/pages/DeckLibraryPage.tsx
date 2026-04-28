@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import * as library from '@/api/deckLibraryAdapter';
 import { getCardById } from '@/api/digimonCardApi';
 import type { DigimonCardData } from '@/types/cards';
@@ -290,6 +290,7 @@ export function DeckLibraryPage() {
         </div>
         <div className="library-actions">
           {notice && <span className="library-live">{notice}</span>}
+          <button type="button" className="secondary" onClick={() => navigate('/')}>Home</button>
           <button type="button" onClick={() => navigate('/deckbuilder/new')}>New Deck</button>
         </div>
       </div>
@@ -365,6 +366,19 @@ export function DeckLibraryPage() {
               <button type="button" onClick={() => navigate('/deckbuilder/new')}>Create your first deck</button>
             </section>
           )}
+
+          <header className="library-hero">
+            <div>
+              <span className="library-kicker">// ARMORY</span>
+              <h1>DECK LIBRARY</h1>
+              <p>Organize folders, inspect legality, pin tournament lists, and open the builder.</p>
+            </div>
+            <div className="library-hero-actions">
+              <Link to="/" className="library-command">Home</Link>
+              <Link to="/deckbuilder/new" className="library-command primary">New Deck</Link>
+              <Link to="/deckbuilder/new?import=1" className="library-command">Import</Link>
+            </div>
+          </header>
 
           <section className="library-toolbar">
             <label className="library-search">
