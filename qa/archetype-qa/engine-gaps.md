@@ -282,6 +282,15 @@ Last updated: 2026-03-17
 - **Suggested change:** Add a `select_opponent_permanent_dp_sum(description, self_dp, callback)` method to `EffectContext` that: (1) initializes a `remaining_budget = self_dp`; (2) presents a filtered pick from `opponent.battle_area` where `perm.dp <= remaining_budget`; (3) after each pick, subtracts the picked card's DP from `remaining_budget` and repeats if budget > 0 and valid candidates remain; (4) allows the player to stop picking at any point; (5) calls `callback` once on all selected handles. Alternatively, extend `PendingSelection` with a `DpBudget(u32)` variant that the selection engine drains per-pick.
 - **Workaround:** `raw_rust: { fn: lm_021_delete_dp_sum }` and `raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }` — both fall back to single-pick with a DP <= budget filter. Full multi-pick semantics are deferred until this gap closes.
 
+### `IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask  [G-IGNORE-COLOR-MASK]
+- **Discovered in:** Medusamon Batch 11, ST22-08 Offensive Plug-In V DSL implementation (2026-04-27)
+- **Scope:** Rust engine.
+- **Card(s):** ST22-08 Offensive Plug-In V — "While you have a Tamer, you can ignore this card's color requirements." Also any card that would use the `IgnoreColorRequirement` modifier via a flood_gate clause.
+- **Effect text:** "While you have a Tamer, you can ignore this card's color requirements."
+- **What's missing:** `code/digimon-engine/src/action/mask.rs`'s `option_color_match_available` function (line 598) has the following comment: "Script-level `match_color_requirement=False` and the `IGNORE_COLOR_REQUIREMENT` aura modifier are residual §4.2b work; both are absent here." The `ModifierType::IgnoreColorRequirement` variant exists in `enums.rs` (line 488) and the DSL validator accepts it, but no enforcement hook reads this modifier in the Rust action mask. The Python engine resolved this gap on 2026-03-14, but the Rust engine's action mask never received the equivalent fix.
+- **Suggested change:** In `option_color_match_available`, before returning `false`, check whether the card itself carries an `IgnoreColorRequirement` modifier (self-modifier on the card source) or whether any ally permanent has a permanent-level `IgnoreColorRequirement` modifier that applies to this card. If so, return `true`. This matches the Python engine's `_match_color_requirement_fn` pattern and the `ModifierType.IGNORE_COLOR_REQUIREMENT` aura check in `action_mask.py`.
+- **Workaround:** None — the `flood_gate` YAML clause with `modifier: IgnoreColorRequirement` compiles correctly but has zero runtime effect because the enforcement is absent.
+
 <!-- Entry template:
 ### {Gap Title}
 - **Discovered in:** {archetype name} ({date})
@@ -291,3 +300,11 @@ Last updated: 2026-03-17
 - **Suggested change:** {brief proposal}
 - **Workaround:** {if any, otherwise "None — BLOCKED"}
 -->
+
+### Self-Digivolution-Stack Name Check (triggered clause condition)  [G-SELF-DIGIVOLUTION-CONTAINS-NAME]
+- **Discovered in:** Medusamon Batch 11, BT20-102 Omnimon (X Antibody) DSL implementation (2026-04-27)
+- **Card(s):** BT20-102 Omnimon (X Antibody) — "[On Play][When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, ..."
+- **Effect text:** "If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards" — a condition on the triggering permanent's OWN card stack.
+- **What's missing:** `lower_triggered.rs` passes `PredicateSubject::None` to the condition closure when evaluating a triggered clause's `condition:` block. This means no subject-requiring predicate (e.g., a hypothetical `self_digivolution_contains_name`) can evaluate the source permanent's own stack. The condition closure must receive a `PredicateSubject::Permanent(source_h)` where `source_h` is the permanent that fired the trigger. The engine method `Permanent::contains_card_name(name, data)` already exists in `permanent.rs` and scans the full card_sources stack — the gap is the predicate threading, not the engine primitive.
+- **Suggested change:** In `lower_triggered.rs`, when building the condition closure, capture the `source_permanent` handle (available from `EffectContext` at fire time) and pass it as `PredicateSubject::Permanent(source_h)` instead of `PredicateSubject::None`. Add a `self_digivolution_contains_name: Option<String>` field to `BoolPredicateSpec` in `digimon-dsl` that evaluates `perm.contains_card_name(name, &game.card_data)` when the subject is a permanent. This is a hybrid gap: engine has the method, DSL+lowering need the predicate leaf + subject threading.
+- **Workaround:** Entire boardwipe clause (clause d) routed through `raw_rust: { fn: bt20_102_boardwipe_and_return }` which checks `perm.contains_card_name("Omnimon", ...)` and `perm.contains_card_name("X Antibody", ...)` directly. Over-approximation: top card name "Omnimon (X Antibody)" always contains "X Antibody", so condition is always true for standalone BT20-102 rather than only when a genuine "Omnimon" or "X Antibody" base is in the digivolution stack.

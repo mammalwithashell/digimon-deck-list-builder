@@ -1,0 +1,78 @@
+card: BT21-072
+name: "Arresterdramon: Superior Mode"
+kind: digimon
+level: 5
+color: [red, purple]
+cost: 9
+dp: 10000
+traits: [Dragon, Hero]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4 }
+    cost: 4
+
+# Clause 1: <Raid>
+# DCGO: RaidSelfEffect(isInheritedEffect: false, card: card, condition: null)
+# Printed keyword. Declarative grant_keyword clause.
+#
+# Clause 2: <Piercing>
+# DCGO: PierceSelfEffect(isInheritedEffect: false, card: card, condition: null)
+# Printed keyword. Declarative grant_keyword clause.
+#
+# Clause 3: [When Digivolving] This Digimon may attack without suspending.
+# DCGO: ActivateClass(EffectTiming.OnEnterFieldAnyone), CanTriggerWhenDigivolving,
+#   SelectAttackEffect.SetWithoutTap(), canAttack(withoutTap: true).
+# BLOCKED (G-MAY-ATTACK-NOW): No DSL verb for an in-effect optional attack on self
+# without suspending. Engine lacks `EffectContext::may_attack_now(target)` and the
+# DSL lacks a corresponding step verb. Tracked in qa/dsl-vocab-gaps.md.
+#
+# Clause 4: [All Turns] This Digimon gets +1000 DP for each of its digivolution cards.
+# DCGO: CardEffectFactory.ChangeSelfDPStaticEffect(changeValue: 1000 * count(), ...) at
+#   EffectTiming.None — a continuous declarative effect whose value recomputes each tick
+#   as count() = PermanentOfThisCard().DigivolutionCards.Count().
+# BLOCKED (G-AURA-DP-FORMULA): The DSL `kind: aura` declarative with self-target
+#   only accepts `dp_modifier: <i32>` (static literal). It has no formula variant
+#   (`dp_modifier_fn` or `dp_modifier_formula`). The formula `base: 0, per: material_count,
+#   delta: 1000` is expressible via `add_dp_modifier` in a triggered clause but that only
+#   applies a snapshot at event time — not a continuous dynamically-recomputed aura that
+#   updates when de_digivolve trashes digivolution cards. The no-approximations policy
+#   requires faithful continuous DP. Tracked in qa/dsl-vocab-gaps.md.
+#
+# Clause 5 (Inherited): [Your Turn] This Digimon gets +2000 DP.
+# DCGO: CardEffectFactory.ChangeSelfDPStaticEffect(changeValue: 2000, isInheritedEffect: true, ...)
+#   condition: IsExistOnBattleArea(card) && IsOwnerTurn(card).
+# Standard inherited self-aura with your_turn gate — BT23-005 pattern.
+# NOTE (G-INHERITED-DISPATCH): DSL `scope: inherited` triggered clauses are not yet
+# dispatched by enqueue_from_permanent (only the top card is scanned). However, this is a
+# DECLARATIVE aura (not a triggered clause), so inherited declarative effects must still
+# be verified to dispatch. The static DP path (`lower_aura.rs`) sets Effect.dp_modifier
+# which `source_dp_contribution` reads — verify that declarative inherited effects are
+# included in the scan.
+
+effects:
+  # ─── Clause 1: <Raid> ─────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── Clause 2: <Piercing> ─────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  # ─── Clause 3: [When Digivolving] may attack without suspending ───────────
+  # BLOCKED: G-MAY-ATTACK-NOW — no DSL verb for in-effect unsuspended optional
+  # attack on self. Omit until qa/dsl-vocab-gaps.md G-MAY-ATTACK-NOW closes.
+
+  # ─── Clause 4: [All Turns] +1000 DP per digivolution card ─────────────────
+  # BLOCKED: G-AURA-DP-FORMULA — AuraBody.dp_modifier accepts only a static i32;
+  # no formula variant exists for continuous per-stack-size DP. Omit until the
+  # DSL adds dp_modifier_fn / dp_modifier_formula to AuraBody.
+
+  # ─── Clause 5 (Inherited): [Your Turn] +2000 DP ───────────────────────────
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

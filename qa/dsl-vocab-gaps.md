@@ -251,3 +251,144 @@ Format per entry:
 - Gap kind: dsl (engine has `trash_top_security`; DSL has no count-computed loop combinator).
 - Workaround: `raw_rust: { fn: bt17_018_trash_security_per_ten_trash }` — reads both players' trash sizes, computes `floor((p0 + p1) / 10)`, loops `ctx.trash_top_security(opponent)` that many times. When closed: replace the `raw_rust:` step with the native DSL verb.
 - First reported: 2026-04-27 (BT17-018 batch-implement-cards-rust-dsl)
+
+---
+
+## ST22-08 — Link Registration Clause (Plug-In / Link Card Mechanic)  [G-DSL-LINK-VERB]
+- Effect text: "Inherited: Link Requirements [Link] Lv.3 or higher: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+- Also: "[Main] You may link this card to 1 of your Digimon without paying the cost."
+- Missing DSL verb / step kind / predicate: Two missing DSL constructs:
+  (a) A declarative clause kind for declaring link requirements — no `kind: link_requirement` or equivalent in `TypedDeclarativeBody`. The closest existing cards (EX11-027 Maquinamon) use `kind: raw_rust fn: ex11_027_link_requirements triggers: [main_from_hand, main_on_field]`.
+  (b) An optional link-action step within a `process:` body — no `link_to_digimon:` or similar step verb. DCGO's `SelectPermanentEffect` with `Mode.Custom` + `card.CanLinkToTargetPermanent(permanent, false)` + `canNoSelect: true` drives this. The engine has `OptionSubtype::Link`, `Effect::link(cost, filter)`, and `attach_linked_card()`, but these are reachable only via hand-written `CardEffect` or raw_rust functions.
+- Lowers to engine API: `Effect::link(cost, filter_fn)` on the declarative side; `ctx.game.attach_linked_card(host_handle)` on the step side. Both exist in the engine; neither is accessible from the DSL step vocabulary.
+- Suggested DSL syntax:
+  ```yaml
+  # Declaration form (inherited link requirements):
+  - kind: link_requirement
+    scope: inherited
+    cost: 2
+    filter: { level_gte: 3 }
+  
+  # Step form (optional free link in process body):
+  - link_to_own_digimon:
+      optional: true
+      cost_delta: -99   # or free: true
+      filter: { kind: digimon }
+      bind_as: linked_host
+  ```
+- Gap kind: dsl (engine has the primitive; DSL lacks both the clause kind and the step verb).
+- First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+
+---
+
+## ST22-08 — Linked-Card Effect Scope  [G-DSL-LINKED-SCOPE]
+- Effect text: DCGO shows EndOfTurnLinkedEffect with `activateClass.SetIsLinkedEffect(true)` — an effect that fires only when the card is linked to a Digimon in the battle area, and the linked Digimon may attack at the controller's end of turn.
+- Missing DSL verb / step kind / predicate: `scope: linked` — a clause scope for effects that fire as if they were part of the Digimon the card is linked to. `CompiledScope` in `digimon-dsl/src/compiled.rs` has `FaceUp` and `Inherited` variants; there is no `Linked` variant. The effect-queue (`effect_queue.rs`) already handles linked cards in `enqueue_from_permanent` (the Phase 8 Task 4 linked_cards branch), but the scope is expressed as a raw `linked_cards` list on `Permanent`, not as a DSL-compiled clause with `scope: linked`.
+- Lowers to engine API: the engine already fires effects for linked cards via the `linked_cards` loop in `enqueue_from_permanent`. The DSL lowering layer would need to detect `scope: linked` on a clause and install the resulting `Effect` via `Effect::declarative(card)` with a flag indicating it should be enqueued from the linked-card path rather than the top-card path.
+- Suggested DSL syntax:
+  ```yaml
+  - scope: linked
+    when: end_of_your_turn
+    optional: true
+    once_per_turn: true
+    process:
+      - raw_rust: { fn: st22_08_linked_eot_may_attack }
+  ```
+- Gap kind: dsl (engine fires linked-card effects; DSL has no `scope: linked` clause kind that lowers into the linked-card effect list).
+- First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+
+---
+
+## ST22-08 — Named-Binding DP Reference in Formula  [G-BINDING-DP-FORMULA]
+- Effect text: "[Main] … delete 1 of your opponent's Digimon with as much or less DP as 1 of your Digimon."
+- Missing DSL verb / step kind / predicate: `binding_dp` — a formula primitive that reads the effective DP of a named binding (a `PermanentHandle` stored by `bind_as:` from a prior `select_own_permanent`). The formula system (`formula.rs` + `formula_eval.rs`) can read `source_permanent`'s DP via `{ of: source_permanent, value: dp }` (see DSL spec §3.10), but there is no form to read an arbitrary named binding's DP — which is required for "DP ≤ chosen own Digimon's DP" where the comparator is player-selected mid-effect.
+- Lowers to engine API: `ctx.game.effective_dp(handle)` — already exists. The gap is that `CompiledFormula` has no `BindingDp(String)` variant that reads `bindings.get_permanent(name)` and calls `effective_dp`. 
+- Suggested DSL syntax:
+  ```yaml
+  # In dp_lte formula, reference a named binding:
+  dp_lte:
+    formula:
+      binding_dp: ally   # resolves bindings["ally"] as PermanentHandle, calls effective_dp
+  ```
+  Requires: (1) add `BindingDp(String)` to `FormulaSpec` and `CompiledFormula`; (2) add evaluation branch in `formula_eval.rs` that resolves the binding from `Bindings` and calls `ctx.game.effective_dp(h)`; (3) pass `Bindings` into the formula evaluator call chain.
+- Gap kind: dsl (engine has `effective_dp`; DSL formula system has no binding-reference form).
+- Workaround: None — `dp_lte` predicate is also not evaluated (G-PRED-DP-LTE). Both gaps must close together for this clause to work.
+- First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+
+---
+
+## ST22-08 — Return Played Option Card to Hand Post-Security  [G-ADD-OPTION-SELF-TO-HAND]
+- Effect text: "[Security] Delete 1 of your opponent's Digimon with the lowest DP. Then, add this card to the hand."
+- Missing DSL verb / step kind / predicate: A step verb for "add this played Option card back to the controller's hand after security resolution." This is different from `add_top_security_to_hand` (which moves the TOP of the security stack to hand) and different from `return_to_hand` (which moves a battle-area permanent to hand). The played Option is in the "being resolved" state during security — it has not yet been trashed. The DCGO calls `CardEffectCommons.AddThisCardToHand(card, activateClass)`. In the Python engine, this was implemented as `CardEffectCommons.add_this_card_to_hand` after the security-effect fires. EX6-072 Mega Digimon Assembly uses `raw_rust: { fn: ex6_072_add_self_to_hand }` for the same pattern.
+- Lowers to engine API: `ctx.add_security_option_to_hand()` or a method that retrieves the current card being resolved in the security context and places it in the controller's hand instead of trashing it. The exact engine mechanism depends on how `security_attack()` manages the Option card — checking `_security_played` flag vs. moving it to hand.
+- Suggested DSL syntax:
+  ```yaml
+  - return_self_to_hand: {}   # Or: add_this_card_to_hand: {}
+  ```
+  This would lower to a method that finds the source card's handle and transfers it from the security-resolution staging to the controller's hand.
+- Gap kind: dsl (the engine already has a pattern for this — ex6_072_add_self_to_hand raw_rust — but there is no DSL step verb).
+- Workaround: `raw_rust: { fn: st22_08_add_self_to_hand }` (same pattern as `ex6_072_add_self_to_hand`).
+- First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+
+---
+
+## BT21-072 — [All Turns] +1000 DP per digivolution card (dynamic formula aura)  [G-AURA-DP-FORMULA]
+
+- Effect text: "[All Turns] This Digimon gets +1000 DP for each of its digivolution cards."
+- Missing DSL verb / step kind / predicate: `dp_modifier_fn` / `dp_modifier_formula` — a formula-based variant of `AuraBody.dp_modifier`. The DCGO implements this via `ChangeSelfDPStaticEffect(changeValue: 1000 * count(), ...)` at `EffectTiming.None`, where `count()` is a live lambda returning `PermanentOfThisCard().DigivolutionCards.Count()` (= material_count = stack_size - 1). This is a **continuously-recomputed** aura that updates dynamically each tick, including after `de_digivolve` operations that pop digivolution cards from the stack. The DSL `kind: aura` with self-target accepts only `dp_modifier: Option<i32>` — a static literal with no formula variant. The `FormulaSpec` type (with `per: material_count, delta: 1000`) exists for step-level `add_dp_modifier` verbs, but `add_dp_modifier` only snapshots the formula's value at event-fire time, not continuously. Storing a snapshot in `Effect.dp_modifier` cannot model the dynamic behaviour required.
+- Lowers to engine API: `source_dp_contribution(perm_handle, source_index)` reads `Effect.dp_modifier` continuously — the engine query mechanism already supports live reads. The gap is that `AuraBody` has no formula field to store a `FormulaSpec` that `lower_aura.rs` could evaluate at read-time rather than compile-time.
+- Suggested DSL syntax:
+  ```yaml
+  - kind: aura
+    active_when: { all_turns: true }   # or omit for always-on
+    target: {}                          # self
+    dp_modifier_fn:                     # NEW: formula-based dynamic variant
+      base: 0
+      per: material_count               # CompiledPerSelector::MaterialCount = stack_size - 1
+      delta: 1000
+  ```
+  Implementation notes: (1) add `dp_modifier_fn: Option<FormulaSpec>` to `AuraBody` in `digimon-dsl/src/clause.rs`; (2) compile to `CompiledAuraBody.dp_modifier_fn: Option<CompiledFormula>` in `digimon-dsl/src/compiler/clause.rs`; (3) in `lower_aura.rs`, when `dp_modifier_fn` is set, store the `CompiledFormula` in a new `Effect.dp_modifier_formula` field instead of `Effect.dp_modifier`; (4) have `source_dp_contribution` evaluate the formula against the current stack size when `dp_modifier_formula` is present.
+- Gap kind: dsl (engine `source_dp_contribution` already reads continuously; `AuraBody` just lacks the formula field, and `Effect` lacks a formula storage slot for dynamic evaluation).
+- Workaround: Clause omitted from YAML. Test `#[ignore = "pending: G-AURA-DP-FORMULA — AuraBody.dp_modifier does not accept a formula"]`.
+- First reported: 2026-04-27 (BT21-072 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+
+---
+
+## BT20-102 — Omnimon (X Antibody) self-digivolution-stack name check  [G-SELF-DIGIVOLUTION-CONTAINS-NAME]
+
+- Effect text: "[On Play][When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, ..."
+- Missing DSL verb / step kind / predicate: `self_digivolution_contains_name` — a `BoolPredicate` leaf that evaluates `rctx.source_permanent()?.contains_card_name(name, &rctx.game.card_data)` from within a triggered clause's `condition:` block. The DSL predicate `source_name_contains` applies to the SOURCE PERMANENT (the Digimon this card is stacked under, in inherited contexts) — not to this card's own digivolution stack at runtime. Additionally, `lower_triggered.rs` passes `PredicateSubject::None` to condition closures, so any subject-requiring predicate silently passes.
+- Engine gap component (hybrid): `Permanent::contains_card_name(name, data)` exists in `code/digimon-engine/src/permanent.rs` and scans the full stack. The gap is that `lower_triggered.rs` does not pass a `PredicateSubject::Permanent(source_h)` to the condition closure (currently passes `PredicateSubject::None`).
+- Lowers to engine API: `Permanent::contains_card_name(name, &game.card_data)` on `rctx.source_permanent()`.
+- Suggested DSL syntax:
+  ```yaml
+  condition:
+    self_digivolution_contains_name: "Omnimon"
+    # or: any_of: [{ self_digivolution_contains_name: "Omnimon" }, { self_digivolution_contains_name: "X Antibody" }]
+  ```
+  Implementation: add `self_digivolution_contains_name: Option<String>` to `BoolPredicateSpec` in `digimon-dsl/src/predicate.rs`, compile to `CompiledPredicate` field, evaluate in `eval_predicate(p, rctx, PredicateSubject::Permanent(source_h))` where `source_h` is the triggering permanent's handle — requires threading the source handle into the triggered-clause condition closure in `lower_triggered.rs`.
+- Gap kind: hybrid (engine has the method; DSL needs predicate leaf + `lower_triggered.rs` subject threading).
+- Workaround: entire boardwipe clause routed through `raw_rust: { fn: bt20_102_boardwipe_and_return }` which calls `perm.contains_card_name(...)` directly. Over-wide: top card name "Omnimon (X Antibody)" contains "X Antibody" so condition is always true for BT20-102 even with no digivolution source.
+- First reported: 2026-04-27 (BT20-102 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+
+---
+
+## BT20-102 — Exclude-from-binding filter in `for_each`  [G-FOR-EACH-EXCLUDE-BINDING]
+
+- Effect text: "[On Play][When Digivolving] ... choose 1 of both players' Digimon and delete all other Digimon."
+- Missing DSL verb / step kind / predicate: `not_in_binding` — a `CandidatePredicate` leaf in `for_each { over, filter, body }` that excludes permanents whose handle appears in a named binding (a prior selection). Without it, "delete all OTHER Digimon" (all except the two saved by selection) cannot be expressed purely in DSL.
+- Engine API: the engine can iterate `battle_area` handles and compare against a collected `Vec<PermanentHandle>`. No new API needed — gap is purely in the DSL filter vocabulary.
+- Suggested DSL syntax:
+  ```yaml
+  - for_each:
+      over: { of: any, kind: digimon }
+      bind_as: candidate
+      filter:
+        not_in_binding: saved   # CandidatePredicate: exclude if handle is in binding "saved"
+      body:
+        - delete_permanent: { target: candidate }
+  ```
+  Implementation: add `not_in_binding: Option<String>` to `CandidatePredicateSpec` in `digimon-dsl/src/predicate.rs`, compile, and evaluate by looking up the named binding in `Bindings` and comparing handle equality.
+- Gap kind: dsl (engine can express this in a raw_rust loop; DSL has no filter for handle-set exclusion).
+- Workaround: entire boardwipe clause routed through `raw_rust: { fn: bt20_102_boardwipe_and_return }` which collects `saved: Vec<PermanentHandle>` and filters deletions via `.contains()`.
+- First reported: 2026-04-27 (BT20-102 batch-implement-cards-rust-dsl, Medusamon Batch 11)

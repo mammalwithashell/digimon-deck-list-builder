@@ -611,6 +611,283 @@ fn lm_021_delete_dp_sum(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
     );
 }
 
+/// BT20-102 Omnimon (X Antibody) — [On Play][When Digivolving] board-wipe + return.
+///
+/// Printed text:
+/// "[On Play][When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's
+/// digivolution cards, choose 1 of both players' Digimon and delete all other
+/// Digimon. Then, return 1 of your opponent's Digimon to the bottom of the deck."
+///
+/// DCGO analysis (BT20_102.cs, EffectTiming.OnEnterFieldAnyone):
+///   1. IsOmniOrXAntiSource(): checks DigivolutionCards for "Omnimon" or "X Antibody".
+///   2. If opp has Digimon: controller picks 1 to protect (mandatory).
+///   3. If own has Digimon: controller picks 1 to protect (mandatory).
+///   4. Delete all Digimon NOT in the saved list.
+///   5. (Unconditional) if opp has Digimon: pick 1 to return to bottom of deck.
+///
+/// Multi-round selection chain: steps 2 → 3 → 4 → 5 are sequenced via nested
+/// callbacks (each `select_*` parks the game, continuation runs in its callback).
+///
+/// **GAP G-SELF-DIGIVOLUTION-CONTAINS-NAME** [hybrid]:
+///   Condition check uses `Permanent::contains_card_name` (engine API exists).
+///   DSL has no `self_digivolution_contains_name` predicate leaf and
+///   `lower_triggered.rs` passes `PredicateSubject::None` to condition closures.
+///   The top card name "Omnimon (X Antibody)" contains "X Antibody" so the
+///   condition is always true for BT20-102, which is an over-wide approximation
+///   vs DCGO's DigivolutionCards-only check. Tracked in qa/dsl-vocab-gaps.md.
+///
+/// **GAP G-FOR-EACH-EXCLUDE-BINDING** [dsl]:
+///   "Delete all OTHER Digimon" implemented here via handle exclusion list.
+///   DSL has no `not_in_binding` predicate. Tracked in qa/dsl-vocab-gaps.md.
+///
+/// **Step 5 is unconditional** per DCGO — fires outside the IsOmniOrXAntiSource
+/// block regardless of whether the board-wipe condition was met.
+fn bt20_102_boardwipe_and_return(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    use crate::enums::{CardKind, StackPosition};
+    use crate::permanent::PermanentHandle;
+
+    let controller = ctx.player;
+    let opponent = ctx.opponent_id();
+
+    // ─── Step 1: Condition check ──────────────────────────────────────────────
+    // Locate BT20-102 on the controller's field and check its stack.
+    // contains_card_name scans card_sources + top card. Top card name is
+    // "Omnimon (X Antibody)" which contains "X Antibody" → condition always true
+    // for a standalone BT20-102, and also true when stacked on an "Omnimon" source.
+    let condition_met = ctx
+        .game
+        .player(controller)
+        .battle_area
+        .iter()
+        .any(|perm| {
+            let top = perm.top_card();
+            let data = &ctx.game.card_data[top.data_index];
+            data.card_id == "BT20-102"
+                && (perm.contains_card_name("Omnimon", &ctx.game.card_data)
+                    || perm.contains_card_name("X Antibody", &ctx.game.card_data))
+        });
+
+    if condition_met {
+        // ─── Steps 2–4: Conditional board-wipe via callback chain ────────────
+        // Snapshot Digimon handles BEFORE any selection (indices stable until
+        // deletion runs at end of callback chain).
+
+        let opp_digimon: Vec<PermanentHandle> = ctx
+            .game
+            .player(opponent)
+            .battle_area
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, perm)| {
+                let data = &ctx.game.card_data[perm.top_card().data_index];
+                (data.card_kind == CardKind::Digimon).then_some(PermanentHandle {
+                    player: opponent,
+                    index: idx as u8,
+                })
+            })
+            .collect();
+
+        let own_digimon: Vec<PermanentHandle> = ctx
+            .game
+            .player(controller)
+            .battle_area
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, perm)| {
+                let data = &ctx.game.card_data[perm.top_card().data_index];
+                (data.card_kind == CardKind::Digimon).then_some(PermanentHandle {
+                    player: controller,
+                    index: idx as u8,
+                })
+            })
+            .collect();
+
+        // Helper: delete all Digimon not in saved list, then install step 5.
+        fn delete_and_return(
+            ctx: &mut EffectContext<'_>,
+            all_opp: Vec<PermanentHandle>,
+            all_own: Vec<PermanentHandle>,
+            saved: Vec<PermanentHandle>,
+        ) {
+            use crate::enums::{CardKind, StackPosition};
+            // Collect deletion targets.
+            let mut to_delete: Vec<PermanentHandle> = all_opp
+                .iter()
+                .chain(all_own.iter())
+                .copied()
+                .filter(|h| !saved.contains(h))
+                .collect();
+            // Descending index order so earlier deletions don't shift later indices.
+            to_delete.sort_by(|a, b| a.player.cmp(&b.player).then(b.index.cmp(&a.index)));
+            for h in to_delete {
+                ctx.delete_permanent(h);
+            }
+            // Step 5 (unconditional): return 1 opp Digimon to deck bottom.
+            // After deletions, re-check opponent battle area.
+            let opp = 1 - ctx.player; // opponent of controller
+            let opp_still_has = ctx.game.player(opp).battle_area.iter().any(|perm| {
+                let data = &ctx.game.card_data[perm.top_card().data_index];
+                data.card_kind == CardKind::Digimon
+            });
+            if opp_still_has {
+                ctx.select_opponent_permanent(
+                    "Choose 1 of your opponent's Digimon to return to the bottom of their deck",
+                    false,
+                    |game, h| {
+                        let data =
+                            &game.card_data[game.player(h.player).battle_area[h.index as usize]
+                                .top_card()
+                                .data_index];
+                        data.card_kind == CardKind::Digimon
+                    },
+                    |ctx, selected| {
+                        ctx.return_to_deck(selected, StackPosition::Bottom);
+                    },
+                );
+            }
+        }
+
+        match (opp_digimon.is_empty(), own_digimon.is_empty()) {
+            // Both empty: no selections; skip to step 5 directly.
+            (true, true) => {
+                delete_and_return(ctx, vec![], vec![], vec![]);
+            }
+
+            // Only own Digimon exist: skip opp-save, just pick own-save.
+            (true, false) => {
+                let all_own = own_digimon;
+                let all_opp = opp_digimon; // empty
+                let own_filter = all_own.clone();
+                ctx.select_own_permanent(
+                    "Choose 1 of your Digimon to protect from deletion",
+                    false,
+                    move |_game, h| own_filter.contains(&h),
+                    move |ctx, saved_own| {
+                        delete_and_return(ctx, all_opp, all_own, vec![saved_own]);
+                    },
+                );
+            }
+
+            // Only opp Digimon exist: pick opp-save, skip own-save.
+            (false, true) => {
+                let all_opp = opp_digimon;
+                let all_own = own_digimon; // empty
+                let opp_filter = all_opp.clone();
+                ctx.select_opponent_permanent(
+                    "Choose 1 of your opponent's Digimon to protect from deletion",
+                    false,
+                    move |_game, h| opp_filter.contains(&h),
+                    move |ctx, saved_opp| {
+                        delete_and_return(ctx, all_opp, all_own, vec![saved_opp]);
+                    },
+                );
+            }
+
+            // Both players have Digimon: pick opp-save, then own-save in callback.
+            (false, false) => {
+                let all_opp = opp_digimon;
+                let all_own = own_digimon;
+                let opp_filter = all_opp.clone();
+                let own_cb = all_own.clone();
+                let opp_cb = all_opp.clone();
+                ctx.select_opponent_permanent(
+                    "Choose 1 of your opponent's Digimon to protect from deletion",
+                    false,
+                    move |_game, h| opp_filter.contains(&h),
+                    move |ctx, saved_opp| {
+                        let own_filter = own_cb.clone();
+                        let all_own2 = own_cb;
+                        let all_opp2 = opp_cb;
+                        ctx.select_own_permanent(
+                            "Choose 1 of your Digimon to protect from deletion",
+                            false,
+                            move |_game, h| own_filter.contains(&h),
+                            move |ctx, saved_own| {
+                                delete_and_return(
+                                    ctx,
+                                    all_opp2,
+                                    all_own2,
+                                    vec![saved_opp, saved_own],
+                                );
+                            },
+                        );
+                    },
+                );
+            }
+        }
+    } else {
+        // Condition not met: skip the board-wipe (steps 2–4).
+        // Step 5 still fires unconditionally.
+        let opp_has_digimon = ctx.game.player(opponent).battle_area.iter().any(|perm| {
+            let data = &ctx.game.card_data[perm.top_card().data_index];
+            data.card_kind == CardKind::Digimon
+        });
+
+        if opp_has_digimon {
+            ctx.select_opponent_permanent(
+                "Choose 1 of your opponent's Digimon to return to the bottom of their deck",
+                false,
+                |game, h| {
+                    let data = &game.card_data[game.player(h.player).battle_area[h.index as usize]
+                        .top_card()
+                        .data_index];
+                    data.card_kind == CardKind::Digimon
+                },
+                |ctx, selected| {
+                    ctx.return_to_deck(selected, StackPosition::Bottom);
+                },
+            );
+        }
+    }
+}
+
+/// BT20-016 Paildramon — [All Turns] cross-permanent deletion observer no-op placeholder.
+///
+/// Printed effect: "[All Turns] When any of your [Paildramon] or [Dinobeemon] would be
+/// deleted, 2 of your Digimon may DNA digivolve into [Imperialdramon: Dragon Mode] in
+/// the hand."
+///
+/// This clause is a cross-permanent deletion observer: the carrier watches for the
+/// deletion of OTHER Paildramon / Dinobeemon permanents it controls, then optionally
+/// triggers a DNA digivolve from hand. DCGO uses `ActivateClass` at
+/// `WhenPermanentWouldBeDeleted` timing — deletion proceeds regardless (not cancelled).
+///
+/// This function is a no-op placeholder pending resolution of the following hybrid gap:
+///
+/// **G-EVENT-TARGET-OWNER** — the `ReplacementContext` (and `TriggerContext`) does not
+/// expose which player controls the subject permanent. Without a controller predicate,
+/// a `WhenWouldBeDeleted` effect cannot accurately filter for "your Paildramon or
+/// Dinobeemon" vs. an opponent's card of the same name. Additionally, the
+/// `lower_replacement.rs` `subject_matches` guard (lines 83–91) prevents DSL `kind:
+/// replacement` clauses from observing non-self subjects. Raw-rust declarative effects
+/// CAN register `WhenWouldBeDeleted` via `replacement_process`, but they still need
+/// the controller information to satisfy the "your" ownership condition.
+///
+/// When G-EVENT-TARGET-OWNER is closed, implement as follows:
+///   1. Build a `WhenWouldBeDeleted` replacement effect scoped to the carrier.
+///   2. In the replacement predicate:
+///      a. Check `rctx.subject == ReplacementSubject::Permanent(subj_h)`.
+///      b. Check `subj_h != carrier` (other permanent, not self).
+///      c. Check `subj_h.player == carrier.player` (owned by same player).
+///      d. Check the subject's top card name contains "Paildramon" or "Dinobeemon".
+///      e. Check 2 own Digimon exist (condition for DNA) and "Imperialdramon: Dragon Mode"
+///         is in the controller's hand.
+///   3. Do NOT cancel deletion (rctx.outcome remains Proceed — not a prevention effect).
+///   4. Present an optional DNA digivolve prompt:
+///      a. select_hand for Imperialdramon: Dragon Mode (from controller's hand)
+///      b. select_dna_pair for 2 own Digimon as DNA sources
+///      c. effect_initiated_dna_digivolve(src_a, src_b, from_hand, cost=0, ignore_requirements=false)
+///   5. Deletion of the original Paildramon/Dinobeemon proceeds regardless of DNA choice.
+///
+/// Tracked under G-EVENT-TARGET-OWNER in `qa/archetype-qa/engine-gaps.md`.
+fn bt20_016_dna_on_deletion(_handle: crate::card_source::CardHandle) -> Vec<Effect> {
+    // No-op: returns an empty effect list.
+    // Full implementation blocked by G-EVENT-TARGET-OWNER (subject controller
+    // attribution missing from ReplacementContext) and subject_matches gate in
+    // lower_replacement.rs.
+    vec![]
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
@@ -626,6 +903,8 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_step("bt17_018_delete_opp_digimon_dp_budget", bt17_018_delete_opp_digimon_dp_budget);
     r.register_step("bt17_018_trash_security_per_ten_trash", bt17_018_trash_security_per_ten_trash);
     r.register_step("lm_021_delete_dp_sum", lm_021_delete_dp_sum);
+    r.register_step("bt20_102_boardwipe_and_return", bt20_102_boardwipe_and_return);
+    r.register_declarative("bt20_016_dna_on_deletion", bt20_016_dna_on_deletion);
     r
 }
 

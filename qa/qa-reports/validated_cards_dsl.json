@@ -1,7 +1,33 @@
 {
   "version": 1,
-  "last_updated": "2026-04-28",
+  "last_updated": "2026-04-27",
   "cards": {
+    "BT20-016": {
+      "card_name": "Paildramon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "HYBRID",
+      "archetype": "Medusamon Batch 11",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-016.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_016.rs",
+      "test_count": 23,
+      "patterns": ["H3", "D1", "G2-adjacent", "H11"],
+      "notes": "18 active tests pass; 5 ignored pending gaps. Clause 1 ([On Play][When Digivolving] Piercing + +4000 DP) fully DSL-implemented. Clause 2 ([All Turns] cross-permanent deletion observer) registered as raw_rust declarative bt20_016_dna_on_deletion (no-op) pending G-EVENT-TARGET-OWNER. Inherited <Security A.+1> compiled but runtime-blocked by G-DECLARATIVE-KEYWORD. May-attack sub-clause blocked by G-MAY-ATTACK-NOW."
+    },
+    "BT20-102": {
+      "card_name": "Omnimon (X Antibody)",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "HYBRID",
+      "archetype": "Medusamon Batch 11",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_102.rs",
+      "test_count": 16,
+      "patterns": ["D4", "F", "H3", "E2"],
+      "notes": "12 active tests pass; 4 ignored pending gaps. Raw_rust bt20_102_boardwipe_and_return registered. Gaps blocking full PASS: G-SELF-DIGIVOLUTION-CONTAINS-NAME (hybrid: engine has contains_card_name, DSL lacks self-stack predicate), G-FOR-EACH-EXCLUDE-BINDING (dsl: no not_in_binding filter), G-MAY-ATTACK-NOW (hybrid: attack-without-suspending step), G-OPT-TRIGGERED (triggered OPT enforcement). G-DECLARATIVE-KEYWORD blocks runtime Raid/Piercing/Blocker."
+    },
     "BT14-001": {
       "card_name": "Koromon",
       "validated_date": "2026-04-27",
@@ -617,6 +643,38 @@
         "once_per_turn"
       ],
       "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 — raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security — raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 → is_fresh=true → can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
+    },
+    "ST22-08": {
+      "card_name": "Offensive Plug-In V",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "hybrid",
+      "archetype": "Medusamon Batch 11",
+      "yaml_path": "code/digimon-engine/cards/st22/ST22-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st22/st22_08.rs",
+      "test_count": 19,
+      "patterns": [],
+      "notes": "Link/Plug-In mechanic entirely unavailable in DSL: no link verb, no linked scope, no binding-DP formula. Also: G-PRED-DP-LTE (dp_lte not evaluated), G-IGNORE-COLOR-MASK (IgnoreColorRequirement not enforced in action mask), G-ADD-OPTION-SELF-TO-HAND."
+    },
+    "BT21-072": {
+      "card_name": "Arresterdramon: Superior Mode",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Medusamon Batch 11",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_072.rs",
+      "test_count": 10,
+      "patterns": [
+        "H3",
+        "H9",
+        "D4",
+        "G-MAY-ATTACK-NOW",
+        "G-AURA-DP-FORMULA"
+      ],
+      "notes": "Clauses 1 (<Raid>) and 2 (<Piercing>) implemented as declarative grant_keyword. Clause 5 (Inherited [Your Turn] +2000 DP) implemented as declarative scope:inherited aura. 8 active tests pass (structural x4, keyword behavioral x2, inherited aura behavioral x2). Clauses 3 ([When Digivolving] may attack without suspending) and 4 ([All Turns] +1000 DP per digivolution card) BLOCKED: G-MAY-ATTACK-NOW (hybrid gap, no mid-effect optional unsuspended attack verb) and G-AURA-DP-FORMULA (dsl gap, AuraBody.dp_modifier is static i32 only, no formula variant). 2 tests ignored."
     }
   }
 }
