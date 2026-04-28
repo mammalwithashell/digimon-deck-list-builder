@@ -67,6 +67,7 @@ class MaskableRecurrentPPO(RecurrentPPO):
 
     policy_aliases: ClassVar[dict[str, type[BasePolicy]]] = {
         "MaskableMlpLstmPolicy": MaskableMlpLstmPolicy,
+        "MlpLstmPolicy": MaskableMlpLstmPolicy,
     }
 
     def __init__(
