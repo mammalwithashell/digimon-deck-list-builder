@@ -5,49 +5,8 @@
   font-family: Geist, Inter, system-ui, sans-serif;
 }
 
-.ib-flow-titlebar {
-  height: 38px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 14px;
-  padding: 0 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-}
-
-.ib-flow-dots {
-  display: flex;
-  gap: 8px;
-}
-
-.ib-flow-dots span {
-  width: 11px;
-  height: 11px;
-  border-radius: 999px;
-}
-
-.ib-flow-dots .r { background: #ff5f57; }
-.ib-flow-dots .y { background: #ffbd2e; }
-.ib-flow-dots .g { background: #28c840; }
-
-.ib-flow-window-title {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  color: rgba(245, 241, 232, 0.72);
-}
-
-.ib-flow-pill-live {
-  border: 1px solid rgba(76, 212, 151, 0.55);
-  color: #4cd497;
-  padding: 3px 8px;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-}
-
 .ib-flow-body {
-  min-height: calc(100vh - 38px);
+  min-height: 100vh;
 }
 
 .ib-flow-topbar {

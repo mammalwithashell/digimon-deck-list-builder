@@ -42,35 +42,6 @@
   border-radius: 0;
 }
 
-.launcher-pill-live,
-.launcher-pill-offline {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border: 1px solid var(--line-2);
-}
-
-.launcher-pill-live {
-  color: var(--good);
-}
-
-.launcher-pill-offline {
-  color: var(--warn);
-}
-
-.launcher-pill-live::before,
-.launcher-pill-offline::before,
-.launcher-ok::before,
-.launcher-warn::before {
-  content: '';
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 6px currentColor;
-}
-
 .launcher-body-area {
   position: relative;
   display: grid;
@@ -251,14 +222,6 @@
   display: flex;
   align-items: center;
   gap: 14px;
-}
-
-.launcher-topbar .launcher-pill-live {
-  color: var(--good);
-}
-
-.launcher-topbar .launcher-pill-offline {
-  color: var(--warn);
 }
 
 .launcher-user {
@@ -625,7 +588,7 @@
   border-top: 1px solid var(--line);
   padding: 8px 24px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   font-family: var(--mono);
   font-size: 9px;
@@ -633,21 +596,6 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   background: var(--bg-1);
-}
-
-.launcher-ok,
-.launcher-warn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.launcher-ok {
-  color: var(--good);
-}
-
-.launcher-warn {
-  color: var(--warn);
 }
 
 .launcher-screen {

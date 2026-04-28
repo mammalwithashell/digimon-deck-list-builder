@@ -333,6 +333,13 @@
   font-weight: 800;
 }
 
+.library-actions button.secondary {
+  background: transparent;
+  color: var(--lib-text);
+  border-color: var(--lib-line-2);
+  font-weight: 500;
+}
+
 .library-toolbar {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto 150px;

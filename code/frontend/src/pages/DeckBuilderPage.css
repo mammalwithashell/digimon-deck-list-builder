@@ -470,6 +470,35 @@
   background: linear-gradient(160deg, var(--bld-bg-3), var(--bld-bg-2));
 }
 
+.deck-builder-page .bld-card-image,
+.deck-builder-app .bld-card-image {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.deck-builder-page .bld-card-image img,
+.deck-builder-app .bld-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+.deck-builder-page .bld-card-image span,
+.deck-builder-app .bld-card-image span {
+  max-width: 80%;
+  color: var(--bld-ink-2);
+  font-family: var(--bld-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .deck-builder-page .bld-preview-card .frame::after,
 .deck-builder-app .bld-preview-card .frame::after,
 .deck-builder-page .bld-card::after,
@@ -711,6 +740,17 @@
   outline: 1px solid var(--bld-ink-0);
   outline-offset: -1px;
   box-shadow: 0 0 0 1px var(--bld-ink-0), 0 0 14px rgba(255, 255, 255, 0.2);
+}
+
+.deck-builder-page .bld-card.cap-reached,
+.deck-builder-app .bld-card.cap-reached {
+  filter: grayscale(0.82);
+  opacity: 0.54;
+}
+
+.deck-builder-page .bld-card.cap-reached:hover,
+.deck-builder-app .bld-card.cap-reached:hover {
+  transform: none;
 }
 
 .deck-builder-page .bld-card.disabled,

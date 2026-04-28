@@ -22,17 +22,9 @@ export function InBetweenShell({
   children,
   rightSlot,
 }: InBetweenShellProps) {
+  void title;
   return (
     <div className="ib-flow-frame">
-      <div className="ib-flow-titlebar">
-        <div className="ib-flow-dots" aria-hidden="true">
-          <span className="r" />
-          <span className="y" />
-          <span className="g" />
-        </div>
-        <div className="ib-flow-window-title">THE AMPHITHEATER BETWIXT - {title}</div>
-        <span className="ib-flow-pill-live">CONNECTED</span>
-      </div>
       <div className="ib-flow-body">
         <div className="ib-flow-topbar">
           <nav className="ib-flow-crumb" aria-label="Play flow">

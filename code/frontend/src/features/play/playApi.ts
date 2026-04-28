@@ -72,15 +72,26 @@ export async function queueQuickMatch(params: {
 
 export async function createRoom(params: {
   formatId: PlayFormatId;
-  deck: DeckResponse;
 }): Promise<{ game_id: string; join_code: string }> {
   void params.formatId;
   return lobbyApi.createLobby({
-    deck: [...params.deck.egg_deck, ...params.deck.main_deck],
     is_public: false,
     allow_spectators: true,
     spectator_mode: 'hidden',
   });
+}
+
+export async function setRoomDeck(params: {
+  gameId: string;
+  deck: DeckResponse;
+}): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.setLobbyDeck(params.gameId, {
+    deck: [...params.deck.egg_deck, ...params.deck.main_deck],
+  });
+}
+
+export async function getRoomState(gameId: string): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.getLobbyState(gameId);
 }
 
 export async function createBotGame(params: {

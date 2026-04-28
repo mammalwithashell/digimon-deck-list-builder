@@ -55,11 +55,12 @@ test.describe('Desktop launcher', () => {
     });
   });
 
-  test('renders live server state and launcher actions', async ({ page }) => {
+  test('renders launcher actions without connection badges', async ({ page }) => {
     const launcherHeading = await openDesktopLauncher(page);
 
     await expect(launcherHeading).toBeVisible();
-    await expect(page.getByText('CONNECTED')).toBeVisible();
+    await expect(page.getByText('CONNECTED', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('OFFLINE', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /PRIMARY ACTION\s+PLAY/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /LIBRARY\s+MY DECKS/i })).toBeVisible();
     await expect(page.getByText('Launcher polish')).toBeVisible();

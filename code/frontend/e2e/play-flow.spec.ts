@@ -126,25 +126,50 @@ test.describe('In Between play flow', () => {
     await page.getByRole('button', { name: /EMBER VANGUARD/i }).click();
     await page.getByRole('button', { name: /USE THIS DECK/i }).click();
     await expect(page.getByRole('heading', { name: /SEARCHING\s+FOR AN OPPONENT/i })).toBeVisible();
+    await expect.poll(() => queuePayload).not.toBeNull();
     expect(queuePayload).toMatchObject({
       queue_type: 'casual',
       game_mode: 'standard',
     });
   });
 
-  test('creates a room from selected deck', async ({ page }) => {
+  test('creates a room immediately and locks a deck inside the room', async ({ page }) => {
     await mockDeckLibrary(page);
-    await page.route('**/lobby/create', (route) =>
-      route.fulfill({ json: { game_id: 'game-1', join_code: 'ABC123' } }),
-    );
+    let createPayload: Record<string, unknown> | null = null;
+    let deckPayload: Record<string, unknown> | null = null;
+    await page.route('**/lobby/create', (route) => {
+      createPayload = route.request().postDataJSON();
+      return route.fulfill({ json: { game_id: 'game-1', join_code: 'ABC123' } });
+    });
+    await page.route('**/lobby/game-1/deck', (route) => {
+      deckPayload = route.request().postDataJSON();
+      return route.fulfill({
+        json: {
+          game_id: 'game-1',
+          join_code: 'ABC123',
+          host_display_name: 'Guest-ABCD',
+          host_deck_ready: true,
+          joiner_deck_ready: false,
+          started: false,
+        },
+      });
+    });
     await page.goto('/play');
     await page.getByRole('button', { name: /ROOM MATCH/i }).click();
     await page.getByRole('button', { name: /STANDARD/i }).click();
     await page.getByRole('button', { name: /ENTER FORMAT/i }).click();
-    await page.getByRole('button', { name: /EMBER VANGUARD/i }).click();
-    await page.getByRole('button', { name: /USE THIS DECK/i }).click();
     await expect(page).toHaveURL(/\/play\/room\/new/);
     await expect(page.getByText('ABC123', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /EMBER VANGUARD/i })).toBeVisible();
+    expect(createPayload).toMatchObject({
+      is_public: false,
+      allow_spectators: true,
+      spectator_mode: 'hidden',
+    });
+    expect(createPayload).not.toHaveProperty('deck');
+    await expect.poll(() => deckPayload).not.toBeNull();
+    expect((deckPayload?.deck as string[]) ?? []).toContain('BT1-001');
+    expect((deckPayload?.deck as string[]) ?? []).toContain('BT1-002');
   });
 
   test('bot match starts local game route from deck selection', async ({ page }) => {

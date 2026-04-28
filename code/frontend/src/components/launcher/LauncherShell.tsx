@@ -20,6 +20,7 @@ export function LauncherShell({
   username,
   children,
 }: LauncherShellProps) {
+  void serverHealthy;
   return (
     <div className="launcher-screen">
       <div className="launcher-frame">
@@ -53,17 +54,11 @@ export function LauncherShell({
             <div className="launcher-topbar">
               <div><span>00</span><b> Launcher</b></div>
               <div className="launcher-topbar-meta">
-                <span className={serverHealthy ? 'launcher-pill-live' : 'launcher-pill-offline'}>
-                  {serverHealthy ? 'CONNECTED' : 'OFFLINE'}
-                </span>
                 <div className="launcher-user">Signed in as {username}</div>
               </div>
             </div>
             <div className="launcher-content">{children}</div>
             <div className="launcher-statusbar">
-              <span className={serverHealthy ? 'launcher-ok' : 'launcher-warn'}>
-                {serverHealthy ? 'SERVER OK' : 'SERVER OFFLINE'}
-              </span>
               <span>DESKTOP</span>
             </div>
           </main>

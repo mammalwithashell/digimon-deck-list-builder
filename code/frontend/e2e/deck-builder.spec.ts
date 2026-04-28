@@ -102,6 +102,15 @@ async function mockDeckBuilderRoutes(page: Page) {
     const cards = cardId ? apiCards.filter((card) => card.id === cardId) : apiCards;
     return route.fulfill({ json: cards });
   });
+  await page.route('https://images.digimoncard.io/**', (route) =>
+    route.fulfill({
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+        'base64',
+      ),
+    }),
+  );
 }
 
 test.describe('Deck Builder', () => {
@@ -116,6 +125,7 @@ test.describe('Deck Builder', () => {
     await expect(page.getByText('DECK CONTENTS')).toBeVisible();
     await expect(page.getByLabel('Deck name')).toHaveValue('New Deck');
     await expect(page.getByRole('button', { name: 'Gaomon BT1-001' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Gaomon BT1-001' }).locator('img[alt="Gaomon"]')).toBeVisible();
   });
 
   test('adds and removes a card from the deck with click and right-click', async ({ page }) => {
@@ -131,6 +141,28 @@ test.describe('Deck Builder', () => {
     await cardTile.click({ button: 'right' });
     await expect(cardTile.locator('.ct')).toHaveCount(0);
     await expect(deckPane.locator('.bld-section-head .ct')).toHaveText('0 / 50');
+  });
+
+  test('greys out a card when it reaches the copy cap', async ({ page }) => {
+    await page.goto('/deckbuilder/new');
+
+    const cardTile = page.getByRole('button', { name: 'Gaomon BT1-001' });
+    await cardTile.click();
+    await cardTile.click();
+    await cardTile.click();
+    await cardTile.click();
+
+    await expect(cardTile.locator('.ct')).toHaveText('MAX');
+    await expect(cardTile).toHaveClass(/cap-reached/);
+    await expect(page.locator('.bld-deck .bld-section-head .ct')).toHaveText('4 / 50');
+  });
+
+  test('offers home, library, and quit navigation', async ({ page }) => {
+    await page.goto('/deckbuilder/new');
+
+    await expect(page.getByRole('button', { name: 'HOME' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'LIBRARY' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'QUIT' })).toBeVisible();
   });
 
   test('saves a new deck and loads an existing saved deck', async ({ page }) => {

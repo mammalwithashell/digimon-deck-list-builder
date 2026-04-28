@@ -290,6 +290,7 @@ export function DeckLibraryPage() {
         </div>
         <div className="library-actions">
           {notice && <span className="library-live">{notice}</span>}
+          <button type="button" className="secondary" onClick={() => navigate('/')}>Home</button>
           <button type="button" onClick={() => navigate('/deckbuilder/new')}>New Deck</button>
         </div>
       </div>
@@ -373,6 +374,7 @@ export function DeckLibraryPage() {
               <p>Organize folders, inspect legality, pin tournament lists, and open the builder.</p>
             </div>
             <div className="library-hero-actions">
+              <Link to="/" className="library-command">Home</Link>
               <Link to="/deckbuilder/new" className="library-command primary">New Deck</Link>
               <Link to="/deckbuilder/new?import=1" className="library-command">Import</Link>
             </div>

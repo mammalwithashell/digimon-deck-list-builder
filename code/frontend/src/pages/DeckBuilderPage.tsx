@@ -5,6 +5,7 @@ import {
   getBuilderDeck,
   saveBuilderDeck,
 } from '@/features/deck-builder/deckBuilderAdapter';
+import { useCardImage } from '@/hooks/useCardImage';
 import {
   builderCardColorClass,
   deckEntriesToSlotArrays,
@@ -54,6 +55,25 @@ function uniqueCards(cards: DigimonCardData[]): DigimonCardData[] {
     seen.add(key);
     return true;
   });
+}
+
+function BuilderCardImage({
+  card,
+  className = '',
+}: {
+  card: DigimonCardData;
+  className?: string;
+}) {
+  const { src, isLoading, hasError } = useCardImage(card.cardnumber, card.isAltArt ?? false);
+  return (
+    <div className={`bld-card-image ${className}`}>
+      {!isLoading && !hasError && src ? (
+        <img src={src} alt={card.name} draggable={false} />
+      ) : (
+        <span>{isLoading ? 'LOADING ART' : card.name}</span>
+      )}
+    </div>
+  );
 }
 
 async function loadCardMap(cardIds: string[]): Promise<Map<string, DigimonCardData>> {
@@ -268,6 +288,9 @@ export function DeckBuilderPage() {
         <div className="bld">
           <header className="bld-top">
             <div className="left">
+              <button type="button" className="back" onClick={() => navigate('/')}>
+                HOME
+              </button>
               <button type="button" className="back" onClick={() => navigate('/deckbuilder')}>
                 LIBRARY
               </button>
@@ -316,6 +339,7 @@ export function DeckBuilderPage() {
               <button type="button" className="btn btn-opp" onClick={handleValidate}>VALIDATE</button>
               <button type="button" className="btn btn-ghost" onClick={() => setShowImport(true)}>IMPORT</button>
               <button type="button" className="btn btn-danger" onClick={handleClear}>CLEAR</button>
+              <button type="button" className="btn btn-ghost" onClick={() => navigate('/')}>QUIT</button>
             </div>
           </header>
 
@@ -397,6 +421,7 @@ export function DeckBuilderPage() {
                 <>
                   <div className="bld-preview-card">
                     <div className={`frame ${builderCardColorClass(previewCard)}`}>
+                      <BuilderCardImage card={previewCard} />
                       {previewCard.play_cost && <span className="cost">{previewCard.play_cost}</span>}
                       {previewCard.level && <span className="lvl">L{previewCard.level}</span>}
                       <span className="nm">{previewCard.name}</span>
@@ -425,25 +450,30 @@ export function DeckBuilderPage() {
               <div className="bld-pool-grid">
                 {visibleCards.map((card) => {
                   const count = cardCount([...mainDeck, ...eggDeck], card.cardnumber);
+                  const atCap = count >= 4;
                   return (
                     <button
                       type="button"
                       key={`${card.cardnumber}-${card.isAltArt ? 'alt' : 'base'}`}
                       aria-label={cardButtonName(card)}
-                      className={`bld-card ${builderCardColorClass(card)} ${count > 0 ? 'in-deck' : ''} ${previewCard?.cardnumber === card.cardnumber ? 'preview' : ''}`}
+                      aria-disabled={atCap}
+                      className={`bld-card ${builderCardColorClass(card)} ${count > 0 ? 'in-deck' : ''} ${atCap ? 'cap-reached' : ''} ${previewCard?.cardnumber === card.cardnumber ? 'preview' : ''}`}
                       onMouseEnter={() => setPreviewCard(card)}
                       onFocus={() => setPreviewCard(card)}
-                      onClick={() => addCardToDeck(card.cardnumber, card, card.isAltArt ?? false)}
+                      onClick={() => {
+                        if (!atCap) addCardToDeck(card.cardnumber, card, card.isAltArt ?? false);
+                      }}
                       onContextMenu={(event) => {
                         event.preventDefault();
                         removeCardFromDeck(card.cardnumber, card.isAltArt ?? false);
                       }}
                     >
+                      <BuilderCardImage card={card} />
                       {card.play_cost && <span className="cost">{card.play_cost}</span>}
                       {card.level && <span className="lvl">L{card.level}</span>}
                       <span className="nm">{card.name}</span>
                       <span className="id">{card.cardnumber}</span>
-                      {count > 0 && <span className="ct">x{count}</span>}
+                      {count > 0 && <span className="ct">{atCap ? 'MAX' : `x${count}`}</span>}
                     </button>
                   );
                 })}
@@ -468,19 +498,22 @@ export function DeckBuilderPage() {
                     {visibleSections.map((section) => (
                       <div key={section.label} className="bld-subsection">
                         <div className="bld-subsection-head">{section.label} <span>{section.total}</span></div>
-                        {section.entries.map((entry) => (
-                          <div key={`${entry.cardId}-${entry.isAltArt ? 'alt' : 'base'}`} className="bld-row" onMouseEnter={() => entry.cardData && setPreviewCard(entry.cardData)}>
-                            <span className="ct">x{entry.count}</span>
-                            <span className={`swatch ${builderCardColorClass(entry.cardData)}`} />
-                            <div className="nm">{entry.cardData?.name ?? entry.cardId}<small>{entry.cardId} · {entry.cardData?.type?.toUpperCase() ?? 'CARD'}</small></div>
-                            <span className="cost">{entry.cardData?.play_cost ? `C${entry.cardData.play_cost}` : '-'}</span>
-                            <span className="lvl">{entry.cardData?.level ? `L${entry.cardData.level}` : entry.cardData?.type === 'Option' ? 'OPT' : 'TMR'}</span>
-                            <div className="actions">
-                              <button type="button" onClick={() => removeCardFromDeck(entry.cardId, entry.isAltArt)}>-</button>
-                              <button type="button" onClick={() => entry.cardData && addCardToDeck(entry.cardId, entry.cardData, entry.isAltArt)}>+</button>
+                        {section.entries.map((entry) => {
+                          const totalCount = cardCount([...mainDeck, ...eggDeck], entry.cardId);
+                          return (
+                            <div key={`${entry.cardId}-${entry.isAltArt ? 'alt' : 'base'}`} className="bld-row" onMouseEnter={() => entry.cardData && setPreviewCard(entry.cardData)}>
+                              <span className="ct">x{entry.count}</span>
+                              <span className={`swatch ${builderCardColorClass(entry.cardData)}`} />
+                              <div className="nm">{entry.cardData?.name ?? entry.cardId}<small>{entry.cardId} · {entry.cardData?.type?.toUpperCase() ?? 'CARD'}</small></div>
+                              <span className="cost">{entry.cardData?.play_cost ? `C${entry.cardData.play_cost}` : '-'}</span>
+                              <span className="lvl">{entry.cardData?.level ? `L${entry.cardData.level}` : entry.cardData?.type === 'Option' ? 'OPT' : 'TMR'}</span>
+                              <div className="actions">
+                                <button type="button" onClick={() => removeCardFromDeck(entry.cardId, entry.isAltArt)}>-</button>
+                                <button type="button" disabled={totalCount >= 4} onClick={() => entry.cardData && addCardToDeck(entry.cardId, entry.cardData, entry.isAltArt)}>+</button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ))}
                     {activeCards.length === 0 && <div className="bld-empty">EMPTY</div>}
