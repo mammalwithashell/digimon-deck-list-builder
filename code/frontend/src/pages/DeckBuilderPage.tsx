@@ -36,6 +36,8 @@ export function DeckBuilderPage() {
   const { id: routeDeckId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const params = new URLSearchParams(location.search);
+  const returnToPlay = params.get('returnTo') === 'play';
   const {
     deckName,
     setDeckName,
@@ -60,7 +62,7 @@ export function DeckBuilderPage() {
     const params = new URLSearchParams(location.search);
     if (location.pathname.endsWith('/new') || params.get('new') === '1') {
       clearDeck();
-      setShowImport(false);
+      setShowImport(params.get('import') === '1');
     } else if (params.get('import') === '1') {
       setShowImport(true);
     }
@@ -140,7 +142,11 @@ export function DeckBuilderPage() {
           egg_deck_alt_arts: eggAlts,
         });
         setDeckId(saved.id);
-        if (!routeDeckId) navigate(`/deckbuilder/${saved.id}`, { replace: true });
+        if (returnToPlay) {
+          navigate('/play/deck', { replace: true });
+        } else if (!routeDeckId) {
+          navigate(`/deckbuilder/${saved.id}`, { replace: true });
+        }
       } else if (deckId) {
         await deckApi.updateDeck(deckId, {
           name: deckName,
@@ -159,7 +165,7 @@ export function DeckBuilderPage() {
           game_mode: 'standard',
         });
         setDeckId(created.id);
-        navigate(`/deckbuilder/${created.id}`, { replace: true });
+        navigate(returnToPlay ? '/play/deck' : `/deckbuilder/${created.id}`, { replace: true });
       }
       setIsDirty(false);
     } catch {
@@ -210,6 +216,14 @@ export function DeckBuilderPage() {
         >
           Import/Export
         </button>
+        {returnToPlay && (
+          <button
+            onClick={() => navigate('/play/deck')}
+            className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white text-sm rounded"
+          >
+            Back to Play
+          </button>
+        )}
       </div>
 
       {/* Main content */}

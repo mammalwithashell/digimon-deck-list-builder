@@ -57,18 +57,26 @@ test.describe('Deck Library', () => {
 
     await page.addInitScript(() => {
       localStorage.setItem('access_token', 'test-token');
+      localStorage.setItem('guest_access_token', 'test-token');
+      localStorage.setItem('guest_user_id', 'u1');
+      localStorage.setItem('guest_display_name', 'tester');
     });
-    await page.route('**/api/users/me', (route) =>
+    await page.route('**/auth/guest', (route) =>
+      route.fulfill({
+        json: { access_token: 'test-token', user_id: 'u1', display_name: 'tester' },
+      }),
+    );
+    await page.route('**/users/me', (route) =>
       route.fulfill({
         json: { id: 'u1', username: 'tester', email: 't@example.com', roles: [] },
       }),
     );
-    await page.route('**/api/decks/folders', (route) => route.fulfill({ json: folders }));
-    await page.route('**/api/decks', (route) => {
+    await page.route('**/decks/folders', (route) => route.fulfill({ json: folders }));
+    await page.route('**/decks', (route) => {
       if (route.request().method() === 'GET') return route.fulfill({ json: decks });
       return route.fallback();
     });
-    await page.route('**/api/decks/deck-1', (route) =>
+    await page.route('**/decks/deck-1', (route) =>
       route.fulfill({
         json: {
           ...decks[0],
@@ -82,7 +90,7 @@ test.describe('Deck Library', () => {
         },
       }),
     );
-    await page.route('**/api/decks/deck-2', (route) =>
+    await page.route('**/decks/deck-2', (route) =>
       route.fulfill({
         json: {
           ...decks[1],
@@ -96,7 +104,7 @@ test.describe('Deck Library', () => {
         },
       }),
     );
-    await page.route('**/api/decks/*/library', async (route) => {
+    await page.route('**/decks/*/library', async (route) => {
       const id = route.request().url().match(/\/decks\/([^/]+)\/library/)?.[1];
       const body = route.request().postDataJSON() as { is_pinned?: boolean };
       decks = decks.map((deck) =>
@@ -132,6 +140,17 @@ test.describe('Deck Library', () => {
         ],
       }),
     );
+
+    await page.goto('/deckbuilder');
+    await expect(page.getByRole('heading', { name: 'DECK LIBRARY' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /New Deck/i })).toBeVisible();
+    await page.getByRole('link', { name: /New Deck/i }).click();
+    await expect(page).toHaveURL(/\/deckbuilder\/new/);
+
+    await page.goto('/deckbuilder');
+    await page.getByRole('link', { name: /Import/i }).click();
+    await expect(page).toHaveURL(/\/deckbuilder\/new\?import=1/);
+    await expect(page.getByText('Import / Export Deck')).toBeVisible();
 
     await page.goto('/deckbuilder');
     await expect(page.getByRole('heading', { name: 'Blue Flare' })).toBeVisible();

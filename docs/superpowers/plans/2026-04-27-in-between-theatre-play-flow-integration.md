@@ -2405,7 +2405,7 @@ git commit -m "feat: launch games from in between deck select"
 - Modify: `code/frontend/src/pages/DeckBuilderPage.tsx`
 - Modify: `code/frontend/e2e/deck-library.spec.ts`
 
-- [ ] **Step 1: Add deck library e2e for new mock affordances**
+- [x] **Step 1: Add deck library e2e for new mock affordances**
 
 Extend `code/frontend/e2e/deck-library.spec.ts`:
 
@@ -2416,7 +2416,7 @@ await page.getByRole('link', { name: /New Deck/i }).click();
 await expect(page).toHaveURL(/\/deckbuilder\/new/);
 ```
 
-- [ ] **Step 2: Run e2e and verify it fails if affordances are missing**
+- [x] **Step 2: Run e2e and verify it fails if affordances are missing**
 
 Run:
 
@@ -2427,7 +2427,7 @@ npm run e2e -- deck-library.spec.ts
 
 Expected: fail if `New Deck` is a button without route navigation or if heading text differs.
 
-- [ ] **Step 3: Add library header and action links**
+- [x] **Step 3: Add library header and action links**
 
 In `code/frontend/src/pages/DeckLibraryPage.tsx`, add a top action area before the filter controls:
 
@@ -2451,7 +2451,7 @@ Add import:
 import { Link } from 'react-router-dom';
 ```
 
-- [ ] **Step 4: Add library CSS**
+- [x] **Step 4: Add library CSS**
 
 In `code/frontend/src/pages/DeckLibraryPage.css`, add:
 
@@ -2503,7 +2503,9 @@ In `code/frontend/src/pages/DeckLibraryPage.css`, add:
 }
 ```
 
-- [ ] **Step 5: Run e2e and commit**
+Implemented note: the deck library e2e also caches/mocks the desktop guest session for `/deckbuilder`, broadens deck API route globs for desktop-mode hosted API bases, and verifies `/deckbuilder/new?import=1` opens the import affordance. `DeckBuilderPage` now honors `?import=1` on the new-deck route and shows a `Back to Play` affordance for `returnTo=play`.
+
+- [x] **Step 5: Run e2e and commit**
 
 Run:
 

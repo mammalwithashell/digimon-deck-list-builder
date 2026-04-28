@@ -282,6 +282,57 @@
   border-color: rgba(255, 91, 91, 0.55);
 }
 
+.library-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--lib-line);
+  background: rgba(12, 15, 21, 0.76);
+}
+
+.library-kicker {
+  color: #ffb05a;
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+}
+
+.library-hero h1 {
+  margin: 4px 0;
+  color: var(--lib-text);
+  letter-spacing: 0;
+}
+
+.library-hero p {
+  margin: 0;
+  color: rgba(245, 241, 232, 0.62);
+}
+
+.library-hero-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.library-command {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--lib-text);
+  text-decoration: none;
+  padding: 10px 12px;
+  font-family: "JetBrains Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+.library-command.primary {
+  background: var(--lib-accent);
+  border-color: var(--lib-accent);
+  color: #090604;
+  font-weight: 800;
+}
+
 .library-toolbar {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto 150px;
@@ -691,6 +742,7 @@
 
   .library-topbar,
   .library-shell,
+  .library-hero,
   .library-toolbar,
   .library-banner {
     display: block;
@@ -712,6 +764,10 @@
 
   .library-banner > .library-sleeve {
     margin-bottom: 12px;
+  }
+
+  .library-hero-actions {
+    margin-top: 12px;
   }
 
   .library-banner-actions {
