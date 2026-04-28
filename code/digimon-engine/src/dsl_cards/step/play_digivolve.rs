@@ -130,10 +130,20 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
 
         // ── Play primitives (security / materials) ────────────────────────
         CompiledStep::PlayFromSecurity => {
-            // Operates on the controller (effect owner), per the IR's
-            // zero-field shape. Distinct from `play_pending_security`,
-            // which handles the security-skill replay path.
-            let _ = ctx.play_from_security(ctx.player);
+            // Dispatch depends on context:
+            //   - Security-skill timing: the card was already popped from the
+            //     security zone by the combat loop and parked in
+            //     `Game::pending_security`. Use `play_pending_security()` to
+            //     mark the `played` bit so it doesn't get trashed after the
+            //     check (BT21-015, BT5-093, BT9-092, BT22-084, etc.).
+            //   - All other timings (e.g. "[When Digivolving] play 1 card from
+            //     security"): use `play_from_security(player)` which pops
+            //     from the live security zone.
+            if ctx.game.pending_security.is_some() {
+                ctx.play_pending_security();
+            } else {
+                let _ = ctx.play_from_security(ctx.player);
+            }
             true
         }
         CompiledStep::PlayFromMaterials {

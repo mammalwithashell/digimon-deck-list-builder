@@ -33,7 +33,10 @@ use crate::selection::{PendingSelection, PendingSelectionView, SelectionError, S
 #[cfg(feature = "dsl-yaml-loader")]
 use crate::dsl_cards::DslCardEffect;
 #[cfg(feature = "dsl-yaml-loader")]
-use digimon_dsl::compiled::{CompiledCard, CompiledCardKind, CompiledClause, CompiledColor};
+use digimon_dsl::compiled::{
+    CompiledCard, CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause,
+    CompiledScope,
+};
 
 /// A scripted game runner for behavioral tests.
 pub struct DebugRunner {
@@ -648,6 +651,25 @@ fn embedded_dsl_registry() -> Result<&'static digimon_dsl::CardRegistry, String>
 
 #[cfg(feature = "dsl-yaml-loader")]
 fn card_data_from_compiled(card: &CompiledCard) -> CardData {
+    // Populate native printed keywords from DSL `grant_keyword` FaceUp clauses.
+    // This mirrors the "printed on the card's face" path in `Game::has_keyword`.
+    // Inherited-scope grants (scope: Inherited) are intentionally excluded here
+    // — they are only active when this card is in a digivolution stack, and
+    // `Game::has_keyword` checks `card_sources` for inherited grants separately.
+    let keywords: Vec<crate::enums::Keyword> = card
+        .effects
+        .iter()
+        .filter_map(|clause| match clause {
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
+                keyword,
+                value,
+                scope: CompiledScope::FaceUp,
+                ..
+            }) => crate::dsl_cards::modifier_map::lookup_keyword(keyword, *value),
+            _ => None,
+        })
+        .collect();
+
     CardData {
         card_id: card.card.clone(),
         card_name: card.name.clone(),
@@ -676,7 +698,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         effect_class_name: card.card.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
-        keywords: Vec::new(),
+        keywords,
     }
 }
 

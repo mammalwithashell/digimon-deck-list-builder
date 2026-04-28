@@ -42,3 +42,38 @@ Format per entry:
 - Suggested DSL syntax: `when: [on_move, on_play]` (new `on_move` token in the DSL `when` enum).
 - Gap kind: hybrid (this entry tracks the DSL half; engine half tracked separately).
 - First reported: 2026-04-27 (EX11-008 batch-implement-cards-rust-dsl)
+
+---
+
+## BT21-025 — `attacker_trait_has` predicate on `on_attack_target_change` clauses  [G-ATK-TRAIT-FILTER]
+- Effect text: "[Your Turn][Once Per Turn] When any of your [Reptile] or [Dragonkin] trait Digimon's attack targets change, trash your opponent's top security card."
+- Missing DSL verb / step kind / predicate: `attacker_trait_has` (and likely `attacker_owner_is_you`) predicates to gate `on_attack_target_change` clauses by the attacking permanent's traits/owner.
+- Lowers to engine API: `TriggerContext` already carries `source_permanent` for `PlayerBattleArea` triggers; a predicate could inspect `ctx.trigger_context.source_permanent.traits()`. No new engine API needed.
+- Suggested DSL syntax:
+  ```yaml
+  condition:
+    attacker_trait_has: Reptile
+    # or any_of: [{ attacker_trait_has: Reptile }, { attacker_trait_has: Dragonkin }]
+  ```
+- Workaround used: `any_permanent` filter over your battle area with `trait_has: Reptile/Dragonkin` — necessary but not sufficient (over-fires when a non-matching attacker switches target while a matching ally is on board).
+- First reported: 2026-04-27 (BT21-025 batch-implement-cards-rust-dsl)
+
+---
+
+## BT24-016 — `condition:` field on `AltPathSpec` (alt-digivolve activation gates)  [G-ALT-PATH-CONDITION]
+- Effect text: "[Hand] [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon] from your trash as any of your [Elizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
+- Missing DSL verb / step kind / predicate: `AltPathSpec` (in `digimon-dsl`) has `#[serde(deny_unknown_fields)]` and no `condition:` field. The "If you have [Owen Dreadnought]" gate cannot be expressed; the activated alt-path becomes available whenever the source filter (Elizamon on field) plus the extra_cost (Dimetromon in trash) are satisfied, regardless of Owen presence.
+- Lowers to engine API: The activated-digivolve activation check already evaluates predicates via the standard `PredicateSpec` path; the gap is that `AltPathSpec` doesn't carry an extra activation predicate.
+- Suggested DSL syntax: add `condition: Option<PredicateSpec>` to `AltPathSpec` (evaluated on top of the existing source-filter / extra-cost gates).
+  ```yaml
+  alt_paths:
+    - kind: activated_digivolve
+      condition:
+        all_of:
+          - exists: { of: you, zone: [battle_area], kind: tamer, name_contains: "Owen Dreadnought" }
+      from: { name_contains: "Elizamon" }
+      cost: 3
+      ignore_requirements: true
+      extra_cost: ...
+  ```
+- First reported: 2026-04-27 (BT24-016 batch-implement-cards-rust-dsl)

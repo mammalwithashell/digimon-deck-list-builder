@@ -53,6 +53,58 @@
       "test_count": 16,
       "patterns": ["E1", "H9"],
       "notes": "OnPlay grant-Raid+3000-DP implemented and tested with end-of-turn expiry (15 active tests). [When Moving] timing dropped pending G-ON-MOVE engine gap. Inherited OPT lockout test ignored pending G-OPT-TRIGGERED."
+    },
+    "BT21-025": {
+      "card_name": "Lamiamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_025.rs",
+      "test_count": 13,
+      "patterns": ["H_PROGRESS"],
+      "notes": "Progress keyword + own [Your Turn][OPT] OnAttackTargetChanged trash-top-security shipped. Inherited [All Turns][OPT] OnLoseSecurity blocked by G-INHERITED-DISPATCH. New gap: G-ATK-TRAIT-FILTER (attacker_trait_has predicate). 8 active, 5 ignored."
+    },
+    "BT24-016": {
+      "card_name": "Lamiamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-016.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_016.rs",
+      "test_count": 14,
+      "patterns": ["G2", "C-ALT-DIGI"],
+      "notes": "Standard alt-digivolve + activated alt-digivolve from Elizamon with Dimetromon extra-cost shipped (Owen Dreadnought gate not enforceable: G-ALT-PATH-CONDITION). When-Digivolving/When-Attacking OPT clause shipped structurally; behavior blocked by G-OPT-TRIGGERED. Inherited All-Turns OPT clause shipped structurally; behavior blocked by G-INHERITED-DISPATCH. 8 structural, 6 ignored."
+    },
+    "BT21-015": {
+      "card_name": "Cyclonemon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-015.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_015.rs",
+      "test_count": 16,
+      "patterns": ["F-PLAY-FROM-SEC", "D-DELETE-DP-LTE", "D4"],
+      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete ≤4000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
+    },
+    "BT24-011": {
+      "card_name": "Cyclonemon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-011.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_011.rs",
+      "test_count": 15,
+      "patterns": ["H1-RUSH", "H9-RAID", "H9-INHERITED-RAID", "C-ALT-DIGI"],
+      "notes": "Alt-digi from any Lv3 TS at cost 2 + own Rush + own Raid + inherited Raid all ship. Engine fixes landed in src/debug_runner.rs (populate CardData.keywords from declarative GrantKeyword clauses) and src/game.rs (has_keyword scans card_sources for inherited grant_keyword effects). 15/15 passing."
     }
   }
 }

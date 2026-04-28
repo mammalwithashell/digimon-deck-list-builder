@@ -1268,7 +1268,41 @@ impl Game {
         let top = perm.top_card();
         // `data_index` is a direct Vec index — O(1), no iteration needed.
         let card_data = &self.card_data[top.data_index];
-        card_data.keywords.contains(&keyword)
+        if card_data.keywords.contains(&keyword) {
+            return true;
+        }
+        // Inherited keyword grants from digivolution sources. Walk the
+        // card_sources stack and check each source card's effect list for a
+        // declarative + inherited GrantKeyword effect that matches `keyword`.
+        //
+        // Convention: DSL `lower_grant_keyword` names these effects
+        // `"Grant <KeywordName>"` (e.g. `"Grant Raid"`). Hand-authored
+        // inherited keyword-grant effects should follow the same naming
+        // convention so this query detects them. This is an intentional
+        // internal coupling within the engine's DSL lowering pipeline.
+        //
+        // Why not run the process closure? Process closures are mutable and
+        // `has_keyword` takes `&self`. The name-match is the lightest
+        // side-effect-free probe available without adding a separate
+        // `granted_keyword` field to `Effect`.
+        let kw_name = format!("{keyword:?}");
+        let grant_name = format!("Grant {kw_name}");
+        let source_ids: Vec<(String, crate::card_source::CardHandle)> = perm
+            .card_sources
+            .iter()
+            .map(|s| (s.card_id(&self.card_data).to_string(), s.handle()))
+            .collect();
+        for (src_id, src_handle) in source_ids {
+            let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
+                continue;
+            };
+            for effect in &effects {
+                if effect.declarative && effect.inherited && effect.name == grant_name {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// Returns the `PermanentHandle` of the currently-attacking permanent,
