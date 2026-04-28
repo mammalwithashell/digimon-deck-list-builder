@@ -157,6 +157,85 @@ fn bt5_008_opp_cannot_reduce_digivolve_cost(_handle: crate::card_source::CardHan
     vec![]
 }
 
+/// P-137 Flamedramon — [Your Turn][OPT] opponent adds their top security to hand.
+///
+/// Printed effect: "[Your Turn][Once Per Turn] When this Digimon's attack target
+/// is switched, your opponent adds the top card of their security stack to the hand."
+///
+/// DCGO analysis (P_137.cs EffectTiming.OnAttackTargetChanged):
+///   - `CardObjectController.AddHandCards` — moves the top security card to the
+///     opponent's hand.
+///   - `IReduceSecurity.ReduceSecurity` — fires the security-loss event chain
+///     (OnLoseSecurity for the defender, OnOpponentSecurityRemoved for the attacker).
+///
+/// This function is the `raw_rust:` bridge pending resolution of the hybrid gap
+/// [G-ADD-TOP-SECURITY-TO-HAND]:
+///
+/// **DSL gap**: No `add_top_security_to_hand` verb exists in `digimon-dsl/src/step.rs`.
+///   The only security-removal verb is `trash_top_security` (moves to trash).
+///   `add_top_security_to_hand` would lower to a new `EffectContext` method that
+///   moves the card to the owner's hand instead of trash.
+///
+/// **Engine gap**: `EffectContext` has no `add_top_security_to_hand` method.
+///   The closest is `trash_top_security` which routes through the WhenWouldBeTrashed
+///   replacement chain and fires zone-transfer events to trash. The hand-transfer
+///   variant needs the same `IReduceSecurity`-equivalent event firing but to hand.
+///
+/// Implementation strategy here:
+///   1. Pop the top security card from the opponent's security stack.
+///   2. Push it to the opponent's hand.
+///   3. Fire `OnLoseSecurity` from the defender's security-revealed context so
+///      observer cards (e.g., BT21-001 Gigimon) see the security loss.
+///   4. Fire `OnOpponentSecurityRemoved` from the controller's battle area so
+///      archetype observers (e.g., BT21-008 Elizamon) see the opponent's loss.
+///
+/// When [G-ADD-TOP-SECURITY-TO-HAND] is closed, replace the raw_rust step in
+/// `P-137.yaml` with the native DSL verb and remove this function.
+///
+/// Tracked under [G-ADD-TOP-SECURITY-TO-HAND] in qa/dsl-vocab-gaps.md and
+/// qa/archetype-qa/engine-gaps.md.
+fn p_137_opp_adds_top_security_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    use crate::enums::EffectTiming;
+    use crate::selection::TriggerSource;
+
+    let opponent = ctx.opponent_id();
+
+    // No-op if opponent has no security.
+    if ctx.game.player(opponent).security.is_empty() {
+        return;
+    }
+
+    // Pop the top security card (security is stored front=bottom, back=top;
+    // `pop()` removes from the back = the top of the stack).
+    let card = match ctx.game.player_mut(opponent).security.pop() {
+        Some(c) => c,
+        None => return,
+    };
+    let card_handle = card.handle();
+
+    // Move the card to the opponent's hand.
+    ctx.game.player_mut(opponent).hand.push(card);
+
+    // Fire OnLoseSecurity so cards watching the defender's security loss can react.
+    // Use SecurityRevealed trigger source to mirror the normal security-loss path.
+    ctx.game.enqueue_triggered(
+        EffectTiming::OnLoseSecurity,
+        TriggerSource::SecurityRevealed {
+            defender: opponent,
+            card: card_handle,
+        },
+    );
+    ctx.game.drain_effect_queue();
+
+    // Fire OnOpponentSecurityRemoved so the controller's archetype observers react.
+    let controller = ctx.player;
+    ctx.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::PlayerBattleArea(controller),
+    );
+    ctx.game.drain_effect_queue();
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
@@ -164,6 +243,7 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_declarative("bt24_012_would_leave_replacement", bt24_012_would_leave_replacement);
     r.register_step("bt16_082_on_move_noop", bt16_082_on_move_noop);
     r.register_declarative("bt5_008_opp_cannot_reduce_digivolve_cost", bt5_008_opp_cannot_reduce_digivolve_cost);
+    r.register_step("p_137_opp_adds_top_security_to_hand", p_137_opp_adds_top_security_to_hand);
     r
 }
 

@@ -256,6 +256,23 @@ Last updated: 2026-03-17
   The simplest v1 fix is to call a new `Game::run_declarative_effects()` method at the end of `fire_on_play`, `end_turn`, and `begin_turn` — these are the natural state-change boundaries where auras need to be recomputed.
 - **Workaround:** Structural tests pass (compile-time verification only). All behavioral tests for filtered aura and grant_keyword modifier installation are `#[ignore]`'d with this gap tag.
 
+### `EffectContext::add_top_security_to_hand` Missing (engine half of G-ADD-TOP-SECURITY-TO-HAND)
+- **Discovered in:** Medusamon Batch 8, P-137 Flamedramon DSL implementation (2026-04-27)
+- **Card(s):** P-137 Flamedramon — "[Your Turn][Once Per Turn] When this Digimon's attack target is switched, your opponent adds the top card of their security stack to the hand."
+- **Effect text:** "opponent adds the top card of their security stack to the hand"
+- **What's missing:** `EffectContext` only exposes `trash_top_security(player)` for security removal. There is no `add_top_security_to_hand(player)` method that pops the top security card and places it in the player's hand while firing the standard security-removed event chain (`OnLoseSecurity` via `SecurityRevealed` + `OnOpponentSecurityRemoved` via `PlayerBattleArea`).
+- **Suggested change:** Add `pub fn add_top_security_to_hand(&mut self, player: PlayerId) -> bool` to `EffectContext`. Implementation: pop `security.last()`, push to `hand`, fire `EffectTiming::OnLoseSecurity` with `TriggerSource::SecurityRevealed { defender: player, card: card_handle }` and `EffectTiming::OnOpponentSecurityRemoved` with `TriggerSource::PlayerBattleArea(controller)`.
+- **Workaround:** `raw_rust: { fn: p_137_opp_adds_top_security_to_hand }` — manually implements the move + event chain in `src/cards/raw_rust/mod.rs`.
+
+### Outer-Tail Steps Lost When Inner `select_hand` Has No Candidates  [G-SELECT-EMPTY-OUTER-TAIL]
+- **Discovered in:** Medusamon Batch 8, BT21-024 Cyberdramon side-fix (2026-04-27)
+- **Card(s):** BT21-024 Cyberdramon — opponent places hand card as bottom security, then top security trashed.
+- **Effect text:** "they place 1 card from their hand as the bottom security card. Then, trash their top security card."
+- **What's missing:** When `select_hand` is called inside an `as_selecting_player` body and there are no valid candidates (empty hand), `install_select_hand` returns early without installing a `PendingSelection`. `try_install` still returns `true` (the variant was matched), so `run_steps` returns `RunOutcome::Parked`. `as_selecting_player` propagates `Parked`, and `park_outer_tail` parks subsequent sibling steps in `dsl_outer_tail`. Since no selection was ever installed, the selection callback never fires, and `drain_dsl_outer_tail` is never called — outer-tail steps are permanently lost.
+- **Affected pattern:** Any YAML where `as_selecting_player { body: [select_hand, ...] }` is followed by sibling steps, and the opponent may have an empty hand. The sibling steps after `as_selecting_player` are silently skipped in the empty-hand scenario.
+- **Suggested change:** When `install_select_hand` detects `valid_action_ids.is_empty()` and `optional=true`, it should run the callback synchronously with a sentinel `NO_SELECTION` index (or call `drain_dsl_outer_tail` directly) rather than just returning. For `optional=false` with an empty hand, the current silent-skip behavior may be acceptable — but `drain_dsl_outer_tail` should still fire.
+- **Workaround:** Move subsequent steps that must fire unconditionally INSIDE the `as_selecting_player` body (at the cost of tying them to the selection resolution). Steps after the body that require unconditional execution in the empty-hand case cannot be expressed in the current DSL. The BT21-024 empty-hand test is `#[ignore]`'d with this gap tag.
+
 <!-- Entry template:
 ### {Gap Title}
 - **Discovered in:** {archetype name} ({date})

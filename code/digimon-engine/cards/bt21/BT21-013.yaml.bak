@@ -1,0 +1,155 @@
+card: BT21-013
+name: Agunimon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Wizard, Hero]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 2
+
+# ─── Clause 1: [When Digivolving] optional ───────────────────────────────────
+#
+# "You may place 1 [Hybrid] or [Hero] trait Digimon card from your hand or
+#  trash as this Digimon's bottom digivolution card or under any of your
+#  red Tamers with inherited effects."
+#
+# DCGO BT21_013.cs analysis (OnEnterFieldAnyone timing):
+#   - CanSelectPermanent: permanent == card.PermanentOfThisCard()  (self)
+#                      OR permanent.IsTamer && CardColors.Contains(Red) && HasInheritedEffect
+#   - CanSelectSourceCard: IsDigimon && (EqualsTraits("Hybrid") || EqualsTraits("Hero"))
+#   - If both hand and trash have eligible cards → present "From hand" / "From trash"
+#     EffectChoice; otherwise auto-resolve to the available zone.
+#   - canNoSelect: true on both SelectPermanentEffect and on SelectCardEffect from trash
+#     → the whole clause is optional (isOptional=true in SetUpActivateClass).
+#
+# DSL modelling:
+#   - when: when_digivolving, optional: true
+#   - Step 1: select_own_permanent — filter is self (card_number_is BT21-013) OR
+#     a red Tamer with inherited effects.
+#   - Step 2: select_effect_choice "From hand" / "From trash" (mirroring DCGO hand/trash
+#     branch, optional so player can decline even after choosing a destination).
+#   - Step 3 (if branch=0): select_hand filter Hybrid OR Hero Digimon → place_as_bottom_source
+#   - Step 4 (if branch=1): select_trash filter Hybrid OR Hero Digimon → place_as_bottom_source
+#
+# NOTE on filter for permanent selection:
+#   `card_number_is: "BT21-013"` matches the permanent whose top card IS Agunimon —
+#   i.e. the Agunimon permanent itself. This correctly captures "self" without requiring
+#   an `is_source_permanent` predicate (which doesn't exist in the DSL).
+#   An alternative with `other: false` alone would admit ALL permanents you control, which
+#   is too broad. The `any_of` approach precisely replicates DCGO's CanSelectPermanent.
+
+# ─── Clause 2: [When Attacking] optional ─────────────────────────────────────
+#
+# "This Digimon may digivolve into a red [Hybrid] or [Hero] trait Digimon card
+#  in the hand with the digivolution cost reduced by 1."
+#
+# DCGO BT21_013.cs analysis (OnAllyAttack timing):
+#   - CanActivateCondition: HasMatchConditionOwnersHand with CanSelectCard
+#   - CanSelectCard: IsDigimon && (EqualsTraits("Hybrid") || EqualsTraits("Hero"))
+#                  && HasCardColor(Red)
+#   - ActivateCoroutine: DigivolveIntoHandOrTrashCard(
+#       targetPermanent: card.PermanentOfThisCard(),
+#       cardCondition: CanSelectCard,
+#       payCost: true,
+#       reduceCostTuple: (reduceCost: 1, reduceCostCardCondition: null),
+#       isHand: true)
+#   - isOptional=true → "you may"
+#
+# DSL modelling:
+#   - when: when_attacking, optional: true
+#   - select_hand: filter red Hybrid-or-Hero Digimon
+#   - effect_initiated_digivolve: target self, from_hand: pick, cost: { reduce: 1 },
+#     ignore_requirements: false
+#   Proven pattern from BT21-001 (cost: { reduce: 1 }, scope own).
+
+# ─── Clause 3: Inherited [Your Turn] +2000 DP ────────────────────────────────
+#
+# Declarative self-aura, scope: inherited, active_when: your_turn.
+# Identical pattern to BT23-005 and BT21-015.
+
+effects:
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] You may place 1 [Hybrid]/[Hero] Digimon from hand or trash as bottom source under self or a red Tamer with inherited effects"
+    process:
+      - select_own_permanent:
+          bind_as: dest
+          optional: true
+          filter:
+            any_of:
+              - card_number_is: "BT21-013"
+              - all_of:
+                  - kind: tamer
+                  - color_is: red
+                  - has_inherited: {}
+          prompt: "Choose a destination: this Digimon or a red Tamer with inherited effects"
+      - select_effect_choice:
+          bind_as: zone_choice
+          labels:
+            - "From hand"
+            - "From trash"
+          prompt: "Select a [Hybrid] or [Hero] Digimon from which area?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: source_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Hybrid
+                        - trait_has: Hero
+                prompt: "Choose a [Hybrid] or [Hero] Digimon from hand"
+            - place_as_bottom_source:
+                source: source_card
+                target: dest
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: source_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Hybrid
+                        - trait_has: Hero
+                prompt: "Choose a [Hybrid] or [Hero] Digimon from trash"
+            - place_as_bottom_source:
+                source: source_card
+                target: dest
+
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] This Digimon may digivolve into a red [Hybrid]/[Hero] Digimon in hand, cost -1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: red
+              - any_of:
+                  - trait_has: Hybrid
+                  - trait_has: Hero
+          prompt: "Choose a red [Hybrid] or [Hero] Digimon to digivolve into"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

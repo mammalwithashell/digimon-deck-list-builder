@@ -1,12 +1,12 @@
 # Archetype DSL Implementation: Medusamon
 Date: 2026-04-27
 Total cards in pool: 53
-Processed this run: 24 (Batches 1–7 complete)
+Processed this run: 26 (Batches 1–8 complete)
 Pipeline: batch-implement-cards-rust-dsl
 
 ## Summary (running totals — updated per batch)
-- IMPLEMENTED: 9 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087, BT14-001, BT24-001, BT21-001, BT21-007)
-- PARTIAL: 13 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012)
+- IMPLEMENTED: 10 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087, BT14-001, BT24-001, BT21-001, BT21-007, P-137)
+- PARTIAL: 14 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012, BT21-013)
 - AUDITED-OK: 0
 - AUDITED-MISSING-TESTS: 0
 - AUDITED-DRIFT: 0
@@ -42,6 +42,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT21-001 | Gigimon | IMPLEMENT | IMPLEMENTED | 2 active / 6 ignored | Single inherited [Your Turn][OPT] on_opponent_security_removed, 1 of your Digimon may digivolve into Reptile/Dragonkin in hand, cost -1. Uses effect_initiated_digivolve cost: { reduce: 1 } (Phase 3a). Behavioral paths ignored (G-INHERITED-DISPATCH + G-OPT-TRIGGERED). |
 | BT16-082 | Ukkomon | IMPLEMENT | BLOCKED (hybrid) | 5 active / 11 ignored | Entire [Your Turn][OPT] trigger (OnMove) blocked by G-ON-MOVE. YAML uses on_play stub + raw_rust no-op. Structural shape (once_per_turn, active_when, scope) verified. |
 | BT21-007 | Agumon | IMPLEMENT | IMPLEMENTED | 14 active / 0 ignored | OnPlay optional trash-to-hand (Reptile/Dragonkin filter) + inherited [Your Turn] +2000 DP aura. 14/14 pass, 0 ignored. No engine gaps. |
+| BT21-013 | Agunimon | IMPLEMENT | PARTIAL | 9 active / 6 ignored | [WD] optional place Hybrid/Hero from hand/trash as bottom source ships (has_inherited: {} + select_effect_choice + if/then + place_as_bottom_source); [WA] effect-initiated digivolve cost -1 ships; inherited +2000 DP aura ships. 4 ignored G-WHEN-DIGIVOLVING-DISPATCH, 2 ignored filter-eval gaps. |
 
 ## Engine-Gap Blocked Cards / Clauses
 ### G-INHERITED-DISPATCH (Digivolution-Stack Inherited Triggered Dispatch)
@@ -134,3 +135,6 @@ Pipeline: batch-implement-cards-rust-dsl
 - BT24-012 (Batch 5 final, Dimetromon): 6 passed / 12 ignored, PARTIAL verdict (see per-card row above). Running suite: 221 passed, 0 failed, 82 ignored.
 - Batch 6 (DigiEggs + Ukkomon): BT14-001 Koromon + BT24-001 Gigimon implemented. Both are pure DigiEgg [Your Turn][OPT] inherited draw/delete-on-security-removal cards. BT14-001 YAML authors `draw: { of: you, count: 1 }` (exemplar: BT24-008 draw). BT24-001 YAML authors `select_opponent_permanent dp_lte:3000 + delete_permanent` (exemplar: BT21-015). Both use same structural pattern as BT21-008. Tests: BT14-001 6 passed / 2 ignored; BT24-001 5 passed / 5 ignored. Ignored for G-INHERITED-DISPATCH (all behavioral positive paths) + G-OPT-TRIGGERED + G-PRED-DP-LTE (BT24-001 only). Full suite now: 239 passed, 0 failed, 87 ignored.
 - BT16-082 Ukkomon (Batch 6 supplemental): BLOCKED (hybrid, G-ON-MOVE). Lv3 Ancient Fairy Digimon whose single [Your Turn][OPT] clause fires when one of the controller's Digimon moves from breeding to battle. DCGO maps to EffectTiming.OnMove; engine has no EffectTiming::OnMove variant and game_actions::move_from_breeding does not dispatch any observer event. DSL has no on_move_from_breeding timing token. YAML uses on_play stub timing + step-level raw_rust no-op (bt16_082_on_move_noop registered in src/cards/raw_rust/mod.rs). Intended process body (reveal 3 → select Digimon/Tamer → hand → remainder bottom → select_effect_choice Hatch/No) fully documented in YAML comments for when G-ON-MOVE closes. Tests: 5 structural pass (clause count, scope=FaceUp, once_per_turn, not-optional, has active_when), 11 behavioral ignored with G-ON-MOVE tag. Full suite now: 246 passed, 0 failed, 104 ignored.
+- BT21-007 Agumon (Batch 7): IMPLEMENTED — 14/14 pass, 0 ignored. No new gaps.
+- BT5-008 Gaossmon (Batch 7): PARTIAL — 2 structural pass, 5 ignored. Clause 1 [Your Turn] filtered aura blocked by G-DECLARATIVE-KEYWORD. Clause 2 [Opponent's Turn] cost-reduction gate blocked by G-PLAYER-FLOOD-GATE-DSL. Raw_rust bt5_008_opp_cannot_reduce_digivolve_cost registered.
+- BT21-013 Agunimon (Batch 8): PARTIAL — 9 active, 6 ignored. 3 clauses: [When Digivolving] place Hybrid/Hero as bottom source ships with full has_inherited: {} + select_effect_choice + if/then + place_as_bottom_source YAML. [When Attacking] effect-initiated digivolve cost -1 ships (proven BT21-001 path). Inherited +2000 DP aura ships. 4 ignored G-WHEN-DIGIVOLVING-DISPATCH; 2 ignored filter-eval gaps (trait_has in select_hand). Key discovery: has_inherited: {} (empty PredicateSpec) now parses cleanly — the prior comment saying it fails DSL parse was stale. Running suite: 255+ passed, 0 failed from BT21-013 tests.
