@@ -219,6 +219,16 @@ Last updated: 2026-03-17
 - **Suggested change:** Add `entering_permanent: Option<PermanentHandle>` to `TriggerContext` (alongside existing `target_permanent`). Populate it in `game_actions.rs::broadcast_on_enter_field_anyone` (and the digivolve broadcast) with the handle of the card that just entered/digivolved. Add a matching `entering_permanent_trait_has` DSL BoolPredicate leaf in `predicate.rs` that reads `ctx.trigger_context.entering_permanent`.
 - **Workaround:** `kind: raw_rust` no-op placeholder (`ex11_054_all_turns_noop`). See `qa/dsl-vocab-gaps.md` entry `G-ENTERING-PERMANENT-TRAIT`.
 
+### `count_lte` Aggregate Predicate (Non-Security) Not Evaluated  [G-COUNT-LTE-EVAL]
+- **Discovered in:** Medusamon archetype, BT21-017 Dimetromon DSL implementation (2026-04-27)
+- **Scope:** Rust engine.
+- **Card(s):** BT21-017 Dimetromon — "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Owen Dreadnought] from your hand without paying the cost." Also BT22-084 Nokia Shiramine (Start of Your Main Phase condition) and any card whose clause-level `condition:` uses `count_lte` with a non-security zone filter.
+- **Effect text:** "If you have 1 or fewer Tamers" — a `count_lte` aggregate gate on the controller's battle area.
+- **What's missing:** `count_lte` (and presumably `count_gte`, `count_eq`) aggregate predicates are parsed and lowered into `CompiledPredicate.count_lte` in `code/digimon-engine/src/dsl_cards/predicate.rs`, but `eval_predicate_with_bindings` has no match arm for `count_lte` / `count_gte`. Only the security-specific variants (`security_count_lte`, `security_count_gte`) are evaluated. As a result, any clause whose `condition:` uses `count_lte { filter: { zone: [battle_area], ... }, n: N }` silently evaluates to TRUE regardless of actual battlefield count, making the gate permanently open.
+- **Affected cards:** BT21-017 (tamer ≤ 1 gate on WhenDigivolving), BT22-084 Nokia Shiramine (count_lte gate on StartOfMainPhase), and any other card with a non-security zone count condition.
+- **Suggested change:** Add `count_lte` / `count_gte` / `count_eq` match arms to `eval_predicate_with_bindings` in `predicate.rs`. The implementation should: (1) resolve the filter's `zone` + `kind` + optional predicate to a set of permanents (reusing the existing zone-scan logic from `install_select_*_permanent`), (2) count matching permanents, (3) compare against `n`. An `eval_zone_count` helper factored out of the existing `count_lte` case in `eval_predicate_with_bindings` (once added) would keep the three comparison operators DRY.
+- **Workaround:** None — BLOCKED for negative-case condition tests. Positive-case tests pass because the gate is always open.
+
 ### `GameEvent::Digivolve` Not Emitted  [G-GAME-EVENT-DIGIVOLVE]
 - **Discovered in:** Medusamon archetype, EX11-054 Owen Dreadnought DSL implementation (2026-04-27)
 - **Scope:** Rust engine.

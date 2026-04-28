@@ -50,10 +50,57 @@ fn ex11_054_all_turns_noop(_handle: crate::card_source::CardHandle) -> Vec<Effec
     vec![]
 }
 
+/// BT24-012 Dimetromon — [All Turns] "protect other Reptile/Dragonkin ally by bouncing self"
+/// replacement — no-op placeholder.
+///
+/// Printed clause (b):
+/// "[All Turns] When any of your OTHER Digimon with the [Reptile] or [Dragonkin] trait
+/// would leave the battle area by your opponent's effects, by returning this Digimon to
+/// your hand, they don't leave."
+///
+/// This is a cross-permanent replacement effect: the carrier (Dimetromon) intercepts a
+/// *different* permanent leaving and cancels that departure by paying a cost (return self
+/// to hand). The standard `kind: replacement` + `cancel_replacement` DSL path is blocked
+/// by the `subject_matches` guard in `lower_replacement.rs` (line 83–91), which only fires
+/// when the carrier IS the leaving subject.
+///
+/// The full implementation requires:
+///
+/// **Gap G-EVENT-TARGET-OWNER** — no predicate in `ReplacementContext` gates on whether
+/// the leaving permanent is controlled by the same player as the carrier. Additionally,
+/// removal-cause attribution ("by your opponent's effects") is not threaded into the
+/// replacement context — the engine would need `ReplacementContext::caused_by_opponent`
+/// populated from game-action callsites. Until this is wired, any implementation would
+/// over-fire (fires for own-effect removal too), violating the no-approximations policy.
+///
+/// **subject_matches architecture gap** — `lower_replacement.rs` enforces that replacement
+/// effects only fire when `rctx.effect.source_permanent == Some(subject_h)`. Lifting this
+/// restriction to allow "protect others" patterns requires a targeted change to
+/// `lower_replacement.rs`.
+///
+/// Until both gaps are closed this function returns an empty `Vec<Effect>`, preserving
+/// no-op behavior while the YAML clause documents the intent.
+///
+/// When implemented, the fn must:
+///   1. Build a `WhenWouldLeaveBattleArea` replacement effect scoped to the carrier.
+///   2. In the replacement predicate: check subject != carrier, subject.controller == carrier.controller,
+///      subject has Reptile or Dragonkin trait, and carrier is on the battle area.
+///   3. Present optional prompt ("Accept/Decline"); on accept: return carrier to hand via
+///      `ctx.return_to_hand(carrier)` and set outcome to Cancelled.
+///
+/// Tracked under G-EVENT-TARGET-OWNER in `qa/archetype-qa/engine-gaps.md`.
+fn bt24_012_would_leave_replacement(_handle: crate::card_source::CardHandle) -> Vec<Effect> {
+    // No-op: returns an empty effect list.
+    // Full implementation blocked by G-EVENT-TARGET-OWNER (removal cause attribution
+    // + cross-permanent replacement) and the subject_matches gate in lower_replacement.rs.
+    vec![]
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
     r.register_declarative("ex11_054_all_turns_noop", ex11_054_all_turns_noop);
+    r.register_declarative("bt24_012_would_leave_replacement", bt24_012_would_leave_replacement);
     r
 }
 

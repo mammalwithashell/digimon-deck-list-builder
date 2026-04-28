@@ -1,0 +1,108 @@
+card: P-189
+name: Dimetromon
+kind: digimon
+level: 4
+color: [red]
+cost: 6
+dp: 6000
+traits: [Reptile, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 2
+
+# Clause 1 — [Security] You may play 1 card with the [LIBERATOR] trait and a play
+# cost of 4 or less from your hand or trash without paying the cost.
+#
+# DCGO: SecuritySkill timing → CanSelectCardCondition checks ContainsTraits("LIBERATOR")
+# && HasPlayCost && GetCostItself <= 4. If both hand and trash have eligible cards, a
+# "From hand / From trash" EffectChoice is presented first; then the selected card is
+# played free.
+#
+# DSL modelling:
+#   - timing: on_security, optional: true
+#   - select_effect_choice: "From hand" / "From trash" (DCGO "From which area" choice)
+#     with if/then/else to branch into select_hand or select_trash
+#   - play_from_hand_free / play_from_trash_free for the free play
+#
+# KNOWN GAP G-PLAY-COST-LTE:
+#   `play_cost_lte` predicate does not exist in PredicateSpec (digimon-dsl/src/predicate.rs).
+#   Neither `select_hand` nor `select_trash` can enforce the "cost ≤ 4" constraint at
+#   selection time until a `play_cost_lte` leaf is added to PredicateSpec and wired in
+#   eval_card_fields. Additionally select_union_zone uses an accept-all filter (Phase 2e).
+#   The trait_has: LIBERATOR filter can be expressed but is also currently accept-all for
+#   select_hand/select_trash (Phase 2b). Tests for incorrect candidate filtering are
+#   #[ignore = "pending: G-PLAY-COST-LTE"].
+#
+# KNOWN GAP G-DECLARATIVE-KEYWORD (Clause 2):
+#   Declarative grant_keyword clauses compile to Effect::declarative(...) with
+#   EffectTiming::Declarative, which is never enqueued or fired. The Progress modifier
+#   is not installed at runtime. Same gap as BT21-029.
+#
+# KNOWN GAPS G-INHERITED-DISPATCH + G-OPT-TRIGGERED (Clause 3):
+#   Inherited triggered effects are not dispatched from the digivolution stack.
+#   OPT is not enforced for triggered effects in the queue-drain path.
+
+effects:
+  # Clause 1 — [Security] optional play from hand or trash (LIBERATOR, cost ≤ 4)
+  # "You may" → optional: true
+  # DCGO: presents "From hand" / "From trash" EffectChoice when both zones have
+  # eligible cards; otherwise auto-resolves to the zone with candidates.
+  - when: on_security
+    optional: true
+    summary: "[Security] You may play 1 LIBERATOR (cost ≤ 4) from hand or trash free"
+    process:
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play a card?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: false
+                filter:
+                  # trait_has filter is expressed here for faithful YAML authoring.
+                  # G-PLAY-COST-LTE: play_cost_lte: 4 cannot be expressed; omitted.
+                  # select_hand accept-all (Phase 2b) means filter is not enforced.
+                  trait_has: LIBERATOR
+                prompt: "Select a LIBERATOR card to play from hand"
+            - play_from_hand_free:
+                of: you
+                hand_index: picked_hand
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: false
+                filter:
+                  trait_has: LIBERATOR
+                prompt: "Select a LIBERATOR card to play from trash"
+            - play_from_trash_free:
+                of: you
+                hand_index: picked_trash
+
+  # Clause 2 — <Progress> (declarative keyword grant, face-up)
+  # DCGO: ProgressSelfStaticEffect(false, card, null) — isInheritedEffect=false
+  # GAP G-DECLARATIVE-KEYWORD: compiled but not installed at runtime.
+  - kind: grant_keyword
+    keyword: Progress
+
+  # Clause 3 — [Inherited] [Your Turn] [Once Per Turn]
+  # When your opponent's security stack is removed from, gain 1 memory.
+  # DCGO: CanTriggerWhenLoseSecurity checks player == card.Owner.Enemy (opponent's security),
+  #       IsOwnerTurn, IsExistOnBattleAreaDigimon (must be top of a permanent on field while
+  #       this card is inherited).
+  # GAP G-INHERITED-DISPATCH: not dispatched from digivolution stack.
+  # GAP G-OPT-TRIGGERED: OPT not enforced for triggered effects.
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Inherited][Your Turn][OPT] Opponent's security removed → gain 1 memory"
+    process:
+      - gain_memory: 1

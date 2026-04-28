@@ -209,6 +209,45 @@
       "test_count": 15,
       "patterns": ["B1", "F9", "H3-PIERCING"],
       "notes": "All 3 clauses ship: (a) [Start of Your Main Phase] gain 1 memory if opp has Digimon, (b) [End of Your Turn] optional suspend-cost → select Reptile/Dragonkin → grant Piercing for the turn, (c) [Security] play_from_security. 14 active tests pass, 1 ignored. Gap: G-MAY-ATTACK-NOW (DSL-GAP — 'Then, that Digimon attacks' step omitted; MayAttack/ForceAttack ModifierTypes not in lookup_modifier_type, and no DSL verb for effect-initiated mandatory EOT attack on a specific Digimon). Key fixes during implementation: (1) DSL binding `target: source` (not `source_permanent`) required for Suspend step — 'source_permanent' is not a recognized keyword in compile_binding_ref, falls through to CompiledBindingRef::Named and silently no-ops; (2) test helpers need filler decks for both players to prevent deckout on P1's first draw, which would set game_over and skip end-of-turn expiry in multi-turn tests."
+    },
+    "BT21-017": {
+      "card_name": "Dimetromon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_017.rs",
+      "test_count": 16,
+      "patterns": ["C-DIGIVOLVE", "G-COUNT-GATE", "G-INHERITED-OPT"],
+      "notes": "WhenDigivolving optional Owen Dreadnought play ships (select_hand name_contains filter + play_from_hand_free). Tamer-count gate (count_lte n:1) is compiled but NOT evaluated at runtime — G-COUNT-LTE-EVAL (new gap): eval_predicate_with_bindings has no count_lte match arm for non-security zones; gate always passes. 1 condition test #[ignore = pending: G-COUNT-LTE-EVAL]. Inherited [Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 3 inherited tests #[ignore]. 12 active tests pass, 4 ignored total."
+    },
+    "P-189": {
+      "card_name": "Dimetromon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/p/P-189.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_189.rs",
+      "test_count": 16,
+      "patterns": ["F-SECURITY-PLAY-FROM-ZONE", "H_PROGRESS", "G-INHERITED-OPT"],
+      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-≤4 filter (G-PLAY-COST-LTE) cannot be enforced — play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 8 active tests pass, 8 ignored. New gap reported: G-PLAY-COST-LTE."
+    },
+    "BT24-012": {
+      "card_name": "Dimetromon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-012.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_012.rs",
+      "test_count": 18,
+      "patterns": ["H5-BLOCKER", "REPLACE-OTHER-PERM", "G-INHERITED-OPT"],
+      "notes": "Clause (a) Blocker keyword ships and is verified by 2 active tests (keyword present + active on field, doesn't leak to allies). Clause (b) 'protect other Reptile/Dragonkin by returning self' is the most complex cross-permanent replacement in the Medusamon pool: standard kind:replacement is blocked by subject_matches guard in lower_replacement.rs; uses kind:raw_rust fn bt24_012_would_leave_replacement (registered in src/cards/raw_rust/mod.rs as declarative no-op placeholder). Full clause (b) implementation blocked by G-EVENT-TARGET-OWNER (no removal-cause attribution for 'opponent effects only' gate, no cross-permanent subject filter in replacement context). Clause (c) [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 6 structural tests pass, 12 ignored (6 for G-EVENT-TARGET-OWNER clause (b) + 5 for G-INHERITED-DISPATCH/G-OPT-TRIGGERED clause (c) + 1 raw_rust trait/self filter)."
     }
   }
 }

@@ -1,12 +1,12 @@
 # Archetype DSL Implementation: Medusamon
 Date: 2026-04-27
 Total cards in pool: 53
-Processed this run: 16 (Batches 1–4 complete)
+Processed this run: 19 (Batches 1–5 complete)
 Pipeline: batch-implement-cards-rust-dsl
 
 ## Summary (running totals — updated per batch)
 - IMPLEMENTED: 5 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087)
-- PARTIAL: 10 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081)
+- PARTIAL: 13 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012)
 - AUDITED-OK: 0
 - AUDITED-MISSING-TESTS: 0
 - AUDITED-DRIFT: 0
@@ -34,6 +34,9 @@ Pipeline: batch-implement-cards-rust-dsl
 | EX11-054 | Owen Dreadnought | IMPLEMENT | PARTIAL | 8 active / 4 ignored | Clauses 1+3 ship (memory gate + security play). Clause 2 no-op placeholder (G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER + G-GAME-EVENT-DIGIVOLVE hybrid gaps) |
 | BT18-087 | Owen Dreadnought | IMPLEMENT | IMPLEMENTED | 14 active / 1 ignored | All 3 clauses ship: memory gate, on_opponent_security_removed suspend-cost+delete, security play. 1 ignored (G-PRED-DP-LTE). Fix: `target: source` not `target: source_permanent` in suspend step. |
 | BT21-081 | Owen Dreadnought | IMPLEMENT | PARTIAL | 14 active / 1 ignored | (a) start_of_main gain-1-mem, (b) end_of_turn optional suspend-cost→select Reptile/Dragonkin→grant Piercing, (c) security play all ship. 1 ignored: G-MAY-ATTACK-NOW ("Then, that Digimon attacks" omitted — MayAttack/ForceAttack not in DSL lookup_modifier_type). |
+| P-189 | Dimetromon | IMPLEMENT | PARTIAL | 8 active / 8 ignored | [Security] optional LIBERATOR free-play from hand/trash ships; cost-≤4 filter unenforceable (G-PLAY-COST-LTE new gap). Progress declarative ships structurally (G-DECLARATIVE-KEYWORD). Inherited OPT gain-1-memory ships structurally (G-INHERITED-DISPATCH + G-OPT-TRIGGERED). |
+| BT21-017 | Dimetromon | IMPLEMENT | PARTIAL | 12 active / 4 ignored | WhenDigivolving optional Owen play ships. Tamer-count gate (count_lte n:1) compiled but not evaluated — G-COUNT-LTE-EVAL (new gap). Inherited OPT blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. |
+| BT24-012 | Dimetromon | IMPLEMENT | PARTIAL | 6 active / 12 ignored | Blocker keyword + raw_rust clause (b) placeholder + inherited OPT clause (c) ship structurally. Clause (b) "protect other Reptile/Dragonkin" blocked by G-EVENT-TARGET-OWNER (removal-cause attribution + cross-permanent replacement). Clause (c) blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. Raw_rust fn bt24_012_would_leave_replacement registered as no-op in src/cards/raw_rust/mod.rs. |
 
 ## Engine-Gap Blocked Cards / Clauses
 ### G-INHERITED-DISPATCH (Digivolution-Stack Inherited Triggered Dispatch)
@@ -64,7 +67,7 @@ Pipeline: batch-implement-cards-rust-dsl
 - See `qa/archetype-qa/engine-gaps.md` entry G-GAME-EVENT-DIGIVOLVE.
 
 ### G-EVENT-TARGET-OWNER (no predicate to filter trigger-target by owner)
-- Affected: BT24-018 replacement clause, BT21-029 deletion arm.
+- Affected: BT24-018 replacement clause, BT21-029 deletion arm, BT24-012 clause (b) (cross-permanent replacement + removal-cause attribution for "by opponent's effects").
 - See `qa/archetype-qa/engine-gaps.md`.
 
 ### G-PRED-DP-LTE (dp_lte not evaluated for permanents)
@@ -97,6 +100,16 @@ Pipeline: batch-implement-cards-rust-dsl
 - Affects BT24-082 clause-2 "may attack" and BT21-081 "then attacks" sub-clauses.
 - See `qa/dsl-vocab-gaps.md`.
 
+### BT21-017 — `count_lte` aggregate predicate not evaluated (G-COUNT-LTE-EVAL)
+- `count_lte { filter: { zone: [battle_area], kind: tamer }, n: 1 }` compiles into `CompiledPredicate.count_lte` but `eval_predicate_with_bindings` has no match arm for it. Gate silently passes always.
+- Also affects BT22-084 Nokia Shiramine (start_of_main count_lte gate). See `qa/archetype-qa/engine-gaps.md` entry G-COUNT-LTE-EVAL.
+
+### P-189 — `play_cost_lte` predicate missing (G-PLAY-COST-LTE)
+- `play_cost_lte: N` not in `PredicateSpec`; `eval_card_fields` has no cost comparison branch.
+- `install_select_hand` / `install_select_trash` use accept-all filters (Phase 2b) — cost filter cannot be enforced at selection time even once the predicate is added, until Phase 2b wiring is completed.
+- Affects the "cost ≤ 4" constraint in P-189's security clause; also affects any future card with a cost-based selection filter.
+- See `qa/dsl-vocab-gaps.md` entry G-PLAY-COST-LTE.
+
 ## New Patterns Discovered
 - `inherited_dp_buff_via_aura_with_self_target` — `kind: aura, target: {}, dp_modifier: N` resolves to a self-aura when `scope: inherited` (BT23-005). Worth documenting in `RUST_DSL_TEST_API.md` §6 row table.
 - `return-self-to-deck-as-cost` — `return_to_deck: { target: source, position: bottom }` (BT24-082). Must use `target: source` (not `target: source_permanent`) — `"source"` is a keyword in `compile_binding_ref` that maps to `CompiledBindingRef::Source → ctx.source_permanent`; `"source_permanent"` is just a Named binding that fails lookup.
@@ -111,3 +124,5 @@ Pipeline: batch-implement-cards-rust-dsl
 - Batch 4 complete. Final suite: 188 passed, 0 failed, 52 ignored.
 - Per user directive (2026-04-27): cards whose ENTIRE effect set hits the surfaced gaps will be SKIPPED in upcoming batches; cards with at least one implementable clause are still dispatched and produce PARTIAL verdicts.
 - Opus reviewer wave skipped for Batch 1 — agents self-reviewed against §11 + positive rules; cargo green, no inter-card conflicts in the worker outputs.
+- P-189 (Batch 5, single card): 8 passed / 8 ignored, PARTIAL verdict. [Security] select_effect_choice + two separate `if:` blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free ships and compiles. Fix required during authoring: `if/then/else` (with `else:` key) parse-fails in the DSL YAML — the correct pattern is two separate `if:` blocks with complementary conditions (`equals: [zone_choice, 0]` / `equals: [zone_choice, 1]`). New DSL vocab gap reported: G-PLAY-COST-LTE (`play_cost_lte` predicate missing from PredicateSpec + accept-all filter Phase 2b). 8 ignored: 2 for G-PLAY-COST-LTE, 1 for G-DECLARATIVE-KEYWORD, 2 for G-INHERITED-DISPATCH, 2 for G-INHERITED-DISPATCH+G-OPT-TRIGGERED, 1 for security-attack harness. Batch 5 complete. Running suite: 196 passed, 0 failed, 60 ignored.
+- BT21-017 (Batch 5, Dimetromon): 12 passed / 4 ignored, PARTIAL verdict. WhenDigivolving optional Owen Dreadnought play (select_hand name_contains + play_from_hand_free) ships and passes. Tamer-count gate (count_lte n:1 on battle_area tamers) compiles correctly but is not evaluated at runtime — new engine gap G-COUNT-LTE-EVAL documented in engine-gaps.md. P-189.yaml bugs fixed during this card's TDD run: (1) `if/then/else` nested-key format corrected, (2) `play_from_trash_free` argument changed from `trash_index:` to `hand_index:` (PlayFromTrashFree reuses PlayFromHandArgs struct). 4 ignored: 1 for G-COUNT-LTE-EVAL, 3 for G-INHERITED-DISPATCH (+G-OPT-TRIGGERED). Running suite: 214 passed, 0 failed, 76 ignored.
