@@ -23,19 +23,6 @@ export function LauncherShell({
   return (
     <div className="launcher-screen">
       <div className="launcher-frame">
-        <div className="launcher-titlebar">
-          <div className="launcher-dots" aria-hidden="true">
-            <span className="launcher-dot launcher-dot-red" />
-            <span className="launcher-dot launcher-dot-yellow" />
-            <span className="launcher-dot launcher-dot-green" />
-          </div>
-          <div className="launcher-window-title">DIGIMON TCG DESKTOP · v{buildVersion}</div>
-          <div className="launcher-titlebar-right">
-            <span className={serverHealthy ? 'launcher-pill-live' : 'launcher-pill-offline'}>
-              {serverHealthy ? 'CONNECTED' : 'OFFLINE'}
-            </span>
-          </div>
-        </div>
         <div className="launcher-body-area">
           <aside className="launcher-side">
             <Link className="launcher-brand" to="/">
@@ -65,7 +52,12 @@ export function LauncherShell({
           <main className="launcher-main">
             <div className="launcher-topbar">
               <div><span>00</span><b> Launcher</b></div>
-              <div className="launcher-user">Signed in as {username}</div>
+              <div className="launcher-topbar-meta">
+                <span className={serverHealthy ? 'launcher-pill-live' : 'launcher-pill-offline'}>
+                  {serverHealthy ? 'CONNECTED' : 'OFFLINE'}
+                </span>
+                <div className="launcher-user">Signed in as {username}</div>
+              </div>
             </div>
             <div className="launcher-content">{children}</div>
             <div className="launcher-statusbar">
