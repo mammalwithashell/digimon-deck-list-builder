@@ -157,6 +157,58 @@
       "test_count": 17,
       "patterns": ["F3", "H_PROGRESS", "H3-PIERCING", "H5-BLOCKER", "ARMOR-PURGE"],
       "notes": "All 4 printed keywords ship (Progress, Piercing, Blocker, Armor Purge). When-Digivolving trash-security blocked by G-TRASH-SELECTED-SECURITY. Two All-Turns OPT clauses structurally OK; behavior blocked by G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER. 5 structural pass, 12 ignored."
+    },
+    "BT24-082": {
+      "card_name": "Owen Dreadnought",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-082.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_082.rs",
+      "test_count": 14,
+      "patterns": ["B1", "B2", "F9"],
+      "notes": "Clause 1 (start_of_main return-self + play_from_hand_free + conditional play_from_trash_free) fully ships. Clause 2 (on_digivolve suspend-cost + DP modifier) ships with two approximations: any_permanent condition instead of newly-digivolved trait filter (G-ON-DIGIVOLVE-TRAIT-FILTER), select_own_permanent prompt instead of auto-target (same gap). 'may attack' sub-clause dropped (G-MAY-ATTACK-NOW hybrid). Security clause ships. 11 active tests pass, 3 ignored (G-ON-DIGIVOLVE-TRAIT-FILTER, G-MAY-ATTACK-NOW, G-OPT-TRIGGERED). Key fix: DSL binding `target: source` (not `source_permanent`) required for ReturnToDeck/Suspend to resolve ctx.source_permanent."
+    },
+    "BT18-087": {
+      "card_name": "Owen Dreadnought",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-087.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_087.rs",
+      "test_count": 15,
+      "patterns": ["B2", "B3", "F9"],
+      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete ≤4000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source → ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
+    },
+    "EX11-054": {
+      "card_name": "Owen Dreadnought",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_054.rs",
+      "test_count": 12,
+      "patterns": ["B2", "F9"],
+      "notes": "Clauses 1 and 3 ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3 (tested, passes) and [Security] play_from_security (tested, passes). Clause 2 ([All Turns] Reptile/Dragonkin ally played/digivolves → suspend self, draw 1, give Progress Digimon +3000 DP) is a no-op raw_rust placeholder pending two hybrid gaps: G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER (OnEnterFieldAnyone observer TriggerContext doesn't carry entering permanent handle) and G-GAME-EVENT-DIGIVOLVE (GameEvent::Digivolve not emitted, blocking digivolve-detection in raw_rust). 8 non-ignored tests pass, 4 ignored (entering_permanent_trigger_context + G-DECLARATIVE-KEYWORD). Raw_rust fn: ex11_054_all_turns_noop registered in src/cards/raw_rust/mod.rs."
+    },
+    "BT21-081": {
+      "card_name": "Owen Dreadnought",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-081.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_081.rs",
+      "test_count": 15,
+      "patterns": ["B1", "F9", "H3-PIERCING"],
+      "notes": "All 3 clauses ship: (a) [Start of Your Main Phase] gain 1 memory if opp has Digimon, (b) [End of Your Turn] optional suspend-cost → select Reptile/Dragonkin → grant Piercing for the turn, (c) [Security] play_from_security. 14 active tests pass, 1 ignored. Gap: G-MAY-ATTACK-NOW (DSL-GAP — 'Then, that Digimon attacks' step omitted; MayAttack/ForceAttack ModifierTypes not in lookup_modifier_type, and no DSL verb for effect-initiated mandatory EOT attack on a specific Digimon). Key fixes during implementation: (1) DSL binding `target: source` (not `source_permanent`) required for Suspend step — 'source_permanent' is not a recognized keyword in compile_binding_ref, falls through to CompiledBindingRef::Named and silently no-ops; (2) test helpers need filler decks for both players to prevent deckout on P1's first draw, which would set game_over and skip end-of-turn expiry in multi-turn tests."
     }
   }
 }

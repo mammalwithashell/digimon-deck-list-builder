@@ -88,7 +88,7 @@ effects:
 
       # Step 3 — BT24-017 gets +2000 DP per opponent Digimon until opp turn ends.
       - add_dp_modifier:
-          target: source_permanent
+          target: source
           value:
             formula:
               base: 0

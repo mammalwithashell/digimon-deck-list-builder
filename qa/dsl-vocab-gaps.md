@@ -77,3 +77,40 @@ Format per entry:
       extra_cost: ...
   ```
 - First reported: 2026-04-27 (BT24-016 batch-implement-cards-rust-dsl)
+
+---
+
+## BT24-082 / BT21-081 — Immediate optional attack within effect resolution  [G-MAY-ATTACK-NOW]
+- Effect text (BT24-082): "[Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] Digimon, by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack."
+- Effect text (BT21-081): "[End of Your Turn] By suspending this Tamer, 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains <Piercing> for the turn. Then, that Digimon attacks."
+- Missing DSL verb / step kind / predicate: No DSL verb for an immediate attack (optional or mandatory) on a specific named Digimon mid-effect-resolution. The DCGO fires `SelectAttackEffect` (BT24-082) or `SetCanNotSelectNotAttack` (BT21-081) within the effect coroutine — i.e., an in-effect attack, not an end-of-turn attack-window action.
+- Engine gap: `ModifierType::MayAttack` and `ModifierType::ForceAttack` exist in `enums.rs` but are NOT in `lookup_modifier_type` (`modifier_map.rs`), so they cannot be granted via `add_modifier:`. Even if registered, these modifiers target the EOT Execute/Vortex attack window — they don't trigger an immediate, mid-effect attack on a specific permanent.
+- Lowers to engine API: A new `EffectContext::may_attack_now(target: PermanentHandle)` / `force_attack_now(target: PermanentHandle)` primitive would be needed, plus a corresponding DSL step verb.
+- Suggested DSL syntax:
+  ```yaml
+  - may_attack_now: { target: tgt }          # optional — player may choose to attack
+  - force_attack_now: { target: tgt }         # mandatory — Digimon must attack
+  ```
+- Gap kind: hybrid (DSL lacks the verb AND engine lacks the mid-effect attack primitive).
+- Workaround: Omit the "may attack" / "then attacks" sub-clause. Test `#[ignore]`'d with `G-MAY-ATTACK-NOW` tag.
+- First reported: 2026-04-27 (BT24-082 batch-implement-cards-rust-dsl)
+
+---
+
+## EX11-054 — [All Turns] entering-permanent trait gate  [G-ENTERING-PERMANENT-TRAIT]
+
+- Effect text: "[All Turns] When your Digimon are played or digivolve, if any of them have the [Reptile] or [Dragonkin] trait, by suspending this Tamer, <Draw 1>. After, 1 of your Digimon with <Progress> gets +3000 DP for the turn."
+- Missing DSL verb / step kind / predicate: `entering_permanent_trait_has` / `digivolving_permanent_trait_has` — BoolPredicate leaves to gate an observer clause on the traits of the card that JUST entered the field or digivolved. The `event_target_trait_has` predicate evaluates `TriggerContext.target_permanent`, which for `OnEnterFieldAnyone` / `OnDigivolve` observers is the OBSERVER's own permanent handle (not the entering/digivolving card).
+- Companion engine gap: `trigger_context_for_source` in `effect_queue.rs` sets `target_permanent = source_permanent` (the observer itself) when iterating `TriggerSource::PlayerBattleArea(pid)`. The entering card's handle is not threaded into `TriggerContext`. Additionally, `GameEvent::Digivolve` is "defined for future wiring — not emitted yet" (events.rs), blocking event-log-based detection of the digivolving permanent.
+- Lowers to engine API: requires new `entering_permanent: Option<PermanentHandle>` field in `TriggerContext`, populated by `game_actions.rs::broadcast_on_enter_field_anyone` (and the digivolve equivalent) with the newly-entered permanent's handle. A DSL predicate would then read this field via `ctx.trigger_context.entering_permanent.map(|h| ctx.game.permanent_traits(h).contains(trait))`.
+- Suggested DSL syntax:
+  ```yaml
+  condition:
+    any_of:
+      - entering_permanent_trait_has: Reptile
+      - entering_permanent_trait_has: Dragonkin
+  # (same shape for digivolve half with digivolving_permanent_trait_has)
+  ```
+- Gap kind: hybrid (engine doesn't thread the entering-permanent handle through TriggerContext; DSL has no predicate leaf to read it even if it did).
+- Workaround: `kind: raw_rust` no-op placeholder (`ex11_054_all_turns_noop`). All related tests `#[ignore]`'d with `entering_permanent_trigger_context` tag.
+- First reported: 2026-04-27 (EX11-054 batch-implement-cards-rust-dsl)
