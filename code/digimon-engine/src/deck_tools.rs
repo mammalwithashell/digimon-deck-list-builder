@@ -18,6 +18,7 @@ use std::sync::OnceLock;
 
 use serde::Deserialize;
 
+use crate::enums::{GameMode, Rarity};
 use crate::rules::CardRestriction;
 
 // Data files — `include_str!` bakes the bytes into the crate, so there's no
@@ -36,7 +37,7 @@ pub struct CardSummary {
     /// Matches Python `CardKind`: 0=Digimon, 1=Tamer, 2=Option, 3=DigiEgg.
     pub card_kind: u8,
     /// Matches Python `Rarity`: 0=C, 1=U, 2=R, 3=SR, 4=SEC, 5=P.
-    pub rarity: u8,
+    pub rarity: Rarity,
     /// Max copies allowed per deck. Defaults to 4; a handful of cards
     /// override it in the data file (e.g. starter-deck restrictions).
     pub max_count_in_deck: u32,
@@ -48,6 +49,7 @@ struct CardEntryRaw {
     #[serde(default)]
     card_name_eng: String,
     card_kind: u8,
+    #[serde(default = "default_rarity")]
     rarity: u8,
     #[serde(default = "default_max_count")]
     max_count_in_deck: u32,
@@ -55,6 +57,18 @@ struct CardEntryRaw {
 
 fn default_max_count() -> u32 {
     4
+}
+
+fn default_rarity() -> u8 {
+    u8::MAX
+}
+
+fn parse_rarity(raw: u8, card_id: &str) -> Rarity {
+    if raw == default_rarity() {
+        return Rarity::NoRarity;
+    }
+    Rarity::from_u8(raw)
+        .unwrap_or_else(|| panic!("cards.json has unknown rarity value {raw} for card {card_id}"))
 }
 
 #[derive(Deserialize)]
@@ -71,13 +85,14 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
             .expect("cards.json is malformed (compiled-in resource)");
         raw.into_iter()
             .map(|(k, v)| {
+                let rarity = parse_rarity(v.rarity, &k);
                 (
                     k,
                     CardSummary {
                         card_id: v.card_id,
                         card_name_eng: v.card_name_eng,
                         card_kind: v.card_kind,
-                        rarity: v.rarity,
+                        rarity,
                         max_count_in_deck: v.max_count_in_deck,
                     },
                 )
@@ -175,6 +190,7 @@ fn card_limit(card_id: &str) -> Option<u32> {
 pub enum DeckRuleset {
     Standard,
     NoRestriction,
+    Pauper,
     Eden,
 }
 
@@ -183,8 +199,19 @@ impl DeckRuleset {
         match game_mode {
             "standard" | "" => Some(Self::Standard),
             "no_restriction" => Some(Self::NoRestriction),
+            "pauper" => Some(Self::Pauper),
             "eden" => Some(Self::Eden),
             _ => None,
+        }
+    }
+
+    pub fn from_game_mode_enum(mode: GameMode) -> Option<Self> {
+        match mode {
+            GameMode::Standard => Some(Self::Standard),
+            GameMode::Pauper => Some(Self::Pauper),
+            GameMode::NoRestriction => Some(Self::NoRestriction),
+            GameMode::Eden => Some(Self::Eden),
+            GameMode::EdhCommander | GameMode::Titan => None,
         }
     }
 
@@ -192,6 +219,7 @@ impl DeckRuleset {
         match self {
             Self::Standard => None,
             Self::NoRestriction => None,
+            Self::Pauper => None,
             Self::Eden => Some(CardRestriction::eden_ref()),
         }
     }
@@ -199,7 +227,7 @@ impl DeckRuleset {
 
 fn format_card_limit(ruleset: DeckRuleset, card_id: &str) -> Option<u32> {
     match ruleset {
-        DeckRuleset::Standard => card_limit(card_id),
+        DeckRuleset::Standard | DeckRuleset::Pauper => card_limit(card_id),
         DeckRuleset::NoRestriction => None,
         DeckRuleset::Eden => CardRestriction::eden_ref()
             .card_limits
@@ -210,7 +238,7 @@ fn format_card_limit(ruleset: DeckRuleset, card_id: &str) -> Option<u32> {
 
 fn format_choice_groups(ruleset: DeckRuleset) -> Vec<(Vec<String>, Vec<String>)> {
     match ruleset {
-        DeckRuleset::Standard => CHOICE_GROUPS
+        DeckRuleset::Standard | DeckRuleset::Pauper => CHOICE_GROUPS
             .iter()
             .map(|(a, b)| {
                 (
@@ -229,18 +257,20 @@ fn format_choice_groups(ruleset: DeckRuleset) -> Vec<(Vec<String>, Vec<String>)>
 }
 
 fn is_common_or_uncommon(card: &CardSummary) -> bool {
-    matches!(card.rarity, 0 | 1)
+    matches!(card.rarity, Rarity::C | Rarity::U)
 }
 
 fn is_eden_anomaly(card: &CardSummary) -> bool {
     let name = card.card_name_eng.to_ascii_lowercase();
     match card.card_kind {
         // Rare or promo Tamers.
-        1 => matches!(card.rarity, 2 | 5),
+        1 => matches!(card.rarity, Rarity::R | Rarity::P),
         // Rare/promo/SR Memory Boosts, promo Trainings, and promo Scrambles.
-        2 if name.contains("memory boost") => matches!(card.rarity, 2 | 3 | 5),
-        2 if name.contains("training") => card.rarity == 5,
-        2 if name.contains("scramble") => card.rarity == 5,
+        2 if name.contains("memory boost") => {
+            matches!(card.rarity, Rarity::R | Rarity::SR | Rarity::P)
+        }
+        2 if name.contains("training") => card.rarity == Rarity::P,
+        2 if name.contains("scramble") => card.rarity == Rarity::P,
         _ => false,
     }
 }
@@ -399,6 +429,16 @@ pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
     validate_deck_for_ruleset(card_ids, DeckRuleset::Standard)
 }
 
+/// Validate a flat card-id list against a named Rust game mode.
+pub fn validate_deck_for_mode(
+    card_ids: &[String],
+    mode: GameMode,
+) -> Result<DeckValidationResult, String> {
+    let ruleset = DeckRuleset::from_game_mode_enum(mode)
+        .ok_or_else(|| format!("Unsupported deck validation game mode: {mode:?}"))?;
+    Ok(validate_deck_for_ruleset(card_ids, ruleset))
+}
+
 pub fn validate_deck_for_ruleset(
     card_ids: &[String],
     ruleset: DeckRuleset,
@@ -503,6 +543,23 @@ pub fn validate_deck_for_ruleset(
         }
     }
 
+    if ruleset == DeckRuleset::Pauper {
+        for (card_id, _) in &sorted_counts {
+            let Some(entity) = db.get(card_id.as_str()) else {
+                continue;
+            };
+            if entity.card_kind == 3 || is_common_or_uncommon(entity) {
+                continue;
+            }
+            errors.push(format!(
+                "{} ({}): rarity {} is not legal in Pauper format",
+                card_id,
+                entity.card_name_eng,
+                entity.rarity.code()
+            ));
+        }
+    }
+
     let deck_ids_set: HashSet<&str> = card_ids.iter().map(String::as_str).collect();
     for (group_a, group_b) in format_choice_groups(ruleset) {
         let has_a = group_a
@@ -591,4 +648,20 @@ pub fn get_models_dir() -> std::path::PathBuf {
     std::env::var("ONNX_MODELS_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| std::path::PathBuf::from("models"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_rarity_sentinel_maps_to_no_rarity() {
+        assert_eq!(parse_rarity(default_rarity(), "TEST-001"), Rarity::NoRarity);
+    }
+
+    #[test]
+    #[should_panic(expected = "cards.json has unknown rarity value 42 for card TEST-001")]
+    fn invalid_rarity_value_panics() {
+        let _ = parse_rarity(42, "TEST-001");
+    }
 }

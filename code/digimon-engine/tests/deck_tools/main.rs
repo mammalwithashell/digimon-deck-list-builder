@@ -5,7 +5,9 @@
 use digimon_engine::deck_tools::{
     card_database, classify_parsed, is_card_tested, out_of_set_cards, parse_deck, parse_text,
     parse_tts, summarize_deck, tested_cards_sorted, validate_deck, validate_deck_for_game_mode,
+    validate_deck_for_mode,
 };
+use digimon_engine::{GameMode, Rarity};
 
 // ─── Card ID pattern ───────────────────────────────────────────────────
 
@@ -86,6 +88,7 @@ fn card_database_loads_real_cards_json() {
     let greymon = db.get("AD1-001").expect("AD1-001 should exist");
     assert_eq!(greymon.card_kind, 0);
     assert_eq!(greymon.card_name_eng, "Greymon");
+    assert_eq!(greymon.rarity, Rarity::R);
 }
 
 #[test]
@@ -215,6 +218,37 @@ fn make_legal_deck() -> Vec<String> {
     deck
 }
 
+fn make_legal_pauper_deck() -> Vec<String> {
+    let db = card_database();
+    let mut candidates: Vec<&str> = db
+        .values()
+        .filter(|c| {
+            c.card_kind == 0
+                && c.max_count_in_deck >= 4
+                && matches!(c.rarity, Rarity::C | Rarity::U)
+                && !is_banned_or_restricted(&c.card_id)
+        })
+        .map(|c| c.card_id.as_str())
+        .collect();
+    candidates.sort_unstable();
+    let ids: Vec<&str> = candidates.into_iter().take(13).collect();
+    assert_eq!(
+        ids.len(),
+        13,
+        "need 13 unrestricted 4-copy common/uncommon Digimon in the DB"
+    );
+    let mut deck = Vec::with_capacity(50);
+    for cid in &ids {
+        for _ in 0..4 {
+            if deck.len() < 50 {
+                deck.push((*cid).to_string());
+            }
+        }
+    }
+    assert_eq!(deck.len(), 50);
+    deck
+}
+
 fn is_banned_or_restricted(card_id: &str) -> bool {
     // Mirror of `deck_tools.rs::BANNED_CARDS` and `RESTRICTED_CARDS`. These
     // constants are private to the `deck_tools` module, so duplicating
@@ -255,7 +289,7 @@ fn make_eden_legal_deck() -> Vec<String> {
         .values()
         .filter(|c| {
             c.card_kind == 0
-                && matches!(c.rarity, 0 | 1)
+                && matches!(c.rarity, Rarity::C | Rarity::U)
                 && c.max_count_in_deck >= 4
                 && !is_eden_restricted_or_choice_member(&c.card_id)
         })
@@ -369,6 +403,52 @@ fn validate_deck_warns_on_unknown_cards() {
     let result = validate_deck(&deck);
     // Unknown → warning, not an error (matches Python).
     assert!(result.warnings.iter().any(|w| w.contains("ZZZ-999")));
+}
+
+#[test]
+fn validate_deck_for_pauper_accepts_common_uncommon_deck() {
+    let deck = make_legal_pauper_deck();
+    let result = validate_deck_for_game_mode(&deck, "pauper").unwrap();
+    assert!(
+        result.is_valid,
+        "expected pauper deck to be legal, got errors: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn validate_deck_for_pauper_rejects_rare_or_higher() {
+    let mut deck = make_legal_pauper_deck();
+    deck[0] = "AD1-001".to_string(); // Greymon, rarity R.
+    let result = validate_deck_for_game_mode(&deck, "pauper").unwrap();
+    assert!(!result.is_valid);
+    assert!(result
+        .errors
+        .iter()
+        .any(|e| e.contains("AD1-001") && e.contains("rarity R")));
+}
+
+#[test]
+fn validate_deck_for_pauper_accepts_game_mode_enum() {
+    let deck = make_legal_pauper_deck();
+    let result = validate_deck_for_mode(&deck, GameMode::Pauper).unwrap();
+    assert!(
+        result.is_valid,
+        "expected pauper deck to be legal, got errors: {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn standard_format_allows_rare_cards() {
+    let mut deck = make_legal_pauper_deck();
+    deck[0] = "AD1-001".to_string(); // Greymon, rarity R.
+    let result = validate_deck_for_game_mode(&deck, "standard").unwrap();
+    assert!(
+        result.is_valid,
+        "standard format should not reject rarity R, got errors: {:?}",
+        result.errors
+    );
 }
 
 #[test]
