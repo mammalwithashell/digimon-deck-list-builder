@@ -138,11 +138,12 @@ Last updated: 2026-03-17
 ### `EffectTiming::OnMove` Missing  [G-ON-MOVE]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
 - **Scope:** Rust engine + DSL (hybrid; see `qa/dsl-vocab-gaps.md` for DSL half).
-- **Card(s):** EX11-008 Elizamon — `[When Moving] [On Play]` shared body. Other archetypes will surface this when their cards have similar When-Moving clauses.
-- **Effect text:** "[When Moving] 1 of your Digimon ... gains <Raid> and +3000 DP for the turn."
-- **What's missing:** `EffectTiming::OnMove` variant + dispatch hook in `game.move_from_breeding()` (similar to `fire_on_play`). DCGO maps to `EffectTiming.OnMove`; Rust has no equivalent. The closest existing variant `OnHatch` fires when an egg moves digitama→breeding for permanents already on field — different timing.
-- **Suggested change:** add `EffectTiming::OnMove` variant; in `Game::move_from_breeding`, after the move completes, fire `OnMove` for the moved permanent (same pattern as `OnPlay` from `play_from_hand`).
-- **Workaround:** None — BLOCKED. Implementer worked around by handling only the `[On Play]` half in YAML.
+- **Card(s):** EX11-008 Elizamon — `[When Moving] [On Play]` shared body; BT16-082 Ukkomon — entire [Your Turn][OPT] triggered effect (observer in battle area watches any own Digimon move from breeding). Other archetypes will surface this for cards with "[When one of your Digimon moves from the breeding area]" observer triggers.
+- **Effect text (EX11-008):** "[When Moving] 1 of your Digimon ... gains <Raid> and +3000 DP for the turn."
+- **Effect text (BT16-082):** "[Your Turn][Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, reveal the top 3 cards of your deck. Add 1 Digimon card or Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, you may hatch in your breeding area."
+- **What's missing:** `EffectTiming::OnMove` variant + dispatch hook in `game_actions::move_from_breeding()`. DCGO maps to `EffectTiming.OnMove`; Rust has no equivalent. The closest existing variant `OnHatch` fires when an egg moves digitama→breeding — a different event. BT16-082 is a battle-area observer card (not the moving card itself); the OnMove dispatch needs to fire `enqueue_triggered` over the controller's battle area (analogous to `OnEnterFieldAnyone` fan-out) so observer permanents like Ukkomon see the event.
+- **Suggested change:** (1) Add `EffectTiming::OnMove` to `src/enums.rs`. (2) In `game_actions::move_from_breeding`, after the permanent moves to battle_area: fire `enqueue_triggered(EffectTiming::OnMove, TriggerSource::PlayerBattleArea(player_id))` so all observer permanents in the controller's battle area see the event. (3) Add `CompiledTiming::OnMoveFromBreeding` to `digimon-dsl/src/compiled.rs` and map it in `timing_map.rs`.
+- **Workaround:** EX11-008 — handled only the `[On Play]` half in YAML. BT16-082 — structural stub with `on_play` timing + raw_rust no-op (`bt16_082_on_move_noop`).
 
 ### `dp_lte` Predicate Compiled but Not Evaluated in `eval_card_fields`  [G-DP-LTE-PREDICATE]
 - **Discovered in:** Medusamon archetype, BT21-015 Cyclonemon DSL implementation (2026-04-27)

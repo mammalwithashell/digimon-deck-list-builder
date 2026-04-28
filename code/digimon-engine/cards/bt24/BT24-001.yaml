@@ -1,0 +1,46 @@
+card: BT24-001
+name: Gigimon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser, LIBERATOR]
+form: In-Training
+
+# Clause 1 — Inherited [Your Turn] [Once Per Turn] When your opponent's security
+# stack is removed from, you may delete 1 of their Digimon with 3000 DP or less.
+#
+# Timing:  on_opponent_security_removed  (maps to DCGO EffectTiming.OnLoseSecurity
+#          filtered by CanTriggerWhenLoseSecurity(player => player == owner.Enemy))
+# Scope:   inherited — fires while Gigimon is a digivolution source in a stack.
+# OPT:     once_per_turn: true
+# Optional: "you may" → optional: true
+# Active:  your turn only → active_when: { your_turn: true }
+#
+# Delete target: opponent's Digimon with DP ≤ 3000.
+# Pattern: BT21-015 select_opponent_permanent + dp_lte + delete_permanent.
+#
+# Known gaps in effect:
+#   G-INHERITED-DISPATCH — the engine does not fire inherited triggered effects
+#     from the digivolution stack yet. All behavioral tests relying on the clause
+#     actually firing are #[ignore]'d pending this fix.
+#   G-OPT-TRIGGERED — max_per_turn not enforced for triggered effects.
+#   G-PRED-DP-LTE — dp_lte filter compiled but not evaluated; negative-eligibility
+#     tests are #[ignore]'d pending this fix.
+
+effects:
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] [OPT] When opp security removed, you may delete 1 opp Digimon with 3000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 3000
+          prompt: "Delete a Digimon (3000 DP or less)"
+      - delete_permanent: { target: tgt }

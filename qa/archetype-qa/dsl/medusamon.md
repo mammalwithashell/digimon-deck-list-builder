@@ -1,18 +1,18 @@
 # Archetype DSL Implementation: Medusamon
 Date: 2026-04-27
 Total cards in pool: 53
-Processed this run: 19 (Batches 1–5 complete)
+Processed this run: 23 (Batches 1–6 complete + BT21-001 + BT16-082 Ukkomon)
 Pipeline: batch-implement-cards-rust-dsl
 
 ## Summary (running totals — updated per batch)
-- IMPLEMENTED: 5 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087)
+- IMPLEMENTED: 8 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087, BT14-001, BT24-001, BT21-001)
 - PARTIAL: 13 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012)
 - AUDITED-OK: 0
 - AUDITED-MISSING-TESTS: 0
 - AUDITED-DRIFT: 0
 - BLOCKED (engine): 0
 - BLOCKED (dsl): 0
-- BLOCKED (hybrid): 0
+- BLOCKED (hybrid): 1 (BT16-082)
 - SKIPPED (prior verdict): 0
 
 ## Per-Card Verdicts
@@ -37,6 +37,10 @@ Pipeline: batch-implement-cards-rust-dsl
 | P-189 | Dimetromon | IMPLEMENT | PARTIAL | 8 active / 8 ignored | [Security] optional LIBERATOR free-play from hand/trash ships; cost-≤4 filter unenforceable (G-PLAY-COST-LTE new gap). Progress declarative ships structurally (G-DECLARATIVE-KEYWORD). Inherited OPT gain-1-memory ships structurally (G-INHERITED-DISPATCH + G-OPT-TRIGGERED). |
 | BT21-017 | Dimetromon | IMPLEMENT | PARTIAL | 12 active / 4 ignored | WhenDigivolving optional Owen play ships. Tamer-count gate (count_lte n:1) compiled but not evaluated — G-COUNT-LTE-EVAL (new gap). Inherited OPT blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. |
 | BT24-012 | Dimetromon | IMPLEMENT | PARTIAL | 6 active / 12 ignored | Blocker keyword + raw_rust clause (b) placeholder + inherited OPT clause (c) ship structurally. Clause (b) "protect other Reptile/Dragonkin" blocked by G-EVENT-TARGET-OWNER (removal-cause attribution + cross-permanent replacement). Clause (c) blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. Raw_rust fn bt24_012_would_leave_replacement registered as no-op in src/cards/raw_rust/mod.rs. |
+| BT14-001 | Koromon | IMPLEMENT | IMPLEMENTED | 6 active / 2 ignored | Single inherited [Your Turn][OPT] on_opponent_security_removed draw 1. Positive behavioral + OPT lockout ignored (G-INHERITED-DISPATCH + G-OPT-TRIGGERED). |
+| BT24-001 | Gigimon | IMPLEMENT | IMPLEMENTED | 5 active / 5 ignored | Single inherited [Your Turn][OPT] optional on_opponent_security_removed delete opp Digimon dp_lte:3000. Behavioral paths ignored (G-INHERITED-DISPATCH + G-PRED-DP-LTE + G-OPT-TRIGGERED). |
+| BT21-001 | Gigimon | IMPLEMENT | IMPLEMENTED | 2 active / 6 ignored | Single inherited [Your Turn][OPT] on_opponent_security_removed, 1 of your Digimon may digivolve into Reptile/Dragonkin in hand, cost -1. Uses effect_initiated_digivolve cost: { reduce: 1 } (Phase 3a). Behavioral paths ignored (G-INHERITED-DISPATCH + G-OPT-TRIGGERED). |
+| BT16-082 | Ukkomon | IMPLEMENT | BLOCKED (hybrid) | 5 active / 11 ignored | Entire [Your Turn][OPT] trigger (OnMove) blocked by G-ON-MOVE. YAML uses on_play stub + raw_rust no-op. Structural shape (once_per_turn, active_when, scope) verified. |
 
 ## Engine-Gap Blocked Cards / Clauses
 ### G-INHERITED-DISPATCH (Digivolution-Stack Inherited Triggered Dispatch)
@@ -48,7 +52,7 @@ Pipeline: batch-implement-cards-rust-dsl
 - See `qa/archetype-qa/engine-gaps.md`.
 
 ### G-ON-MOVE (`EffectTiming::OnMove` Missing)
-- Affected (this batch): EX11-008 [When Moving] half of its dual-timing OnPlay/OnMove clause.
+- Affected (this batch): EX11-008 [When Moving] half; BT16-082 Ukkomon — entire single effect blocked (observer trigger on any own Digimon moving from breeding to battle).
 - See `qa/archetype-qa/engine-gaps.md`.
 
 ### G-ON-DIGIVOLVE-TRAIT-FILTER (on_digivolve context missing newly-digivolved permanent)
@@ -126,3 +130,6 @@ Pipeline: batch-implement-cards-rust-dsl
 - Opus reviewer wave skipped for Batch 1 — agents self-reviewed against §11 + positive rules; cargo green, no inter-card conflicts in the worker outputs.
 - P-189 (Batch 5, single card): 8 passed / 8 ignored, PARTIAL verdict. [Security] select_effect_choice + two separate `if:` blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free ships and compiles. Fix required during authoring: `if/then/else` (with `else:` key) parse-fails in the DSL YAML — the correct pattern is two separate `if:` blocks with complementary conditions (`equals: [zone_choice, 0]` / `equals: [zone_choice, 1]`). New DSL vocab gap reported: G-PLAY-COST-LTE (`play_cost_lte` predicate missing from PredicateSpec + accept-all filter Phase 2b). 8 ignored: 2 for G-PLAY-COST-LTE, 1 for G-DECLARATIVE-KEYWORD, 2 for G-INHERITED-DISPATCH, 2 for G-INHERITED-DISPATCH+G-OPT-TRIGGERED, 1 for security-attack harness. Batch 5 complete. Running suite: 196 passed, 0 failed, 60 ignored.
 - BT21-017 (Batch 5, Dimetromon): 12 passed / 4 ignored, PARTIAL verdict. WhenDigivolving optional Owen Dreadnought play (select_hand name_contains + play_from_hand_free) ships and passes. Tamer-count gate (count_lte n:1 on battle_area tamers) compiles correctly but is not evaluated at runtime — new engine gap G-COUNT-LTE-EVAL documented in engine-gaps.md. P-189.yaml bugs fixed during this card's TDD run: (1) `if/then/else` nested-key format corrected, (2) `play_from_trash_free` argument changed from `trash_index:` to `hand_index:` (PlayFromTrashFree reuses PlayFromHandArgs struct). 4 ignored: 1 for G-COUNT-LTE-EVAL, 3 for G-INHERITED-DISPATCH (+G-OPT-TRIGGERED). Running suite: 214 passed, 0 failed, 76 ignored.
+- BT24-012 (Batch 5 final, Dimetromon): 6 passed / 12 ignored, PARTIAL verdict (see per-card row above). Running suite: 221 passed, 0 failed, 82 ignored.
+- Batch 6 (DigiEggs + Ukkomon): BT14-001 Koromon + BT24-001 Gigimon implemented. Both are pure DigiEgg [Your Turn][OPT] inherited draw/delete-on-security-removal cards. BT14-001 YAML authors `draw: { of: you, count: 1 }` (exemplar: BT24-008 draw). BT24-001 YAML authors `select_opponent_permanent dp_lte:3000 + delete_permanent` (exemplar: BT21-015). Both use same structural pattern as BT21-008. Tests: BT14-001 6 passed / 2 ignored; BT24-001 5 passed / 5 ignored. Ignored for G-INHERITED-DISPATCH (all behavioral positive paths) + G-OPT-TRIGGERED + G-PRED-DP-LTE (BT24-001 only). Full suite now: 239 passed, 0 failed, 87 ignored.
+- BT16-082 Ukkomon (Batch 6 supplemental): BLOCKED (hybrid, G-ON-MOVE). Lv3 Ancient Fairy Digimon whose single [Your Turn][OPT] clause fires when one of the controller's Digimon moves from breeding to battle. DCGO maps to EffectTiming.OnMove; engine has no EffectTiming::OnMove variant and game_actions::move_from_breeding does not dispatch any observer event. DSL has no on_move_from_breeding timing token. YAML uses on_play stub timing + step-level raw_rust no-op (bt16_082_on_move_noop registered in src/cards/raw_rust/mod.rs). Intended process body (reveal 3 → select Digimon/Tamer → hand → remainder bottom → select_effect_choice Hatch/No) fully documented in YAML comments for when G-ON-MOVE closes. Tests: 5 structural pass (clause count, scope=FaceUp, once_per_turn, not-optional, has active_when), 11 behavioral ignored with G-ON-MOVE tag. Full suite now: 246 passed, 0 failed, 104 ignored.

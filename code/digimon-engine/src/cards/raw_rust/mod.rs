@@ -96,11 +96,38 @@ fn bt24_012_would_leave_replacement(_handle: crate::card_source::CardHandle) -> 
     vec![]
 }
 
+/// BT16-082 Ukkomon — OnMove trigger body no-op placeholder.
+///
+/// Printed effect: "[Your Turn][Once Per Turn] When one of your Digimon moves
+/// from the breeding area to the battle area, reveal the top 3 cards of your
+/// deck. Add 1 Digimon card or Tamer card among them to the hand. Return the
+/// rest to the bottom of the deck. Then, you may hatch in your breeding area."
+///
+/// This function is a no-op step placeholder pending resolution of G-ON-MOVE
+/// (hybrid gap):
+///
+/// **Engine gap**: `EffectTiming::OnMove` does not exist in `enums.rs`. The
+/// `game_actions::move_from_breeding` method only fires `OnTrainingTrash` — it
+/// does not dispatch any event that a battle-area observer card like Ukkomon
+/// could subscribe to. See `qa/archetype-qa/engine-gaps.md` [G-ON-MOVE].
+///
+/// **DSL gap**: No `on_move_from_breeding` when-token exists in `digimon-dsl`.
+/// `CompiledTiming` has no `OnMoveFromBreeding` variant, and `timing_map.rs`
+/// has no mapping for it. See `qa/dsl-vocab-gaps.md` (EX11-008 entry).
+///
+/// When G-ON-MOVE is closed, replace the stub clause in `BT16-082.yaml` with
+/// the real process body (reveal 3 → select Digimon/Tamer → hand → remainder
+/// bottom → may hatch EffectChoice) and remove this function.
+fn bt16_082_on_move_noop(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    // No-op: full implementation blocked by G-ON-MOVE.
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
     r.register_declarative("ex11_054_all_turns_noop", ex11_054_all_turns_noop);
     r.register_declarative("bt24_012_would_leave_replacement", bt24_012_would_leave_replacement);
+    r.register_step("bt16_082_on_move_noop", bt16_082_on_move_noop);
     r
 }
 
