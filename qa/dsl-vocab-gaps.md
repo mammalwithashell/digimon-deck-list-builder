@@ -392,3 +392,21 @@ Format per entry:
 - Gap kind: dsl (engine can express this in a raw_rust loop; DSL has no filter for handle-set exclusion).
 - Workaround: entire boardwipe clause routed through `raw_rust: { fn: bt20_102_boardwipe_and_return }` which collects `saved: Vec<PermanentHandle>` and filters deletions via `.contains()`.
 - First reported: 2026-04-27 (BT20-102 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+
+---
+
+## P-035 / P-103 / BT24-089 — Option-as-permanent placement (inherited security)  [G-PLACE-SELF-AS-OPTION-PERMANENT]
+
+- Effect text (P-035): "[Main] … Then, place this card in your battle area." and "[Security] Place this card in the battle area." (inherited)
+- Missing DSL verb / step kind: `place_self_as_delay_option: {}` — a step that places the currently-resolving Option card into the battle area as an `OptionState::Delayed` permanent from within an inherited security context. Two contexts exist:
+  1. **Main clause** ("Then, place this card in your battle area."): DCGO calls `PlaceDelayOptionCards(card, activateClass)`. In the Rust engine, `dispose_option` + `classify_option_subtype` detect the `kind: delay` clause and auto-place the card at the `MainEffectDrain` phase — no explicit DSL step is needed. The engine handles placement implicitly.
+  2. **Inherited security clause** ("[Security] Place this card in the battle area."): DCGO calls `CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)`. In the Rust engine, no `EffectContext` method exists to place the digivolution-source Option card from an inherited-security context into the battle area as a Delay permanent. The security-resolution flow does not call `dispose_option` in this path.
+- Lowers to engine API: A new `pub fn place_self_as_delay_option_permanent(&mut self)` on `EffectContext`. In the inherited-security context, this method must: (1) identify the source Option card (the digivolution source that triggered this effect), (2) remove it from its current location (digivolution stack), and (3) place it in `self.game.players[owner].battle_area` as a `Permanent` with `OptionState::Delayed`.
+- Suggested DSL syntax:
+  ```yaml
+  - place_self_as_delay_option: {}
+  ```
+  Used in the `process:` of the inherited security clause. Not needed in the Main clause (engine auto-placement via `dispose_option` suffices).
+- Gap kind: dsl (for inherited security context). Engine already handles the Main clause auto-placement; the gap is the inherited-security-context placement where `dispose_option` is not called.
+- Workaround: `process: []` (empty process) — clause is structurally present for dispatch routing; behavioral placement tests are `#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"]`. Affects P-035, P-103, BT24-089 (all use the same pattern).
+- First reported: 2026-04-28 (P-035 Red Memory Boost! batch-implement-cards-rust-dsl, Medusamon Batch 12). Same gap pre-existed in P-103.yaml and BT24-089.yaml without a tracker entry.

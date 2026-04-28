@@ -888,6 +888,105 @@ fn bt20_016_dna_on_deletion(_handle: crate::card_source::CardHandle) -> Vec<Effe
     vec![]
 }
 
+/// BT8-097 Crimson Blaze — [Main][Security] opponent can't play Digimon by effects
+/// until the end of their turn.
+///
+/// Printed effect: "[Main] Your opponent can't play Digimon by effects until the end
+/// of their turn."
+///
+/// DCGO analysis (BT8_097.cs, ActivateClass EffectTiming.OptionSkill):
+///   CanNotPutFieldClass targeting:
+///     cardSource.IsDigimon || cardSource.IsDigiEgg
+///   CardEffectCondition:
+///     cardEffect.EffectSourceCard.Owner == card.Owner.Enemy
+///   Added to card.Owner.Enemy.UntilOwnerTurnEndEffects →
+///     expires at end of OPPONENT'S turn.
+///
+/// Implementation:
+///   Install `CannotPlayDigimonByEffect` as a player-scoped modifier on the opponent
+///   with `Expiry::EndOfOpponentsTurn`. This blocks effect-initiated Digimon plays
+///   from any zone (hand + trash) via the gate in `play_from_hand_with_cost` and
+///   `play_from_trash_with_cost`.
+///
+/// Note: Unlike BT23-014 (which also blocks Tamers), BT8-097 only blocks Digimon.
+/// Per DCGO: `CardCondition: cardSource.IsDigimon || cardSource.IsDigiEgg`; no Tamer.
+///
+/// NOTE G-PLAYER-FLOOD-GATE-DSL: DSL `kind: flood_gate` only installs permanent-level
+/// modifiers. Player-level `CannotPlayDigimonByEffect` requires this raw_rust bridge
+/// until a `add_player_modifier` DSL verb is available.
+fn bt8_097_opp_cannot_play_digimon_by_effect(
+    ctx: &mut EffectContext<'_>,
+    _bindings: &mut Bindings,
+) {
+    use crate::enums::{Expiry, ModifierType};
+    use crate::modifiers::PlayerModifierEntry;
+
+    let opponent = ctx.opponent_id();
+    let source_player = ctx.player;
+
+    // Block opponent from playing Digimon by effect (covers any zone).
+    ctx.game.modifiers.add_player_modifier(
+        opponent,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::EndOfOpponentsTurn,
+            None,
+            source_player,
+        ),
+    );
+}
+
+/// LM-027 Red Scramble — Delay placeholder no-op (G-DELAY-START-OF-TURN).
+///
+/// The Delay clause in LM-027 fires at the START of the controller's turn
+/// (DCGO `EffectTiming.OnStartTurn`). The engine's `DelayTrigger` enum only
+/// supports `EndOfThisTurn` and `EndOfYourNextTurn` — there is no
+/// `StartOfYourNextTurn` variant. The DSL `kind: delay` lowerer maps all
+/// non-EndOfYourTurn timings to `EndOfYourNextTurn`, which fires at the WRONG
+/// time (end-of-turn, not start-of-turn).
+///
+/// This function is a declarative no-op placeholder preserving the clause-index
+/// slot until G-DELAY-START-OF-TURN is resolved. When the gap closes:
+///   1. Add `DelayTrigger::StartOfYourNextTurn` to `enums::DelayTrigger`.
+///   2. Wire a mapping in `lower_delay.rs`.
+///   3. Replace the raw_rust clause in LM-027.yaml with a native `kind: delay`
+///      clause using the new trigger, and implement the full body:
+///      a. select_trash (mandatory, filter: digimon + color_is: red)
+///      b. move_trash_to_deck_top (or raw_rust lm_027_return_trash_to_deck_top
+///         until G-ZONE-TRASH-TO-DECK is resolved)
+///      c. if no Digimon on controller's field: select_trash (optional,
+///         dp_lte: 2000, play_from_trash_free)
+///      d. condition: opponent has at least 1 Digimon on field.
+///   4. Remove this function and its registration.
+///
+/// Tracked in qa/archetype-qa/engine-gaps.md under G-DELAY-START-OF-TURN.
+fn lm_027_delay_start_of_turn_noop(_handle: crate::card_source::CardHandle) -> Vec<Effect> {
+    // No-op: full implementation blocked by G-DELAY-START-OF-TURN.
+    vec![]
+}
+
+/// LM-027 Red Scramble — Security clause "add this card to hand" no-op.
+///
+/// The printed Security effect ends with "Then, add this card to the hand."
+/// DCGO implements this via `CardEffectCommons.AddThisCardToHand(card, activateClass)`
+/// which moves the currently-resolving option card from security-resolution
+/// staging back to the controller's hand.
+///
+/// This function is a step no-op placeholder until G-ADD-OPTION-SELF-TO-HAND
+/// is resolved. When the gap closes:
+///   1. Add `EffectContext::add_security_option_to_hand()` to the engine.
+///   2. Add an `add_this_option_to_hand` step verb to the DSL.
+///   3. Replace the raw_rust step in LM-027.yaml with the native verb.
+///   4. Remove this function and its registration.
+///
+/// Tracked in qa/dsl-vocab-gaps.md under G-ADD-OPTION-SELF-TO-HAND and in
+/// qa/archetype-qa/engine-gaps.md (also referenced by ST22-08, EX6-072).
+fn lm_027_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
+    // The engine has no EffectContext::add_security_option_to_hand() method.
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
@@ -897,6 +996,7 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_declarative("bt5_008_opp_cannot_reduce_digivolve_cost", bt5_008_opp_cannot_reduce_digivolve_cost);
     r.register_step("p_137_opp_adds_top_security_to_hand", p_137_opp_adds_top_security_to_hand);
     r.register_formula("ex8_074_suspended_dp_cap", ex8_074_suspended_dp_cap);
+    r.register_step("bt8_097_opp_cannot_play_digimon_by_effect", bt8_097_opp_cannot_play_digimon_by_effect);
     r.register_step("bt23_014_opp_cannot_play_from_trash", bt23_014_opp_cannot_play_from_trash);
     r.register_formula("bt23_014_dynamic_dp_cap", bt23_014_dynamic_dp_cap);
     r.register_step("bt9_112_delete_lowest_cost_digimon", bt9_112_delete_lowest_cost_digimon);
@@ -905,6 +1005,8 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_step("lm_021_delete_dp_sum", lm_021_delete_dp_sum);
     r.register_step("bt20_102_boardwipe_and_return", bt20_102_boardwipe_and_return);
     r.register_declarative("bt20_016_dna_on_deletion", bt20_016_dna_on_deletion);
+    r.register_declarative("lm_027_delay_start_of_turn_noop", lm_027_delay_start_of_turn_noop);
+    r.register_step("lm_027_add_self_to_hand", lm_027_add_self_to_hand);
     r
 }
 

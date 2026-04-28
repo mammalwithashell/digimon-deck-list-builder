@@ -1,12 +1,12 @@
 # Archetype DSL Implementation: Medusamon
-Date: 2026-04-27
+Date: 2026-04-28
 Total cards in pool: 53
-Processed this run: 34 (Batches 1–11 complete, including BT9-112 DeathXmon, BT23-014 Gallantmon, LM-021 Agumon - Bond of Bravery, ST22-08 Offensive Plug-In V, BT21-072 Arresterdramon: Superior Mode)
+Processed this run: 37 (Batches 1–12 complete, including BT9-112 DeathXmon, BT23-014 Gallantmon, LM-021 Agumon - Bond of Bravery, ST22-08 Offensive Plug-In V, BT21-072 Arresterdramon: Superior Mode, P-103 Offense Training, LM-027 Red Scramble, P-035 Red Memory Boost!)
 Pipeline: batch-implement-cards-rust-dsl
 
 ## Summary (running totals — updated per batch)
 - IMPLEMENTED: 12 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087, BT14-001, BT24-001, BT21-001, BT21-007, P-137, BT21-026, BT9-112)
-- PARTIAL: 19 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012, BT21-013, EX9-013, EX10-010, BT23-014, LM-021, BT21-072)
+- PARTIAL: 22 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012, BT21-013, EX9-013, EX10-010, BT23-014, LM-021, BT21-072, P-103, LM-027, P-035)
 - AUDITED-OK: 0
 - AUDITED-MISSING-TESTS: 0
 - AUDITED-DRIFT: 0
@@ -52,6 +52,8 @@ Pipeline: batch-implement-cards-rust-dsl
 | LM-021 | Agumon - Bond of Bravery | IMPLEMENT | PARTIAL | 13 active / 2 ignored | Lv7 Red Blast Digivolve ACE. (1) BlastDigivolve grant_keyword declarative ships; (2) [On Play][When Digivolving] delete opp Digimon DP-sum ≤ 14000 — raw_rust:lm_021_delete_dp_sum single-pick fallback (G-MULTI-SELECT-OPP-DP-SUM new engine gap); (3) [When Attacking][OPT] if you have a Tamer, trash_top_security ships and tests pass. ace_overflow: -5. 2 ignored: G-OPT-TRIGGERED. Bug fix: bt17_018 tests were failing due to summoning sickness (turn_count=0 when using .build()); added r.game.turn_count = 1 to runner_with_p1_security() in bt17_018.rs. Full suite: 412 passed, 0 failed, 146 ignored. |
 | ST22-08 | Offensive Plug-In V | IMPLEMENT | BLOCKED (hybrid) | 2 active / 17 ignored | Plug-In / Link card. All 7 clauses BLOCKED. (1) Color bypass: flood_gate IgnoreColorRequirement compiles but G-IGNORE-COLOR-MASK (action mask doesn't enforce it). (2) Security delete lowest-DP: G-PRED-DP-LTE (dp_lte not evaluated). (3) Security add self to hand: G-ADD-OPTION-SELF-TO-HAND (no DSL step). (4) Main optional free link: G-DSL-LINK-VERB (no link step). (5) Main DP-comparative delete: G-BINDING-DP-FORMULA + G-PRED-DP-LTE. (6) Inherited link requirements: G-DSL-LINK-VERB. (7) Linked EOT may attack: G-DSL-LINKED-SCOPE. 2 structural tests pass (YAML parses+compiles), 17 ignored. |
 | BT21-072 | Arresterdramon: Superior Mode | IMPLEMENT | PARTIAL | 8 active / 2 ignored | Clauses 1 (<Raid>) and 2 (<Piercing>) implement as declarative grant_keyword. Clause 5 (Inherited [Your Turn] +2000 DP) implements as declarative scope:inherited aura. Clause 3 ([When Digivolving] may attack without suspending) BLOCKED G-MAY-ATTACK-NOW. Clause 4 ([All Turns] +1000 DP per digivolution card) BLOCKED G-AURA-DP-FORMULA (new gap: AuraBody.dp_modifier is static i32 only, no formula variant for per-stack-size dynamic DP). 8 active tests pass (structural x4, keyword has_keyword x2, inherited aura source_dp_contribution x2). 2 ignored. |
+| P-103 | Offense Training | IMPLEMENT | PARTIAL | 13 active / 3 ignored | Clause 0 ([Main] reveal top 2 → add 1 red to hand → place rest at bottom) fully expressed in DSL; "then place self in battle area" sub-step blocked by G-PLACE-SELF-AS-OPTION-PERMANENT (1 ignored). Clause 1 ([Main]<Delay> optional digivolve into red Digimon in hand, cost -2) fully expressed using kind:delay + effect_initiated_digivolve cost:{reduce:2}. Clause 2 (inherited [Security] place self in battle area) structurally present as scope:inherited on_security with empty process; placement blocked by G-PLACE-SELF-AS-OPTION-PERMANENT (2 ignored). DSL infra: 312 dsl tests pass. cards_behavioral binary blocked from full compile by pre-existing lm_027.rs errors (unrelated in-progress work on this branch). |
+| LM-027 | Red Scramble | IMPLEMENT | PARTIAL | 13 active / 6 ignored | Clause A ([Main] optional effect_initiated_digivolve cost -3) fully DSL-implemented — select_own_permanent (optional) + select_hand (red Digimon filter) + effect_initiated_digivolve { cost: { reduce: 3 } }. Clause B ([Start of Your Turn] Delay) raw_rust no-op placeholder pending G-DELAY-START-OF-TURN (new gap: engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play red Digimon ≤2000 DP from trash free, add self to hand) DSL-implemented with select_trash + play_from_trash_free + raw_rust lm_027_add_self_to_hand (no-op, G-ADD-OPTION-SELF-TO-HAND). dp_lte: 2000 compiled but unenforced (G-PRED-DP-LTE). 6 ignored: 4 Delay gaps + 1 dp_lte gap + 1 add-self-to-hand gap. |
 
 ## Engine-Gap Blocked Cards / Clauses
 ### G-MULTI-SELECT-OPP-DP-SUM (Multi-Select with Running DP-Sum Cap)
@@ -102,6 +104,12 @@ Pipeline: batch-implement-cards-rust-dsl
 - Affected: BT24-018 WD clause.
 - See `qa/archetype-qa/engine-gaps.md`.
 
+### G-PLACE-SELF-AS-OPTION-PERMANENT (Option card placement into battle area as Delay permanent)
+- Affected: P-103 Offense Training — (a) Clause 0 sub-step "Then, place this card in the battle area" after the reveal/add sequence; (b) Clause 2 entire body (inherited [Security] place self in battle area as Delay permanent).
+- Root cause: no `place_option_in_battle_area:` DSL step verb. The engine infers option-as-permanent placement from the Delay clause presence together with a main_from_hand trigger, but there is no explicit step to trigger that placement from within the YAML process body.
+- Same gap as BT24-089.yaml. Blocking both the mid-[Main] placement and the security-resolution placement.
+- See `qa/archetype-qa/engine-gaps.md` entry G-PLACE-SELF-AS-OPTION-PERMANENT.
+
 ## DSL-Vocab-Gap Blocked Cards / Clauses
 ### BT23-005 — `cost_reduction` lacks `when_this_digivolves_into` + `target_trait_has` predicate
 - See `qa/dsl-vocab-gaps.md`.
@@ -138,6 +146,18 @@ Pipeline: batch-implement-cards-rust-dsl
 ### G-SELECT-EMPTY-OUTER-TAIL (outer-tail steps lost when inner select_hand has no candidates)
 - Affected: BT21-024 Cyberdramon — `trash_top_security` not fired when opponent has empty hand.
 - See `qa/archetype-qa/engine-gaps.md` entry G-SELECT-EMPTY-OUTER-TAIL.
+
+### G-DELAY-START-OF-TURN (DelayTrigger::StartOfYourNextTurn missing — Delay fires at start of turn)
+- Affected: LM-027 Red Scramble — entire Clause B ([Start of Your Turn] Delay body) unimplementable with native DSL.
+- Root cause: `DelayTrigger` enum only has `EndOfThisTurn` and `EndOfYourNextTurn`. No variant for start-of-turn firing.
+- Workaround: `kind: raw_rust` no-op placeholder `lm_027_delay_start_of_turn_noop`.
+- See `qa/archetype-qa/engine-gaps.md` entry G-DELAY-START-OF-TURN.
+
+### G-ADD-OPTION-SELF-TO-HAND (no engine method or DSL step to return security option card to hand)
+- Affected: LM-027 Red Scramble Security clause step 3. Also ST22-08, EX6-072.
+- Root cause: `EffectContext` has no `add_pending_security_to_hand()` method. DSL has no `add_this_option_to_hand` step verb.
+- Workaround: `raw_rust: { fn: lm_027_add_self_to_hand }` — registered but no-op.
+- See `qa/archetype-qa/engine-gaps.md` entry G-ADD-OPTION-SELF-TO-HAND.
 
 ### BT21-072 — `dp_modifier_fn` formula variant missing on `AuraBody` (G-AURA-DP-FORMULA)
 - Affected: BT21-072 Arresterdramon: Superior Mode clause 4 — "[All Turns] This Digimon gets +1000 DP for each of its digivolution cards."
@@ -184,3 +204,5 @@ Pipeline: batch-implement-cards-rust-dsl
   (7) Linked EOT may attack: DCGO uses `SetIsLinkedEffect(true)` — the engine fires linked-card effects via the `linked_cards` loop, but the DSL has no `scope: linked` clause kind; new DSL gap G-DSL-LINKED-SCOPE documented.
   New engine gap: G-IGNORE-COLOR-MASK added to engine-gaps.md. New DSL vocab gaps: G-DSL-LINK-VERB, G-DSL-LINKED-SCOPE, G-BINDING-DP-FORMULA, G-ADD-OPTION-SELF-TO-HAND added to dsl-vocab-gaps.md. YAML stub with extensive documentation of expected post-gap-closure shape written at code/digimon-engine/cards/st22/ST22-08.yaml. Test file at code/digimon-engine/tests/cards_behavioral/st22/st22_08.rs. Full suite: 412 passed, 0 failed, 163 ignored (17 new ignores from ST22-08, 0 new failures).
 - BT20-102 Omnimon (X Antibody) (Batch 11): PARTIAL — 12 active / 4 ignored. Lv7 Red/Blue Digimon with Raid+Piercing+Blocker declarative grants, [On Play][When Digivolving] conditional board-wipe + unconditional return-to-deck-bottom, and [EOT][OPT] Rush grant. Three declarative GrantKeyword clauses (Raid, Piercing, Blocker) compile structurally but runtime-blocked by G-DECLARATIVE-KEYWORD. Boardwipe clause (two new gaps: G-SELF-DIGIVOLUTION-CONTAINS-NAME hybrid + G-FOR-EACH-EXCLUDE-BINDING dsl) routed entirely through new raw_rust fn `bt20_102_boardwipe_and_return` using nested callback chain (opp-save → own-save → delete non-saved → unconditional return-to-deck-bottom). BT20-016.yaml `from_a`/`from_b` field error fixed to `materials: [...]` syntax (blocking the pack build). EOT Rush grant fully DSL-implemented and tested with expiry verification. Attack step omitted pending G-MAY-ATTACK-NOW. OPT lockout test ignored pending G-OPT-TRIGGERED. Alt-path `name_contains: "Omnimon"` / cost 2 compiled. New gaps documented: G-SELF-DIGIVOLUTION-CONTAINS-NAME (engine-gaps.md + dsl-vocab-gaps.md), G-FOR-EACH-EXCLUDE-BINDING (dsl-vocab-gaps.md). Full suite: 424 passed, 0 failed, 167 ignored.
+- P-103 Offense Training (Batch 12): PARTIAL — 13 active / 3 ignored. Single-card batch. Standard red Option with 3 clauses: [Main] reveal pipeline (reveal_top_deck + select_reveal color_is:red + add_to_hand_from_reveal + place_remainder_on_deck), [Main]<Delay> standard delay body (kind:delay + trigger:on_play → EndOfYourNextTurn; select_own_permanent optional + select_hand red Digimon + effect_initiated_digivolve cost:{reduce:2}), and inherited [Security] structural placeholder. Two compile fixes during TDD: (1) color import changed from digimon_engine::enums::Color → CardColor (no Color alias exists in the engine); (2) pass_allowed field → is_optional on &PendingSelection. DSL infra (cargo test --test dsl): 312 passed. cards_behavioral binary blocked from full compile by pre-existing lm_027.rs errors on this branch (unrelated in-progress work). 3 tests ignored with G-PLACE-SELF-AS-OPTION-PERMANENT. No new engine or DSL gaps introduced. Running suite (dsl tests only): 312 passed.
+- BT8-097 Crimson Blaze (Batch 12): PARTIAL — 17 active / 3 ignored. Red Option card Cost 6 with 3 clauses: Clause A (BeforePayCost cost reduction -1 per opp battle_area permanent), Clause B ([Main] floodgate + delete sweep), Clause C ([Security] mirrors Clause B). Clause A: `kind: cost_reduction / reduction_timing: before_pay_cost / when_playing_this: true / amount_fn.per.card_count_in_zone` — fully DSL-native, passes all structural and behavioral tests. Clause B+C: floodgate via new raw_rust fn `bt8_097_opp_cannot_play_digimon_by_effect` (installs `ModifierType::CannotPlayDigimonByEffect` only — distinct from BT23-014 which also installs `CannotPlayTamerByEffect` per printed text); delete sweep via `for_each / dp_lte:6000 / delete_permanent`. Gap G-PLAYER-FLOOD-GATE-DSL: raw_rust bridge used correctly (same pattern as BT23-014 and BT5-008). Gap G-PRED-DP-LTE: `dp_lte` predicate on permanents not evaluated in `eval_permanent_fields` — dp cap unenforced at runtime; 2 DP-boundary tests `#[ignore]`'d. New engine gap G-FOR-EACH-DELETE-INDEX-SHIFT discovered: `for_each` snapshots PermanentHandles (index-based) before iterating; when first Digimon at idx 0 is deleted, higher-index handles become stale — second deletion no-ops via out-of-bounds guard. Multi-target delete test `#[ignore]`'d. Gap G-FORMULA-KIND-FILTER (approximation): `card_count_in_zone` counts all battle_area permanents including Tamers (not Digimon only); conservative over-count, noted in YAML. Raw_rust fn `bt8_097_opp_cannot_play_digimon_by_effect` registered in `src/cards/raw_rust/mod.rs`. All 17 active tests pass. Raw_rust budget: 17/66 = 25.8% — hard budget exceeded (soft warning; this function is necessary until G-PLAYER-FLOOD-GATE-DSL closes).
