@@ -384,6 +384,76 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
     );
 }
 
+#[test]
+fn cannot_reduce_play_cost_suppresses_when_playing_this_hand_reducer() {
+    struct HandSelfReducer;
+    impl CardEffect for HandSelfReducer {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![
+                Effect::before_pay_cost(card)
+                    .when_playing_this()
+                    .cost_reduction(3)
+                    .build(),
+            ]
+        }
+    }
+
+    let mut registry = digimon_engine::cards::build_registry();
+    registry.insert("SELF-REDUCER", Arc::new(HandSelfReducer));
+
+    let mut r = DebugRunner::builder()
+        .with_registry(registry)
+        .add_card(CardData {
+            card_id: "SELF-REDUCER".to_string(),
+            card_name: "Self Reducer".to_string(),
+            card_kind: CardKind::Digimon,
+            level: Some(4),
+            dp: Some(2000),
+            play_cost: 4,
+            colors: vec![CardColor::Red],
+            traits: Vec::new(),
+            evo_costs: Vec::new(),
+            dna_costs: Vec::new(),
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            security_text: String::new(),
+            keywords: Vec::new(),
+            effect_class_name: "SELF_REDUCER".to_string(),
+            index: 0,
+            norm_id: 0.0,
+        })
+        .add_card(make_filler())
+        .hand(0, &["SELF-REDUCER"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    let tp = r.game.turn_player();
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotReducePlayCost,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
+    );
+
+    let memory_before = r.game.memory;
+    let result = r
+        .game
+        .play_from_hand_with_cost(tp, 0, CostDelta::Reduce(0), PlaySource::ByHand);
+
+    assert!(result.is_some(), "play should succeed at full printed cost");
+    let cost_paid = (memory_before - r.game.memory) as i32;
+    assert_eq!(
+        cost_paid, 4,
+        "hand-card when_playing_this reducer must be suppressed by CannotReducePlayCost"
+    );
+}
+
 // ─── CannotPlayDigimonByEffect: security trigger path ─────────────────────
 
 fn make_attacker() -> CardData {

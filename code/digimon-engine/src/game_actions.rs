@@ -2194,12 +2194,22 @@ impl Game {
         hand_card_id: &str,
         hand_card_handle: crate::card_source::CardHandle,
     ) -> i32 {
+        if self
+            .modifiers
+            .player_has(acting_player, ModifierType::CannotReducePlayCost)
+        {
+            return 0;
+        }
+
         let Some(effects) = self.effects_for_card(hand_card_id, hand_card_handle) else {
             return 0;
         };
         let mut total: i32 = 0;
         for effect in &effects {
             if effect.timing != EffectTiming::BeforePayCost {
+                continue;
+            }
+            if !effect.when_playing_this {
                 continue;
             }
             // Hand cards are never "under" a stack — only top-card effects fire.
