@@ -597,4 +597,6 @@ Key docs:
 - `docs/TOOLS.md`: CLI tools and operational workflows.
 - `docs/RUST_ENGINE_API.md`: Rust card scripting API.
 - `docs/RUST_PYTHON_PARITY.md`: transitional Rust/Python divergence tracker.
+- `docs/RUST_ENGINE_GAPS.md`: reusable Rust scripting capability gaps surfaced by archetype audits.
 - `qa/archetype-qa/engine-gaps.md`: known rule/card gaps that block no-approximations compliance.
+- `.codex/skills/assess-rust-engine-archetype/`: Codex read-only DSL readiness assessment workflow for archetypes, decks, card groups, or card lists.

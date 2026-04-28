@@ -2,6 +2,8 @@
 
 17 priority archetypes -- faithfulness reviewed 2026-03-17.
 
+These statuses are from the legacy Python QA lane. Rust YAML DSL readiness reports live under `dsl/` and may have stricter blocked verdicts where executable Rust card specs, action masks, or pending-selection support are missing.
+
 ## Status Summary
 
 | # | Archetype | Cards | Faithful | Fixed | Deferred | Status |
@@ -54,3 +56,4 @@
 |------|---------|
 | [engine-api-reference.md](engine-api-reference.md) | Engine scripting API reference for card implementation agents |
 | [engine-gaps.md](engine-gaps.md) | Accumulated engine gaps found during reviews |
+| [dsl/bg-imperial.md](dsl/bg-imperial.md) | Rust YAML DSL readiness assessment for BG Imperial |

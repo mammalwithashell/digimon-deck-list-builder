@@ -22,3 +22,7 @@
 Related top-level docs:
 - `CLAUDE.md` — project overview, tech stack, commands, working rules
 - `AGENTS.md` — RL agent architecture, wrapper chain, gauntlet system
+
+Related agent workflows:
+- `.codex/skills/assess-rust-engine-archetype/` — Codex read-only DSL readiness assessment for archetypes, decks, card groups, or card lists
+- `.claude/skills/assess-archetype-rust/` — legacy Claude gap-filing audit workflow that appends to `RUST_ENGINE_GAPS.md` and emits `.claude/plans/rust-engine-gaps-*.md`
