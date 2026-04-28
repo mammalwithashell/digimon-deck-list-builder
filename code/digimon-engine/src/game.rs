@@ -1271,35 +1271,43 @@ impl Game {
         if card_data.keywords.contains(&keyword) {
             return true;
         }
-        // Inherited keyword grants from digivolution sources. Walk the
-        // card_sources stack and check each source card's effect list for a
-        // declarative + inherited GrantKeyword effect that matches `keyword`.
-        //
-        // Convention: DSL `lower_grant_keyword` names these effects
-        // `"Grant <KeywordName>"` (e.g. `"Grant Raid"`). Hand-authored
-        // inherited keyword-grant effects should follow the same naming
-        // convention so this query detects them. This is an intentional
-        // internal coupling within the engine's DSL lowering pipeline.
-        //
-        // Why not run the process closure? Process closures are mutable and
-        // `has_keyword` takes `&self`. The name-match is the lightest
-        // side-effect-free probe available without adding a separate
-        // `granted_keyword` field to `Effect`.
-        let kw_name = format!("{keyword:?}");
-        let grant_name = format!("Grant {kw_name}");
-        let source_ids: Vec<(String, crate::card_source::CardHandle)> = perm
+        // Inherited keyword grants from digivolution sources. Only cards
+        // under the top card contribute inherited text, and any active_when
+        // condition must pass before the keyword is considered live.
+        let stack_size = perm.card_sources.len();
+        let source_ids: Vec<(usize, String, crate::card_source::CardHandle)> = perm
             .card_sources
             .iter()
-            .map(|s| (s.card_id(&self.card_data).to_string(), s.handle()))
+            .enumerate()
+            .map(|(i, s)| (i, s.card_id(&self.card_data).to_string(), s.handle()))
             .collect();
-        for (src_id, src_handle) in source_ids {
+        for (source_index, src_id, src_handle) in source_ids {
+            let is_under = source_index + 1 < stack_size;
+            if !is_under {
+                continue;
+            }
             let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
                 continue;
             };
             for effect in &effects {
-                if effect.declarative && effect.inherited && effect.name == grant_name {
-                    return true;
+                if !effect.declarative || !effect.inherited {
+                    continue;
                 }
+                if effect.granted_keyword != Some(keyword) {
+                    continue;
+                }
+                if let Some(cond) = &effect.condition {
+                    let ctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        src_handle,
+                        Some(handle),
+                        handle.player,
+                    );
+                    if !cond(&ctx) {
+                        continue;
+                    }
+                }
+                return true;
             }
         }
         false

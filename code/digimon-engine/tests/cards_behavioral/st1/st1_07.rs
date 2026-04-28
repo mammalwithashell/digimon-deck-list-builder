@@ -61,9 +61,7 @@ fn st1_07_compiles_and_is_in_pack() {
 #[test]
 fn st1_07_has_one_declarative_and_no_triggered() {
     let runner = greymon_runner();
-    let compiled = runner
-        .compiled_card("ST1-07")
-        .expect("ST1-07 in pack");
+    let compiled = runner.compiled_card("ST1-07").expect("ST1-07 in pack");
 
     let triggered_count = compiled
         .effects
@@ -93,9 +91,7 @@ fn st1_07_has_one_declarative_and_no_triggered() {
 #[test]
 fn st1_07_declarative_clause_is_inherited_security_attack_plus() {
     let runner = greymon_runner();
-    let compiled = runner
-        .compiled_card("ST1-07")
-        .expect("ST1-07 in pack");
+    let compiled = runner.compiled_card("ST1-07").expect("ST1-07 in pack");
 
     let inherited_sap = compiled.effects.iter().find(|c| {
         matches!(
@@ -127,9 +123,7 @@ fn st1_07_declarative_clause_is_inherited_security_attack_plus() {
 #[test]
 fn st1_07_security_attack_plus_value_is_1() {
     let runner = greymon_runner();
-    let compiled = runner
-        .compiled_card("ST1-07")
-        .expect("ST1-07 in pack");
+    let compiled = runner.compiled_card("ST1-07").expect("ST1-07 in pack");
 
     // Locate the GrantKeyword clause and confirm its value encodes 1.
     // In the compiled form, `keyword` is a string ("SecurityAttackPlus") and
@@ -189,12 +183,14 @@ fn st1_07_inherited_security_attack_plus_grants_to_carrier_via_stack() {
         let game = runner.game_mut();
         game.players[0].battle_area[carrier.index as usize]
             .card_sources
-            .push(greymon_source);
+            .insert(0, greymon_source);
     }
 
     // The carrier must inherit SecurityAttackPlus(1) from ST1-07 in its stack.
     assert!(
-        runner.game.has_keyword(carrier, Keyword::SecurityAttackPlus(1)),
+        runner
+            .game
+            .has_keyword(carrier, Keyword::SecurityAttackPlus(1)),
         "PLAIN-LV5 with ST1-07 as a digivolution source must inherit SecurityAttackPlus(1)"
     );
 }
@@ -216,8 +212,23 @@ fn st1_07_inherited_security_attack_plus_absent_without_source() {
     let carrier = runner.place_on_field(0, "PLAIN-LV5", Some(0));
 
     assert!(
-        !runner.game.has_keyword(carrier, Keyword::SecurityAttackPlus(1)),
+        !runner
+            .game
+            .has_keyword(carrier, Keyword::SecurityAttackPlus(1)),
         "A carrier with no ST1-07 in its digivolution stack must NOT have SecurityAttackPlus(1)"
+    );
+}
+
+#[test]
+fn st1_07_top_card_inherited_security_attack_plus_does_not_apply_to_itself() {
+    let mut runner = greymon_runner();
+    let handle = runner.place_on_field(0, "ST1-07", Some(0));
+
+    assert!(
+        !runner
+            .game
+            .has_keyword(handle, Keyword::SecurityAttackPlus(1)),
+        "ST1-07's inherited SecurityAttackPlus clause must not apply while ST1-07 is the top card"
     );
 }
 

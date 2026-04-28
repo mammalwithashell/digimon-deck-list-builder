@@ -635,7 +635,10 @@ impl DebugRunnerBuilder {
             .insert(card_id.clone(), compiled.clone());
         let registry = self.registry.get_or_insert_with(build_registry);
         let raw = Arc::new(raw_rust::build_registry());
-        registry.insert(&card_id, Arc::new(DslCardEffect::new_with_raw(compiled, raw)));
+        registry.insert(
+            &card_id,
+            Arc::new(DslCardEffect::new_with_raw(compiled, raw)),
+        );
     }
 }
 
@@ -651,20 +654,25 @@ fn embedded_dsl_registry() -> Result<&'static digimon_dsl::CardRegistry, String>
 #[cfg(feature = "dsl-yaml-loader")]
 fn card_data_from_compiled(card: &CompiledCard) -> CardData {
     use crate::dsl_cards::modifier_map::lookup_keyword;
-    use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
+    use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
 
-    // Populate native keywords from `grant_keyword` declarative clauses.
+    // Populate native keywords from face-up `grant_keyword` declarative clauses.
     // A `GrantKeyword` clause is semantically equivalent to a printed keyword
     // on the card face, so `has_keyword` can detect it via the native path
-    // without needing the declarative process to run at placement.
+    // without needing the declarative process to run at placement. Inherited
+    // grants are stack text and must stay out of native top-card keywords.
     let mut keywords: Vec<Keyword> = Vec::new();
     for clause in &card.effects {
         if let CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
             keyword,
             value,
+            scope,
             ..
         }) = clause
         {
+            if matches!(scope, CompiledScope::Inherited) {
+                continue;
+            }
             if let Some(kw) = lookup_keyword(keyword, *value) {
                 if !keywords.contains(&kw) {
                     keywords.push(kw);

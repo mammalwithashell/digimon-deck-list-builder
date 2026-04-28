@@ -2,7 +2,7 @@
 
 use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::{DelayTrigger, EffectTiming};
+use crate::enums::{DelayTrigger, EffectTiming, Keyword};
 use crate::permanent::PermanentHandle;
 
 /// Condition closures run during effect evaluation and during tensor-time
@@ -97,6 +97,7 @@ pub struct Effect {
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
     pub cost_reduction: i32,
+    pub granted_keyword: Option<Keyword>,
 
     /// When `true`, this effect's `dp_modifier` is applied to the opposing
     /// security Digimon's DP during the §2.5 security DP battle. Used for
@@ -400,6 +401,7 @@ impl EffectBuilder {
                 pay_cost_fn: None,
                 dp_modifier: 0,
                 cost_reduction: 0,
+                granted_keyword: None,
                 applies_to_opponent_security_dp: false,
                 replacement_process: None,
                 option_main: false,
@@ -565,6 +567,11 @@ impl EffectBuilder {
 
     pub fn cost_reduction(mut self, n: i32) -> Self {
         self.inner.cost_reduction = n;
+        self
+    }
+
+    pub fn granted_keyword(mut self, keyword: Keyword) -> Self {
+        self.inner.granted_keyword = Some(keyword);
         self
     }
 
