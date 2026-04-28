@@ -1053,7 +1053,7 @@ git commit -m "feat: add in between play shell routes"
 - Create: `code/frontend/src/pages/ModeSelectPage.css`
 - Modify: `code/frontend/e2e/play-flow.spec.ts`
 
-- [ ] **Step 1: Extend e2e for format selection**
+- [x] **Step 1: Extend e2e for format selection**
 
 Append to `code/frontend/e2e/play-flow.spec.ts`:
 
@@ -1067,7 +1067,7 @@ test('chooses quick match standard and advances to deck select', async ({ page }
 });
 ```
 
-- [ ] **Step 2: Run the e2e and verify it fails**
+- [x] **Step 2: Run the e2e and verify it fails**
 
 Run:
 
@@ -1078,7 +1078,7 @@ npm run e2e -- play-flow.spec.ts
 
 Expected: fail because `ModeSelectPage` does not render the mock controls.
 
-- [ ] **Step 3: Implement mode select page**
+- [x] **Step 3: Implement mode select page**
 
 Create `code/frontend/src/pages/ModeSelectPage.tsx`:
 
@@ -1174,7 +1174,7 @@ export function ModeSelectPage() {
 }
 ```
 
-- [ ] **Step 4: Add mode page CSS**
+- [x] **Step 4: Add mode page CSS**
 
 Create `code/frontend/src/pages/ModeSelectPage.css`:
 
@@ -1309,7 +1309,7 @@ Create `code/frontend/src/pages/ModeSelectPage.css`:
 }
 ```
 
-- [ ] **Step 5: Run build/e2e and commit**
+- [x] **Step 5: Run build/e2e and commit**
 
 Run:
 
