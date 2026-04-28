@@ -13,6 +13,58 @@ Format per entry:
 - First reported: YYYY-MM-DD
 ```
 
+## BT22-098 / P-229 — event-gated Delay activation windows
+- Effect text: BT22-098: "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> ... 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3." P-229: "[Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay> ... 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
+- Missing DSL verb / step kind / predicate: `kind: delay` can express an option becoming a delayed effect, but the lowerer only maps end-of-turn style delay triggers. Event-gated windows such as "when Arisa suspends" or "when Mirai is played" are not representable, and `on_ally_played` is currently skipped by the timing map.
+- Lowers to engine API: needs a Delay registration that records an event trigger plus event predicate while preserving the rule that Delay effects cannot activate the turn the option was placed.
+- Suggested DSL syntax:
+  ```yaml
+  - kind: delay
+    trigger: on_suspend
+    condition: { event_target_name_is: "Arisa Kinosaki" }
+    process:
+      - effect_digivolve:
+          from: hand
+          source_filter: { trait_has: Puppet }
+          target_filter: { traits_include: [Puppet, LIBERATOR] }
+          cost_reduction: 3
+
+  - kind: delay
+    trigger: on_ally_played
+    condition: { event_card_name_is: "Mirai Kinosaki" }
+    process:
+      - effect_digivolve:
+          from: hand
+          target_filter: { trait_has: LIBERATOR, level_lte: 6 }
+          cost_reduction: 3
+  ```
+- Gap kind: hybrid (this entry tracks the DSL vocabulary/lowering half; engine event-gated Delay state and action-mask support are tracked in `qa/archetype-qa/engine-gaps.md`).
+- First reported: 2026-04-28 (Puppets archetype assessment)
+
+## EX9-032 / EX7-027 / BT22-036 — replacement cause predicate and `active_when` lowering
+- Effect text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
+- Missing DSL verb / step kind / predicate: replacement clauses accept `active_when`, but `lower_replacement` ignores it. The DSL also lacks a replacement-context predicate for "other than by your effects", so this prevention effect cannot be faithfully gated by cause/controller.
+- Lowers to engine API: the replacement evaluator needs to expose replacement cause/controller to DSL predicates and apply `active_when` before presenting the cost/selection branch.
+- Suggested DSL syntax:
+  ```yaml
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    active_when:
+      replacement_cause_not: own_effect
+    process:
+      - select_own_permanent:
+          as: cost
+          filter:
+            any_of:
+              - kind: token
+              - trait_has: Puppet
+            other_than_source: true
+      - delete_permanent: { target: cost }
+      - cancel_replacement: {}
+  ```
+- Gap kind: hybrid (DSL predicate/lowering plus engine replacement-context plumbing).
+- First reported: 2026-04-28 (Puppets archetype assessment)
+
 ## BT22-008 / BT22-017 — inherited end-of-turn DNA digivolve registration
 - Effect text: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in your hand."
 - Missing DSL verb / step kind / predicate: Lowering for existing `alt_path_registration` declarative clauses with `kind: dna_digivolve`. YAML examples can spell the clause, but `code/digimon-engine/src/dsl_cards/mod.rs` currently leaves this declarative form in the unlowered catch-all branch.
