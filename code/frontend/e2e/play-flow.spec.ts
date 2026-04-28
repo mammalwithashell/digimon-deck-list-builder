@@ -131,4 +131,19 @@ test.describe('In Between play flow', () => {
       game_mode: 'standard',
     });
   });
+
+  test('creates a room from selected deck', async ({ page }) => {
+    await mockDeckLibrary(page);
+    await page.route('**/lobby/create', (route) =>
+      route.fulfill({ json: { game_id: 'game-1', join_code: 'ABC123' } }),
+    );
+    await page.goto('/play');
+    await page.getByRole('button', { name: /ROOM MATCH/i }).click();
+    await page.getByRole('button', { name: /STANDARD/i }).click();
+    await page.getByRole('button', { name: /ENTER FORMAT/i }).click();
+    await page.getByRole('button', { name: /EMBER VANGUARD/i }).click();
+    await page.getByRole('button', { name: /USE THIS DECK/i }).click();
+    await expect(page).toHaveURL(/\/play\/room\/new/);
+    await expect(page.getByText('ABC123', { exact: true })).toBeVisible();
+  });
 });

@@ -1984,7 +1984,7 @@ git commit -m "feat: add in between matchmaking screen"
 - Create: `code/frontend/src/pages/RoomLobbyPage.css`
 - Modify: `code/frontend/e2e/play-flow.spec.ts`
 
-- [ ] **Step 1: Add room e2e**
+- [x] **Step 1: Add room e2e**
 
 Append:
 
@@ -2005,7 +2005,7 @@ test('creates a room from selected deck', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: Run e2e and verify it fails**
+- [x] **Step 2: Run e2e and verify it fails**
 
 Run:
 
@@ -2016,7 +2016,7 @@ npm run e2e -- play-flow.spec.ts
 
 Expected: fail because `RoomLobbyPage` is not implemented.
 
-- [ ] **Step 3: Implement room lobby page**
+- [x] **Step 3: Implement room lobby page**
 
 Create `code/frontend/src/pages/RoomLobbyPage.tsx`:
 
@@ -2128,7 +2128,7 @@ export function RoomLobbyPage() {
 }
 ```
 
-- [ ] **Step 4: Add room CSS**
+- [x] **Step 4: Add room CSS**
 
 Create `code/frontend/src/pages/RoomLobbyPage.css`:
 
@@ -2220,7 +2220,7 @@ Create `code/frontend/src/pages/RoomLobbyPage.css`:
 }
 ```
 
-- [ ] **Step 5: Run e2e and commit**
+- [x] **Step 5: Run e2e and commit**
 
 Run:
 
