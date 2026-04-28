@@ -17,7 +17,7 @@ The `/batch-implement-cards-rust-dsl` skill cites this document directly. Every 
 ```
 code/digimon-engine/
 ├── cards/<set>/<card_id>.yaml          # Production DSL card specs (canonical)
-├── cards/_examples/                    # Hand-curated YAML fixtures used in docs
+├── cards/_examples/                    # Hand-curated YAML fixtures used in docs and infra tests
 ├── src/
 │   ├── dsl_cards/                      # Lowering: CompiledCard → Effect closures
 │   ├── dsl_registry.rs                 # Embedded + on-disk pack loaders
@@ -70,7 +70,7 @@ mod tokens;
 
 ### Production YAML location
 
-Production card specs live at `code/digimon-engine/cards/<set>/<card_id>.yaml`. The pack build (`build.rs`) bundles them into `OUT_DIR/cards.pack`, which `dsl_registry::from_embedded()` loads at runtime. Tests using `runner.dsl_card("BT15-003")` resolve through the embedded pack — they read the same spec the shipping engine reads.
+Production card specs live at `code/digimon-engine/cards/<set>/<card_id>.yaml`. The pack build (`build.rs`) scans the whole `cards/` tree by direct subdirectory, including production set directories and `_examples/` fixtures, and bundles the valid specs into `OUT_DIR/cards.pack`. `dsl_registry::from_embedded()` loads that pack at runtime. Tests using `runner.dsl_card("BT15-003")` resolve through the embedded pack - they read the same spec the shipping engine reads.
 
 ---
 

@@ -605,16 +605,16 @@ python code/tools/build_registry.py --sets BT26
 
 New cards get append-only indices. Existing indices are preserved, so old trained agents remain valid.
 
-### Step 3: Implement Card Effects in Rust
+### Step 3: Implement Card Effects with the Rust DSL
 
-Card scripts are now hand-written Rust `CardEffect` implementations under `code/digimon-engine/src/cards/`. Use the `/batch-implement-cards-rust` skill to dispatch the TDD pipeline against the new set, or `/assess-archetype-rust` to pre-flight the engine primitives the set will require.
+Card scripts are primarily authored as YAML specs under `code/digimon-engine/cards/<set>/<CARD_ID>.yaml`, with long-tail bespoke behavior routed through named `raw_rust` functions under `code/digimon-engine/src/cards/raw_rust/`. Use the `batch-implement-cards-rust-dsl` workflow to dispatch the TDD pipeline against the new set, or `assess-rust-engine-archetype` to pre-flight the DSL and engine primitives the set will require.
 
 ```bash
-# Optional pre-flight: see which engine primitives the set needs
-/assess-archetype-rust BT26
+# Optional pre-flight: see which DSL and engine primitives the set needs
+assess-rust-engine-archetype BT26
 
-# TDD-driven hand-implementation in batches
-/batch-implement-cards-rust BT26
+# TDD-driven YAML DSL implementation in batches
+batch-implement-cards-rust-dsl BT26
 ```
 
 The C# files at `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` remain available as the behavioral source of truth.
