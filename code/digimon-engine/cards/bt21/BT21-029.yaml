@@ -1,0 +1,87 @@
+card: BT21-029
+name: Medusamon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: [Dragonkin, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 4
+
+effects:
+  # Clause (a): <Security A. +1>
+  #
+  # GAP G-DECLARATIVE-KEYWORD: DSL declarative grant_keyword clauses compile to
+  # Effect::declarative(...) with EffectTiming::Declarative, but Declarative timing
+  # is never enqueued or fired by the engine. The modifier is not installed at
+  # runtime. Test bt21_029_clause_a_security_attack_plus_1_installed_on_field is
+  # #[ignore = "pending: G-DECLARATIVE-KEYWORD"] until this gap is closed.
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+  # Clause (b): <Progress>
+  # Same G-DECLARATIVE-KEYWORD gap applies; Progress is compiled but not installed.
+  - kind: grant_keyword
+    keyword: Progress
+
+  # Clause (c): [When Digivolving] [End of Attack] [Once Per Turn]
+  # You may delete 1 of your opponent's lowest DP Digimon.
+  #
+  # GAP G-PREDICATE-DP-FILTER: dp_lte formula predicates are compiled
+  # but not evaluated in predicate.rs eval_permanent_fields(). The
+  # selection will accept all opponent Digimon rather than only the
+  # lowest-DP ones. Tests for the DP filter constraint are
+  # #[ignore = "pending: G-PREDICATE-DP-FILTER"].
+  #
+  # GAP G-SELECT-OPP-FILTER: select_opponent_permanent ignores its
+  # compiled filter (Phase 2b limitation).
+  - when: [when_digivolving, end_of_attack]
+    once_per_turn: true
+    optional: true
+    summary: "Delete 1 of opponent's lowest DP Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  aggregate:
+                    selector: lowest_dp
+                    scope: opponent
+          prompt: "Delete opponent's lowest DP Digimon"
+      - delete_permanent: { target: tgt }
+
+  # Clause (d) — security arm: [All Turns] [Once Per Turn]
+  # When their security stack is removed from → opponent plays 1 Petrification Token.
+  # on_opponent_security_removed fires in the attacker's battle area (fully implemented).
+  - when: on_opponent_security_removed
+    once_per_turn: true
+    summary: "Opponent plays Petrification Token on security removed"
+    process:
+      - play_token:
+          controller: opponent
+          token_name: petrification
+
+  # Clause (d) — deletion arm: [All Turns] [Once Per Turn]
+  # When any of your opponent's Digimon are deleted → opponent plays Petrification Token.
+  #
+  # BLOCKED (G-EVENT-TARGET-OWNER): on_any_deletion fires for ALL
+  # deletions — own and opponent. The DSL predicate layer has no
+  # event_target_owner predicate to filter "deleted permanent belonged
+  # to opponent". Omitted until G-EVENT-TARGET-OWNER is closed.
+  # Once closed, implement as:
+  #   - when: on_any_deletion
+  #     once_per_turn: true
+  #     condition: { event_target_owner: opponent }
+  #     process:
+  #       - play_token: { controller: opponent, token_name: petrification }

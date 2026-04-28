@@ -1,0 +1,60 @@
+card: BT21-007
+name: Agumon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Reptile]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 0
+
+# ─── Clause 1: [On Play] optional trash → hand ──────────────────────────────
+#
+# "[On Play] You may return 1 Digimon card with the [Reptile] or [Dragonkin]
+#  trait from your trash to the hand."
+#
+# "You may" → optional: true at clause level.
+# No [Once Per Turn] in printed text → no once_per_turn.
+# Target: exactly 1 Digimon card with Reptile or Dragonkin trait in own trash.
+# Verb: select_trash (filter: kind:digimon + trait Reptile or Dragonkin, optional)
+#       + add_to_hand_from_trash.
+#
+# ─── Clause 2: [Inherited] [Your Turn] +2000 DP ──────────────────────────────
+#
+# "Inherited Effect [Your Turn] This Digimon gets +2000 DP."
+#
+# Modelled as a declarative aura (scope: inherited), not a triggered effect.
+# `source_dp_contribution` reads the static dp_modifier field, gated by
+# active_when: { your_turn: true }. The G-INHERITED-DISPATCH engine gap applies
+# only to triggered effects dispatched through the effect queue; this aura rides
+# the existing `source_dp_contribution` path (same as BT23-005) and works today.
+
+effects:
+  # Clause 1 — [On Play] optional return Reptile/Dragonkin from trash
+  - when: on_play
+    optional: true
+    summary: "[On Play] You may return 1 Reptile/Dragonkin Digimon from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Reptile
+                  - trait_has: Dragonkin
+          prompt: "Return a Reptile or Dragonkin Digimon from trash to hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  # Clause 2 — [Inherited] [Your Turn] +2000 DP aura
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

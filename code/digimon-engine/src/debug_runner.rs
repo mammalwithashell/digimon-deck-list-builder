@@ -22,7 +22,7 @@ use crate::card_data::{CardData, DnaCost, DnaRequirement};
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
-use crate::enums::{CardColor, CardKind, GamePhase, ModifierType, PlayerId};
+use crate::enums::{CardColor, CardKind, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::events::GameEvent;
 use crate::game::Game;
 use crate::modifiers::ModifierRegistry;
@@ -625,6 +625,7 @@ impl DebugRunnerBuilder {
 
     #[cfg(feature = "dsl-yaml-loader")]
     fn register_compiled_card(&mut self, compiled: CompiledCard) {
+        use crate::cards::raw_rust;
         let card_id = compiled.card.clone();
         let compiled = Arc::new(compiled);
         self.card_data
@@ -633,7 +634,11 @@ impl DebugRunnerBuilder {
         self.compiled_cards
             .insert(card_id.clone(), compiled.clone());
         let registry = self.registry.get_or_insert_with(build_registry);
-        registry.insert(&card_id, Arc::new(DslCardEffect::new(compiled)));
+        let raw = Arc::new(raw_rust::build_registry());
+        registry.insert(
+            &card_id,
+            Arc::new(DslCardEffect::new_with_raw(compiled, raw)),
+        );
     }
 }
 
@@ -648,6 +653,34 @@ fn embedded_dsl_registry() -> Result<&'static digimon_dsl::CardRegistry, String>
 
 #[cfg(feature = "dsl-yaml-loader")]
 fn card_data_from_compiled(card: &CompiledCard) -> CardData {
+    use crate::dsl_cards::modifier_map::lookup_keyword;
+    use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
+
+    // Populate native keywords from face-up `grant_keyword` declarative clauses.
+    // A `GrantKeyword` clause is semantically equivalent to a printed keyword
+    // on the card face, so `has_keyword` can detect it via the native path
+    // without needing the declarative process to run at placement. Inherited
+    // grants are stack text and must stay out of native top-card keywords.
+    let mut keywords: Vec<Keyword> = Vec::new();
+    for clause in &card.effects {
+        if let CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
+            keyword,
+            value,
+            scope,
+            ..
+        }) = clause
+        {
+            if matches!(scope, CompiledScope::Inherited) {
+                continue;
+            }
+            if let Some(kw) = lookup_keyword(keyword, *value) {
+                if !keywords.contains(&kw) {
+                    keywords.push(kw);
+                }
+            }
+        }
+    }
+
     CardData {
         card_id: card.card.clone(),
         card_name: card.name.clone(),
@@ -676,7 +709,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         effect_class_name: card.card.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
-        keywords: Vec::new(),
+        keywords,
     }
 }
 

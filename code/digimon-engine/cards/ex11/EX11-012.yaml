@@ -1,0 +1,56 @@
+card: EX11-012
+name: Medusamon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 12000
+traits: [Dragonkin, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_includes: red }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+
+  - kind: grant_keyword
+    keyword: Progress
+
+  - when: [when_digivolving, end_of_attack]
+    optional: true
+    summary: "Delete <=12000 DP Digimon; return trash; play Petrification Token"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 12000
+          prompt: "Delete 1 opponent Digimon with <= this Digimon's DP"
+      - delete_permanent: { target: tgt }
+      - select_trash:
+          of: opponent
+          bind_as: r
+          filter: {}
+          prompt: "Return 1 card from opponent's trash to bottom of deck"
+      - raw_rust:
+          fn: ex11_012_return_trash_to_deck_bottom
+          consumes: [r]
+      - play_token:
+          controller: opponent
+          token_name: petrification
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    active_when: { all_turns: true }
+    summary: "Delete 1 Token to prevent leaving"
+    process:
+      - select_own_permanent:
+          bind_as: cost_token
+          filter: { kind: token }
+          optional: true
+          prompt: "Delete 1 Token so this Digimon doesn't leave"
+      - delete_permanent: { target: cost_token }
+      - cancel_replacement: {}

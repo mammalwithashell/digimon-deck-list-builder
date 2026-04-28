@@ -1,0 +1,64 @@
+card: BT21-025
+name: Lamiamon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Dragonkin, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4 }
+    cost: 3
+
+effects:
+  # Clause 1: <Progress> printed keyword grant.
+  - kind: grant_keyword
+    keyword: Progress
+
+  # Clause 2: [Your Turn] [Once Per Turn] When any of your [Reptile] or
+  # [Dragonkin] trait Digimon's attack targets change, trash your opponent's
+  # top security card.
+  #
+  # DSL gap G-ATK-TRAIT-FILTER: the DSL has no `attacker_trait_has` predicate
+  # to gate on the attacking permanent's traits. The `any_permanent` condition
+  # below checks that at least one matching Digimon is on your field — a
+  # necessary-but-not-sufficient approximation (fires even if a different
+  # Digimon is the attacker). Blocked tests are marked with G-ATK-TRAIT-FILTER.
+  - when: on_attack_target_change
+    active_when: { your_turn: true }
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - trait_has: Reptile
+          - trait_has: Dragonkin
+    process:
+      - trash_top_security: { of: opponent }
+
+  # Clause 3: [All Turns] [Once Per Turn] (Inherited) When your opponent's
+  # security is removed from, you may play 1 [Reptile] or [Dragonkin] trait
+  # Digimon card with 5000 DP or less from your hand without paying the cost.
+  #
+  # Engine gap G-INHERITED-DISPATCH: inherited triggered effects on
+  # digivolution-stack sources never fire — clause 3 tests are ignored.
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 5000
+              - any_of:
+                  - trait_has: Reptile
+                  - trait_has: Dragonkin
+          prompt: "Play a Reptile / Dragonkin Digimon with 5000 DP or less free"
+      - play_from_hand_free: { of: you, hand_index: pick }

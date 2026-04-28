@@ -169,3 +169,56 @@ effects:
     assert_eq!(runner.game.players[0].hand.len(), 1);
     assert!(runner.game.players[0].trash.is_empty());
 }
+
+#[test]
+fn select_opponent_permanent_filter_uses_original_effect_controller() {
+    let yaml = r#"
+card: DSL-E2E-OPP
+name: Opponent Selector
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - when: on_play
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            owner: opponent
+          prompt: "Pick opponent"
+      - delete_permanent: { target: target }
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("valid YAML");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compiles");
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("DSL-E2E-OPP", "Opponent Selector"))
+        .add_card(make_test_card("OPP-TARGET", "Opponent Target"))
+        .hand(0, &["DSL-E2E-OPP"])
+        .build();
+
+    runner.place_on_field(1, "OPP-TARGET", Some(0));
+
+    let dsl_effect = DslCardEffect::new(Arc::new(compiled));
+    let card: CardHandle = runner.game.players[0].hand[0].handle();
+    let effects = dsl_effect.effects(card);
+    let process = effects[0].process.as_ref().expect("has process closure");
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
+        process(&mut ctx);
+    }
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("opponent permanent selection should be installed");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        1,
+        "owner: opponent must be evaluated relative to the effect controller, not the target owner"
+    );
+}

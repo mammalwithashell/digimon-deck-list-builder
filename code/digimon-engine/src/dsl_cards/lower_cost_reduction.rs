@@ -16,19 +16,24 @@ use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect::Effect;
 use crate::effect_context::EffectReadContext;
+use crate::permanent::PermanentHandle;
 
 fn evaluate_amount(
     formula: &CompiledFormula,
     rctx: &EffectReadContext<'_>,
     raw: &EngineRawRustRegistry,
 ) -> i32 {
-    match rctx.source_permanent {
-        Some(target) => formula_eval::evaluate_read_with_raw(formula, rctx, target, raw),
-        None => match formula {
-            CompiledFormula::Literal(n) => *n,
-            _ => 0,
-        },
-    }
+    // Use the source permanent as the formula target when available.  When the
+    // effect fires during `before_pay_cost` for a card still in hand,
+    // `source_permanent` is `None`.  In that case we supply a sentinel handle
+    // (`player=controller, index=255`).  Formulas that do not dereference the
+    // target (e.g. `CardCountInZoneScoped`) evaluate correctly; formulas that
+    // DO dereference it (e.g. `StackSize`, `MaterialCount`) call
+    // `battle_area.get(255)` which returns `None` and safely short-circuit to 0.
+    let target = rctx
+        .source_permanent
+        .unwrap_or(PermanentHandle { player: rctx.player, index: 255 });
+    formula_eval::evaluate_read_with_raw(formula, rctx, target, raw)
 }
 
 pub fn lower(
@@ -48,6 +53,7 @@ pub fn lower(
         Some(CompiledFormula::Literal(amount)),
         vec![],
         Arc::new(EngineRawRustRegistry::new()),
+        false,
     )
 }
 
@@ -60,6 +66,7 @@ pub fn lower_with_formula(
     amount_fn: Option<CompiledFormula>,
     pay_cost: Vec<CompiledStep>,
     raw: Arc<EngineRawRustRegistry>,
+    when_playing_this: bool,
 ) -> Effect {
     let active_when = active_when.map(Arc::new);
     let condition = condition.map(Arc::new);
@@ -74,6 +81,9 @@ pub fn lower_with_formula(
     }
     if once_per_turn {
         builder = builder.once_per_turn();
+    }
+    if when_playing_this {
+        builder = builder.when_playing_this();
     }
     builder = builder.cost_reduction_fn(move |rctx| {
         if let Some(aw) = &active_when {

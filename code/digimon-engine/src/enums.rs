@@ -522,6 +522,11 @@ pub enum ModifierType {
     // ── Phase 6 flood gates (player-scoped) ──────────────────────────────
     // Enforcement wires up in Tasks 3-4; for now these are pure data.
     CannotPlayDigimonByEffect,
+    /// Prevents the affected player from playing Tamer cards via effects
+    /// (regardless of zone: hand or trash). Companion to `CannotPlayDigimonByEffect`.
+    /// Checked in `play_from_hand_with_cost` and `play_from_trash_with_cost` when
+    /// `source == PlaySource::ByEffect && card_kind == CardKind::Tamer`.
+    CannotPlayTamerByEffect,
     CannotGainMemoryByEffect,
     CannotGainMemoryExceptFromTamers,
     CannotReducePlayCost,

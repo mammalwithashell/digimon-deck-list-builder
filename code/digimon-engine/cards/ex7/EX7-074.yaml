@@ -1,0 +1,210 @@
+card: EX7-074
+name: "Vortex Resonance"
+kind: option
+color: [green, blue]
+cost: 3
+traits: [LIBERATOR]
+
+# ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────────
+#
+# "While you have [LIBERATOR] trait Digimon or Tamer, you can ignore this
+# card's color requirements."
+#
+# DCGO (EX7_074.cs, EffectTiming.None):
+#   IgnoreColorConditionClass.SetUpIgnoreColorConditionClass(cardCondition: CardCondition)
+#   where CardCondition checks (cardSource == card) — applies to this card only.
+#   CanUseCondition: CardEffectCommons.HasMatchConditionOwnersPermanent(card, HasLiberatorTrait)
+#   HasLiberatorTrait: (permanent.IsDigimon || permanent.IsTamer) &&
+#                      permanent.TopCard.ContainsTraits("Liberator" or "LIBERATOR")
+#
+# DSL modelling:
+#   - kind: flood_gate → modifier: IgnoreColorRequirement
+#   - target: { card_number_is: "EX7-074" } — applies to this card only
+#   - active_when: any_permanent { of: you, battle_area } where
+#     (kind: digimon AND trait: LIBERATOR) OR (kind: tamer)
+#
+# G-IGNORE-COLOR-MASK [engine gap]:
+#   The modifier: IgnoreColorRequirement flood_gate clause compiles correctly,
+#   but code/digimon-engine/src/action/mask.rs option_color_match_available
+#   does not consult the IgnoreColorRequirement modifier at runtime. The clause
+#   has zero runtime effect until that gap is resolved.
+#   Tracked in qa/archetype-qa/engine-gaps.md under G-IGNORE-COLOR-MASK.
+#   Tests asserting the color bypass actually unlocks play are
+#   #[ignore = "pending: G-IGNORE-COLOR-MASK"].
+
+# ─── Clause 1: [Main] Reveal + add LIBERATOR to hand + digivolve cost -4 ──────
+#
+# "[Main] Reveal the top 3 cards of your deck. Add 1 card with the [LIBERATOR]
+# trait among them to the hand. Return the rest to the bottom of the deck.
+# Then, 1 of your Digimon may digivolve into a Digimon card in your hand with
+# the digivolution cost reduced by 4."
+#
+# DCGO (EffectTiming.OptionSkill):
+#   1. SimplifiedRevealDeckTopCardsAndSelect(
+#        revealCount: 3,
+#        simplifiedSelectCardConditions: [
+#          { canTargetCondition: IsLiberatorTraitCardCondition,
+#            message: "Select 1 card with [LIBERATOR] trait.",
+#            mode: AddHand, maxCount: 1 } ],
+#        remainingCardsPlace: RemainingCardsPlace.DeckBottom)
+#
+#   2. if (CardEffectCommons.HasMatchConditionPermanent(CanSelectOwnPermanentCondition)):
+#        SelectPermanentEffect(canNoSelect: true) over own battle area Digimon.
+#      if permanent selected:
+#        DigivolveIntoHandOrTrashCard(
+#          cardCondition: IsDigimon, payCost: true,
+#          reduceCostTuple: (reduceCost: 4, reduceCostCardCondition: null),
+#          isHand: true)
+#
+# DSL modelling:
+#   - when: main_from_hand
+#   - optional: false at clause level — no "you may" on reveal step.
+#     The digivolve sub-step is optional via select_own_permanent(optional: true).
+#   - reveal_top_deck: { count: 3 }
+#   - select_reveal: { filter: trait_has: LIBERATOR, optional: true }
+#   - add_to_hand_from_reveal
+#   - place_remainder_on_deck: { position: bottom }
+#   - select_own_permanent: { optional: true, filter: digimon }
+#   - select_hand: { filter: kind: digimon }
+#   - effect_initiated_digivolve: { cost: { reduce: 4 } }
+
+# ─── Clause 2: Inherited [Security] ──────────────────────────────────────────
+#
+# "Inherited: Security Effect [Security] You may play 1 card with the [LIBERATOR]
+# trait with a play cost of 4 or less from your hand or trash without paying
+# the cost. Then, add this card to the hand."
+#
+# DCGO (EffectTiming.SecuritySkill):
+#   canSelectHand/canSelectTrash filtered by: ContainsTraits("LIBERATOR") &&
+#   HasPlayCost && GetCostItself <= 4 && !IsDigiEgg && CanPlayAsNewPermanent(payCost:false)
+#   If both zones have candidates: "From hand / From trash" zone-choice prompt.
+#   PlayPermanentCards(payCost: false) on selected card.
+#   AddThisCardToHand → EX7-074 moves to controller's hand.
+#
+# G-PLAY-COST-LTE: play_cost_lte: 4 predicate not enforced at selection runtime.
+# G-ADD-OPTION-SELF-TO-HAND: no DSL step / engine method for self-to-hand.
+#   raw_rust placeholder (ex7_074_add_self_to_hand) is a no-op until resolved.
+
+effects:
+  # ─── Clause 0: Color bypass flood_gate ─────────────────────────────────────
+  # "While you have [LIBERATOR] trait Digimon or Tamer, ignore color requirements."
+  # G-IGNORE-COLOR-MASK: compiled but not enforced in Rust action mask at runtime.
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: LIBERATOR
+          - kind: tamer
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "EX7-074" }
+    summary: "While you have a LIBERATOR Digimon or Tamer, ignore this card's color requirements"
+
+  # ─── Clause 1: [Main] ──────────────────────────────────────────────────────
+  # Reveal top 3 → add 1 LIBERATOR to hand → return rest to bottom →
+  # 1 Digimon may digivolve into a hand Digimon, cost -4.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 3; add 1 LIBERATOR to hand; rest to bottom; 1 Digimon may digivolve into hand Digimon, cost -4"
+    process:
+      # Reveal top 3.
+      # DCGO: SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...).
+      - reveal_top_deck:
+          of: you
+          count: 3
+      # Select 1 LIBERATOR card from reveal to add to hand.
+      # DCGO: canTargetCondition: ContainsTraits("LIBERATOR"), mode: AddHand, maxCount: 1.
+      # optional: true — if no LIBERATOR among revealed cards, skip add step.
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            trait_has: LIBERATOR
+          prompt: "Select 1 card with the [LIBERATOR] trait to add to your hand"
+      # Move selected card to hand.
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      # Return remaining revealed cards to deck bottom.
+      # DCGO: remainingCardsPlace: RemainingCardsPlace.DeckBottom.
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # Select 1 of your Digimon to digivolve (optional — DCGO: canNoSelect: true).
+      # DCGO: CanSelectOwnPermanentCondition checks battle area Digimon that can
+      # receive a digivolve from at least one hand Digimon. We surface the choice
+      # with optional: true (player may decline).
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      # Select the target Digimon card from hand.
+      # DCGO: DigivolveIntoHandOrTrashCard cardCondition: IsDigimon, isHand: true.
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            kind: digimon
+          prompt: "Choose a Digimon card in your hand to digivolve into"
+      # Execute effect-initiated digivolve, cost reduced by 4.
+      # DCGO: payCost: true, reduceCostTuple: (reduceCost: 4, null), isHand: true.
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 4 }
+          ignore_requirements: false
+
+  # ─── Clause 2: Inherited [Security] ────────────────────────────────────────
+  # "You may play 1 LIBERATOR (cost ≤ 4) from hand or trash free;
+  #  then add this card to the hand."
+  # DCGO: EffectTiming.SecuritySkill, optional ("you may").
+  # scope: inherited — security effect on an option card (inherited by carrier).
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 LIBERATOR (cost ≤4) from hand or trash free; add this card to hand"
+    process:
+      # Zone choice when both hand and trash have eligible cards.
+      # DCGO: SetBoolSelection(["From hand","From trash"]) if both zones eligible;
+      #       SetBool(canSelectHand) if only one zone eligible.
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play a card?"
+      # Branch A: play from hand.
+      # DCGO: SelectHandEffect(canNoSelect: true, filter: LIBERATOR + cost≤4 + playable)
+      # G-PLAY-COST-LTE: play_cost_lte: 4 not enforced at selection runtime.
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  trait_has: LIBERATOR
+                prompt: "Select a LIBERATOR card (cost 4 or less) to play from your hand"
+            - play_from_hand_free: { of: you, hand_index: picked_hand }
+      # Branch B: play from trash.
+      # DCGO: SelectCardEffect(canNoSelect: () => true, root: Trash, filter: LIBERATOR + cost≤4)
+      # G-PLAY-COST-LTE: play_cost_lte: 4 not enforced at selection runtime.
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  trait_has: LIBERATOR
+                prompt: "Select a LIBERATOR card (cost 4 or less) to play from your trash"
+            - play_from_trash_free: { of: you, hand_index: picked_trash }
+      # "Then, add this card to the hand."
+      # DCGO: CardEffectCommons.AddThisCardToHand(card, activateClass).
+      # G-ADD-OPTION-SELF-TO-HAND: no DSL step / EffectContext method exists yet.
+      # No-op placeholder — same pattern as lm_027_add_self_to_hand.
+      - raw_rust: { fn: ex7_074_add_self_to_hand }

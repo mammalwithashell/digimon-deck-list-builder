@@ -1,0 +1,81 @@
+card: BT21-001
+name: Gigimon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser, LIBERATOR]
+
+# ─── Clause 1: Inherited ────────────────────────────────────────────────────
+#
+# "Inherited Effect [Your Turn] [Once Per Turn]
+#  When your opponent's security stack is removed from,
+#  1 of your Digimon may digivolve into a Digimon card with the
+#  [Reptile] or [Dragonkin] trait in the hand with the digivolution
+#  cost reduced by 1."
+#
+# DCGO BT21_001.cs analysis:
+#   - EffectTiming.OnLoseSecurity — fires when opponent loses security.
+#   - CanUseCondition: IsExistOnBattleAreaDigimon + IsOwnerTurn + CanTriggerWhenLoseSecurity(enemy).
+#   - CanActivateCondition: IsExistOnBattleAreaDigimon (re-checked at activation time).
+#   - ActivateCoroutine:
+#       1. SelectPermanentEffect over P0's battle area (canNoSelect: true — optional).
+#       2. If a permanent is selected: DigivolveIntoHandOrTrashCard(
+#              targetPermanent: selectedPermanent,
+#              cardCondition: Reptile OR Dragonkin,
+#              payCost: true,
+#              reduceCostTuple: (reduceCost: 1, reduceCostCardCondition: null),
+#              isHand: true).
+#
+# DSL modelling:
+#   - scope: inherited    → fires while Gigimon is a digivolution source under a carrier.
+#   - when: on_opponent_security_removed
+#   - active_when: { your_turn: true }
+#   - once_per_turn: true      [Once Per Turn]
+#   - optional: false at clause level — clause fires automatically; optionality is
+#     inside the process via select_own_permanent with optional: true.
+#   - process:
+#     1. select_own_permanent (optional: true, filter: digimon)
+#        → DCGO's SelectPermanentEffect with canNoSelect: true.
+#     2. select_hand (filter: Reptile OR Dragonkin)
+#        → DCGO's DigivolveIntoHandOrTrashCard cardCondition.
+#     3. effect_initiated_digivolve (cost: { reduce: 1 }, ignore_requirements: false)
+#        → DCGO's payCost: true + reduceCostTuple: (1, null).
+#
+# Known gaps:
+#   - G-INHERITED-DISPATCH: enqueue_from_permanent does not scan digivolution-stack
+#     sources for `scope: inherited` triggered clauses. This entire clause is
+#     structurally correct but won't fire at runtime. Behavioral tests are #[ignore]'d.
+#   - G-OPT-TRIGGERED: once_per_turn not enforced for triggered effects; OPT tests
+#     are #[ignore]'d.
+
+effects:
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When opponent's security removed, 1 of your Digimon may digivolve into Reptile/Dragonkin in hand, cost -1"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Reptile
+                  - trait_has: Dragonkin
+          prompt: "Choose a Reptile or Dragonkin card to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false

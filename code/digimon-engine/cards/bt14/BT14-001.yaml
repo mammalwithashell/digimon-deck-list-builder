@@ -1,0 +1,19 @@
+card: BT14-001
+name: Koromon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  # Inherited [Your Turn] [Once Per Turn]
+  # When a card is removed from your opponent's security stack, <Draw 1>.
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "Your Turn / OPT: when opponent's security is removed, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

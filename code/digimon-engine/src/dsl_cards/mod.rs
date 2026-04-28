@@ -144,6 +144,7 @@ impl CardEffect for DslCardEffect {
                                 Some(amount_formula),
                                 pay_cost.clone(),
                                 self.raw.clone(),
+                                *when_playing_this,
                             ));
                         }
                     }
