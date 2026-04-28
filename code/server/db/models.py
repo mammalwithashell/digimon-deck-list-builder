@@ -96,7 +96,7 @@ class Deck(Base):
     __tablename__ = "decks"
     __table_args__ = (
         CheckConstraint(
-            "game_mode IN ('standard', 'edh_commander', 'titan', 'no_restriction')",
+            "game_mode IN ('standard', 'eden', 'edh_commander', 'titan', 'no_restriction')",
             name="ck_decks_game_mode",
         ),
         CheckConstraint(
@@ -119,6 +119,7 @@ class Deck(Base):
 
     id = Column(String, primary_key=True, default=_new_uuid)
     owner_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    folder_id = Column(String, ForeignKey("deck_folders.id", ondelete="SET NULL"), nullable=True)
     name = Column(String, nullable=False)
     description = Column(Text, default="")
     game_mode = Column(String, nullable=False)
@@ -135,6 +136,7 @@ class Deck(Base):
     is_valid = Column(Integer, default=0, nullable=False)
     validation_errors = Column(Text, default="[]")  # JSON array of error strings
     is_public = Column(Integer, default=0, nullable=False)
+    is_pinned = Column(Integer, default=0, nullable=False)
     tags = Column(Text, default="[]")  # JSON array of tag strings
     # Matchmaking classifier output — "meta" / "rogue" / "jank" or NULL if
     # the classifier hasn't run yet. Populated on save by the meta_tier
@@ -145,7 +147,25 @@ class Deck(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
     owner = relationship("User", back_populates="decks")
+    folder = relationship("DeckFolder", back_populates="decks")
     versions = relationship("DeckVersion", back_populates="deck", cascade="all, delete-orphan")
+
+
+class DeckFolder(Base):
+    __tablename__ = "deck_folders"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "name", name="uq_deck_folders_owner_name"),
+        Index("idx_deck_folders_owner_id", "owner_id"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    owner_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    decks = relationship("Deck", back_populates="folder")
 
 
 # ── Deck Versions ───────────────────────────────────────────────────────
@@ -242,7 +262,7 @@ class GameSession(Base):
     __tablename__ = "game_sessions"
     __table_args__ = (
         CheckConstraint(
-            "game_mode IN ('standard', 'edh_commander', 'titan', 'no_restriction')",
+            "game_mode IN ('standard', 'eden', 'edh_commander', 'titan', 'no_restriction')",
             name="ck_game_sessions_mode",
         ),
         CheckConstraint(

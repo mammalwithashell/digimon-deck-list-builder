@@ -1,5 +1,5 @@
 import client from './client';
-import type { DeckSummary } from '@/types/deck';
+import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
 
 // Mirrors `gameApi.ts` — desktop builds dispatch parse / validate /
 // tested-cards calls through Tauri `invoke()` into the embedded
@@ -26,27 +26,6 @@ interface CreateDeckParams {
   egg_deck_alt_arts?: boolean[];
   is_public?: boolean;
   tags?: string[];
-}
-
-interface DeckResponse {
-  id: string;
-  owner_id: string;
-  name: string;
-  description: string;
-  game_mode: string;
-  main_deck: string[];
-  egg_deck: string[];
-  main_deck_alt_arts?: boolean[];
-  egg_deck_alt_arts?: boolean[];
-  commander_id: string | null;
-  is_valid: boolean;
-  validation_errors: string[];
-  is_public: boolean;
-  tags: string[];
-  meta_tier?: string | null;
-  meta_archetype?: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 interface ParseDeckResponse {
@@ -78,6 +57,28 @@ export async function listDecks(gameMode?: string): Promise<DeckSummary[]> {
   return data;
 }
 
+export async function listDeckFolders(): Promise<DeckFolder[]> {
+  const { data } = await client.get<DeckFolder[]>('/decks/folders');
+  return data;
+}
+
+export async function createDeckFolder(name: string): Promise<DeckFolder> {
+  const { data } = await client.post<DeckFolder>('/decks/folders', { name });
+  return data;
+}
+
+export async function updateDeckFolder(
+  folderId: string,
+  params: { name?: string; sort_order?: number },
+): Promise<DeckFolder> {
+  const { data } = await client.put<DeckFolder>(`/decks/folders/${folderId}`, params);
+  return data;
+}
+
+export async function deleteDeckFolder(folderId: string): Promise<void> {
+  await client.delete(`/decks/folders/${folderId}`);
+}
+
 export async function getDeck(deckId: string): Promise<DeckResponse> {
   const { data } = await client.get<DeckResponse>(`/decks/${deckId}`);
   return data;
@@ -88,6 +89,14 @@ export async function updateDeck(
   params: Partial<CreateDeckParams> & { change_note?: string },
 ): Promise<DeckResponse> {
   const { data } = await client.put<DeckResponse>(`/decks/${deckId}`, params);
+  return data;
+}
+
+export async function updateDeckLibraryFields(
+  deckId: string,
+  params: { folder_id?: string | null; is_pinned?: boolean },
+): Promise<DeckResponse> {
+  const { data } = await client.patch<DeckResponse>(`/decks/${deckId}/library`, params);
   return data;
 }
 
@@ -131,6 +140,7 @@ export async function validateDeckRaw(
     ? await invokeTauri<BackendValidateDeckResponse>('rust_validate_deck_raw', {
         mainDeck,
         eggDeck,
+        gameMode: gameMode ?? 'standard',
       })
     : (
         await client.post<BackendValidateDeckResponse>('/decks/validate', {

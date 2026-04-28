@@ -14,6 +14,60 @@ pub enum CardKind {
     Token,
 }
 
+/// Card rarity.
+///
+/// Variant order mirrors Python's `Rarity` enum in
+/// `digimon_gym/engine/data/enums.py` and the ingester's `RARITY_MAP`:
+/// C=0, U=1, R=2, SR=3, SEC=4, P=5, NoRarity=6.
+/// `u8::MAX` is reserved by deck-data deserializers as the sentinel for
+/// "missing rarity"; it should be mapped to `NoRarity` before calling
+/// `from_u8` so invalid numeric rarity values can fail fast.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Rarity {
+    C = 0,
+    U = 1,
+    R = 2,
+    SR = 3,
+    SEC = 4,
+    P = 5,
+    NoRarity = 6,
+}
+
+impl Rarity {
+    pub fn from_u8(raw: u8) -> Option<Self> {
+        match raw {
+            0 => Some(Self::C),
+            1 => Some(Self::U),
+            2 => Some(Self::R),
+            3 => Some(Self::SR),
+            4 => Some(Self::SEC),
+            5 => Some(Self::P),
+            6 => Some(Self::NoRarity),
+            _ => None,
+        }
+    }
+
+    pub const fn mask(self) -> u8 {
+        1u8 << (self as u8)
+    }
+
+    pub const fn is_in_mask(self, mask: u8) -> bool {
+        mask & self.mask() != 0
+    }
+
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::C => "C",
+            Self::U => "U",
+            Self::R => "R",
+            Self::SR => "SR",
+            Self::SEC => "SEC",
+            Self::P => "P",
+            Self::NoRarity => "NoRarity",
+        }
+    }
+}
+
 /// Card color.
 ///
 /// Variant order mirrors Python's `CardColor` enum in
@@ -518,7 +572,9 @@ pub enum SkipDraw {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum GameMode {
     Standard,
+    Pauper,
     NoRestriction,
+    Eden,
     EdhCommander,
     Titan,
 }
@@ -594,6 +650,29 @@ pub enum CardSourceRef {
     Trash(PlayerId, usize),
     DeckTop(PlayerId),
     Reveal(CardHandle),
+}
+
+#[cfg(test)]
+mod rarity_tests {
+    use super::*;
+
+    #[test]
+    fn rarity_from_u8_rejects_unknown_values() {
+        assert_eq!(Rarity::from_u8(0), Some(Rarity::C));
+        assert_eq!(Rarity::from_u8(1), Some(Rarity::U));
+        assert_eq!(Rarity::from_u8(6), Some(Rarity::NoRarity));
+        assert_eq!(Rarity::from_u8(u8::MAX), None);
+        assert_eq!(Rarity::from_u8(42), None);
+    }
+
+    #[test]
+    fn rarity_masks_are_distinct() {
+        let pauper_mask = Rarity::C.mask() | Rarity::U.mask();
+        assert!(Rarity::C.is_in_mask(pauper_mask));
+        assert!(Rarity::U.is_in_mask(pauper_mask));
+        assert!(!Rarity::R.is_in_mask(pauper_mask));
+        assert!(!Rarity::NoRarity.is_in_mask(pauper_mask));
+    }
 }
 
 #[cfg(test)]

@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +19,16 @@ import torch
 import torch.nn as nn
 
 from digimon_engine import ACTION_SPACE_SIZE, TENSOR_SIZE
+
+
+CODE_ROOT = Path(__file__).resolve().parents[1]
+if str(CODE_ROOT) not in sys.path:
+    sys.path.insert(0, str(CODE_ROOT))
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +119,7 @@ def export_mlp(sb3_zip_path: str, output_path: str) -> None:
         output_names=["logits"],
         dynamic_axes={"obs": {0: "batch"}, "logits": {0: "batch"}},
         opset_version=17,
+        dynamo=False,
     )
     print(f"Exported MLP model to {output_path}")
 
@@ -127,8 +139,9 @@ def export_lstm(sb3_zip_path: str, output_path: str) -> None:
     wrapper.eval()
 
     dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
-    dummy_h = torch.zeros(1, 1, 256, dtype=torch.float32)
-    dummy_c = torch.zeros(1, 1, 256, dtype=torch.float32)
+    hidden_size = policy.lstm_actor.hidden_size
+    dummy_h = torch.zeros(1, 1, hidden_size, dtype=torch.float32)
+    dummy_c = torch.zeros(1, 1, hidden_size, dtype=torch.float32)
 
     with torch.no_grad():
         logits_shape = tuple(wrapper(dummy_obs, dummy_h, dummy_c)[0].shape)
@@ -150,6 +163,7 @@ def export_lstm(sb3_zip_path: str, output_path: str) -> None:
             "logits": {0: "batch"},
         },
         opset_version=17,
+        dynamo=False,
     )
     print(f"Exported LSTM model to {output_path}")
 
@@ -189,8 +203,9 @@ def _verify_lstm(policy, wrapper, onnx_path: str) -> None:
     import onnxruntime as ort
 
     dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
-    dummy_h = torch.zeros(1, 1, 256, dtype=torch.float32)
-    dummy_c = torch.zeros(1, 1, 256, dtype=torch.float32)
+    hidden_size = policy.lstm_actor.hidden_size
+    dummy_h = torch.zeros(1, 1, hidden_size, dtype=torch.float32)
+    dummy_c = torch.zeros(1, 1, hidden_size, dtype=torch.float32)
 
     with torch.no_grad():
         pt_logits, pt_h, pt_c = wrapper(dummy_obs, dummy_h, dummy_c)

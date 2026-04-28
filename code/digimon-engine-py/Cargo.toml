@@ -9,7 +9,7 @@ name = "digimon_engine"
 crate-type = ["cdylib"]
 
 [dependencies]
-digimon-engine = { path = "../digimon-engine", default-features = false }
+digimon-engine = { path = "../digimon-engine", default-features = false, features = ["dsl-yaml-loader"] }
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py311"] }
 numpy = "0.22"
 serde_json = "1"

@@ -4,28 +4,9 @@
 
 import { invoke } from '@tauri-apps/api/core';
 
-import type { DeckSummary } from '@/types/deck';
+import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
 
-export interface Deck {
-  id: string;
-  owner_id: string;
-  name: string;
-  description: string;
-  game_mode: string;
-  main_deck: string[];
-  egg_deck: string[];
-  main_deck_alt_arts?: boolean[];
-  egg_deck_alt_arts?: boolean[];
-  commander_id: string | null;
-  is_valid: boolean;
-  validation_errors: string[];
-  is_public: boolean;
-  tags: string[];
-  meta_tier?: string | null;
-  meta_archetype?: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type Deck = DeckResponse;
 
 // Re-export the shared DeckSummary so callers can treat this module and
 // `deckApi.ts` as swap-compatible.
@@ -33,6 +14,29 @@ export type { DeckSummary } from '@/types/deck';
 
 export async function listDecks(): Promise<DeckSummary[]> {
   return invoke<DeckSummary[]>('decks_list');
+}
+
+export async function listDeckFolders(): Promise<DeckFolder[]> {
+  return invoke<DeckFolder[]>('deck_folders_list');
+}
+
+export async function createDeckFolder(name: string): Promise<DeckFolder> {
+  return invoke<DeckFolder>('deck_folders_create', { name });
+}
+
+export async function updateDeckFolder(
+  folderId: string,
+  params: { name?: string; sort_order?: number },
+): Promise<DeckFolder> {
+  return invoke<DeckFolder>('deck_folders_update', {
+    folderId,
+    name: params.name,
+    sortOrder: params.sort_order,
+  });
+}
+
+export async function deleteDeckFolder(folderId: string): Promise<boolean> {
+  return invoke<boolean>('deck_folders_delete', { folderId });
 }
 
 export async function getDeck(deckId: string): Promise<Deck> {
@@ -49,6 +53,7 @@ export async function putDeck(deck: Partial<Deck> & {
   const now = new Date().toISOString();
   const full: Deck = {
     id: deck.id ?? '',
+    folder_id: deck.folder_id ?? null,
     // TODO(task-8): once bootstrap/guest.ts lands, stamp the actual guest
     // user_id from localStorage instead of the 'guest' placeholder.
     owner_id: deck.owner_id ?? 'guest',
@@ -63,6 +68,7 @@ export async function putDeck(deck: Partial<Deck> & {
     is_valid: deck.is_valid ?? false,
     validation_errors: deck.validation_errors ?? [],
     is_public: deck.is_public ?? false,
+    is_pinned: deck.is_pinned ?? false,
     tags: deck.tags ?? [],
     meta_tier: deck.meta_tier ?? null,
     meta_archetype: deck.meta_archetype ?? null,
@@ -74,4 +80,16 @@ export async function putDeck(deck: Partial<Deck> & {
 
 export async function deleteDeck(deckId: string): Promise<boolean> {
   return invoke<boolean>('decks_delete', { deckId });
+}
+
+export async function updateDeckLibraryFields(
+  deckId: string,
+  params: { folder_id?: string | null; is_pinned?: boolean },
+): Promise<Deck> {
+  return invoke<Deck>('decks_update_library', {
+    deckId,
+    folderId: params.folder_id ?? undefined,
+    clearFolder: params.folder_id === null,
+    isPinned: params.is_pinned,
+  });
 }

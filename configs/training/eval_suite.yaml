@@ -1,0 +1,111 @@
+# Held-out evaluation suite. Each row is one matchup cell; the agent plays
+# Player 1 in every cell and a scripted opponent plays Player 2.
+
+version: 1
+opponent_policy: greedy
+games_per_cell: 25
+matchups:
+  - name: mirror_st1
+    deck1:
+      - ST1-01
+      - ST1-01
+      - ST1-01
+      - ST1-01
+      - ST1-01
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+    deck2:
+      - ST1-01
+      - ST1-01
+      - ST1-01
+      - ST1-01
+      - ST1-01
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+      - ST1-03
+    seeds: [101, 102, 103, 104, 105, 106, 107, 108]

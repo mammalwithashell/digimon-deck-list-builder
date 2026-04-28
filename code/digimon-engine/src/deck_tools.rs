@@ -18,6 +18,9 @@ use std::sync::OnceLock;
 
 use serde::Deserialize;
 
+use crate::enums::{GameMode, Rarity};
+use crate::rules::CardRestriction;
+
 // Data files — `include_str!` bakes the bytes into the crate, so there's no
 // separate resource-bundling step for desktop builds.
 const CARDS_JSON: &str = include_str!("../../../data/cards.json");
@@ -33,6 +36,8 @@ pub struct CardSummary {
     pub card_name_eng: String,
     /// Matches Python `CardKind`: 0=Digimon, 1=Tamer, 2=Option, 3=DigiEgg.
     pub card_kind: u8,
+    /// Matches Python `Rarity`: 0=C, 1=U, 2=R, 3=SR, 4=SEC, 5=P.
+    pub rarity: Rarity,
     /// Max copies allowed per deck. Defaults to 4; a handful of cards
     /// override it in the data file (e.g. starter-deck restrictions).
     pub max_count_in_deck: u32,
@@ -44,12 +49,26 @@ struct CardEntryRaw {
     #[serde(default)]
     card_name_eng: String,
     card_kind: u8,
+    #[serde(default = "default_rarity")]
+    rarity: u8,
     #[serde(default = "default_max_count")]
     max_count_in_deck: u32,
 }
 
 fn default_max_count() -> u32 {
     4
+}
+
+fn default_rarity() -> u8 {
+    u8::MAX
+}
+
+fn parse_rarity(raw: u8, card_id: &str) -> Rarity {
+    if raw == default_rarity() {
+        return Rarity::NoRarity;
+    }
+    Rarity::from_u8(raw)
+        .unwrap_or_else(|| panic!("cards.json has unknown rarity value {raw} for card {card_id}"))
 }
 
 #[derive(Deserialize)]
@@ -66,12 +85,14 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
             .expect("cards.json is malformed (compiled-in resource)");
         raw.into_iter()
             .map(|(k, v)| {
+                let rarity = parse_rarity(v.rarity, &k);
                 (
                     k,
                     CardSummary {
                         card_id: v.card_id,
                         card_name_eng: v.card_name_eng,
                         card_kind: v.card_kind,
+                        rarity,
                         max_count_in_deck: v.max_count_in_deck,
                     },
                 )
@@ -163,6 +184,95 @@ fn card_limit(card_id: &str) -> Option<u32> {
         return Some(1);
     }
     None
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeckRuleset {
+    Standard,
+    NoRestriction,
+    Pauper,
+    Eden,
+}
+
+impl DeckRuleset {
+    pub fn from_game_mode(game_mode: &str) -> Option<Self> {
+        match game_mode {
+            "standard" | "" => Some(Self::Standard),
+            "no_restriction" => Some(Self::NoRestriction),
+            "pauper" => Some(Self::Pauper),
+            "eden" => Some(Self::Eden),
+            _ => None,
+        }
+    }
+
+    pub fn from_game_mode_enum(mode: GameMode) -> Option<Self> {
+        match mode {
+            GameMode::Standard => Some(Self::Standard),
+            GameMode::Pauper => Some(Self::Pauper),
+            GameMode::NoRestriction => Some(Self::NoRestriction),
+            GameMode::Eden => Some(Self::Eden),
+            GameMode::EdhCommander | GameMode::Titan => None,
+        }
+    }
+
+    fn restriction(self) -> Option<&'static CardRestriction> {
+        match self {
+            Self::Standard => None,
+            Self::NoRestriction => None,
+            Self::Pauper => None,
+            Self::Eden => Some(CardRestriction::eden_ref()),
+        }
+    }
+}
+
+fn format_card_limit(ruleset: DeckRuleset, card_id: &str) -> Option<u32> {
+    match ruleset {
+        DeckRuleset::Standard | DeckRuleset::Pauper => card_limit(card_id),
+        DeckRuleset::NoRestriction => None,
+        DeckRuleset::Eden => CardRestriction::eden_ref()
+            .card_limits
+            .get(card_id)
+            .map(|limit| u32::from(*limit)),
+    }
+}
+
+fn format_choice_groups(ruleset: DeckRuleset) -> Vec<(Vec<String>, Vec<String>)> {
+    match ruleset {
+        DeckRuleset::Standard | DeckRuleset::Pauper => CHOICE_GROUPS
+            .iter()
+            .map(|(a, b)| {
+                (
+                    a.iter().map(|s| (*s).to_string()).collect(),
+                    b.iter().map(|s| (*s).to_string()).collect(),
+                )
+            })
+            .collect(),
+        DeckRuleset::NoRestriction => Vec::new(),
+        DeckRuleset::Eden => ruleset
+            .restriction()
+            .expect("EDEN restriction must exist")
+            .choice_groups
+            .clone(),
+    }
+}
+
+fn is_common_or_uncommon(card: &CardSummary) -> bool {
+    matches!(card.rarity, Rarity::C | Rarity::U)
+}
+
+fn is_eden_anomaly(card: &CardSummary) -> bool {
+    let name = card.card_name_eng.to_ascii_lowercase();
+    match card.card_kind {
+        // Rare or promo Tamers.
+        1 => matches!(card.rarity, Rarity::R | Rarity::P),
+        // Rare/promo/SR Memory Boosts, promo Trainings, and promo Scrambles.
+        2 if name.contains("memory boost") => {
+            matches!(card.rarity, Rarity::R | Rarity::SR | Rarity::P)
+        }
+        2 if name.contains("training") => card.rarity == Rarity::P,
+        2 if name.contains("scramble") => card.rarity == Rarity::P,
+        _ => false,
+    }
 }
 
 // ─── Parsers ───────────────────────────────────────────────────────────
@@ -298,6 +408,15 @@ pub struct DeckValidationResult {
     pub warnings: Vec<String>,
 }
 
+pub fn validate_deck_for_game_mode(
+    card_ids: &[String],
+    game_mode: &str,
+) -> Result<DeckValidationResult, String> {
+    let ruleset = DeckRuleset::from_game_mode(game_mode)
+        .ok_or_else(|| format!("Unsupported deck validation game_mode: {game_mode}"))?;
+    Ok(validate_deck_for_ruleset(card_ids, ruleset))
+}
+
 /// Validate a flat card-id list against game rules + the restricted list.
 ///
 /// Checks (order matches Python so error messages come out identically):
@@ -307,6 +426,23 @@ pub struct DeckValidationResult {
 ///   4. Restricted list (banned → error, restricted → limit enforced)
 ///   5. Choice-group exclusivity
 pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
+    validate_deck_for_ruleset(card_ids, DeckRuleset::Standard)
+}
+
+/// Validate a flat card-id list against a named Rust game mode.
+pub fn validate_deck_for_mode(
+    card_ids: &[String],
+    mode: GameMode,
+) -> Result<DeckValidationResult, String> {
+    let ruleset = DeckRuleset::from_game_mode_enum(mode)
+        .ok_or_else(|| format!("Unsupported deck validation game mode: {mode:?}"))?;
+    Ok(validate_deck_for_ruleset(card_ids, ruleset))
+}
+
+pub fn validate_deck_for_ruleset(
+    card_ids: &[String],
+    ruleset: DeckRuleset,
+) -> DeckValidationResult {
     let db = card_database();
     let counts = summarize_deck(card_ids);
 
@@ -367,7 +503,7 @@ pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
 
     for (card_id, count) in &sorted_counts {
         let count = **count;
-        if let Some(limit) = card_limit(card_id.as_str()) {
+        if let Some(limit) = format_card_limit(ruleset, card_id.as_str()) {
             let name = db
                 .get(card_id.as_str())
                 .map(|e| e.card_name_eng.as_str())
@@ -382,13 +518,64 @@ pub fn validate_deck(card_ids: &[String]) -> DeckValidationResult {
         }
     }
 
-    let deck_ids_set: HashSet<&str> = card_ids.iter().map(String::as_str).collect();
-    for (group_a, group_b) in CHOICE_GROUPS {
-        let has_a = group_a.iter().any(|cid| deck_ids_set.contains(cid));
-        let has_b = group_b.iter().any(|cid| deck_ids_set.contains(cid));
-        if has_a && has_b {
+    if ruleset == DeckRuleset::Eden {
+        let mut anomaly_count = 0u32;
+        for (card_id, count) in &sorted_counts {
+            let Some(entity) = db.get(card_id.as_str()) else {
+                continue;
+            };
+            if entity.card_kind == 3 || is_common_or_uncommon(entity) {
+                continue;
+            }
+            if is_eden_anomaly(entity) {
+                anomaly_count += **count;
+                continue;
+            }
             errors.push(format!(
-                "Choice restriction violated: cannot include cards from [{}] and [{}] in the same deck",
+                "{} ({}): rarity is not legal in EDEN format",
+                card_id, entity.card_name_eng
+            ));
+        }
+        if anomaly_count > 4 {
+            errors.push(format!(
+                "EDEN Anomaly Protocol allows at most 4 total rare/promo Tamers, Memory Boosts, Training Boosts, and Scrambles (got {anomaly_count})"
+            ));
+        }
+    }
+
+    if ruleset == DeckRuleset::Pauper {
+        for (card_id, _) in &sorted_counts {
+            let Some(entity) = db.get(card_id.as_str()) else {
+                continue;
+            };
+            if entity.card_kind == 3 || is_common_or_uncommon(entity) {
+                continue;
+            }
+            errors.push(format!(
+                "{} ({}): rarity {} is not legal in Pauper format",
+                card_id,
+                entity.card_name_eng,
+                entity.rarity.code()
+            ));
+        }
+    }
+
+    let deck_ids_set: HashSet<&str> = card_ids.iter().map(String::as_str).collect();
+    for (group_a, group_b) in format_choice_groups(ruleset) {
+        let has_a = group_a
+            .iter()
+            .any(|cid| deck_ids_set.contains(cid.as_str()));
+        let has_b = group_b
+            .iter()
+            .any(|cid| deck_ids_set.contains(cid.as_str()));
+        if has_a && has_b {
+            let prefix = if ruleset == DeckRuleset::Eden {
+                "EDEN "
+            } else {
+                ""
+            };
+            errors.push(format!(
+                "{prefix}Choice restriction violated: cannot include cards from [{}] and [{}] in the same deck",
                 group_a.join(", "),
                 group_b.join(", "),
             ));
@@ -461,4 +648,20 @@ pub fn get_models_dir() -> std::path::PathBuf {
     std::env::var("ONNX_MODELS_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| std::path::PathBuf::from("models"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_rarity_sentinel_maps_to_no_rarity() {
+        assert_eq!(parse_rarity(default_rarity(), "TEST-001"), Rarity::NoRarity);
+    }
+
+    #[test]
+    #[should_panic(expected = "cards.json has unknown rarity value 42 for card TEST-001")]
+    fn invalid_rarity_value_panics() {
+        let _ = parse_rarity(42, "TEST-001");
+    }
 }

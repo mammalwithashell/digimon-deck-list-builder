@@ -19,13 +19,53 @@ export interface DeckData {
   gameMode: string;
 }
 
+export interface DeckFolder {
+  id: string;
+  owner_id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DeckSummary {
   id: string;
   name: string;
+  description: string;
   game_mode: string;
   is_valid: boolean;
   is_public: boolean;
+  is_pinned: boolean;
+  folder_id: string | null;
   card_count: number;
+  main_count: number;
+  egg_count: number;
+  tags: string[];
+  meta_tier?: string | null;
+  meta_archetype?: string | null;
+  colors?: string[];
+  highest_level?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeckResponse {
+  id: string;
+  owner_id: string;
+  folder_id?: string | null;
+  name: string;
+  description: string;
+  game_mode: string;
+  main_deck: string[];
+  egg_deck: string[];
+  main_deck_alt_arts?: boolean[];
+  egg_deck_alt_arts?: boolean[];
+  commander_id: string | null;
+  is_valid: boolean;
+  validation_errors: string[];
+  is_public: boolean;
+  is_pinned: boolean;
+  tags: string[];
   meta_tier?: string | null;
   meta_archetype?: string | null;
   created_at: string;
