@@ -26,8 +26,15 @@ Each entry lists the cards that surfaced it, but the entry itself describes a re
 | Medusamon | 2026-04-17 | — | — | — | — |
 | DNA Omnimon | 2026-04-17 | 64 | 1 | 4 | 59 |
 | TS Olympos | 2026-04-18 | 105 | 1 | 4 | 100 |
-| Rocks | 2026-04-18 | 47 | 0 | 0 | 47 |
+| Rocks | 2026-04-18; refreshed 2026-04-28 | 47 | 0 | 0 | 47 |
 | Dark Masters | 2026-04-18 | 58 | 0 | 0 | 58 |
+
+### Rocks refresh notes (2026-04-28)
+
+- **Assessment target:** `Rocks` / `RockClose` from `data/deck_library.json`, with 47 unique card IDs across the local archetype decklists. The most common core cards are `EX10-032`, `P-167`, `EX8-047`, `EX8-005`, `EX10-036`, `EX10-069`, `EX8-067`, `BT21-055`, `P-107`, `BT16-082`, `EX8-048`, `EX10-063`, `EX8-051`, `EX10-028`, `EX10-033`, `EX10-025`, `LM-031`, `P-169`, `P-039`, and `EX8-055`.
+- **Current Rust DSL coverage:** only `BT14-009`, `BT16-082`, `EX7-074`, and `P-206` have YAML under `code/digimon-engine/cards/`; the main `EX8`/`EX10`/`EX11`/`P-167` shell is not authored yet. None of those four YAMLs is fully ready: `BT16-082` is a documented `G-ON-MOVE` raw-rust no-op placeholder; `P-206` and `EX7-074` retain `G-IGNORE-COLOR-MASK`, `G-PLAY-COST-LTE`, and add-self-to-hand/disposition gaps; `BT14-009` still depends on the bilateral player-scoped passive modifier shape documented below.
+- **Blocking primitives reaffirmed:** Rocks remains blocked primarily by `OnDigivolutionCardTrashed` with host/source context, cross-permanent source selection across own stacks, triggered-body `.pay_cost()` ordering, granted `Collision`, option/Delay disposition, and player-scoped passive modifiers. These are reusable engine capabilities, not card-local implementation chores.
+- **First regression to write:** start with `EX10-032` Proganomon or `P-167` Landramon. The test should install a player-visible source selection across all own Digimon stacks, trash exactly the chosen `[Mineral]`/`[Rock]` source, fire only that specific source card's inherited "when this card is trashed from digivolution cards" effect, and then resolve the printed follow-up.
 
 ## At a glance
 

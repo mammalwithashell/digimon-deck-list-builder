@@ -59,6 +59,66 @@ Format per entry:
   ```
 - First reported: 2026-04-28
 
+---
+
+## Rocks archetype refresh — source-selection and cost-payment DSL surface  [G-ROCKS-SOURCE-SELECTION-DSL]
+- Effect text: Rocks core repeatedly uses "by trashing any 1/3 [Mineral] or [Rock] trait card(s) from your Digimon's digivolution cards" and "place up to N [Mineral]/[Rock] cards from your trash as bottom digivolution cards." Examples: `EX10-032`, `P-167`, `EX10-036`, `EX10-033`, `EX8-055`, `EX10-028`, `EX8-070`, `EX10-025`.
+- Missing DSL verb / step kind / predicate: First-class source-zone selectors for digivolution cards across all of your own stacks, including exact-N, up-to-N with PASS terminator, and single-pick forms. Current DSL has `place_as_bottom_source` and `trash_top_source`, but no `select_source_across_own_permanents` / `select_n_sources_across_own_permanents` step that can bind `(PermanentHandle, source_index)` choices and then trash/place exactly the selected cards.
+- Companion engine gap: `docs/RUST_ENGINE_GAPS.md` tracks the engine half under "Cross-permanent count-capped multi-select" and the cost-ordering half under "`.pay_cost()` builder hook for triggered non-cost-reduction effects." This entry tracks the YAML vocabulary and lowering shape that should sit on top of those primitives once available.
+- Lowers to engine API: proposed `ctx.select_source_across_own_permanents(...)`, `ctx.select_n_sources_across_own_permanents(...)`, and `EffectBuilder::pay_cost_trash_n_own_sources_by_trait(...)`.
+- Suggested DSL syntax:
+  ```yaml
+  - pay_cost:
+      select_sources:
+        of: you
+        from: any_own_digimon
+        count: 1
+        filter:
+          any_of:
+            - trait_has: Mineral
+            - trait_has: Rock
+        bind_as: trashed_sources
+      then:
+        - trash_selected_sources: trashed_sources
+  ```
+  Up-to-N variants should use `max_count: 3` and surface PASS as a legal terminator so RL sees the "stop selecting" choice.
+- Gap kind: hybrid (engine selection/action support is still required; DSL needs the reusable vocabulary and lowering once that lands).
+- Workaround: Do not auto-pick sources. The Rocks assessment on 2026-04-28 found this to be the core no-approximations blocker for the archetype.
+- First reported: 2026-04-28 (Rocks Rust-engine assessment refresh)
+
+---
+
+## Rocks archetype refresh — event-card predicates for Mineral/Rock observers  [G-ROCKS-EVENT-CARD-PREDICATES]
+- Effect text: Rocks Tamers and inherited effects gate on the card or host involved in a just-fired event, for example "when any of your Digimon digivolve into a [Mineral] or [Rock] trait Digimon" (`EX8-067`) and "when effects trash digivolution cards of any of your [Mineral] or [Rock] trait Digimon" (`EX10-063`, `P-169`, `EX11-065`).
+- Missing DSL verb / step kind / predicate: Reusable predicate leaves for the event payload: `digivolving_card_trait_has`, `trashed_source_trait_has`, `trashed_source_card_id_is`, and `host_permanent_trait_has`. Existing source-relative leaves such as `source_permanent_trait_has` are not enough unless the lowering receives the correct event subject and distinguishes observer permanent, host permanent, and trashed source card.
+- Companion engine gap: the engine needs `OnDigivolutionCardTrashed` fan-out with host/source context; see `docs/RUST_ENGINE_GAPS.md` "OnDigivolutionCardTrashed observer timing" and related Rocks entries.
+- Lowers to engine API: `TriggerContext` / event payload fields containing `{host_permanent, trashed_card, trashed_source_index, cause_player}` plus predicate evaluation against those fields.
+- Suggested DSL syntax:
+  ```yaml
+  condition:
+    all_of:
+      - host_permanent_trait_has: Mineral
+      - trashed_source_trait_has: Rock
+  ```
+  Trait alternatives should compose through existing `any_of`.
+- Gap kind: hybrid (requires engine event context plus DSL predicate leaves).
+- Workaround: None faithful. Scanning trash after the fact loses which source card was trashed from which host, and can trigger the wrong inherited card.
+- First reported: 2026-04-28 (Rocks Rust-engine assessment refresh)
+
+---
+
+## Rocks archetype refresh — authored YAML coverage note
+- Assessment target: the `Rocks` / `RockClose` archetype in `data/deck_library.json`, refreshed on 2026-04-28.
+- Finding: only `BT14-009`, `BT16-082`, `EX7-074`, and `P-206` currently have Rust YAML under `code/digimon-engine/cards/`; the main `EX8`/`EX10`/`EX11`/`P-167` Rocks shell is not authored in DSL yet.
+- Existing DSL gaps reaffirmed by the refresh:
+  - `EX11-008 — [When Moving] timing` also blocks `BT16-082`, `EX11-038`, and `P-215`-style Rocks effects until the DSL has a real `on_move`/`when_moving` token.
+  - `P-189 — play cost <= filter` also blocks `P-206` and `EX7-074` security selections.
+  - `P-206 — Board-color cross-reference predicate` remains the specific blocker for `P-206` Delay filtering.
+  - `P-107 — place_self_as_delay_option` remains relevant to `P-107`, `P-039`, `BT23-096`, and related Delay/security disposition effects.
+- First reported: 2026-04-28 (Rocks Rust-engine assessment refresh)
+
+---
+
 ## BT22-008 / BT22-017 — inherited end-of-turn DNA digivolve registration
 - Effect text: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in your hand."
 - Missing DSL verb / step kind / predicate: Lowering for existing `alt_path_registration` declarative clauses with `kind: dna_digivolve`. YAML examples can spell the clause, but `code/digimon-engine/src/dsl_cards/mod.rs` currently leaves this declarative form in the unlowered catch-all branch.
