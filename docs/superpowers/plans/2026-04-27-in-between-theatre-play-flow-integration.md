@@ -2529,7 +2529,7 @@ git commit -m "feat: polish deck library for in between mock"
 **Files:**
 - Modify if failures require fixes: files touched by earlier tasks only.
 
-- [ ] **Step 1: Run unit tests**
+- [x] **Step 1: Run unit tests**
 
 Run:
 
@@ -2540,7 +2540,7 @@ npm test -- src/features/play/formatCatalog.test.ts src/features/play/playFlowSt
 
 Expected: all tests pass.
 
-- [ ] **Step 2: Run frontend builds**
+- [x] **Step 2: Run frontend builds**
 
 Run:
 
@@ -2552,7 +2552,7 @@ npm run build:desktop
 
 Expected: both builds pass.
 
-- [ ] **Step 3: Run Playwright specs**
+- [x] **Step 3: Run Playwright specs**
 
 Run:
 
@@ -2563,7 +2563,7 @@ npm run e2e -- play-flow.spec.ts deck-library.spec.ts launcher.spec.ts guest-onb
 
 Expected: all specs pass.
 
-- [ ] **Step 4: Run backend and Tauri checks**
+- [x] **Step 4: Run backend and Tauri checks**
 
 Run:
 
@@ -2574,7 +2574,7 @@ cargo tauri build --no-bundle --config '{"build":{"beforeBuildCommand":""}}'
 
 Expected: API tests pass; Tauri release executable builds at `target/release/digimon-tcg.exe`.
 
-- [ ] **Step 5: Manual desktop smoke**
+- [x] **Step 5: Manual desktop smoke**
 
 Run:
 
@@ -2591,7 +2591,7 @@ Expected:
 - Bot Match launches `/game/<id>` and renders the board.
 - Deck Library still opens from launcher and allows Edit/New Deck.
 
-- [ ] **Step 6: Final commit**
+- [x] **Step 6: Final commit**
 
 Run:
 
