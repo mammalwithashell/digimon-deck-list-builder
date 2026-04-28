@@ -32,19 +32,19 @@ Prefer the Rust engine and DSL as the target. Treat legacy Python and DCGO only 
    - Check `docs/RUST_ENGINE_API.md` for `EffectContext` primitives.
    - Check `code/digimon-engine/src/selection.rs`, `src/action/`, and `src/effect_context/` for selection/action support.
    - Check existing behavioral tests under `code/digimon-engine/tests/`, especially `tests/dsl/`, `tests/cards_behavioral/`, `tests/combat/`, and `tests/cost_hooks/`.
-   - Check gap trackers such as `docs/RUST_PYTHON_PARITY.md` and `qa/archetype-qa/engine-gaps.md` when present.
+   - Check gap trackers such as `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md`, `docs/RUST_PYTHON_PARITY.md`, and legacy `qa/archetype-qa/engine-gaps.md` when present.
 
 5. Classify each card/effect.
    - `ready`: expressible in current YAML DSL and backed by tests or obvious lowering.
-   - `dsl-gap`: engine can likely support the behavior, but YAML schema/lowering lacks a needed predicate, step, timing, binding, formula, or selection form.
-   - `engine-gap`: the Rust engine lacks the underlying rule primitive, timing hook, action mask surface, state mutation, token/zone behavior, or pending-selection flow.
+   - `dsl-gap`: engine can likely support the behavior, but YAML schema/lowering lacks a needed predicate, step, timing, binding, formula, or selection form. Route reusable DSL vocabulary or lowering gaps to `qa/dsl-vocab-gaps.md`.
+   - `engine-gap`: the Rust engine lacks the underlying rule primitive, timing hook, action mask surface, state mutation, token/zone behavior, or pending-selection flow. Route reusable Rust engine capability gaps to `docs/RUST_ENGINE_GAPS.md`.
    - `rules-gap`: printed text cannot be assessed without a ruling or unresolved rules interpretation.
    - `test-gap`: behavior appears supported but lacks meaningful regression coverage for this archetype.
    - `data-gap`: local card metadata, traits, colors, levels, alt paths, or card IDs are missing or inconsistent.
 
 6. Produce a report.
    - Start with a concise verdict: ready, mostly ready, blocked, or unknown.
-   - List concrete gaps with file references and the smallest missing capability.
+   - List concrete gaps with file references, the smallest missing capability, and the tracker each reusable gap belongs in.
    - Distinguish DSL gaps from engine gaps; do not collapse them into "not implemented."
    - Include suggested first tests for blockers, because new Rust card behavior is TDD.
    - Avoid claiming an effect is implementable unless the DSL and engine can surface all choices without hidden auto-selection.

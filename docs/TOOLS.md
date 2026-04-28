@@ -206,7 +206,7 @@ python code/tools/ingest_pinecone.py --all --dry-run                # Preview co
 | `engine-api` | Engine API reference doc + decomposed engine source (AST-chunked) | ~300 |
 | `card-scripts` | Python scripts (frozen + generated) + C# reference scripts | ~6,000 |
 | `card-metadata` | Per-card entries from `cards.json` (ID, name, kind, level, colors, traits, effect text) | ~4,000 |
-| `rules-docs` | `RULES_CONTEXT.md`, `ACTION_SPEC.md`, `TENSOR_SPEC.md`, `engine-gaps.md` | ~100 |
+| `rules-docs` | `RULES_CONTEXT.md`, `ACTION_SPEC.md`, `TENSOR_SPEC.md`, `RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` | ~100 |
 
 ---
 

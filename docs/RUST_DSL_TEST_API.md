@@ -199,7 +199,7 @@ All required:
 - `code/engine_py_legacy/engine/data/scripts/` — Python ground-truth implementations.
 - `DCGO/Assets/Scripts/CardEffect/` — C# behavioral reference.
 - `qa/archetype-qa/INDEX.md` and the per-archetype QA docs for the **17 launch archetypes** (Chaos Control, Medusamon, Dark Masters, TS Jupitermon, Royal Knights, DNA Omnimon, Jesmon, Puppets, Hudiemon, TS Neptunemon, Millenniummon, ExMaquinamon, Galacticmon, Zephagamon, BG Imperial, Rocks, TS Olympos). Verdict tables surface canonical examples per pattern.
-- `qa/archetype-qa/engine-gaps.md` — exclude any card depending on an unclosed gap.
+- `docs/RUST_ENGINE_GAPS.md` and `qa/dsl-vocab-gaps.md` — exclude any card depending on an unclosed engine primitive or DSL vocabulary gap.
 
 ### Selection rules (per row)
 
@@ -828,7 +828,7 @@ A consolidated list. Each anti-pattern fails review.
 5. **Don't test DSL syntax in `cards_behavioral/`.** Parser / validator / lowering belongs in `tests/dsl/`. Card behavioral tests assume the DSL works.
 6. **Don't use synthetic `TEST-*` cards when a real DSL card from the same set covers the mechanic.** `make_test_card` is for the runner's own self-tests and for one-off engine primitive coverage, not for archetype work.
 7. **Don't assert on `process` step contents.** Step vocabulary changes; behavioral assertions cover the outcome.
-8. **Don't stub a test with `#[ignore]` for missing features without naming the gap.** Use `#[ignore = "pending: <gap-id> from qa/archetype-qa/engine-gaps.md"]` so the unblock is mechanical.
+8. **Don't stub a test with `#[ignore]` for missing features without naming the gap.** Use `#[ignore = "pending: <gap-id> from docs/RUST_ENGINE_GAPS.md"]` or `#[ignore = "pending: <gap-id> from qa/dsl-vocab-gaps.md"]` so the unblock is mechanical.
 9. **Don't share fixtures across unrelated tests via mutable global state.** Each test builds its own runner; cross-test contamination is forbidden.
 10. **Don't omit the file header docstring.** Card text + C# reference + pattern row tags are mandatory.
 11. **Don't use `place_on_field` to skip a real OnPlay path you should be testing.** `place_on_field` skips cost payment, OnPlay observers, and registry-driven triggers. Use it when the test is about *post-play* state (combat, inherited effects on a stacked egg) — not as a shortcut around play resolution.
@@ -962,7 +962,7 @@ Tests fail. Make each pass by:
 
 1. Verifying the YAML compiles (`cargo test --test dsl -- --ignored ex11_027` if a parser test exists).
 2. Adding any missing DSL verbs to `code/digimon-dsl/` if `cargo test --test dsl loader` reports unknown step (this is the rare case — the verbs above all exist in Phase 2b).
-3. If a verb is missing entirely and lands an engine gap, file it under `qa/archetype-qa/engine-gaps.md` and `#[ignore = "pending: <gap-id>"]` the affected test until the gap closes.
+3. If a verb is missing entirely, route the blocker by layer: engine primitives go in `docs/RUST_ENGINE_GAPS.md`, while DSL verbs, predicates, schema, or lowering gaps go in `qa/dsl-vocab-gaps.md`; then `#[ignore = "pending: <gap-id>"]` the affected test until the gap closes.
 
 ### Step 5 — Verify no regression
 
@@ -1003,5 +1003,6 @@ The translation is rarely 1:1. Port what each Python test *proves*, not its asse
 - `2026-04-21-card-scripting-dsl.md` — DSL spec, vocabulary, compile pipeline.
 - `RUST_PYTHON_PARITY.md` — known cross-engine divergences.
 - `qa/archetype-qa/INDEX.md` — 17 launch archetypes with verdict tables.
-- `qa/archetype-qa/engine-gaps.md` — open engine gaps (cards depending on these stay `#[ignore]`).
+- `RUST_ENGINE_GAPS.md` — open Rust engine primitive gaps (cards depending on these stay `#[ignore]`).
+- `qa/dsl-vocab-gaps.md` — open DSL vocabulary and lowering gaps.
 - `qa/dsl-test-pool.md` — example card pool (regenerated per §4 research task).
