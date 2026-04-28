@@ -8,17 +8,13 @@ import { ValidationPanel } from '@/components/deckbuilder/ValidationPanel';
 import { ImportExport } from '@/components/deckbuilder/ImportExport';
 import { CardDetail } from '@/components/shared/CardDetail';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
-import { useAuthStore } from '@/stores/authStore';
 import { getCardById } from '@/api/digimonCardApi';
 import * as deckApi from '@/api/deckApi';
-import * as deckStore from '@/storage/deckStore';
+import {
+  getBuilderDeck,
+  saveBuilderDeck,
+} from '@/features/deck-builder/deckBuilderAdapter';
 import type { DeckEntry } from '@/types/deck';
-
-// Desktop saves decks to the local Tauri-backed store; web keeps hitting
-// the hosted `/decks` API. The tested-cards allowlist + raw-validate calls
-// already branch inside `deckApi` itself, so they stay on `deckApi`.
-const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
-const decks = IS_DESKTOP ? deckStore : deckApi;
 
 function groupCardIds(ids: string[], altArts: boolean[] = []): DeckEntry[] {
   const counts = new Map<string, { cardId: string; isAltArt: boolean; count: number }>();
@@ -87,7 +83,7 @@ export function DeckBuilderPage() {
 
     async function loadRouteDeck() {
       try {
-        const deck = await decks.getDeck(routeDeckId!);
+        const deck = await getBuilderDeck(routeDeckId!);
         const mainEntries = groupCardIds(deck.main_deck, deck.main_deck_alt_arts);
         const eggEntries = groupCardIds(deck.egg_deck, deck.egg_deck_alt_arts);
         const allIds = [...new Set([...deck.main_deck, ...deck.egg_deck])];
@@ -126,46 +122,20 @@ export function DeckBuilderPage() {
         (e) => Array(e.count).fill(!!e.isAltArt) as boolean[],
       );
 
-      if (IS_DESKTOP) {
-        // Single write path on desktop: `putDeck` creates when `id` is
-        // empty and updates when present. Stamp the guest owner_id from
-        // the bootstrap cache so decks get associated with the caller.
-        const ownerId = useAuthStore.getState().user?.id ?? 'guest';
-        const saved = await deckStore.putDeck({
-          id: deckId ?? undefined,
-          owner_id: ownerId,
-          name: deckName,
-          game_mode: 'standard',
-          main_deck: mainIds,
-          egg_deck: eggIds,
-          main_deck_alt_arts: mainAlts,
-          egg_deck_alt_arts: eggAlts,
-        });
-        setDeckId(saved.id);
-        if (returnToPlay) {
-          navigate('/play/deck', { replace: true });
-        } else if (!routeDeckId) {
-          navigate(`/deckbuilder/${saved.id}`, { replace: true });
-        }
-      } else if (deckId) {
-        await deckApi.updateDeck(deckId, {
-          name: deckName,
-          main_deck: mainIds,
-          egg_deck: eggIds,
-          main_deck_alt_arts: mainAlts,
-          egg_deck_alt_arts: eggAlts,
-        });
-      } else {
-        const created = await deckApi.createDeck({
-          name: deckName,
-          main_deck: mainIds,
-          egg_deck: eggIds,
-          main_deck_alt_arts: mainAlts,
-          egg_deck_alt_arts: eggAlts,
-          game_mode: 'standard',
-        });
-        setDeckId(created.id);
-        navigate(returnToPlay ? '/play/deck' : `/deckbuilder/${created.id}`, { replace: true });
+      const saved = await saveBuilderDeck({
+        deckId,
+        name: deckName,
+        main_deck: mainIds,
+        egg_deck: eggIds,
+        main_deck_alt_arts: mainAlts,
+        egg_deck_alt_arts: eggAlts,
+        game_mode: 'standard',
+      });
+      setDeckId(saved.id);
+      if (returnToPlay) {
+        navigate('/play/deck', { replace: true });
+      } else if (!deckId) {
+        navigate(`/deckbuilder/${saved.id}`, { replace: true });
       }
       setIsDirty(false);
     } catch {

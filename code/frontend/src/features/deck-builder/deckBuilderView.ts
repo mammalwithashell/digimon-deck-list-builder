@@ -40,7 +40,9 @@ interface SectionDefinition {
   expected: number;
 }
 
-const SECTION_DEFINITIONS: Record<string, SectionDefinition> = {
+type SectionKey = 'lv2' | 'lv3' | 'lv4' | 'lv5' | 'lv6' | 'tamer' | 'option' | 'other';
+
+const SECTION_DEFINITIONS: Record<SectionKey, SectionDefinition> = {
   lv2: { label: 'LV2 / DIGI-EGG', expected: 5 },
   lv3: { label: 'LV3 / ROOKIE', expected: 0 },
   lv4: { label: 'LV4 / CHAMPION', expected: 0 },
@@ -51,7 +53,7 @@ const SECTION_DEFINITIONS: Record<string, SectionDefinition> = {
   other: { label: 'OTHER', expected: 0 },
 };
 
-const SECTION_ORDER = ['lv2', 'lv3', 'lv4', 'lv5', 'lv6', 'tamer', 'option', 'other'] as const;
+const SECTION_ORDER: readonly SectionKey[] = ['lv2', 'lv3', 'lv4', 'lv5', 'lv6', 'tamer', 'option', 'other'];
 
 function normalize(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
@@ -66,7 +68,7 @@ function isDigiEgg(card: DigimonCardData | undefined): boolean {
   return normalize(card?.type) === 'digi-egg' || parseLevel(card) === 2;
 }
 
-function sectionKeyForEntry(entry: DeckEntry): keyof typeof SECTION_DEFINITIONS {
+function sectionKeyForEntry(entry: DeckEntry): SectionKey {
   const card = entry.cardData;
   const type = normalize(card?.type);
 
@@ -249,7 +251,7 @@ export function deckEntriesToSlotArrays(entries: DeckEntry[]): { ids: string[]; 
 }
 
 export function groupDeckEntriesForBuilder(entries: DeckEntry[]): BuilderSection[] {
-  const groups = new Map<keyof typeof SECTION_DEFINITIONS, DeckEntry[]>();
+  const groups = new Map<SectionKey, DeckEntry[]>();
 
   for (const entry of entries) {
     const key = sectionKeyForEntry(entry);
