@@ -431,15 +431,18 @@ fn install_select_own_permanent(
 
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let player = ctx.player;
     ctx.select_own_permanent(
         &prompt,
         optional,
         move |game, handle| {
             let read_ctx = crate::effect_context::EffectReadContext::new(
                 game,
-                crate::card_source::CardHandle(0),
-                None,
-                handle.player,
+                source_card,
+                source_permanent,
+                player,
             );
             eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
         },
@@ -481,15 +484,18 @@ fn install_select_opponent_permanent(
 
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let player = ctx.player;
     ctx.select_opponent_permanent(
         &prompt,
         optional,
         move |game, handle| {
             let read_ctx = crate::effect_context::EffectReadContext::new(
                 game,
-                crate::card_source::CardHandle(0),
-                None,
-                handle.player,
+                source_card,
+                source_permanent,
+                player,
             );
             eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
         },
