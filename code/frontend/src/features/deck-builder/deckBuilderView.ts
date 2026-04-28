@@ -156,9 +156,9 @@ export function filterBuilderCards(cards: DigimonCardData[], filters: BuilderCar
       if (!colorSet.has(primary) && (!secondary || !colorSet.has(secondary))) return false;
     }
 
-    if (type && normalize(card.type) !== type) return false;
-    if (level && normalize(card.level) !== level) return false;
-    if (rarity && normalize(card.cardrarity) !== rarity) return false;
+    if (type && type !== 'all' && normalize(card.type) !== type) return false;
+    if (level && level !== 'all' && normalize(card.level) !== level) return false;
+    if (rarity && rarity !== 'all' && normalize(card.cardrarity) !== rarity) return false;
     if (filters.inheritedOnly && !hasInheritedEffect(card)) return false;
     if (filters.securityOnly && !hasSecurityEffect(card)) return false;
     return true;

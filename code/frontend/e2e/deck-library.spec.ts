@@ -72,6 +72,9 @@ test.describe('Deck Library', () => {
       }),
     );
     await page.route('**/decks/folders', (route) => route.fulfill({ json: folders }));
+    await page.route('**/decks/tested-cards', (route) =>
+      route.fulfill({ json: { card_ids: ['BT1-001', 'BT1-002', 'BT1-003', 'BT1-004'], card_count: 4 } }),
+    );
     await page.route('**/decks', (route) => {
       if (route.request().method() === 'GET') return route.fulfill({ json: decks });
       return route.fallback();
@@ -146,6 +149,9 @@ test.describe('Deck Library', () => {
     await expect(page.getByRole('link', { name: /New Deck/i })).toBeVisible();
     await page.getByRole('link', { name: /New Deck/i }).click();
     await expect(page).toHaveURL(/\/deckbuilder\/new/);
+    await expect(page.getByText('CARD POOL')).toBeVisible();
+    await expect(page.getByText('DECK CONTENTS')).toBeVisible();
+    await expect(page.getByLabel('Deck name')).toHaveValue('New Deck');
 
     await page.goto('/deckbuilder');
     await page.getByRole('link', { name: /Import/i }).click();
@@ -166,5 +172,8 @@ test.describe('Deck Library', () => {
 
     await page.getByRole('button', { name: 'Edit' }).click();
     await expect(page).toHaveURL(/\/deckbuilder\/deck-1$/);
+    await expect(page.getByText('CARD POOL')).toBeVisible();
+    await expect(page.getByText('DECK CONTENTS')).toBeVisible();
+    await expect(page.getByLabel('Deck name')).toHaveValue('Blue Flare');
   });
 });

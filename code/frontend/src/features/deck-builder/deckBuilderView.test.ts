@@ -118,6 +118,7 @@ describe('deck builder view helpers', () => {
     expect(result).toEqual([target]);
     expect(filterBuilderCards([target], filters({ search: 'vaccine' }))).toEqual([target]);
     expect(filterBuilderCards([target], filters({ search: 'BT11-028' }))).toEqual([target]);
+    expect(filterBuilderCards([target], filters({ type: 'all', level: 'all', rarity: 'all' }))).toEqual([target]);
   });
 
   it('computes main, egg, total, type, and level counts from deck entries', () => {
