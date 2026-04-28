@@ -112,4 +112,23 @@ test.describe('In Between play flow', () => {
     await page.getByRole('button', { name: /USE THIS DECK/i }).click();
     await expect(page).toHaveURL(/\/play\/matching/);
   });
+
+  test('queues selected deck for quick match', async ({ page }) => {
+    await mockDeckLibrary(page);
+    let queuePayload: unknown = null;
+    await page.route('**/matchmaking/queue', async (route) => {
+      queuePayload = route.request().postDataJSON();
+      await route.fulfill({ json: { status: 'waiting', ticket_id: 'ticket-1' } });
+    });
+    await page.goto('/play');
+    await page.getByRole('button', { name: /STANDARD/i }).click();
+    await page.getByRole('button', { name: /ENTER FORMAT/i }).click();
+    await page.getByRole('button', { name: /EMBER VANGUARD/i }).click();
+    await page.getByRole('button', { name: /USE THIS DECK/i }).click();
+    await expect(page.getByRole('heading', { name: /SEARCHING\s+FOR AN OPPONENT/i })).toBeVisible();
+    expect(queuePayload).toMatchObject({
+      queue_type: 'casual',
+      game_mode: 'standard',
+    });
+  });
 });

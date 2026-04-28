@@ -1689,7 +1689,7 @@ git commit -m "feat: add in between deck selection"
 - Create: `code/frontend/src/pages/MatchingPage.css`
 - Modify: `code/frontend/e2e/play-flow.spec.ts`
 
-- [ ] **Step 1: Extend e2e for queue call**
+- [x] **Step 1: Extend e2e for queue call**
 
 Add to `code/frontend/e2e/play-flow.spec.ts`:
 
@@ -1714,7 +1714,7 @@ test('queues selected deck for quick match', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: Run e2e and verify it fails**
+- [x] **Step 2: Run e2e and verify it fails**
 
 Run:
 
@@ -1725,7 +1725,7 @@ npm run e2e -- play-flow.spec.ts
 
 Expected: fail because `MatchingPage` is not implemented.
 
-- [ ] **Step 3: Implement matching page**
+- [x] **Step 3: Implement matching page**
 
 Create `code/frontend/src/pages/MatchingPage.tsx`:
 
@@ -1850,7 +1850,7 @@ export function MatchingPage() {
 }
 ```
 
-- [ ] **Step 4: Add matching CSS**
+- [x] **Step 4: Add matching CSS**
 
 Create `code/frontend/src/pages/MatchingPage.css`:
 
@@ -1958,7 +1958,7 @@ Create `code/frontend/src/pages/MatchingPage.css`:
 }
 ```
 
-- [ ] **Step 5: Run e2e and commit**
+- [x] **Step 5: Run e2e and commit**
 
 Run:
 
