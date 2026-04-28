@@ -1,12 +1,12 @@
 # Archetype DSL Implementation: Medusamon
 Date: 2026-04-27
 Total cards in pool: 53
-Processed this run: 26 (Batches 1–8 complete)
+Processed this run: 28 (Batches 1–9 complete)
 Pipeline: batch-implement-cards-rust-dsl
 
 ## Summary (running totals — updated per batch)
 - IMPLEMENTED: 10 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087, BT14-001, BT24-001, BT21-001, BT21-007, P-137)
-- PARTIAL: 14 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012, BT21-013)
+- PARTIAL: 16 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012, BT21-013, EX9-013, EX10-010)
 - AUDITED-OK: 0
 - AUDITED-MISSING-TESTS: 0
 - AUDITED-DRIFT: 0
@@ -44,6 +44,8 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT21-007 | Agumon | IMPLEMENT | IMPLEMENTED | 14 active / 0 ignored | OnPlay optional trash-to-hand (Reptile/Dragonkin filter) + inherited [Your Turn] +2000 DP aura. 14/14 pass, 0 ignored. No engine gaps. |
 | BT21-013 | Agunimon | IMPLEMENT | PARTIAL | 9 active / 6 ignored | [WD] optional place Hybrid/Hero from hand/trash as bottom source ships (has_inherited: {} + select_effect_choice + if/then + place_as_bottom_source); [WA] effect-initiated digivolve cost -1 ships; inherited +2000 DP aura ships. 4 ignored G-WHEN-DIGIVOLVING-DISPATCH, 2 ignored filter-eval gaps. |
 | P-137 | Flamedramon | IMPLEMENT | IMPLEMENTED | 10 active / 2 ignored | (a) ArmorPurge keyword + (b) Raid keyword + (c) on_attack_target_change OPT → opponent adds top security to hand (raw_rust). Alt-path name_contains: Veemon. Hybrid gap G-ADD-TOP-SECURITY-TO-HAND (new). BT21-024.yaml restructured as side-fix (place_on_security moved inside as_selecting_player body). New gap G-SELECT-EMPTY-OUTER-TAIL documented. |
+| EX9-013 | BlitzGreymon | IMPLEMENT | PARTIAL | 19 active / 1 ignored | BlastDigivolve + Alliance + Blocker grant_keyword; De-Digivolve 3 on_play+when_digivolving (mandatory OppField select); optional EndOfYourTurn DNA digivolve into Omnimon Alter-S from hand; two alt-digi paths (Lv5/Cost4; Lv5+[Greymon]\|[DM]/Cost3/ignore_requirements); ace_overflow: -4. 1 ignored: G-MAY-ATTACK-NOW ("Then, 1 of your Digimon may attack" after DNA step). |
+| EX10-010 | BlackWarGreymon | IMPLEMENT | PARTIAL | 16 active / 3 ignored | BurstDigivolve marker:true + Raid+Reboot+Blocker grants + ace_overflow:-4 + delete Digimon/Tamer + conditional DP aura + conditional immunity (flood_gate). 16 pass; 3 ignored: G-PLAY-COST-LTE (delete cost filter), G-PRED-DP-LTE (dp_gte:13000 aura condition), 2 immunity gaps (lower_aura modifier not wired + CannotBeAffected not enforced). |
 
 ## Engine-Gap Blocked Cards / Clauses
 ### G-INHERITED-DISPATCH (Digivolution-Stack Inherited Triggered Dispatch)
@@ -117,6 +119,15 @@ Pipeline: batch-implement-cards-rust-dsl
 - Affects the "cost ≤ 4" constraint in P-189's security clause; also affects any future card with a cost-based selection filter.
 - See `qa/dsl-vocab-gaps.md` entry G-PLAY-COST-LTE.
 
+### G-ADD-TOP-SECURITY-TO-HAND (opponent adds top security to hand — engine + DSL half)
+- Affected: P-137 Flamedramon clause (c).
+- Workaround: `raw_rust: { fn: p_137_opp_adds_top_security_to_hand }`.
+- See `qa/archetype-qa/engine-gaps.md` and `qa/dsl-vocab-gaps.md` entry G-ADD-TOP-SECURITY-TO-HAND.
+
+### G-SELECT-EMPTY-OUTER-TAIL (outer-tail steps lost when inner select_hand has no candidates)
+- Affected: BT21-024 Cyberdramon — `trash_top_security` not fired when opponent has empty hand.
+- See `qa/archetype-qa/engine-gaps.md` entry G-SELECT-EMPTY-OUTER-TAIL.
+
 ## New Patterns Discovered
 - `inherited_dp_buff_via_aura_with_self_target` — `kind: aura, target: {}, dp_modifier: N` resolves to a self-aura when `scope: inherited` (BT23-005). Worth documenting in `RUST_DSL_TEST_API.md` §6 row table.
 - `return-self-to-deck-as-cost` — `return_to_deck: { target: source, position: bottom }` (BT24-082). Must use `target: source` (not `target: source_permanent`) — `"source"` is a keyword in `compile_binding_ref` that maps to `CompiledBindingRef::Source → ctx.source_permanent`; `"source_permanent"` is just a Named binding that fails lookup.
@@ -139,3 +150,6 @@ Pipeline: batch-implement-cards-rust-dsl
 - BT21-007 Agumon (Batch 7): IMPLEMENTED — 14/14 pass, 0 ignored. No new gaps.
 - BT5-008 Gaossmon (Batch 7): PARTIAL — 2 structural pass, 5 ignored. Clause 1 [Your Turn] filtered aura blocked by G-DECLARATIVE-KEYWORD. Clause 2 [Opponent's Turn] cost-reduction gate blocked by G-PLAYER-FLOOD-GATE-DSL. Raw_rust bt5_008_opp_cannot_reduce_digivolve_cost registered.
 - BT21-013 Agunimon (Batch 8): PARTIAL — 9 active, 6 ignored. 3 clauses: [When Digivolving] place Hybrid/Hero as bottom source ships with full has_inherited: {} + select_effect_choice + if/then + place_as_bottom_source YAML. [When Attacking] effect-initiated digivolve cost -1 ships (proven BT21-001 path). Inherited +2000 DP aura ships. 4 ignored G-WHEN-DIGIVOLVING-DISPATCH; 2 ignored filter-eval gaps (trait_has in select_hand). Key discovery: has_inherited: {} (empty PredicateSpec) now parses cleanly — the prior comment saying it fails DSL parse was stale. Running suite: 255+ passed, 0 failed from BT21-013 tests.
+- P-137 Flamedramon (Batch 8): IMPLEMENTED — 10 active / 2 ignored. YAML: grant_keyword ArmorPurge + grant_keyword Raid + on_attack_target_change/active_when:your_turn/once_per_turn with raw_rust:p_137_opp_adds_top_security_to_hand. Alt-path from Veemon-topped permanent (name_contains: "Veemon", cost 2). New hybrid gap G-ADD-TOP-SECURITY-TO-HAND (EffectContext lacks add_top_security_to_hand; raw_rust workaround fires security event chain). Side-fix: BT21-024.yaml restructured — place_on_security moved inside as_selecting_player body so the pick binding is in scope at inner-tail time (was in outer tail, causing silent no-op). New gap G-SELECT-EMPTY-OUTER-TAIL documented: outer-tail steps after as_selecting_player are lost when inner select_hand has no candidates. BT21-024 test bt21_024_clause1_trashes_top_security_even_when_opponent_has_no_hand #[ignore]'d with G-SELECT-EMPTY-OUTER-TAIL. Full suite: 298 passed, 0 failed, 123 ignored.
+- EX9-013 BlitzGreymon (Batch 9): PARTIAL — 19 active / 1 ignored. All clauses except the G-MAY-ATTACK-NOW sub-clause fully authored and green. Key fix during TDD: `select_opponent_permanent` installs `SelectionKind::OppField` (not `Target`) — test assertions corrected accordingly. YAML verified clean on first compile; no new gaps introduced. Raw_rust budget: no raw_rust needed for this card. Running suite: 317 passed, 0 failed, 124 ignored.
+- EX10-010 BlackWarGreymon (Batch 9): PARTIAL — 16 active / 3 ignored. Lv6 Red/Black Blast Digivolve ACE with Raid+Reboot+Blocker, delete Digimon/Tamer, conditional DP aura (+3000), conditional immunity. All active tests green. 3 ignored: (1) G-PLAY-COST-LTE — delete filter "play cost ≤7" not enforced at selection (play_cost_lte predicate missing from PredicateSpec); (2) G-PRED-DP-LTE — dp_gte:13000 in active_when not evaluated (aura over-fires on ANY opp Digimon); (3) immunity clause — two separate gaps: lower_aura.rs drops the `modifier` field (CannotBeAffected never installed), AND CannotBeAffected is not enforced by the engine's effect execution path even if installed. Key decisions: immunity represented as `kind: flood_gate, modifier: CannotBeAffected` with self-targeting `card_number_is: EX10-010`; immunity and DP aura share the same `active_when` predicate (all_of: all_turns + any_permanent opp digimon dp_gte). No new raw_rust fns needed. Running suite post-commit: ~333 passed, 0 failed, ~127 ignored.

@@ -114,6 +114,7 @@ fn cost_reduction_amount_fn_uses_formula_value() {
         Some(CompiledFormula::Literal(4)),
         vec![],
         Arc::new(EngineRawRustRegistry::new()),
+        false,
     );
 
     let runner = DebugRunner::builder().build();
@@ -143,6 +144,7 @@ fn cost_reduction_amount_fn_uses_raw_formula_registry() {
         Some(CompiledFormula::RawRust("cost_formula".into())),
         vec![],
         Arc::new(raw),
+        false,
     );
 
     let mut runner = DebugRunner::builder()

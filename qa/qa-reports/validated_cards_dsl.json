@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-04-27",
+  "last_updated": "2026-04-28",
   "cards": {
     "BT14-001": {
       "card_name": "Koromon",
@@ -437,24 +437,7 @@
         "E5-TRASH-TOP-SECURITY",
         "D4-INHERITED-DP-AURA"
       ],
-      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped — DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
-    },
-    "P-137": {
-      "card_name": "Flamedramon",
-      "validated_date": "2026-04-27",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
-      "archetype": "Medusamon Batch 8",
-      "yaml_path": "code/digimon-engine/cards/p/P-137.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_137.rs",
-      "test_count": 12,
-      "patterns": [
-        "H-ARMOR-PURGE",
-        "H-RAID",
-        "E5-OAT-CHANGE-OPP-HAND"
-      ],
-      "notes": "3 clauses: ArmorPurge + Raid declarative grant_keyword + [Your Turn][OPT] on_attack_target_change opponent adds top security to hand. G-ADD-TOP-SECURITY-TO-HAND (hybrid): no DSL verb or EffectContext method to move security to hand; implemented via raw_rust p_137_opp_adds_top_security_to_hand (registered in src/cards/raw_rust/mod.rs). 10 active tests pass (structural + behavioral + gating), 2 ignored for G-OPT-TRIGGERED."
+      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped \u00e2\u20ac\u201d DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
     },
     "ST1-07": {
       "card_name": "Greymon",
@@ -502,6 +485,57 @@
         "A1"
       ],
       "notes": "10/12 tests active and passing. 2/12 ignored (G-OPT-TRIGGERED: once_per_turn not enforced for triggered effects). Clause (a) ArmorPurge keyword grant. Clause (b) Raid keyword grant. Clause (c) on_attack_target_change once_per_turn triggers opponent to add top security to hand via raw_rust:p_137_opp_adds_top_security_to_hand. Hybrid gap G-ADD-TOP-SECURITY-TO-HAND: EffectContext lacks add_top_security_to_hand method (only trash_top_security exists); DSL lacks corresponding verb. Alt path: name_contains:Veemon (cost 2). BT21-024.yaml restructured as side-fix: place_on_security moved inside as_selecting_player body so pick binding is visible at inner-tail time; plus G-SELECT-EMPTY-OUTER-TAIL documented for empty-hand outer-tail loss."
+    },
+    "EX9-013": {
+      "card_name": "BlitzGreymon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Medusamon Batch 9",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-013.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_013.rs",
+      "test_count": 20,
+      "patterns": [
+        "G2",
+        "H5",
+        "H10",
+        "H12",
+        "H13",
+        "D1-adjacent",
+        "E2-adjacent"
+      ],
+      "notes": "Lv6 Red/White Blast Digivolve ACE. 19/20 tests pass; 1 ignored (G-MAY-ATTACK-NOW). BLOCKED sub-clause: End-of-Turn after DNA digivolve \"Then, 1 of your Digimon may attack.\" has no DSL verb. All other clauses fully authored: BlastDigivolve/Alliance/Blocker grant_keyword, De-Digivolve 3 on_play+when_digivolving (mandatory), optional EndOfYourTurn DNA digivolve into Omnimon Alter-S, two alt-digi paths (Lv5/Cost4 standard; Lv5+[Greymon]|[DM]/Cost3/ignore_requirements), ace_overflow: -4."
+    },
+    "EX10-010": {
+      "card_name": "BlackWarGreymon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Medusamon Batch 9",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_010.rs",
+      "test_count": 19,
+      "patterns": [
+        "H12",
+        "H9-RAID",
+        "H7-REBOOT",
+        "H5-BLOCKER",
+        "D1",
+        "F6"
+      ],
+      "notes": "Lv6 Red/Black Blast Digivolve ACE. 16/19 tests pass; 3 ignored (G-PLAY-COST-LTE x1, immunity gaps x2). Clauses authored: BurstDigivolve marker:true (Blast Digivolve), Raid+Reboot+Blocker grant_keyword, ace_overflow: -4, standard digivolve (Lv5 red/cost 4), [On Play]+[When Digivolving] delete opponent Digimon/Tamer (play_cost_lte:7 filter omitted \u00e2\u20ac\u201d G-PLAY-COST-LTE), [All Turns] +3000 DP aura gated on any_permanent(of:opponent, kind:digimon, dp_gte:13000) (dp_gte over-fires \u00e2\u20ac\u201d G-PRED-DP-LTE), [All Turns] immunity (flood_gate modifier:CannotBeAffected compiled but not lowered \u00e2\u20ac\u201d lower_aura.rs modifier not wired) and CannotBeAffected not enforced by engine (two separate gaps)."
+    },
+    "EX8-074": {
+      "status": "IMPLEMENTED",
+      "date": "2026-04-28",
+      "notes": "All 13 runnable tests pass. 5 ignored (G-COUNT-LTE-EVAL, G-PRED-DP-LTE x2, G-OPT-TRIGGERED, G-ALL-TURNS-FILTER). raw_rust formula ex8_074_suspended_dp_cap registered. Gaps: G-PRED-DP-LTE (dp_lte formula not eval'd at runtime), G-COUNT-LTE-EVAL, G-OPT-TRIGGERED, G-ALL-TURNS-FILTER, G-ACTIVATE-CARD-WD-EFFECTS."
+    },
+    "BT21-026": {
+      "status": "IMPLEMENTED",
+      "date": "2026-04-28",
+      "notes": "11/11 runnable tests pass. 5 ignored: G-DECLARATIVE-KEYWORD (Rush/Blocker not installed at runtime x2), G-EVENT-TARGET-OWNER (deletion arm omitted \u2014 no event_target_owner predicate x3). Cost reduction (-2 per opp battle area permanent) fully working. Keywords Rush/Raid/Blocker declared as grant_keyword. Unsuspend on opp deletion blocked until G-EVENT-TARGET-OWNER closes."
     }
   }
 }

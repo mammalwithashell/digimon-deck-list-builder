@@ -236,6 +236,54 @@ fn p_137_opp_adds_top_security_to_hand(ctx: &mut EffectContext<'_>, _bindings: &
     ctx.game.drain_effect_queue();
 }
 
+/// EX8-074 MedievalGallantmon — Dynamic DP cap formula for the [When Digivolving]
+/// delete sub-clause.
+///
+/// Printed text: "delete 1 of your opponent's 8000 DP or lower Digimon. For each
+/// other suspended Digimon, add 3000 to this DP deletion effect's maximum."
+///
+/// Formula: `8000 + 3000 × (count of OTHER suspended Digimon in the controller's
+/// battle area, excluding the source permanent itself)`.
+///
+/// The `target` argument is the candidate being filtered (an opponent's Digimon);
+/// `rctx.source_permanent` is the handle to EX8-074 on the field.
+/// `rctx.player` is the controller (who owns EX8-074).
+///
+/// Used in `dp_lte: { formula: { raw_rust: ex8_074_suspended_dp_cap } }`.
+/// The formula is called once per candidate during predicate evaluation.
+///
+/// NOTE G-PRED-DP-LTE: dp_lte with a formula is parsed but the predicate
+/// evaluator does not yet invoke the formula on permanents in non-security zones.
+/// Until that gap closes, this formula is compiled and registered but not called
+/// at runtime — all opponent Digimon pass the dp_lte filter unconditionally.
+fn ex8_074_suspended_dp_cap(
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    _target: crate::permanent::PermanentHandle,
+) -> i32 {
+    let controller = rctx.player;
+    let source_handle = rctx.source_permanent;
+
+    // Count suspended Digimon belonging to the controller, excluding the source permanent.
+    let suspended_count = rctx
+        .game
+        .player(controller)
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter(|(idx, perm)| {
+            // Exclude the source permanent (EX8-074 itself).
+            let perm_handle = crate::permanent::PermanentHandle {
+                player: controller,
+                index: *idx as u8,
+            };
+            let is_source = source_handle.map_or(false, |sh| sh == perm_handle);
+            !is_source && perm.is_suspended
+        })
+        .count() as i32;
+
+    8000 + 3000 * suspended_count
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
@@ -244,6 +292,7 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_step("bt16_082_on_move_noop", bt16_082_on_move_noop);
     r.register_declarative("bt5_008_opp_cannot_reduce_digivolve_cost", bt5_008_opp_cannot_reduce_digivolve_cost);
     r.register_step("p_137_opp_adds_top_security_to_hand", p_137_opp_adds_top_security_to_hand);
+    r.register_formula("ex8_074_suspended_dp_cap", ex8_074_suspended_dp_cap);
     r
 }
 

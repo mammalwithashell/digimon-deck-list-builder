@@ -192,7 +192,23 @@ impl Game {
 
         // Phase 5 Task 2: scan BeforePayCost effects in battle area of both
         // players and accumulate cost reductions before paying memory.
-        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
+        // Also scan the played card's own effects for `when_playing_this: true`
+        // reducers, which are not yet on the field during this scan.
+        let (hand_card_id, hand_card_handle) = {
+            let player = self.player(player_id);
+            let card = &player.hand[hand_index];
+            (
+                card.card_id(&self.card_data).to_string(),
+                card.handle(),
+            )
+        };
+        let field_reduction = self.scan_before_pay_cost_reduction(player_id);
+        let hand_reduction = self.scan_before_pay_cost_reduction_for_hand_card(
+            player_id,
+            &hand_card_id,
+            hand_card_handle,
+        );
+        let total_reduction = field_reduction + hand_reduction;
         let base_cost = cost_delta.resolve(printed_cost) as i32;
         let effective_cost = (base_cost - total_reduction).max(0) as u16;
 
@@ -2084,6 +2100,14 @@ impl Game {
                 if is_under != effect.inherited {
                     continue;
                 }
+                // Skip `when_playing_this` effects when scanning field
+                // permanents. These effects are self-scoped — they only
+                // fire when the source card itself is being played from hand.
+                // They are evaluated separately in
+                // `scan_before_pay_cost_reduction_for_hand_card`.
+                if effect.when_playing_this {
+                    continue;
+                }
 
                 // Step 1: evaluate condition — construct and drop the read
                 // context immediately so no immutable borrow lingers.
@@ -2127,6 +2151,85 @@ impl Game {
 
                 total += reduction;
             }
+        }
+        total
+    }
+
+    /// Scan the effects of a single card still in hand for `BeforePayCost`
+    /// reductions that are scoped to "when this specific card is being played".
+    ///
+    /// `scan_before_pay_cost_reduction` only walks battle-area permanents.
+    /// Cards with `when_playing_this: true` install their `BeforePayCost`
+    /// reducer on the card itself — but before the card reaches the field it
+    /// lives in the hand, so the normal scan misses it.
+    ///
+    /// This companion method fills that gap: it evaluates only the effects that
+    /// originated from `hand_card_handle` and returns the additional reduction.
+    /// It is called from `play_from_hand_with_cost` alongside the regular scan.
+    fn scan_before_pay_cost_reduction_for_hand_card(
+        &mut self,
+        acting_player: crate::enums::PlayerId,
+        hand_card_id: &str,
+        hand_card_handle: crate::card_source::CardHandle,
+    ) -> i32 {
+        let Some(effects) = self.effects_for_card(hand_card_id, hand_card_handle) else {
+            return 0;
+        };
+        let mut total: i32 = 0;
+        for effect in &effects {
+            if effect.timing != EffectTiming::BeforePayCost {
+                continue;
+            }
+            // Hand cards are never "under" a stack — only top-card effects fire.
+            if effect.inherited {
+                continue;
+            }
+
+            // Evaluate condition (if any). Use `source_permanent = None` since
+            // the card is still in hand at this point.
+            let cond_ok = if let Some(cond) = &effect.condition {
+                let ctx = EffectReadContext::new(
+                    self,
+                    hand_card_handle,
+                    None, // source_permanent: card is in hand, not yet on field
+                    acting_player,
+                );
+                cond(&ctx)
+            } else {
+                true
+            };
+            if !cond_ok {
+                continue;
+            }
+
+            // Evaluate the reduction amount.
+            let reduction = if let Some(reduction_fn) = &effect.cost_reduction_fn {
+                let ctx = EffectReadContext::new(
+                    self,
+                    hand_card_handle,
+                    None, // source_permanent: card is in hand
+                    acting_player,
+                );
+                reduction_fn(&ctx).max(0)
+            } else {
+                effect.cost_reduction.max(0)
+            };
+
+            // pay_cost_fn gates the reduction; run it if present.
+            if let Some(pay_cost_fn) = &effect.pay_cost_fn {
+                let mut ctx = EffectContext::new(
+                    self,
+                    hand_card_handle,
+                    None, // source_permanent: card is in hand
+                    acting_player,
+                );
+                let paid = pay_cost_fn(&mut ctx);
+                if !paid {
+                    continue;
+                }
+            }
+
+            total += reduction;
         }
         total
     }

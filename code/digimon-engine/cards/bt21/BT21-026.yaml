@@ -1,0 +1,83 @@
+card: BT21-026
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+traits: [Dragonkin]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 3
+
+effects:
+  # ─── Clause 1: When this card would be played, reduce the play cost by 2
+  # for each of your opponent's Digimon.
+  #
+  # DCGO: ChangeCostClass with CardSourceCondition (cardSource == card) and
+  # count() = 2 * GetBattleAreaPermanents().Count(permanent => permanent.IsDigimon).
+  #
+  # NOTE: card_count_in_zone counts ALL battle_area permanents (Digimon + Tamers).
+  # The DSL formula has no `kind: digimon` filter for the per-selector, so Tamers
+  # on the opponent's side are also counted. This matches the approximation used in
+  # BT24-017 (same formula pattern). In practice this is rarely significant since
+  # opponents rarely run Tamers in the late game. A future G-FORMULA-KIND-FILTER gap
+  # can address this if needed.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount_fn:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: opponent
+          zone: battle_area
+      delta: 2
+    summary: "-2 per opp battle area permanent when played"
+
+  # ─── Clause 2: <Rush>
+  # DCGO: RushSelfStaticEffect(isInheritedEffect: false, card: card, condition: null)
+  # GAP G-DECLARATIVE-KEYWORD: grant_keyword declaratives compile to
+  # EffectTiming::Declarative which is not yet enqueued by the engine.
+  # Rush is compiled correctly but not installed at runtime.
+  - kind: grant_keyword
+    keyword: Rush
+
+  # ─── Clause 3: <Raid>
+  # DCGO: RaidSelfEffect(isInheritedEffect: false, card: card, condition: null)
+  # Same G-DECLARATIVE-KEYWORD gap.
+  - kind: grant_keyword
+    keyword: Raid
+
+  # ─── Clause 4: <Blocker>
+  # DCGO: BlockerSelfStaticEffect(isInheritedEffect: false, card: card, condition: null)
+  # Same G-DECLARATIVE-KEYWORD gap.
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── Clause 5: [All Turns] [Once Per Turn] When any of your opponent's Digimon
+  # are deleted, this Digimon may unsuspend.
+  #
+  # BLOCKED (G-EVENT-TARGET-OWNER): on_any_deletion fires for ALL deletions —
+  # own and opponent. The DSL predicate layer has no `event_target_owner` predicate
+  # to filter "deleted permanent belonged to opponent". This is the same gap that
+  # blocked BT21-029 Medusamon's deletion arm. Omitted until G-EVENT-TARGET-OWNER
+  # is closed.
+  #
+  # DCGO reference:
+  #   timing: OnDestroyedAnyone
+  #   CanUseCondition: IsExistOnBattleAreaDigimon(card) &&
+  #                    CanTriggerOnPermanentDeleted(hashtable, IsOpponentsDigimon)
+  #   CanActivateCondition: IsExistOnBattleAreaDigimon(card)
+  #   ActivateCoroutine: IUnsuspendPermanents([card.PermanentOfThisCard()])
+  #   SetHashString("Unsuspend_BT21-026")
+  #
+  # Once G-EVENT-TARGET-OWNER is closed, implement as:
+  #   - when: on_any_deletion
+  #     active_when: { all_turns: true }
+  #     once_per_turn: true
+  #     optional: true
+  #     condition: { event_target_owner: opponent }
+  #     process:
+  #       - unsuspend: { target: self }

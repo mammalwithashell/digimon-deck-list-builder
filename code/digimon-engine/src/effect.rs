@@ -132,6 +132,15 @@ pub struct Effect {
     /// host's controller. Set by `.linked()`. Phase 8 Task 4. Mirrors DCGO's
     /// "Plug-In gives the host this effect" semantics for Appmon-trait cards.
     pub linked: bool,
+
+    /// When `true`, this `BeforePayCost` cost-reduction effect is scoped to
+    /// "when THIS specific card is being played from hand."  The effect must
+    /// NOT fire when the card is already on the field and another card is being
+    /// played. Set by `.when_playing_this()` in the builder; enforced by
+    /// `scan_before_pay_cost_reduction` (which skips field-permanent sources
+    /// whose effect has this flag) and
+    /// `scan_before_pay_cost_reduction_for_hand_card` (which evaluates it).
+    pub when_playing_this: bool,
 }
 
 impl std::fmt::Debug for Effect {
@@ -399,8 +408,18 @@ impl EffectBuilder {
                 link_filter: None,
                 training: false,
                 linked: false,
+                when_playing_this: false,
             },
         }
+    }
+
+    /// Mark this `BeforePayCost` effect as "when THIS card is being played
+    /// from hand." The scan in `scan_before_pay_cost_reduction` will skip
+    /// this effect when the source is a field permanent; it is evaluated
+    /// separately in `scan_before_pay_cost_reduction_for_hand_card`.
+    pub fn when_playing_this(mut self) -> Self {
+        self.inner.when_playing_this = true;
+        self
     }
 
     fn on_play_flag(mut self) -> Self {
