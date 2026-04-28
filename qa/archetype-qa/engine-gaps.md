@@ -153,10 +153,52 @@ Last updated: 2026-03-17
 - **Suggested change:** add a `dp_lte` (and presumably `dp_gte`, `dp_eq`) match arm in `eval_card_fields` that reads the target's printed DP from card metadata (or the live effective DP — whichever the predicate semantics intend) and applies the comparison.
 - **Workaround:** None — BLOCKED for negative-case tests; positive-case tests still pass because the engine over-permissively accepts eligible targets.
 
+### `event_target_owner` Predicate Missing  [G-EVENT-TARGET-OWNER]
+- **Discovered in:** Medusamon archetype, BT24-018 Styracomon (and BT21-029 Medusamon clause-d-deletion-arm) DSL implementations (2026-04-27)
+- **Scope:** Rust engine + DSL (hybrid).
+- **Card(s):** BT24-018 Styracomon — replacement clause "When any of your [Reptile] or [Dragonkin] would leave the battle area"; BT21-029 Medusamon — deletion-arm of the All-Turns token-spawn trigger.
+- **What's missing:** No `event_target_owner` (or equivalent) predicate to gate triggered/replacement clauses by which player controls the event-target permanent. Affects any clause whose printed text says "your X" or "your opponent's X" in the trigger condition.
+- **Suggested change:** add `event_target_owner: you | opponent` (or `event_target_is_yours: bool`) to `CompiledPredicate` AND wire `eval_predicate` to read the trigger context's target permanent's controller.
+- **Workaround:** None — replacement/trigger fires for both players' permanents until closed.
+
+### `dp_lte` / `dp_gte` Predicates Not Evaluated for Permanents  [G-PRED-DP-LTE / G-PREDICATE-DP-FILTER / G-SELECT-OPP-FILTER — same root cause]
+- **Discovered in:** Medusamon archetype, BT21-015 Cyclonemon (Batch 2) + BT24-017 Medusamon + BT21-029 Medusamon (Batch 3) (2026-04-27)
+- **Scope:** Rust engine.
+- **Card(s):** BT21-015 (delete ≤4000 DP), BT24-017 (lowest DP), BT21-029 (lowest DP), and most cards with DP-bounded delete/select.
+- **What's missing:** `dp_lte` / `dp_gte` parse and lower into `CompiledPredicate` but `eval_permanent_fields` (in `dsl_cards/predicate.rs`) doesn't read the target's DP and apply the comparator. Selection prompts therefore include ineligible high-DP targets.
+- **Suggested change:** add `dp_lte` / `dp_gte` arms to `eval_permanent_fields` that read printed DP from card metadata (or `permanent.dp()` for live DP — pin the semantics first).
+- **Note:** Three card-discovery names (G-PRED-DP-LTE, G-PREDICATE-DP-FILTER, G-SELECT-OPP-FILTER, G-DP-LTE-PREDICATE) all refer to this same root cause; consolidating under G-PRED-DP-LTE.
+
+### `[All Turns]` (Both-Player) Filter on Triggered Clauses  [G-ALL-TURNS-FILTER]
+- **Discovered in:** Medusamon archetype, BT24-018 Styracomon (2026-04-27).
+- **Scope:** DSL.
+- **Card(s):** BT24-018, BT21-029, BT24-016, BT21-025 — every card with `[All Turns]` triggered clauses.
+- **What's missing:** `active_when: { all_turns: true }` parses but the predicate evaluator may not actually allow firing on the opponent's turn (uncertain — needs verification). Tests for opp-turn triggers are #[ignore]'d pending verification.
+- **Workaround:** Use `active_when: { all_turns: true }` and confirm via behavioral test on opp's turn.
+
+### `trash_security_card` Verb (Non-Top Security) Missing  [G-TRASH-SELECTED-SECURITY]
+- **Discovered in:** Medusamon archetype, BT24-018 Styracomon (2026-04-27).
+- **Scope:** DSL + engine (hybrid).
+- **Card(s):** BT24-018 — "[When Digivolving] You may trash any 1 of your opponent's security cards."
+- **What's missing:** `select_security` can bind a target index but no DSL verb consumes that binding to actually trash the chosen card. Only `trash_top_security` exists. The engine likely has the primitive (security indexing already supported elsewhere); just no DSL bridge.
+- **Workaround:** `raw_rust:` escape hatch.
+
+### Trash → Deck-Bottom Move (Without Reveal Phase)  [G-ZONE-TRASH-TO-DECK]
+- **Discovered in:** Medusamon archetype, BT24-017 Medusamon (Batch 3, 2026-04-27).
+- **Scope:** DSL + engine (hybrid).
+- **Card(s):** BT24-017 (return 2 trash to bottom of deck), BT21-029-related, EX11-012 (return 1 trash to bottom).
+- **What's missing:** A DSL verb / `EffectContext` API for moving a chosen trash card to the bottom of the owner's main deck. Existing `return_to_deck_from_reveal` works for cards in the reveal zone, not trash.
+- **Workaround:** EX11-012 implementer added a `raw_rust: ex11_012_return_trash_to_deck_bottom` (6-line bridge in `src/cards/raw_rust/mod.rs`). Generalizing it as a first-class DSL verb is the proper fix.
+
 ### Resolved during Medusamon run
 
 - **`PlayFromSecurity` dispatch in security-skill timing** — RESOLVED 2026-04-27 in BT21-015 implementation. `code/digimon-engine/src/dsl_cards/step/play_digivolve.rs` now dispatches to `play_pending_security()` when `ctx.game.pending_security.is_some()` (security-skill replay path) and `play_from_security(player)` otherwise. Affects every DSL card with a `[Security]` clause that uses `play_from_security: {}` (BT21-015, BT5-093, BT9-092, BT22-084, ...).
-- **Declarative inherited `grant_keyword` not visible to `has_keyword`** — RESOLVED 2026-04-27 in BT24-011 implementation. `code/digimon-engine/src/game.rs::has_keyword` now scans `perm.card_sources` for `declarative && inherited` effects whose name matches the `Grant <Keyword>` convention set by `lower_grant_keyword`. Companion change in `code/digimon-engine/src/debug_runner.rs::card_data_from_compiled` populates `CardData.keywords` from FaceUp `GrantKeyword` clauses so own-printed keywords surface without dispatch. Affects every DSL card that uses `kind: grant_keyword` either own-scope or inherited (BT24-011 Cyclonemon, EX11-012 Medusamon, others).
+- **Declarative inherited `grant_keyword` not visible to `has_keyword`** — RESOLVED 2026-04-27 in BT24-011 implementation. `code/digimon-engine/src/game.rs::has_keyword` now scans `perm.card_sources` for `declarative && inherited` effects whose name matches the `Grant <Keyword>` convention set by `lower_grant_keyword`. Companion change in `code/digimon-engine/src/debug_runner.rs::card_data_from_compiled` populates `CardData.keywords` from FaceUp `GrantKeyword` clauses so own-printed keywords surface without dispatch.
+- **`Progress` keyword not in `lookup_keyword`** — RESOLVED 2026-04-27 in BT21-029 / EX11-012 implementations. `src/dsl_cards/modifier_map.rs` now maps `"Progress" => Keyword::Progress`.
+- **`SelectOwnPermanent` / `SelectOpponentPermanent` ignored predicate filters (accept-all)** — RESOLVED 2026-04-27 in EX11-012 implementation. `src/dsl_cards/step/selections.rs::install_select_*_permanent` now pre-filters candidates with `eval_predicate` and threads the filter closure to the underlying `select_*_permanent` API.
+- **Replacement clause subject-guard missing (would-leave fires for any permanent)** — RESOLVED 2026-04-27 in EX11-012 implementation. `src/dsl_cards/lower_replacement.rs` now checks `subject_matches` so `WhenWouldLeaveBattleArea` only fires when the carrier itself is the leaving permanent.
+- **`CompiledCardKind::Token` missing from predicate match** — RESOLVED 2026-04-27 in EX11-012 implementation. `src/dsl_cards/predicate.rs` now handles `CompiledCardKind::Token`, enabling `kind: token` filters (e.g. "delete 1 Token" cost).
+- **Petrification token name case-sensitivity bug** — RESOLVED 2026-04-27 in BT21-029 implementation. `TokenRegistry` is keyed lowercase; YAML `token_name:` values must use lowercase (`petrification` not `Petrification`). EX11-012's example version had the same bug; production version corrected.
 
 <!-- Entry template:
 ### {Gap Title}

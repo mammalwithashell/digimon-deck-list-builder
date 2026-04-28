@@ -33,6 +33,7 @@ fn phase_0_exit_criteria() {
         "ex6_072_add_self_to_hand",
         "ex11_027_optional_link_maquinamon",
         "ex11_027_link_requirements",
+        "ex11_012_return_trash_to_deck_bottom",
     ]);
     let ctx = ValidationContext { raw_rust: &reg };
 

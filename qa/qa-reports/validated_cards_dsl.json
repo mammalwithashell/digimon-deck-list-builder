@@ -105,6 +105,58 @@
       "test_count": 15,
       "patterns": ["H1-RUSH", "H9-RAID", "H9-INHERITED-RAID", "C-ALT-DIGI"],
       "notes": "Alt-digi from any Lv3 TS at cost 2 + own Rush + own Raid + inherited Raid all ship. Engine fixes landed in src/debug_runner.rs (populate CardData.keywords from declarative GrantKeyword clauses) and src/game.rs (has_keyword scans card_sources for inherited grant_keyword effects). 15/15 passing."
+    },
+    "BT21-029": {
+      "card_name": "Medusamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_029.rs",
+      "test_count": 16,
+      "patterns": ["E3", "H4-SECA-PLUS-1", "H_PROGRESS"],
+      "notes": "Security A.+1 + Progress + OPT delete-lowest-DP + token-spawn-on-security ship. Token-spawn-on-deletion arm dropped pending G-EVENT-TARGET-OWNER. Engine fix: token name lowercased (Petrification → petrification matches TokenRegistry key)."
+    },
+    "BT24-017": {
+      "card_name": "Medusamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_017.rs",
+      "test_count": 12,
+      "patterns": ["H9-RAID", "H_PROGRESS", "H3-PIERCING"],
+      "notes": "Raid + Progress + Piercing keywords + delete-lowest-DP step ship. Trash-to-deck-bottom step and lowest-DP filter blocked by G-ZONE-TRASH-TO-DECK + G-PRED-DP-LTE. 9 active, 3 ignored."
+    },
+    "EX11-012": {
+      "card_name": "Medusamon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-012.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_012.rs",
+      "test_count": 8,
+      "patterns": ["F3", "H1-RUSH", "H_PROGRESS"],
+      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave → delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
+    },
+    "BT24-018": {
+      "card_name": "Styracomon",
+      "validated_date": "2026-04-27",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_018.rs",
+      "test_count": 17,
+      "patterns": ["F3", "H_PROGRESS", "H3-PIERCING", "H5-BLOCKER", "ARMOR-PURGE"],
+      "notes": "All 4 printed keywords ship (Progress, Piercing, Blocker, Armor Purge). When-Digivolving trash-security blocked by G-TRASH-SELECTED-SECURITY. Two All-Turns OPT clauses structurally OK; behavior blocked by G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER. 5 structural pass, 12 ignored."
     }
   }
 }

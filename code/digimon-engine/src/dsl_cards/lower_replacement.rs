@@ -11,6 +11,7 @@ use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::trigger_map::lookup_replacement_trigger;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::EffectTiming;
+use crate::replacement::ReplacementSubject;
 
 /// Build the base `EffectBuilder` for a "Would*" replacement timing.
 /// Returns `None` only if `timing` is not one of the nine `WhenWould*`
@@ -73,6 +74,22 @@ pub fn lower_with_raw(
     }
 
     builder = builder.replacement_process(move |rctx| {
+        // DSL replacements scope to the carrier permanent by default:
+        // only fire when the SUBJECT is the same permanent that carries
+        // this effect. This mirrors the "When THIS Digimon would leave"
+        // semantics on all printed self-replacement clauses. Inherited
+        // clauses (scope == Inherited) can propagate from any card in the
+        // digivolution stack; for now they still bind to the top-card perm.
+        let subject_matches = match rctx.subject {
+            ReplacementSubject::Permanent(subject_h) => {
+                rctx.effect.source_permanent == Some(subject_h)
+            }
+            _ => false,
+        };
+        if !subject_matches {
+            return;
+        }
+
         let mut bindings = Bindings::new();
         rctx.effect.game.dsl_replacement_outcome = None;
         let _ = run_steps_with_runtime(&process, rctx.effect, &mut bindings, &runtime);

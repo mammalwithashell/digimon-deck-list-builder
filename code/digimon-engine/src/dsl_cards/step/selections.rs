@@ -98,6 +98,7 @@ pub fn try_install(
             true
         }
         CompiledStep::SelectOwnPermanent {
+            filter,
             bind_as,
             prompt,
             optional,
@@ -105,6 +106,7 @@ pub fn try_install(
         } => {
             install_select_own_permanent(
                 ctx,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -115,6 +117,7 @@ pub fn try_install(
             true
         }
         CompiledStep::SelectOpponentPermanent {
+            filter,
             bind_as,
             prompt,
             optional,
@@ -122,6 +125,7 @@ pub fn try_install(
         } => {
             install_select_opponent_permanent(
                 ctx,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -400,6 +404,7 @@ fn install_select_trash(
 
 fn install_select_own_permanent(
     ctx: &mut EffectContext<'_>,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -407,12 +412,37 @@ fn install_select_own_permanent(
     bindings: Bindings,
     runtime: StepRuntime,
 ) {
+    // Pre-filter candidates using the compiled predicate so that an empty
+    // result (e.g. "kind: token" with no tokens on field) short-circuits
+    // without installing a PendingSelection. Mirrors install_select_any_permanent.
+    let target_player = ctx.player;
+    let read = ctx.as_read();
+    let has_candidates = (0..read.game.player(target_player).battle_area.len()).any(|i| {
+        let h = PermanentHandle {
+            player: target_player,
+            index: i as u8,
+        };
+        eval_predicate(&filter, &read, PredicateSubject::Permanent(h))
+    });
+    drop(read);
+    if !has_candidates {
+        return;
+    }
+
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
     ctx.select_own_permanent(
         &prompt,
         optional,
-        |_game, _handle| true,
+        move |game, handle| {
+            let read_ctx = crate::effect_context::EffectReadContext::new(
+                game,
+                crate::card_source::CardHandle(0),
+                None,
+                handle.player,
+            );
+            eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
+        },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -425,6 +455,7 @@ fn install_select_own_permanent(
 
 fn install_select_opponent_permanent(
     ctx: &mut EffectContext<'_>,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -432,12 +463,36 @@ fn install_select_opponent_permanent(
     bindings: Bindings,
     runtime: StepRuntime,
 ) {
+    // Pre-filter candidates using the compiled predicate so that an empty
+    // result short-circuits without installing a PendingSelection.
+    let opponent = ctx.game.next_clockwise(ctx.player);
+    let read = ctx.as_read();
+    let has_candidates = (0..read.game.player(opponent).battle_area.len()).any(|i| {
+        let h = PermanentHandle {
+            player: opponent,
+            index: i as u8,
+        };
+        eval_predicate(&filter, &read, PredicateSubject::Permanent(h))
+    });
+    drop(read);
+    if !has_candidates {
+        return;
+    }
+
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
     ctx.select_opponent_permanent(
         &prompt,
         optional,
-        |_game, _handle| true,
+        move |game, handle| {
+            let read_ctx = crate::effect_context::EffectReadContext::new(
+                game,
+                crate::card_source::CardHandle(0),
+                None,
+                handle.player,
+            );
+            eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
+        },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
