@@ -13,6 +13,52 @@ Format per entry:
 - First reported: YYYY-MM-DD
 ```
 
+## Chaos Control — effect-initiated digivolve from trash
+- Effect text: EX11-005 Yaamon / EX11-069 Yuuki / BT21-100 The Digimon I Designed / BT24-080 Megidramon all digivolve a battle-area Digimon into a card in trash, sometimes for free and sometimes with a reduced cost.
+- Missing DSL verb / step kind / predicate: `effect_initiated_digivolve` only accepts `from_hand`; there is no source-zone-parametric form for `from_trash` or `from_security`.
+- Lowers to engine API: currently blocked by `docs/RUST_ENGINE_GAPS.md` "Effect-initiated digivolve from non-hand source zones"; once the engine primitive accepts a source zone, lower to that shared helper.
+- Suggested DSL syntax:
+  ```yaml
+  - effect_initiated_digivolve:
+      target: base
+      from:
+        zone: trash
+        of: you
+        card: evo
+      cost: { reduce: 1 }
+      ignore_requirements: false
+  ```
+- First reported: 2026-04-28
+
+## BT24-080 — delete all opponent Digimon with the lowest level
+- Effect text: "[On Play] [When Digivolving] [On Deletion] Delete all of your opponent's lowest level Digimon."
+- Missing DSL verb / step kind / predicate: aggregate minimum-level predicate plus mass delete. `for_each` can delete all permanents matching a predicate, but the DSL has no predicate for "level equals the minimum level among opponent Digimon."
+- Lowers to engine API: engine-side iteration over opponent battle-area permanents plus `delete_permanent` is sufficient once the minimum-level candidate set can be computed.
+- Suggested DSL syntax:
+  ```yaml
+  - delete_all:
+      of: opponent
+      filter:
+        kind: digimon
+        level_is: { aggregate: minimum, over: opponent_battle_area }
+  ```
+- First reported: 2026-04-28
+
+## EX4-011 — DP deletion threshold from shared trash count
+- Effect text: "For every 10 total cards in both player's trashes, add 2000 to the maximum DP you can choose with DP-based deletion effects."
+- Missing DSL verb / step kind / predicate: formula support for cross-player trash count buckets inside a `dp_lte` selection predicate. Existing formula vocabulary covers some modifier values, but not a target-filter threshold derived from `floor((your_trash + opponent_trash) / 10) * 2000`.
+- Lowers to engine API: read both players' trash lengths, compute the threshold, then install the normal opponent-permanent selection and `delete_permanent` callback.
+- Suggested DSL syntax:
+  ```yaml
+  dp_lte:
+    formula:
+      base: 7000
+      per: shared_trash_count
+      bucket: 10
+      delta: 2000
+  ```
+- First reported: 2026-04-28
+
 ## BT22-008 / BT22-017 — inherited end-of-turn DNA digivolve registration
 - Effect text: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in your hand."
 - Missing DSL verb / step kind / predicate: Lowering for existing `alt_path_registration` declarative clauses with `kind: dna_digivolve`. YAML examples can spell the clause, but `code/digimon-engine/src/dsl_cards/mod.rs` currently leaves this declarative form in the unlowered catch-all branch.
