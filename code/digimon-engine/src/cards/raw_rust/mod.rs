@@ -122,12 +122,48 @@ fn bt16_082_on_move_noop(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings)
     // No-op: full implementation blocked by G-ON-MOVE.
 }
 
+/// BT5-008 Gaossmon — [Opponent's Turn] opponent can't reduce digivolution costs.
+///
+/// Printed effect: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
+///
+/// This function is a no-op placeholder pending resolution of the following gaps:
+///
+/// **DSL gap G-PLAYER-FLOOD-GATE-DSL**: The DSL `kind: flood_gate` lowers to
+/// `lower_flood_gate.rs` which calls `ctx.add_modifier(h, ...)` — permanent-level only.
+/// There is no `add_player_modifier` step verb in the DSL, and `EffectContext` does not
+/// expose `add_player_modifier`. As a result, a player-level `CannotReducePlayCost`
+/// modifier cannot be installed via any DSL or EffectContext API path.
+///
+/// **Engine enforcement gap**: `scan_before_pay_cost_reduction` in `game_actions.rs`
+/// checks only `CannotReducePlayCost` (which covers ALL cost types, both play and digivolve).
+/// There is no separate `CannotReduceDigivolveCost` variant or per-cost-type enforcement
+/// split. The correct fix is to add `CannotReduceDigivolveCost` + enforce it specifically
+/// in the digivolve cost-reduction scan path.
+///
+/// When both gaps are closed, the YAML clause should be replaced with:
+/// ```yaml
+/// - kind: flood_gate   # or add_player_modifier step once available
+///   active_when: { opponents_turn: true }
+///   target: { player: opponent }
+///   modifier: CannotReduceDigivolveCost
+/// ```
+/// And this function should be removed.
+///
+/// Tracked in `qa/dsl-vocab-gaps.md` under G-PLAYER-FLOOD-GATE-DSL.
+fn bt5_008_opp_cannot_reduce_digivolve_cost(_handle: crate::card_source::CardHandle) -> Vec<Effect> {
+    // No-op: returns an empty effect list.
+    // Full implementation blocked by G-PLAYER-FLOOD-GATE-DSL and missing
+    // CannotReduceDigivolveCost enforcement in scan_before_pay_cost_reduction.
+    vec![]
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
     r.register_declarative("ex11_054_all_turns_noop", ex11_054_all_turns_noop);
     r.register_declarative("bt24_012_would_leave_replacement", bt24_012_would_leave_replacement);
     r.register_step("bt16_082_on_move_noop", bt16_082_on_move_noop);
+    r.register_declarative("bt5_008_opp_cannot_reduce_digivolve_cost", bt5_008_opp_cannot_reduce_digivolve_cost);
     r
 }
 

@@ -1,11 +1,11 @@
 # Archetype DSL Implementation: Medusamon
 Date: 2026-04-27
 Total cards in pool: 53
-Processed this run: 23 (Batches 1–6 complete + BT21-001 + BT16-082 Ukkomon)
+Processed this run: 24 (Batches 1–7 complete)
 Pipeline: batch-implement-cards-rust-dsl
 
 ## Summary (running totals — updated per batch)
-- IMPLEMENTED: 8 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087, BT14-001, BT24-001, BT21-001)
+- IMPLEMENTED: 9 (BT24-008, BT21-015, BT24-011, EX11-012, BT18-087, BT14-001, BT24-001, BT21-001, BT21-007)
 - PARTIAL: 13 (BT21-008, BT23-005, EX11-008, BT21-025, BT24-016, BT21-029, BT24-017, BT24-082, EX11-054, BT21-081, P-189, BT21-017, BT24-012)
 - AUDITED-OK: 0
 - AUDITED-MISSING-TESTS: 0
@@ -41,6 +41,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT24-001 | Gigimon | IMPLEMENT | IMPLEMENTED | 5 active / 5 ignored | Single inherited [Your Turn][OPT] optional on_opponent_security_removed delete opp Digimon dp_lte:3000. Behavioral paths ignored (G-INHERITED-DISPATCH + G-PRED-DP-LTE + G-OPT-TRIGGERED). |
 | BT21-001 | Gigimon | IMPLEMENT | IMPLEMENTED | 2 active / 6 ignored | Single inherited [Your Turn][OPT] on_opponent_security_removed, 1 of your Digimon may digivolve into Reptile/Dragonkin in hand, cost -1. Uses effect_initiated_digivolve cost: { reduce: 1 } (Phase 3a). Behavioral paths ignored (G-INHERITED-DISPATCH + G-OPT-TRIGGERED). |
 | BT16-082 | Ukkomon | IMPLEMENT | BLOCKED (hybrid) | 5 active / 11 ignored | Entire [Your Turn][OPT] trigger (OnMove) blocked by G-ON-MOVE. YAML uses on_play stub + raw_rust no-op. Structural shape (once_per_turn, active_when, scope) verified. |
+| BT21-007 | Agumon | IMPLEMENT | IMPLEMENTED | 14 active / 0 ignored | OnPlay optional trash-to-hand (Reptile/Dragonkin filter) + inherited [Your Turn] +2000 DP aura. 14/14 pass, 0 ignored. No engine gaps. |
 
 ## Engine-Gap Blocked Cards / Clauses
 ### G-INHERITED-DISPATCH (Digivolution-Stack Inherited Triggered Dispatch)

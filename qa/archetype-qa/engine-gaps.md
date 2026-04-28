@@ -239,6 +239,23 @@ Last updated: 2026-03-17
 - **Suggested change:** Emit `GameEvent::Digivolve { player, permanent: PermanentHandle }` inside the digivolve execution path (wherever `fire_on_digivolve` is called). This unblocks event-log-based raw_rust workarounds until the full TriggerContext fix lands.
 - **Workaround:** None — raw_rust event-log detection blocked until emission is wired.
 
+### `EffectTiming::Declarative` Never Fired — Filtered Aura / Grant-Keyword Runtime Gap  [G-DECLARATIVE-KEYWORD]
+- **Discovered in:** Medusamon archetype — BT21-029, EX11-012, EX11-054 (grant_keyword), BT5-008 (filtered aura), 2026-04-27
+- **Scope:** Rust engine.
+- **Card(s):** Any card using `kind: aura` with a non-empty target predicate (filtered aura), or `kind: grant_keyword` with a declarative scope. Specific cards: BT21-029 Medusamon, EX11-012 Medusamon (Progress keyword), BT5-008 Gaossmon (filtered aura +3000 DP to other Gaossmon).
+- **Effect text:** "[Your Turn] Your other [Gaossmon] all get +3000 DP." (BT5-008); "[When Digivolving / On Field] <Progress>" (EX11-012 inherited); "SecurityAttack+1" (BT21-029 clause a).
+- **What's missing:** `EffectTiming::Declarative` is defined in `enums.rs` (line 204) and used by `Effect::declarative(card)` in `effect.rs`, but it is **never enqueued or fired** anywhere in the engine. No call site in `game_phases.rs`, `game_actions.rs`, `game.rs`, or `effect_queue.rs` calls `enqueue_triggered(EffectTiming::Declarative, ...)`. As a result:
+  - Filtered aura `process` closures (which call `ctx.add_dp_modifier`, `ctx.grant_keyword`) are never invoked.
+  - Declarative `grant_keyword` modifiers are never installed in `ModifierRegistry` at runtime.
+  - The `active_when` condition closure on declarative effects is also never evaluated.
+  - The only working declarative path is the **self-aura** (empty predicate), which uses `Effect.dp_modifier` static field read by `source_dp_contribution` — a completely different execution path that doesn't require the process closure.
+- **Scope of impact:** All DSL `kind: aura` clauses with a non-empty `target:` predicate, all `kind: grant_keyword` declarative clauses, and all `kind: flood_gate` clauses that target permanents (flood_gate uses the same declarative process path).
+- **Suggested change:** Implement a declarative-effects tick loop. Two approaches:
+  1. **On-placement tick**: when `play_from_hand` / `fire_on_play` installs a new permanent, iterate all existing permanents and call each declarative process closure via `enqueue_triggered(EffectTiming::Declarative, TriggerSource::PlayerBattleArea(p))` or a dedicated `fire_all_declarative_effects()` scan. The `Expiry::Permanent` flag on declarative modifiers + `ModifierRegistry` deduplication ensure re-firing is safe.
+  2. **Per-query computation**: evaluate the declarative effect condition+process inline at query time (e.g., inside `game.modifiers.sum(h, ChangeDp)`) rather than pre-installing modifiers. This matches the "continuous re-evaluation" model used by physical TCGs where static effects are recomputed on every state change.
+  The simplest v1 fix is to call a new `Game::run_declarative_effects()` method at the end of `fire_on_play`, `end_turn`, and `begin_turn` — these are the natural state-change boundaries where auras need to be recomputed.
+- **Workaround:** Structural tests pass (compile-time verification only). All behavioral tests for filtered aura and grant_keyword modifier installation are `#[ignore]`'d with this gap tag.
+
 <!-- Entry template:
 ### {Gap Title}
 - **Discovered in:** {archetype name} ({date})
