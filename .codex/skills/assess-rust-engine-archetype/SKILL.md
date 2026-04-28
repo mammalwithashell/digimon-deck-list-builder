@@ -1,6 +1,6 @@
 ---
 name: assess-rust-engine-archetype
-description: Assess whether the Digimon Rust engine and YAML DSL can implement a requested archetype, deck, card group, or card list; use when Codex needs to inspect printed card text, current Rust DSL examples/lowering support, action/pending-selection coverage, and engine tests to produce a readiness report with concrete implementation gaps.
+description: Assess whether the Digimon Rust engine and YAML DSL can implement a requested archetype, deck, card group, or card list; use when Codex needs to inspect printed card text, current Rust DSL YAML/lowering support, action/pending-selection coverage, and engine tests to produce a readiness report with concrete implementation gaps.
 ---
 
 # Assess Rust Engine Archetype
@@ -25,7 +25,8 @@ Prefer the Rust engine and DSL as the target. Treat legacy Python and DCGO only 
 
 3. Inspect the DSL surface.
    - Read `code/digimon-dsl/README.md`, `code/digimon-dsl/src/spec.rs`, `code/digimon-dsl/src/step.rs`, and `code/digimon-dsl/src/predicate.rs` only as needed.
-   - Compare against authored examples in `code/digimon-engine/cards/_examples/*.yaml`.
+   - Compare against authored YAML in `code/digimon-engine/cards/`, including production set directories such as `bt21/`, `bt24/`, and `ex11/`, plus `_examples/` fixtures.
+   - Check `code/digimon-engine/build.rs` and `code/digimon-engine/src/dsl_registry.rs` when you need to confirm which YAML specs are embedded in the runtime pack.
    - Check lowering coverage in `code/digimon-engine/src/dsl_cards/`, especially `lower_triggered.rs`, `lower_replacement.rs`, `lower_delay.rs`, `lower_aura.rs`, `lower_cost_reduction.rs`, and `step/`.
 
 4. Inspect engine capability behind the DSL.

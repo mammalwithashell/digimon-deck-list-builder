@@ -1,6 +1,6 @@
 # Rust Engine Gaps
 
-Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `/assess-archetype-rust`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
+Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `assess-rust-engine-archetype`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
 Format and conventions mirror `qa/archetype-qa/engine-gaps.md` (Python-scoped). Gap titles are **capability-centric**, never card-centric.
 
@@ -850,7 +850,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 
 ## Deferred — verification / test coverage only
 
-Items where the existing primitive **likely works** but no behavioral test covers the specific pathway. Not engine gaps; filed here so they surface when the archetype moves to `/batch-implement-cards-rust` and a faithful DebugRunner test must be written. **Do not count toward BLOCKING / PARTIAL tallies.**
+Items where the existing primitive **likely works** but no behavioral test covers the specific pathway. Not engine gaps; filed here so they surface when the archetype moves to the Rust DSL implementation workflow and a faithful DebugRunner test must be written. **Do not count toward BLOCKING / PARTIAL tallies.**
 
 - **Tamer play-from-security pipeline** — `ctx.play_from_security` was written against `CardKind::Digimon`; `CardKind::Tamer` routing through the same path + subsequent `[Your Turn]` / `[All Turns]` observers is unverified. Cards: BT17-081 Tai Kamiya & Matt Ishida, BT22-089 Mirei Mikagura, BT5-092 Nokia Shiramine, EX9-066 Tai Kamiya & Matt Ishida, ST20-15 Island of Adventure, EX4-061 Matt Ishida & Tai Kamiya (DNA Omnimon); Dark Masters adds: BT8-090 Kari Kamiya, ST6-14 Matt Ishida, BT4-097 Kari Kamiya, BT8-094 Digimon Emperor, BT13-102 Keenan Crier, EX9-068 Analogman, RB1-035 Hokuto Amanokawa (all Tamer security plays). See RUST_PYTHON_PARITY §2.5a, §2.5j.
 - **Option multi-color match semantics** — RUST_PYTHON_PARITY §4.2 implements color match; verify multi-color Options require at least one matching own-side permanent **per** printed color (intersection), not any-one (union). Card: BT17-095 Miraculous Mega Knight (Red/Blue Option, DNA Omnimon). See RUST_PYTHON_PARITY §4.2, §4.2b.
