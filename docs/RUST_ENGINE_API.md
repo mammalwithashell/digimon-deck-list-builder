@@ -609,7 +609,7 @@ Effect::security(card)
     .name("Deal 3000 DP to attacker")
     .process(|ctx| {
         // Engine wires `ctx.source_permanent` to the attacker when firing
-        // SecurityEffect timings (forthcoming — see engine-gaps.md).
+        // SecurityEffect timings (forthcoming — see RUST_ENGINE_GAPS.md).
     })
     .build()
 ```
@@ -1594,7 +1594,7 @@ See `tests/combat/phase9_end_to_end.rs` for the canonical Counter + Raid + Colli
 
 ## 9. Known gaps (as of Phase 6)
 
-These are documented in `qa/archetype-qa/engine-gaps.md`. Notable items:
+These are documented in `docs/RUST_ENGINE_GAPS.md`. DSL-only vocabulary and lowering gaps live in `qa/dsl-vocab-gaps.md`. Notable items:
 
 - **Block / Counter / Alliance interrupt phases** are wired through the state machine; trait-gated Alliance is incomplete.
 - **OnSecurityCheck** / **OnStartBattle** / **OnEndBattle** / **OnEndAttack** timings — OnSecurityCheck is wired in the attack path; OnStartBattle/OnEndBattle are not yet fired.
@@ -1917,7 +1917,7 @@ Use the same verdict vocabulary as the Python `/batch-fix-cards` skill so the ev
 
 - **IMPLEMENTED** — every clause has a passing test and a faithful implementation.
 - **PARTIAL** — some clauses landed; the rest are blocked on a specific engine gap. Document which clauses and why.
-- **BLOCKED** — the card requires engine infrastructure that doesn't yet exist (new `EffectTiming` variant, modifier type, selection kind, etc.). Do not ship a stub. File the gap in `qa/archetype-qa/engine-gaps.md` and move on.
+- **BLOCKED** — the card requires infrastructure that doesn't yet exist (new `EffectTiming` variant, modifier type, selection kind, etc.). Do not ship a stub. File missing Rust engine primitives in `docs/RUST_ENGINE_GAPS.md`; if the engine primitive exists but the DSL cannot express or lower it, file the gap in `qa/dsl-vocab-gaps.md` and move on.
 
 ### No-approximations checklist (Rust)
 
