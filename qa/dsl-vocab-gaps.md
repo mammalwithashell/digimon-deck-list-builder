@@ -18,7 +18,15 @@ Format per entry:
 - Missing DSL verb / step kind / predicate: Lowering for existing `alt_path_registration` declarative clauses with `kind: dna_digivolve`. YAML examples can spell the clause, but `code/digimon-engine/src/dsl_cards/mod.rs` currently leaves this declarative form in the unlowered catch-all branch.
 - Lowers to engine API: the same alternate-path registration and action-mask channel used by normal DNA digivolve costs, producing a player-visible pending/action path rather than an automatic end-of-turn digivolve.
 - Suggested DSL syntax: keep the existing `alt_path_registration` shape and require lowering for inherited clauses, including `timing: end_of_your_turn`, `kind: dna_digivolve`, material filters, target hand-card filter, and cost override.
+- Also blocks: `BT12-021` Veemon and `BT12-047` Wormmon in BG Imperial. Their inherited text is "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
 - First reported: 2026-04-28
+
+## BG Imperial DNA cards — YAML `dna_costs` authoring / production data population
+- Effect text: "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0" and equivalent BG Imperial DNA requirements.
+- Missing DSL verb / step kind / predicate: `CardSpec` has no field that authors `dna_costs`, and production `cards.json` ingest does not populate `CardData.dna_costs`, so a YAML card can describe effects but cannot make the normal DNA action legal in the Rust action mask.
+- Lowers to engine API: `CardData.dna_costs`, consumed by the DNA digivolve action-mask branch and `Game::initiate_dna_digivolve`.
+- Suggested DSL syntax: either add a top-level `dna_costs:` field to `CardSpec`, or make `alt_paths: [{ kind: dna_digivolve, ... }]` populate the runtime `CardData.dna_costs` used by action-mask evaluation.
+- First reported: 2026-04-28 (BG Imperial assess-rust-engine-archetype)
 
 ## BT22-015 — grant "this Digimon may attack" after When Digivolving
 - Effect text: "[When Digivolving] ... Then, this Digimon may attack."
