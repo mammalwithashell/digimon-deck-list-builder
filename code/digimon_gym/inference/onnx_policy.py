@@ -65,7 +65,12 @@ class OnnxMlpPolicy:
             raise FileNotFoundError(f"ONNX model not found: {onnx_path}")
         self.session = session or _get_session(onnx_path)
 
-    def predict(self, obs: np.ndarray, action_mask: np.ndarray) -> int:
+    def predict(
+        self,
+        obs: np.ndarray,
+        action_mask: np.ndarray,
+        deterministic: bool = True,
+    ) -> int:
         """Run inference and return the selected action index.
 
         Args:
@@ -75,6 +80,16 @@ class OnnxMlpPolicy:
         obs_batch = obs.reshape(1, -1).astype(np.float32)
         (logits,) = self.session.run(["logits"], {"obs": obs_batch})
         return _masked_argmax(logits[0], action_mask)
+
+    def predict_with_state(
+        self,
+        obs: np.ndarray,
+        action_mask: np.ndarray,
+        state=None,
+        episode_start=None,
+        deterministic: bool = True,
+    ):
+        return self.predict(obs, action_mask, deterministic=deterministic), state
 
 
 class OnnxLstmPolicy:
@@ -90,7 +105,12 @@ class OnnxLstmPolicy:
         self.hidden_size = hidden_size
         self.reset()
 
-    def predict(self, obs: np.ndarray, action_mask: np.ndarray) -> int:
+    def predict(
+        self,
+        obs: np.ndarray,
+        action_mask: np.ndarray,
+        deterministic: bool = True,
+    ) -> int:
         """Run inference with LSTM state threading.
 
         Args:
@@ -105,6 +125,21 @@ class OnnxLstmPolicy:
         self.h = h_out
         self.c = c_out
         return _masked_argmax(logits[0], action_mask)
+
+    def predict_with_state(
+        self,
+        obs: np.ndarray,
+        action_mask: np.ndarray,
+        state=None,
+        episode_start=None,
+        deterministic: bool = True,
+    ):
+        if episode_start is not None and bool(np.asarray(episode_start).reshape(-1)[0]):
+            self.reset()
+        if state is not None:
+            self.h, self.c = state
+        action = self.predict(obs, action_mask, deterministic=deterministic)
+        return action, (self.h, self.c)
 
     def reset(self) -> None:
         """Reset LSTM state at episode boundary."""
@@ -131,3 +166,57 @@ def load_onnx_policy(onnx_path: str, model_type: str = "auto") -> OnnxMlpPolicy 
     if model_type == "lstm":
         return OnnxLstmPolicy(onnx_path)
     return OnnxMlpPolicy(onnx_path)
+
+
+class OnnxPolicy:
+    """Compatibility wrapper that auto-detects MLP vs LSTM ONNX policies."""
+
+    def __init__(self, onnx_path: str, model_type: str = "auto", hidden_size: int = 256):
+        if model_type == "auto":
+            session = _get_session(onnx_path)
+            detected = _detect_model_type(session)
+            if detected == "lstm":
+                self.policy = OnnxLstmPolicy(
+                    onnx_path,
+                    hidden_size=hidden_size,
+                    session=session,
+                )
+            else:
+                self.policy = OnnxMlpPolicy(onnx_path, session=session)
+        elif model_type == "lstm":
+            self.policy = OnnxLstmPolicy(onnx_path, hidden_size=hidden_size)
+        else:
+            self.policy = OnnxMlpPolicy(onnx_path)
+
+    def predict(
+        self,
+        obs: np.ndarray,
+        action_mask: np.ndarray,
+        deterministic: bool = True,
+    ) -> int:
+        return self.policy.predict(
+            obs,
+            action_mask=action_mask,
+            deterministic=deterministic,
+        )
+
+    def predict_with_state(
+        self,
+        obs: np.ndarray,
+        action_mask: np.ndarray,
+        state=None,
+        episode_start=None,
+        deterministic: bool = True,
+    ):
+        return self.policy.predict_with_state(
+            obs,
+            action_mask=action_mask,
+            state=state,
+            episode_start=episode_start,
+            deterministic=deterministic,
+        )
+
+    def reset(self) -> None:
+        reset = getattr(self.policy, "reset", None)
+        if reset is not None:
+            reset()

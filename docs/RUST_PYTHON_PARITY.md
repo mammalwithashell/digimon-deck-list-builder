@@ -77,6 +77,17 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 **Coverage:** [tests/first_turn_draw.rs](../code/digimon-engine/tests/first_turn_draw.rs) locks in the P0-skips / P1-draws-on-turn-2 / P0-draws-on-turn-3 rule.
 
+### 1.8 🔴 RL cross-engine certification failures — observed 2026-04-28
+
+The Python-side certification tests added in [test_rust_python_parity.py](../code/tests/rl/test_rust_python_parity.py) and [test_player_id_translation.py](../code/tests/rl/test_player_id_translation.py) currently expose several PyO3/Rust-backend blockers:
+
+- Initial observation tensor mismatch at index `1`: Python reports `17.0`, Rust reports `3.0` for the same ST1 mirror deck and seed `12345`.
+- Initial action-mask mismatch at indices `[0, 1, 60, 62]`: Python marks `[0, 1]` legal and `[60, 62]` illegal; Rust marks `[60, 62]` legal and `[0, 1]` illegal.
+- Multi-step parity and player-ID translation tests cannot advance through `DigimonEnv.step()` on the Rust backend because `digimon_engine.RustHeadlessGame` does not expose the `.game` attribute that `DigimonEnv._compute_reward()` expects.
+- `RustHeadlessGame.get_board_tensor(0)` and `get_board_tensor(3)` do not reject invalid Python player IDs, so the Python 1/2 ↔ Rust 0/1 boundary is not yet guarded.
+
+**Disposition:** do not compensate in `digimon_gym`; fix the Rust/PyO3 backend surface and player-ID validation, then re-run `python -m pytest code/tests/rl/test_rust_python_parity.py code/tests/rl/test_player_id_translation.py -v`.
+
 ---
 
 ## 2. Combat & permanent state

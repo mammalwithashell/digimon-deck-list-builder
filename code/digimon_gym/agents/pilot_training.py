@@ -18,6 +18,7 @@ Requires: pip install stable-baselines3 sb3-contrib tensorboard
 
 import os
 import argparse
+import random
 import time
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +26,7 @@ from typing import Callable, Dict, Optional, List, Union
 
 import numpy as np
 import gymnasium
+import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODELS_DIR = str(_REPO_ROOT / "models")
@@ -32,6 +34,7 @@ DEFAULT_MODELS_DIR = str(_REPO_ROOT / "models")
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
 from digimon_engine import ACTION_SPACE_SIZE
@@ -41,6 +44,8 @@ from digimon_gym.agents.maskable_recurrent import (
     MaskableRecurrentPPO,
     MaskableMlpLstmPolicy,
 )
+from digimon_gym.agents.opponent_pool import OpponentPool
+from digimon_gym.agents.training_config import TrainingConfig
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -60,6 +65,20 @@ def _unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
                 f"Innermost layer is {type(unwrapped).__name__}."
             )
     return unwrapped
+
+
+def _seed_everything(seed: int) -> None:
+    """Seed Python, NumPy, PyTorch, and CUDA RNGs for reproducible runs."""
+    import torch as th
+
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    th.manual_seed(seed)
+    if th.cuda.is_available():
+        th.cuda.manual_seed_all(seed)
+    th.backends.cudnn.deterministic = True
+    th.backends.cudnn.benchmark = False
 
 
 # ─── Opponent Policies ──────────────────────────────────────────────
@@ -122,6 +141,37 @@ def make_agent_opponent_fn(
         return _mlp_policy
 
 
+def make_pool_opponent_fn(
+    pool: OpponentPool,
+    mode: str = "uniform",
+) -> Callable[[DigimonEnv], int]:
+    """Build an opponent policy that samples saved agents from a pool."""
+    cache: Dict[str, Callable[[DigimonEnv], int]] = {}
+    current: list[Optional[tuple[str, Callable[[DigimonEnv], int]]]] = [None]
+
+    def _opponent(env: DigimonEnv) -> int:
+        if current[0] is None:
+            entry = pool.sample(mode=mode)
+            if entry.weights_path not in cache:
+                cache[entry.weights_path] = make_agent_opponent_fn(
+                    entry.weights_path,
+                    algorithm=entry.algorithm,
+                )
+            current[0] = (entry.name, cache[entry.weights_path])
+        return current[0][1](env)
+
+    def _reset_state() -> None:
+        if current[0] is not None:
+            _name, policy = current[0]
+            reset = getattr(policy, "reset_state", None)
+            if reset is not None:
+                reset()
+        current[0] = None
+
+    _opponent.reset_state = _reset_state  # type: ignore[attr-defined]
+    return _opponent
+
+
 # ─── Opponent Wrapper ────────────────────────────────────────────────
 
 class OpponentWrapper(gymnasium.Wrapper):
@@ -142,6 +192,9 @@ class OpponentWrapper(gymnasium.Wrapper):
         self._unwrapped_env: DigimonEnv = env
 
     def reset(self, **kwargs):
+        reset = getattr(self.opponent_fn, "reset_state", None)
+        if reset is not None:
+            reset()
         obs, info = self.env.reset(**kwargs)
         # If Player 2 goes first, auto-play until Player 1's turn
         obs, info = self._advance_opponent(obs, info)
@@ -224,12 +277,14 @@ class WinRateCallback(BaseCallback):
     def __init__(self, eval_env_fn: Callable,
                  eval_freq: int = 10000,
                  n_eval_episodes: int = 20,
+                 eval_suite=None,
                  verbose: int = 1):
         super().__init__(verbose)
         self._eval_env_fn = eval_env_fn
         self._eval_env: Optional[gymnasium.Env] = None
         self.eval_freq = eval_freq
         self.n_eval_episodes = n_eval_episodes
+        self.eval_suite = eval_suite
         self.games_played = 0
         self._last_eval_step = 0
         self.last_win_rate: float = 0.0
@@ -265,7 +320,7 @@ class WinRateCallback(BaseCallback):
                 self.games_played += 1
 
         # Periodic evaluation (only once per eval_freq interval)
-        if self.num_timesteps - self._last_eval_step >= self.eval_freq:
+        if self.eval_freq > 0 and self.num_timesteps - self._last_eval_step >= self.eval_freq:
             self._last_eval_step = self.num_timesteps
             self._run_evaluation()
 
@@ -365,6 +420,32 @@ class WinRateCallback(BaseCallback):
         self.logger.record("pilot/mean_eval_episode_length", mean_length)
         self.logger.record("pilot/games_played", self.games_played)
 
+        if self.eval_suite is not None:
+            suite_states = {}
+
+            def _agent_fn(env: DigimonEnv) -> int:
+                mask = env.action_mask()
+                obs = env.runner.get_board_tensor(1)
+                key = id(env)
+                episode_start = key not in suite_states or env._step_count == 0
+                action, state = self.model.predict(
+                    obs,
+                    state=suite_states.get(key),
+                    episode_start=np.array([episode_start]),
+                    action_masks=mask,
+                    deterministic=True,
+                )
+                suite_states[key] = state
+                return int(action)
+
+            suite_result = self.eval_suite.run(agent_fn=_agent_fn)
+            self.logger.record(
+                "eval_suite/overall_win_rate",
+                suite_result.overall_win_rate,
+            )
+            for name, cell in suite_result.cell_results.items():
+                self.logger.record(f"eval_suite/{name}/win_rate", cell.win_rate)
+
         if self.verbose:
             print(
                 f"  [Eval @ {self.num_timesteps} steps] "
@@ -372,6 +453,75 @@ class WinRateCallback(BaseCallback):
                 f"Mean reward: {mean_reward:.3f} | "
                 f"Games played: {self.games_played}"
             )
+
+
+class PeriodicCheckpointCallback(BaseCallback):
+    """Save model checkpoints at fixed env-step intervals with rotation."""
+
+    def __init__(
+        self,
+        save_freq: int,
+        save_dir: Path,
+        run_name: str,
+        keep_last: int = 3,
+        verbose: int = 0,
+    ):
+        super().__init__(verbose)
+        self.save_freq = save_freq
+        self.save_dir = Path(save_dir)
+        self.run_name = run_name
+        self.keep_last = keep_last
+        self._last_save = 0
+        self.saved_at: list[dict[str, str | int]] = []
+
+    def _on_step(self) -> bool:
+        if self.save_freq <= 0:
+            return True
+        if self.num_timesteps - self._last_save < self.save_freq:
+            return True
+        self._last_save = self.num_timesteps
+        ckpt_dir = self.save_dir / self.run_name / "checkpoints"
+        ckpt_dir.mkdir(parents=True, exist_ok=True)
+        path = ckpt_dir / f"step_{self.num_timesteps:09d}.zip"
+        self.model.save(str(path))
+        self.saved_at.append(
+            {"step": self.num_timesteps, "path": str(path), "saved_at": datetime.now().isoformat()}
+        )
+        checkpoints = sorted(ckpt_dir.glob("step_*.zip"))
+        for old in checkpoints[: -self.keep_last]:
+            old.unlink(missing_ok=True)
+        return True
+
+
+class ActionValidityCallback(BaseCallback):
+    """Track how often sampled training actions are legal under the mask."""
+
+    def __init__(self, verbose: int = 0):
+        super().__init__(verbose)
+        self.valid_count = 0
+        self.total_count = 0
+
+    def _on_step(self) -> bool:
+        infos = self.locals.get("infos", [])
+        actions = self.locals.get("actions", [])
+        masks = self.locals.get("action_masks")
+        if masks is not None:
+            mask_iter = masks
+        else:
+            mask_iter = [info.get("action_mask") for info in infos]
+        for mask, action in zip(mask_iter, actions):
+            if mask is None:
+                continue
+            action_id = int(np.asarray(action).item())
+            self.total_count += 1
+            if mask[action_id] > 0:
+                self.valid_count += 1
+        if self.total_count and self.total_count % 1000 < max(1, len(actions)):
+            self.logger.record(
+                "action_validity/rate",
+                self.valid_count / self.total_count,
+            )
+        return True
 
 
 # ─── Training ────────────────────────────────────────────────────────
@@ -464,6 +614,29 @@ def make_env(opponent: str = "greedy",
     return ActionMasker(env, mask_fn)
 
 
+def make_vec_env(cfg: TrainingConfig, opponent_fn: Callable[[DigimonEnv], int]):
+    """Build ActionMasker-wrapped vector environments from TrainingConfig."""
+
+    def _factory(rank: int):
+        def _init():
+            base_env = DigimonEnv()
+            wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+
+            def mask_fn(env):
+                return _unwrap_to_digimon_env(env).action_mask()
+
+            env = ActionMasker(wrapped, mask_fn)
+            env.reset(seed=cfg.seed + rank)
+            return env
+
+        return _init
+
+    factories = [_factory(rank) for rank in range(cfg.n_envs)]
+    if getattr(cfg, "vec_env_backend", "dummy") == "subproc" and cfg.n_envs > 1:
+        return SubprocVecEnv(factories, start_method="spawn")
+    return DummyVecEnv(factories)
+
+
 def save_model(model: Union[MaskablePPO, MaskableRecurrentPPO],
                models_dir: str = DEFAULT_MODELS_DIR,
                job_id: Optional[str] = None) -> str:
@@ -510,6 +683,7 @@ def train(total_timesteps: int = 100_000,
           deck_pool_mode: str = "eager",
           deck_pool_seed: Optional[int] = None,
           deck_pool_hybrid_max: int = 10,
+          cfg: Optional[TrainingConfig] = None,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
     """Train a Pilot Agent using MaskablePPO or MaskableRecurrentPPO.
 
@@ -542,6 +716,41 @@ def train(total_timesteps: int = 100_000,
     Returns:
         Trained model (MaskablePPO or MaskableRecurrentPPO).
     """
+    config_driven = cfg is not None
+    if cfg is None:
+        cfg = TrainingConfig(
+            algorithm="lstm" if use_lstm else "mlp",
+            timesteps=total_timesteps,
+            seed=0,
+            learning_rate=learning_rate,
+            n_steps=n_steps,
+            batch_size=batch_size,
+            n_epochs=n_epochs,
+            gamma=gamma,
+            opponent=opponent,
+            eval_freq=eval_freq,
+            eval_episodes=n_eval_episodes,
+            checkpoint_every=0,
+            models_dir=save_dir,
+            tensorboard_log=tensorboard_log,
+        )
+    else:
+        total_timesteps = cfg.timesteps
+        opponent = cfg.opponent
+        eval_freq = cfg.eval_freq
+        n_eval_episodes = cfg.eval_episodes
+        learning_rate = cfg.learning_rate
+        n_steps = cfg.n_steps
+        batch_size = cfg.batch_size
+        n_epochs = cfg.n_epochs
+        gamma = cfg.gamma
+        tensorboard_log = cfg.tensorboard_log
+        save_dir = cfg.models_dir
+        use_lstm = cfg.algorithm == "lstm"
+        lstm_hidden_size = cfg.lstm_hidden_size
+
+    _seed_everything(cfg.seed)
+    run_name = cfg.run_name or datetime.now().strftime("pilot_ppo_%Y%m%d_%H%M%S")
     algorithm_name = "MaskableRecurrentPPO" if use_lstm else "MaskablePPO"
     if verbose:
         print("=" * 60)
@@ -563,18 +772,36 @@ def train(total_timesteps: int = 100_000,
             print(f"  Bounty:         +{bounty_bonus} if TI > {bounty_threshold}")
         print("=" * 60)
 
+    pool_opponent_fn = None
+    if opponent == "pool":
+        pool = OpponentPool.load(Path(cfg.opponent_pool_manifest or ""))
+        if pool.size == 0:
+            raise ValueError(f"opponent_pool_manifest {cfg.opponent_pool_manifest} is empty")
+        pool_opponent_fn = make_pool_opponent_fn(
+            pool,
+            mode=cfg.opponent_pool_mode,
+        )
+
     # Create training environment
-    env = make_env(
-        opponent=opponent,
-        deck1=deck1,
-        gauntlet=gauntlet,
-        bounty_threshold=bounty_threshold,
-        bounty_bonus=bounty_bonus,
-        deck_pool_variants=deck_pool_variants,
-        deck_pool_mode=deck_pool_mode,
-        deck_pool_seed=deck_pool_seed,
-        deck_pool_hybrid_max=deck_pool_hybrid_max,
-    )
+    if pool_opponent_fn is not None:
+        env = make_vec_env(cfg, opponent_fn=pool_opponent_fn)
+    elif cfg.n_envs > 1:
+        opponent_policies = {"greedy": greedy_policy, "random": random_policy}
+        if opponent not in opponent_policies:
+            raise ValueError(f"cfg.n_envs > 1 currently supports greedy/random, got {opponent}")
+        env = make_vec_env(cfg, opponent_fn=opponent_policies[opponent])
+    else:
+        env = make_env(
+            opponent=opponent,
+            deck1=deck1,
+            gauntlet=gauntlet,
+            bounty_threshold=bounty_threshold,
+            bounty_bonus=bounty_bonus,
+            deck_pool_variants=deck_pool_variants,
+            deck_pool_mode=deck_pool_mode,
+            deck_pool_seed=deck_pool_seed,
+            deck_pool_hybrid_max=deck_pool_hybrid_max,
+        )
 
     # Load autoencoder embeddings for warm-start (if available)
     pretrained_embeddings = None
@@ -595,7 +822,14 @@ def train(total_timesteps: int = 100_000,
         ),
     )
 
-    if use_lstm:
+    if cfg.resume_from:
+        if use_lstm:
+            model = MaskableRecurrentPPO.load(cfg.resume_from, env=env, device=device)
+        else:
+            model = MaskablePPO.load(cfg.resume_from, env=env, device=device)
+        if verbose:
+            print(f"  [resume] loaded checkpoint, num_timesteps={model.num_timesteps}")
+    elif use_lstm:
         model = MaskableRecurrentPPO(
             MaskableMlpLstmPolicy,
             env,
@@ -604,9 +838,15 @@ def train(total_timesteps: int = 100_000,
             batch_size=n_steps,  # RecurrentPPO requires batch_size == n_steps
             n_epochs=n_epochs,
             gamma=gamma,
+            gae_lambda=cfg.gae_lambda,
+            clip_range=cfg.clip_range,
+            ent_coef=cfg.ent_coef,
+            vf_coef=cfg.vf_coef,
+            max_grad_norm=cfg.max_grad_norm,
             tensorboard_log=tensorboard_log,
             verbose=0,
             device=device,
+            seed=cfg.seed,
             policy_kwargs=dict(
                 lstm_hidden_size=lstm_hidden_size,
                 n_lstm_layers=1,
@@ -624,35 +864,68 @@ def train(total_timesteps: int = 100_000,
             batch_size=batch_size,
             n_epochs=n_epochs,
             gamma=gamma,
+            gae_lambda=cfg.gae_lambda,
+            clip_range=cfg.clip_range,
+            ent_coef=cfg.ent_coef,
+            vf_coef=cfg.vf_coef,
+            max_grad_norm=cfg.max_grad_norm,
             tensorboard_log=tensorboard_log,
             verbose=0,
             device=device,
+            seed=cfg.seed,
             policy_kwargs=extractor_kwargs,
         )
 
     # Create evaluation callback
-    eval_env_fn = lambda: make_env(
-        opponent=opponent, deck1=deck1,
-        gauntlet=gauntlet, bounty_threshold=bounty_threshold,
-        bounty_bonus=bounty_bonus,
-        deck_pool_variants=deck_pool_variants,
-        deck_pool_mode=deck_pool_mode,
-        deck_pool_seed=deck_pool_seed,
-        deck_pool_hybrid_max=deck_pool_hybrid_max,
-    )
+    if pool_opponent_fn is not None:
+        def eval_env_fn():
+            base_env = DigimonEnv(deck1=deck1)
+            wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
+            return ActionMasker(
+                wrapped,
+                lambda env: _unwrap_to_digimon_env(env).action_mask(),
+            )
+    else:
+        eval_env_fn = lambda: make_env(
+            opponent=opponent, deck1=deck1,
+            gauntlet=gauntlet, bounty_threshold=bounty_threshold,
+            bounty_bonus=bounty_bonus,
+            deck_pool_variants=deck_pool_variants,
+            deck_pool_mode=deck_pool_mode,
+            deck_pool_seed=deck_pool_seed,
+            deck_pool_hybrid_max=deck_pool_hybrid_max,
+        )
+    eval_suite = None
+    if cfg.eval_suite:
+        from digimon_gym.agents.eval_suite import HeldOutEvalSuite
+
+        eval_suite = HeldOutEvalSuite.from_yaml(Path(cfg.eval_suite))
     win_rate_cb = WinRateCallback(
         eval_env_fn=eval_env_fn,
         eval_freq=eval_freq,
         n_eval_episodes=n_eval_episodes,
+        eval_suite=eval_suite,
         verbose=verbose,
     )
+    action_validity_cb = ActionValidityCallback()
+    callbacks: list[BaseCallback] = [win_rate_cb, action_validity_cb]
+    checkpoint_cb = None
+    if cfg.checkpoint_every > 0:
+        checkpoint_cb = PeriodicCheckpointCallback(
+            save_freq=cfg.checkpoint_every,
+            save_dir=Path(save_dir),
+            run_name=run_name,
+            keep_last=cfg.keep_last_checkpoints,
+        )
+        callbacks.append(checkpoint_cb)
 
     # Train
     start = time.time()
     try:
         model.learn(
             total_timesteps=total_timesteps,
-            callback=win_rate_cb,
+            callback=callbacks,
+            reset_num_timesteps=cfg.resume_from is None,
         )
     finally:
         win_rate_cb.close()
@@ -664,12 +937,18 @@ def train(total_timesteps: int = 100_000,
         print(f"  Steps/sec: {total_timesteps / elapsed:,.0f}")
 
     # Save model
-    model_path = save_model(model, save_dir, job_id=job_id)
+    if config_driven:
+        run_dir = Path(save_dir) / run_name
+        run_dir.mkdir(parents=True, exist_ok=True)
+        final_path = run_dir / "final.zip"
+        model.save(str(final_path))
+        model_path = str(final_path)
+    else:
+        model_path = save_model(model, save_dir, job_id=job_id)
     if verbose:
         print(f"  Model saved to: {model_path}")
 
     # Save training run metadata as JSON sidecar
-    from pathlib import Path
     from digimon_gym.agents.training_metrics import TrainingRunMetadata
 
     run_id = Path(model_path).stem
@@ -687,6 +966,7 @@ def train(total_timesteps: int = 100_000,
         total_games=win_rate_cb.games_played,
         archetype_results=win_rate_cb.get_archetype_results(),
         hyperparameters={
+            **cfg.to_dict(),
             "learning_rate": learning_rate,
             "n_steps": n_steps,
             "batch_size": batch_size,
@@ -694,6 +974,13 @@ def train(total_timesteps: int = 100_000,
             "gamma": gamma,
         },
     )
+    if checkpoint_cb is not None:
+        meta.checkpoint_timestamps = checkpoint_cb.saved_at
+    if eval_suite is not None:
+        meta.eval_suite_results = {
+            "overall_win_rate": None,
+            "suite_path": cfg.eval_suite,
+        }
     meta_path = Path(model_path).with_suffix(".meta.json")
     meta.save(meta_path)
     if verbose:
@@ -709,46 +996,58 @@ def main():
         description="Train Digimon TCG Pilot Agent (MaskablePPO / MaskableRecurrentPPO)"
     )
     parser.add_argument(
-        "--timesteps", type=int, default=100_000,
-        help="Total training timesteps (default: 100000)"
+        "--config", type=str, default="configs/training/default.yaml",
+        help="Path to TrainingConfig YAML."
+    )
+    parser.add_argument(
+        "--set", action="append", default=[], dest="overrides",
+        help="Override one config field, e.g. --set seed=42 (repeatable)."
+    )
+    parser.add_argument(
+        "--resume", type=str, default=None,
+        help="Resume from a saved checkpoint .zip."
+    )
+    parser.add_argument(
+        "--timesteps", type=int, default=None,
+        help="Total training timesteps."
     )
     opponent_group = parser.add_mutually_exclusive_group()
     opponent_group.add_argument(
         "--opponent", choices=["greedy", "random"],
-        default="greedy",
-        help="Opponent policy (default: greedy)"
+        default=None,
+        help="Opponent policy."
     )
     opponent_group.add_argument(
         "--self-play", action="store_true",
         help="Enable self-play (agent plays both sides)"
     )
     parser.add_argument(
-        "--lr", type=float, default=3e-4,
-        help="Learning rate (default: 3e-4)"
+        "--lr", type=float, default=None,
+        help="Learning rate."
     )
     parser.add_argument(
-        "--batch-size", type=int, default=64,
-        help="Minibatch size (default: 64)"
+        "--batch-size", type=int, default=None,
+        help="Minibatch size."
     )
     parser.add_argument(
-        "--n-steps", type=int, default=2048,
-        help="Rollout buffer size (default: 2048)"
+        "--n-steps", type=int, default=None,
+        help="Rollout buffer size."
     )
     parser.add_argument(
-        "--eval-freq", type=int, default=10_000,
-        help="Steps between evaluations (default: 10000)"
+        "--eval-freq", type=int, default=None,
+        help="Steps between evaluations."
     )
     parser.add_argument(
-        "--eval-episodes", type=int, default=20,
-        help="Games per evaluation (default: 20)"
+        "--eval-episodes", type=int, default=None,
+        help="Games per evaluation."
     )
     parser.add_argument(
-        "--log-dir", type=str, default="runs/pilot_ppo",
-        help="TensorBoard log directory (default: runs/pilot_ppo)"
+        "--log-dir", type=str, default=None,
+        help="TensorBoard log directory."
     )
     parser.add_argument(
-        "--save-dir", type=str, default="models",
-        help="Model save directory (default: models)"
+        "--save-dir", type=str, default=None,
+        help="Model save directory."
     )
     parser.add_argument(
         "--gauntlet", action="store_true",
@@ -775,13 +1074,41 @@ def main():
         help="Use LSTM policy (MaskableRecurrentPPO) instead of MLP"
     )
     parser.add_argument(
-        "--lstm-hidden-size", type=int, default=256,
-        help="LSTM hidden units per layer (default: 256)"
+        "--lstm-hidden-size", type=int, default=None,
+        help="LSTM hidden units per layer."
     )
 
     args = parser.parse_args()
 
-    opponent = "self-play" if args.self_play else args.opponent
+    overrides = {}
+    for kv in args.overrides:
+        if "=" not in kv:
+            parser.error(f"--set expects key=value, got {kv!r}")
+        key, value = kv.split("=", 1)
+        overrides[key] = yaml.safe_load(value)
+
+    legacy_overrides = {
+        "timesteps": args.timesteps,
+        "learning_rate": args.lr,
+        "batch_size": args.batch_size,
+        "n_steps": args.n_steps,
+        "eval_freq": args.eval_freq,
+        "eval_episodes": args.eval_episodes,
+        "tensorboard_log": args.log_dir,
+        "models_dir": args.save_dir,
+        "lstm_hidden_size": args.lstm_hidden_size,
+    }
+    overrides.update({key: value for key, value in legacy_overrides.items() if value is not None})
+    if args.self_play:
+        overrides["opponent"] = "self-play"
+    elif args.opponent is not None:
+        overrides["opponent"] = args.opponent
+    if args.lstm:
+        overrides["algorithm"] = "lstm"
+    if args.resume:
+        overrides["resume_from"] = args.resume
+
+    cfg = TrainingConfig.from_yaml(Path(args.config), overrides=overrides)
 
     # Load gauntlet if requested
     gauntlet = None
@@ -810,21 +1137,22 @@ def main():
         print(f"  Player deck: {len(deck1)} cards from {args.deck_json}")
 
     train(
-        total_timesteps=args.timesteps,
-        opponent=opponent,
-        eval_freq=args.eval_freq,
-        n_eval_episodes=args.eval_episodes,
-        learning_rate=args.lr,
-        n_steps=args.n_steps,
-        batch_size=args.batch_size,
-        tensorboard_log=args.log_dir,
-        save_dir=args.save_dir,
+        total_timesteps=cfg.timesteps,
+        opponent=cfg.opponent,
+        eval_freq=cfg.eval_freq,
+        n_eval_episodes=cfg.eval_episodes,
+        learning_rate=cfg.learning_rate,
+        n_steps=cfg.n_steps,
+        batch_size=cfg.batch_size,
+        tensorboard_log=cfg.tensorboard_log,
+        save_dir=cfg.models_dir,
         gauntlet=gauntlet,
         deck1=deck1,
         bounty_threshold=args.bounty_threshold,
         bounty_bonus=args.bounty_bonus,
-        use_lstm=args.lstm,
-        lstm_hidden_size=args.lstm_hidden_size,
+        use_lstm=cfg.algorithm == "lstm",
+        lstm_hidden_size=cfg.lstm_hidden_size,
+        cfg=cfg,
     )
 
 

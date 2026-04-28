@@ -68,6 +68,10 @@ class TrainingRunMetadata:
     # Tournament ranking (ETWR) — matches gauntlet_orchestrator output format
     tournament_rankings: list[dict] = field(default_factory=list)
 
+    # Readiness infrastructure metadata
+    eval_suite_results: dict = field(default_factory=dict)
+    checkpoint_timestamps: list[dict] = field(default_factory=list)
+
     def save(self, path: Path) -> None:
         """Write metadata to a JSON file."""
         path.write_text(json.dumps(asdict(self), indent=2))
