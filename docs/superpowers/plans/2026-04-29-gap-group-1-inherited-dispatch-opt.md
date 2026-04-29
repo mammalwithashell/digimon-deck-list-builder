@@ -32,7 +32,8 @@ Implementation files for the later code slice:
 
 - Modify: `code/digimon-engine/src/effect_queue.rs`
   - Extend `enqueue_from_permanent` to scan inherited source cards below the top card after the existing top-card, linked-card, and Training scans.
-  - Ensure triggered queue drain checks `max_per_turn` before process execution and records activation after successful execution.
+  - Extend `run_queued_effect_inner` source-card validity checking so queued inherited effects are accepted when `qe.source_card` still exists in the carrier permanent's below-top `card_sources`.
+  - Ensure triggered queue drain checks `max_per_turn` before process execution and records activation before process execution, matching the existing activated field-main path unless inspection proves the queue has a stronger established convention.
 - Modify if needed: `code/digimon-engine/src/effect.rs`
   - Only adjust effect metadata or helper accessors if existing fields do not expose `inherited`, `max_per_turn`, effect slot, or timing matching cleanly.
 - Modify if needed: `code/digimon-engine/src/trigger_context.rs`
@@ -41,10 +42,11 @@ Implementation files for the later code slice:
 Regression tests:
 
 - Test: `code/digimon-engine/tests/cards_behavioral/bt21/bt21_008.rs`
-  - Add the real-card inherited-dispatch regression for BT21-008 under a carrier.
-  - Add the same-card once-per-turn regression for two security-removal events in one turn.
+  - Unignore/adapt the existing attack-based inherited-dispatch regression for BT21-008 under a carrier.
+  - Unignore/adapt the existing same-card once-per-turn regression for two attack-based security removal events in one turn.
 - Test: `code/digimon-engine/tests/effects/queue_drainer.rs`
   - Add a small queue-level regression that a buried non-inherited top-card effect does not dispatch from source position, if a card-behavioral fixture would be too noisy.
+  - Add queue isolation coverage with direct `enqueue_triggered(EffectTiming::OnOpponentSecurityRemoved, TriggerSource::PlayerBattleArea(0))` if attack-based BT21-008 setup is too brittle.
 
 Tracker docs for the implementation slice, after tests pass:
 
@@ -58,57 +60,56 @@ Tracker docs for the implementation slice, after tests pass:
 - Docs: `qa/dsl-vocab-gaps.md`
   - No expected change for this slice unless implementation proves a DSL gap note can be narrowed without changing DSL vocabulary.
 
-## Task 1: Add Failing Inherited Dispatch Test
+## Task 1: Unignore or Adapt Existing Failing Inherited Dispatch Test
 
 **Files:**
 - Test: `code/digimon-engine/tests/cards_behavioral/bt21/bt21_008.rs`
 
 - [ ] **Step 1: Inspect the existing BT21-008 fixture**
 
-Read the file and identify the current DebugRunner setup helpers:
+Read the file and identify the existing ignored inherited tests before adding any new coverage:
 
 ```bash
-rg -n "BT21-008|bt21_008|play_digimon_with_sources|trash_top_security|drain_effects" code/digimon-engine/tests/cards_behavioral/bt21/bt21_008.rs code/digimon-engine/tests -g "*.rs"
+rg -n "#\\[ignore|bt21_008_inherited_positive|bt21_008_inherited_opt_blocks|attack_player|place_elizamon_as_source" code/digimon-engine/tests/cards_behavioral/bt21/bt21_008.rs
 ```
 
-Expected: existing helper names or nearby patterns for creating a carrier with sources, removing security by effect, and draining the queue.
+Expected: the fixture already contains ignored attack-based tests named `bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn` and `bt21_008_inherited_opt_blocks_second_trigger_same_turn`, plus helper setup through `place_elizamon_as_source`.
 
-- [ ] **Step 2: Add the failing inherited BT21-008 security-removed test**
+- [ ] **Step 2: Unignore/adapt the existing inherited-dispatch test**
 
-Add this test to `code/digimon-engine/tests/cards_behavioral/bt21/bt21_008.rs`. If helper names differ, adapt to existing DebugRunner helpers with identical semantics; do not skip the test.
+Prefer removing `#[ignore = "..."]` from the existing `bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn` test and updating its blocked comment. Keep its attack-based setup:
 
 ```rust
 #[test]
-fn bt21_008_inherited_security_removed_gain_memory_fires_from_source() {
-    let mut runner = DebugRunner::new();
-    runner.load_card_data();
-    runner.setup_basic_game();
+fn bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(ELIZAMON_YAML)
+        .expect("BT21-008 YAML parses")
+        .add_card(make_filler("CARRIER"))
+        .add_card(make_filler("SEC-CARD"))
+        .add_card(make_filler("FILLER-DECK"))
+        .security(1, &["SEC-CARD"])
+        .deck(0, &["FILLER-DECK"])
+        .memory(10)
+        .start();
 
-    let carrier = runner
-        .play_digimon_with_sources(
-            0,
-            "BT21-017",
-            vec!["BT21-008"],
-        )
-        .expect("carrier with BT21-008 source");
+    let carrier_perm = place_elizamon_as_source(&mut runner, &["SEC-CARD"]);
 
-    runner.set_memory(0, 0);
-    runner.trash_top_security_by_effect(1);
-    runner.drain_effects();
+    let memory_before = runner.memory();
+    runner.attack_player(carrier_perm, 1, false);
+    let _ = runner.auto_resolve();
+    let delta = runner.memory() - memory_before;
 
-    assert_eq!(
-        runner.memory(),
-        1,
-        "BT21-008 inherited observer should gain memory when opponent security is removed"
-    );
     assert!(
-        runner.permanent(0, carrier)
-            .expect("carrier remains")
-            .has_source_card("BT21-008"),
-        "inherited effect fires from source without removing it"
+        delta >= 1,
+        "inherited clause must fire when Elizamon is a source and security removed; delta={delta}"
     );
 }
 ```
+
+Do not guide this test through effect-driven security trashing, such as `trash_top_security_by_effect`, unless that helper already fires the existing `OnOpponentSecurityRemoved` dispatch without adding new event dispatch code. Adding new effect-driven security-removal dispatch is outside this slice.
+
+If the existing ignored test requires small maintenance to compile after unignoring, adapt it to current DebugRunner helper names with identical attack-based semantics. Do not add a near-duplicate while leaving the stale ignored test behind.
 
 - [ ] **Step 3: Run the focused card test and confirm failure**
 
@@ -118,44 +119,79 @@ Run:
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt21_008
 ```
 
-Expected before implementation: the new inherited-dispatch test fails because the source-card inherited trigger is not enqueued from below the carrier top card.
+Expected before implementation: the unignored inherited-dispatch test fails because the source-card inherited trigger is not enqueued from below the carrier top card.
 
-## Task 2: Add Failing Triggered OPT Test
+- [ ] **Step 4: Use direct queue isolation only when attack setup is too brittle**
+
+If the attack-based BT21-008 fixture is too brittle for isolating this engine slice, add a queue-level test in `code/digimon-engine/tests/effects/queue_drainer.rs` that directly fires the already-existing timing:
+
+```rust
+game.enqueue_triggered(
+    EffectTiming::OnOpponentSecurityRemoved,
+    TriggerSource::PlayerBattleArea(0),
+);
+game.drain_effect_queue();
+```
+
+The queue-level setup must still put BT21-008 or an equivalent inherited test effect below the carrier top card and assert the inherited source effect runs. This avoids pulling effect-driven security-removal dispatch into this child plan.
+
+## Task 2: Unignore or Adapt Existing Triggered OPT Test
 
 **Files:**
 - Test: `code/digimon-engine/tests/cards_behavioral/bt21/bt21_008.rs`
 - Test if better isolated: `code/digimon-engine/tests/effects/queue_drainer.rs`
 
-- [ ] **Step 1: Add same-turn double-event OPT coverage**
+- [ ] **Step 1: Unignore/adapt same-turn attack-based OPT coverage**
 
-Prefer the real-card BT21-008 fixture. Add this test to `code/digimon-engine/tests/cards_behavioral/bt21/bt21_008.rs`. If the existing fixture cannot create two security-removal events with current helpers, place an equivalent queue-level test in `code/digimon-engine/tests/effects/queue_drainer.rs` using a test effect with `max_per_turn = 1`.
+Prefer removing `#[ignore = "..."]` from the existing `bt21_008_inherited_opt_blocks_second_trigger_same_turn` test and updating its blocked comment. Keep the attack-based two-security-removal setup:
 
 ```rust
 #[test]
-fn inherited_once_per_turn_security_removed_observer_fires_once() {
-    let mut runner = DebugRunner::new();
-    runner.load_card_data();
-    runner.setup_basic_game();
+fn bt21_008_inherited_opt_blocks_second_trigger_same_turn() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(ELIZAMON_YAML)
+        .expect("BT21-008 YAML parses")
+        .add_card(make_filler("CARRIER"))
+        .add_card(make_filler("SEC-1"))
+        .add_card(make_filler("SEC-2"))
+        .add_card(make_filler("FILLER-DECK"))
+        .security(1, &["SEC-1", "SEC-2"])
+        .deck(0, &["FILLER-DECK"])
+        .memory(10)
+        .start();
 
-    runner
-        .play_digimon_with_sources(0, "BT21-017", vec!["BT21-008"])
-        .expect("carrier with inherited source");
+    let carrier_perm = place_elizamon_as_source(&mut runner, &[]);
 
-    runner.set_memory(0, 0);
-    runner.trash_top_security_by_effect(1);
-    runner.drain_effects();
-    runner.trash_top_security_by_effect(1);
-    runner.drain_effects();
+    let m0 = runner.memory();
+    runner.attack_player(carrier_perm, 1, false);
+    let _ = runner.auto_resolve();
+    let first_delta = runner.memory() - m0;
 
-    assert_eq!(
-        runner.memory(),
-        1,
-        "once-per-turn inherited observer must not fire twice in one turn"
+    assert!(
+        first_delta >= 1,
+        "first security removal should fire inherited OPT clause; delta={first_delta}"
+    );
+
+    if runner.game_over() {
+        return;
+    }
+
+    let m2 = runner.memory();
+    let carrier_perm2 = runner.perm_handle(0, 0);
+    runner.attack_player(carrier_perm2, 1, false);
+    let _ = runner.auto_resolve();
+    let second_delta = runner.memory() - m2;
+
+    assert!(
+        second_delta < first_delta,
+        "OPT must block second inherited trigger; first_delta={first_delta}, second_delta={second_delta}"
     );
 }
 ```
 
-If helper names differ, adapt to existing DebugRunner helpers with identical semantics; do not skip the test.
+If helper names differ, adapt the existing ignored test to current helpers with identical attack-based semantics. Do not add a near-duplicate while leaving the stale ignored test behind.
+
+Do not use `trash_top_security_by_effect` for this behavioral guidance unless it already routes through existing `OnOpponentSecurityRemoved` fan-out. If direct queue isolation is needed, use `enqueue_triggered(EffectTiming::OnOpponentSecurityRemoved, TriggerSource::PlayerBattleArea(0))` twice in the same turn with a test effect whose `max_per_turn = 1`.
 
 - [ ] **Step 2: Run the focused tests and confirm failure**
 
@@ -275,6 +311,30 @@ Follow the same attribution pattern as the existing linked-card branch where pos
 
 Do not add new event timings, event payload fields, source-trash fan-out, or breeding-area scan paths in this slice. This implementation should only make existing dispatch calls see inherited source-card effects when those calls already fan out over a battle-area carrier permanent.
 
+- [ ] **Step 6: Accept below-top source cards in queued-effect validity checking**
+
+In `run_queued_effect_inner`, extend the source-card liveness check that currently accepts only:
+
+- `top_matches`
+- `linked_matches`
+- `training_matches`
+
+Add a `below_top_source_matches` check that accepts a queued inherited source-card effect when `qe.source_card` still appears in the carrier permanent's below-top `card_sources`:
+
+```rust
+let below_top_source_matches = perm
+    .card_sources
+    .iter()
+    .take(perm.card_sources.len().saturating_sub(1))
+    .any(|c| c.card_index == qe.source_card.0);
+
+if !top_matches && !linked_matches && !training_matches && !below_top_source_matches {
+    return;
+}
+```
+
+Adapt field names to the current `Permanent` and `CardHandle` types. This is required because `enqueue_from_permanent` can correctly queue an inherited source-card effect and the drainer can still drop it if `run_queued_effect_inner` does not consider below-top stack membership valid.
+
 ## Task 5: Enforce `once_per_turn` / `max_per_turn` for Queued Triggered Effects
 
 **Files:**
@@ -306,15 +366,27 @@ if let Some(max) = effect.max_per_turn {
 
 Adapt `effect.max_per_turn`, `source_card`, `effect_slot`, and return behavior to the existing types. The key requirement is that triggered effects route through the same activation-count/once-per-turn checks as top-card activated effects.
 
-- [ ] **Step 3: Record activation only after successful execution**
+- [ ] **Step 3: Record activation before invoking `process`, matching activated field-main**
 
-After the queued effect successfully invokes its process closure, call the existing activation recording helper:
+The existing activated field-main path records activation before invoking `process`:
 
 ```rust
 source_permanent.record_activation(source_card, effect_slot);
+if let Some(process) = &effect.process {
+    let mut ctx = EffectContext::new(self, source_card, source_permanent, controller);
+    process(&mut ctx);
+}
 ```
 
-Use the existing helper signature and mutation access pattern. If the queue path can create pending selections before final resolution, record at the same semantic point the current engine treats an activation as consumed for activated effects.
+Match that pattern in `run_queued_effect_inner` unless inspection proves the queue has a stronger established convention for pending-selection effects. The intended default is:
+
+1. Validate source-card liveness, including below-top source membership for inherited effects.
+2. Re-fetch the effect and check `max_per_turn`.
+3. Evaluate conditions and pay-cost gate.
+4. Record activation on the carrier permanent for `qe.source_card` and `qe.effect_slot`.
+5. Invoke `process`.
+
+The only acceptable difference is if queued triggered effects that install pending selections already have an established completion-time convention elsewhere in the queue code. If so, document that convention in the implementation comments and add a regression proving double enqueue cannot bypass OPT before the pending selection resolves.
 
 - [ ] **Step 4: Preserve no-op behavior for unlimited effects**
 
