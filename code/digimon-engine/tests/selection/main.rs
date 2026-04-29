@@ -11,4 +11,5 @@ mod opponent_permanent;
 mod opponent_selector;
 mod ordered_permutation;
 mod place_remainder;
+mod source_multi;
 mod union_zone;

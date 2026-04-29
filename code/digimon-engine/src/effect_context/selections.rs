@@ -26,7 +26,7 @@ use crate::effect_context::EffectContext;
 use crate::enums::{CardKind, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
-use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
+use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind, SourceSelectionRef};
 
 /// Identifies which zone `select_count_capped_multi` draws candidates from.
 ///
@@ -358,6 +358,52 @@ impl<'a> EffectContext<'a> {
             }),
             on_decline: None,
         });
+    }
+
+    pub fn select_own_sources<F, C>(
+        &mut self,
+        prompt: &str,
+        min: u8,
+        max: u8,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, SourceSelectionRef) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<SourceSelectionRef>) + Send + Sync + 'static,
+    {
+        assert!(min <= max, "select_own_sources min must be <= max");
+        assert!(max > 0, "select_own_sources max must be > 0");
+
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let previous_phase = self.game.current_phase;
+        install_source_multi_selection(
+            self.game,
+            controller,
+            selecting_player,
+            override_pin,
+            prompt.to_string(),
+            min,
+            max,
+            Vec::new(),
+            std::sync::Arc::new(filter),
+            source_card,
+            source_permanent,
+            previous_phase,
+            Box::new(move |game, picked| {
+                let mut ctx = EffectContext::new_with_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    controller,
+                    override_pin,
+                );
+                callback(&mut ctx, picked);
+            }),
+        );
     }
 
     /// Prompt `self.player` to pick one of several labeled branches
@@ -1371,6 +1417,151 @@ fn install_permutation_step(
             }
         }),
         on_decline: None,
+    });
+}
+
+// ── cross-permanent source multi-select trampoline ───────────────────────────
+
+type SourceFilter = std::sync::Arc<dyn Fn(&Game, SourceSelectionRef) -> bool + Send + Sync>;
+type SourceFinalCallback =
+    Box<dyn FnOnce(&mut Game, Vec<SourceSelectionRef>) + Send + Sync + 'static>;
+
+fn source_multi_candidates(
+    game: &Game,
+    of_player: PlayerId,
+    picked: &[SourceSelectionRef],
+    filter: &SourceFilter,
+) -> Vec<(u16, SourceSelectionRef)> {
+    use crate::action::space::encode_source_select;
+
+    let mut out = Vec::new();
+    for (field_index, perm) in game.player(of_player).battle_area.iter().enumerate() {
+        if perm.card_sources.len() <= 1 {
+            continue;
+        }
+        for source_index in 0..(perm.card_sources.len() - 1) {
+            let card = perm.card_sources[source_index].handle();
+            let permanent = PermanentHandle {
+                player: of_player,
+                index: field_index as u8,
+            };
+            let source_ref = SourceSelectionRef {
+                permanent,
+                field_index: field_index as u8,
+                source_index: source_index as u8,
+                card,
+            };
+            if picked.iter().any(|p| p.card == card) {
+                continue;
+            }
+            if !(filter)(game, source_ref) {
+                continue;
+            }
+            if let Some(action_id) = encode_source_select(field_index as u16, source_index as u16) {
+                out.push((action_id, source_ref));
+            }
+        }
+    }
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_source_multi_selection(
+    game: &mut Game,
+    of_player: PlayerId,
+    selecting_player: PlayerId,
+    override_pin: Option<PlayerId>,
+    prompt: String,
+    min: u8,
+    max: u8,
+    picked: Vec<SourceSelectionRef>,
+    filter: SourceFilter,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    previous_phase: GamePhase,
+    final_callback: SourceFinalCallback,
+) {
+    use crate::action::space::PASS;
+    use std::sync::{Arc, Mutex};
+
+    let candidates = source_multi_candidates(game, of_player, &picked, &filter);
+    if candidates.is_empty() || picked.len() == max as usize {
+        if picked.len() >= min as usize {
+            final_callback(game, picked);
+        }
+        return;
+    }
+
+    let mut valid_action_ids: Vec<u16> =
+        candidates.iter().map(|(action_id, _)| *action_id).collect();
+    if picked.len() >= min as usize {
+        valid_action_ids.push(PASS);
+    }
+
+    let shared_cb: Arc<Mutex<Option<SourceFinalCallback>>> =
+        Arc::new(Mutex::new(Some(final_callback)));
+    let shared_cb_decline = Arc::clone(&shared_cb);
+    let action_to_source = Arc::new(candidates);
+    let prompt_for_next = prompt.clone();
+    let filter_for_next = Arc::clone(&filter);
+    let picked_for_pick = picked.clone();
+    let picked_for_decline = picked.clone();
+
+    game.current_phase = GamePhase::SelectSource;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::SourceMulti {
+            min,
+            max,
+            picked: picked.len() as u8,
+        },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: picked.len() >= min as usize,
+        prompt,
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        callback: Box::new(move |game: &mut Game, action_id: u16| {
+            let (_, source_ref) = action_to_source
+                .iter()
+                .find(|(candidate_action, _)| *candidate_action == action_id)
+                .copied()
+                .expect("source action must have been in valid_action_ids");
+            let mut next_picked = picked_for_pick;
+            next_picked.push(source_ref);
+
+            let next_cb: SourceFinalCallback = Box::new(move |game, picks| {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(cb_opt.is_some(), "source final callback already consumed");
+                if let Some(cb) = cb_opt {
+                    cb(game, picks);
+                }
+            });
+
+            install_source_multi_selection(
+                game,
+                of_player,
+                selecting_player,
+                override_pin,
+                prompt_for_next,
+                min,
+                max,
+                next_picked,
+                filter_for_next,
+                source_card,
+                source_permanent,
+                previous_phase,
+                next_cb,
+            );
+        }),
+        on_decline: Some(Box::new(move |game: &mut Game| {
+            let cb_opt = shared_cb_decline.lock().unwrap().take();
+            debug_assert!(cb_opt.is_some(), "source final callback already consumed");
+            if let Some(cb) = cb_opt {
+                cb(game, picked_for_decline);
+            }
+        })),
     });
 }
 
