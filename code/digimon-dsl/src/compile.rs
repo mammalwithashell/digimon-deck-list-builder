@@ -1156,6 +1156,16 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
         },
+        S::SelectOwnBreedingPermanent(a) => CompiledStep::SelectOwnBreedingPermanent {
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+                .collect(),
+        },
         S::SelectReveal(a) => CompiledStep::SelectReveal {
             of: compile_player_ref(a.of),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::card_source::CardHandle;
 use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
-use crate::selection::SourceSelectionRef;
+use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingValue {
@@ -17,6 +17,7 @@ pub enum BindingValue {
     PermanentList(Vec<PermanentHandle>),
     CardList(Vec<CardHandle>),
     SourceRefs(Vec<SourceSelectionRef>),
+    BreedingPermanentRef(BreedingPermanentSelectionRef),
 }
 
 #[derive(Debug, Default, Clone)]
@@ -135,6 +136,14 @@ impl Bindings {
         self.insert(name, BindingValue::SourceRefs(refs));
     }
 
+    pub fn insert_breeding_permanent_ref(
+        &mut self,
+        name: &str,
+        breeding_ref: BreedingPermanentSelectionRef,
+    ) {
+        self.insert(name, BindingValue::BreedingPermanentRef(breeding_ref));
+    }
+
     pub fn get_permanent_list(&self, name: &str) -> Option<Vec<PermanentHandle>> {
         match self.get(name)? {
             BindingValue::PermanentList(v) => Some(v),
@@ -152,6 +161,13 @@ impl Bindings {
     pub fn get_source_refs(&self, name: &str) -> Option<Vec<SourceSelectionRef>> {
         match self.get(name)? {
             BindingValue::SourceRefs(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn get_breeding_permanent_ref(&self, name: &str) -> Option<BreedingPermanentSelectionRef> {
+        match self.get(name)? {
+            BindingValue::BreedingPermanentRef(v) => Some(v),
             _ => None,
         }
     }

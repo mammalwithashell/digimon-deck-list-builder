@@ -676,6 +676,11 @@ pub enum CompiledStep {
         prompt: String,
         then: Vec<CompiledStep>,
     },
+    SelectOwnBreedingPermanent {
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
     TrashSelectedSources {
         source_refs: String,
     },

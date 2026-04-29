@@ -26,7 +26,10 @@ use crate::effect_context::EffectContext;
 use crate::enums::{CardKind, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
-use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind, SourceSelectionRef};
+use crate::selection::{
+    BreedingPermanentSelectionRef, EffectChoiceEntry, PendingSelection, SelectionKind,
+    SourceSelectionRef,
+};
 
 /// Identifies which zone `select_count_capped_multi` draws candidates from.
 ///
@@ -450,6 +453,63 @@ impl<'a> EffectContext<'a> {
                 callback(&mut ctx, picked);
             }),
         );
+    }
+
+    pub fn select_own_breeding_permanent<F, C>(&mut self, prompt: &str, filter: F, callback: C)
+    where
+        F: Fn(&Game, BreedingPermanentSelectionRef) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, BreedingPermanentSelectionRef) + Send + Sync + 'static,
+    {
+        let Some(card) = self
+            .game
+            .player(self.player)
+            .breeding_area
+            .as_ref()
+            .map(|p| p.top_card().handle())
+        else {
+            return;
+        };
+        let selection_ref = BreedingPermanentSelectionRef {
+            player: self.player,
+            card,
+        };
+        if !filter(self.game, selection_ref) {
+            return;
+        }
+        let Some(action_id) = crate::action::space::encode_breeding_select(self.player) else {
+            return;
+        };
+
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let previous_phase = self.game.current_phase;
+
+        self.game.current_phase = GamePhase::SelectBreedingPermanent;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::BreedingPermanent,
+            selecting_player,
+            previous_phase,
+            valid_action_ids: vec![action_id],
+            is_optional: false,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            callback: Box::new(move |game, _| {
+                let mut ctx = EffectContext::new_with_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    controller,
+                    override_pin,
+                );
+                callback(&mut ctx, selection_ref);
+            }),
+            on_decline: None,
+        });
     }
 
     /// Prompt `self.player` to pick one of several labeled branches

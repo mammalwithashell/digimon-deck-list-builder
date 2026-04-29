@@ -63,6 +63,7 @@ fn phase_int(p: GamePhase) -> i64 {
         GamePhase::SelectUnion => 5,
         GamePhase::SelectPermutation => 5,
         GamePhase::SelectBudgeted => 5,
+        GamePhase::SelectBreedingPermanent => 5,
     }
 }
 

@@ -3,6 +3,7 @@
 //! selection-kind routing dispatch.
 
 mod behavioral_end_to_end;
+mod breeding_permanent;
 mod count_capped;
 mod dp_budget;
 mod kinds;

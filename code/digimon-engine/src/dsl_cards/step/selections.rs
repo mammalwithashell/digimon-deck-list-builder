@@ -331,6 +331,26 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectOwnBreedingPermanent {
+            bind_as,
+            prompt,
+            then,
+        } => {
+            if !has_own_breeding_candidate(ctx) {
+                return false;
+            }
+            let mut inner_tail = then.clone();
+            inner_tail.extend_from_slice(tail);
+            install_select_own_breeding_permanent(
+                ctx,
+                bind_as.clone(),
+                prompt.clone(),
+                inner_tail,
+                bindings,
+                runtime.clone(),
+            );
+            true
+        }
         CompiledStep::SelectUnionZone {
             of,
             zones,
@@ -416,6 +436,10 @@ fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) ->
             };
             ctx.game.effective_dp(handle).unwrap_or(0) <= dp_budget
         })
+}
+
+fn has_own_breeding_candidate(ctx: &EffectContext<'_>) -> bool {
+    ctx.game.player(ctx.player).breeding_area.is_some()
 }
 
 fn install_select_hand(
@@ -984,6 +1008,25 @@ fn install_select_opponent_dp_budget(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+}
+
+fn install_select_own_breeding_permanent(
+    ctx: &mut EffectContext<'_>,
+    bind_as: Option<String>,
+    prompt: String,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
+    ctx.select_own_breeding_permanent(&prompt, |_game, _target| true, move |cb_ctx, target| {
+        let mut b = bindings.clone();
+        if let Some(name) = &bind_as {
+            b.insert_breeding_permanent_ref(name, target);
+        }
+        run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+    });
 }
 
 fn install_select_ordered_permutation(

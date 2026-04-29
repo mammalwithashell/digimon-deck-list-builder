@@ -105,3 +105,37 @@ effects:
         other => panic!("expected SelectOpponentDpBudget, got {other:?}"),
     }
 }
+
+#[test]
+fn select_own_breeding_permanent_lowers_with_tail() {
+    let yaml = r#"
+card: X-BREED
+name: Breeding Picker
+kind: digimon
+level: 6
+color: [red]
+cost: 8
+dp: 9000
+effects:
+  - when: when_attacking
+    process:
+      - select_own_breeding_permanent:
+          bind_as: breeding_target
+          prompt: Choose breeding
+          then:
+            - gain_memory: 1
+"#;
+
+    match compile_first_step(yaml) {
+        CompiledStep::SelectOwnBreedingPermanent {
+            bind_as,
+            prompt,
+            then,
+        } => {
+            assert_eq!(bind_as.as_deref(), Some("breeding_target"));
+            assert_eq!(prompt, "Choose breeding");
+            assert_eq!(then, vec![CompiledStep::GainMemory(1)]);
+        }
+        other => panic!("expected SelectOwnBreedingPermanent, got {other:?}"),
+    }
+}

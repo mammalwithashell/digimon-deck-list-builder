@@ -122,6 +122,7 @@ pub enum GamePhase {
     SelectUnion,
     SelectPermutation,
     SelectBudgeted,
+    SelectBreedingPermanent,
 }
 
 impl GamePhase {
@@ -152,6 +153,7 @@ impl GamePhase {
             GamePhase::SelectUnion => "SelectUnion",
             GamePhase::SelectPermutation => "SelectPermutation",
             GamePhase::SelectBudgeted => "SelectBudgeted",
+            GamePhase::SelectBreedingPermanent => "SelectBreedingPermanent",
         }
     }
 }

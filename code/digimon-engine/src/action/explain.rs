@@ -87,7 +87,8 @@ pub fn explain_action(game: &Game, player_id: PlayerId, action_id: u16) -> Actio
         | GamePhase::AllianceTiming
         | GamePhase::SelectUnion
         | GamePhase::SelectPermutation
-        | GamePhase::SelectBudgeted => explain_selection(game, player_id, action_id),
+        | GamePhase::SelectBudgeted
+        | GamePhase::SelectBreedingPermanent => explain_selection(game, player_id, action_id),
         GamePhase::Unsuspend | GamePhase::Draw | GamePhase::EndTurn | GamePhase::GameOver => base(
             game,
             player_id,
@@ -435,6 +436,18 @@ fn explain_selection(game: &Game, player_id: PlayerId, action_id: u16) -> Action
         e.target_zone = Some(ActionZone::Battle);
         e.target_index = Some(target);
         return with_battle_card(e, game, opponent, target);
+    }
+
+    if game.current_phase == GamePhase::SelectBreedingPermanent {
+        let mut e = base(
+            game,
+            player_id,
+            action_id,
+            ActionKind::Selection,
+            "Select breeding permanent".to_string(),
+        );
+        e.target_zone = Some(ActionZone::Breeding);
+        return with_breeding_card(e, game, player_id);
     }
 
     let mut e = base(

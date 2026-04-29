@@ -125,6 +125,7 @@ pub enum StepSpec {
     SelectMaterial(SelectMaterialArgs),
     SelectOwnSources(SelectOwnSourcesArgs),
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
+    SelectOwnBreedingPermanent(SelectOwnBreedingPermanentArgs),
     SelectReveal(SelectZoneArgs),
     SelectSecurity(SelectZoneArgs),
     SelectUnionZone(SelectUnionArgs),
@@ -224,6 +225,9 @@ impl Serialize for StepSpec {
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
             StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
             StepSpec::SelectOpponentDpBudget(v) => kv!(s, "select_opponent_dp_budget", v),
+            StepSpec::SelectOwnBreedingPermanent(v) => {
+                kv!(s, "select_own_breeding_permanent", v)
+            }
             StepSpec::SelectReveal(v) => kv!(s, "select_reveal", v),
             StepSpec::SelectSecurity(v) => kv!(s, "select_security", v),
             StepSpec::SelectUnionZone(v) => kv!(s, "select_union_zone", v),
@@ -347,6 +351,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
             "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
             "select_opponent_dp_budget" => StepSpec::SelectOpponentDpBudget(map.next_value()?),
+            "select_own_breeding_permanent" => {
+                StepSpec::SelectOwnBreedingPermanent(map.next_value()?)
+            }
             "select_reveal" => StepSpec::SelectReveal(map.next_value()?),
             "select_security" => StepSpec::SelectSecurity(map.next_value()?),
             "select_union_zone" => StepSpec::SelectUnionZone(map.next_value()?),
@@ -424,6 +431,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_material",
                         "select_own_sources",
                         "select_opponent_dp_budget",
+                        "select_own_breeding_permanent",
                         "select_reveal",
                         "select_security",
                         "select_union_zone",
@@ -838,6 +846,16 @@ pub struct SelectOpponentDpBudgetArgs {
     pub dp_budget: i32,
     #[serde(default)]
     pub min_picks: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default)]
+    pub then: Vec<StepSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectOwnBreedingPermanentArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,

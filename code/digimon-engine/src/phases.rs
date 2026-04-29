@@ -17,6 +17,7 @@ impl GamePhase {
                 | GamePhase::SelectUnion
                 | GamePhase::SelectPermutation
                 | GamePhase::SelectBudgeted
+                | GamePhase::SelectBreedingPermanent
         )
     }
 
@@ -61,6 +62,7 @@ impl GamePhase {
             GamePhase::SelectUnion => 6.0,
             GamePhase::SelectPermutation => 6.0,
             GamePhase::SelectBudgeted => 6.0,
+            GamePhase::SelectBreedingPermanent => 6.0,
         }
     }
 }

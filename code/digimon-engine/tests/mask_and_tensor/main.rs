@@ -5,6 +5,7 @@
 
 mod action_explain;
 mod action_main_effects_parity;
+mod breeding_selection_mask;
 mod card_registry_parity;
 mod dp_budget_selection_mask;
 mod mask_end_of_turn_parity;
