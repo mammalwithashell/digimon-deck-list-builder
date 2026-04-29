@@ -659,6 +659,16 @@ pub enum CompiledStep {
         prompt_key: Option<String>,
         optional: bool,
     },
+    SelectOwnSources {
+        min: u8,
+        max: u8,
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
+    TrashSelectedSources {
+        source_refs: String,
+    },
     SelectReveal {
         of: CompiledPlayerRef,
         filter: CompiledPredicate,

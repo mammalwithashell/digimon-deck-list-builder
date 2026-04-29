@@ -985,6 +985,9 @@ fn compile_step(
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
+            source_refs: a.source_refs.clone(),
+        },
         S::Hatch(a) => CompiledStep::Hatch {
             of: compile_player_ref(a.of),
         },
@@ -1125,6 +1128,18 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+        },
+        S::SelectOwnSources(a) => CompiledStep::SelectOwnSources {
+            min: a.min,
+            max: a.max,
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+                .collect(),
         },
         S::SelectReveal(a) => CompiledStep::SelectReveal {
             of: compile_player_ref(a.of),

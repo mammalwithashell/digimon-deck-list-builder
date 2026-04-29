@@ -92,6 +92,7 @@ pub enum StepSpec {
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
     TrashTopSource(TargetArg),
+    TrashSelectedSources(TrashSelectedSourcesArgs),
     Hatch(PlayerArg),
 
     // Play / digivolve
@@ -121,6 +122,7 @@ pub enum StepSpec {
     SelectHand(SelectZoneArgs),
     SelectTrash(SelectZoneArgs),
     SelectMaterial(SelectMaterialArgs),
+    SelectOwnSources(SelectOwnSourcesArgs),
     SelectReveal(SelectZoneArgs),
     SelectSecurity(SelectZoneArgs),
     SelectUnionZone(SelectUnionArgs),
@@ -191,6 +193,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
+            StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
@@ -216,6 +219,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectHand(v) => kv!(s, "select_hand", v),
             StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
+            StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
             StepSpec::SelectReveal(v) => kv!(s, "select_reveal", v),
             StepSpec::SelectSecurity(v) => kv!(s, "select_security", v),
             StepSpec::SelectUnionZone(v) => kv!(s, "select_union_zone", v),
@@ -304,6 +308,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
+            "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
             // Play / digivolve
@@ -335,6 +340,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_hand" => StepSpec::SelectHand(map.next_value()?),
             "select_trash" => StepSpec::SelectTrash(map.next_value()?),
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
+            "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
             "select_reveal" => StepSpec::SelectReveal(map.next_value()?),
             "select_security" => StepSpec::SelectSecurity(map.next_value()?),
             "select_union_zone" => StepSpec::SelectUnionZone(map.next_value()?),
@@ -387,6 +393,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_token",
                         "place_as_bottom_source",
                         "trash_top_source",
+                        "trash_selected_sources",
                         "hatch",
                         "play_from_hand",
                         "play_from_hand_free",
@@ -408,6 +415,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_hand",
                         "select_trash",
                         "select_material",
+                        "select_own_sources",
                         "select_reveal",
                         "select_security",
                         "select_union_zone",
@@ -612,6 +620,12 @@ pub struct PlaceAsBottomSourceArgs {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub struct TrashSelectedSourcesArgs {
+    pub source_refs: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct PlayFromHandArgs {
     pub of: PlayerRef,
     pub hand_index: BindingRef,
@@ -785,6 +799,23 @@ pub struct SelectMaterialArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+}
+
+fn default_select_sources_prompt() -> String {
+    "Choose source cards".to_string()
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectOwnSourcesArgs {
+    pub min: u8,
+    pub max: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    #[serde(default = "default_select_sources_prompt")]
+    pub prompt: String,
+    #[serde(default)]
+    pub then: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

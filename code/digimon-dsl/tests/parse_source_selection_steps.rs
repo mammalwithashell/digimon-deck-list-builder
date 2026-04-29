@@ -1,0 +1,61 @@
+//! Phase 2g source-selection DSL verbs parse and lower into compiled steps.
+
+use digimon_dsl::compile::compile;
+use digimon_dsl::compiled::{CompiledClause, CompiledStep};
+use digimon_dsl::spec::CardSpec;
+
+fn compile_first_step(yaml: &str) -> CompiledStep {
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("YAML parse");
+    let compiled = compile(&spec).expect("compile");
+    let clause = &compiled.effects[0];
+    let process = match clause {
+        CompiledClause::Triggered(t) => &t.process,
+        _ => panic!("expected triggered clause"),
+    };
+    process[0].clone()
+}
+
+#[test]
+fn select_own_sources_lowers_with_nested_trash_step() {
+    let yaml = r#"
+card: X-SRC
+name: Source Picker
+kind: digimon
+level: 6
+color: [red]
+cost: 8
+dp: 9000
+effects:
+  - when: when_attacking
+    process:
+      - select_own_sources:
+          min: 1
+          max: 2
+          bind_as: picked_sources
+          then:
+            - trash_selected_sources:
+                source_refs: picked_sources
+"#;
+
+    match compile_first_step(yaml) {
+        CompiledStep::SelectOwnSources {
+            min,
+            max,
+            bind_as,
+            prompt,
+            then,
+        } => {
+            assert_eq!(min, 1);
+            assert_eq!(max, 2);
+            assert_eq!(bind_as.as_deref(), Some("picked_sources"));
+            assert_eq!(prompt, "Choose source cards");
+            assert_eq!(
+                then,
+                vec![CompiledStep::TrashSelectedSources {
+                    source_refs: "picked_sources".to_string(),
+                }]
+            );
+        }
+        other => panic!("expected SelectOwnSources, got {other:?}"),
+    }
+}

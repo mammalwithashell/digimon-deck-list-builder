@@ -61,6 +61,7 @@ mod phase2f3_end_to_end;
 mod phase2f4_end_to_end;
 mod phase2f4_schedule_delayed;
 mod phase2g_on_dna_digivolve;
+mod phase2g_select_sources;
 mod phase3_reducer_selection;
 mod phase3a_binding_player_id;
 mod phase3a_cost_delta;

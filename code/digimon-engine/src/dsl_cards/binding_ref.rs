@@ -80,6 +80,7 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
         BindingValue::Literal(v) => Some(ResolvedBinding::Literal(v)),
         BindingValue::PermanentList(v) => Some(ResolvedBinding::PermanentList(v)),
         BindingValue::CardList(v) => Some(ResolvedBinding::CardList(v)),
+        BindingValue::SourceRefs(_) => None,
     }
 }
 

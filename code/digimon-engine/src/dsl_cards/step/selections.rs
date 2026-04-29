@@ -283,6 +283,30 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectOwnSources {
+            min,
+            max,
+            bind_as,
+            prompt,
+            then,
+        } => {
+            if min > max || *max == 0 || !has_own_source_candidates(ctx) {
+                return false;
+            }
+            let mut inner_tail = then.clone();
+            inner_tail.extend_from_slice(tail);
+            install_select_own_sources(
+                ctx,
+                *min,
+                *max,
+                bind_as.clone(),
+                prompt.clone(),
+                inner_tail,
+                bindings,
+                runtime.clone(),
+            );
+            true
+        }
         CompiledStep::SelectUnionZone {
             of,
             zones,
@@ -344,6 +368,14 @@ pub fn try_install(
         }
         _ => false,
     }
+}
+
+fn has_own_source_candidates(ctx: &EffectContext<'_>) -> bool {
+    ctx.game
+        .player(ctx.player)
+        .battle_area
+        .iter()
+        .any(|perm| perm.card_sources.len() > 1)
 }
 
 fn install_select_hand(
@@ -849,6 +881,37 @@ fn install_select_material(
                 {
                     b.insert_card(name, card.handle());
                 }
+            }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
+}
+
+fn install_select_own_sources(
+    ctx: &mut EffectContext<'_>,
+    min: u8,
+    max: u8,
+    bind_as: Option<String>,
+    prompt: String,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    if min > max || max == 0 {
+        return;
+    }
+
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
+    ctx.select_own_sources(
+        &prompt,
+        min,
+        max,
+        |_game, _source| true,
+        move |cb_ctx, source_refs| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_source_refs(name, source_refs);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
