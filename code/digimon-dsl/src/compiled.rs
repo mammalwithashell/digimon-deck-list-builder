@@ -505,6 +505,9 @@ pub enum CompiledStep {
     DeletePermanent {
         target: CompiledBindingRef,
     },
+    DeleteBoundPermanents {
+        binding: String,
+    },
     ReturnToHand {
         target: CompiledBindingRef,
     },
@@ -662,6 +665,13 @@ pub enum CompiledStep {
     SelectOwnSources {
         min: u8,
         max: u8,
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
+    SelectOpponentDpBudget {
+        dp_budget: i32,
+        min_picks: u8,
         bind_as: Option<String>,
         prompt: String,
         then: Vec<CompiledStep>,

@@ -420,6 +420,23 @@ fn explain_selection(game: &Game, player_id: PlayerId, action_id: u16) -> Action
         );
     }
 
+    if game.current_phase == GamePhase::SelectBudgeted
+        && (ATTACK_START..ATTACK_END).contains(&action_id)
+    {
+        let (_, target) = decode_attack(action_id);
+        let opponent = game.next_clockwise(player_id);
+        let mut e = base(
+            game,
+            player_id,
+            action_id,
+            ActionKind::Selection,
+            format!("Select opponent slot {target}"),
+        );
+        e.target_zone = Some(ActionZone::Battle);
+        e.target_index = Some(target);
+        return with_battle_card(e, game, opponent, target);
+    }
+
     let mut e = base(
         game,
         player_id,

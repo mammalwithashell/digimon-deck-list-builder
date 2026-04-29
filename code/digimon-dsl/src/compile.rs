@@ -949,6 +949,9 @@ fn compile_step(
         S::DeletePermanent(a) => CompiledStep::DeletePermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
+            binding: a.binding.clone(),
+        },
         S::ReturnToHand(a) => CompiledStep::ReturnToHand {
             target: compile_binding_ref(&a.target),
         },
@@ -1132,6 +1135,18 @@ fn compile_step(
         S::SelectOwnSources(a) => CompiledStep::SelectOwnSources {
             min: a.min,
             max: a.max,
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            then: a
+                .then
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+                .collect(),
+        },
+        S::SelectOpponentDpBudget(a) => CompiledStep::SelectOpponentDpBudget {
+            dp_budget: a.dp_budget,
+            min_picks: a.min_picks,
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             then: a

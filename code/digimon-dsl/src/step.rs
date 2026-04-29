@@ -83,6 +83,7 @@ pub enum StepSpec {
 
     // Field / permanent
     DeletePermanent(TargetArg),
+    DeleteBoundPermanents(DeleteBoundPermanentsArgs),
     ReturnToHand(TargetArg),
     ReturnToDeck(ReturnPermanentArgs),
     Suspend(TargetArg),
@@ -123,6 +124,7 @@ pub enum StepSpec {
     SelectTrash(SelectZoneArgs),
     SelectMaterial(SelectMaterialArgs),
     SelectOwnSources(SelectOwnSourcesArgs),
+    SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
     SelectReveal(SelectZoneArgs),
     SelectSecurity(SelectZoneArgs),
     SelectUnionZone(SelectUnionArgs),
@@ -184,6 +186,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
+            StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
             StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
             StepSpec::ReturnToDeck(v) => kv!(s, "return_to_deck", v),
             StepSpec::Suspend(v) => kv!(s, "suspend", v),
@@ -220,6 +223,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
             StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
+            StepSpec::SelectOpponentDpBudget(v) => kv!(s, "select_opponent_dp_budget", v),
             StepSpec::SelectReveal(v) => kv!(s, "select_reveal", v),
             StepSpec::SelectSecurity(v) => kv!(s, "select_security", v),
             StepSpec::SelectUnionZone(v) => kv!(s, "select_union_zone", v),
@@ -299,6 +303,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
+            "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
             "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
             "return_to_deck" => StepSpec::ReturnToDeck(map.next_value()?),
             "suspend" => StepSpec::Suspend(map.next_value()?),
@@ -341,6 +346,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_trash" => StepSpec::SelectTrash(map.next_value()?),
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
             "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
+            "select_opponent_dp_budget" => StepSpec::SelectOpponentDpBudget(map.next_value()?),
             "select_reveal" => StepSpec::SelectReveal(map.next_value()?),
             "select_security" => StepSpec::SelectSecurity(map.next_value()?),
             "select_union_zone" => StepSpec::SelectUnionZone(map.next_value()?),
@@ -384,6 +390,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "reveal_top_deck",
                         "place_remainder_on_deck",
                         "delete_permanent",
+                        "delete_bound_permanents",
                         "return_to_hand",
                         "return_to_deck",
                         "suspend",
@@ -416,6 +423,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_trash",
                         "select_material",
                         "select_own_sources",
+                        "select_opponent_dp_budget",
                         "select_reveal",
                         "select_security",
                         "select_union_zone",
@@ -454,6 +462,12 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 pub enum BindingRef {
     Structured(StructuredBindingRef),
     Named(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeleteBoundPermanentsArgs {
+    pub binding: String,
 }
 
 /// Target of an `add_modifier:` step — either a named binding (from a
@@ -813,6 +827,19 @@ pub struct SelectOwnSourcesArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     #[serde(default = "default_select_sources_prompt")]
+    pub prompt: String,
+    #[serde(default)]
+    pub then: Vec<StepSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectOpponentDpBudgetArgs {
+    pub dp_budget: i32,
+    #[serde(default)]
+    pub min_picks: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
     pub prompt: String,
     #[serde(default)]
     pub then: Vec<StepSpec>,

@@ -406,6 +406,52 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    pub fn select_opponent_permanents_by_dp_budget<F, C>(
+        &mut self,
+        prompt: &str,
+        dp_budget: i32,
+        min_picks: u8,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, PermanentHandle) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<PermanentHandle>) + Send + Sync + 'static,
+    {
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let opponent = self.game.next_clockwise(self.player);
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let previous_phase = self.game.current_phase;
+
+        install_dp_budget_selection(
+            self.game,
+            opponent,
+            controller,
+            selecting_player,
+            override_pin,
+            prompt.to_string(),
+            dp_budget,
+            min_picks,
+            Vec::new(),
+            std::sync::Arc::new(filter),
+            source_card,
+            source_permanent,
+            previous_phase,
+            Box::new(move |game, picked| {
+                let mut ctx = EffectContext::new_with_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    controller,
+                    override_pin,
+                );
+                callback(&mut ctx, picked);
+            }),
+        );
+    }
+
     /// Prompt `self.player` to pick one of several labeled branches
     /// ("choose one: A or B"). `labels` is the set of option labels in
     /// order; the callback receives the chosen 0-based index.
@@ -1558,6 +1604,142 @@ fn install_source_multi_selection(
         on_decline: Some(Box::new(move |game: &mut Game| {
             let cb_opt = shared_cb_decline.lock().unwrap().take();
             debug_assert!(cb_opt.is_some(), "source final callback already consumed");
+            if let Some(cb) = cb_opt {
+                cb(game, picked_for_decline);
+            }
+        })),
+    });
+}
+
+// ── opponent DP-budget permanent multi-select trampoline ─────────────────────
+
+type DpBudgetFilter = std::sync::Arc<dyn Fn(&Game, PermanentHandle) -> bool + Send + Sync>;
+type DpBudgetFinalCallback =
+    Box<dyn FnOnce(&mut Game, Vec<PermanentHandle>) + Send + Sync + 'static>;
+
+fn dp_budget_candidates(
+    game: &Game,
+    opponent: PlayerId,
+    remaining_dp: i32,
+    picked: &[PermanentHandle],
+    filter: &DpBudgetFilter,
+) -> Vec<(u16, PermanentHandle, i32)> {
+    use crate::action::space::encode_attack;
+
+    let mut out = Vec::new();
+    for (index, _perm) in game.player(opponent).battle_area.iter().enumerate() {
+        let handle = PermanentHandle {
+            player: opponent,
+            index: index as u8,
+        };
+        if picked.contains(&handle) {
+            continue;
+        }
+        if !(filter)(game, handle) {
+            continue;
+        }
+        let dp = game.effective_dp(handle).unwrap_or(0);
+        if dp <= remaining_dp {
+            out.push((encode_attack(0, index as u16), handle, dp));
+        }
+    }
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_dp_budget_selection(
+    game: &mut Game,
+    opponent: PlayerId,
+    controller: PlayerId,
+    selecting_player: PlayerId,
+    override_pin: Option<PlayerId>,
+    prompt: String,
+    remaining_dp: i32,
+    min_picks: u8,
+    picked: Vec<PermanentHandle>,
+    filter: DpBudgetFilter,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    previous_phase: GamePhase,
+    final_callback: DpBudgetFinalCallback,
+) {
+    use crate::action::space::PASS;
+    use std::sync::{Arc, Mutex};
+
+    let candidates = dp_budget_candidates(game, opponent, remaining_dp, &picked, &filter);
+    if candidates.is_empty() {
+        if picked.len() >= min_picks as usize {
+            final_callback(game, picked);
+        }
+        return;
+    }
+
+    let mut valid_action_ids: Vec<u16> =
+        candidates.iter().map(|(action_id, _, _)| *action_id).collect();
+    if picked.len() >= min_picks as usize {
+        valid_action_ids.push(PASS);
+    }
+
+    let shared_cb: Arc<Mutex<Option<DpBudgetFinalCallback>>> =
+        Arc::new(Mutex::new(Some(final_callback)));
+    let shared_cb_decline = Arc::clone(&shared_cb);
+    let action_to_target = Arc::new(candidates);
+    let prompt_for_next = prompt.clone();
+    let filter_for_next = Arc::clone(&filter);
+    let picked_for_pick = picked.clone();
+    let picked_for_decline = picked.clone();
+
+    game.current_phase = GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::DpBudget {
+            remaining_dp,
+            picked: picked.len() as u8,
+        },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: picked.len() >= min_picks as usize,
+        prompt,
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        callback: Box::new(move |game: &mut Game, action_id: u16| {
+            let (_, chosen, dp) = action_to_target
+                .iter()
+                .find(|(candidate_action, _, _)| *candidate_action == action_id)
+                .copied()
+                .expect("DP-budget action must have been in valid_action_ids");
+            let mut next_picked = picked_for_pick;
+            next_picked.push(chosen);
+
+            let next_cb: DpBudgetFinalCallback = Box::new(move |game, picks| {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(cb_opt.is_some(), "DP-budget final callback already consumed");
+                if let Some(cb) = cb_opt {
+                    cb(game, picks);
+                }
+            });
+
+            install_dp_budget_selection(
+                game,
+                opponent,
+                controller,
+                selecting_player,
+                override_pin,
+                prompt_for_next,
+                remaining_dp - dp,
+                min_picks,
+                next_picked,
+                filter_for_next,
+                source_card,
+                source_permanent,
+                previous_phase,
+                next_cb,
+            );
+        }),
+        on_decline: Some(Box::new(move |game: &mut Game| {
+            let cb_opt = shared_cb_decline.lock().unwrap().take();
+            debug_assert!(cb_opt.is_some(), "DP-budget final callback already consumed");
             if let Some(cb) = cb_opt {
                 cb(game, picked_for_decline);
             }

@@ -4,6 +4,7 @@
 
 mod behavioral_end_to_end;
 mod count_capped;
+mod dp_budget;
 mod kinds;
 mod kinds_exist;
 mod material;

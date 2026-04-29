@@ -307,6 +307,30 @@ pub fn try_install(
             );
             true
         }
+        CompiledStep::SelectOpponentDpBudget {
+            dp_budget,
+            min_picks,
+            bind_as,
+            prompt,
+            then,
+        } => {
+            if !has_opponent_dp_budget_candidates(ctx, *dp_budget) {
+                return false;
+            }
+            let mut inner_tail = then.clone();
+            inner_tail.extend_from_slice(tail);
+            install_select_opponent_dp_budget(
+                ctx,
+                *dp_budget,
+                *min_picks,
+                bind_as.clone(),
+                prompt.clone(),
+                inner_tail,
+                bindings,
+                runtime.clone(),
+            );
+            true
+        }
         CompiledStep::SelectUnionZone {
             of,
             zones,
@@ -376,6 +400,22 @@ fn has_own_source_candidates(ctx: &EffectContext<'_>) -> bool {
         .battle_area
         .iter()
         .any(|perm| perm.card_sources.len() > 1)
+}
+
+fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) -> bool {
+    let opponent = ctx.game.next_clockwise(ctx.player);
+    ctx.game
+        .player(opponent)
+        .battle_area
+        .iter()
+        .enumerate()
+        .any(|(index, _)| {
+            let handle = PermanentHandle {
+                player: opponent,
+                index: index as u8,
+            };
+            ctx.game.effective_dp(handle).unwrap_or(0) <= dp_budget
+        })
 }
 
 fn install_select_hand(
@@ -912,6 +952,34 @@ fn install_select_own_sources(
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
                 b.insert_source_refs(name, source_refs);
+            }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_select_opponent_dp_budget(
+    ctx: &mut EffectContext<'_>,
+    dp_budget: i32,
+    min_picks: u8,
+    bind_as: Option<String>,
+    prompt: String,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
+    ctx.select_opponent_permanents_by_dp_budget(
+        &prompt,
+        dp_budget,
+        min_picks,
+        |_game, _handle| true,
+        move |cb_ctx, handles| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_permanent_list(name, handles);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },

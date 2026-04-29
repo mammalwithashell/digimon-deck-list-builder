@@ -59,3 +59,49 @@ effects:
         other => panic!("expected SelectOwnSources, got {other:?}"),
     }
 }
+
+#[test]
+fn select_opponent_dp_budget_lowers_with_bound_delete_step() {
+    let yaml = r#"
+card: X-DP
+name: DP Picker
+kind: digimon
+level: 6
+color: [red]
+cost: 8
+dp: 9000
+effects:
+  - when: when_attacking
+    process:
+      - select_opponent_dp_budget:
+          dp_budget: 5000
+          min_picks: 1
+          bind_as: targets
+          prompt: Choose opponents
+          then:
+            - delete_bound_permanents:
+                binding: targets
+"#;
+
+    match compile_first_step(yaml) {
+        CompiledStep::SelectOpponentDpBudget {
+            dp_budget,
+            min_picks,
+            bind_as,
+            prompt,
+            then,
+        } => {
+            assert_eq!(dp_budget, 5000);
+            assert_eq!(min_picks, 1);
+            assert_eq!(bind_as.as_deref(), Some("targets"));
+            assert_eq!(prompt, "Choose opponents");
+            assert_eq!(
+                then,
+                vec![CompiledStep::DeleteBoundPermanents {
+                    binding: "targets".to_string(),
+                }]
+            );
+        }
+        other => panic!("expected SelectOpponentDpBudget, got {other:?}"),
+    }
+}
