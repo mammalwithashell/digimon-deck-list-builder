@@ -255,6 +255,38 @@ fn bt21_008_inherited_top_card_queue_does_not_stay_live_after_moving_below_top()
     );
 }
 
+#[test]
+fn bt21_008_inherited_source_queue_does_not_stay_live_after_becoming_top() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(ELIZAMON_YAML)
+        .expect("BT21-008 YAML parses")
+        .add_card(make_filler("CARRIER"))
+        .memory(0)
+        .start();
+    let handle = place_elizamon_as_source(&mut runner, &[]);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::PlayerBattleArea(handle.player),
+    );
+
+    {
+        let game = runner.game_mut();
+        game.players[0].battle_area[handle.index as usize]
+            .card_sources
+            .pop()
+            .expect("carrier top card exists");
+    }
+
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.memory(),
+        0,
+        "inherited effects queued from source scan must not gain top-card liveness later"
+    );
+}
+
 /// Negative: during opponent's turn, Elizamon's inherited clause is inactive.
 /// (active_when: { your_turn: true } blocks it.)
 #[test]

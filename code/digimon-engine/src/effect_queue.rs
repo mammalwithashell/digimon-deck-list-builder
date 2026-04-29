@@ -595,7 +595,8 @@ impl Game {
             // Phase 8 Task 5: a Training-sideways effect's source_card lives
             // on a different `OptionState::Training` permanent the same
             // owner controls; scan the owner's battle_area for it.
-            let top_matches = perm.top_card().card_index == qe.source_card.0;
+            let top_matches =
+                !qe.allow_below_top_liveness && perm.top_card().card_index == qe.source_card.0;
             let linked_matches = perm
                 .linked_cards
                 .iter()
