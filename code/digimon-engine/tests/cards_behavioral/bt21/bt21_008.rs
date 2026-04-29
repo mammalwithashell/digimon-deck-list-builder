@@ -23,7 +23,8 @@ use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::enums::EffectTiming;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const ELIZAMON_YAML: &str = include_str!("../../../cards/bt21/BT21-008.yaml");
 
@@ -179,17 +180,12 @@ fn bt21_008_inherited_clause_is_opt_and_on_opponent_security_removed() {
 
 // ── Section 2: Condition gating for inherited clause ────────────────────���───
 
-/// Positive: Elizamon as inherited source under a carrier, P0 attacks
-/// P1's security on P0's turn. OnOpponentSecurityRemoved fires → +1 memory.
+/// Positive: Elizamon as inherited source under a carrier sees the existing
+/// OnOpponentSecurityRemoved timing and gains +1 memory.
 ///
-/// BLOCKED: The engine's `enqueue_from_permanent` only scans the top card's
-/// effects and `linked_cards` / Training permanents. It does NOT iterate
-/// `card_sources` (the digivolution stack) for non-Training inherited effects.
-/// Until the engine gains stack-inherited triggered-effect dispatch, Elizamon's
-/// inherited `OnOpponentSecurityRemoved` clause never fires from the stack.
-/// Engine gap: digivolution-stack inherited triggered effects (non-Training).
+/// Regression: `enqueue_from_permanent` must scan below-top stack sources for
+/// inherited triggered effects.
 #[test]
-#[ignore = "BLOCKED: engine lacks digivolution-stack inherited triggered-effect dispatch (enqueue_from_permanent only scans top card + linked_cards + Training)"]
 fn bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(ELIZAMON_YAML)
@@ -199,16 +195,18 @@ fn bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn() {
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-CARD"])
         .deck(0, &["FILLER-DECK"])
-        .memory(10)
+        .memory(0)
         .start();
 
     let carrier_perm = place_elizamon_as_source(&mut runner, &["SEC-CARD"]);
 
     let memory_before = runner.memory();
 
-    // P0 attacks P1's security with the carrier (Elizamon underneath).
-    runner.attack_player(carrier_perm, 1, false);
-    let _ = runner.auto_resolve();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::PlayerBattleArea(carrier_perm.player),
+    );
+    runner.game.drain_effect_queue();
 
     let memory_after = runner.memory();
     let delta = memory_after - memory_before;
@@ -374,11 +372,8 @@ fn bt21_008_on_play_all_filler_deck_phase2b_accept_all_completes() {
 
 /// OPT: second security removal in same turn does NOT gain memory.
 ///
-/// BLOCKED: same engine gap as the positive test — digivolution-stack inherited
-/// effect dispatch is not implemented. The first assertion (`first_delta >= 1`)
-/// already fails because the inherited clause never fires from the stack.
+/// Regression: triggered OPT limits must apply to inherited queue effects.
 #[test]
-#[ignore = "BLOCKED: engine lacks digivolution-stack inherited triggered-effect dispatch (same gap as bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn)"]
 fn bt21_008_inherited_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(ELIZAMON_YAML)
@@ -389,15 +384,18 @@ fn bt21_008_inherited_opt_blocks_second_trigger_same_turn() {
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1", "SEC-2"])
         .deck(0, &["FILLER-DECK"])
-        .memory(10)
+        .memory(0)
         .start();
 
     let carrier_perm = place_elizamon_as_source(&mut runner, &[]);
 
-    // First attack: OPT fires, memory +1.
+    // First event: OPT fires, memory +1.
     let m0 = runner.memory();
-    runner.attack_player(carrier_perm, 1, false);
-    let _ = runner.auto_resolve();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::PlayerBattleArea(carrier_perm.player),
+    );
+    runner.game.drain_effect_queue();
     let m1 = runner.memory();
     let first_delta = m1 - m0;
 
@@ -406,15 +404,13 @@ fn bt21_008_inherited_opt_blocks_second_trigger_same_turn() {
         "first security removal should fire inherited OPT clause; delta={first_delta}"
     );
 
-    if runner.game_over() {
-        return; // can't test second attack if game ended
-    }
-
-    // Second attack: OPT is used → clause should be locked out.
+    // Second same-turn event: OPT is used -> clause should be locked out.
     let m2 = runner.memory();
-    let carrier_perm2 = runner.perm_handle(0, 0);
-    runner.attack_player(carrier_perm2, 1, false);
-    let _ = runner.auto_resolve();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::PlayerBattleArea(carrier_perm.player),
+    );
+    runner.game.drain_effect_queue();
     let m3 = runner.memory();
     let second_delta = m3 - m2;
 
@@ -427,12 +423,9 @@ fn bt21_008_inherited_opt_blocks_second_trigger_same_turn() {
 
 /// OPT resets after end_turn: can fire again on the next turn.
 ///
-/// NOTE: This test currently passes only because the carrier permanent is
-/// removed from the battle area between turns, triggering an early-return
-/// bail-out path (`battle_area_size(0) == 0`). The underlying behavior it
-/// intends to verify (OPT reset on a live inherited effect) cannot be
-/// confirmed until the digivolution-stack inherited dispatch engine gap is
-/// resolved. See the BLOCKED tests above for the gap description.
+/// Best-effort attack smoke: security combat may remove the carrier before a
+/// second live inherited trigger can be observed, so the same-turn direct queue
+/// test above carries the focused triggered OPT enforcement regression.
 #[test]
 fn bt21_008_inherited_opt_resets_after_end_turn() {
     let mut runner = DebugRunner::builder()

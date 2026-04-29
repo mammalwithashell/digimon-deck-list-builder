@@ -96,6 +96,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 **Closed by Phase 1 (2026-04-19):** Fire sites wired in `digimon-engine` — see `fire_on_opponent_security_removed()` in `code/digimon-engine/src/combat.rs` and `Effect::on_opponent_security_removed(card)` builder in `code/digimon-engine/src/effect.rs`. Fires at `SecurityPhase::Dispose` against the attacking player's battle area. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatch and observer timing documentation.
 
+**Updated 2026-04-29:** Existing battle-area enqueue paths now dispatch below-top inherited stack effects as well as top-card / linked / Training effects, and permanent-backed queued triggered effects enforce `max_per_turn`. This closes the BT21-008-style inherited observer + triggered OPT slice. Non-attack/effect-driven security removal, source-trash observers, breeding dispatch, and selection/action-space work remain separate gaps.
+
 ### Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)

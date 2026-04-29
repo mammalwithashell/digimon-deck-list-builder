@@ -158,19 +158,19 @@ Last updated: 2026-04-28
 - **Scope:** Rust engine (`code/digimon-engine/`) only. Python engine resolves inherited effects via `card_sources[:-1]` scanning in `_collect_triggered_effects`.
 - **Card(s):** BT21-008 Elizamon — inherited `[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory.` Almost all Lv3+ Digimon in this archetype have a similar inherited triggered effect; this gap blocks the inherited half of every one of them.
 - **Effect text:** any DSL clause with `scope: inherited` + a triggered timing.
-- **What's missing:** `enqueue_from_permanent` in `code/digimon-engine/src/effect_queue.rs` only collects effects from the **top card** of a permanent. It already handles two sideways-inheritance cases (Phase 8 Task 4: `linked_cards`; Phase 8 Task 5: `OptionState::Training`), but it does NOT iterate `card_sources[0..n-1]` (the digivolution stack below the top card) for `effect.inherited = true` triggered effects. Cards compiled with `scope: inherited` set `effect.inherited = true`, but no dispatch path fires them when this card is in someone else's digivolution stack.
-- **Affected cards:** every YAML card with `scope: inherited` and a triggered timing.
-- **Suggested change:** in `enqueue_from_permanent` after the top-card scan, iterate `perm.card_sources[0..len-1]`. For each source, call `effects_for_card` and collect effects where `effect.inherited && timing_flag_matches(effect, timing)`. Attribute the queued effect to the hosting permanent's controller and `source_permanent`, with `source_card` pointing at the digivolution source's card handle (same pattern as the linked-cards branch).
-- **Workaround:** None — BLOCKED.
+- **Status:** Fixed for battle-area permanent dispatch on 2026-04-29. `enqueue_from_permanent` now preserves top-card / linked / Training dispatch, then scans below-top `card_sources` and queues only matching `effect.inherited == true` effects with `source_permanent` set to the carrier and `source_card` set to the inherited source card.
+- **Affected cards:** YAML cards with `scope: inherited` and a triggered timing can now fire from below the top card when the relevant event is already dispatched to the carrier permanent's battle-area observer path.
+- **Regression coverage:** `bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn` and `buried_non_inherited_triggered_effect_does_not_fire_from_source_position`.
+- **Remaining limits:** This does not add new event fire sites. Source-trash events, breeding-area dispatch, effect-driven security-removal fan-out, and selection/action-space work remain separate gaps.
 
 ### `max_per_turn` (Once-Per-Turn) Not Enforced for Triggered Effects  [G-OPT-TRIGGERED]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
 - **Scope:** Rust engine.
 - **Card(s):** EX11-008 Elizamon (inherited OPT clause); applies to every DSL card with `once_per_turn: true` on a triggered clause.
 - **Effect text:** any clause that combines `[Once Per Turn]` with a non-Main triggered timing (`OnLoseSecurity`, `WhenAttacking`, `OnPlay`, `OnDigivolving`, etc.).
-- **What's missing:** `once_per_turn: true` in YAML correctly lowers to `Effect::max_per_turn = 1`, but `run_queued_effect_inner` in `effect_queue.rs` does NOT consult `max_per_turn` when dispatching triggered effects through the queue. OPT is enforced only for activated `Main*` effects in `game_actions.rs`. Triggered effects with OPT can therefore fire more than once per turn.
-- **Suggested change:** in the queue-drain path, before invoking each queued effect's process closure, consult `Permanent::activation_count(source_card, slot) >= effect.max_per_turn` (already tracked) and skip if exceeded; call `Permanent::record_activation` after a successful invocation.
-- **Workaround:** None — BLOCKED for tests; cards still partially work (the effect just over-fires).
+- **Status:** Fixed for permanent-backed queued triggered effects on 2026-04-29. `run_queued_effect_inner` now checks `Permanent::activation_count(source_card, slot) >= effect.max_per_turn` before processing and records activation before `process`, matching the existing activated field-main timing.
+- **Regression coverage:** `bt21_008_inherited_opt_blocks_second_trigger_same_turn`.
+- **Remaining limits:** This only enforces the existing queued-effect activation counter. It does not add optional prompt/action-space handling, new event payloads, source-trash dispatch, or breeding dispatch.
 
 ### `EffectTiming::OnMove` Missing  [G-ON-MOVE]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)

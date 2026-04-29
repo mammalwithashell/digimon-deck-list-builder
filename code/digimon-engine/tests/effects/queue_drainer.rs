@@ -8,6 +8,7 @@
 //! effects that make resolution order observable in memory totals.
 
 use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
+use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::EffectTiming;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
@@ -296,4 +297,40 @@ fn wrong_player_rejected() {
         .expect_err("non-selecting player must be rejected");
     assert_eq!(err, SelectionError::WrongPlayer);
     assert!(r.game.pending_selection.is_some());
+}
+
+#[test]
+fn buried_non_inherited_triggered_effect_does_not_fire_from_source_position() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("TEST-006", "TestSix"))
+        .memory(0)
+        .start();
+    let carrier = r.place_on_field(0, "CARRIER", Some(0));
+
+    {
+        let game = r.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TEST-006")
+            .expect("TEST-006 registered in card_data");
+        let next = game.next_card_index();
+        let source = CardSource::new(data_idx, 0, next);
+        game.players[0].battle_area[carrier.index as usize]
+            .card_sources
+            .insert(0, source);
+    }
+
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.memory(),
+        0,
+        "buried non-inherited top-card effects must not dispatch from source position"
+    );
 }

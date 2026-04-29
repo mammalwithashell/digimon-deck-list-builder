@@ -485,6 +485,46 @@ impl Game {
                 }
             }
         }
+
+        let inherited_sources: Vec<(String, CardHandle)> = {
+            let Some(perm) = self
+                .players
+                .get(handle.player as usize)
+                .and_then(|p| p.battle_area.get(handle.index as usize))
+            else {
+                return;
+            };
+            let stack_len = perm.card_sources.len();
+            perm.card_sources
+                .iter()
+                .take(stack_len.saturating_sub(1))
+                .map(|c| (c.card_id(&self.card_data).to_string(), c.handle()))
+                .collect()
+        };
+        for (source_card_id, inherited_source) in inherited_sources {
+            let Some(effects) = self.effects_for_card(&source_card_id, inherited_source) else {
+                continue;
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if !effect.inherited {
+                    continue;
+                }
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card: inherited_source,
+                    source_permanent: Some(handle),
+                    controller: handle.player,
+                    timing,
+                    trigger_context,
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: source_card_id.clone(),
+                });
+            }
+        }
     }
 
     /// Who gets to choose the next effect to resolve. Turn player first,
@@ -548,6 +588,11 @@ impl Game {
                 .linked_cards
                 .iter()
                 .any(|c| c.card_index == qe.source_card.0);
+            let below_top_source_matches = perm
+                .card_sources
+                .iter()
+                .take(perm.card_sources.len().saturating_sub(1))
+                .any(|c| c.card_index == qe.source_card.0);
             let training_matches = self
                 .players
                 .get(perm_handle.player as usize)
@@ -560,7 +605,11 @@ impl Game {
                     })
                 })
                 .unwrap_or(false);
-            if !top_matches && !linked_matches && !training_matches {
+            if !top_matches
+                && !linked_matches
+                && !below_top_source_matches
+                && !training_matches
+            {
                 return;
             }
         }
@@ -571,6 +620,21 @@ impl Game {
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
             return;
         };
+
+        if effect.max_per_turn > 0 {
+            if let Some(perm_handle) = qe.source_permanent {
+                let Some(perm) = self
+                    .players
+                    .get(perm_handle.player as usize)
+                    .and_then(|p| p.battle_area.get(perm_handle.index as usize))
+                else {
+                    return;
+                };
+                if perm.activation_count(qe.source_card, qe.effect_slot) >= effect.max_per_turn {
+                    return;
+                }
+            }
+        }
 
         // Python parity (§2.5h): `_fire_security_skill` iterates
         // `effect_list(SecuritySkill)` and invokes the callback directly —
@@ -607,6 +671,18 @@ impl Game {
                 EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
             if !pay_cost(&mut ctx) {
                 return; // cost not paid; skip process (silent abort, mirrors failed condition)
+            }
+        }
+
+        if effect.max_per_turn > 0 {
+            if let Some(perm_handle) = qe.source_permanent {
+                if let Some(perm) = self
+                    .players
+                    .get_mut(perm_handle.player as usize)
+                    .and_then(|p| p.battle_area.get_mut(perm_handle.index as usize))
+                {
+                    perm.record_activation(qe.source_card, qe.effect_slot);
+                }
             }
         }
 
