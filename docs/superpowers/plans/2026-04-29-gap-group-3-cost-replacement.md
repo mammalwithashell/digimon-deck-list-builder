@@ -20,6 +20,8 @@ This plan starts from the post-Group-2 engine state:
 - `ReplacementContext` already carries `cause`, `subject`, `original_destination`, and `outcome`.
 - Replacement parking for nested selections already exists in `replacement.rs`.
 - DSL replacement lowering exists in `code/digimon-engine/src/dsl_cards/lower_replacement.rs`, but its `active_when` predicates are not fully wired through replacement cause/controller context.
+- Core hand-play cost arithmetic can add field and hand reductions, but observer-shaped reducers such as BT13-007 King Drasil_7D6's `when_any_ally_played` YAML are currently skipped by the cost-reduction lowerer, and the current field scan does not model BT13-007's `[Breeding]` observer scope.
+- ST21-13 Matt Ishida & T.K. Takaishi plus AD1-025 Omnimon plus BT13-007 King Drasil_7D6 is the required stress fixture: AD1-025 has both `[Royal Knight]` and `[ADVENTURE]`, so the player must be able to accept Drasil's Royal Knight reduction and then accept Matt/T.K.'s ADVENTURE reduction before final memory payment.
 
 This plan extends the existing substrate. It does not replace the current `pay_cost_fn` field or rebuild replacement dispatch.
 
@@ -49,6 +51,10 @@ This plan extends the existing substrate. It does not replace the current `pay_c
   - Reuse existing source-selection primitives for optional pay-cost selections.
   - Add no new action IDs unless a test proves existing `SourceMulti` cannot represent the prompt.
 
+- Modify: `code/digimon-engine/src/game_actions.rs`
+  - Collect stacked `BeforePayCost` reducers from hand, battle area, and breeding area before memory payment.
+  - Resolve optional play-cost reducers through pending selections instead of applying or skipping them synchronously.
+
 - Modify: `code/digimon-engine/src/replacement.rs`
   - Add replacement predicate context accessors for cause, source controller, subject controller, and source-vs-subject ownership.
   - Ensure optional replacement prompts are only installed after predicates pass.
@@ -60,8 +66,22 @@ This plan extends the existing substrate. It does not replace the current `pay_c
   - Lower `active_when` onto replacement predicate evaluation using replacement context.
   - Keep source-permanent self-scope behavior unless the DSL explicitly asks for observer-scoped replacement.
 
+- Modify: `code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs`
+  - Lower observer-shaped play-cost reducers such as `when_any_ally_played`.
+  - Preserve self/hand-card reducer behavior for `when_playing_this`.
+
+- Modify: `code/digimon-engine/src/dsl_cards/mod.rs`
+  - Stop skipping `cost_reduction` clauses that provide `when_any_ally_played`.
+
+### DSL Files
+
+- Modify: `code/digimon-dsl/src/clause.rs`
+- Modify: `code/digimon-dsl/src/compiled.rs`
+- Modify: `code/digimon-dsl/src/compile.rs`
+
 ### Test Files
 
+- Create: `code/digimon-engine/tests/cost_hooks/stacked_would_play_reducers.rs`
 - Create: `code/digimon-engine/tests/cost_hooks/pay_cost_selection.rs`
 - Modify: `code/digimon-engine/tests/cost_hooks/main.rs`
 - Create: `code/digimon-engine/tests/replacements/context_predicates.rs`
@@ -84,9 +104,350 @@ This plan extends the existing substrate. It does not replace the current `pay_c
 - When `pay_cost_fn` returns `true` and installed `game.pending_selection`, the engine parks the queued effect and does not run `process` until the selection chain resolves.
 - If a selection callback calls `ctx.decline_pending_pay_cost()` or `game.decline_pending_pay_cost()`, the parked effect is discarded and `process` does not run.
 - Max-per-turn counters are recorded only when the pay cost completed and immediately before `process`, matching the current synchronous path.
+- Optional `BeforePayCost` play-cost reducers must be surfaced as player choices before memory is paid.
+- Multiple eligible play-cost reducers must resolve as a chain. Accepting one reducer must not prevent another eligible reducer from a different source unless the accepted reducer's source cost changes eligibility.
 - Replacement predicates must execute before optional accept/decline prompts.
 - Replacement source/controller context must be visible to native effects and DSL-lowered `active_when`.
 - Attack cancellation must leave no stale `pending_attack`, must not perform battle, and must not perform security checks.
+
+---
+
+### Task 1A: Stacked Would-Play Cost Reduction Chain
+
+**Files:**
+- Create: `code/digimon-engine/tests/cost_hooks/stacked_would_play_reducers.rs`
+- Modify: `code/digimon-engine/tests/cost_hooks/main.rs`
+- Modify: `code/digimon-engine/src/game.rs`
+- Modify: `code/digimon-engine/src/game_actions.rs`
+- Modify: `code/digimon-engine/src/effect.rs`
+- Modify: `code/digimon-engine/src/dsl_cards/mod.rs`
+- Modify: `code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs`
+- Modify: `code/digimon-dsl/src/clause.rs`
+- Modify: `code/digimon-dsl/src/compiled.rs`
+- Modify: `code/digimon-dsl/src/compile.rs`
+
+- [ ] **Step 1: Register the stacked-reducer test module**
+
+Add this line to `code/digimon-engine/tests/cost_hooks/main.rs`:
+
+```rust
+mod stacked_would_play_reducers;
+```
+
+- [ ] **Step 2: Write the failing AD1-025 stacked-reduction tests**
+
+Create `code/digimon-engine/tests/cost_hooks/stacked_would_play_reducers.rs`.
+
+Add tests with these fixed names:
+
+```rust
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::{CardHandle, CardSource};
+use digimon_engine::debug_runner::{DebugBreedingPermanent, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::dsl_cards::DslCardEffect;
+
+fn digimon(card_id: &str, play_cost: u16, traits: &[&str]) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: card_id.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(7),
+        dp: Some(15000),
+        play_cost,
+        colors: vec![CardColor::White],
+        traits: traits.iter().map(|s| s.to_string()).collect(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        effect_class_name: card_id.replace('-', "_"),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+fn tamer(card_id: &str, play_cost: u16) -> CardData {
+    let mut card = digimon(card_id, play_cost, &[]);
+    card.card_kind = CardKind::Tamer;
+    card.level = None;
+    card.dp = None;
+    card
+}
+
+fn cards() -> HashMap<String, CardData> {
+    HashMap::from([
+        (
+            "AD1-025".to_string(),
+            digimon("AD1-025", 15, &["Holy Warrior", "Royal Knight", "ADVENTURE", "Hero"]),
+        ),
+        ("BT13-007".to_string(), digimon("BT13-007", 13, &["Unknown", "Royal Knight"])),
+        ("ST21-13".to_string(), tamer("ST21-13", 4)),
+        ("RK-SOURCE-A".to_string(), digimon("RK-SOURCE-A", 3, &["Royal Knight"])),
+        ("RK-SOURCE-B".to_string(), digimon("RK-SOURCE-B", 3, &["Royal Knight"])),
+    ])
+}
+
+fn add_breeding_source(r: &mut DebugRunner, breeding: DebugBreedingPermanent, card_id: &str) {
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == card_id)
+        .expect("source card exists");
+    let next_idx = r.game.next_card_index();
+    let source = CardSource::new(data_idx, breeding.player, next_idx);
+    let permanent = r.game.players[breeding.player as usize]
+        .breeding_area
+        .as_mut()
+        .expect("breeding permanent exists");
+    let top = permanent.card_sources.pop().expect("breeding top exists");
+    permanent.card_sources.push(source);
+    permanent.card_sources.push(top);
+}
+
+fn choice_index_containing(r: &DebugRunner, text: &str) -> usize {
+    let choices = r
+        .pending_selection()
+        .and_then(|selection| selection.effect_choices.as_ref())
+        .expect("effect-choice pending selection exists");
+    choices
+        .iter()
+        .position(|choice| choice.label.contains(text))
+        .unwrap_or_else(|| panic!("choice containing {text} exists"))
+}
+
+struct KingDrasilReduction;
+impl CardEffect for KingDrasilReduction {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::before_pay_cost(card)
+            .name("King Drasil_7D6 Royal Knight play-cost reduction")
+            .optional()
+            .once_per_turn()
+            .condition(|ctx| ctx.cost_target_has_trait("Royal Knight"))
+            .cost_reduction_fn(|ctx| {
+                let source = ctx.cost_reduction_source().expect("reducer source exists");
+                4 + ctx.source_stack_source_count(source) as i32
+            })
+            .build()]
+    }
+}
+
+struct MattTkReduction;
+impl CardEffect for MattTkReduction {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::before_pay_cost(card)
+            .name("Matt Ishida & T.K. Takaishi ADVENTURE play-cost reduction")
+            .optional()
+            .condition(|ctx| ctx.cost_target_from_hand() && ctx.cost_target_has_trait("ADVENTURE"))
+            .pay_cost_fn(|ctx| ctx.suspend_source_tamer())
+            .cost_reduction(1)
+            .build()]
+    }
+}
+
+fn setup() -> DebugRunner {
+    let mut r = DebugRunner::builder()
+        .with_card_data(cards())
+        .hand(0, &["AD1-025"])
+        .memory(20)
+        .start();
+    r.register_effect("BT13-007", Arc::new(KingDrasilReduction));
+    r.register_effect("ST21-13", Arc::new(MattTkReduction));
+    r
+}
+
+#[test]
+fn ad1_025_can_accept_drasil_then_matt_tk_reductions() {
+    let mut r = setup();
+    let drasil = r.place_in_breeding(0, "BT13-007");
+    add_breeding_source(&mut r, drasil, "RK-SOURCE-A");
+    add_breeding_source(&mut r, drasil, "RK-SOURCE-B");
+    r.place_on_field(0, "ST21-13", Some(0));
+
+    assert!(r.play(0, 0).is_none(), "play is pending cost-reduction choices");
+    assert!(r.pending_selection().unwrap().prompt.contains("BT13-007"));
+    r.execute_branch(choice_index_containing(&r, "Apply")).unwrap();
+    assert!(r.pending_selection().unwrap().prompt.contains("ST21-13"));
+    r.execute_branch(choice_index_containing(&r, "Apply")).unwrap();
+
+    assert_eq!(r.memory(), 12);
+    assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), "ST21-13");
+    assert_eq!(r.game.players[0].battle_area[1].top_card().card_id(&r.game.card_data), "AD1-025");
+    assert!(r.game.players[0].battle_area[0].is_suspended);
+}
+
+#[test]
+fn declining_matt_tk_keeps_only_drasil_reduction() {
+    let mut r = setup();
+    let drasil = r.place_in_breeding(0, "BT13-007");
+    add_breeding_source(&mut r, drasil, "RK-SOURCE-A");
+    add_breeding_source(&mut r, drasil, "RK-SOURCE-B");
+    r.place_on_field(0, "ST21-13", Some(0));
+
+    assert!(r.play(0, 0).is_none(), "play is pending cost-reduction choices");
+    r.execute_branch(choice_index_containing(&r, "Apply")).unwrap();
+    r.execute_branch(choice_index_containing(&r, "Decline")).unwrap();
+
+    assert_eq!(r.memory(), 11);
+    assert_eq!(r.game.players[0].battle_area[1].top_card().card_id(&r.game.card_data), "AD1-025");
+    assert!(!r.game.players[0].battle_area[0].is_suspended);
+}
+
+#[test]
+fn drasil_observer_cost_reduction_lowers_from_yaml() {
+    let yaml = include_str!("../../cards/_examples/BT13-007.yaml");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse BT13-007 YAML");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile BT13-007 YAML");
+    let dsl = DslCardEffect::new(Arc::new(compiled));
+    let effects = dsl.effects(CardHandle(0));
+
+    assert!(effects.iter().any(|effect| {
+        effect.timing == EffectTiming::BeforePayCost
+            && effect.optional
+            && effect.max_per_turn == 1
+            && !effect.when_playing_this
+            && effect.condition.is_some()
+            && effect.cost_reduction_fn.is_some()
+    }));
+}
+```
+
+The test file defines the helper functions above so the regression does not depend on production card loading. Keep these assertions unchanged:
+- AD1-025 printed play cost is 15.
+- BT13-007 reduces by 4 plus one for each Drasil source, so two sources reduce by 6.
+- ST21-13 reduces by 1 and suspends itself as the source cost.
+- Accepting both reductions pays 8 memory from 20 and leaves 12.
+- Declining Matt/T.K. after accepting Drasil pays 9 memory from 20 and leaves 11.
+
+- [ ] **Step 3: Add pending play-cost target context**
+
+Add a target context available while collecting and resolving play-cost reducers:
+
+```rust
+pub struct CostTargetContext {
+    pub player: PlayerId,
+    pub card_id: String,
+    pub from_hand: bool,
+    pub source: PlaySource,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CostReductionSource {
+    Battle(PermanentHandle),
+    Breeding { player: PlayerId, card: CardHandle },
+    Hand { player: PlayerId, hand_index: usize, card: CardHandle },
+}
+```
+
+Expose read-only access through effect evaluation:
+
+```rust
+impl EffectReadContext<'_> {
+    pub fn cost_target_card_id(&self) -> Option<&str>;
+    pub fn cost_target_has_trait(&self, trait_name: &str) -> bool;
+    pub fn cost_target_from_hand(&self) -> bool;
+    pub fn cost_reduction_source(&self) -> Option<CostReductionSource>;
+    pub fn source_stack_source_count(&self, source: CostReductionSource) -> usize;
+}
+
+impl EffectContext<'_> {
+    pub fn suspend_source_tamer(&mut self) -> bool;
+}
+```
+
+Install the context only while resolving `BeforePayCost` reducers for a pending play. Clear it before the played card enters the battle area.
+
+- [ ] **Step 4: Collect eligible reducers without paying source costs**
+
+Extract the current scanning path into a side-effect-free collector:
+
+```rust
+pub struct CostReductionCandidate {
+    pub source_card: String,
+    pub source: CostReductionSource,
+    pub controller: PlayerId,
+    pub effect_slot: u16,
+    pub amount: i32,
+    pub optional: bool,
+    pub requires_pay_cost: bool,
+}
+```
+
+The collector must include:
+- Breeding-area observers such as BT13-007 whose scope is `[Breeding]`.
+- Battle-area observers whose trigger is "when any ally with trait X would be played".
+- Self or hand-card reducers whose trigger is "when playing this card".
+- Source-cost reducers such as ST21-13 only when their source cost can be paid, including "suspend this Tamer".
+- Mandatory no-cost reducers as automatically accepted candidates.
+- Optional reducers in deterministic source order.
+
+Do not invoke `pay_cost_fn` during collection. Invoke it only when the player accepts that candidate.
+
+- [ ] **Step 5: Resolve optional reducers as a chain**
+
+Add a pending play-cost chain state:
+
+```rust
+pub struct PendingPlayCostReductionChain {
+    pub player: PlayerId,
+    pub hand_index: usize,
+    pub source: PlaySource,
+    pub base_cost: i32,
+    pub accepted_reduction: i32,
+    pub remaining: Vec<CostReductionCandidate>,
+}
+```
+
+`play_from_hand_with_cost` must:
+- Build `CostTargetContext`.
+- Collect mandatory and optional reducers.
+- Auto-apply mandatory no-cost reducers by adding their amount to `accepted_reduction`.
+- Install `PendingPlayCostReductionChain` when optional reducers exist.
+- Return `None` from `DebugRunner::play` / `Game::play_from_hand` while the play is parked behind pending cost-reduction choices.
+- Expose the next optional reducer through the existing effect-choice pending selection/action path.
+- Finish the play with `max(base_cost - accepted_reduction, 0)` when no optional reducers remain.
+
+Resolving one candidate must:
+- Accept: pay the candidate's source cost, add its reduction amount, mark once-per-turn usage, and continue to the next candidate.
+- Decline: leave the source unchanged and continue to the next candidate.
+- Re-check source-cost affordability before accepting.
+- Finish by paying the clamped final memory cost and playing the card exactly once.
+
+- [ ] **Step 6: Lower observer-shaped cost reducers**
+
+Update `code/digimon-engine/src/dsl_cards/mod.rs` and `code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs` so `when_any_ally_played` on a `cost_reduction` clause lowers into a `BeforePayCost` observer instead of being skipped.
+
+Rules:
+- BT13-007's `[Breeding]` scope lowers to a breeding-area `BeforePayCost` observer.
+- `when_playing_this` continues to lower as a self or hand-card reducer.
+- `when_any_ally_played.trait_has: "Royal Knight"` tests `CostTargetContext`.
+- ST21-13's "from your hand" requirement tests `CostTargetContext::from_hand`.
+- Once-per-turn markers are keyed by reducer source and effect slot.
+
+- [ ] **Step 7: Verify and commit**
+
+Run:
+
+```bash
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks -- stacked_would_play_reducers --nocapture
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks -- --nocapture
+```
+
+Expected: PASS.
+
+Then commit:
+
+```bash
+git add code/digimon-engine/src/game.rs code/digimon-engine/src/game_actions.rs code/digimon-engine/src/effect.rs code/digimon-engine/src/dsl_cards/mod.rs code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs code/digimon-dsl/src/clause.rs code/digimon-dsl/src/compiled.rs code/digimon-dsl/src/compile.rs code/digimon-engine/tests/cost_hooks/main.rs code/digimon-engine/tests/cost_hooks/stacked_would_play_reducers.rs
+git commit -m "feat: chain stacked play cost reductions"
+```
 
 ---
 
@@ -1505,16 +1866,17 @@ In `docs/RUST_ENGINE_GAPS.md`, mark the Group 3 cost/replacement items as covere
 Status: implemented.
 
 Regression coverage:
+- `code/digimon-engine/tests/cost_hooks/stacked_would_play_reducers.rs`
 - `code/digimon-engine/tests/cost_hooks/pay_cost_selection.rs`
 - `code/digimon-engine/tests/replacements/context_predicates.rs`
 - `code/digimon-engine/tests/replacements/partition.rs`
 - `code/digimon-engine/tests/option_flow/replacement_integration.rs::bt17_097_delay_prevents_deletion_and_digivolves_from_hand`
 - `code/digimon-engine/tests/replacements/attack_cancel.rs`
 
-The engine supports triggered pay costs that park pending selections before
-process execution, optional pay-cost decline, replacement cause/controller
-predicates, Partition source selection, Delay-as-replacement prevention, and
-effect-driven pending attack cancellation.
+The engine supports stacked optional would-play cost reducers, triggered pay
+costs that park pending selections before process execution, optional pay-cost
+decline, replacement cause/controller predicates, Partition source selection,
+Delay-as-replacement prevention, and effect-driven pending attack cancellation.
 ```
 
 - [ ] **Step 2: Update archetype QA gaps**
@@ -1525,6 +1887,7 @@ In `qa/archetype-qa/engine-gaps.md`, replace the open Group 3 entries with:
 ### Cost and Replacement Framework
 
 Resolved by Group 3:
+- BT13-007 King Drasil_7D6 and ST21-13 Matt Ishida & T.K. Takaishi can both reduce AD1-025 Omnimon before memory is paid because AD1-025 has both `[Royal Knight]` and `[ADVENTURE]`.
 - Triggered effect costs may install pending selections and resume process only after cost payment.
 - Optional cost decline skips process without hidden auto-selection.
 - Replacement predicates can inspect cause, source controller, and subject controller.
@@ -1541,6 +1904,7 @@ In `docs/superpowers/plans/2026-04-29-archetype-engine-dsl-gap-roadmap.md`, unde
 - [x] Create `docs/superpowers/plans/2026-04-29-gap-group-3-cost-replacement.md`.
 - [x] Define slices for:
   - `.pay_cost()` for non-BeforePayCost triggered effects.
+  - Stacked optional would-play cost reducers.
   - Optional cost decline path through pending selection.
   - Replacement context cause/controller predicate.
   - Partition source enforcement and selection.
@@ -1548,6 +1912,7 @@ In `docs/superpowers/plans/2026-04-29-archetype-engine-dsl-gap-roadmap.md`, unde
   - Attack cancellation return path.
 - [x] Require regression fixtures:
   - `EX10-003` Tumblemon for attack cancellation.
+  - `AD1-025` Omnimon plus `BT13-007` King Drasil_7D6 plus `ST21-13` Matt Ishida & T.K. Takaishi for stacked play-cost reductions.
   - `BT16-025` Paildramon for Partition source enforcement.
   - `BT17-097` Return to the Primogenitor for Delay-as-replacement.
   - `EX9-032` / `EX7-027` / `BT22-036` for replacement cause gate.
@@ -1559,6 +1924,7 @@ Run:
 
 ```bash
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks -- pay_cost --nocapture
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks -- stacked_would_play_reducers --nocapture
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- context_predicates --nocapture
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- partition --nocapture
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- attack_cancel --nocapture
@@ -1583,6 +1949,7 @@ Run the broad gates that protect the touched subsystems:
 
 ```bash
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks -- stacked_would_play_reducers
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection
@@ -1597,6 +1964,7 @@ Expected: PASS. Existing compiler warnings about unrelated DNA-origin fields are
 ## Self-Review Checklist
 
 - Spec coverage:
+  - Stacked would-play cost reductions for BT13-007 plus ST21-13 plus AD1-025: Task 1A.
   - `.pay_cost()` for non-BeforePayCost triggered effects: Task 1.
   - Optional cost decline path through pending selection: Task 2.
   - Replacement context cause/controller predicate: Task 3.
