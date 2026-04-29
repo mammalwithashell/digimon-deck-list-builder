@@ -268,6 +268,10 @@ pub enum EffectTiming {
     /// Global observer: fires when any Option card is played by any player.
     OnUseOption,
 
+    /// Global observer: fires after a persistent Option card is placed into
+    /// the battle area and has a stable permanent/card handle.
+    OnOptionPlaced,
+
     /// Fires when an Option's delayed body resolves. Most printed Delays
     /// fire at end of owner's next turn; see DelayTrigger for triggers.
     DelayEffect,

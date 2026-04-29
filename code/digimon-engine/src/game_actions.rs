@@ -701,14 +701,29 @@ impl Game {
                 self.commit_option_trash_outcome(pending, outcome);
             }
             OptionSubtype::Delay(trigger) => {
+                let owner = pending.owner;
+                let placed_card = pending.card.handle();
                 let trash_turn = self.compute_delay_trash_turn(pending.owner, trigger);
                 let turn = self.turn_count;
                 let mut perm = crate::permanent::Permanent::new(pending.card, turn);
                 perm.option_state = crate::permanent::OptionState::Delayed {
-                    owner: pending.owner,
+                    owner,
                     trash_on_turn: trash_turn,
                 };
-                self.player_mut(pending.owner).battle_area.push(perm);
+                self.player_mut(owner).battle_area.push(perm);
+                let permanent = PermanentHandle {
+                    player: owner,
+                    index: (self.player(owner).battle_area.len() - 1) as u8,
+                };
+                self.enqueue_triggered(
+                    EffectTiming::OnOptionPlaced,
+                    TriggerSource::OptionPlaced {
+                        player: owner,
+                        permanent,
+                        card: placed_card,
+                    },
+                );
+                self.drain_effect_queue();
             }
             OptionSubtype::Link => {
                 // Phase 8 Task 4: evaluate link_filter against every

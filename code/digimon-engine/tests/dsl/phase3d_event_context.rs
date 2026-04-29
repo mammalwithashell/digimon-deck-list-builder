@@ -2,7 +2,7 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlaySource};
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 use std::sync::Arc;
@@ -26,6 +26,39 @@ fn digimon_card(id: &str, name: &str, traits: &[&str], dp: i32) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+    }
+}
+
+fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Option,
+        level: None,
+        dp: None,
+        play_cost: 0,
+        colors: vec![CardColor::Red],
+        traits: traits.iter().map(|t| t.to_string()).collect(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+struct DelayOptionNoop;
+impl CardEffect for DelayOptionNoop {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Delay noop")
+            .delay(DelayTrigger::EndOfYourNextTurn)
+            .process(|_ctx| {})
+            .build()]
     }
 }
 
@@ -410,6 +443,45 @@ effects:
         before + 4,
         "observer should see the entering card traits through event context"
     );
+}
+
+#[test]
+fn on_option_placed_event_card_trait_predicate_matches_placed_option() {
+    let yaml = r#"
+card: DSL-OPT-OBS
+name: Option Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_option_placed
+    condition: { event_card_trait_has: Royal Knight }
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(option_card("RK-OPTION", "Royal Knight Option", &["Royal Knight"]))
+        .hand(0, &["RK-OPTION"])
+        .build();
+    runner.register_effect("RK-OPTION", Arc::new(DelayOptionNoop));
+    runner.place_on_field(0, "DSL-OPT-OBS", None);
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    let battle_before = runner.battle_area_size(0);
+    let _ = runner.game.play_option_from_hand(0, 0);
+
+    assert_eq!(
+        runner.battle_area_size(0),
+        battle_before + 1,
+        "Delay option should be placed before OnOptionPlaced observers resolve"
+    );
+
+    assert_eq!(runner.memory(), before + 2);
 }
 
 struct DeleteSelfThenPlayNext;

@@ -416,6 +416,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Workaround:** None — BLOCKED. Option-card play flow is a foundational architectural gap; Plug-In is arguably its own sub-spec.
 - **Related:** RUST_ENGINE_API §9.
 
+**Updated 2026-04-29 (Task 4 / G-OPTION-PLACED-TIMING):** Delay-style Option placement through `Game::play_option_from_hand` now dispatches `EffectTiming::OnOptionPlaced` after the Option permanent is committed to the battle area, carrying `TriggerContext.event_permanent`, `event_card`, and `source_player` through `TriggerSource::OptionPlaced { player, permanent, card }`. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed_fires_after_delay_option_enters_battle_area` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_option_placed_event_card_trait_predicate_matches_placed_option`. Transient Standard options, security-effect "place in battle area" disposition, Link, Training, and breeding-area observer fan-out remain open unless separately tested.
+
 ### Scheduled end-of-turn effect queue (for transient Options)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)

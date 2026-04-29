@@ -647,6 +647,7 @@ Format per entry:
 - Gap kind: hybrid (DSL has the token but no lowering target; engine lacks the timing dispatch).
 - Workaround: None faithful. The memory-gain trigger is omitted at runtime.
 - First reported: 2026-04-28 (Royal Knights archetype assessment)
+- Updated 2026-04-29: `when: on_option_placed` now lowers to `EffectTiming::OnOptionPlaced`, and Delay-style Option placement through `Game::play_option_from_hand` supplies the placed Option through `event_card` / `event_permanent`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed_fires_after_delay_option_enters_battle_area` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_option_placed_event_card_trait_predicate_matches_placed_option`. Transient Standard options, security-effect placement, Link, Training, breeding-area observer fan-out, and the full BT13-007 inherited once-per-turn loop remain open follow-ups.
 
 ---
 

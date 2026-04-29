@@ -312,6 +312,14 @@ pub enum TriggerSource {
         permanent: PermanentHandle,
         card: CardHandle,
     },
+    /// Observer timing fired after a persistent Option enters the battle area.
+    /// Scans all players' battle areas while carrying the placed Option
+    /// permanent/card as event context.
+    OptionPlaced {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
 }
 
 /// Transient per-security-check state. Lives on `Game` from the moment the

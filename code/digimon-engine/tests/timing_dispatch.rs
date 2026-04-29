@@ -8,7 +8,9 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming, PlaySource};
+use digimon_engine::enums::{
+    CardColor, CardKind, CostDelta, DelayTrigger, EffectTiming, PlaySource,
+};
 use digimon_engine::events::GameEvent;
 use std::sync::Arc;
 
@@ -71,6 +73,9 @@ fn new_effect_timings_are_constructible() {
 
     let e = Effect::on_digivolution_card_trashed(card).build();
     assert_eq!(e.timing, EffectTiming::OnDigivolutionCardTrashed);
+
+    let e = Effect::on_option_placed(card).build();
+    assert_eq!(e.timing, EffectTiming::OnOptionPlaced);
 }
 
 #[test]
@@ -115,6 +120,28 @@ fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
         play_cost,
         colors: vec![CardColor::Red],
         traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Option,
+        level: None,
+        dp: None,
+        play_cost: 0,
+        colors: vec![CardColor::Red],
+        traits: traits.iter().map(|t| t.to_string()).collect(),
         evo_costs: Vec::new(),
         dna_costs: Vec::new(),
         effect_text: String::new(),
@@ -761,6 +788,54 @@ fn on_move_fires_after_breeding_permanent_moves_to_battle() {
 
     let before = r.memory();
     assert!(r.game.move_from_breeding(0), "breeding permanent should move");
+
+    assert_eq!(r.memory(), before + 1);
+}
+
+struct DelayOptionNoop;
+impl CardEffect for DelayOptionNoop {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Delay noop")
+            .delay(DelayTrigger::EndOfYourNextTurn)
+            .process(|_ctx| {})
+            .build()]
+    }
+}
+
+struct OnOptionPlacedObserver;
+impl CardEffect for OnOptionPlacedObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_option_placed(card)
+            .name("Option placed observer")
+            .condition(|ctx| ctx.event_card().is_some())
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
+
+#[test]
+fn on_option_placed_fires_after_delay_option_enters_battle_area() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Option Observer", 3))
+        .add_card(option_card("OPT-DELAY", "Delay Option", &["Royal Knight"]))
+        .hand(0, &["OBS", "OPT-DELAY"])
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(OnOptionPlacedObserver));
+    r.register_effect("OPT-DELAY", Arc::new(DelayOptionNoop));
+
+    assert_eq!(r.play(0, 0), Some(0));
+    r.game.enter_main_phase();
+    let before = r.memory();
+    let battle_before = r.battle_area_size(0);
+    let _ = r.game.play_option_from_hand(0, 0);
+
+    assert_eq!(
+        r.battle_area_size(0),
+        battle_before + 1,
+        "Delay option should be placed as a battle-area option permanent"
+    );
 
     assert_eq!(r.memory(), before + 1);
 }

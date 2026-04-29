@@ -328,6 +328,11 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnDigivolutionCardTrashed)
     }
 
+    /// Fires after a persistent Option card is placed in the battle area.
+    pub fn on_option_placed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnOptionPlaced)
+    }
+
     /// Builder constructor for a BeforePayCost effect — fires during cost
     /// calculation before memory is deducted. Use with `.cost_reduction_fn`
     /// for dynamic cost reduction or `.pay_cost_fn` for custom payment logic.
