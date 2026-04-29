@@ -65,12 +65,66 @@ Format per entry:
 - Gap kind: hybrid (DSL predicate/lowering plus engine replacement-context plumbing).
 - First reported: 2026-04-28 (Puppets archetype assessment)
 
+## Chaos Control — effect-initiated digivolve from trash
+- Effect text: EX11-005 Yaamon / EX11-069 Yuuki / BT21-100 The Digimon I Designed / BT24-080 Megidramon all digivolve a battle-area Digimon into a card in trash, sometimes for free and sometimes with a reduced cost.
+- Missing DSL verb / step kind / predicate: `effect_initiated_digivolve` only accepts `from_hand`; there is no source-zone-parametric form for `from_trash` or `from_security`.
+- Lowers to engine API: currently blocked by `docs/RUST_ENGINE_GAPS.md` "Effect-initiated digivolve from non-hand source zones"; once the engine primitive accepts a source zone, lower to that shared helper.
+- Suggested DSL syntax:
+  ```yaml
+  - effect_initiated_digivolve:
+      target: base
+      from:
+        zone: trash
+        of: you
+        card: evo
+      cost: { reduce: 1 }
+      ignore_requirements: false
+  ```
+- First reported: 2026-04-28
+
+## BT24-080 — delete all opponent Digimon with the lowest level
+- Effect text: "[On Play] [When Digivolving] [On Deletion] Delete all of your opponent's lowest level Digimon."
+- Missing DSL verb / step kind / predicate: aggregate minimum-level predicate plus mass delete. `for_each` can delete all permanents matching a predicate, but the DSL has no predicate for "level equals the minimum level among opponent Digimon."
+- Lowers to engine API: engine-side iteration over opponent battle-area permanents plus `delete_permanent` is sufficient once the minimum-level candidate set can be computed.
+- Suggested DSL syntax:
+  ```yaml
+  - delete_all:
+      of: opponent
+      filter:
+        kind: digimon
+        level_is: { aggregate: minimum, over: opponent_battle_area }
+  ```
+- First reported: 2026-04-28
+
+## EX4-011 — DP deletion threshold from shared trash count
+- Effect text: "For every 10 total cards in both player's trashes, add 2000 to the maximum DP you can choose with DP-based deletion effects."
+- Missing DSL verb / step kind / predicate: formula support for cross-player trash count buckets inside a `dp_lte` selection predicate. Existing formula vocabulary covers some modifier values, but not a target-filter threshold derived from `floor((your_trash + opponent_trash) / 10) * 2000`.
+- Lowers to engine API: read both players' trash lengths, compute the threshold, then install the normal opponent-permanent selection and `delete_permanent` callback.
+- Suggested DSL syntax:
+  ```yaml
+  dp_lte:
+    formula:
+      base: 7000
+      per: shared_trash_count
+      bucket: 10
+      delta: 2000
+  ```
+- First reported: 2026-04-28
+
 ## BT22-008 / BT22-017 — inherited end-of-turn DNA digivolve registration
 - Effect text: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in your hand."
 - Missing DSL verb / step kind / predicate: Lowering for existing `alt_path_registration` declarative clauses with `kind: dna_digivolve`. YAML examples can spell the clause, but `code/digimon-engine/src/dsl_cards/mod.rs` currently leaves this declarative form in the unlowered catch-all branch.
 - Lowers to engine API: the same alternate-path registration and action-mask channel used by normal DNA digivolve costs, producing a player-visible pending/action path rather than an automatic end-of-turn digivolve.
 - Suggested DSL syntax: keep the existing `alt_path_registration` shape and require lowering for inherited clauses, including `timing: end_of_your_turn`, `kind: dna_digivolve`, material filters, target hand-card filter, and cost override.
+- Also blocks: `BT12-021` Veemon and `BT12-047` Wormmon in BG Imperial. Their inherited text is "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
 - First reported: 2026-04-28
+
+## BG Imperial DNA cards — YAML `dna_costs` authoring / production data population
+- Effect text: "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0" and equivalent BG Imperial DNA requirements.
+- Missing DSL verb / step kind / predicate: `CardSpec` has no field that authors `dna_costs`, and production `cards.json` ingest does not populate `CardData.dna_costs`, so a YAML card can describe effects but cannot make the normal DNA action legal in the Rust action mask.
+- Lowers to engine API: `CardData.dna_costs`, consumed by the DNA digivolve action-mask branch and `Game::initiate_dna_digivolve`.
+- Suggested DSL syntax: either add a top-level `dna_costs:` field to `CardSpec`, or make `alt_paths: [{ kind: dna_digivolve, ... }]` populate the runtime `CardData.dna_costs` used by action-mask evaluation.
+- First reported: 2026-04-28 (BG Imperial assess-rust-engine-archetype)
 
 ## BT22-015 — grant "this Digimon may attack" after When Digivolving
 - Effect text: "[When Digivolving] ... Then, this Digimon may attack."
@@ -509,3 +563,75 @@ Format per entry:
 - Gap kind: dsl (engine stores `card_colors` on `CardData` and has full battle-area access; the DSL/lowering path just lacks the predicate leaf for a dynamic color-set intersection).
 - Workaround: `filter: { kind: tamer }` only — the "same color as any of your Digimon on the field" constraint is not enforced at selection time. Tests asserting color-mismatch rejection are `#[ignore = "pending: G-COLOR-MATCH-AGAINST-BOARD"]`. First card affected: P-206 Digital Gate Open Delay clause.
 - First reported: 2026-04-28 (P-206 Digital Gate Open batch-implement-cards-rust-dsl, Medusamon Batch 14)
+
+---
+
+## Royal Knights — `on_option_placed` timing lowerer  [G-OPTION-PLACED-TIMING]
+
+- Effect text: `BT13-007` King Drasil_7D6 inherited: "[Breeding] [Your Turn] [Once Per Turn] When an Option card with the [Royal Knight] trait is placed in the battle area, gain 1 memory."
+- Missing DSL verb / step kind / predicate: `when: on_option_placed` is accepted by the DSL compiler as `CompiledTiming::OnOptionPlaced`, but the Rust engine timing map returns `None` for it, so no `EffectTiming` is emitted and no clause can fire.
+- Companion engine gap: the Rust engine has no `EffectTiming::OnOptionPlaced` dispatch site when a Delay/Training/field Option is placed in the battle area. `BT13-110` Royal Knights of the Purge and `BT20-100` The Last Guardian both make this timing matter for the Royal Knights loop.
+- Lowers to engine API: needs a new `EffectTiming::OnOptionPlaced` (or equivalent observer timing) plus a dispatch after Option placement in `Game::dispose_option` / option placement helpers. The trigger context should identify the placed Option card and controller so `event_card_trait_has: "Royal Knight"` can be evaluated.
+- Suggested DSL syntax:
+  ```yaml
+  - scope: inherited
+    when: on_option_placed
+    active_when: { in_breeding: true }
+    once_per_turn: true
+    condition: { event_card_trait_has: "Royal Knight" }
+    process:
+      - gain_memory: 1
+  ```
+- Gap kind: hybrid (DSL has the token but no lowering target; engine lacks the timing dispatch).
+- Workaround: None faithful. The memory-gain trigger is omitted at runtime.
+- First reported: 2026-04-28 (Royal Knights archetype assessment)
+
+---
+
+## Royal Knights — selecting permanents in the breeding area  [G-BREEDING-PERMANENT-SELECTION]
+
+- Effect text: `BT20-083` Omekamon: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area." Similar Royal Knights effects target or play from the breeding-area King Drasil stack (`BT13-093`, `BT13-110`, `BT13-112`, `EX11-053`, `BT23-072`).
+- Missing DSL verb / step kind / predicate: `select_own_permanent` / `select_any_permanent` only scan `battle_area`, even when the YAML filter includes `zone: [breeding]`. There is no `select_own_breeding_permanent` step and no selection kind/action encoding for a breeding-area permanent.
+- Companion engine gap: `PendingSelection` currently represents field, hand, trash, reveal, security, material, and similar prompts, but not a breeding-area permanent handle. `PermanentHandle` also encodes battle-area indices; the breeding slot needs either a new handle variant or a dedicated selection path.
+- Lowers to engine API: after the engine exposes breeding-area selection, the existing `place_as_bottom_source`, `play_from_materials`, and `effect_initiated_digivolve` steps can consume the selected breeding permanent.
+- Suggested DSL syntax:
+  ```yaml
+  - select_own_permanent:
+      bind_as: kd
+      filter:
+        all_of:
+          - name_is: "King Drasil_7D6"
+          - zone: [breeding]
+      prompt: "Choose your King Drasil_7D6 in breeding"
+  ```
+  Alternatively, add an explicit sugar step:
+  ```yaml
+  - select_own_breeding_permanent:
+      bind_as: kd
+      filter: { name_is: "King Drasil_7D6" }
+  ```
+- Gap kind: hybrid (the YAML shape exists, but lowering/runtime selection ignore breeding).
+- Workaround: None faithful. Auto-targeting the only breeding permanent would hide a player-visible selection and violates the no-approximations policy.
+- First reported: 2026-04-28 (Royal Knights archetype assessment)
+
+---
+
+## BT8-097 / Royal Knights — formula filters for counted battle-area cards  [G-FORMULA-KIND-FILTER]
+
+- Effect text: `BT8-097` Crimson Blaze: "Reduce the memory cost of this card in your hand by 1 for each Digimon your opponent has in play."
+- Missing DSL verb / step kind / predicate: `card_count_in_zone` formulas can count a player's `battle_area`, but cannot apply a `kind: digimon` filter. The authored YAML therefore counts all opponent battle-area permanents, including Tamers and Option permanents, when computing the cost reduction.
+- Lowers to engine API: the engine can inspect each battle-area permanent and test `Permanent::is_digimon(&card_data)`; the formula DSL needs a filtered-count form that passes a compiled predicate into formula evaluation.
+- Suggested DSL syntax:
+  ```yaml
+  amount_fn:
+    base: 0
+    per:
+      card_count_in_zone:
+        of: opponent
+        zone: battle_area
+        filter: { kind: digimon }
+    delta: 1
+  ```
+- Gap kind: dsl (engine has the data; formula vocabulary lacks the filter).
+- Workaround: current YAML over-reduces when the opponent controls non-Digimon permanents.
+- First reported: 2026-04-28 (Royal Knights archetype assessment; surfaced by BT8-097 in Royal Knights lists)

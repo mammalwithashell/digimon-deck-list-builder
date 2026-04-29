@@ -206,7 +206,7 @@ python code/tools/ingest_pinecone.py --all --dry-run                # Preview co
 | `engine-api` | Engine API reference doc + decomposed engine source (AST-chunked) | ~300 |
 | `card-scripts` | Python scripts (frozen + generated) + C# reference scripts | ~6,000 |
 | `card-metadata` | Per-card entries from `cards.json` (ID, name, kind, level, colors, traits, effect text) | ~4,000 |
-| `rules-docs` | `RULES_CONTEXT.md`, `ACTION_SPEC.md`, `TENSOR_SPEC.md`, `engine-gaps.md` | ~100 |
+| `rules-docs` | `RULES_CONTEXT.md`, `ACTION_SPEC.md`, `TENSOR_SPEC.md`, `RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` | ~100 |
 
 ---
 
@@ -605,16 +605,16 @@ python code/tools/build_registry.py --sets BT26
 
 New cards get append-only indices. Existing indices are preserved, so old trained agents remain valid.
 
-### Step 3: Implement Card Effects in Rust
+### Step 3: Implement Card Effects with the Rust DSL
 
-Card scripts are now hand-written Rust `CardEffect` implementations under `code/digimon-engine/src/cards/`. Use the `/batch-implement-cards-rust` skill to dispatch the TDD pipeline against the new set, or `/assess-archetype-rust` to pre-flight the engine primitives the set will require.
+Card scripts are primarily authored as YAML specs under `code/digimon-engine/cards/<set>/<CARD_ID>.yaml`, with long-tail bespoke behavior routed through named `raw_rust` functions under `code/digimon-engine/src/cards/raw_rust/`. Use the `batch-implement-cards-rust-dsl` workflow to dispatch the TDD pipeline against the new set, or `assess-rust-engine-archetype` to pre-flight the DSL and engine primitives the set will require.
 
 ```bash
-# Optional pre-flight: see which engine primitives the set needs
-/assess-archetype-rust BT26
+# Optional pre-flight: see which DSL and engine primitives the set needs
+assess-rust-engine-archetype BT26
 
-# TDD-driven hand-implementation in batches
-/batch-implement-cards-rust BT26
+# TDD-driven YAML DSL implementation in batches
+batch-implement-cards-rust-dsl BT26
 ```
 
 The C# files at `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` remain available as the behavioral source of truth.
