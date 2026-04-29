@@ -524,6 +524,11 @@ pub struct PendingAttack {
     /// suspend-on-declare step is suppressed. Matches Python
     /// `resolve_attack(..., without_suspend=True)`.
     pub is_overclock: bool,
+    /// True once declaration has crossed the observable boundary: attacker was
+    /// marked attacking, suspend/attack count was applied when appropriate, and
+    /// `OnAttack` / declared-attack observer windows have begun. Optional
+    /// pre-declaration replacements can park while this is still false.
+    pub declaration_committed: bool,
     /// Phase 9: set by a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
     /// replacement whose process calls `rctx.cancel()`. `advance_pending_attack`
     /// detects this and short-circuits directly to `Cleanup`. EndOfAttack

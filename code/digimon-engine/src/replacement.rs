@@ -959,6 +959,56 @@ fn commit_deferred_outcome(
     // Player) currently cover trash-by-effect / draw — those fire-sites
     // apply the outcome synchronously and don't use optional replacements
     // in v1.
+    if original_destination.is_none()
+        && cause == ReplacementCause::Battle
+        && game.pending_attack.is_some()
+    {
+        match outcome {
+            ReplacementOutcome::None | ReplacementOutcome::CustomHandled => {}
+            ReplacementOutcome::Cancelled => {
+                if let Some(pa) = game.pending_attack.as_mut() {
+                    pa.cancelled = true;
+                }
+            }
+            ReplacementOutcome::Substituted(new_subject) => {
+                let is_attacker_subject = game
+                    .pending_attack
+                    .as_ref()
+                    .map(|pa| subject == ReplacementSubject::Permanent(pa.attacker))
+                    .unwrap_or(false);
+                if is_attacker_subject {
+                    debug_assert!(
+                        false,
+                        "WhenWouldAttack Substituted outcome not supported in v1; \
+                         use WhenWouldBeAttackTarget for attack redirects"
+                    );
+                } else {
+                    let new_target = match new_subject {
+                        ReplacementSubject::Permanent(h) => crate::AttackTarget::Digimon(h),
+                        ReplacementSubject::Player(pid) => crate::AttackTarget::Player(pid),
+                        ReplacementSubject::Card(_, _) => {
+                            debug_assert!(
+                                false,
+                                "Attack target substitution does not accept Card subjects"
+                            );
+                            game.replacement_pending_outcome = None;
+                            return;
+                        }
+                    };
+                    game.apply_attack_target_substitution(new_target);
+                }
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Battle replacement Redirected outcome is not meaningful for attack shape"
+                );
+            }
+        }
+        game.replacement_pending_outcome = None;
+        return;
+    }
+
     let perm = match subject {
         ReplacementSubject::Permanent(h) => h,
         other => {

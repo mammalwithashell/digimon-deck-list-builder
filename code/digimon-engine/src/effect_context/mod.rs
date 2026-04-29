@@ -177,6 +177,20 @@ impl<'a> EffectReadContext<'a> {
             .and_then(|s| s.attacker)
     }
 
+    pub fn attack_attacker(&self) -> Option<PermanentHandle> {
+        self.game
+            .pending_attack
+            .as_ref()
+            .map(|attack| attack.attacker)
+    }
+
+    pub fn attack_target(&self) -> Option<crate::AttackTarget> {
+        self.game
+            .pending_attack
+            .as_ref()
+            .map(|attack| attack.effective_target)
+    }
+
     pub fn security_digimon(&self) -> Option<CardHandle> {
         self.game
             .security_resolution
@@ -512,6 +526,20 @@ impl<'a> EffectContext<'a> {
             .security_resolution
             .as_ref()
             .and_then(|s| s.attacker)
+    }
+
+    pub fn attack_attacker(&self) -> Option<PermanentHandle> {
+        self.game
+            .pending_attack
+            .as_ref()
+            .map(|attack| attack.attacker)
+    }
+
+    pub fn attack_target(&self) -> Option<crate::AttackTarget> {
+        self.game
+            .pending_attack
+            .as_ref()
+            .map(|attack| attack.effective_target)
     }
 
     /// The handle of the security card currently being resolved (the card

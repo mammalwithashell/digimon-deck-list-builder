@@ -856,7 +856,7 @@ Expected after implementation: PASS.
 - Test: `code/digimon-engine/tests/timing_dispatch.rs`
 - Test when cleaner: `code/digimon-engine/tests/cards_behavioral/ex10/ex10_003.rs`
 
-- [ ] **Step 1: Write the failing declared-attack dispatch test**
+- [x] **Step 1: Write the failing declared-attack dispatch test**
 
 Add this test to `code/digimon-engine/tests/timing_dispatch.rs`:
 
@@ -918,7 +918,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch
 
 Expected before implementation: FAIL if attack observer dispatch or attack payload accessors are missing. If dispatch already exists, the first failure should be missing context accessors or target payload.
 
-- [ ] **Step 2: Write the failing exclusion/order regression**
+- [x] **Step 2: Write the failing exclusion/order regression**
 
 Add this test to the same file:
 
@@ -953,28 +953,39 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch
 
 Expected before implementation: FAIL if the fan-out includes the attacker or if no dispatch exists.
 
-- [ ] **Step 3: Implement declared-attack payload threading**
+- [x] **Step 3: Implement declared-attack payload threading**
 
 Make these code changes:
 
 ```text
-1. Add or extend `TriggerSource::DeclaredAttack { attacker, target }`.
-2. Populate `TriggerContext.attack_attacker`, `TriggerContext.attack_target`, and `TriggerContext.source_player`.
-3. Fire `OnAllyAttack` after the attack is declared and before Alliance/Counter/Block windows, scanning the attacker's controller battle area and excluding the attacking permanent itself.
-4. Fire `OnOpponentAttack` in the same declared-attack window for the defending player's battle area.
-5. Preserve the existing `OnAttack` self timing and `WhenAttacking` observer timing order unless current tests specify a different order.
-6. Ensure direct security attacks and Digimon-target attacks both set an attack target variant, not an absent target.
+1. Reuse the existing `PendingAttack` state instead of adding `TriggerSource::DeclaredAttack` for this slice.
+2. Expose `EffectReadContext::attack_attacker()` / `EffectContext::attack_attacker()` and `attack_target()` over the live pending attack.
+3. Return the pending attack's effective target so `WhenWouldBeAttackTarget` substitution is visible to declared-attack observers.
+4. Preserve the existing `combat::fire_on_attack` fan-out: `OnAllyAttack` fires after `OnAttack` / `WhenAttacking` and before Alliance/Counter/Block windows, scanning the attacker's controller battle area and excluding the attacking permanent itself.
+5. Preserve `OnOpponentAttack` in the same declared-attack window for the defending player's battle area.
+6. Add `PendingAttack::declaration_committed` so optional pre-declaration replacements can resume through normal handle validity before the attacker is marked attacking.
+7. Commit accepted optional pre-declaration replacement outcomes before declaration resumes: cancel outcomes set `pending_attack.cancelled`, and target substitutions rewrite `effective_target`.
+8. Resume any parked `pending_attack` from the generic post-selection hook once replacement accept/decline callbacks and nested drains settle, so normal `decode_action` callers cannot strand an attack with no pending selection.
+9. After declaration is committed, guard the observer fan-out and attack state-machine resume path with the permanent's live attacking state so a shifted battle-area slot cannot masquerade as the original attacker after earlier attack triggers move/delete the attacker, without cancelling legal same-permanent stack changes.
 ```
 
 This slice only dispatches observers. Attack cancellation and triggered-body source-trash costs belong to the cost/replacement child plan.
 
-- [ ] **Step 4: Verify the slice**
+- [x] **Step 4: Verify the slice**
 
 Run:
 
 ```bash
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- declared_attack_fires_ally_and_opponent_observers_with_attack_context
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_ally_attack_does_not_fire_on_the_attacker_itself
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- attack_target_context_reports_effective_declared_target_after_substitution
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- accepted_predeclare_cancel_replacement_cancels_before_observers
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- declined_predeclare_replacement_resumes_attack_declaration
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- accepted_predeclare_target_substitution_updates_attack_context
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- attack_resume_after_trigger_order_does_not_alias_removed_attacker
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_ally_attack_still_fires_if_attacker_stack_changes_during_on_attack
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_ally_attack_does_not_fire_if_attacker_left_during_on_attack
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker
 ```
 
 Expected after implementation: PASS.
@@ -986,7 +997,7 @@ Expected after implementation: PASS.
 - Docs: `qa/archetype-qa/engine-gaps.md`
 - Docs: `qa/dsl-vocab-gaps.md`
 
-- [ ] **Step 1: Update `docs/RUST_ENGINE_GAPS.md`**
+- [x] **Step 1: Update `docs/RUST_ENGINE_GAPS.md`**
 
 After the targeted tests for a slice pass, update only the matching gap text:
 
@@ -1015,7 +1026,7 @@ OnAllyAttack / OnOpponentAttack:
 
 Do not mark a gap resolved if the event only works through direct `enqueue_triggered` and not through the real state-machine dispatch site.
 
-- [ ] **Step 2: Update `qa/archetype-qa/engine-gaps.md`**
+- [x] **Step 2: Update `qa/archetype-qa/engine-gaps.md`**
 
 Update these entries with the same evidence:
 
@@ -1031,7 +1042,7 @@ OnAllyAttack / OnOpponentAttack observer timings
 
 For Rocks and Royal Knights notes, narrow only the event-context blocker. Keep selection, replacement, breeding-source fan-out, option state, and triggered-body cost blockers open unless separate tests in this implementation prove those behaviors.
 
-- [ ] **Step 3: Update `qa/dsl-vocab-gaps.md`**
+- [x] **Step 3: Update `qa/dsl-vocab-gaps.md`**
 
 Update these DSL entries only after both schema/lowering and runtime dispatch tests pass:
 
@@ -1045,7 +1056,9 @@ Attack observer predicate notes if this file has an existing OnAllyAttack or OnO
 
 For each entry, include the exact test command that proves the DSL lowerer and runtime payload both work.
 
-- [ ] **Step 4: Run tracker diff check**
+Note: this attack-observer slice adds runtime context accessors only; `qa/dsl-vocab-gaps.md` has no existing `OnAllyAttack` / `OnOpponentAttack` predicate entry to narrow. Attack-target-kind and attacker predicates remain listed as follow-ups in the engine trackers until a DSL lowering slice proves them.
+
+- [x] **Step 4: Run tracker diff check**
 
 Run:
 

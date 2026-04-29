@@ -1035,6 +1035,14 @@ impl Game {
         if self.pending_selection.is_none() {
             self.finish_pending_option_placed_turn_check();
         }
+        // Some attack-time selections, especially optional pre-declare
+        // replacements, park `pending_attack` before declaration commits. Once
+        // the selection callback and any nested drains settle, resume the
+        // attack state machine so callers using the normal action decoder do
+        // not get a Main-phase mask while an attack is still pending.
+        if self.pending_selection.is_none() && self.pending_attack.is_some() {
+            self.advance_pending_attack();
+        }
         Ok(())
     }
 
