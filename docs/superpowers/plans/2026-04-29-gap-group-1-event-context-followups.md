@@ -120,6 +120,7 @@ fn on_move_fires_after_breeding_permanent_moves_to_battle() {
         .add_card(plain_digimon("BABY", "Baby", 0))
         .add_card(plain_digimon("FILLER", "Filler", 1))
         .hand(0, &["OBS"])
+        .digitama(0, &["BABY"])
         .deck(0, &filler)
         .deck(1, &filler)
         .memory(10)
@@ -127,10 +128,10 @@ fn on_move_fires_after_breeding_permanent_moves_to_battle() {
     r.register_effect("OBS", Arc::new(OnMoveObserver));
 
     assert_eq!(r.play(0, 0), Some(0));
-    r.place_in_breeding(0, "BABY");
+    assert!(r.game.hatch(0), "hatch BABY into breeding");
 
     let before = r.memory();
-    assert!(r.move_from_breeding(0), "breeding permanent should move");
+    assert!(r.game.move_from_breeding(0), "breeding permanent should move");
 
     assert_eq!(r.memory(), before + 1);
 }
@@ -245,18 +246,35 @@ Expected after implementation: PASS.
 Add this test to `code/digimon-engine/tests/timing_dispatch.rs`:
 
 ```rust
+fn zero_cost_evo_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    let mut card = plain_digimon(card_id, name, 0);
+    card.level = Some(4);
+    card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost: 0,
+    }];
+    card
+}
+
 #[test]
 fn game_event_digivolve_is_emitted_with_new_top_card_and_field_index() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("BASE", "Base", 3))
-        .add_card(plain_digimon("EVO", "Evolution", 3))
+        .add_card(zero_cost_evo_card("EVO", "Evolution", &[]))
         .hand(0, &["EVO"])
         .memory(10)
         .start();
     let base = r.place_on_field(0, "BASE", None);
 
     let checkpoint = r.event_checkpoint();
-    assert!(r.digivolve_from_hand(0, 0, base.index as usize));
+    assert!(r.game.digivolve_from_hand(
+        0,
+        0,
+        base.index as usize,
+        PlaySource::ByDigivolve
+    ));
 
     let events = r.events_since(checkpoint);
     assert!(
@@ -276,6 +294,8 @@ fn game_event_digivolve_is_emitted_with_new_top_card_and_field_index() {
     );
 }
 ```
+
+Also add `use digimon_engine::events::GameEvent;` if `timing_dispatch.rs` does not already import it. The existing file already imports `EvoCost`, `CardColor`, and `PlaySource`; keep using those types rather than hard-coded color integers.
 
 Run:
 
@@ -310,16 +330,37 @@ effects:
         .from_dsl_yaml(yaml)
         .unwrap()
         .add_card(digimon_card("BASE", "Base", &[], 1000))
-        .add_card(digimon_card("EVO-MINERAL", "Mineral Evo", &["Mineral"], 3000))
+        .add_card({
+            let mut card = digimon_card("EVO-MINERAL", "Mineral Evo", &["Mineral"], 3000);
+            card.level = Some(4);
+            card.evo_costs = vec![EvoCost {
+                card_color: CardColor::Red as u8,
+                level: 3,
+                memory_cost: 0,
+            }];
+            card
+        })
+        .hand(0, &["EVO-MINERAL"])
         .build();
     runner.place_on_field(0, "DSL-DIGI-OBS", None);
     let target = runner.place_on_field(0, "BASE", None);
-    runner.push_hand(0, "EVO-MINERAL");
 
-    assert!(runner.digivolve_from_hand(0, 0, target.index as usize));
+    assert!(runner.game.digivolve_from_hand(
+        0,
+        0,
+        target.index as usize,
+        PlaySource::ByDigivolve
+    ));
 
     assert_eq!(runner.memory(), 3);
 }
+```
+
+Extend the imports at the top of `phase3d_event_context.rs` to include `EvoCost` and `PlaySource`:
+
+```rust
+use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlaySource};
 ```
 
 Run:
@@ -335,15 +376,14 @@ Expected before implementation: FAIL because `OnDigivolve` observers do not rece
 Make these code changes:
 
 ```text
-1. Before mutating the stack in each digivolve commit path, record the previous top card id.
+1. In `Game::digivolve_from_hand`, before mutating the stack, record the previous top card id.
 2. After the new card is on top and the permanent handle remains stable, emit `GameEvent::Digivolve { player, top_card_id, field_index, from_stack_top }`.
 3. Replace broad `TriggerSource::PlayerBattleArea(player)` for `EffectTiming::OnDigivolve` with a payload that carries `permanent` and new `card`.
 4. Populate `TriggerContext.event_permanent`, `TriggerContext.event_card`, and `TriggerContext.source_player`.
 5. Update `event_card_trait_has`, `event_target_kind`, and `event_target` predicate/binding code to read the payload instead of trying to infer the target from the observer permanent.
-6. Apply the same payload rules to `digivolve_from_hand`, `effect_initiated_digivolve`, and `dna_digivolve_inner` only where those paths already fire `OnDigivolve` / `OnDnaDigivolve`.
 ```
 
-Do not fire `WhenDigivolving` for breeding-area digivolve unless a separate existing test proves that behavior has already changed; current comments state breeding digivolve does not fire that timing.
+This slice is proven only for `Game::digivolve_from_hand`. Do not mark `effect_initiated_digivolve`, `dna_digivolve_inner`, or breeding-area digivolve as complete in trackers unless the implementation worker adds separate red/green tests for those paths in this same task. Do not fire `WhenDigivolving` for breeding-area digivolve unless a separate existing test proves that behavior has already changed; current comments state breeding digivolve does not fire that timing.
 
 - [ ] **Step 4: Verify the slice**
 
@@ -390,17 +430,22 @@ effects:
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(yaml)
         .unwrap()
-        .add_card(digimon_card("RK-ENTER", "Royal Knight", &["Royal Knight"], 3000))
+        .add_card({
+            let mut card = digimon_card("RK-ENTER", "Royal Knight", &["Royal Knight"], 3000);
+            card.play_cost = 0;
+            card
+        })
         .hand(1, &["RK-ENTER"])
         .memory(10)
         .build();
     runner.place_on_field(0, "DSL-ENTER-OBS", None);
 
+    let before = runner.memory();
     assert_eq!(runner.play(1, 0), Some(0));
 
     assert_eq!(
         runner.memory(),
-        14,
+        before + 4,
         "observer should see the entering card traits through event context"
     );
 }
@@ -420,13 +465,13 @@ Make these code changes:
 
 ```text
 1. Add `TriggerSource::EnteredField { player, permanent, card }` or extend the existing enter-field trigger source with those fields.
-2. In every successful battle-area play path that already fires `OnEnterFieldAnyone`, pass the entering permanent handle and top card handle in the trigger source.
+2. In the normal `Game::play_from_hand` / `DebugRunner::play` battle-area Digimon path that already fires `OnEnterFieldAnyone`, pass the entering permanent handle and top card handle in the trigger source.
 3. Populate `TriggerContext.event_permanent`, `TriggerContext.event_card`, and `TriggerContext.source_player`.
 4. Update DSL event predicates and bindings to use those fields.
 5. Preserve current ordering: the card's own `OnPlay` resolves before global `OnEnterFieldAnyone`, matching existing comments in `game_actions.rs`.
 ```
 
-Do not add breeding-area fan-out in this slice. If a Royal Knights breeding observer still cannot see this event, keep that as `G-BREEDING-TRIGGER-DISPATCH`.
+This slice is proven only for the normal hand-play path. Do not claim coverage for effect-created permanents, token play, option placement, or breeding-area fan-out unless separate red/green tests are added. If a Royal Knights breeding observer still cannot see this event, keep that as `G-BREEDING-TRIGGER-DISPATCH`.
 
 - [ ] **Step 3: Verify the slice**
 
@@ -458,6 +503,39 @@ Expected after implementation: PASS for the new DSL test and existing enter-fiel
 Add this test to `code/digimon-engine/tests/timing_dispatch.rs`:
 
 ```rust
+fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Option,
+        level: None,
+        dp: None,
+        play_cost: 0,
+        colors: vec![CardColor::Red],
+        traits: traits.iter().map(|t| t.to_string()).collect(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+struct DelayOptionNoop;
+impl CardEffect for DelayOptionNoop {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Delay noop")
+            .delay(DelayTrigger::EndOfYourNextTurn)
+            .process(|_ctx| {})
+            .build()]
+    }
+}
+
 struct OnOptionPlacedObserver;
 impl CardEffect for OnOptionPlacedObserver {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
@@ -478,16 +556,24 @@ fn on_option_placed_fires_after_delay_option_enters_battle_area() {
         .memory(10)
         .start();
     r.register_effect("OBS", Arc::new(OnOptionPlacedObserver));
+    r.register_effect("OPT-DELAY", Arc::new(DelayOptionNoop));
 
     assert_eq!(r.play(0, 0), Some(0));
     let before = r.memory();
-    assert!(r.play_option_from_hand(0, 0), "Delay option should be placed");
+    let battle_before = r.battle_area_size(0);
+    let _ = r.game.play_option_from_hand(0, 0);
+
+    assert_eq!(
+        r.battle_area_size(0),
+        battle_before + 1,
+        "Delay option should be placed as a battle-area option permanent"
+    );
 
     assert_eq!(r.memory(), before + 1);
 }
 ```
 
-If no `option_card` or `play_option_from_hand` helper exists, create the smallest helper in this test file using the existing `CardData` pattern and drive the repository's current option placement API. The test must place an Option as a battle-area option state, not simply play and trash a normal option.
+Extend the imports in `timing_dispatch.rs` with `DelayTrigger` if it is not already imported. The test drives the current API, `r.game.play_option_from_hand(0, 0)`, and proves the card parked on the battle area before asserting the observer fired.
 
 Run:
 
@@ -522,28 +608,32 @@ effects:
         .from_dsl_yaml(yaml)
         .unwrap()
         .add_card(option_card("RK-OPTION", "Royal Knight Option", &["Royal Knight"]))
+        .hand(0, &["RK-OPTION"])
         .build();
+    runner.register_effect("RK-OPTION", Arc::new(DelayOptionNoop));
     runner.place_on_field(0, "DSL-OPT-OBS", None);
-    let option_perm = runner.place_option_in_battle_area(0, "RK-OPTION");
-    let event_card = runner
-        .game
-        .players[0]
-        .battle_area[option_perm.index as usize]
-        .top_card()
-        .handle();
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnOptionPlaced,
-        TriggerSource::OptionPlaced {
-            player: 0,
-            permanent: Some(option_perm),
-            card: event_card,
-        },
+    let before = runner.memory();
+    let battle_before = runner.battle_area_size(0);
+    let _ = runner.game.play_option_from_hand(0, 0);
+
+    assert_eq!(
+        runner.battle_area_size(0),
+        battle_before + 1,
+        "Delay option should be placed before OnOptionPlaced observers resolve"
     );
-    runner.game.drain_effect_queue();
 
-    assert_eq!(runner.memory(), 2);
+    assert_eq!(runner.memory(), before + 2);
 }
+```
+
+Add the same `option_card` helper and `DelayOptionNoop` fixture shown in Step 1 to `phase3d_event_context.rs`, or place equivalent local helpers above this test. Also add these imports if absent:
+
+```rust
+use std::sync::Arc;
+use digimon_engine::card_source::CardHandle;
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::DelayTrigger;
 ```
 
 Run:
@@ -567,7 +657,7 @@ Make these code changes:
 6. Dispatch after placement, not before, so predicates can inspect option state and the option can be referenced by handle when a permanent exists.
 ```
 
-Do not route transient options that immediately resolve to trash through this timing unless the engine has explicitly represented them as placed battle-area option permanents.
+This slice is proven only for Delay-style option placement through `Game::play_option_from_hand`. Do not route transient options that immediately resolve to trash through this timing unless a separate red/green test proves the engine explicitly represents them as placed battle-area option permanents.
 
 - [ ] **Step 4: Verify the slice**
 
@@ -597,6 +687,9 @@ Expected after implementation: PASS.
 Add this test to `code/digimon-engine/tests/timing_dispatch.rs`:
 
 ```rust
+use digimon_engine::card_source::CardSource;
+use digimon_engine::permanent::{Permanent, PermanentHandle};
+
 struct SourceTrashObserver;
 impl CardEffect for SourceTrashObserver {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
@@ -619,18 +712,33 @@ fn on_digivolution_card_trashed_context_carries_host_and_trashed_source() {
     r.register_effect("OBS", Arc::new(SourceTrashObserver));
 
     r.place_on_field(0, "OBS", None);
-    let host = r.play_digimon_with_sources(0, "TOP", vec!["UNDER"]).expect("host stack");
-    let trashed = r.source_card_handle(host, 0).expect("UNDER source handle");
+    let host = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g.card_data.iter().position(|c| c.card_id == "UNDER").unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
 
     let before = r.memory();
-    r.trash_source_by_handle(host, trashed).expect("source trash succeeds");
-    r.drain_effects();
+    assert!(
+        r.game_mut().return_to_hand(host).is_some(),
+        "return_to_hand should move TOP to hand and trash UNDER"
+    );
 
     assert_eq!(r.memory(), before + 1);
 }
 ```
 
-If the helper names differ, use existing DebugRunner source-stack helpers with the same semantics: a battle-area host has one below-top source, that source is trashed by an effect path, and the observer condition requires both host permanent and trashed source card from trigger context.
+This uses the existing `Game::return_to_hand` source-disposition path because it already trashes below-top sources and claims to fire `OnDigivolutionCardTrashed`. Do not use non-existent DebugRunner source-stack helpers.
 
 Run:
 
@@ -668,16 +776,37 @@ effects:
         .add_card(digimon_card("UNDER-MINERAL", "Under Mineral", &["Mineral"], 1000))
         .build();
     runner.place_on_field(0, "DSL-SOURCE-TRASH-OBS", None);
-    let host = runner
-        .play_digimon_with_sources(0, "TOP", vec!["UNDER-MINERAL"])
-        .expect("host stack");
-    let trashed = runner.source_card_handle(host, 0).expect("source handle");
+    let host = {
+        let g = runner.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER-MINERAL")
+            .unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
 
-    runner.trash_source_by_handle(host, trashed).expect("source trash succeeds");
-    runner.drain_effects();
+    assert!(runner.game_mut().return_to_hand(host).is_some());
 
     assert_eq!(runner.memory(), 3);
 }
+```
+
+Add these imports to `phase3d_event_context.rs` for the manual source-stack fixture:
+
+```rust
+use digimon_engine::card_source::CardSource;
+use digimon_engine::permanent::{Permanent, PermanentHandle};
 ```
 
 Run:
@@ -696,12 +825,12 @@ Make these code changes:
 1. Add or extend `TriggerSource::SourceTrashedFromStack { host, trashed_card, cause }`.
 2. Add a minimal `TrashCause` enum only if the current engine has no source-trash cause discriminator; start with `Effect` for this slice.
 3. Populate `TriggerContext.event_host_permanent`, `TriggerContext.event_source_card`, `TriggerContext.event_card`, and `TriggerContext.source_player`.
-4. Route all existing source-trash helper paths that already claim to fire `OnDigivolutionCardTrashed` through this trigger source.
+4. Route the `Game::return_to_hand` below-top source-disposition path through this trigger source.
 5. Ensure inherited effects on the trashed source can still inspect their former host before the host stack is mutated beyond recognition.
 6. Update DSL event-card predicates so `event_card` resolves to the trashed source card for this timing.
 ```
 
-Do not add cross-permanent multi-source selection here. This task only makes source-trash events faithful once a source-trash path is already called.
+This slice is proven only for below-top sources trashed by `Game::return_to_hand`. Do not mark `return_to_deck`, `de_digivolve`, `trash_card_source`, `trash_top_source`, Armor Purge, Fragment, Digi-Burst, or cross-permanent source selection complete unless the implementation worker adds separate red/green tests for those paths. Do not add cross-permanent multi-source selection here.
 
 - [ ] **Step 4: Verify the slice**
 
@@ -863,19 +992,19 @@ G-ON-MOVE / [When Moving]:
   Cite the `on_move_fires_after_breeding_permanent_moves_to_battle` test and state that breeding-to-battle movement now carries moved permanent/card context.
 
 G-GAME-EVENT-DIGIVOLVE:
-  Cite the `game_event_digivolve_is_emitted_with_new_top_card_and_field_index` test and state which digivolve paths emit the event.
+  Cite the `game_event_digivolve_is_emitted_with_new_top_card_and_field_index` test and state that the normal `Game::digivolve_from_hand` path emits the event. Keep effect-initiated digivolve and DNA digivolve listed as follow-up paths unless separately tested.
 
 G-ON-DIGIVOLVE-TRAIT-FILTER:
   Cite the DSL trait-filter test and state that `event_card` is the new top card for OnDigivolve.
 
 G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER:
-  Cite the DSL trait-filter test and state that `event_card` is the entering card.
+  Cite the DSL trait-filter test and state that `event_card` is the entering card for normal hand-played Digimon. Keep effect-created permanents, token play, and breeding fan-out listed as follow-up paths unless separately tested.
 
 G-OPTION-PLACED-TIMING:
-  Cite the option placement timing and DSL tests.
+  Cite the Delay option placement timing and DSL tests. Keep transient option resolution and other option-state paths open unless separately tested.
 
 OnDigivolutionCardTrashed observer timing:
-  Cite the host/source context tests and keep cross-permanent source selection open if it is still absent.
+  Cite the `Game::return_to_hand` host/source context tests and keep `return_to_deck`, `de_digivolve`, direct source-trash helpers, keyword costs, and cross-permanent source selection open unless separately tested.
 
 OnAllyAttack / OnOpponentAttack:
   Cite the declared-attack dispatch and attacker-exclusion tests.
@@ -975,42 +1104,3 @@ git commit -m "feat: wire event context followups"
 ```
 
 Expected: commit succeeds with only files from this implementation plan staged. If one of the listed optional files was not changed, omit it from `git add`.
-
-## Plan-File Verification and Commit
-
-- [ ] **Step 1: Run placeholder scan for this plan**
-
-Run:
-
-```bash
-$patterns = @(
-  [string]::new([char[]](84,66,68)),
-  [string]::new([char[]](84,79,68,79)),
-  ('implement' + ' later'),
-  ('fill in ' + 'details')
-)
-Select-String -Path 'docs/superpowers/plans/2026-04-29-gap-group-1-event-context-followups.md' -Pattern $patterns
-```
-
-Expected: no output.
-
-- [ ] **Step 2: Run whitespace diff check for this plan**
-
-Run:
-
-```bash
-git diff --check -- docs/superpowers/plans/2026-04-29-gap-group-1-event-context-followups.md
-```
-
-Expected: no output.
-
-- [ ] **Step 3: Commit exactly this child plan**
-
-Run:
-
-```bash
-git add docs/superpowers/plans/2026-04-29-gap-group-1-event-context-followups.md
-git commit -m "docs: plan event context followups"
-```
-
-Expected: commit succeeds with only `docs/superpowers/plans/2026-04-29-gap-group-1-event-context-followups.md` staged.
