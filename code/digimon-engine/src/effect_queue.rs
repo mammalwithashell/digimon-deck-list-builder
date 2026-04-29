@@ -566,6 +566,13 @@ impl Game {
     }
 
     fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
+        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+            return;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return;
+        };
+
         // Source permanent may have been deleted by a prior effect in this
         // batch. Skip silently — matches Python behavior.
         if let Some(perm_handle) = qe.source_permanent {
@@ -593,6 +600,7 @@ impl Game {
                 .iter()
                 .take(perm.card_sources.len().saturating_sub(1))
                 .any(|c| c.card_index == qe.source_card.0);
+            let inherited_source_matches = below_top_source_matches && effect.inherited;
             let training_matches = self
                 .players
                 .get(perm_handle.player as usize)
@@ -607,19 +615,12 @@ impl Game {
                 .unwrap_or(false);
             if !top_matches
                 && !linked_matches
-                && !below_top_source_matches
+                && !inherited_source_matches
                 && !training_matches
             {
                 return;
             }
         }
-
-        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
-            return;
-        };
-        let Some(effect) = effects.get(qe.effect_slot as usize) else {
-            return;
-        };
 
         if effect.max_per_turn > 0 {
             if let Some(perm_handle) = qe.source_permanent {
