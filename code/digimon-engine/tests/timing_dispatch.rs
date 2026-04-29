@@ -5,13 +5,14 @@
 //! wiring is tested in subsequent Phase 1 tasks.
 
 use digimon_engine::card_data::{CardData, EvoCost};
-use digimon_engine::card_source::CardHandle;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{
     CardColor, CardKind, CostDelta, DelayTrigger, EffectTiming, PlaySource,
 };
 use digimon_engine::events::GameEvent;
+use digimon_engine::permanent::{Permanent, PermanentHandle};
 use std::sync::Arc;
 
 fn dummy() -> CardHandle {
@@ -791,7 +792,10 @@ fn on_move_fires_after_breeding_permanent_moves_to_battle() {
     assert!(r.game.hatch(0), "hatch BABY into breeding");
 
     let before = r.memory();
-    assert!(r.game.move_from_breeding(0), "breeding permanent should move");
+    assert!(
+        r.game.move_from_breeding(0),
+        "breeding permanent should move"
+    );
 
     assert_eq!(r.memory(), before + 1);
 }
@@ -914,6 +918,122 @@ fn delay_option_cost_crossing_turn_ends_after_on_option_placed_selection_resolve
         1,
         "memory crossed to the opponent while playing the Delay option, so the turn should pass after observers settle"
     );
+}
+
+struct SourceTrashObserver;
+impl CardEffect for SourceTrashObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("Source trash observer")
+            .condition(|ctx| ctx.event_card().is_some())
+            .process(|ctx| {
+                assert!(ctx.event_host_card().is_some());
+                assert!(ctx.event_source_card().is_some());
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+struct SourceTrashHostAliasGuard;
+impl CardEffect for SourceTrashHostAliasGuard {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("Source trash host alias guard")
+            .condition(|ctx| ctx.event_source_card().is_some())
+            .process(|ctx| {
+                if let Some(host) = ctx.event_host_permanent() {
+                    let aliased_id = ctx.game.player(host.player).battle_area[host.index as usize]
+                        .top_card()
+                        .card_id(ctx.card_data());
+                    assert_ne!(
+                        aliased_id, "OTHER",
+                        "stale source-trash host handle must not alias a shifted permanent"
+                    );
+                }
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_digivolution_card_trashed_context_carries_host_and_trashed_source() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Source Trash Observer", 3))
+        .add_card(plain_digimon("TOP", "Top", 4))
+        .add_card(plain_digimon("UNDER", "Under", 3))
+        .memory(5)
+        .start();
+    r.register_effect("OBS", Arc::new(SourceTrashObserver));
+
+    r.place_on_field(0, "OBS", None);
+    let host = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER")
+            .unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+
+    let before = r.memory();
+    assert!(
+        r.game_mut().return_to_hand(host).is_some(),
+        "return_to_hand should move TOP to hand and trash UNDER"
+    );
+
+    assert_eq!(r.memory(), before + 1);
+}
+
+#[test]
+fn source_trash_host_context_does_not_alias_shifted_permanent() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Source Trash Observer", 3))
+        .add_card(plain_digimon("TOP", "Top", 4))
+        .add_card(plain_digimon("UNDER", "Under", 3))
+        .add_card(plain_digimon("OTHER", "Other", 3))
+        .memory(5)
+        .start();
+    r.register_effect("OBS", Arc::new(SourceTrashHostAliasGuard));
+
+    let host = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER")
+            .unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+    r.place_on_field(0, "OTHER", None);
+    r.place_on_field(0, "OBS", None);
+
+    let before = r.memory();
+    assert!(r.game_mut().return_to_hand(host).is_some());
+
+    assert_eq!(r.memory(), before + 1);
 }
 
 // ─── TEST-P1-T12 ──────────────────────────────────────────────────────────────

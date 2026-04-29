@@ -161,7 +161,7 @@ Last updated: 2026-04-28
 - **Status:** Fixed for battle-area permanent dispatch on 2026-04-29. `enqueue_from_permanent` now preserves top-card / linked / Training dispatch, then scans below-top `card_sources` and queues only matching `effect.inherited == true` effects with `source_permanent` set to the carrier and `source_card` set to the inherited source card.
 - **Affected cards:** YAML cards with `scope: inherited` and a triggered timing can now fire from below the top card when the relevant event is already dispatched to the carrier permanent's battle-area observer path.
 - **Regression coverage:** `bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn` and `buried_non_inherited_triggered_effect_does_not_fire_from_source_position`.
-- **Remaining limits:** This does not add new event fire sites. Source-trash events, breeding-area dispatch, effect-driven security-removal fan-out, and selection/action-space work remain separate gaps.
+- **Remaining limits:** This does not add new event fire sites. Source-trash paths outside the `Game::return_to_hand` event-payload slice, breeding-area dispatch, effect-driven security-removal fan-out, and selection/action-space work remain separate gaps.
 
 ### `max_per_turn` (Once-Per-Turn) Not Enforced for Triggered Effects  [G-OPT-TRIGGERED]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
@@ -170,7 +170,7 @@ Last updated: 2026-04-28
 - **Effect text:** any clause that combines `[Once Per Turn]` with a non-Main triggered timing (`OnLoseSecurity`, `WhenAttacking`, `OnPlay`, `OnDigivolving`, etc.).
 - **Status:** Fixed for permanent-backed queued triggered effects on 2026-04-29. `run_queued_effect_inner` now checks `Permanent::activation_count(source_card, slot) >= effect.max_per_turn` before processing and records activation before `process`, matching the existing activated field-main timing.
 - **Regression coverage:** `bt21_008_inherited_opt_blocks_second_trigger_same_turn`.
-- **Remaining limits:** This only enforces the existing queued-effect activation counter. It does not add optional prompt/action-space handling, new event payloads, source-trash dispatch, or breeding dispatch.
+- **Remaining limits:** This only enforces the existing queued-effect activation counter. It does not add optional prompt/action-space handling, source-trash paths outside the `Game::return_to_hand` event-payload slice, or breeding dispatch.
 
 ### `EffectTiming::OnMove` for Breeding-to-Battle Movement  [G-ON-MOVE]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)

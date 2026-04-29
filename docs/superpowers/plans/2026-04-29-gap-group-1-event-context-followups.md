@@ -682,7 +682,7 @@ Expected after implementation: PASS.
 - Test: `code/digimon-engine/tests/dsl/phase3d_event_context.rs`
 - Test when cleaner: `code/digimon-engine/tests/cards_behavioral/ex10/ex10_032.rs` or `code/digimon-engine/tests/cards_behavioral/p/p_167.rs`
 
-- [ ] **Step 1: Write the failing host/source context test**
+- [x] **Step 1: Write the failing host/source context test**
 
 Add this test to `code/digimon-engine/tests/timing_dispatch.rs`:
 
@@ -748,7 +748,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch
 
 Expected before implementation: FAIL because source-trash trigger context does not expose both host and trashed source card, or the source-trash helper does not fire the timing.
 
-- [ ] **Step 2: Write the failing DSL trait-filter test**
+- [x] **Step 2: Write the failing DSL trait-filter test**
 
 Add this test to `code/digimon-engine/tests/dsl/phase3d_event_context.rs`:
 
@@ -817,7 +817,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digiv
 
 Expected before implementation: FAIL because `event_card_trait_has` cannot see the trashed source card.
 
-- [ ] **Step 3: Implement source-trash payload threading**
+- [x] **Step 3: Implement source-trash payload threading**
 
 Make these code changes:
 
@@ -832,12 +832,15 @@ Make these code changes:
 
 This slice is proven only for below-top sources trashed by `Game::return_to_hand`. Do not mark `return_to_deck`, `de_digivolve`, `trash_card_source`, `trash_top_source`, Armor Purge, Fragment, Digi-Burst, or cross-permanent source selection complete unless the implementation worker adds separate red/green tests for those paths. Do not add cross-permanent multi-source selection here.
 
-- [ ] **Step 4: Verify the slice**
+Review follow-up: the final implementation snapshots the former host top card as `event_host_card` and validates `event_host_permanent()` before exposing it, because the removed host's old `PermanentHandle` can alias a different permanent after battle-area indices shift. Covered by `source_trash_host_context_does_not_alias_shifted_permanent`.
+
+- [x] **Step 4: Verify the slice**
 
 Run:
 
 ```bash
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_digivolution_card_trashed_context_carries_host_and_trashed_source
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- source_trash_host_context_does_not_alias_shifted_permanent
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolution_card_trashed_event_card_trait_predicate_matches_trashed_source
 ```
 

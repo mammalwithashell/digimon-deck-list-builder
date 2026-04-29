@@ -1,9 +1,9 @@
 use digimon_engine::card_data::{CardData, EvoCost};
-use digimon_engine::card_source::CardHandle;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming, PlaySource};
-use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::permanent::{Permanent, PermanentHandle};
 use digimon_engine::selection::TriggerSource;
 use std::sync::Arc;
 
@@ -155,7 +155,12 @@ effects:
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(yaml)
         .unwrap()
-        .add_card(digimon_card("SEC-VAC", "Security Vaccine", &["Vaccine"], 1000))
+        .add_card(digimon_card(
+            "SEC-VAC",
+            "Security Vaccine",
+            &["Vaccine"],
+            1000,
+        ))
         .add_card(digimon_card("ATTACKER", "Attacker", &["Dragon"], 2000))
         .security(1, &["SEC-VAC"])
         .build();
@@ -339,12 +344,9 @@ effects:
     let target = runner.place_on_field(0, "BASE", None);
     runner.game.enter_main_phase();
 
-    assert!(runner.game.digivolve_from_hand(
-        0,
-        0,
-        target.index as usize,
-        PlaySource::ByDigivolve,
-    ));
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, target.index as usize, PlaySource::ByDigivolve,));
 
     assert_eq!(runner.memory(), 3);
 }
@@ -387,12 +389,9 @@ effects:
     let target = runner.place_on_field(0, "BASE", None);
     runner.game.enter_main_phase();
 
-    assert!(runner.game.digivolve_from_hand(
-        0,
-        0,
-        target.index as usize,
-        PlaySource::ByDigivolve,
-    ));
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, target.index as usize, PlaySource::ByDigivolve,));
 
     assert_eq!(
         runner.effective_dp(target),
@@ -464,7 +463,11 @@ effects:
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(yaml)
         .unwrap()
-        .add_card(option_card("RK-OPTION", "Royal Knight Option", &["Royal Knight"]))
+        .add_card(option_card(
+            "RK-OPTION",
+            "Royal Knight Option",
+            &["Royal Knight"],
+        ))
         .hand(0, &["RK-OPTION"])
         .build();
     runner.register_effect("RK-OPTION", Arc::new(DelayOptionNoop));
@@ -482,6 +485,59 @@ effects:
     );
 
     assert_eq!(runner.memory(), before + 2);
+}
+
+#[test]
+fn on_digivolution_card_trashed_event_card_trait_predicate_matches_trashed_source() {
+    let yaml = r#"
+card: DSL-SOURCE-TRASH-OBS
+name: Source Trash Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolution_card_trashed
+    condition: { event_card_trait_has: Mineral }
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("TOP", "Top", &[], 4000))
+        .add_card(digimon_card(
+            "UNDER-MINERAL",
+            "Under Mineral",
+            &["Mineral"],
+            1000,
+        ))
+        .build();
+    runner.place_on_field(0, "DSL-SOURCE-TRASH-OBS", None);
+    let host = {
+        let g = runner.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER-MINERAL")
+            .unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+
+    assert!(runner.game_mut().return_to_hand(host).is_some());
+
+    assert_eq!(runner.memory(), 3);
 }
 
 struct DeleteSelfThenPlayNext;

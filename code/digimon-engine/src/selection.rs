@@ -320,6 +320,15 @@ pub enum TriggerSource {
         permanent: PermanentHandle,
         card: CardHandle,
     },
+    /// Observer timing fired after a card under a permanent's top card is
+    /// trashed from that digivolution stack. Scans all players' battle areas
+    /// while carrying the former host and trashed source card as event context.
+    SourceTrashedFromStack {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        card: CardHandle,
+    },
 }
 
 /// Transient per-security-check state. Lives on `Game` from the moment the

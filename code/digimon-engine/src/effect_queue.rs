@@ -139,6 +139,21 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::SourceTrashedFromStack { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
         }
     }
 
@@ -329,6 +344,21 @@ impl Game {
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 event_permanent: Some(permanent),
                 event_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::SourceTrashedFromStack {
+                player,
+                host,
+                host_card,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                event_source_card: Some(card),
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
@@ -711,9 +741,8 @@ impl Game {
                 .iter()
                 .take(perm.card_sources.len().saturating_sub(1))
                 .any(|c| c.card_index == qe.source_card.0);
-            let inherited_source_matches = below_top_source_matches
-                && qe.allow_below_top_liveness
-                && effect.inherited;
+            let inherited_source_matches =
+                below_top_source_matches && qe.allow_below_top_liveness && effect.inherited;
             let training_matches = self
                 .players
                 .get(perm_handle.player as usize)
@@ -726,11 +755,7 @@ impl Game {
                     })
                 })
                 .unwrap_or(false);
-            if !top_matches
-                && !linked_matches
-                && !inherited_source_matches
-                && !training_matches
-            {
+            if !top_matches && !linked_matches && !inherited_source_matches && !training_matches {
                 return;
             }
         }

@@ -128,6 +128,25 @@ impl<'a> EffectReadContext<'a> {
             .and_then(|trigger| trigger.event_card)
     }
 
+    pub fn event_source_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_source_card)
+    }
+
+    pub fn event_host_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_host_card)
+    }
+
+    pub fn event_host_permanent(&self) -> Option<PermanentHandle> {
+        self.game.current_trigger_context.and_then(|trigger| {
+            let handle = trigger.event_host_permanent?;
+            live_event_permanent(self.game, handle, trigger.event_host_card)
+        })
+    }
+
     /// Returns `true` if this effect's source card is a Tamer.
     ///
     /// Used by flood-gate discriminators like `CannotGainMemoryExceptFromTamers`
@@ -238,6 +257,22 @@ impl<'a> EffectReadContext<'a> {
         } else {
             None
         }
+    }
+}
+
+fn live_event_permanent(
+    game: &Game,
+    handle: PermanentHandle,
+    expected_card: Option<CardHandle>,
+) -> Option<PermanentHandle> {
+    let card = game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+        .map(|perm| perm.top_card().handle())?;
+    match expected_card {
+        Some(expected_card) if card != expected_card => None,
+        _ => Some(handle),
     }
 }
 
@@ -425,6 +460,25 @@ impl<'a> EffectContext<'a> {
         self.game
             .current_trigger_context
             .and_then(|trigger| trigger.event_card)
+    }
+
+    pub fn event_source_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_source_card)
+    }
+
+    pub fn event_host_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_host_card)
+    }
+
+    pub fn event_host_permanent(&self) -> Option<PermanentHandle> {
+        self.game.current_trigger_context.and_then(|trigger| {
+            let handle = trigger.event_host_permanent?;
+            live_event_permanent(self.game, handle, trigger.event_host_card)
+        })
     }
 
     /// Returns `true` if this effect's source card is a Tamer.

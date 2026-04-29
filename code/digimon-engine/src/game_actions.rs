@@ -228,10 +228,7 @@ impl Game {
         let (hand_card_id, hand_card_handle) = {
             let player = self.player(player_id);
             let card = &player.hand[hand_index];
-            (
-                card.card_id(&self.card_data).to_string(),
-                card.handle(),
-            )
+            (card.card_id(&self.card_data).to_string(), card.handle())
         };
         let field_reduction = self.scan_before_pay_cost_reduction(player_id);
         let hand_reduction = self.scan_before_pay_cost_reduction_for_hand_card(
@@ -1563,13 +1560,17 @@ impl Game {
         // (digivolution stack sources only — not linked_cards which are Tamer
         // equipment and separate semantic category).
         for card in sources {
+            let source_card = card.handle();
             self.player_mut(handle.player).trash.push(card);
-            for pid in 0..self.players.len() {
-                self.enqueue_triggered(
-                    crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                );
-            }
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                crate::selection::TriggerSource::SourceTrashedFromStack {
+                    player: handle.player,
+                    host: handle,
+                    host_card: top_handle,
+                    card: source_card,
+                },
+            );
             self.drain_effect_queue();
         }
         let had_linked = !perm.linked_cards.is_empty();
