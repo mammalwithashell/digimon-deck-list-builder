@@ -271,6 +271,9 @@ pub fn try_install(
                 // Return false so run_steps falls through and the tail runs synchronously.
                 _ => return false,
             };
+            if !has_material_candidates(ctx, perm) {
+                return false;
+            }
             install_select_material(
                 ctx,
                 perm,
@@ -420,6 +423,15 @@ fn has_own_source_candidates(ctx: &EffectContext<'_>) -> bool {
         .battle_area
         .iter()
         .any(|perm| perm.card_sources.len() > 1)
+}
+
+fn has_material_candidates(ctx: &EffectContext<'_>, perm: PermanentHandle) -> bool {
+    ctx.game
+        .player(perm.player)
+        .battle_area
+        .get(perm.index as usize)
+        .map(|p| p.card_sources.len() > 1)
+        .unwrap_or(false)
 }
 
 fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) -> bool {
