@@ -2,7 +2,7 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-04-28
+Last updated: 2026-04-29
 
 ## Resolved Gaps
 
@@ -161,7 +161,7 @@ Last updated: 2026-04-28
 - **Status:** Fixed for battle-area permanent dispatch on 2026-04-29. `enqueue_from_permanent` now preserves top-card / linked / Training dispatch, then scans below-top `card_sources` and queues only matching `effect.inherited == true` effects with `source_permanent` set to the carrier and `source_card` set to the inherited source card.
 - **Affected cards:** YAML cards with `scope: inherited` and a triggered timing can now fire from below the top card when the relevant event is already dispatched to the carrier permanent's battle-area observer path.
 - **Regression coverage:** `bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn` and `buried_non_inherited_triggered_effect_does_not_fire_from_source_position`.
-- **Remaining limits:** This does not add new event fire sites. Source-trash paths outside the `Game::return_to_hand` event-payload slice, breeding-area dispatch, effect-driven security-removal fan-out, and selection/action-space work remain separate gaps.
+- **Remaining limits:** This does not add new event fire sites. Source-trash paths outside the `Game::return_to_hand` event-payload slice, breeding-area dispatch, and effect-driven security-removal fan-out remain separate gaps. Group 2 closed the shared source, DP-budget, breeding-permanent, and empty-tail selection primitives on 2026-04-29.
 
 ### `max_per_turn` (Once-Per-Turn) Not Enforced for Triggered Effects  [G-OPT-TRIGGERED]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
@@ -311,6 +311,7 @@ Last updated: 2026-04-28
 - **Affected pattern:** Any YAML where `as_selecting_player { body: [select_hand, ...] }` is followed by sibling steps, and the opponent may have an empty hand. The sibling steps after `as_selecting_player` are silently skipped in the empty-hand scenario.
 - **Suggested change:** When `install_select_hand` detects `valid_action_ids.is_empty()` and `optional=true`, it should run the callback synchronously with a sentinel `NO_SELECTION` index (or call `drain_dsl_outer_tail` directly) rather than just returning. For `optional=false` with an empty hand, the current silent-skip behavior may be acceptable — but `drain_dsl_outer_tail` should still fire.
 - **Workaround:** Move subsequent steps that must fire unconditionally INSIDE the `as_selecting_player` body (at the cost of tying them to the selection resolution). Steps after the body that require unconditional execution in the empty-hand case cannot be expressed in the current DSL. The BT21-024 empty-hand test is `#[ignore]`'d with this gap tag.
+- **Updated 2026-04-29:** Empty inner selection handling now preserves the outer tail for `select_material` and the new `select_own_sources` path. Covered by `empty_select_material_runs_outer_tail_synchronously` and `empty_select_own_sources_runs_outer_tail_synchronously`. Other legacy selection installers should use the same "no candidates means no park" pattern when they grow empty-candidate tests.
 
 ### Multi-Select of Opponent Battle-Area Permanents with Running DP-Sum Cap  [G-MULTI-SELECT-OPP-DP-SUM]
 - **Discovered in:** Medusamon Batch 10, LM-021 Agumon - Bond of Bravery DSL implementation (2026-04-28)
@@ -320,6 +321,15 @@ Last updated: 2026-04-28
 - **What's missing:** `EffectContext` exposes only single-target selection (`select_opponent_permanent`) and count-capped multi-target selection (`select_count_capped_multi`, which caps by pick count, not by DP sum). There is no primitive for iterative multi-select where each pick reduces a remaining DP budget and the player may stop at any point once they have at least one selection (DCGO: `canEndNotMax: true`, `canTargetConditionByPreSelectedList` with dynamic remainder). The running DP-sum cap requires: (a) tracking cumulative DP of already-selected targets, (b) re-filtering valid candidates after each pick to exclude those whose DP would exceed the remaining budget, and (c) allowing early termination once at least one target is picked. None of these are available in the current selection state machine.
 - **Suggested change:** Add a `select_opponent_permanent_dp_sum(description, self_dp, callback)` method to `EffectContext` that: (1) initializes a `remaining_budget = self_dp`; (2) presents a filtered pick from `opponent.battle_area` where `perm.dp <= remaining_budget`; (3) after each pick, subtracts the picked card's DP from `remaining_budget` and repeats if budget > 0 and valid candidates remain; (4) allows the player to stop picking at any point; (5) calls `callback` once on all selected handles. Alternatively, extend `PendingSelection` with a `DpBudget(u32)` variant that the selection engine drains per-pick.
 - **Workaround:** `raw_rust: { fn: lm_021_delete_dp_sum }` and `raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }` — both fall back to single-pick with a DP <= budget filter. Full multi-pick semantics are deferred until this gap closes.
+- **Updated 2026-04-29:** Resolved for opponent battle-area DP-budget selection. `EffectContext::select_opponent_permanents_by_dp_budget` installs `SelectionKind::DpBudget`, filters remaining affordable targets after each pick, and exposes PASS after `min_picks`. DSL `select_opponent_dp_budget` binds the chosen permanents and `delete_bound_permanents` consumes them. Covered by `dp_budget_selection_tracks_remaining_dp_and_allows_pass_after_min`, `dp_budget_selection_finishes_when_no_targets_fit`, `dp_budget_selection_mask_exposes_only_remaining_affordable_targets`, and `dsl_select_dp_budget_deletes_bound_permanents`.
+
+### Cross-Permanent Rocks Source Selection Resolved  [G-ROCKS-SOURCE-SELECTION-DSL]
+- **Discovered in:** Rocks / RockClose archetype assessment (2026-04-29 follow-up).
+- **Scope:** Rust engine + DSL.
+- **Card(s):** EX10-032 Proganomon, EX10-028 Landramon, EX8-070 Zofr Kabus, EX10-036 Magneticdramon, EX10-033 / EX11-044 / EX8-055 Pyramidimon source-trash bodies.
+- **Status:** Resolved for the shared selection primitive. `EffectContext::select_own_sources` supports exact-N and up-to-N source choices across own battle-area stacks, binds stable `SourceSelectionRef` values, and DSL `trash_selected_sources` consumes those refs without a fake permanent prompt.
+- **Regression coverage:** `source_multi::exact_two_sources_can_be_selected_across_own_battle_area`, `source_multi::up_to_sources_enables_pass_only_after_minimum_is_met`, `source_multi_mask_only_exposes_selecting_players_pending_actions`, `select_own_sources_binds_source_refs_for_trashing`, and `empty_select_own_sources_runs_outer_tail_synchronously`.
+- **Remaining limits:** Triggered-body cost ordering, Fragment / Digi-Burst / replacement integration, and card-specific Rocks bodies remain separate gaps.
 
 ### `IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask  [G-IGNORE-COLOR-MASK]
 - **Discovered in:** Medusamon Batch 11, ST22-08 Offensive Plug-In V DSL implementation (2026-04-27)
@@ -402,7 +412,7 @@ Last updated: 2026-04-28
 - **First test:** place `BT13-007` in player 0 breeding, put one Royal Knight in player 0 battle area, enter main phase, and assert the top digitama plus that Royal Knight are placed under King Drasil while the Royal Knight leaves battle.
 - **Workaround:** None — BLOCKED. Moving King Drasil to battle just to reuse `PlayerBattleArea` would change legal zones and action masks.
 
-### Breeding-Area Pending Selection / Permanent Handles Missing  [G-BREEDING-PERMANENT-SELECTION]
+### Breeding-Area Pending Selection / Permanent Handles  [G-BREEDING-PERMANENT-SELECTION]
 - **Discovered in:** Royal Knights archetype assessment (2026-04-28)
 - **Scope:** Rust engine + DSL.
 - **Card(s):** BT20-083 Omekamon — `[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area.` Also BT13-093 Omekamon, BT13-110 Royal Knights of the Purge, BT13-112 Omnimon, EX11-053 Omekamon, and BT23-072 King Drasil_7D6, all of which target or play cards from a breeding-area King Drasil stack.
@@ -411,6 +421,8 @@ Last updated: 2026-04-28
 - **Suggested change:** Introduce a stable way to address breeding permanents in selections, such as `PermanentHandle::Breeding { player }` or a new `PermanentRef` enum with `BattleArea(PermanentHandle)` and `Breeding(PlayerId)`. Add an action-mask/decoder path for selecting the breeding slot, then update `select_own_permanent` / `select_any_permanent` prefilters to include it when the compiled predicate allows `CompiledZone::Breeding`.
 - **First test:** trigger `BT20-083` On Deletion with a `BT13-007` in breeding and assert a pending selection offers the breeding King Drasil rather than silently doing nothing.
 - **Workaround:** None faithful. Auto-selecting the only breeding permanent hides a gameplay choice and fails when future cards offer multiple legal destinations across battle/breeding zones.
+- **Updated 2026-04-29:** Resolved for pending selection and DSL binding without fake battle-area handles. `EffectContext::select_own_breeding_permanent` installs `SelectionKind::BreedingPermanent`, masks only the phase-scoped breeding selection action (`encode_breeding_select(player)`), and DSL `select_own_breeding_permanent` binds a `BreedingPermanentRef`. Covered by `breeding_permanent_selection_targets_breeding_without_fake_battle_handle`, `breeding_selection_mask_exposes_only_breeding_select_action`, and `dsl_select_breeding_permanent_binds_target`.
+- **Remaining limits:** This does not solve breeding-area trigger fan-out, effect-initiated movement to or from the breeding stack, or source placement under a selected breeding permanent. Those remain under `G-BREEDING-TRIGGER-DISPATCH` and the relevant zone-movement gaps.
 
 ### Option-Placed Observer Timing Missing  [G-OPTION-PLACED-TIMING]
 - **Discovered in:** Royal Knights archetype assessment (2026-04-28)

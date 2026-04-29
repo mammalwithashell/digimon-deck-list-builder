@@ -341,7 +341,7 @@ git commit -m "docs: plan event context followups"
 - Test: `code/digimon-engine/tests/mask_and_tensor/*.rs`
 - Test: `code/digimon-engine/tests/dsl/phase2e_select_material.rs`
 
-- [ ] **Step 1: Create the child plan file**
+- [x] **Step 1: Create the child plan file**
 
 The child plan must start with a scope note:
 
@@ -349,11 +349,11 @@ The child plan must start with a scope note:
 This plan changes shared action/selection internals. Do not run it in parallel with breeding permanent handle work, action-space resizing, or replacement nested-selection work.
 ```
 
-- [ ] **Step 2: Require an action-space decision record**
+- [x] **Step 2: Require an action-space decision record**
 
 The child plan must include a step to document whether new selections reuse existing action ranges or require `ACTION_SPACE_SIZE` changes. If action size changes, the plan must update `docs/ACTION_SPEC.md`, PyO3 constants, and RL env constants in the same implementation slice.
 
-- [ ] **Step 3: Define selection slices**
+- [x] **Step 3: Define selection slices**
 
 Include these slices:
 
@@ -367,7 +367,7 @@ Include these slices:
 7. Empty inner selection continues outer tail.
 ```
 
-- [ ] **Step 4: Require test commands**
+- [x] **Step 4: Require test commands**
 
 Each slice must run:
 
@@ -376,7 +376,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- <s
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor -- <mask_test_name>
 ```
 
-- [ ] **Step 5: Commit the child plan**
+- [x] **Step 5: Commit the child plan**
 
 ```bash
 git add docs/superpowers/plans/2026-04-29-gap-group-2-selection-primitives.md
