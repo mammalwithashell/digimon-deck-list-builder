@@ -110,6 +110,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 **Closed by Phase 1 (2026-04-19):** Both fire sites wired in `digimon-engine` — see `fire_on_enter_field_anyone()` in `code/digimon-engine/src/game_actions.rs` (called after OnPlay from `play_from_hand_with_cost` and `play_from_trash_with_cost`) and `fire_on_any_deletion()` in `code/digimon-engine/src/combat.rs` (called from `delete_permanent_with_effects`). Builders: `Effect::on_enter_field_anyone(card)` and `Effect::on_any_deletion(card)` in `code/digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher and observer timing documentation.
 
+**Updated 2026-04-29 (Task 3):** Normal hand-played battle-area permanents now dispatch `OnEnterFieldAnyone` through `TriggerSource::EnteredField { player, permanent, card }`, preserving the global battle-area observer scan while populating `TriggerContext.event_permanent`, `TriggerContext.event_card`, and `source_player` with the entering permanent/card. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_enter_field_anyone_event_card_trait_predicate_matches_entering_card`. Follow-up paths remain open unless separately tested: effect-created permanents, token play, option placement, play-from-trash context, and breeding-area observer fan-out.
+
 ### Phase-granular turn timings (`StartOfYourTurn`, `StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)

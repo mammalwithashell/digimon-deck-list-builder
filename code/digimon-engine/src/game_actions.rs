@@ -254,6 +254,13 @@ impl Game {
         let perm = crate::permanent::Permanent::new(card, turn);
         player.battle_area.push(perm);
         let field_index = player.battle_area.len() - 1;
+        let entered = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        let entered_card = self.players[player_id as usize].battle_area[field_index]
+            .top_card()
+            .handle();
 
         // Emit Play event: permanent is on field, before OnPlay effects fire.
         let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
@@ -271,13 +278,16 @@ impl Game {
         self.fire_on_play(player_id, field_index);
 
         // OnEnterFieldAnyone: global observer — fires in every player's battle
-        // area after OnPlay resolves. Python mirror: OnEnterFieldAnyone timing.
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::OnEnterFieldAnyone,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-            );
-        }
+        // area after OnPlay resolves, carrying the entering card as event
+        // metadata while preserving observer-source identity.
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnEnterFieldAnyone,
+            crate::selection::TriggerSource::EnteredField {
+                player: player_id,
+                permanent: entered,
+                card: entered_card,
+            },
+        );
         self.drain_effect_queue();
 
         Some(field_index)

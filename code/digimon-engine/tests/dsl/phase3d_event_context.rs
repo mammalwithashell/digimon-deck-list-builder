@@ -369,3 +369,42 @@ effects:
         "observer should not receive its own event_target modifier"
     );
 }
+
+#[test]
+fn on_enter_field_anyone_event_card_trait_predicate_matches_entering_card() {
+    let yaml = r#"
+card: DSL-ENTER-OBS
+name: Enter Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_enter_field_anyone
+    condition: { event_card_trait_has: Royal Knight }
+    process:
+      - gain_memory: 4
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card({
+            let mut card = digimon_card("RK-ENTER", "Royal Knight", &["Royal Knight"], 3000);
+            card.play_cost = 0;
+            card
+        })
+        .hand(1, &["RK-ENTER"])
+        .memory(10)
+        .build();
+    runner.place_on_field(0, "DSL-ENTER-OBS", None);
+
+    let before = runner.memory();
+    assert_eq!(runner.play(1, 0), Some(0));
+
+    assert_eq!(
+        runner.memory(),
+        before + 4,
+        "observer should see the entering card traits through event context"
+    );
+}

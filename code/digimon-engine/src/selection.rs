@@ -304,6 +304,14 @@ pub enum TriggerSource {
         permanent: PermanentHandle,
         card: CardHandle,
     },
+    /// Observer timing fired after a permanent enters the battle area. Scans
+    /// all players' battle areas while carrying the entering permanent/card
+    /// as event context.
+    EnteredField {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
 }
 
 /// Transient per-security-check state. Lives on `Game` from the moment the

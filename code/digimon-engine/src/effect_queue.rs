@@ -109,6 +109,21 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::EnteredField { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
         }
     }
 
@@ -267,6 +282,18 @@ impl Game {
                 ..TriggerContext::default()
             },
             TriggerSource::Digivolved {
+                player,
+                permanent,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(permanent),
+                event_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::EnteredField {
                 player,
                 permanent,
                 card,
