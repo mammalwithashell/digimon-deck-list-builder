@@ -1093,14 +1093,6 @@ git diff --check -- code/digimon-engine/src/enums.rs code/digimon-engine/src/eff
 
 Expected: no output.
 
-- [ ] **Step 4: Commit the implementation slice**
+- [ ] **Step 4: Stop for orchestration handoff**
 
-Run:
-
-```bash
-git status --short
-git add code/digimon-engine/src/enums.rs code/digimon-engine/src/effect.rs code/digimon-engine/src/selection.rs code/digimon-engine/src/trigger_context.rs code/digimon-engine/src/effect_context.rs code/digimon-engine/src/dsl_cards/predicate.rs code/digimon-engine/src/dsl_cards/timing_map.rs code/digimon-engine/src/events.rs code/digimon-engine/src/game_actions.rs code/digimon-engine/src/game_phases.rs code/digimon-engine/src/combat.rs code/digimon-engine/tests/timing_dispatch.rs code/digimon-engine/tests/dsl/phase3d_event_context.rs docs/RUST_ENGINE_GAPS.md qa/archetype-qa/engine-gaps.md qa/dsl-vocab-gaps.md
-git commit -m "feat: wire event context followups"
-```
-
-Expected: commit succeeds with only files from this implementation plan staged. If one of the listed optional files was not changed, omit it from `git add`.
+After the verification commands pass, stop and report the changed files, test results, and any remaining tracker caveats to the orchestrator or user. Commit creation, branch publication, and pull request handling are managed outside this implementation plan.
