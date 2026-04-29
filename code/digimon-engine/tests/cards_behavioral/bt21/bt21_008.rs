@@ -217,6 +217,44 @@ fn bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn() {
     );
 }
 
+#[test]
+fn bt21_008_inherited_top_card_queue_does_not_stay_live_after_moving_below_top() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(ELIZAMON_YAML)
+        .expect("BT21-008 YAML parses")
+        .add_card(make_filler("NEW-TOP"))
+        .memory(0)
+        .start();
+    let handle = runner.place_on_field(0, "BT21-008", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::PlayerBattleArea(handle.player),
+    );
+
+    {
+        let game = runner.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "NEW-TOP")
+            .expect("NEW-TOP registered in card_data");
+        let next = game.next_card_index();
+        let new_top = CardSource::new(data_idx, 0, next);
+        game.players[0].battle_area[handle.index as usize]
+            .card_sources
+            .push(new_top);
+    }
+
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.memory(),
+        0,
+        "inherited effects queued from top-card scan must not gain below-top liveness later"
+    );
+}
+
 /// Negative: during opponent's turn, Elizamon's inherited clause is inactive.
 /// (active_when: { your_turn: true } blocks it.)
 #[test]

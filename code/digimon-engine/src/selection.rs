@@ -249,6 +249,10 @@ pub struct QueuedEffect {
     /// Card ID string, carried so the drainer can re-look-up the effect
     /// from the registry without scanning zones for a matching `CardHandle`.
     pub card_id: String,
+    /// True only for queue entries originally collected from a below-top
+    /// digivolution source scan. Prevents top-card effects from gaining
+    /// source-position liveness after being covered by a later digivolution.
+    pub allow_below_top_liveness: bool,
 }
 
 /// Describes where a trigger is firing from. Consumed by

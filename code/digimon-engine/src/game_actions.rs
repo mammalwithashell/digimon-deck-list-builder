@@ -561,6 +561,7 @@ impl Game {
                 is_optional: effect.optional,
                 is_turn_player,
                 card_id: card_id.to_string(),
+                allow_below_top_liveness: false,
             });
         }
     }
@@ -598,6 +599,7 @@ impl Game {
                 is_optional: effect.optional,
                 is_turn_player,
                 card_id: card_id.to_string(),
+                allow_below_top_liveness: false,
             });
         }
     }

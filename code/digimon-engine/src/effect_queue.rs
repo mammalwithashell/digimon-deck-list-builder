@@ -285,6 +285,7 @@ impl Game {
                 is_optional: effect.optional,
                 is_turn_player,
                 card_id: card_id.clone(),
+                allow_below_top_liveness: false,
             });
         }
     }
@@ -353,6 +354,7 @@ impl Game {
                     is_optional: effect.optional,
                     is_turn_player,
                     card_id: card_id.clone(),
+                    allow_below_top_liveness: false,
                 });
             }
         }
@@ -395,6 +397,7 @@ impl Game {
                     is_optional: effect.optional,
                     is_turn_player,
                     card_id: linked_card_id.clone(),
+                    allow_below_top_liveness: false,
                 });
             }
         }
@@ -481,6 +484,7 @@ impl Game {
                         is_optional: effect.optional,
                         is_turn_player,
                         card_id: training_card_id.clone(),
+                        allow_below_top_liveness: false,
                     });
                 }
             }
@@ -522,6 +526,7 @@ impl Game {
                     is_optional: effect.optional,
                     is_turn_player,
                     card_id: source_card_id.clone(),
+                    allow_below_top_liveness: true,
                 });
             }
         }
@@ -600,7 +605,9 @@ impl Game {
                 .iter()
                 .take(perm.card_sources.len().saturating_sub(1))
                 .any(|c| c.card_index == qe.source_card.0);
-            let inherited_source_matches = below_top_source_matches && effect.inherited;
+            let inherited_source_matches = below_top_source_matches
+                && qe.allow_below_top_liveness
+                && effect.inherited;
             let training_matches = self
                 .players
                 .get(perm_handle.player as usize)
