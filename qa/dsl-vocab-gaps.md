@@ -230,7 +230,7 @@ Format per entry:
 ## EX11-008 — [When Moving] timing (DSL half — see engine-gaps.md for engine half)
 
 - Effect text: "[When Moving] [On Play] 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains <Raid> and +3000 DP for the turn."
-- Status: fixed for the timing token and runtime event context on 2026-04-29. `when: on_move` lowers to `EffectTiming::OnMove`; the runtime dispatch carries the moved permanent/card from breeding-to-battle movement. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_move_event_target_trait_predicate_matches_moved_permanent`.
+- Status: fixed for the timing token and direct runtime event context on 2026-04-29. `when: on_move` lowers to `EffectTiming::OnMove`; `event_target_trait_has` can inspect the moved permanent/card from `TriggerSource::MovedFromBreeding`. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_move_event_target_trait_predicate_matches_moved_permanent`.
 - Remaining DSL work: card-specific bodies still need any additional step verbs/predicates they print, such as EX11-008's target grant body and BT16-082's reveal/add-to-hand/hatch tail.
 - Gap kind: hybrid (this entry tracks the DSL half; engine half tracked separately).
 - First reported: 2026-04-27 (EX11-008 batch-implement-cards-rust-dsl)

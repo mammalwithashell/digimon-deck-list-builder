@@ -101,6 +101,47 @@ effects:
 }
 
 #[test]
+fn event_target_trait_predicate_still_matches_security_attacker() {
+    let yaml = r#"
+card: DSL-EVT-TARGET-TRAIT
+name: Event Target Trait
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_security_check
+    condition: { event_target_trait_has: Dragon }
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("SEC-VAC", "Security Vaccine", &["Vaccine"], 1000))
+        .add_card(digimon_card("ATTACKER", "Attacker", &["Dragon"], 2000))
+        .security(1, &["SEC-VAC"])
+        .build();
+    let observer = runner.place_on_field(1, "DSL-EVT-TARGET-TRAIT", None);
+    let attacker = runner.place_on_field(0, "ATTACKER", None);
+    let revealed = runner.game.players[1].security[0].handle();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnSecurityCheck,
+        TriggerSource::OnSecurityCheck {
+            attacker,
+            defender: observer.player,
+            revealed_card: revealed,
+            was_face_up: false,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.memory(), 3);
+}
+
+#[test]
 fn event_target_binding_resolves_trigger_permanent() {
     let yaml = r#"
 card: DSL-EVT-TARGET
@@ -194,7 +235,7 @@ cost: 0
 dp: 2000
 effects:
   - when: on_move
-    condition: { event_card_trait_has: Rock }
+    condition: { event_target_trait_has: Rock }
     process:
       - gain_memory: 2
 "#;

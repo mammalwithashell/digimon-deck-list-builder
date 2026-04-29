@@ -296,9 +296,6 @@ fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
             return Some(card);
         }
     }
-    if let Some(card) = trigger.event_card {
-        return Some(card);
-    }
     if let Some(handle) = trigger.target_permanent {
         if let Some(card) = rctx
             .game
@@ -310,7 +307,10 @@ fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
             return Some(card);
         }
     }
-    trigger.target_card
+    if let Some(card) = trigger.target_card {
+        return Some(card);
+    }
+    trigger.event_card
 }
 
 fn eval_card_fields(
