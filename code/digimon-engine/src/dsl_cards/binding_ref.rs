@@ -34,10 +34,14 @@ pub fn resolve_binding_ref(
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
         | CompiledBindingRef::OfPermanent(name) => resolve_named(name, bindings),
-        CompiledBindingRef::EventTarget => ctx
-            .game
-            .current_trigger_context
-            .and_then(|t| t.target_permanent.map(ResolvedBinding::Permanent)),
+        CompiledBindingRef::EventTarget => {
+            ctx.game.current_trigger_context.and_then(|t| {
+                t.event_permanent
+                    .or(t.target_permanent)
+                    .map(ResolvedBinding::Permanent)
+                    .or_else(|| t.target_card.or(t.event_card).map(ResolvedBinding::Card))
+            })
+        }
         CompiledBindingRef::EventCard => ctx
             .game
             .current_trigger_context

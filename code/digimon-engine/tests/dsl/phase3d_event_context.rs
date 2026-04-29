@@ -312,3 +312,60 @@ effects:
 
     assert_eq!(runner.memory(), 3);
 }
+
+#[test]
+fn on_digivolve_event_target_binding_resolves_digivolved_permanent() {
+    let yaml = r#"
+card: DSL-DIGI-BIND
+name: Digivolve Binder
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolve
+    process:
+      - add_dp_modifier:
+          target: event_target
+          value: 1000
+          expiry: end_of_turn
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BASE", "Base", &[], 1000))
+        .add_card({
+            let mut card = digimon_card("EVO-TARGET", "Target Evo", &[], 3000);
+            card.level = Some(4);
+            card.evo_costs = vec![EvoCost {
+                card_color: CardColor::Red as u8,
+                level: 3,
+                memory_cost: 0,
+            }];
+            card
+        })
+        .hand(0, &["EVO-TARGET"])
+        .build();
+    let observer = runner.place_on_field(0, "DSL-DIGI-BIND", None);
+    let target = runner.place_on_field(0, "BASE", None);
+    runner.game.enter_main_phase();
+
+    assert!(runner.game.digivolve_from_hand(
+        0,
+        0,
+        target.index as usize,
+        PlaySource::ByDigivolve,
+    ));
+
+    assert_eq!(
+        runner.effective_dp(target),
+        Some(4000),
+        "event_target should bind to the just-digivolved permanent"
+    );
+    assert_eq!(
+        runner.effective_dp(observer),
+        Some(2000),
+        "observer should not receive its own event_target modifier"
+    );
+}
