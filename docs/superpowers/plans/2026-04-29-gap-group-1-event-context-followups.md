@@ -1073,7 +1073,7 @@ Expected: no output.
 **Files:**
 - All source, test, and tracker files touched by the implementation worker.
 
-- [ ] **Step 1: Run the event-context targeted test suite**
+- [x] **Step 1: Run the event-context targeted test suite**
 
 Run:
 
@@ -1088,7 +1088,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_co
 
 Expected after implementation: all commands PASS.
 
-- [ ] **Step 2: Run action/tensor contract review commands**
+- [x] **Step 2: Run action/tensor contract review commands**
 
 Run:
 
@@ -1099,7 +1099,7 @@ Select-String -Path 'code/digimon-engine/src/action/space.rs','code/digimon-engi
 
 Expected: no diff to `docs/ACTION_SPEC.md` or `docs/TENSOR_SPEC.md`; constants remain `ACTION_SPACE_SIZE = 2168` and `TENSOR_SIZE = 1375`.
 
-- [ ] **Step 3: Run whitespace diff check for the implementation**
+- [x] **Step 3: Run whitespace diff check for the implementation**
 
 Run with the actual files changed:
 
@@ -1109,6 +1109,6 @@ git diff --check -- code/digimon-engine/src/enums.rs code/digimon-engine/src/eff
 
 Expected: no output.
 
-- [ ] **Step 4: Stop for orchestration handoff**
+- [x] **Step 4: Stop for orchestration handoff**
 
 After the verification commands pass, stop and report the changed files, test results, and any remaining tracker caveats to the orchestrator or user. Commit creation, branch publication, and pull request handling are managed outside this implementation plan.
