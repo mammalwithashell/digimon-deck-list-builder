@@ -1,6 +1,7 @@
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
 fn digimon_card(id: &str, name: &str, traits: &[&str], dp: i32) -> CardData {
@@ -179,4 +180,48 @@ effects:
             .contains(&revealed.0),
         "event_card binding should let the observer mark the revealed card face-up"
     );
+}
+
+#[test]
+fn on_move_event_target_trait_predicate_matches_moved_permanent() {
+    let yaml = r#"
+card: DSL-MOVE-OBS
+name: Move Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_move
+    condition: { event_card_trait_has: Rock }
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BABY-ROCK", "Rock Baby", &["Rock"], 1000))
+        .build();
+    let observer = runner.place_on_field(0, "DSL-MOVE-OBS", None);
+    let moved = runner.place_on_field(0, "BABY-ROCK", None);
+    let event_card = runner.game.players[moved.player as usize].battle_area[moved.index as usize]
+        .top_card()
+        .handle();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnMove,
+        TriggerSource::MovedFromBreeding {
+            player: 0,
+            permanent: PermanentHandle {
+                player: moved.player,
+                index: moved.index,
+            },
+            card: event_card,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.memory(), 2);
+    assert_eq!(observer.player, 0);
 }

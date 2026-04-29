@@ -221,6 +221,9 @@ pub enum EffectTiming {
     /// Fires when a Digimon is hatched from the breeding area into the
     /// battle area. Observer timing for the hatching player's permanents.
     OnHatch,
+    /// Fires when a breeding-area Digimon moves into the battle area.
+    /// Observer timing for the moving player's battle area.
+    OnMove,
 
     // Cost/play modification
     BeforePayCost,

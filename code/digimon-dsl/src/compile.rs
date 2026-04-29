@@ -125,6 +125,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnSuspend => CompiledTiming::OnSuspend,
         S::OnUnsuspend => CompiledTiming::OnUnsuspend,
         S::OnHatch => CompiledTiming::OnHatch,
+        S::OnMove => CompiledTiming::OnMove,
         S::OnDigivolve => CompiledTiming::OnDigivolve,
         S::OnDnaDigivolve => CompiledTiming::OnDnaDigivolve,
         S::OnDigixros => CompiledTiming::OnDigixros,

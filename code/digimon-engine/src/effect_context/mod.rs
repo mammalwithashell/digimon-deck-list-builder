@@ -116,6 +116,18 @@ impl<'a> EffectReadContext<'a> {
         player.battle_area.get(h.index as usize)
     }
 
+    pub fn event_permanent(&self) -> Option<PermanentHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_permanent)
+    }
+
+    pub fn event_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_card)
+    }
+
     /// Returns `true` if this effect's source card is a Tamer.
     ///
     /// Used by flood-gate discriminators like `CannotGainMemoryExceptFromTamers`
@@ -401,6 +413,18 @@ impl<'a> EffectContext<'a> {
         let h = self.source_permanent?;
         let player = self.game.player(h.player);
         player.battle_area.get(h.index as usize)
+    }
+
+    pub fn event_permanent(&self) -> Option<PermanentHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_permanent)
+    }
+
+    pub fn event_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_card)
     }
 
     /// Returns `true` if this effect's source card is a Tamer.

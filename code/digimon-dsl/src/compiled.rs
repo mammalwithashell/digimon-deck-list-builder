@@ -416,6 +416,7 @@ pub enum CompiledTiming {
     OnSuspend,
     OnUnsuspend,
     OnHatch,
+    OnMove,
     OnDigivolve,
     OnDnaDigivolve,
     OnDigixros,

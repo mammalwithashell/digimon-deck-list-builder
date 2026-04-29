@@ -21,6 +21,7 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnSuspend => EffectTiming::OnSuspend,
         CompiledTiming::OnUnsuspend => EffectTiming::OnUnsuspend,
         CompiledTiming::OnHatch => EffectTiming::OnHatch,
+        CompiledTiming::OnMove => EffectTiming::OnMove,
         CompiledTiming::OnDigivolve => EffectTiming::OnDigivolve,
         CompiledTiming::OnDnaDigivolve => EffectTiming::OnDnaDigivolve,
         CompiledTiming::OnDigixros => EffectTiming::OnDigiXros,

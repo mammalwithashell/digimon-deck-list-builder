@@ -62,6 +62,9 @@ fn new_effect_timings_are_constructible() {
     let e = Effect::on_hatch(card).build();
     assert_eq!(e.timing, EffectTiming::OnHatch);
 
+    let e = Effect::on_move(card).build();
+    assert_eq!(e.timing, EffectTiming::OnMove);
+
     let e = Effect::on_opponent_security_removed(card).build();
     assert_eq!(e.timing, EffectTiming::OnOpponentSecurityRemoved);
 
@@ -721,6 +724,44 @@ fn on_hatch_fires_when_egg_hatches() {
         before,
         r.memory()
     );
+}
+
+struct OnMoveObserver;
+impl CardEffect for OnMoveObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_move(card)
+            .name("OnMove observer gains memory")
+            .condition(|ctx| ctx.event_permanent().is_some())
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
+
+#[test]
+fn on_move_fires_after_breeding_permanent_moves_to_battle() {
+    let mut baby = plain_digimon("BABY", "Baby", 0);
+    baby.level = Some(2);
+
+    let filler: Vec<&str> = vec!["FILLER"; 5];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Move Observer", 3))
+        .add_card(baby)
+        .add_card(plain_digimon("FILLER", "Filler", 1))
+        .hand(0, &["OBS"])
+        .digitama(0, &["BABY"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(OnMoveObserver));
+
+    assert_eq!(r.play(0, 0), Some(0));
+    assert!(r.game.hatch(0), "hatch BABY into breeding");
+
+    let before = r.memory();
+    assert!(r.game.move_from_breeding(0), "breeding permanent should move");
+
+    assert_eq!(r.memory(), before + 1);
 }
 
 // ─── TEST-P1-T12 ──────────────────────────────────────────────────────────────

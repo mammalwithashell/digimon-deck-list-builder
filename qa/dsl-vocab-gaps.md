@@ -163,7 +163,7 @@ Format per entry:
 - Assessment target: the `Rocks` / `RockClose` archetype in `data/deck_library.json`, refreshed on 2026-04-28.
 - Finding: only `BT14-009`, `BT16-082`, `EX7-074`, and `P-206` currently have Rust YAML under `code/digimon-engine/cards/`; the main `EX8`/`EX10`/`EX11`/`P-167` Rocks shell is not authored in DSL yet.
 - Existing DSL gaps reaffirmed by the refresh:
-  - `EX11-008 — [When Moving] timing` also blocks `BT16-082`, `EX11-038`, and `P-215`-style Rocks effects until the DSL has a real `on_move`/`when_moving` token.
+  - `EX11-008 — [When Moving] timing` no longer blocks on the `on_move` token or moved-card event context as of 2026-04-29; card bodies may still need separate target-selection, reveal, or follow-up action primitives.
   - `P-189 — play cost <= filter` also blocks `P-206` and `EX7-074` security selections.
   - `P-206 — Board-color cross-reference predicate` remains the specific blocker for `P-206` Delay filtering.
   - `P-107 — place_self_as_delay_option` remains relevant to `P-107`, `P-039`, `BT23-096`, and related Delay/security disposition effects.
@@ -230,9 +230,8 @@ Format per entry:
 ## EX11-008 — [When Moving] timing (DSL half — see engine-gaps.md for engine half)
 
 - Effect text: "[When Moving] [On Play] 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains <Raid> and +3000 DP for the turn."
-- Missing DSL verb / step kind / predicate: `[When Moving]` (DCGO `EffectTiming.OnMove`) has no DSL `when:` token. The closest existing token `on_hatch` fires for permanents already on field when an egg moves digitama→breeding — different timing.
-- Lowers to engine API: needs new `EffectTiming::OnMove` variant in Rust (engine gap — see `qa/archetype-qa/engine-gaps.md`) AND a DSL token mapping to it.
-- Suggested DSL syntax: `when: [on_move, on_play]` (new `on_move` token in the DSL `when` enum).
+- Status: fixed for the timing token and runtime event context on 2026-04-29. `when: on_move` lowers to `EffectTiming::OnMove`; the runtime dispatch carries the moved permanent/card from breeding-to-battle movement. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_move_event_target_trait_predicate_matches_moved_permanent`.
+- Remaining DSL work: card-specific bodies still need any additional step verbs/predicates they print, such as EX11-008's target grant body and BT16-082's reveal/add-to-hand/hatch tail.
 - Gap kind: hybrid (this entry tracks the DSL half; engine half tracked separately).
 - First reported: 2026-04-27 (EX11-008 batch-implement-cards-rust-dsl)
 

@@ -95,6 +95,7 @@ pub enum Timing {
     OnSuspend,
     OnUnsuspend,
     OnHatch,
+    OnMove,
     OnDigivolve,
     OnDnaDigivolve,
     #[serde(rename = "on_digixros")]

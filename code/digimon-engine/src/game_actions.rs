@@ -75,6 +75,26 @@ impl Game {
         }
         if let Some(perm) = player.breeding_area.take() {
             player.battle_area.push(perm);
+            let moved_handle = PermanentHandle {
+                player: player_id,
+                index: (player.battle_area.len() - 1) as u8,
+            };
+            let moved_card = player
+                .battle_area
+                .last()
+                .map(|permanent| permanent.top_card().handle());
+
+            if let Some(card) = moved_card {
+                self.enqueue_triggered(
+                    EffectTiming::OnMove,
+                    TriggerSource::MovedFromBreeding {
+                        player: player_id,
+                        permanent: moved_handle,
+                        card,
+                    },
+                );
+                self.drain_effect_queue();
+            }
 
             // Phase 8 Task 5: trash every Training permanent the owner
             // controls. Collect handles, then process in reverse so each

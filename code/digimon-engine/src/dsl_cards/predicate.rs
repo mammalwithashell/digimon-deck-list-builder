@@ -285,6 +285,20 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
 
 fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
     let trigger = rctx.game.current_trigger_context?;
+    if let Some(handle) = trigger.event_permanent {
+        if let Some(card) = rctx
+            .game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.top_card().handle())
+        {
+            return Some(card);
+        }
+    }
+    if let Some(card) = trigger.event_card {
+        return Some(card);
+    }
     if let Some(handle) = trigger.target_permanent {
         if let Some(card) = rctx
             .game

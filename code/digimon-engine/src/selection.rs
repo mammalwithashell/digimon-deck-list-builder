@@ -288,6 +288,14 @@ pub enum TriggerSource {
         revealed_card: CardHandle,
         was_face_up: bool,
     },
+    /// Observer timing fired after a breeding-area permanent moves to the
+    /// battle area. Scans the moving player's battle area while carrying the
+    /// moved permanent/card as event context.
+    MovedFromBreeding {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
 }
 
 /// Transient per-security-check state. Lives on `Game` from the moment the

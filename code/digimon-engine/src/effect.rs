@@ -311,6 +311,11 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnHatch)
     }
 
+    /// Fires when a breeding-area Digimon moves into the battle area.
+    pub fn on_move(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnMove)
+    }
+
     /// Fires when an opponent's security card is removed from their security stack.
     /// Medusamon core archetype observer.
     pub fn on_opponent_security_removed(card: CardHandle) -> EffectBuilder {
