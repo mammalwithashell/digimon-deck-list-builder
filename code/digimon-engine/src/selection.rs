@@ -58,6 +58,20 @@ impl std::ops::BitOrAssign for UnionZoneSet {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SourceSelectionRef {
+    pub permanent: PermanentHandle,
+    pub field_index: u8,
+    pub source_index: u8,
+    pub card: CardHandle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct BreedingPermanentSelectionRef {
+    pub player: PlayerId,
+    pub card: CardHandle,
+}
+
 /// Called when a selection resolves with a concrete action ID.
 pub type SelectionCallback = Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
 
@@ -116,6 +130,12 @@ pub enum SelectionKind {
     /// EffectChoice action range (accept) + PASS (decline). `valid_action_ids`
     /// holds exactly one ACCEPT entry; `is_optional = true` admits PASS.
     Replacement,
+    /// Pick source cards across one or more own battle-area permanents.
+    SourceMulti { min: u8, max: u8, picked: u8 },
+    /// Pick opponent permanents whose total DP is capped by a remaining budget.
+    DpBudget { remaining_dp: i32, picked: u8 },
+    /// Pick the selecting player's breeding-area permanent.
+    BreedingPermanent,
 }
 
 /// One branch of a `SelectionKind::EffectChoice` prompt.

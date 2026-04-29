@@ -16,6 +16,8 @@ mod selections;
 
 pub use selections::{CountCappedZone, DistinctByMode, EffectContextSelectorScope};
 
+pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
+
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;

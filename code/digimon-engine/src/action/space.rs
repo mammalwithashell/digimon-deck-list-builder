@@ -122,6 +122,14 @@ pub fn decode_source_select(action: u16) -> (u16, u16) {
     (field, source)
 }
 
+/// Encode a source selection from (field_index, source_index).
+pub fn encode_source_select(field: u16, source: u16) -> Option<u16> {
+    if field >= MAX_FIELD_SLOTS || source >= SOURCES_PER_FIELD {
+        return None;
+    }
+    Some(SOURCE_SELECT_START + field * SOURCES_PER_FIELD + source)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

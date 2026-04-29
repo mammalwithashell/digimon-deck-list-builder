@@ -42,7 +42,17 @@ pub struct DebugRunner {
     compiled_cards: HashMap<String, Arc<CompiledCard>>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DebugBreedingPermanent {
+    pub player: PlayerId,
+    pub card: crate::card_source::CardHandle,
+}
+
 impl DebugRunner {
+    pub fn new() -> Self {
+        Self::builder().start()
+    }
+
     pub fn builder() -> DebugRunnerBuilder {
         DebugRunnerBuilder::default()
     }
@@ -138,6 +148,68 @@ impl DebugRunner {
             player,
             index: index as u8,
         }
+    }
+
+    pub fn place_stack(&mut self, player: PlayerId, card_ids: &[&str]) -> PermanentHandle {
+        assert!(
+            !card_ids.is_empty(),
+            "place_stack requires at least one card id"
+        );
+        let top_id = card_ids[card_ids.len() - 1];
+        let handle = self.place_on_field(player, top_id, Some(0));
+
+        let mut source_cards = Vec::new();
+        for card_id in &card_ids[..card_ids.len() - 1] {
+            let data_idx = self
+                .game
+                .card_data
+                .iter()
+                .position(|c| c.card_id == *card_id)
+                .unwrap_or_else(|| panic!("place_stack: unknown card_id {}", card_id));
+            let next_idx = self.game.next_card_index();
+            let mut card = CardSource::new(data_idx, player, next_idx);
+            card.card_index = next_idx;
+            source_cards.push(card);
+        }
+
+        let perm = self.game.players[player as usize]
+            .battle_area
+            .get_mut(handle.index as usize)
+            .expect("fresh permanent exists");
+        let top = perm.card_sources.pop().expect("top card exists");
+        perm.card_sources.extend(source_cards);
+        perm.card_sources.push(top);
+        handle
+    }
+
+    pub fn place_in_breeding(
+        &mut self,
+        player: PlayerId,
+        card_id: &str,
+    ) -> DebugBreedingPermanent {
+        let handle = self.place_on_field(player, card_id, Some(0));
+        let perm = self.game.players[player as usize]
+            .battle_area
+            .remove(handle.index as usize);
+        let card = perm.top_card().handle();
+        self.game.players[player as usize].breeding_area = Some(perm);
+        DebugBreedingPermanent { player, card }
+    }
+
+    pub fn force_base_dp(&mut self, card_id: &str, dp: i32) {
+        let card = self
+            .game
+            .card_data
+            .iter_mut()
+            .find(|c| c.card_id == card_id)
+            .unwrap_or_else(|| panic!("force_base_dp: unknown card_id {}", card_id));
+        card.dp = Some(dp);
+    }
+
+    pub fn top_card(&self, handle: PermanentHandle) -> crate::card_source::CardHandle {
+        self.game.players[handle.player as usize].battle_area[handle.index as usize]
+            .top_card()
+            .handle()
     }
 
     /// Attack a Digimon. `vortex=false` for the vast majority of tests;
