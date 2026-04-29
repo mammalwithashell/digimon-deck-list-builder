@@ -1,8 +1,11 @@
 use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
+use std::sync::Arc;
 
 fn digimon_card(id: &str, name: &str, traits: &[&str], dp: i32) -> CardData {
     CardData {
@@ -406,5 +409,66 @@ effects:
         runner.memory(),
         before + 4,
         "observer should see the entering card traits through event context"
+    );
+}
+
+struct DeleteSelfThenPlayNext;
+
+impl CardEffect for DeleteSelfThenPlayNext {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Delete self then play next card")
+            .process(|ctx| {
+                if let Some(handle) = ctx.source_permanent {
+                    ctx.delete_permanent(handle);
+                }
+                let _ = ctx.play_from_hand_free(ctx.player, 0);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_enter_field_event_target_trait_uses_event_card_when_entered_handle_is_stale() {
+    let yaml = r#"
+card: DSL-ENTER-STALE-OBS
+name: Enter Stale Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_enter_field_anyone
+    condition: { event_target_trait_has: Royal Knight }
+    process:
+      - gain_memory: 5
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card({
+            let mut card = digimon_card("SELF-ROYAL", "Self Royal", &["Royal Knight"], 3000);
+            card.play_cost = 0;
+            card
+        })
+        .add_card({
+            let mut card = digimon_card("DECOY", "Decoy", &[], 1000);
+            card.play_cost = 0;
+            card
+        })
+        .hand(1, &["SELF-ROYAL", "DECOY"])
+        .memory(10)
+        .build();
+    runner.register_effect("SELF-ROYAL", Arc::new(DeleteSelfThenPlayNext));
+    runner.place_on_field(0, "DSL-ENTER-STALE-OBS", None);
+
+    let before = runner.memory();
+    assert_eq!(runner.play(1, 0), Some(0));
+
+    assert_eq!(
+        runner.memory(),
+        before + 5,
+        "event_target_trait_has should not inspect a different permanent through a stale event_permanent handle"
     );
 }
