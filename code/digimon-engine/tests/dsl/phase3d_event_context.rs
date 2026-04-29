@@ -1,6 +1,6 @@
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
@@ -265,4 +265,50 @@ effects:
 
     assert_eq!(runner.memory(), 2);
     assert_eq!(observer.player, 0);
+}
+
+#[test]
+fn on_digivolve_event_card_trait_predicate_matches_new_top_card() {
+    let yaml = r#"
+card: DSL-DIGI-OBS
+name: Digivolve Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolve
+    condition: { event_card_trait_has: Mineral }
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BASE", "Base", &[], 1000))
+        .add_card({
+            let mut card = digimon_card("EVO-MINERAL", "Mineral Evo", &["Mineral"], 3000);
+            card.level = Some(4);
+            card.evo_costs = vec![EvoCost {
+                card_color: CardColor::Red as u8,
+                level: 3,
+                memory_cost: 0,
+            }];
+            card
+        })
+        .hand(0, &["EVO-MINERAL"])
+        .build();
+    runner.place_on_field(0, "DSL-DIGI-OBS", None);
+    let target = runner.place_on_field(0, "BASE", None);
+    runner.game.enter_main_phase();
+
+    assert!(runner.game.digivolve_from_hand(
+        0,
+        0,
+        target.index as usize,
+        PlaySource::ByDigivolve,
+    ));
+
+    assert_eq!(runner.memory(), 3);
 }

@@ -9,6 +9,7 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming, PlaySource};
+use digimon_engine::events::GameEvent;
 use std::sync::Arc;
 
 fn dummy() -> CardHandle {
@@ -804,6 +805,52 @@ fn lv4_digimon(card_id: &str, name: &str) -> CardData {
         index: 0,
         norm_id: 0.0,
     }
+}
+
+fn zero_cost_evo_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    let mut card = plain_digimon(card_id, name, 0);
+    card.level = Some(4);
+    card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost: 0,
+    }];
+    card
+}
+
+#[test]
+fn game_event_digivolve_is_emitted_with_new_top_card_and_field_index() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BASE", "Base", 3))
+        .add_card(zero_cost_evo_card("EVO", "Evolution", &[]))
+        .hand(0, &["EVO"])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "BASE", None);
+    r.game.enter_main_phase();
+
+    let checkpoint = r.event_checkpoint();
+    assert!(r
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve));
+
+    let events = r.events_since(checkpoint);
+    assert!(
+        events.iter().any(|event| matches!(
+            event,
+            GameEvent::Digivolve {
+                player: 0,
+                top_card_id,
+                field_index,
+                from_stack_top,
+                ..
+            } if top_card_id == "EVO"
+                && *field_index == base.index
+                && from_stack_top == "BASE"
+        )),
+        "digivolve should emit a GameEvent::Digivolve containing new top card and previous stack top"
+    );
 }
 
 #[test]

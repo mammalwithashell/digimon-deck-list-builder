@@ -296,6 +296,14 @@ pub enum TriggerSource {
         permanent: PermanentHandle,
         card: CardHandle,
     },
+    /// Observer timing fired after a battle-area permanent digivolves. Scans
+    /// battle areas while carrying the just-digivolved permanent/card as
+    /// event context.
+    Digivolved {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
 }
 
 /// Transient per-security-check state. Lives on `Game` from the moment the

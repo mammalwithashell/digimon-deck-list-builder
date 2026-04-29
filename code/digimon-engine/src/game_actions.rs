@@ -1762,6 +1762,8 @@ impl Game {
             ));
             return false;
         }
+        let from_stack_top = perm.top_card().card_id(&self.card_data).to_string();
+        let top_card_id = card.card_id(&self.card_data).to_string();
 
         let base_level = perm.top_card().level(&self.card_data).unwrap();
         let base_colors = perm.top_card().colors(&self.card_data);
@@ -1792,6 +1794,21 @@ impl Game {
         let turn = self.turn_count;
         let removed = self.player_mut(player_id).hand.remove(hand_index);
         self.player_mut(player_id).battle_area[field_index].digivolve(removed, turn);
+        let event_card = self
+            .player(player_id)
+            .battle_area
+            .get(field_index)
+            .map(|perm| perm.top_card().handle())
+            .expect("digivolve target remains in battle area after stack mutation");
+
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Digivolve {
+            seq,
+            player: player_id,
+            top_card_id,
+            field_index: field_index as u8,
+            from_stack_top,
+        });
 
         self.player_mut(player_id).draw();
 
@@ -1804,12 +1821,14 @@ impl Game {
         // OnDigivolve: global observer — fires in every player's battle area
         // after the evolving permanent's WhenDigivolving resolves. Distinct
         // from WhenDigivolving (self-timing on the evolving permanent).
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnDigivolve,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
+        self.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: player_id,
+                permanent: handle,
+                card: event_card,
+            },
+        );
         self.drain_effect_queue();
 
         self.check_turn_end();
