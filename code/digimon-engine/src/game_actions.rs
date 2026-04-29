@@ -724,6 +724,9 @@ impl Game {
                     },
                 );
                 self.drain_effect_queue();
+                if self.pending_selection.is_some() {
+                    self.pending_option_placed_turn_check = true;
+                }
             }
             OptionSubtype::Link => {
                 // Phase 8 Task 4: evaluate link_filter against every
@@ -986,6 +989,17 @@ impl Game {
                 }
             }
         }
+    }
+
+    pub(crate) fn finish_pending_option_placed_turn_check(&mut self) {
+        if !self.pending_option_placed_turn_check {
+            return;
+        }
+        if self.pending_selection.is_some() || !self.effect_queue.is_empty() {
+            return;
+        }
+        self.pending_option_placed_turn_check = false;
+        self.check_turn_end();
     }
 
     /// Move a specific card from `player`'s deck to their hand. Returns false

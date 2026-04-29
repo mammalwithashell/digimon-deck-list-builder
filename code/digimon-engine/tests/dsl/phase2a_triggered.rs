@@ -38,16 +38,16 @@ fn compiled_timing_mapping_covers_common_triggered_timings() {
         compiled_timing_to_engine(CompiledTiming::BeforePayCost),
         Some(EffectTiming::BeforePayCost)
     );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnOptionPlaced),
+        Some(EffectTiming::OnOptionPlaced)
+    );
 }
 
 #[test]
 fn compiled_timing_non_targets_return_none() {
     assert_eq!(
         compiled_timing_to_engine(CompiledTiming::OnAllyPlayed),
-        None
-    );
-    assert_eq!(
-        compiled_timing_to_engine(CompiledTiming::OnOptionPlaced),
         None
     );
     assert_eq!(compiled_timing_to_engine(CompiledTiming::Delayed), None);

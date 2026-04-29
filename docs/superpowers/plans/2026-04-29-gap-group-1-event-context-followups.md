@@ -498,7 +498,7 @@ Expected after implementation: PASS for the new DSL test and existing enter-fiel
 - Test: `code/digimon-engine/tests/timing_dispatch.rs`
 - Test: `code/digimon-engine/tests/dsl/phase3d_event_context.rs`
 
-- [ ] **Step 1: Write the failing timing constructor/dispatch test**
+- [x] **Step 1: Write the failing timing constructor/dispatch test**
 
 Add this test to `code/digimon-engine/tests/timing_dispatch.rs`:
 
@@ -583,7 +583,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch
 
 Expected before implementation: FAIL because `EffectTiming::OnOptionPlaced`, builder support, timing lowerer, or dispatch after placement is missing.
 
-- [ ] **Step 2: Write the failing DSL trait-filter test**
+- [x] **Step 2: Write the failing DSL trait-filter test**
 
 Add this test to `code/digimon-engine/tests/dsl/phase3d_event_context.rs`:
 
@@ -644,7 +644,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_optio
 
 Expected before implementation: FAIL because `when: on_option_placed` does not map to a dispatchable engine timing with option-card payload.
 
-- [ ] **Step 3: Implement option placement timing**
+- [x] **Step 3: Implement option placement timing**
 
 Make these code changes:
 
@@ -659,7 +659,7 @@ Make these code changes:
 
 This slice is proven only for Delay-style option placement through `Game::play_option_from_hand`. Do not route transient options that immediately resolve to trash through this timing unless a separate red/green test proves the engine explicitly represents them as placed battle-area option permanents.
 
-- [ ] **Step 4: Verify the slice**
+- [x] **Step 4: Verify the slice**
 
 Run:
 

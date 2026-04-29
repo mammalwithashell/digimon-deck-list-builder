@@ -1007,6 +1007,9 @@ impl Game {
         if self.pending_selection.is_none() {
             self.advance_pending_option();
         }
+        if self.pending_selection.is_none() {
+            self.finish_pending_option_placed_turn_check();
+        }
         Ok(())
     }
 
@@ -1039,7 +1042,9 @@ impl Game {
                 // Delay → park on field (Task 3). Link / Training land in
                 // Tasks 4-5 via the same dispatcher.
                 self.dispose_option();
-                self.check_turn_end();
+                if self.pending_selection.is_none() {
+                    self.check_turn_end();
+                }
             }
             crate::selection::OptionResolutionPhase::LinkSelectHost => {
                 // Unwind happens in install_link_host_selection's callback

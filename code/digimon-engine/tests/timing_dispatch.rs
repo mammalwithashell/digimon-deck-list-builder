@@ -132,14 +132,14 @@ fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
     }
 }
 
-fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+fn option_card_with_cost(card_id: &str, name: &str, play_cost: u16, traits: &[&str]) -> CardData {
     CardData {
         card_id: card_id.to_string(),
         card_name: name.to_string(),
         card_kind: CardKind::Option,
         level: None,
         dp: None,
-        play_cost: 0,
+        play_cost,
         colors: vec![CardColor::Red],
         traits: traits.iter().map(|t| t.to_string()).collect(),
         evo_costs: Vec::new(),
@@ -152,6 +152,10 @@ fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
         index: 0,
         norm_id: 0.0,
     }
+}
+
+fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    option_card_with_cost(card_id, name, 0, traits)
 }
 
 // ─── TEST-P1-T2 ───────────────────────────────────────────────────────────────
@@ -814,6 +818,17 @@ impl CardEffect for OnOptionPlacedObserver {
     }
 }
 
+struct OnOptionPlacedNoopObserver;
+impl CardEffect for OnOptionPlacedNoopObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_option_placed(card)
+            .name("Option placed noop observer")
+            .condition(|ctx| ctx.event_card().is_some())
+            .process(|_ctx| {})
+            .build()]
+    }
+}
+
 #[test]
 fn on_option_placed_fires_after_delay_option_enters_battle_area() {
     let mut r = DebugRunner::builder()
@@ -838,6 +853,67 @@ fn on_option_placed_fires_after_delay_option_enters_battle_area() {
     );
 
     assert_eq!(r.memory(), before + 1);
+}
+
+#[test]
+fn delay_option_cost_crossing_turn_ends_after_on_option_placed_selection_resolves() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS-A", "Observer A", 0))
+        .add_card(plain_digimon("OBS-B", "Observer B", 0))
+        .add_card(option_card_with_cost(
+            "OPT-DELAY-COST",
+            "Delay Option Cost",
+            3,
+            &[],
+        ))
+        .hand(0, &["OBS-A", "OBS-B", "OPT-DELAY-COST"])
+        .memory(1)
+        .start();
+    r.register_effect("OBS-A", Arc::new(OnOptionPlacedNoopObserver));
+    r.register_effect("OBS-B", Arc::new(OnOptionPlacedNoopObserver));
+    r.register_effect("OPT-DELAY-COST", Arc::new(DelayOptionNoop));
+
+    assert_eq!(r.play(0, 0), Some(0));
+    assert_eq!(r.play(0, 0), Some(1));
+    r.game.enter_main_phase();
+
+    let result = r.game.play_option_from_hand(0, 0);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "two OnOptionPlaced observers should ask for trigger order"
+    );
+    assert_eq!(
+        r.game.turn_player(),
+        0,
+        "turn should not pass until the placed-option observer selection settles"
+    );
+    assert_eq!(
+        result,
+        digimon_engine::selection::OptionPlayResult::Pending,
+        "option play should pause on the trigger-order selection"
+    );
+
+    let (selecting_player, action_id) = {
+        let selection = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("trigger-order selection should be pending");
+        (selection.selecting_player, selection.valid_action_ids[0])
+    };
+    r.game
+        .resolve_selection(selecting_player, action_id)
+        .expect("resolving trigger order should succeed");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "all placed-option observers should settle after resolving trigger order"
+    );
+    assert_eq!(
+        r.game.turn_player(),
+        1,
+        "memory crossed to the opponent while playing the Delay option, so the turn should pass after observers settle"
+    );
 }
 
 // ─── TEST-P1-T12 ──────────────────────────────────────────────────────────────

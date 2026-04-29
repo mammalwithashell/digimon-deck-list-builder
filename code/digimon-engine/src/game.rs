@@ -135,6 +135,13 @@ pub struct Game {
     /// Phase 8: in-flight Option card resolution. Set when an Option is
     /// played and cleared after dispose. Dispatch lands in Tasks 2-6.
     pub pending_option: Option<PendingOption>,
+    /// Continuation marker for Delay/Training Option placement observers.
+    /// Option play normally calls `check_turn_end` after disposal. If
+    /// placement observers park a selection after `pending_option` has already
+    /// been consumed, this marker lets `resolve_generic_selection` run the
+    /// turn-end check after the observer queue settles.
+    #[doc(hidden)]
+    pub(crate) pending_option_placed_turn_check: bool,
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
@@ -497,6 +504,7 @@ impl Game {
             pending_attack: None,
             pending_security: None,
             pending_option: None,
+            pending_option_placed_turn_check: false,
             security_resolution: None,
             effect_chain_depth: 0,
             logger: Box::new(SilentLogger),
