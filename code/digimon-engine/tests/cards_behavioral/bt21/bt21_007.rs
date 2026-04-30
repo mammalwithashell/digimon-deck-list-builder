@@ -32,7 +32,9 @@
 #[path = "../../support/dsl_card_data.rs"]
 mod dsl_card_data;
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -178,9 +180,7 @@ fn bt21_007_inherited_aura_clause_shape() {
 
     let aura = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            scope,
-            dp_modifier,
-            ..
+            scope, dp_modifier, ..
         }) => Some((*scope, *dp_modifier)),
         _ => None,
     });
@@ -218,7 +218,11 @@ fn bt21_007_on_play_no_selection_when_trash_empty() {
         "no selection must install when P0's trash has no eligible cards"
     );
     // Hand must be empty: Agumon played, nothing returned.
-    assert_eq!(runner.hand_size(0), 0, "hand must be empty when nothing returned");
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "hand must be empty when nothing returned"
+    );
 }
 
 /// Negative: trash has only a non-trait card → no eligible selection.
@@ -346,7 +350,10 @@ fn bt21_007_on_play_pick_dragonkin_moves_to_hand() {
 
     runner.play(0, 0);
 
-    assert!(runner.pending_selection().is_some(), "selection must be pending");
+    assert!(
+        runner.pending_selection().is_some(),
+        "selection must be pending"
+    );
     let view = runner.pending_selection_view().unwrap();
     let _ = runner.execute_action(0, view.valid_action_ids[0]);
     let _ = runner.auto_resolve();
@@ -416,7 +423,10 @@ fn bt21_007_on_play_both_trait_cards_are_offered() {
 
     runner.play(0, 0);
 
-    assert!(runner.pending_selection().is_some(), "selection must install");
+    assert!(
+        runner.pending_selection().is_some(),
+        "selection must install"
+    );
     let view = runner.pending_selection_view().unwrap();
     assert_eq!(view.kind, SelectionKind::Trash);
     assert_eq!(

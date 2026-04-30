@@ -21,9 +21,13 @@ fn breeding_permanent_selection_targets_breeding_without_fake_battle_handle() {
     let picked_slot = Arc::clone(&picked);
     {
         let mut ctx = EffectContext::new(&mut r.game, source_card, Some(source), p0);
-        ctx.select_own_breeding_permanent("choose breeding", |_, _| true, move |_, target| {
-            *picked_slot.lock().unwrap() = Some(target);
-        });
+        ctx.select_own_breeding_permanent(
+            "choose breeding",
+            |_, _| true,
+            move |_, target| {
+                *picked_slot.lock().unwrap() = Some(target);
+            },
+        );
     }
 
     assert_eq!(r.game.current_phase, GamePhase::SelectBreedingPermanent);

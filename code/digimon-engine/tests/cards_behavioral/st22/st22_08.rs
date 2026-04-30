@@ -35,9 +35,9 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::selection::SelectionKind;
-use digimon_engine::action::space::PASS;
 
 // ---------------------------------------------------------------------------
 // Section 1: Structural assertions (what we CAN verify from the empty stub)
@@ -48,8 +48,7 @@ use digimon_engine::action::space::PASS;
 #[test]
 fn st22_08_yaml_parses_as_option_kind() {
     const YAML: &str = include_str!("../../../cards/st22/ST22-08.yaml");
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("ST22-08.yaml must parse");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("ST22-08.yaml must parse");
     assert_eq!(spec.card, "ST22-08", "card ID must be ST22-08");
     // kind is stored as a string discriminant in CardSpec
     // The option kind is encoded as integer 2 in cards.json
@@ -60,8 +59,7 @@ fn st22_08_yaml_parses_as_option_kind() {
 #[test]
 fn st22_08_yaml_compiles_without_errors() {
     const YAML: &str = include_str!("../../../cards/st22/ST22-08.yaml");
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("ST22-08.yaml must parse");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("ST22-08.yaml must parse");
     let _registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
         .expect("ST22-08.yaml must compile (stub has no raw_rust references)");
 }

@@ -142,7 +142,10 @@ fn up_to_sources_enables_pass_only_after_minimum_is_met() {
         .valid_action_ids
         .contains(&PASS));
     r.game
-        .resolve_selection(p0, encode_source_select(source_stack.index as u16, 0).unwrap())
+        .resolve_selection(
+            p0,
+            encode_source_select(source_stack.index as u16, 0).unwrap(),
+        )
         .expect("pick one");
     assert!(r
         .game

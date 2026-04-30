@@ -36,6 +36,55 @@ enum OptionSubtype {
     Training,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CostReductionKey {
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<crate::permanent::PermanentHandle>,
+    controller: PlayerId,
+    card_id: String,
+    effect_slot: u8,
+    is_under: bool,
+}
+
+struct CostReductionCandidate {
+    key: CostReductionKey,
+    label: String,
+    amount: i32,
+    optional: bool,
+    has_pay_cost: bool,
+}
+
+struct BeforePayCostSourceInfo {
+    source_permanent: Option<crate::permanent::PermanentHandle>,
+    source_card: crate::card_source::CardHandle,
+    card_id: String,
+    is_under: bool,
+    controller: PlayerId,
+    effect_slot: u8,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CostTargetContext {
+    card: crate::card_source::CardHandle,
+    from_hand: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PlayFromHandCostResult {
+    Played(usize),
+    Pending,
+    Failed,
+}
+
+impl PlayFromHandCostResult {
+    fn into_option(self) -> Option<usize> {
+        match self {
+            PlayFromHandCostResult::Played(index) => Some(index),
+            PlayFromHandCostResult::Pending | PlayFromHandCostResult::Failed => None,
+        }
+    }
+}
+
 /// Inspect an Option's effect list to decide its play-path subtype.
 /// Iterates effects; the first one carrying a subtype flag wins.
 fn classify_option_subtype(effects: &[crate::effect::Effect]) -> OptionSubtype {
@@ -179,24 +228,32 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
     ) -> Option<usize> {
-        let turn = self.turn_count;
+        self.play_from_hand_with_cost_result(player_id, hand_index, cost_delta, source, true)
+            .into_option()
+    }
+
+    pub(crate) fn play_from_hand_with_cost_result(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        cost_target_from_hand: bool,
+    ) -> PlayFromHandCostResult {
         let field_slots = self.rules.field_slots;
 
         // Borrow-check-friendly pre-checks: gather everything we need from
         // immutable borrows before taking a mutable borrow.
-        let (printed_cost, card_kind) = {
+        let card_kind = {
             let player = self.player(player_id);
             if hand_index >= player.hand.len() {
-                return None;
+                return PlayFromHandCostResult::Failed;
             }
             if player.battle_area.len() >= field_slots as usize {
-                return None;
+                return PlayFromHandCostResult::Failed;
             }
             let card = &player.hand[hand_index];
-            (
-                card.play_cost(&self.card_data),
-                card.card_kind(&self.card_data),
-            )
+            card.card_kind(&self.card_data)
         };
 
         // Phase 6: CannotPlayDigimonByEffect — when source is ByEffect and the
@@ -207,7 +264,7 @@ impl Game {
                 .modifiers
                 .player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
         {
-            return None;
+            return PlayFromHandCostResult::Failed;
         }
 
         // Phase 6: CannotPlayTamerByEffect — when source is ByEffect and the
@@ -218,34 +275,140 @@ impl Game {
                 .modifiers
                 .player_has(player_id, ModifierType::CannotPlayTamerByEffect)
         {
-            return None;
+            return PlayFromHandCostResult::Failed;
         }
 
-        // Phase 5 Task 2: scan BeforePayCost effects in battle area of both
-        // players and accumulate cost reductions before paying memory.
-        // Also scan the played card's own effects for `when_playing_this: true`
-        // reducers, which are not yet on the field during this scan.
-        let (hand_card_id, hand_card_handle) = {
-            let player = self.player(player_id);
-            let card = &player.hand[hand_index];
-            (card.card_id(&self.card_data).to_string(), card.handle())
-        };
-        let field_reduction = self.scan_before_pay_cost_reduction(player_id);
-        let hand_reduction = self.scan_before_pay_cost_reduction_for_hand_card(
+        let target_card = self.player(player_id).hand[hand_index].handle();
+        self.continue_play_from_hand_cost_reduction_chain(
             player_id,
-            &hand_card_id,
-            hand_card_handle,
-        );
-        let total_reduction = field_reduction + hand_reduction;
+            hand_index,
+            CostTargetContext {
+                card: target_card,
+                from_hand: cost_target_from_hand,
+            },
+            cost_delta,
+            source,
+            0,
+            Vec::new(),
+        )
+    }
+
+    fn continue_play_from_hand_cost_reduction_chain(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target: CostTargetContext,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        mut accumulated_reduction: i32,
+        mut processed: Vec<CostReductionKey>,
+    ) -> PlayFromHandCostResult {
+        loop {
+            let candidates =
+                self.collect_before_pay_cost_reducers(player_id, Some(target), &processed);
+            let Some(candidate) = candidates.into_iter().next() else {
+                return self.finish_play_from_hand_after_reductions(
+                    player_id,
+                    hand_index,
+                    target.card,
+                    cost_delta,
+                    source,
+                    accumulated_reduction,
+                );
+            };
+
+            if !candidate.optional && !candidate.has_pay_cost {
+                let key = candidate.key.clone();
+                if let Some(amount) = self.apply_cost_reduction_candidate(&key, target) {
+                    accumulated_reduction += amount;
+                }
+                processed.push(key);
+                continue;
+            }
+
+            let key = candidate.key.clone();
+            let accept_key = key.clone();
+            let decline_key = key.clone();
+            let accept_processed = processed.clone();
+            let decline_processed = processed.clone();
+            let on_decline = candidate.optional.then(|| {
+                Box::new(move |game: &mut Game| {
+                    let mut processed = decline_processed;
+                    processed.push(decline_key);
+                    let _ = game.continue_play_from_hand_cost_reduction_chain(
+                        player_id,
+                        hand_index,
+                        target,
+                        cost_delta,
+                        source,
+                        accumulated_reduction,
+                        processed,
+                    );
+                }) as crate::selection::DeclineCallback
+            });
+            let previous_phase = self.current_phase;
+            self.current_phase = GamePhase::EffectChoice;
+            self.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::EffectChoice,
+                selecting_player: player_id,
+                previous_phase,
+                valid_action_ids: vec![crate::action::space::HAND_EFFECT_START],
+                is_optional: candidate.optional,
+                prompt: format!("Use {} to reduce play cost?", candidate.label),
+                effect_choices: Some(vec![crate::selection::EffectChoiceEntry {
+                    label: format!("{} (-{})", candidate.label, candidate.amount),
+                    action_id: crate::action::space::HAND_EFFECT_START,
+                }]),
+                source_card: key.source_card,
+                source_permanent: key.source_permanent,
+                callback: Box::new(move |game: &mut Game, _action_id: u16| {
+                    let mut processed = accept_processed;
+                    let mut reduction = accumulated_reduction;
+                    if let Some(amount) = game.apply_cost_reduction_candidate(&accept_key, target) {
+                        reduction += amount;
+                    }
+                    processed.push(accept_key);
+                    let _ = game.continue_play_from_hand_cost_reduction_chain(
+                        player_id, hand_index, target, cost_delta, source, reduction, processed,
+                    );
+                }),
+                on_decline,
+            });
+            return PlayFromHandCostResult::Pending;
+        }
+    }
+
+    fn finish_play_from_hand_after_reductions(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target_card: crate::card_source::CardHandle,
+        cost_delta: crate::enums::CostDelta,
+        _source: PlaySource,
+        total_reduction: i32,
+    ) -> PlayFromHandCostResult {
+        let turn = self.turn_count;
+        let field_slots = self.rules.field_slots;
+        let printed_cost = {
+            let player = self.player(player_id);
+            if player.battle_area.len() >= field_slots as usize {
+                return PlayFromHandCostResult::Failed;
+            }
+            let Some(card) = player.hand.get(hand_index) else {
+                return PlayFromHandCostResult::Failed;
+            };
+            if card.handle() != target_card {
+                return PlayFromHandCostResult::Failed;
+            }
+            card.play_cost(&self.card_data)
+        };
         let base_cost = cost_delta.resolve(printed_cost) as i32;
         let effective_cost = (base_cost - total_reduction).max(0) as u16;
 
-        // Pay the cost up-front. If unaffordable, do not remove the card.
         if !self.pay_memory(effective_cost) {
-            return None;
+            return PlayFromHandCostResult::Failed;
         }
 
-        // Now the cost is paid — commit the play.
         let player = self.player_mut(player_id);
         let card = player.hand.remove(hand_index);
         let perm = crate::permanent::Permanent::new(card, turn);
@@ -259,7 +422,6 @@ impl Game {
             .top_card()
             .handle();
 
-        // Emit Play event: permanent is on field, before OnPlay effects fire.
         let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
             .top_card()
             .card_id(&self.card_data)
@@ -273,10 +435,6 @@ impl Game {
         });
 
         self.fire_on_play(player_id, field_index);
-
-        // OnEnterFieldAnyone: global observer — fires in every player's battle
-        // area after OnPlay resolves, carrying the entering card as event
-        // metadata while preserving observer-source identity.
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnEnterFieldAnyone,
             crate::selection::TriggerSource::EnteredField {
@@ -287,7 +445,7 @@ impl Game {
         );
         self.drain_effect_queue();
 
-        Some(field_index)
+        PlayFromHandCostResult::Played(field_index)
     }
 
     /// Play a card from `player`'s trash to field, paying the printed cost.
@@ -323,10 +481,9 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
     ) -> Option<usize> {
-        let turn = self.turn_count;
         let field_slots = self.rules.field_slots;
 
-        let (printed_cost, card_kind) = {
+        let card_kind = {
             let player = self.player(player_id);
             if trash_index >= player.trash.len() {
                 return None;
@@ -335,10 +492,7 @@ impl Game {
                 return None;
             }
             let card = &player.trash[trash_index];
-            (
-                card.play_cost(&self.card_data),
-                card.card_kind(&self.card_data),
-            )
+            card.card_kind(&self.card_data)
         };
 
         // Phase 6: CannotPlayDigimonByEffect — when source is ByEffect and the
@@ -363,47 +517,24 @@ impl Game {
             return None;
         }
 
-        // Phase 5 Task 2: scan BeforePayCost effects in battle area of both
-        // players and accumulate cost reductions before paying memory.
-        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
-        let base_cost = cost_delta.resolve(printed_cost) as i32;
-        let effective_cost = (base_cost - total_reduction).max(0) as u16;
+        let card = self.player_mut(player_id).trash.remove(trash_index);
+        self.player_mut(player_id).hand.push(card);
+        let hand_index = self.player(player_id).hand.len() - 1;
 
-        if !self.pay_memory(effective_cost) {
-            return None;
+        match self.play_from_hand_with_cost_result(player_id, hand_index, cost_delta, source, false)
+        {
+            PlayFromHandCostResult::Played(field_index) => Some(field_index),
+            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Failed => {
+                let card = self
+                    .player_mut(player_id)
+                    .hand
+                    .pop()
+                    .expect("invariant: card was just pushed to hand");
+                self.player_mut(player_id).trash.insert(trash_index, card);
+                None
+            }
         }
-
-        let player = self.player_mut(player_id);
-        let card = player.trash.remove(trash_index);
-        let perm = crate::permanent::Permanent::new(card, turn);
-        player.battle_area.push(perm);
-        let field_index = player.battle_area.len() - 1;
-
-        let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
-            .top_card()
-            .card_id(&self.card_data)
-            .to_string();
-        let seq = self.next_event_seq();
-        self.events.push(crate::events::GameEvent::Play {
-            seq,
-            player: player_id,
-            card_id: emitted_card_id,
-            field_index: field_index as u8,
-        });
-
-        self.fire_on_play(player_id, field_index);
-
-        // OnEnterFieldAnyone: global observer — fires in every player's battle
-        // area after OnPlay resolves. Python mirror: OnEnterFieldAnyone timing.
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::OnEnterFieldAnyone,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-            );
-        }
-        self.drain_effect_queue();
-
-        Some(field_index)
     }
 
     /// Play an Option card from `player`'s hand.
@@ -2140,211 +2271,330 @@ impl Game {
     /// the `CannotReducePlayCost` flood-gate can suppress all reductions for
     /// the acting player. Callers pass their `player_id` argument.
     fn scan_before_pay_cost_reduction(&mut self, acting_player: crate::enums::PlayerId) -> i32 {
-        // Phase 6: if the acting player has CannotReducePlayCost, suppress all
-        // cost reductions entirely. Mirrors DCGO's per-player flood-gate.
-        if self
-            .modifiers
-            .player_has(acting_player, ModifierType::CannotReducePlayCost)
-        {
-            return 0;
-        }
-        // Pre-snapshot all source identities to avoid holding any borrow on
-        // `self` across the `EffectContext::new(&mut self, ...)` calls below.
-        // (perm_handle, source_card_handle, card_id_string, is_under_flag, player_id)
-        type SourceInfo = (
-            crate::permanent::PermanentHandle,
-            crate::card_source::CardHandle,
-            String,
-            bool,
-            crate::enums::PlayerId,
-        );
-        let source_infos: Vec<SourceInfo> = {
-            let mut infos = Vec::new();
-            for pid in 0..self.players.len() {
-                let player_id = pid as crate::enums::PlayerId;
-                let perm_count = self.player(player_id).battle_area.len();
-                for perm_idx in 0..perm_count {
-                    let perm_handle = crate::permanent::PermanentHandle {
-                        player: player_id,
-                        index: perm_idx as u8,
-                    };
-                    let stack_size = self.player(player_id).battle_area[perm_idx]
-                        .card_sources
-                        .len();
-                    for source_idx in 0..stack_size {
-                        let source =
-                            &self.player(player_id).battle_area[perm_idx].card_sources[source_idx];
-                        let card_id = source.card_id(&self.card_data).to_string();
-                        let src_handle = source.handle();
-                        let is_under = source_idx + 1 < stack_size;
-                        infos.push((perm_handle, src_handle, card_id, is_under, player_id));
-                    }
-                }
-            }
-            infos
-        };
-        // All borrows on self from the snapshot block above are now dropped.
-
-        let mut total: i32 = 0;
-        for (perm_handle, src_handle, card_id, is_under, player_id) in source_infos {
-            let Some(effects) = self.effects_for_card(&card_id, src_handle) else {
+        let candidates = self.collect_before_pay_cost_reducers(acting_player, None, &[]);
+        let mut total = 0;
+        for candidate in candidates {
+            if candidate.optional || candidate.has_pay_cost {
+                self.logger.log(
+                    "[Skipped] optional/paid BeforePayCost reducer requires explicit pending play-cost context",
+                );
                 continue;
-            };
-            // `effects` is an owned Vec<Effect> returned by the registry; it is
-            // NOT a borrow from `self`. This makes it safe to hold `&effect`
-            // while later taking `&mut self` for the pay_cost_fn step.
-            for effect in &effects {
-                if effect.timing != EffectTiming::BeforePayCost {
-                    continue;
-                }
-                // Mirror the activate_field_main inherited/top-card filter:
-                // skip if the position (under vs top) doesn't match the
-                // effect's inherited flag.
-                if is_under != effect.inherited {
-                    continue;
-                }
-                // Skip `when_playing_this` effects when scanning field
-                // permanents. These effects are self-scoped — they only
-                // fire when the source card itself is being played from hand.
-                // They are evaluated separately in
-                // `scan_before_pay_cost_reduction_for_hand_card`.
-                if effect.when_playing_this {
-                    continue;
-                }
-
-                // Step 1: evaluate condition — construct and drop the read
-                // context immediately so no immutable borrow lingers.
-                let cond_ok = if let Some(cond) = &effect.condition {
-                    let ctx =
-                        EffectReadContext::new(self, src_handle, Some(perm_handle), player_id);
-                    cond(&ctx) // ctx dropped at end of this block
-                } else {
-                    true
-                };
-                if !cond_ok {
-                    continue;
-                }
-
-                // Step 2: compute the reduction amount — construct and drop
-                // the read context immediately.
-                let reduction = if let Some(reduction_fn) = &effect.cost_reduction_fn {
-                    let ctx =
-                        EffectReadContext::new(self, src_handle, Some(perm_handle), player_id);
-                    reduction_fn(&ctx).max(0) // ctx dropped at end of this block
-                } else {
-                    effect.cost_reduction.max(0)
-                };
-
-                // Step 3 (Phase 5 Task 4): pay_cost_fn gates this effect's
-                // reduction contribution. `pay_cost_fn` is borrowed from
-                // `effects` (a local owned Vec), NOT from `self`, so this
-                // mutable context construction does not conflict with the
-                // `effect` reference above.
-                if let Some(pay_cost_fn) = &effect.pay_cost_fn {
-                    let mut ctx =
-                        EffectContext::new(self, src_handle, Some(perm_handle), player_id);
-                    let paid = pay_cost_fn(&mut ctx);
-                    if !paid {
-                        // Cost not paid → skip this effect's reduction.
-                        // The play itself proceeds at full(er) cost — it does
-                        // NOT fail here.
-                        continue;
-                    }
-                }
-
-                total += reduction;
+            }
+            if let Some(amount) = self.apply_cost_reduction_candidate(
+                &candidate.key,
+                CostTargetContext {
+                    card: candidate.key.source_card,
+                    from_hand: false,
+                },
+            ) {
+                total += amount;
             }
         }
         total
     }
 
-    /// Scan the effects of a single card still in hand for `BeforePayCost`
-    /// reductions that are scoped to "when this specific card is being played".
-    ///
-    /// `scan_before_pay_cost_reduction` only walks battle-area permanents.
-    /// Cards with `when_playing_this: true` install their `BeforePayCost`
-    /// reducer on the card itself — but before the card reaches the field it
-    /// lives in the hand, so the normal scan misses it.
-    ///
-    /// This companion method fills that gap: it evaluates only the effects that
-    /// originated from `hand_card_handle` and returns the additional reduction.
-    /// It is called from `play_from_hand_with_cost` alongside the regular scan.
-    fn scan_before_pay_cost_reduction_for_hand_card(
+    fn collect_before_pay_cost_reducers(
         &mut self,
-        acting_player: crate::enums::PlayerId,
-        hand_card_id: &str,
-        hand_card_handle: crate::card_source::CardHandle,
-    ) -> i32 {
+        acting_player: PlayerId,
+        cost_target: Option<CostTargetContext>,
+        processed: &[CostReductionKey],
+    ) -> Vec<CostReductionCandidate> {
         if self
             .modifiers
             .player_has(acting_player, ModifierType::CannotReducePlayCost)
         {
-            return 0;
+            return Vec::new();
         }
 
-        let Some(effects) = self.effects_for_card(hand_card_id, hand_card_handle) else {
+        let mut candidates = Vec::new();
+        for info in self.before_pay_cost_source_infos(acting_player, cost_target.map(|t| t.card)) {
+            let key = CostReductionKey {
+                source_card: info.source_card,
+                source_permanent: info.source_permanent,
+                controller: info.controller,
+                card_id: info.card_id,
+                effect_slot: info.effect_slot,
+                is_under: info.is_under,
+            };
+            if processed.contains(&key) {
+                continue;
+            }
+            let Some(amount) = self.inspect_cost_reduction_candidate(&key, cost_target) else {
+                continue;
+            };
+            if amount <= 0 {
+                continue;
+            }
+            let Some(effects) = self.effects_for_card(&key.card_id, key.source_card) else {
+                continue;
+            };
+            let Some(effect) = effects.get(key.effect_slot as usize) else {
+                continue;
+            };
+            candidates.push(CostReductionCandidate {
+                key,
+                label: if effect.name.is_empty() {
+                    "cost reducer".to_string()
+                } else {
+                    effect.name.clone()
+                },
+                amount,
+                optional: effect.optional,
+                has_pay_cost: effect.pay_cost_fn.is_some(),
+            });
+        }
+        candidates
+    }
+
+    fn inspect_cost_reduction_candidate(
+        &mut self,
+        key: &CostReductionKey,
+        cost_target: Option<CostTargetContext>,
+    ) -> Option<i32> {
+        let effects = self.effects_for_card(&key.card_id, key.source_card)?;
+        let effect = effects.get(key.effect_slot as usize)?;
+        if effect.timing != EffectTiming::BeforePayCost {
+            return None;
+        }
+        if key.is_under != effect.inherited {
+            return None;
+        }
+        if effect.max_per_turn > 0 && self.cost_reducer_activation_count(key) >= effect.max_per_turn
+        {
+            return None;
+        }
+        let cond_ok = if let Some(cond) = &effect.condition {
+            let ctx = if let Some(target) = cost_target {
+                EffectReadContext::new_with_cost_target(
+                    self,
+                    key.source_card,
+                    key.source_permanent,
+                    key.controller,
+                    target.card,
+                    target.from_hand,
+                )
+            } else {
+                EffectReadContext::new(self, key.source_card, key.source_permanent, key.controller)
+            };
+            cond(&ctx)
+        } else {
+            true
+        };
+        if !cond_ok {
+            return None;
+        }
+        let amount = if let Some(reduction_fn) = &effect.cost_reduction_fn {
+            let ctx = if let Some(target) = cost_target {
+                EffectReadContext::new_with_cost_target(
+                    self,
+                    key.source_card,
+                    key.source_permanent,
+                    key.controller,
+                    target.card,
+                    target.from_hand,
+                )
+            } else {
+                EffectReadContext::new(self, key.source_card, key.source_permanent, key.controller)
+            };
+            reduction_fn(&ctx).max(0)
+        } else {
+            effect.cost_reduction.max(0)
+        };
+        Some(amount)
+    }
+
+    fn apply_cost_reduction_candidate(
+        &mut self,
+        key: &CostReductionKey,
+        cost_target: CostTargetContext,
+    ) -> Option<i32> {
+        let amount = self.inspect_cost_reduction_candidate(key, Some(cost_target))?;
+        let effects = self.effects_for_card(&key.card_id, key.source_card)?;
+        let effect = effects.get(key.effect_slot as usize)?;
+        if let Some(pay_cost_fn) = &effect.pay_cost_fn {
+            let mut ctx = EffectContext::new_with_cost_target(
+                self,
+                key.source_card,
+                key.source_permanent,
+                key.controller,
+                cost_target.card,
+                cost_target.from_hand,
+            );
+            if !pay_cost_fn(&mut ctx) {
+                return None;
+            }
+        }
+        if effect.max_per_turn > 0 {
+            self.record_cost_reducer_activation(key);
+        }
+        Some(amount)
+    }
+
+    fn cost_reducer_activation_count(&self, key: &CostReductionKey) -> u8 {
+        let Some(source) = key.source_permanent else {
             return 0;
         };
-        let mut total: i32 = 0;
-        for effect in &effects {
+        if source.index == crate::action::space::BREEDING_TARGET as u8 {
+            return self
+                .player(source.player)
+                .breeding_area
+                .as_ref()
+                .map(|perm| perm.activation_count(key.source_card, key.effect_slot))
+                .unwrap_or(0);
+        }
+        self.player(source.player)
+            .battle_area
+            .get(source.index as usize)
+            .map(|perm| perm.activation_count(key.source_card, key.effect_slot))
+            .unwrap_or(0)
+    }
+
+    fn record_cost_reducer_activation(&mut self, key: &CostReductionKey) {
+        let Some(source) = key.source_permanent else {
+            return;
+        };
+        if source.index == crate::action::space::BREEDING_TARGET as u8 {
+            if let Some(perm) = self.player_mut(source.player).breeding_area.as_mut() {
+                perm.record_activation(key.source_card, key.effect_slot);
+            }
+            return;
+        }
+        if let Some(perm) = self
+            .player_mut(source.player)
+            .battle_area
+            .get_mut(source.index as usize)
+        {
+            perm.record_activation(key.source_card, key.effect_slot);
+        }
+    }
+
+    fn before_pay_cost_source_infos(
+        &self,
+        acting_player: PlayerId,
+        cost_target_card: Option<crate::card_source::CardHandle>,
+    ) -> Vec<BeforePayCostSourceInfo> {
+        let mut infos = Vec::new();
+        self.push_breeding_cost_sources(acting_player, &mut infos);
+        for pid in 0..self.players.len() {
+            let player_id = pid as PlayerId;
+            let perm_count = self.player(player_id).battle_area.len();
+            for perm_idx in 0..perm_count {
+                let perm_handle = PermanentHandle {
+                    player: player_id,
+                    index: perm_idx as u8,
+                };
+                let stack_size = self.player(player_id).battle_area[perm_idx]
+                    .card_sources
+                    .len();
+                for source_idx in 0..stack_size {
+                    let source =
+                        &self.player(player_id).battle_area[perm_idx].card_sources[source_idx];
+                    self.push_cost_source_info(
+                        &mut infos,
+                        Some(perm_handle),
+                        source,
+                        source_idx + 1 < stack_size,
+                        player_id,
+                        false,
+                    );
+                }
+            }
+            if player_id != acting_player {
+                self.push_breeding_cost_sources(player_id, &mut infos);
+            }
+        }
+        if let Some(target) = cost_target_card {
+            if let Some((card_id, controller)) = self.card_id_and_owner_for_handle(target) {
+                let Some(effects) = self.effects_for_card(&card_id, target) else {
+                    return infos;
+                };
+                for (slot, effect) in effects.iter().enumerate() {
+                    if effect.timing == EffectTiming::BeforePayCost && effect.when_playing_this {
+                        infos.push(BeforePayCostSourceInfo {
+                            source_permanent: None,
+                            source_card: target,
+                            card_id: card_id.clone(),
+                            is_under: false,
+                            controller,
+                            effect_slot: slot as u8,
+                        });
+                    }
+                }
+            }
+        }
+        infos
+    }
+
+    fn push_breeding_cost_sources(
+        &self,
+        player_id: PlayerId,
+        infos: &mut Vec<BeforePayCostSourceInfo>,
+    ) {
+        let Some(perm) = self.player(player_id).breeding_area.as_ref() else {
+            return;
+        };
+        let stack_size = perm.card_sources.len();
+        let handle = PermanentHandle {
+            player: player_id,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        };
+        for source_idx in 0..stack_size {
+            let source = &perm.card_sources[source_idx];
+            self.push_cost_source_info(
+                infos,
+                Some(handle),
+                source,
+                source_idx + 1 < stack_size,
+                player_id,
+                false,
+            );
+        }
+    }
+
+    fn push_cost_source_info(
+        &self,
+        infos: &mut Vec<BeforePayCostSourceInfo>,
+        source_permanent: Option<PermanentHandle>,
+        source: &CardSource,
+        is_under: bool,
+        controller: PlayerId,
+        allow_when_playing_this: bool,
+    ) {
+        let card_id = source.card_id(&self.card_data).to_string();
+        let source_card = source.handle();
+        let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+            return;
+        };
+        for (slot, effect) in effects.iter().enumerate() {
             if effect.timing != EffectTiming::BeforePayCost {
                 continue;
             }
-            if !effect.when_playing_this {
+            if effect.when_playing_this && !allow_when_playing_this {
                 continue;
             }
-            // Hand cards are never "under" a stack — only top-card effects fire.
-            if effect.inherited {
-                continue;
-            }
+            infos.push(BeforePayCostSourceInfo {
+                source_permanent,
+                source_card,
+                card_id: card_id.clone(),
+                is_under,
+                controller,
+                effect_slot: slot as u8,
+            });
+        }
+    }
 
-            // Evaluate condition (if any). Use `source_permanent = None` since
-            // the card is still in hand at this point.
-            let cond_ok = if let Some(cond) = &effect.condition {
-                let ctx = EffectReadContext::new(
-                    self,
-                    hand_card_handle,
-                    None, // source_permanent: card is in hand, not yet on field
-                    acting_player,
-                );
-                cond(&ctx)
-            } else {
-                true
-            };
-            if !cond_ok {
-                continue;
-            }
-
-            // Evaluate the reduction amount.
-            let reduction = if let Some(reduction_fn) = &effect.cost_reduction_fn {
-                let ctx = EffectReadContext::new(
-                    self,
-                    hand_card_handle,
-                    None, // source_permanent: card is in hand
-                    acting_player,
-                );
-                reduction_fn(&ctx).max(0)
-            } else {
-                effect.cost_reduction.max(0)
-            };
-
-            // pay_cost_fn gates the reduction; run it if present.
-            if let Some(pay_cost_fn) = &effect.pay_cost_fn {
-                let mut ctx = EffectContext::new(
-                    self,
-                    hand_card_handle,
-                    None, // source_permanent: card is in hand
-                    acting_player,
-                );
-                let paid = pay_cost_fn(&mut ctx);
-                if !paid {
-                    continue;
+    fn card_id_and_owner_for_handle(
+        &self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<(String, PlayerId)> {
+        for player in &self.players {
+            for card in &player.hand {
+                if card.handle() == handle {
+                    return Some((card.card_id(&self.card_data).to_string(), card.owner));
                 }
             }
-
-            total += reduction;
         }
-        total
+        None
     }
 
     /// Install a `SelectMaterial` pending selection for DNA digivolve.

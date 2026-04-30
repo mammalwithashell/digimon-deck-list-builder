@@ -321,6 +321,7 @@ pub enum CompiledDeclarativeClause {
         when_playing_this: bool,
         when_any_ally_played: Option<CompiledPredicate>,
         condition: Option<CompiledPredicate>,
+        optional: bool,
         once_per_turn: bool,
         amount: Option<i32>,
         amount_fn: Option<CompiledFormula>,

@@ -144,7 +144,8 @@ fn lm_021_has_blast_digivolve_keyword_clause() {
     // BlastDigivolve is a grant_keyword declarative clause.
     let has_blast = compiled.effects.iter().any(|c| {
         if let CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-            keyword, ..
+            keyword,
+            ..
         }) = c
         {
             keyword.to_lowercase().contains("blast")
@@ -414,8 +415,7 @@ fn lm_021_when_attacking_opt_blocks_second_trigger_same_turn() {
     let security_after_second = runner.security_count(1);
 
     assert_eq!(
-        security_after_second,
-        security_after_first,
+        security_after_second, security_after_first,
         "OPT must block second WhenAttacking trigger in the same turn"
     );
 }

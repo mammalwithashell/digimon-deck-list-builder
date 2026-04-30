@@ -55,7 +55,8 @@ fn bt24_012_has_blocker_grant_keyword() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword, ..
+                keyword,
+                ..
             }) => Some(keyword.clone()),
             _ => None,
         })
@@ -114,10 +115,7 @@ fn bt24_012_has_inherited_on_opponent_security_removed_clause() {
         "BT24-012 must have an inherited triggered clause on OnOpponentSecurityRemoved (clause c)",
     );
 
-    assert!(
-        clause.once_per_turn,
-        "clause (c) must be [Once Per Turn]"
-    );
+    assert!(clause.once_per_turn, "clause (c) must be [Once Per Turn]");
 
     // Clause (c) is NOT optional: "When ... gain 1 memory" is mandatory.
     assert!(
@@ -135,24 +133,26 @@ fn bt24_012_total_clause_count() {
     let face_up_count = card
         .effects
         .iter()
-        .filter(|c| !matches!(c, CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited))
+        .filter(
+            |c| !matches!(c, CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited),
+        )
         .count();
 
     let inherited_count = card
         .effects
         .iter()
-        .filter(|c| matches!(c, CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited))
+        .filter(
+            |c| matches!(c, CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited),
+        )
         .count();
 
     assert_eq!(
-        face_up_count,
-        2,
+        face_up_count, 2,
         "expected 2 face-up clauses (GrantKeyword Blocker + RawRust replacement); got {}",
         face_up_count
     );
     assert_eq!(
-        inherited_count,
-        1,
+        inherited_count, 1,
         "expected 1 inherited clause (on_opponent_security_removed OPT); got {}",
         inherited_count
     );

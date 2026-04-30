@@ -135,7 +135,7 @@ mod tests {
         let (specs, errs) = load_dir_ok(&examples_dir());
         assert!(errs.is_empty());
         let registry = CardRegistry::from_specs("phase1b-test", &specs).expect("compile");
-        assert_eq!(registry.len(), 15);
+        assert_eq!(registry.len(), 21);
         assert!(registry.lookup("ST2-13").is_some());
     }
 

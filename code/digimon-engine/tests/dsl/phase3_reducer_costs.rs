@@ -115,6 +115,8 @@ fn cost_reduction_amount_fn_uses_formula_value() {
         vec![],
         Arc::new(EngineRawRustRegistry::new()),
         false,
+        false,
+        None,
     );
 
     let runner = DebugRunner::builder().build();
@@ -123,6 +125,7 @@ fn cost_reduction_amount_fn_uses_formula_value() {
         source_card: CardHandle(0),
         source_permanent: None,
         player: 0,
+        cost_target_card: None,
     };
 
     assert_eq!(
@@ -145,6 +148,8 @@ fn cost_reduction_amount_fn_uses_raw_formula_registry() {
         vec![],
         Arc::new(raw),
         false,
+        false,
+        None,
     );
 
     let mut runner = DebugRunner::builder()
@@ -157,6 +162,7 @@ fn cost_reduction_amount_fn_uses_raw_formula_registry() {
         source_card: source,
         source_permanent: Some(permanent),
         player: 0,
+        cost_target_card: None,
     };
 
     assert_eq!(

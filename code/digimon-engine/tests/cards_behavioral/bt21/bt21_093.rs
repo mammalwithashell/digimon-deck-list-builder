@@ -59,9 +59,7 @@ fn runner() -> DebugRunner {
 #[test]
 fn bt21_093_compiles_as_option_card() {
     let r = runner();
-    let card = r
-        .compiled_card("BT21-093")
-        .expect("compiled card present");
+    let card = r.compiled_card("BT21-093").expect("compiled card present");
     assert_eq!(card.kind, CompiledCardKind::Option);
     assert_eq!(card.cost, Some(8));
 }
@@ -69,9 +67,7 @@ fn bt21_093_compiles_as_option_card() {
 #[test]
 fn bt21_093_has_cost_reduction_clause() {
     let r = runner();
-    let card = r
-        .compiled_card("BT21-093")
-        .expect("compiled card present");
+    let card = r.compiled_card("BT21-093").expect("compiled card present");
     let has_cr = card.effects.iter().any(|c| {
         matches!(
             c,
@@ -84,9 +80,7 @@ fn bt21_093_has_cost_reduction_clause() {
 #[test]
 fn bt21_093_has_main_from_hand_clause() {
     let r = runner();
-    let card = r
-        .compiled_card("BT21-093")
-        .expect("compiled card present");
+    let card = r.compiled_card("BT21-093").expect("compiled card present");
     let has_main = card.effects.iter().any(|c| {
         matches!(
             c,
@@ -99,9 +93,7 @@ fn bt21_093_has_main_from_hand_clause() {
 #[test]
 fn bt21_093_has_inherited_security_clause() {
     let r = runner();
-    let card = r
-        .compiled_card("BT21-093")
-        .expect("compiled card present");
+    let card = r.compiled_card("BT21-093").expect("compiled card present");
     let has_security = card.effects.iter().any(|c| {
         matches!(
             c,

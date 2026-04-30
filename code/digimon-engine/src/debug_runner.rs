@@ -182,11 +182,7 @@ impl DebugRunner {
         handle
     }
 
-    pub fn place_in_breeding(
-        &mut self,
-        player: PlayerId,
-        card_id: &str,
-    ) -> DebugBreedingPermanent {
+    pub fn place_in_breeding(&mut self, player: PlayerId, card_id: &str) -> DebugBreedingPermanent {
         let handle = self.place_on_field(player, card_id, Some(0));
         let perm = self.game.players[player as usize]
             .battle_area

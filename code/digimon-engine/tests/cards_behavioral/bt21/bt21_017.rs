@@ -67,7 +67,10 @@ fn dimetromon_runner() -> DebugRunner {
 
 /// Fire WhenDigivolving for the given permanent handle using the direct
 /// enqueue pattern (same as BT21-029 / BT24-017 tests).
-fn fire_when_digivolving(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle) {
+fn fire_when_digivolving(
+    runner: &mut DebugRunner,
+    handle: digimon_engine::permanent::PermanentHandle,
+) {
     runner.game.enqueue_triggered(
         EffectTiming::WhenDigivolving,
         TriggerSource::Permanent(handle),
@@ -109,7 +112,10 @@ fn bt21_017_has_when_digivolving_triggered_clause() {
         })
         .any(|t| t.when.contains(&CompiledTiming::WhenDigivolving));
 
-    assert!(has_wd, "BT21-017 must have a triggered clause with when_digivolving");
+    assert!(
+        has_wd,
+        "BT21-017 must have a triggered clause with when_digivolving"
+    );
 }
 
 #[test]
@@ -176,7 +182,9 @@ fn bt21_017_has_inherited_opt_on_opponent_security_removed() {
         .expect("Inherited clause must exist");
 
     assert!(
-        inherited.when.contains(&CompiledTiming::OnOpponentSecurityRemoved),
+        inherited
+            .when
+            .contains(&CompiledTiming::OnOpponentSecurityRemoved),
         "Inherited clause must fire on OnOpponentSecurityRemoved"
     );
     assert!(
@@ -611,7 +619,10 @@ fn bt21_017_inherited_opt_blocks_second_trigger_same_turn() {
     let m1 = runner.memory();
     let first_delta = m1 - m0;
 
-    assert!(first_delta >= 1, "first trigger must fire; delta={first_delta}");
+    assert!(
+        first_delta >= 1,
+        "first trigger must fire; delta={first_delta}"
+    );
 
     if runner.game_over() {
         return;

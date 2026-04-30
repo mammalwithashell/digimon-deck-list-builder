@@ -670,6 +670,7 @@ fn compile_declarative(
                 .condition
                 .as_ref()
                 .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
+            optional: c.optional,
             once_per_turn: c.once_per_turn,
             amount: c.amount,
             amount_fn: c.amount_fn.as_ref().map(compile_formula),
@@ -1322,7 +1323,7 @@ mod tests {
             .join("_examples");
         let (specs, errs) = load_dir_ok(&examples);
         assert!(errs.is_empty(), "parse errors: {errs:#?}");
-        assert_eq!(specs.len(), 15);
+        assert_eq!(specs.len(), 21);
 
         let mut failures = Vec::new();
         for spec in &specs {

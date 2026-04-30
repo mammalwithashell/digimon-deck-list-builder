@@ -91,7 +91,10 @@ fn runner() -> DebugRunner {
 
 /// Place Agunimon as a digivolution source under a carrier on P0's field.
 /// Returns the carrier permanent handle.
-fn place_agunimon_as_source(runner: &mut DebugRunner, carrier_id: &str) -> digimon_engine::permanent::PermanentHandle {
+fn place_agunimon_as_source(
+    runner: &mut DebugRunner,
+    carrier_id: &str,
+) -> digimon_engine::permanent::PermanentHandle {
     let handle = runner.place_on_field(0, carrier_id, Some(0));
     {
         let game = runner.game_mut();
@@ -145,10 +148,7 @@ fn bt21_013_has_when_digivolving_clause_optional() {
         wd.optional,
         "WhenDigivolving clause must be optional ('you may')"
     );
-    assert!(
-        !wd.once_per_turn,
-        "WhenDigivolving clause has no OPT"
-    );
+    assert!(!wd.once_per_turn, "WhenDigivolving clause has no OPT");
     assert_eq!(
         wd.scope,
         CompiledScope::FaceUp,
@@ -193,9 +193,7 @@ fn bt21_013_has_inherited_aura_clause() {
 
     let aura = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            scope,
-            dp_modifier,
-            ..
+            scope, dp_modifier, ..
         }) => Some((*scope, *dp_modifier)),
         _ => None,
     });
@@ -295,7 +293,8 @@ fn bt21_013_when_digivolving_from_hand_places_hybrid_as_bottom_source() {
 
     let base = runner.place_on_field(0, "BASE-LV3", Some(0));
     let stack_before = runner.game.players[0].battle_area[base.index as usize]
-        .card_sources.len();
+        .card_sources
+        .len();
 
     runner.game.enqueue_triggered(
         EffectTiming::WhenDigivolving,
@@ -305,18 +304,19 @@ fn bt21_013_when_digivolving_from_hand_places_hybrid_as_bottom_source() {
 
     // Step 1: select destination (self — Agunimon is placed as a source so the
     // permanent IS Agunimon at this point, or a carrier with Agunimon below).
-    runner.auto_resolve().expect("resolve destination selection");
+    runner
+        .auto_resolve()
+        .expect("resolve destination selection");
 
     // Step 2: choose "From hand" (branch 0).
-    runner
-        .execute_branch(0)
-        .expect("choose From hand branch");
+    runner.execute_branch(0).expect("choose From hand branch");
 
     // Step 3: select the HYBRID-SRC card.
     runner.auto_resolve().expect("resolve hand selection");
 
     let stack_after = runner.game.players[0].battle_area[base.index as usize]
-        .card_sources.len();
+        .card_sources
+        .len();
 
     assert_eq!(
         stack_after,
@@ -358,7 +358,8 @@ fn bt21_013_when_digivolving_from_trash_places_hero_as_bottom_source() {
 
     let base = runner.place_on_field(0, "BASE-LV3", Some(0));
     let stack_before = runner.game.players[0].battle_area[base.index as usize]
-        .card_sources.len();
+        .card_sources
+        .len();
 
     runner.game.enqueue_triggered(
         EffectTiming::WhenDigivolving,
@@ -366,17 +367,18 @@ fn bt21_013_when_digivolving_from_trash_places_hero_as_bottom_source() {
     );
     runner.game.drain_effect_queue();
 
-    runner.auto_resolve().expect("resolve destination selection");
+    runner
+        .auto_resolve()
+        .expect("resolve destination selection");
 
     // Choose "From trash" (branch 1).
-    runner
-        .execute_branch(1)
-        .expect("choose From trash branch");
+    runner.execute_branch(1).expect("choose From trash branch");
 
     runner.auto_resolve().expect("resolve trash selection");
 
     let stack_after = runner.game.players[0].battle_area[base.index as usize]
-        .card_sources.len();
+        .card_sources
+        .len();
 
     assert_eq!(
         stack_after,
@@ -384,7 +386,10 @@ fn bt21_013_when_digivolving_from_trash_places_hero_as_bottom_source() {
         "placing a card from trash as bottom source must grow the digivolution stack by 1"
     );
     let trash_after = runner.trash_size(0);
-    assert_eq!(trash_after, 0, "HERO-TRASH must have left trash after being placed as source");
+    assert_eq!(
+        trash_after, 0,
+        "HERO-TRASH must have left trash after being placed as source"
+    );
 }
 
 // ─── Section 4: Clause 2 behavioral — When Attacking digivolve cost -1 ───────
@@ -494,7 +499,9 @@ fn bt21_013_when_attacking_digivolves_into_hybrid_and_card_leaves_hand() {
 
     // If a Hand selection installed, execute it (pick HYBRID-EVO-ACT).
     if runner.pending_kind() == Some(SelectionKind::Hand) {
-        runner.auto_resolve().expect("resolve hand selection for digivolve");
+        runner
+            .auto_resolve()
+            .expect("resolve hand selection for digivolve");
     }
 
     // The Hybrid card should have left hand after being digivolved into.
@@ -567,9 +574,7 @@ fn bt21_013_inherited_dp_active_on_your_turn() {
 
     assert_eq!(runner.turn_player(), 0, "precondition: P0's turn");
 
-    let contribution = runner
-        .game
-        .source_dp_contribution(carrier_handle, 0);
+    let contribution = runner.game.source_dp_contribution(carrier_handle, 0);
 
     assert_eq!(
         contribution, 2000,
@@ -598,9 +603,7 @@ fn bt21_013_inherited_dp_inactive_on_opponents_turn() {
     runner.end_turn();
     assert_eq!(runner.turn_player(), 1, "precondition: P1's turn");
 
-    let contribution = runner
-        .game
-        .source_dp_contribution(carrier_handle, 0);
+    let contribution = runner.game.source_dp_contribution(carrier_handle, 0);
 
     assert_eq!(
         contribution, 0,
@@ -626,9 +629,7 @@ fn bt21_013_inherited_dp_not_applied_to_top_card_slot() {
 
     let carrier_handle = place_agunimon_as_source(&mut runner, "CARRIER-LV5-TOP");
 
-    let top_contribution = runner
-        .game
-        .source_dp_contribution(carrier_handle, 1);
+    let top_contribution = runner.game.source_dp_contribution(carrier_handle, 1);
 
     assert_eq!(
         top_contribution, 0,

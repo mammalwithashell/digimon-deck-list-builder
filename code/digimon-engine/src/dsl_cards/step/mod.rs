@@ -27,6 +27,8 @@ use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect_context::EffectContext;
 use crate::enums::PlayerId;
 use crate::enums::StackPosition;
+use crate::game::Game;
+use crate::permanent::PermanentHandle;
 
 /// Map a `CompiledStackPosition` to the engine's `StackPosition`.
 /// Shared by `zone_moves` and `permanent_mutations` — lives here to avoid
@@ -107,6 +109,106 @@ fn park_outer_tail(
          was never drained — likely a nested-park bug",
     );
     ctx.game.dsl_outer_tail = Some((outer_tail, bindings.clone(), runtime.clone()));
+}
+
+fn drain_or_rewrap_pending_tail(
+    game: &mut Game,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    player: PlayerId,
+    outer_tail: Vec<CompiledStep>,
+    mut bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    if game.pending_selection.is_some() {
+        wrap_pending_selection_with_tail(
+            game,
+            source_card,
+            source_permanent,
+            player,
+            outer_tail,
+            bindings,
+            runtime,
+        );
+        return;
+    }
+
+    if outer_tail.is_empty() {
+        return;
+    }
+
+    let mut ctx = EffectContext::new(game, source_card, source_permanent, player);
+    run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
+}
+
+fn wrap_pending_selection_with_tail(
+    game: &mut Game,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    player: PlayerId,
+    outer_tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let Some(mut pending) = game.pending_selection.take() else {
+        return;
+    };
+
+    let original_callback = pending.callback;
+    let accept_tail = outer_tail.clone();
+    let accept_bindings = bindings.clone();
+    let accept_runtime = runtime.clone();
+    pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
+        original_callback(game, action_id);
+        drain_or_rewrap_pending_tail(
+            game,
+            source_card,
+            source_permanent,
+            player,
+            accept_tail,
+            accept_bindings,
+            accept_runtime,
+        );
+    });
+
+    if let Some(original_decline) = pending.on_decline.take() {
+        let decline_tail = outer_tail;
+        let decline_bindings = bindings;
+        let decline_runtime = runtime;
+        pending.on_decline = Some(Box::new(move |game: &mut Game| {
+            original_decline(game);
+            drain_or_rewrap_pending_tail(
+                game,
+                source_card,
+                source_permanent,
+                player,
+                decline_tail,
+                decline_bindings,
+                decline_runtime,
+            );
+        }));
+    }
+
+    game.pending_selection = Some(pending);
+}
+
+fn park_pending_selection_tail(
+    ctx: &mut EffectContext<'_>,
+    bindings: &Bindings,
+    steps: &[CompiledStep],
+    i: usize,
+    runtime: &StepRuntime,
+) {
+    let outer_tail = steps[i + 1..].to_vec();
+    wrap_pending_selection_with_tail(
+        ctx.game,
+        ctx.source_card,
+        ctx.source_permanent,
+        ctx.player,
+        outer_tail,
+        bindings.clone(),
+        runtime.clone(),
+    );
 }
 
 /// Drain `Game::dsl_outer_tail` if a parked outer continuation is
@@ -193,6 +295,10 @@ pub fn run_steps_with_runtime(
 
         // Synchronous families — execute and advance.
         run_step_with_runtime(step, ctx, bindings, runtime);
+        if ctx.game.pending_selection.is_some() {
+            park_pending_selection_tail(ctx, bindings, steps, i, runtime);
+            return RunOutcome::Parked;
+        }
         i += 1;
     }
     RunOutcome::Synchronous

@@ -226,7 +226,6 @@ fn bt20_016_has_raw_rust_declarative_clause_for_all_turns() {
         has_raw_rust,
         "BT20-016 must have a RawRust declarative clause for the All Turns deletion observer"
     );
-
 }
 
 #[test]
@@ -240,10 +239,7 @@ fn bt20_016_has_inherited_grant_keyword_security_attack_plus() {
             keyword,
             scope,
             ..
-        }) => {
-            keyword == "SecurityAttackPlus"
-                && matches!(scope, CompiledScope::Inherited)
-        }
+        }) => keyword == "SecurityAttackPlus" && matches!(scope, CompiledScope::Inherited),
         _ => false,
     });
     assert!(
@@ -261,7 +257,10 @@ fn bt20_016_has_digivolve_alt_path() {
         .alt_paths
         .iter()
         .any(|p| p.kind == CompiledAltPathKind::Digivolve);
-    assert!(has_evo, "BT20-016 must have at least one Digivolve alt_path");
+    assert!(
+        has_evo,
+        "BT20-016 must have at least one Digivolve alt_path"
+    );
 }
 
 #[test]
@@ -295,9 +294,9 @@ fn bt20_016_on_play_with_ally_on_field_prompts_selection() {
 
     let _played = runner.play(0, 0).expect("Paildramon plays from hand");
 
-    let kind = runner.pending_kind().expect(
-        "a pending selection must install when at least one own Digimon is on the field",
-    );
+    let kind = runner
+        .pending_kind()
+        .expect("a pending selection must install when at least one own Digimon is on the field");
     assert_eq!(
         kind,
         SelectionKind::OwnField,
@@ -370,7 +369,10 @@ fn bt20_016_on_play_grants_piercing_keyword_to_selected_ally() {
     let _played = runner.play(0, 0).expect("Paildramon plays");
     runner.auto_resolve().expect("auto_resolve succeeds");
 
-    let has_piercing = runner.game.modifiers.has_keyword(target_h, Keyword::Piercing);
+    let has_piercing = runner
+        .game
+        .modifiers
+        .has_keyword(target_h, Keyword::Piercing);
     assert!(
         has_piercing,
         "selected ally Digimon must have Piercing keyword modifier after Clause 1 fires"
@@ -421,9 +423,10 @@ fn bt20_016_when_digivolving_grants_piercing_keyword() {
     let pail_h = runner.place_on_field(0, "BT20-016", None);
 
     // Fire WhenDigivolving explicitly from the Paildramon permanent.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(pail_h));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pail_h),
+    );
     runner.game.drain_effect_queue();
 
     runner.auto_resolve().expect("auto_resolve succeeds");
@@ -452,7 +455,10 @@ fn bt20_016_piercing_keyword_expires_at_end_of_turn() {
 
     // Verify buff is active during the turn.
     assert!(
-        runner.game.modifiers.has_keyword(target_h, Keyword::Piercing),
+        runner
+            .game
+            .modifiers
+            .has_keyword(target_h, Keyword::Piercing),
         "Piercing must be active during the turn it was granted"
     );
 
@@ -460,7 +466,10 @@ fn bt20_016_piercing_keyword_expires_at_end_of_turn() {
     runner.end_turn();
 
     assert!(
-        !runner.game.modifiers.has_keyword(target_h, Keyword::Piercing),
+        !runner
+            .game
+            .modifiers
+            .has_keyword(target_h, Keyword::Piercing),
         "Piercing must expire at end of the turn it was granted"
     );
 }
@@ -487,7 +496,11 @@ fn bt20_016_dp_buff_expires_at_end_of_turn() {
     let during_dp = runner
         .effective_dp(target_h)
         .expect("ALLY-DIG must be on field");
-    assert_eq!(during_dp, base_dp + 4000, "+4000 DP active during play turn");
+    assert_eq!(
+        during_dp,
+        base_dp + 4000,
+        "+4000 DP active during play turn"
+    );
 
     runner.end_turn();
 

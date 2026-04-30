@@ -1734,8 +1734,10 @@ fn install_dp_budget_selection(
         return;
     }
 
-    let mut valid_action_ids: Vec<u16> =
-        candidates.iter().map(|(action_id, _, _)| *action_id).collect();
+    let mut valid_action_ids: Vec<u16> = candidates
+        .iter()
+        .map(|(action_id, _, _)| *action_id)
+        .collect();
     if picked.len() >= min_picks as usize {
         valid_action_ids.push(PASS);
     }
@@ -1774,7 +1776,10 @@ fn install_dp_budget_selection(
 
             let next_cb: DpBudgetFinalCallback = Box::new(move |game, picks| {
                 let cb_opt = shared_cb.lock().unwrap().take();
-                debug_assert!(cb_opt.is_some(), "DP-budget final callback already consumed");
+                debug_assert!(
+                    cb_opt.is_some(),
+                    "DP-budget final callback already consumed"
+                );
                 if let Some(cb) = cb_opt {
                     cb(game, picks);
                 }
@@ -1799,7 +1804,10 @@ fn install_dp_budget_selection(
         }),
         on_decline: Some(Box::new(move |game: &mut Game| {
             let cb_opt = shared_cb_decline.lock().unwrap().take();
-            debug_assert!(cb_opt.is_some(), "DP-budget final callback already consumed");
+            debug_assert!(
+                cb_opt.is_some(),
+                "DP-budget final callback already consumed"
+            );
             if let Some(cb) = cb_opt {
                 cb(game, picked_for_decline);
             }

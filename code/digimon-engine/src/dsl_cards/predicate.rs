@@ -69,6 +69,32 @@ pub fn eval_predicate_with_bindings(
     if !eval_event_fields(pred, rctx) {
         return false;
     }
+    if let Some(want) = pred.in_breeding {
+        let is_in_breeding = match subject {
+            PredicateSubject::Permanent(h) => {
+                h.index == crate::action::space::BREEDING_TARGET as u8
+            }
+            _ => rctx
+                .source_permanent
+                .is_some_and(|h| h.index == crate::action::space::BREEDING_TARGET as u8),
+        };
+        if is_in_breeding != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.on_field {
+        let is_on_field = match subject {
+            PredicateSubject::Permanent(h) => {
+                h.index != crate::action::space::BREEDING_TARGET as u8
+            }
+            _ => rctx
+                .source_permanent
+                .is_some_and(|h| h.index != crate::action::space::BREEDING_TARGET as u8),
+        };
+        if is_on_field != want {
+            return false;
+        }
+    }
 
     // Combinators — short-circuit on first failure.
     for child in &pred.all_of {
@@ -409,14 +435,22 @@ fn eval_permanent_fields(
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
 ) -> bool {
-    let perm = match rctx
-        .game
-        .player(handle.player)
-        .battle_area
-        .get(handle.index as usize)
-    {
-        Some(p) => p,
-        None => return false,
+    let in_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
+    let perm = if in_breeding {
+        match rctx.game.player(handle.player).breeding_area.as_ref() {
+            Some(p) => p,
+            None => return false,
+        }
+    } else {
+        match rctx
+            .game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+        {
+            Some(p) => p,
+            None => return false,
+        }
     };
     // Delegate the shared card fields to the card-handle path using the top card.
     let top_handle = perm.top_card().handle();
@@ -443,8 +477,13 @@ fn eval_permanent_fields(
             return false;
         }
     }
-    if !pred.zone.is_empty() && !pred.zone.contains(&CompiledZone::BattleArea) {
-        // Permanents always live in BattleArea — any zone list missing it fails.
+    if !pred.zone.is_empty()
+        && !pred.zone.contains(if in_breeding {
+            &CompiledZone::Breeding
+        } else {
+            &CompiledZone::BattleArea
+        })
+    {
         return false;
     }
     if let Some(want) = pred.owner {

@@ -91,13 +91,12 @@ fn flamedramon_runner_with_security() -> DebugRunner {
 #[test]
 fn p_137_clause_a_has_armor_purge_grant_keyword() {
     let runner = flamedramon_runner();
-    let compiled = runner
-        .compiled_card("P-137")
-        .expect("P-137 must compile");
+    let compiled = runner.compiled_card("P-137").expect("P-137 must compile");
 
     let has_armor_purge = compiled.effects.iter().any(|c| {
         if let CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-            keyword, ..
+            keyword,
+            ..
         }) = c
         {
             keyword.eq_ignore_ascii_case("ArmorPurge")
@@ -105,20 +104,22 @@ fn p_137_clause_a_has_armor_purge_grant_keyword() {
             false
         }
     });
-    assert!(has_armor_purge, "P-137 must have a GrantKeyword(ArmorPurge) clause");
+    assert!(
+        has_armor_purge,
+        "P-137 must have a GrantKeyword(ArmorPurge) clause"
+    );
 }
 
 /// Clause (b): a GrantKeyword(Raid) declarative clause must be present.
 #[test]
 fn p_137_clause_b_has_raid_grant_keyword() {
     let runner = flamedramon_runner();
-    let compiled = runner
-        .compiled_card("P-137")
-        .expect("P-137 must compile");
+    let compiled = runner.compiled_card("P-137").expect("P-137 must compile");
 
     let has_raid = compiled.effects.iter().any(|c| {
         if let CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-            keyword, ..
+            keyword,
+            ..
         }) = c
         {
             keyword.eq_ignore_ascii_case("Raid")
@@ -134,9 +135,7 @@ fn p_137_clause_b_has_raid_grant_keyword() {
 #[test]
 fn p_137_clause_c_has_on_attack_target_change_own_opt_mandatory() {
     let runner = flamedramon_runner();
-    let compiled = runner
-        .compiled_card("P-137")
-        .expect("P-137 must compile");
+    let compiled = runner.compiled_card("P-137").expect("P-137 must compile");
 
     let clause_c = compiled.effects.iter().find_map(|c| {
         if let CompiledClause::Triggered(t) = c {
@@ -149,8 +148,12 @@ fn p_137_clause_c_has_on_attack_target_change_own_opt_mandatory() {
         None
     });
 
-    let clause_c = clause_c.expect("P-137 must have an own-scope OnAttackTargetChange triggered clause");
-    assert!(clause_c.once_per_turn, "clause (c) must be once_per_turn (OPT)");
+    let clause_c =
+        clause_c.expect("P-137 must have an own-scope OnAttackTargetChange triggered clause");
+    assert!(
+        clause_c.once_per_turn,
+        "clause (c) must be once_per_turn (OPT)"
+    );
     assert!(
         !clause_c.optional,
         "clause (c) is not optional — opponent MUST add the card (no 'you may')"
@@ -161,9 +164,7 @@ fn p_137_clause_c_has_on_attack_target_change_own_opt_mandatory() {
 #[test]
 fn p_137_has_three_clauses_total() {
     let runner = flamedramon_runner();
-    let compiled = runner
-        .compiled_card("P-137")
-        .expect("P-137 must compile");
+    let compiled = runner.compiled_card("P-137").expect("P-137 must compile");
 
     assert_eq!(
         compiled.effects.len(),
@@ -184,9 +185,10 @@ fn p_137_clause_c_fires_when_flamedramon_on_field() {
     let hand_before = runner.hand_size(1);
     let _ = runner.place_on_field(0, "P-137", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -215,9 +217,10 @@ fn p_137_clause_c_does_not_fire_when_not_on_field() {
     let sec_before = runner.security_count(1);
     let hand_before = runner.hand_size(1);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -249,9 +252,10 @@ fn p_137_clause_c_does_not_fire_on_opponents_turn() {
     let hand_before = runner.hand_size(1);
 
     // Fire from p0's battle area — but it's p1's turn, so active_when:your_turn blocks.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -283,9 +287,7 @@ fn p_137_clause_c_moves_top_security_card_to_opp_hand() {
     let _ = runner.place_on_field(0, "P-137", None);
 
     // Snapshot the top security card (last in vec = top) by card_index for identity.
-    let top_card_index = runner
-        .game
-        .players[1]
+    let top_card_index = runner.game.players[1]
         .security
         .last()
         .map(|c| c.card_index)
@@ -294,18 +296,17 @@ fn p_137_clause_c_moves_top_security_card_to_opp_hand() {
     let sec_before = runner.security_count(1);
     let hand_before = runner.hand_size(1);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.security_count(1), sec_before - 1);
     assert_eq!(runner.hand_size(1), hand_before + 1);
 
     // The card that arrived in hand must be the former top-of-security card.
-    let hand_card_index = runner
-        .game
-        .players[1]
+    let hand_card_index = runner.game.players[1]
         .hand
         .last()
         .map(|c| c.card_index)
@@ -326,9 +327,10 @@ fn p_137_clause_c_noop_when_opponent_has_no_security() {
     let hand_before = runner.hand_size(1);
 
     // Must not panic.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.security_count(1), 0);
@@ -350,9 +352,10 @@ fn p_137_clause_c_no_pending_selection_after_fire() {
 
     let _ = runner.place_on_field(0, "P-137", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -382,16 +385,18 @@ fn p_137_clause_c_opt_blocks_second_trigger_same_turn() {
     let _ = runner.place_on_field(0, "P-137", None);
 
     // First trigger — uses the OPT slot.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
     let after_first = runner.security_count(1);
 
     // Second trigger same turn — must be suppressed.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -420,9 +425,10 @@ fn p_137_clause_c_opt_resets_after_turn_end() {
     let _ = runner.place_on_field(0, "P-137", None);
 
     // First trigger.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
     let after_first = runner.security_count(1);
 
@@ -431,9 +437,10 @@ fn p_137_clause_c_opt_resets_after_turn_end() {
     runner.end_turn();
 
     // OPT resets — fires again.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(

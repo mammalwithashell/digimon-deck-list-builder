@@ -129,7 +129,16 @@ fn static_plus_closure_reduction_and_pay_cost_stack_when_condition_passes() {
     let trash_before = r.game.players[0].trash.len(); // 0
     let memory_before = r.memory(); // 5
 
-    r.play(0, 0);
+    assert!(
+        r.play(0, 0).is_none(),
+        "paid reducer should park until its cost is explicitly accepted"
+    );
+    assert_eq!(
+        r.game.players[0].deck.len(),
+        deck_before,
+        "pay_cost_fn must not run before acceptance"
+    );
+    r.execute_branch(0).expect("accept paid reducer");
 
     // B's pay_cost_fn fired: 2 cards moved deck → trash
     assert_eq!(

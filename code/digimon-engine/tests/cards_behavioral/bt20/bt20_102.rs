@@ -147,10 +147,7 @@ fn bt20_102_clause_d_is_on_play_when_digivolving_not_optional() {
         !clause.optional,
         "clause (d) is not optional — 'choose 1' is mandatory when condition is met"
     );
-    assert!(
-        !clause.once_per_turn,
-        "clause (d) has no OPT restriction"
-    );
+    assert!(!clause.once_per_turn, "clause (d) has no OPT restriction");
 }
 
 /// Clause (e): triggered on [EndOfYourTurn], FaceUp scope, optional, once_per_turn.
@@ -283,7 +280,10 @@ fn bt20_102_on_play_boardwipe_deletes_non_saved_opp_digimon() {
         .add_card(opp2)
         .add_card(filler)
         .memory(10)
-        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
         .start();
 
     runner.place_on_field(1, "TEST-OPP-1", Some(0));
@@ -293,7 +293,10 @@ fn bt20_102_on_play_boardwipe_deletes_non_saved_opp_digimon() {
 
     // opp has 2 Digimon → first prompt = opp choose 1 to save.
     let opp_digimon_count_before = runner.game.players[1].battle_area.len();
-    assert_eq!(opp_digimon_count_before, 2, "precondition: opp has 2 Digimon");
+    assert_eq!(
+        opp_digimon_count_before, 2,
+        "precondition: opp has 2 Digimon"
+    );
 
     // The raw_rust fn should have installed a SelectOpponentField prompt.
     assert!(
@@ -309,7 +312,10 @@ fn bt20_102_on_play_boardwipe_deletes_non_saved_opp_digimon() {
             .as_ref()
             .unwrap()
             .valid_action_ids[0];
-        runner.game.resolve_selection(0, action).expect("resolve opp save");
+        runner
+            .game
+            .resolve_selection(0, action)
+            .expect("resolve opp save");
     }
 
     // Now own Digimon save prompt: P0 has only BT20-102, so it is auto-resolved
@@ -353,7 +359,10 @@ fn bt20_102_on_play_return_to_deck_prompt_installs_after_boardwipe() {
         .add_card(opp1)
         .add_card(filler)
         .memory(10)
-        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
         .start();
 
     runner.place_on_field(1, "TEST-OPP-1", Some(0));
@@ -451,8 +460,14 @@ fn runner_with_omnimon_on_field() -> DebugRunner {
         .add_card(own_ally)
         .add_card(filler)
         .memory(10)
-        .deck(0, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
-        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .deck(
+            0,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
         .start();
 
     runner.place_on_field(0, "BT20-102", None);
@@ -544,23 +559,27 @@ fn bt20_102_end_of_turn_rush_expires_end_of_turn() {
     }
 
     // Rush is active for some own Digimon.
-    let _ally_handle = PermanentHandle { player: 0, index: 1 }; // BT20-102@0, ally@1
-    // Don't assert which specific index has Rush; just confirm the expiry mechanics.
-    // Advance to P1's turn end to trigger expiry.
+    let _ally_handle = PermanentHandle {
+        player: 0,
+        index: 1,
+    }; // BT20-102@0, ally@1
+       // Don't assert which specific index has Rush; just confirm the expiry mechanics.
+       // Advance to P1's turn end to trigger expiry.
     runner.game.end_turn(); // P1 ends their turn; expire_end_of_turn(1) fires
 
     // Rush must have expired.
-    let any_has_rush_after = runner.game.players[0]
-        .battle_area
-        .iter()
-        .enumerate()
-        .any(|(idx, _)| {
-            let handle = PermanentHandle {
-                player: 0,
-                index: idx as u8,
-            };
-            runner.game.has_keyword(handle, Keyword::Rush)
-        });
+    let any_has_rush_after =
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .enumerate()
+            .any(|(idx, _)| {
+                let handle = PermanentHandle {
+                    player: 0,
+                    index: idx as u8,
+                };
+                runner.game.has_keyword(handle, Keyword::Rush)
+            });
 
     assert!(
         !any_has_rush_after,
@@ -668,7 +687,10 @@ fn bt20_102_has_raid_piercing_blocker_as_runtime_keywords() {
         .start();
 
     runner.place_on_field(0, "BT20-102", None);
-    let handle = PermanentHandle { player: 0, index: 0 };
+    let handle = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
 
     assert!(
         runner.game.has_keyword(handle, Keyword::Raid),

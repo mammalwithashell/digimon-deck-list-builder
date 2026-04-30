@@ -147,7 +147,9 @@ fn bt21_001_inherited_clause_scope_timing_opt_flags() {
         "BT21-001's clause must be Inherited scope"
     );
     assert!(
-        clause.when.contains(&CompiledTiming::OnOpponentSecurityRemoved),
+        clause
+            .when
+            .contains(&CompiledTiming::OnOpponentSecurityRemoved),
         "BT21-001's clause must fire on OnOpponentSecurityRemoved; when={:?}",
         clause.when
     );
@@ -271,12 +273,22 @@ fn bt21_001_declining_permanent_selection_no_digivolve() {
     );
 
     // Decline the permanent selection (PASS).
-    runner.execute_action(0, digimon_engine::action::space::PASS).unwrap();
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .unwrap();
     let _ = runner.auto_resolve();
 
     // Hand and field unchanged — no digivolve happened.
-    assert_eq!(runner.hand_size(0), hand_before, "hand unchanged after decline");
-    assert_eq!(runner.battle_area_size(0), field_before, "field unchanged after decline");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "hand unchanged after decline"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        field_before,
+        "field unchanged after decline"
+    );
 }
 
 /// When the player selects a Digimon and then a Reptile/Dragonkin card from
@@ -304,7 +316,9 @@ fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1()
 
     // Step 1: select a Digimon on P0's field (should be OwnField selection).
     {
-        let view = runner.pending_selection_view().expect("selection must be pending");
+        let view = runner
+            .pending_selection_view()
+            .expect("selection must be pending");
         assert_eq!(
             view.kind,
             SelectionKind::OwnField,
@@ -315,7 +329,9 @@ fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1()
 
     // Step 2: select a Reptile/Dragonkin card from hand.
     {
-        let view = runner.pending_selection_view().expect("hand selection must be pending");
+        let view = runner
+            .pending_selection_view()
+            .expect("hand selection must be pending");
         assert_eq!(
             view.kind,
             SelectionKind::Hand,
@@ -368,7 +384,9 @@ fn bt21_001_opt_blocks_second_trigger_same_turn() {
     // First security removal — OPT fires.
     runner.attack_player(carrier, 1, false);
     // Decline by PASS to let the effect resolve without digivolving.
-    runner.execute_action(0, digimon_engine::action::space::PASS).unwrap();
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .unwrap();
     let _ = runner.auto_resolve();
 
     if runner.game_over() {
@@ -411,16 +429,22 @@ fn bt21_001_opt_resets_after_end_turn() {
 
     // Turn 1: fire OPT and decline.
     runner.attack_player(carrier, 1, false);
-    runner.execute_action(0, digimon_engine::action::space::PASS).unwrap();
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .unwrap();
     let _ = runner.auto_resolve();
 
-    if runner.game_over() { return; }
+    if runner.game_over() {
+        return;
+    }
 
     // End turn → P1 → P0 again.
     runner.end_turn();
     runner.end_turn();
 
-    if runner.battle_area_size(0) == 0 || runner.game_over() { return; }
+    if runner.battle_area_size(0) == 0 || runner.game_over() {
+        return;
+    }
 
     // Turn 3 (P0 again): OPT should have reset.
     let carrier3 = runner.perm_handle(0, 0);

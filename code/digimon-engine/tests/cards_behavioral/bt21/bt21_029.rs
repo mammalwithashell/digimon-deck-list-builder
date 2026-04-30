@@ -113,7 +113,8 @@ fn bt21_029_declarative_keywords_are_security_attack_plus_and_progress() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword, ..
+                keyword,
+                ..
             }) => Some(keyword.as_str()),
             _ => None,
         })
@@ -530,7 +531,10 @@ fn bt21_029_clause_d_security_arm_no_token_without_security_removal() {
     // Note: a deletion-arm token would also be possible if clause (d) deletion
     // arm were implemented. Since it's BLOCKED (G-EVENT-TARGET-OWNER), no token
     // from deletion either.
-    assert!(!has_token, "no Petrification Token should appear without security removal");
+    assert!(
+        !has_token,
+        "no Petrification Token should appear without security removal"
+    );
 }
 
 /// Clause (d) OPT lockout: second trigger in the same turn is blocked.

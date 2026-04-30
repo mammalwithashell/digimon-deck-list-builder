@@ -30,9 +30,10 @@ fn evaluate_amount(
     // target (e.g. `CardCountInZoneScoped`) evaluate correctly; formulas that
     // DO dereference it (e.g. `StackSize`, `MaterialCount`) call
     // `battle_area.get(255)` which returns `None` and safely short-circuit to 0.
-    let target = rctx
-        .source_permanent
-        .unwrap_or(PermanentHandle { player: rctx.player, index: 255 });
+    let target = rctx.source_permanent.unwrap_or(PermanentHandle {
+        player: rctx.player,
+        index: 255,
+    });
     formula_eval::evaluate_read_with_raw(formula, rctx, target, raw)
 }
 
@@ -54,6 +55,8 @@ pub fn lower(
         vec![],
         Arc::new(EngineRawRustRegistry::new()),
         false,
+        false,
+        None,
     )
 }
 
@@ -66,10 +69,13 @@ pub fn lower_with_formula(
     amount_fn: Option<CompiledFormula>,
     pay_cost: Vec<CompiledStep>,
     raw: Arc<EngineRawRustRegistry>,
+    optional: bool,
     when_playing_this: bool,
+    when_any_ally_played: Option<CompiledPredicate>,
 ) -> Effect {
     let active_when = active_when.map(Arc::new);
     let condition = condition.map(Arc::new);
+    let when_any_ally_played = when_any_ally_played.map(Arc::new);
     let amount_fn = amount_fn.map(Arc::new);
     let pay_cost: Arc<[CompiledStep]> = Arc::from(pay_cost);
     let runtime = StepRuntime::new(raw);
@@ -82,17 +88,60 @@ pub fn lower_with_formula(
     if once_per_turn {
         builder = builder.once_per_turn();
     }
+    if optional {
+        builder = builder.optional();
+    }
     if when_playing_this {
         builder = builder.when_playing_this();
     }
+    let condition_active_when = active_when.clone();
+    let condition_condition = condition.clone();
+    let condition_when_any = when_any_ally_played.clone();
+    builder = builder.condition(move |rctx| {
+        if let Some(aw) = &condition_active_when {
+            let subject = rctx
+                .source_permanent
+                .map(PredicateSubject::Permanent)
+                .unwrap_or(PredicateSubject::None);
+            if !eval_predicate(aw, rctx, subject) {
+                return false;
+            }
+        }
+        if let Some(c) = &condition_condition {
+            if !eval_predicate(c, rctx, PredicateSubject::None) {
+                return false;
+            }
+        }
+        if let Some(wap) = &condition_when_any {
+            let Some(target) = rctx.cost_target_card else {
+                return false;
+            };
+            if !eval_predicate(wap, rctx, PredicateSubject::Card(target)) {
+                return false;
+            }
+        }
+        true
+    });
     builder = builder.cost_reduction_fn(move |rctx| {
         if let Some(aw) = &active_when {
-            if !eval_predicate(aw, rctx, PredicateSubject::None) {
+            let subject = rctx
+                .source_permanent
+                .map(PredicateSubject::Permanent)
+                .unwrap_or(PredicateSubject::None);
+            if !eval_predicate(aw, rctx, subject) {
                 return 0;
             }
         }
         if let Some(c) = &condition {
             if !eval_predicate(c, rctx, PredicateSubject::None) {
+                return 0;
+            }
+        }
+        if let Some(wap) = &when_any_ally_played {
+            let Some(target) = rctx.cost_target_card else {
+                return 0;
+            };
+            if !eval_predicate(wap, rctx, PredicateSubject::Card(target)) {
                 return 0;
             }
         }

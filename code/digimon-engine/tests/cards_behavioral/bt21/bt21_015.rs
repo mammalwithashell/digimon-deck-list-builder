@@ -74,8 +74,7 @@ fn place_cyclonemon_as_source(runner: &mut DebugRunner) -> PermanentHandle {
     let next_idx = runner.game.next_card_index();
     let carrier_source = CardSource::new(carrier_data_idx, 0, next_idx);
     let turn = runner.game.turn_count;
-    runner.game.players[0].battle_area[cyclo_handle.index as usize]
-        .digivolve(carrier_source, turn);
+    runner.game.players[0].battle_area[cyclo_handle.index as usize].digivolve(carrier_source, turn);
 
     cyclo_handle
 }
@@ -204,9 +203,7 @@ fn bt21_015_has_inherited_aura_clause_with_correct_dp_and_scope() {
 
     let aura = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            scope,
-            dp_modifier,
-            ..
+            scope, dp_modifier, ..
         }) => Some((*scope, *dp_modifier)),
         _ => None,
     });
@@ -304,7 +301,11 @@ fn bt21_015_on_play_no_selection_when_no_eligible_target() {
         runner.pending_kind()
     );
     // Opponent's 5000 DP Digimon must survive.
-    assert_eq!(runner.battle_area_size(1), 1, "5000 DP Digimon must survive");
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "5000 DP Digimon must survive"
+    );
 }
 
 /// The delete clause must include exactly the 4000 DP target at the boundary.
@@ -479,7 +480,10 @@ fn bt21_015_security_effect_plays_card_onto_field_after_battle() {
     }
 
     let security_before = runner.security_count(1);
-    assert_eq!(security_before, 1, "pre: P1 has exactly 1 security (Cyclonemon)");
+    assert_eq!(
+        security_before, 1,
+        "pre: P1 has exactly 1 security (Cyclonemon)"
+    );
 
     // P0 attacks P1's security.
     runner.attack_player(attacker, 1, false);

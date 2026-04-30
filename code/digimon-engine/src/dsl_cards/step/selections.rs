@@ -1032,13 +1032,17 @@ fn install_select_own_breeding_permanent(
 ) {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
-    ctx.select_own_breeding_permanent(&prompt, |_game, _target| true, move |cb_ctx, target| {
-        let mut b = bindings.clone();
-        if let Some(name) = &bind_as {
-            b.insert_breeding_permanent_ref(name, target);
-        }
-        run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
-    });
+    ctx.select_own_breeding_permanent(
+        &prompt,
+        |_game, _target| true,
+        move |cb_ctx, target| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_breeding_permanent_ref(name, target);
+            }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
 }
 
 fn install_select_ordered_permutation(

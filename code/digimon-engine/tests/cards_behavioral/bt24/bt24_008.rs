@@ -69,7 +69,11 @@ fn bt24_008_has_two_triggered_clauses() {
         })
         .collect();
 
-    assert_eq!(triggered.len(), 2, "BT24-008 has exactly two triggered clauses");
+    assert_eq!(
+        triggered.len(),
+        2,
+        "BT24-008 has exactly two triggered clauses"
+    );
 }
 
 /// The OnPlay clause is own-scope (FaceUp), optional, and NOT once_per_turn.
@@ -94,7 +98,11 @@ fn bt24_008_on_play_clause_is_own_optional_not_opt() {
         .next()
         .expect("OnPlay clause must exist");
 
-    assert_eq!(on_play.scope, CompiledScope::FaceUp, "OnPlay scope must be own (face_up)");
+    assert_eq!(
+        on_play.scope,
+        CompiledScope::FaceUp,
+        "OnPlay scope must be own (face_up)"
+    );
     assert!(on_play.optional, "OnPlay must be optional");
     assert!(!on_play.once_per_turn, "OnPlay must NOT be once_per_turn");
 }
@@ -117,8 +125,7 @@ fn bt24_008_inherited_clause_is_opt_on_security_removed() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.when
-                    .contains(&CompiledTiming::OnOpponentSecurityRemoved) =>
+                if t.when.contains(&CompiledTiming::OnOpponentSecurityRemoved) =>
             {
                 Some(t)
             }
@@ -132,7 +139,10 @@ fn bt24_008_inherited_clause_is_opt_on_security_removed() {
         CompiledScope::Inherited,
         "clause must be inherited scope"
     );
-    assert!(inherited.once_per_turn, "inherited clause must be once_per_turn");
+    assert!(
+        inherited.once_per_turn,
+        "inherited clause must be once_per_turn"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -181,12 +191,26 @@ fn bt24_008_on_play_reptile_trashes_cost_and_draws_two() {
     );
 
     // Accept: auto-resolve picks the only eligible card (Reptile).
-    runner.auto_resolve().expect("auto-resolve picks the Reptile card");
+    runner
+        .auto_resolve()
+        .expect("auto-resolve picks the Reptile card");
 
-    assert_eq!(runner.trash_size(0), trash_before + 1, "cost card must be trashed");
-    assert_eq!(runner.deck_size(0), deck_before - 2, "deck shrinks by 2 after Draw 2");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "cost card must be trashed"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 2,
+        "deck shrinks by 2 after Draw 2"
+    );
     // Hand: 2 start - 1 played - 1 trashed + 2 drawn = 2
-    assert_eq!(runner.hand_size(0), 2, "hand should be 2 after play + trash + Draw 2");
+    assert_eq!(
+        runner.hand_size(0),
+        2,
+        "hand should be 2 after play + trash + Draw 2"
+    );
 }
 
 /// Dragonkin card is also a valid cost for the OnPlay.
@@ -216,8 +240,16 @@ fn bt24_008_on_play_dragonkin_is_valid_cost() {
     let deck_before = runner.deck_size(0);
     runner.auto_resolve().expect("resolve picks Dragonkin");
 
-    assert_eq!(runner.trash_size(0), trash_before + 1, "Dragonkin must be trashed");
-    assert_eq!(runner.deck_size(0), deck_before - 2, "drew 2 after Dragonkin cost");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "Dragonkin must be trashed"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 2,
+        "drew 2 after Dragonkin cost"
+    );
 }
 
 /// LIBERATOR card is also a valid cost for the OnPlay.
@@ -277,14 +309,30 @@ fn bt24_008_on_play_decline_does_not_trash_or_draw() {
 
     runner.play(0, 0);
 
-    assert!(runner.pending_is_optional(), "prompt must be optional to allow decline");
+    assert!(
+        runner.pending_is_optional(),
+        "prompt must be optional to allow decline"
+    );
 
     let player = runner.pending_selection().unwrap().selecting_player;
-    runner.execute_action(player, PASS).expect("PASS resolves the optional prompt");
+    runner
+        .execute_action(player, PASS)
+        .expect("PASS resolves the optional prompt");
 
-    assert!(runner.pending_selection().is_none(), "no further selection after decline");
-    assert_eq!(runner.trash_size(0), trash_before, "no card trashed on decline");
-    assert_eq!(runner.deck_size(0), deck_before, "no cards drawn on decline");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no further selection after decline"
+    );
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "no card trashed on decline"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "no cards drawn on decline"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -385,13 +433,16 @@ fn bt24_008_inherited_gains_memory_on_opponent_security_removed_your_turn() {
         .dsl_card("BT24-008")
         .expect("BT24-008 must be in embedded pack")
         .add_card(sec_filler)
-        .security(1, &[
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-        ])
+        .security(
+            1,
+            &[
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+            ],
+        )
         .memory(9) // leave room for +1 gain (cap is 10)
         .start();
 
@@ -438,13 +489,16 @@ fn bt24_008_inherited_does_not_fire_on_opponents_turn() {
         .add_card(p1_attacker)
         .add_card(sec_filler)
         // P0's security — to be attacked by P1 on P1's turn.
-        .security(0, &[
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-        ])
+        .security(
+            0,
+            &[
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+            ],
+        )
         .memory(10)
         .start();
 
@@ -500,13 +554,16 @@ fn bt24_008_inherited_opt_blocks_second_activation_same_turn() {
         .dsl_card("BT24-008")
         .expect("BT24-008 must be in embedded pack")
         .add_card(sec_filler)
-        .security(1, &[
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-        ])
+        .security(
+            1,
+            &[
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+            ],
+        )
         .memory(9) // leave room for the first +1; cap is 10
         .start();
 
@@ -516,7 +573,10 @@ fn bt24_008_inherited_opt_blocks_second_activation_same_turn() {
     runner.attack_player(perm_handle, 1, true);
     runner.auto_resolve().ok();
     let mem_after_first = runner.memory();
-    assert_eq!(mem_after_first, 10, "first attack must gain 1 memory (9 → 10)");
+    assert_eq!(
+        mem_after_first, 10,
+        "first attack must gain 1 memory (9 → 10)"
+    );
 
     // Reset memory back to 9 so a second gain would be observable if it fires.
     runner.game.set_memory(9);
@@ -555,16 +615,25 @@ fn bt24_008_inherited_opt_resets_after_end_turn() {
         .add_card(sec_filler)
         .add_card(deck_pad)
         // P0 needs a deck so begin_turn draws don't cause a deckout on turn 3.
-        .deck(0, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .deck(
+            0,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
         // P1 also needs a deck for their draw on turn 2.
-        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
-        .security(1, &[
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-            "SEC-FILLER",
-        ])
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
+        .security(
+            1,
+            &[
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+            ],
+        )
         .memory(9) // leave room for first +1 gain (cap is 10)
         .start();
 

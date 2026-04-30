@@ -82,8 +82,14 @@ fn owen_on_field_with_reptile() -> DebugRunner {
         // Both players need a non-empty deck so begin_turn draws do not
         // trigger a deckout, which would set game_over and prevent expiry
         // from running in subsequent end_turn() calls.
-        .deck(0, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
-        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .deck(
+            0,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
         .start();
 
     runner.place_on_field(0, "BT21-081", None);
@@ -115,8 +121,14 @@ fn owen_on_field_with_dragonkin() -> DebugRunner {
         .add_card(opp_digimon)
         .add_card(filler)
         .memory(3)
-        .deck(0, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
-        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .deck(
+            0,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
         .start();
 
     runner.place_on_field(0, "BT21-081", None);
@@ -170,7 +182,10 @@ fn bt21_081_has_three_triggered_clauses() {
         .iter()
         .filter(|c| matches!(c, CompiledClause::Triggered(_)))
         .count();
-    assert_eq!(triggered_count, 3, "BT21-081 must have exactly 3 triggered clauses");
+    assert_eq!(
+        triggered_count, 3,
+        "BT21-081 must have exactly 3 triggered clauses"
+    );
 }
 
 /// Clause 0: start_of_your_main_phase, FaceUp scope, not optional.
@@ -383,7 +398,10 @@ fn bt21_081_end_of_turn_selected_reptile_gains_piercing() {
         .expect("selection resolves");
 
     // The Reptile must now have Piercing.
-    let reptile_handle = PermanentHandle { player: 0, index: 1 }; // Owen at 0, Reptile at 1
+    let reptile_handle = PermanentHandle {
+        player: 0,
+        index: 1,
+    }; // Owen at 0, Reptile at 1
     assert!(
         runner.game.has_keyword(reptile_handle, Keyword::Piercing),
         "selected Reptile Digimon must have Piercing after effect resolves"
@@ -424,7 +442,10 @@ fn bt21_081_piercing_expires_end_of_turn() {
             .expect("selection resolves");
     }
 
-    let reptile_handle = PermanentHandle { player: 0, index: 1 };
+    let reptile_handle = PermanentHandle {
+        player: 0,
+        index: 1,
+    };
 
     // Step 3: Piercing must be active now (it was just granted on P1's turn).
     assert!(

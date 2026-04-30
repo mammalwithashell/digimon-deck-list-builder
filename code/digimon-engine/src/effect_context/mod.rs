@@ -26,6 +26,7 @@ use crate::enums::{
     EffectTiming, Expiry, Keyword, ModifierType, PlaySource, PlayerId, StackPosition,
 };
 use crate::game::Game;
+use crate::game_actions::PlayFromHandCostResult;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
@@ -43,6 +44,10 @@ pub struct EffectReadContext<'a> {
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
     pub player: PlayerId,
+    /// Card whose cost is currently being inspected by a BeforePayCost hook.
+    /// `None` outside play/digivolve cost calculation.
+    pub cost_target_card: Option<CardHandle>,
+    pub cost_target_from_hand: bool,
 }
 
 impl<'a> EffectReadContext<'a> {
@@ -57,6 +62,26 @@ impl<'a> EffectReadContext<'a> {
             source_card,
             source_permanent,
             player,
+            cost_target_card: None,
+            cost_target_from_hand: false,
+        }
+    }
+
+    pub fn new_with_cost_target(
+        game: &'a Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        player: PlayerId,
+        cost_target_card: CardHandle,
+        cost_target_from_hand: bool,
+    ) -> Self {
+        Self {
+            game,
+            source_card,
+            source_permanent,
+            player,
+            cost_target_card: Some(cost_target_card),
+            cost_target_from_hand,
         }
     }
 
@@ -115,7 +140,36 @@ impl<'a> EffectReadContext<'a> {
     pub fn source_permanent(&self) -> Option<&Permanent> {
         let h = self.source_permanent?;
         let player = self.game.player(h.player);
+        if h.index == crate::action::space::BREEDING_TARGET as u8 {
+            return player.breeding_area.as_ref();
+        }
         player.battle_area.get(h.index as usize)
+    }
+
+    pub fn cost_target_card_id(&self) -> Option<&str> {
+        self.cost_target_card
+            .and_then(|card| self.game.card_data_for_handle(card))
+            .map(|data| data.card_id.as_str())
+    }
+
+    pub fn cost_target_has_trait(&self, needle: &str) -> bool {
+        self.cost_target_card
+            .and_then(|card| self.game.card_data_for_handle(card))
+            .is_some_and(|data| data.traits.iter().any(|trait_name| trait_name == needle))
+    }
+
+    pub fn cost_target_from_hand(&self) -> bool {
+        self.cost_target_from_hand
+    }
+
+    pub fn cost_reduction_source(&self) -> Option<PermanentHandle> {
+        self.source_permanent
+    }
+
+    pub fn source_stack_source_count(&self) -> usize {
+        self.source_permanent()
+            .map(|perm| perm.card_sources.len().saturating_sub(1))
+            .unwrap_or(0)
     }
 
     pub fn event_permanent(&self) -> Option<PermanentHandle> {
@@ -307,6 +361,10 @@ pub struct EffectContext<'a> {
     /// `EffectContextSelectorScope::select_*` call, where it is set to the
     /// desired selector and cleared again before the method returns.
     pub(super) override_selecting_player: Option<PlayerId>,
+    /// Card whose cost is currently being inspected/resolved by a
+    /// BeforePayCost hook. `None` outside cost-reducer resolution.
+    pub cost_target_card: Option<CardHandle>,
+    pub cost_target_from_hand: bool,
 }
 
 impl<'a> EffectContext<'a> {
@@ -322,7 +380,23 @@ impl<'a> EffectContext<'a> {
             source_permanent,
             player,
             override_selecting_player: None,
+            cost_target_card: None,
+            cost_target_from_hand: false,
         }
+    }
+
+    pub fn new_with_cost_target(
+        game: &'a mut Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        player: PlayerId,
+        cost_target_card: CardHandle,
+        cost_target_from_hand: bool,
+    ) -> Self {
+        let mut ctx = Self::new(game, source_card, source_permanent, player);
+        ctx.cost_target_card = Some(cost_target_card);
+        ctx.cost_target_from_hand = cost_target_from_hand;
+        ctx
     }
 
     /// Construct an `EffectContext` with an explicit selecting-player
@@ -463,7 +537,36 @@ impl<'a> EffectContext<'a> {
     pub fn source_permanent(&self) -> Option<&Permanent> {
         let h = self.source_permanent?;
         let player = self.game.player(h.player);
+        if h.index == crate::action::space::BREEDING_TARGET as u8 {
+            return player.breeding_area.as_ref();
+        }
         player.battle_area.get(h.index as usize)
+    }
+
+    pub fn cost_target_card_id(&self) -> Option<&str> {
+        self.cost_target_card
+            .and_then(|card| self.game.card_data_for_handle(card))
+            .map(|data| data.card_id.as_str())
+    }
+
+    pub fn cost_target_has_trait(&self, needle: &str) -> bool {
+        self.cost_target_card
+            .and_then(|card| self.game.card_data_for_handle(card))
+            .is_some_and(|data| data.traits.iter().any(|trait_name| trait_name == needle))
+    }
+
+    pub fn cost_target_from_hand(&self) -> bool {
+        self.cost_target_from_hand
+    }
+
+    pub fn cost_reduction_source(&self) -> Option<PermanentHandle> {
+        self.source_permanent
+    }
+
+    pub fn source_stack_source_count(&self) -> usize {
+        self.source_permanent()
+            .map(|perm| perm.card_sources.len().saturating_sub(1))
+            .unwrap_or(0)
     }
 
     pub fn event_permanent(&self) -> Option<PermanentHandle> {
@@ -695,6 +798,8 @@ impl<'a> EffectContext<'a> {
             source_card: self.source_card,
             source_permanent: self.source_permanent,
             player: self.player,
+            cost_target_card: self.cost_target_card,
+            cost_target_from_hand: self.cost_target_from_hand,
         }
     }
 
@@ -1327,9 +1432,19 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(card);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.play_from_hand_free(player, hand_index) {
-            Some(handle) => Some(handle),
-            None => {
+        match self.game.play_from_hand_with_cost_result(
+            player,
+            hand_index,
+            crate::enums::CostDelta::Free,
+            PlaySource::ByEffect,
+            false,
+        ) {
+            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
+                player,
+                index: field_index as u8,
+            }),
+            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Failed => {
                 // Rollback: pop the card back out of hand and restore it to
                 // the top of security so the failure is observable as a
                 // no-op. Restore face_up_security entry too in case the
@@ -1413,9 +1528,19 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.play_from_hand_with_cost(player, hand_index, cost_delta) {
-            Some(handle) => Some(handle),
-            None => {
+        match self.game.play_from_hand_with_cost_result(
+            player,
+            hand_index,
+            cost_delta,
+            PlaySource::ByEffect,
+            false,
+        ) {
+            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
+                player,
+                index: field_index as u8,
+            }),
+            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Failed => {
                 // Rollback: pop the card out of hand and reinsert it at
                 // its original index in `target.card_sources` so the
                 // failure is a clean no-op for callers.

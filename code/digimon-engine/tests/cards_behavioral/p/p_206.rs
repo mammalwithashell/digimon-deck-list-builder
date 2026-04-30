@@ -260,10 +260,12 @@ fn p_206_clause_2_is_flood_gate_ignore_color() {
         .start();
 
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
-    let has_flood_gate_ignore_color = compiled.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { .. })
-    ));
+    let has_flood_gate_ignore_color = compiled.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { .. })
+        )
+    });
     assert!(
         has_flood_gate_ignore_color,
         "P-206 must have a FloodGate declarative clause for ignore-color bypass"
@@ -285,15 +287,11 @@ fn p_206_clause_3_is_inherited_security_skill() {
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
     let has_inherited_security = compiled.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity)
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
         }
         CompiledClause::Declarative(CompiledDeclarativeClause::RawRust {
             scope, triggers, ..
-        }) => {
-            *scope == CompiledScope::Inherited
-                && triggers.contains(&CompiledTiming::OnSecurity)
-        }
+        }) => *scope == CompiledScope::Inherited && triggers.contains(&CompiledTiming::OnSecurity),
         _ => false,
     });
     assert!(
@@ -586,14 +584,19 @@ fn p_206_ignore_color_flood_gate_is_unconditional() {
     let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
     // The flood_gate clause must be present (unconditional ignore-color).
     // We just confirm the clause is declarative FloodGate — no active_when guards.
-    let flood_gate_count = compiled.effects.iter().filter(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { .. })
-    )).count();
+    let flood_gate_count = compiled
+        .effects
+        .iter()
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { .. })
+            )
+        })
+        .count();
 
     assert_eq!(
-        flood_gate_count,
-        1,
+        flood_gate_count, 1,
         "P-206 must have exactly 1 FloodGate clause (ignore-color bypass); got {flood_gate_count}"
     );
 }
@@ -677,10 +680,12 @@ fn p_206_inherited_security_process_is_non_empty() {
 
     // Either a non-empty process (if Triggered) or a RawRust stub is present.
     // Both are valid; just confirm the clause is not a no-op.
-    let has_raw_rust_stub = compiled.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::RawRust { .. })
-    ));
+    let has_raw_rust_stub = compiled.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::RawRust { .. })
+        )
+    });
 
     assert!(
         sec_process_non_empty || has_raw_rust_stub,

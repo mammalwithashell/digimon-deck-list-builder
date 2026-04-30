@@ -122,7 +122,8 @@ fn bt21_025_clause1_has_progress_grant_keyword() {
 
     let has_progress = compiled.effects.iter().any(|c| {
         if let CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-            keyword, ..
+            keyword,
+            ..
         }) = c
         {
             keyword.eq_ignore_ascii_case("Progress")
@@ -130,7 +131,10 @@ fn bt21_025_clause1_has_progress_grant_keyword() {
             false
         }
     });
-    assert!(has_progress, "BT21-025 must have a GrantKeyword(Progress) clause");
+    assert!(
+        has_progress,
+        "BT21-025 must have a GrantKeyword(Progress) clause"
+    );
 }
 
 /// Clause 2: an own-scope OnAttackTargetChange triggered clause, once_per_turn,
@@ -155,7 +159,10 @@ fn bt21_025_clause2_has_on_attack_target_change_own_opt() {
 
     let clause2 =
         clause2.expect("BT21-025 must have an own-scope OnAttackTargetChange triggered clause");
-    assert!(clause2.once_per_turn, "clause 2 must be once_per_turn (OPT)");
+    assert!(
+        clause2.once_per_turn,
+        "clause 2 must be once_per_turn (OPT)"
+    );
     assert!(
         !clause2.optional,
         "clause 2 is not optional — fires automatically (no 'you may')"
@@ -182,9 +189,8 @@ fn bt21_025_clause3_has_inherited_on_opponent_security_removed_opt_optional() {
         None
     });
 
-    let clause3 = clause3.expect(
-        "BT21-025 must have an inherited OnOpponentSecurityRemoved triggered clause",
-    );
+    let clause3 = clause3
+        .expect("BT21-025 must have an inherited OnOpponentSecurityRemoved triggered clause");
     assert!(clause3.once_per_turn, "clause 3 must be once_per_turn");
     assert!(clause3.optional, "clause 3 must be optional ('you may')");
 }
@@ -200,9 +206,10 @@ fn bt21_025_clause2_fires_when_dragonkin_on_your_field() {
     let sec_before = runner.security_count(1);
     let _ = runner.place_on_field(0, "BT21-025", None); // Dragonkin on field
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -227,9 +234,10 @@ fn bt21_025_clause2_does_not_fire_without_matching_trait_permanent() {
     let _ = runner.place_on_field(0, "NO-TRAIT", None); // no Reptile/Dragonkin trait
     let sec_before = runner.security_count(1);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -255,9 +263,10 @@ fn bt21_025_clause2_does_not_fire_on_opponents_turn() {
     let sec_before = runner.security_count(1);
 
     // Fire from player 0's battle area — but it's player 1's turn.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -285,9 +294,10 @@ fn bt21_025_clause2_trashes_exactly_one_opponent_top_security() {
     let sec_before = runner.security_count(1);
     let trash_before = runner.trash_size(1);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -311,9 +321,10 @@ fn bt21_025_clause2_noop_when_opponent_has_no_security() {
     let _ = runner.place_on_field(0, "BT21-025", None);
 
     // Must not panic.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.security_count(1), 0);
@@ -340,16 +351,18 @@ fn bt21_025_clause2_opt_blocks_second_trigger_same_turn() {
     let _ = runner.place_on_field(0, "BT21-025", None);
 
     // First trigger.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
     let after_first = runner.security_count(1);
 
     // Second trigger same turn — must be suppressed.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -378,9 +391,10 @@ fn bt21_025_clause2_opt_resets_after_turn_end() {
     let _ = runner.place_on_field(0, "BT21-025", None);
 
     // Fire once — uses the OPT slot.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
     let after_first = runner.security_count(1);
 
@@ -389,9 +403,10 @@ fn bt21_025_clause2_opt_resets_after_turn_end() {
     runner.end_turn();
 
     // OPT resets — fires again.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnAttackTargetChange, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -427,9 +442,10 @@ fn bt21_025_clause3_plays_reptile_from_hand_free() {
     let field_before = runner.battle_area_size(0);
 
     // Simulate opponent security removal.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnOpponentSecurityRemoved, TriggerSource::PlayerBattleArea(1));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::PlayerBattleArea(1),
+    );
     runner.game.drain_effect_queue();
 
     if runner.pending_selection().is_some() {
@@ -457,9 +473,10 @@ fn bt21_025_clause3_decline_does_nothing() {
     let hand_before = runner.hand_size(0);
     let field_before = runner.battle_area_size(0);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnOpponentSecurityRemoved, TriggerSource::PlayerBattleArea(1));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::PlayerBattleArea(1),
+    );
     runner.game.drain_effect_queue();
 
     if let Some(sel) = runner.pending_selection() {
@@ -467,8 +484,16 @@ fn bt21_025_clause3_decline_does_nothing() {
         let _ = runner.execute_action(player, PASS);
     }
 
-    assert_eq!(runner.battle_area_size(0), field_before, "no card played on decline");
-    assert_eq!(runner.hand_size(0), hand_before, "hand unchanged on decline");
+    assert_eq!(
+        runner.battle_area_size(0),
+        field_before,
+        "no card played on decline"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "hand unchanged on decline"
+    );
 }
 
 /// OPT lockout for clause 3.

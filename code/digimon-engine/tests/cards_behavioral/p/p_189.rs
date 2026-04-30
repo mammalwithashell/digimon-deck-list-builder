@@ -34,7 +34,9 @@
 
 const P189_YAML: &str = include_str!("../../../cards/p/P-189.yaml");
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 
@@ -95,9 +97,7 @@ fn p_189_compiles_to_three_clauses() {
 #[test]
 fn p_189_security_clause_is_face_up_optional_not_opt() {
     let runner = dimetromon_runner();
-    let compiled = runner
-        .compiled_card("P-189")
-        .expect("P-189 compiled");
+    let compiled = runner.compiled_card("P-189").expect("P-189 compiled");
 
     let sec_clause = compiled
         .effects
@@ -128,17 +128,14 @@ fn p_189_security_clause_is_face_up_optional_not_opt() {
 #[test]
 fn p_189_has_progress_declarative_grant_keyword_clause() {
     let runner = dimetromon_runner();
-    let compiled = runner
-        .compiled_card("P-189")
-        .expect("P-189 compiled");
+    let compiled = runner.compiled_card("P-189").expect("P-189 compiled");
 
     let has_progress = compiled.effects.iter().any(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-            keyword, scope, ..
-        }) => {
-            keyword.to_lowercase().contains("progress")
-                && *scope == CompiledScope::FaceUp
-        }
+            keyword,
+            scope,
+            ..
+        }) => keyword.to_lowercase().contains("progress") && *scope == CompiledScope::FaceUp,
         _ => false,
     });
 
@@ -152,9 +149,7 @@ fn p_189_has_progress_declarative_grant_keyword_clause() {
 #[test]
 fn p_189_inherited_clause_is_opt_on_opponent_security_removed() {
     let runner = dimetromon_runner();
-    let compiled = runner
-        .compiled_card("P-189")
-        .expect("P-189 compiled");
+    let compiled = runner.compiled_card("P-189").expect("P-189 compiled");
 
     let inherited_clause = compiled
         .effects
@@ -192,9 +187,7 @@ fn p_189_inherited_clause_is_opt_on_opponent_security_removed() {
 #[test]
 fn p_189_security_clause_optional_allows_decline() {
     let runner = dimetromon_runner();
-    let compiled = runner
-        .compiled_card("P-189")
-        .expect("P-189 compiled");
+    let compiled = runner.compiled_card("P-189").expect("P-189 compiled");
 
     let sec = compiled
         .effects
@@ -260,9 +253,7 @@ fn p_189_security_clause_compiled_process_prompts_zone_choice() {
     // The actual zone-choice EffectChoice firing is covered when the full
     // security-attack path is available.
     let runner = dimetromon_runner();
-    let compiled = runner
-        .compiled_card("P-189")
-        .expect("P-189 compiled");
+    let compiled = runner.compiled_card("P-189").expect("P-189 compiled");
 
     let sec = compiled
         .effects

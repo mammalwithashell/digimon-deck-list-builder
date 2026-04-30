@@ -389,12 +389,10 @@ fn cannot_reduce_play_cost_suppresses_when_playing_this_hand_reducer() {
     struct HandSelfReducer;
     impl CardEffect for HandSelfReducer {
         fn effects(&self, card: CardHandle) -> Vec<Effect> {
-            vec![
-                Effect::before_pay_cost(card)
-                    .when_playing_this()
-                    .cost_reduction(3)
-                    .build(),
-            ]
+            vec![Effect::before_pay_cost(card)
+                .when_playing_this()
+                .cost_reduction(3)
+                .build()]
         }
     }
 

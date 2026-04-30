@@ -431,9 +431,10 @@ fn lm_027_security_clause_no_panic_with_empty_trash() {
     let field_handle = runner.place_on_field(0, "LM-027", Some(0));
 
     // Fire SecuritySkill timing for this permanent.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(field_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
     runner.game.drain_effect_queue();
 
     // Drain any pending selections (optional clause — engine may install a
@@ -484,9 +485,10 @@ fn lm_027_security_installs_trash_selection_when_eligible_card_in_trash() {
     let field_handle = runner.place_on_field(0, "LM-027", Some(0));
 
     // Fire SecuritySkill timing.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(field_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
     runner.game.drain_effect_queue();
 
     // A selection for the trash card should install (optional).
@@ -529,9 +531,10 @@ fn lm_027_security_no_selection_when_trash_is_empty() {
     // P0's trash is empty — place LM-027 on field and fire Security.
     let field_handle = runner.place_on_field(0, "LM-027", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(field_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -568,9 +571,10 @@ fn lm_027_security_no_selection_when_only_large_red_digimon_in_trash() {
 
     let field_handle = runner.place_on_field(0, "LM-027", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(field_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -607,9 +611,10 @@ fn lm_027_security_plays_small_red_digimon_from_trash_no_panic() {
     let field_handle = runner.place_on_field(0, "LM-027", Some(0));
 
     // Fire Security.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(field_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
     runner.game.drain_effect_queue();
 
     // Drain all selections, accepting the first available action.

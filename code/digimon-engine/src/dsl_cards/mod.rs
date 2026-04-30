@@ -111,24 +111,19 @@ impl CardEffect for DslCardEffect {
                         when_playing_this,
                         when_any_ally_played,
                         condition,
+                        optional,
                         once_per_turn,
                         amount,
                         amount_fn,
                         pay_cost,
                         ..
                     } => {
-                        // Cost reductions lower for before-pay-cost scans tied
-                        // to the played/evolved card. Ally-played observer
-                        // hooks are a separate trigger shape.
                         let timing_ok =
                             matches!(reduction_timing.as_deref(), None | Some("before_pay_cost"));
                         if !timing_ok {
                             continue 'clause;
                         }
-                        if !*when_playing_this {
-                            continue 'clause;
-                        }
-                        if when_any_ally_played.is_some() {
+                        if !*when_playing_this && when_any_ally_played.is_none() {
                             continue 'clause;
                         }
                         let amount_formula = amount_fn.clone().or_else(|| {
@@ -144,7 +139,9 @@ impl CardEffect for DslCardEffect {
                                 Some(amount_formula),
                                 pay_cost.clone(),
                                 self.raw.clone(),
+                                *optional,
                                 *when_playing_this,
+                                when_any_ally_played.clone(),
                             ));
                         }
                     }

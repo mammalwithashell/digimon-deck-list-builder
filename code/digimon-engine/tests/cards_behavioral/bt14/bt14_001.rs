@@ -24,8 +24,8 @@
 //!   OPT lockout test is #[ignore]'d.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 
 const KOROMON_YAML: &str = include_str!("../../../cards/bt14/BT14-001.yaml");
 
@@ -97,7 +97,11 @@ fn bt14_001_has_exactly_one_triggered_clause() {
         })
         .collect();
 
-    assert_eq!(triggered.len(), 1, "BT14-001 must have exactly one triggered clause");
+    assert_eq!(
+        triggered.len(),
+        1,
+        "BT14-001 must have exactly one triggered clause"
+    );
 }
 
 #[test]
@@ -117,7 +121,11 @@ fn bt14_001_inherited_clause_is_scope_inherited() {
         .collect();
 
     let clause = triggered[0];
-    assert_eq!(clause.scope, CompiledScope::Inherited, "clause must be scope: Inherited");
+    assert_eq!(
+        clause.scope,
+        CompiledScope::Inherited,
+        "clause must be scope: Inherited"
+    );
 }
 
 #[test]
@@ -138,7 +146,9 @@ fn bt14_001_inherited_clause_when_on_opponent_security_removed() {
 
     let clause = triggered[0];
     assert!(
-        clause.when.contains(&CompiledTiming::OnOpponentSecurityRemoved),
+        clause
+            .when
+            .contains(&CompiledTiming::OnOpponentSecurityRemoved),
         "clause must fire on OnOpponentSecurityRemoved"
     );
 }
@@ -182,7 +192,10 @@ fn bt14_001_inherited_clause_is_not_optional() {
         .collect();
 
     let clause = triggered[0];
-    assert!(!clause.optional, "clause is not optional per card text (no 'you may')");
+    assert!(
+        !clause.optional,
+        "clause is not optional per card text (no 'you may')"
+    );
 }
 
 // ── Section 2: Condition gating (your_turn gate) ────────────────────────────
