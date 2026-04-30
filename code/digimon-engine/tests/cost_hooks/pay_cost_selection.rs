@@ -78,6 +78,50 @@ impl CardEffect for PayCostSelectionDeclines {
     }
 }
 
+struct OptionalPayCostSelectsSource {
+    log: Arc<Mutex<Vec<&'static str>>>,
+}
+
+impl CardEffect for OptionalPayCostSelectsSource {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let cost_log = self.log.clone();
+        let process_log = self.log.clone();
+        vec![Effect::on_play(card)
+            .name("optional pay cost selects source")
+            .pay_cost(move |ctx| {
+                ctx.select_own_sources(
+                    "Optionally trash 1 source to pay this effect cost",
+                    0,
+                    1,
+                    |game, source_ref| {
+                        game.card_data_for_handle(source_ref.card)
+                            .is_some_and(|data| data.card_id == "SRC")
+                    },
+                    {
+                        let cost_log = cost_log.clone();
+                        move |ctx, refs| match refs.as_slice() {
+                            [] => {
+                                cost_log.lock().unwrap().push("decline_cost");
+                                ctx.decline_pending_pay_cost();
+                            }
+                            [source] => {
+                                cost_log.lock().unwrap().push("accept_cost");
+                                assert!(ctx.game.trash_source_ref(*source));
+                            }
+                            _ => panic!("optional pay cost should choose at most 1 source"),
+                        }
+                    },
+                );
+                true
+            })
+            .process(move |ctx| {
+                process_log.lock().unwrap().push("process");
+                ctx.gain_memory(3);
+            })
+            .build()]
+    }
+}
+
 struct InnerPayCostSelectsSource {
     log: Arc<Mutex<Vec<&'static str>>>,
 }
@@ -101,6 +145,50 @@ impl CardEffect for InnerPayCostSelectsSource {
                     move |ctx, refs| {
                         assert_eq!(refs.len(), 1);
                         assert!(ctx.game.trash_source_ref(refs[0]));
+                    },
+                );
+                true
+            })
+            .process(move |ctx| {
+                process_log.lock().unwrap().push("inner_process");
+                ctx.gain_memory(5);
+            })
+            .build()]
+    }
+}
+
+struct InnerOptionalPayCostDeclines {
+    log: Arc<Mutex<Vec<&'static str>>>,
+}
+
+impl CardEffect for InnerOptionalPayCostDeclines {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let cost_log = self.log.clone();
+        let process_log = self.log.clone();
+        vec![Effect::end_of_your_turn(card)
+            .name("inner optional pay cost may decline")
+            .pay_cost_fn(move |ctx| {
+                ctx.select_own_sources(
+                    "Optionally trash inner source to pay cost",
+                    0,
+                    1,
+                    |game, source_ref| {
+                        game.card_data_for_handle(source_ref.card)
+                            .is_some_and(|data| data.card_id == "SRC-B")
+                    },
+                    {
+                        let cost_log = cost_log.clone();
+                        move |ctx, refs| match refs.as_slice() {
+                            [] => {
+                                cost_log.lock().unwrap().push("inner_decline_cost");
+                                ctx.decline_pending_pay_cost();
+                            }
+                            [source] => {
+                                cost_log.lock().unwrap().push("inner_accept_cost");
+                                assert!(ctx.game.trash_source_ref(*source));
+                            }
+                            _ => panic!("inner optional cost should choose at most 1 source"),
+                        }
                     },
                 );
                 true
@@ -347,6 +435,83 @@ fn pay_cost_selection_decline_discards_parked_process() {
 }
 
 #[test]
+fn optional_pay_cost_decline_skips_process() {
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("HOST", "Host"))
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("PAYSEL", "PaySel"))
+        .hand(0, &["PAYSEL"])
+        .memory(10)
+        .start();
+    r.register_effect(
+        "PAYSEL",
+        Arc::new(OptionalPayCostSelectsSource { log: log.clone() }),
+    );
+
+    r.place_stack(0, &["SRC", "HOST"]);
+    let memory_before = r.memory();
+    r.play(0, 0);
+
+    assert!(r.game.pending_pay_cost_effect.is_some());
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("optional source selection installed");
+    assert!(matches!(
+        pending.kind,
+        SelectionKind::SourceMulti {
+            min: 0,
+            max: 1,
+            picked: 0
+        }
+    ));
+    assert!(pending.is_optional);
+
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("optional pay-cost PASS resolves");
+
+    assert!(r.game.pending_selection.is_none());
+    assert!(r.game.pending_pay_cost_effect.is_none());
+    assert_eq!(*log.lock().unwrap(), vec!["decline_cost"]);
+    assert_eq!(r.memory(), memory_before - 3);
+    assert_eq!(r.trash_size(0), 0);
+}
+
+#[test]
+fn optional_pay_cost_accept_pays_cost_and_resumes_process() {
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("HOST", "Host"))
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(make_test_card("PAYSEL", "PaySel"))
+        .hand(0, &["PAYSEL"])
+        .memory(10)
+        .start();
+    r.register_effect(
+        "PAYSEL",
+        Arc::new(OptionalPayCostSelectsSource { log: log.clone() }),
+    );
+
+    let host = r.place_stack(0, &["SRC", "HOST"]);
+    let memory_before = r.memory();
+    r.play(0, 0);
+
+    let action = encode_source_select(host.index as u16, 0).expect("source selection action");
+    r.game
+        .resolve_selection(0, action)
+        .expect("optional pay-cost source selection resolves");
+
+    assert!(r.game.pending_selection.is_none());
+    assert!(r.game.pending_pay_cost_effect.is_none());
+    assert_eq!(*log.lock().unwrap(), vec!["accept_cost", "process"]);
+    assert_eq!(r.memory(), memory_before);
+    assert_eq!(r.trash_size(0), 1);
+}
+
+#[test]
 fn nested_pay_cost_selection_does_not_overwrite_outer_continuation() {
     let log = Arc::new(Mutex::new(Vec::new()));
     let mut r = DebugRunner::builder()
@@ -408,6 +573,69 @@ fn nested_pay_cost_selection_does_not_overwrite_outer_continuation() {
     );
     assert_eq!(r.memory(), memory_before - 3 + 5 + 3);
     assert_eq!(r.trash_size(0), 2);
+}
+
+#[test]
+fn nested_optional_pay_cost_decline_skips_active_inner_and_resumes_outer() {
+    let log = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("HOST-A", "Host A"))
+        .add_card(make_test_card("HOST-B", "Host B"))
+        .add_card(make_test_card("SRC-A", "Source A"))
+        .add_card(make_test_card("SRC-B", "Source B"))
+        .add_card(make_test_card("INNER", "Inner"))
+        .add_card(make_test_card("OUTER", "Outer"))
+        .hand(0, &["OUTER"])
+        .memory(5)
+        .start();
+    r.register_effect(
+        "INNER",
+        Arc::new(InnerOptionalPayCostDeclines { log: log.clone() }),
+    );
+    r.register_effect(
+        "OUTER",
+        Arc::new(OuterPayCostCallbackDrainsInnerQueue { log: log.clone() }),
+    );
+
+    let outer_host = r.place_stack(0, &["SRC-A", "HOST-A"]);
+    r.place_stack(0, &["SRC-B", "HOST-B"]);
+    r.place_on_field(0, "INNER", Some(0));
+
+    let memory_before = r.memory();
+    r.play(0, 0);
+
+    let outer_action =
+        encode_source_select(outer_host.index as u16, 0).expect("outer source action");
+    r.game
+        .resolve_selection(0, outer_action)
+        .expect("outer source-selection action resolves");
+
+    assert_eq!(
+        *log.lock().unwrap(),
+        vec!["outer_pay_cost", "outer_callback"]
+    );
+    assert!(r.game.pending_selection.is_some());
+    assert!(r.game.pending_pay_cost_effect.is_some());
+    assert_eq!(r.game.pending_pay_cost_stack.len(), 1);
+
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("inner optional pay-cost PASS resolves");
+
+    assert!(r.game.pending_selection.is_none());
+    assert!(r.game.pending_pay_cost_effect.is_none());
+    assert!(r.game.pending_pay_cost_stack.is_empty());
+    assert_eq!(
+        *log.lock().unwrap(),
+        vec![
+            "outer_pay_cost",
+            "outer_callback",
+            "inner_decline_cost",
+            "outer_process"
+        ]
+    );
+    assert_eq!(r.memory(), memory_before - 3 + 3);
+    assert_eq!(r.trash_size(0), 1);
 }
 
 #[test]
