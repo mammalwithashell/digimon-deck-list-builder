@@ -601,9 +601,11 @@ impl EffectBuilder {
     /// The closure receives `&mut EffectContext` so it can trash cards,
     /// suspend permanents, or otherwise mutate game state to pay the cost.
     ///
-    /// **v1 constraint:** synchronous — the closure must NOT install a
-    /// `PendingSelection`. For selection-gated pay-costs, fold the selection
-    /// into `process` for now. See Phase 5 non-goals.
+    /// Queued triggered effects may install a `PendingSelection` while paying
+    /// the cost. In that case the effect parks before `process`, resumes only
+    /// after the selection chain resolves, and can be discarded by calling
+    /// `EffectContext::decline_pending_pay_cost()` from the selection
+    /// callback.
     ///
     /// Phase 5 dispatch wires up in Tasks 3-4.
     pub fn pay_cost_fn<F>(mut self, f: F) -> Self
@@ -612,6 +614,14 @@ impl EffectBuilder {
     {
         self.inner.pay_cost_fn = Some(Box::new(f));
         self
+    }
+
+    /// Alias for [`Self::pay_cost_fn`].
+    pub fn pay_cost<F>(self, f: F) -> Self
+    where
+        F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static,
+    {
+        self.pay_cost_fn(f)
     }
 
     /// Attach a replacement-effect process for "Would*" timings.

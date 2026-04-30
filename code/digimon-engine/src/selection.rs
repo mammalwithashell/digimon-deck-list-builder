@@ -275,6 +275,17 @@ pub struct QueuedEffect {
     pub allow_below_top_liveness: bool,
 }
 
+/// Queued triggered effect parked after its `pay_cost_fn` installed a
+/// mandatory/optional selection. The cost callback has already returned
+/// `true`; once the selection chain resolves, the effect resumes at the
+/// max-per-turn record + process stage. If the callback explicitly declines
+/// the pay cost, this parked entry is discarded.
+#[derive(Debug, Clone)]
+pub struct PendingPayCostEffect {
+    pub queued_effect: QueuedEffect,
+    pub declined: bool,
+}
+
 /// Describes where a trigger is firing from. Consumed by
 /// `Game::enqueue_triggered` to decide which zones/permanents to scan.
 #[derive(Debug, Clone, Copy)]

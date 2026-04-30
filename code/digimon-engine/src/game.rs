@@ -13,8 +13,8 @@ use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
 use crate::selection::{
-    EffectQueue, PendingAttack, PendingOption, PendingSecurity, PendingSelection,
-    SecurityResolutionState, SelectionError,
+    EffectQueue, PendingAttack, PendingOption, PendingPayCostEffect, PendingSecurity,
+    PendingSelection, SecurityResolutionState, SelectionError,
 };
 use crate::token_registry::TokenRegistry;
 use crate::trigger_context::TriggerContext;
@@ -123,6 +123,14 @@ pub struct Game {
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).
     pub effect_queue: EffectQueue,
+    /// Queued triggered effect parked while its `pay_cost_fn` resolves a
+    /// player selection. Resumed by `resolve_selection` before ordinary queue
+    /// draining continues.
+    pub pending_pay_cost_effect: Option<PendingPayCostEffect>,
+    /// Outer pay-cost continuations parked beneath the current one. This is
+    /// populated when a pay-cost selection callback drains another queued
+    /// effect that itself parks for a pay-cost selection.
+    pub pending_pay_cost_stack: Vec<PendingPayCostEffect>,
     /// In-flight attack, if any. Installed by `begin_attack`, advanced by
     /// the combat state machine, cleared by `cleanup_attack`.
     /// Always `None` until the combat state machine lands (PR4).
@@ -501,6 +509,8 @@ impl Game {
             revealed_cards: Vec::new(),
             pending_selection: None,
             effect_queue: EffectQueue::new(),
+            pending_pay_cost_effect: None,
+            pending_pay_cost_stack: Vec::new(),
             pending_attack: None,
             pending_security: None,
             pending_option: None,
@@ -651,6 +661,40 @@ impl Game {
             return Err(SelectionError::NoPendingSelection);
         }
         self.resolve_generic_selection(player, action_id)
+    }
+
+    /// Mark the currently parked pay-cost effect as declined. Selection
+    /// callbacks installed by `pay_cost_fn` can call this after the player
+    /// declines or the selected cost cannot be paid; the parked process tail
+    /// will be discarded when the selection chain unwinds.
+    pub fn decline_pending_pay_cost(&mut self) {
+        if let Some(pending) = self.pending_pay_cost_effect.as_mut() {
+            pending.declined = true;
+        }
+    }
+
+    /// Trash a source selected through `EffectContext::select_own_sources`.
+    /// Returns `true` when the stable source handle was found and moved.
+    pub fn trash_source_ref(&mut self, source_ref: crate::selection::SourceSelectionRef) -> bool {
+        let Some(permanent) = self
+            .player_mut(source_ref.permanent.player)
+            .battle_area
+            .get_mut(source_ref.permanent.index as usize)
+        else {
+            return false;
+        };
+        let Some(pos) = permanent
+            .card_sources
+            .iter()
+            .position(|source| source.handle() == source_ref.card)
+        else {
+            return false;
+        };
+        let removed = permanent.card_sources.remove(pos);
+        self.player_mut(source_ref.permanent.player)
+            .trash
+            .push(removed);
+        true
     }
 
     /// Fire all applicable replacement effects for the given would-event.

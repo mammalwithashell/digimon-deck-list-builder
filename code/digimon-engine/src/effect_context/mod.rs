@@ -479,6 +479,13 @@ impl<'a> EffectContext<'a> {
         self.game.scheduled_effects.push(entry);
     }
 
+    /// Decline the pay cost for a queued triggered effect that parked during
+    /// `pay_cost_fn`. The effect queue will discard the parked process tail
+    /// after the current selection callback unwinds.
+    pub fn decline_pending_pay_cost(&mut self) {
+        self.game.decline_pending_pay_cost();
+    }
+
     // ─── Read-only queries ────────────────────────────────────────────
 
     pub fn memory(&self) -> i16 {
