@@ -30,6 +30,7 @@ use crate::game_actions::PlayFromHandCostResult;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
+use crate::replacement::ReplacementCause;
 use crate::rules::Rules;
 use crate::scheduled_effects::ScheduledEffect;
 use digimon_dsl::compiled::CompiledStep;
@@ -44,6 +45,9 @@ pub struct EffectReadContext<'a> {
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
     pub player: PlayerId,
+    replacement_cause: Option<ReplacementCause>,
+    replacement_source_controller: Option<PlayerId>,
+    replacement_subject_controller: Option<PlayerId>,
     /// Card whose cost is currently being inspected by a BeforePayCost hook.
     /// `None` outside play/digivolve cost calculation.
     pub cost_target_card: Option<CardHandle>,
@@ -62,6 +66,9 @@ impl<'a> EffectReadContext<'a> {
             source_card,
             source_permanent,
             player,
+            replacement_cause: None,
+            replacement_source_controller: None,
+            replacement_subject_controller: None,
             cost_target_card: None,
             cost_target_from_hand: false,
         }
@@ -80,9 +87,24 @@ impl<'a> EffectReadContext<'a> {
             source_card,
             source_permanent,
             player,
+            replacement_cause: None,
+            replacement_source_controller: None,
+            replacement_subject_controller: None,
             cost_target_card: Some(cost_target_card),
             cost_target_from_hand,
         }
+    }
+
+    pub fn with_replacement_context(
+        mut self,
+        cause: ReplacementCause,
+        source_controller: Option<PlayerId>,
+        subject_controller: Option<PlayerId>,
+    ) -> Self {
+        self.replacement_cause = Some(cause);
+        self.replacement_source_controller = source_controller;
+        self.replacement_subject_controller = subject_controller;
+        self
     }
 
     pub fn memory(&self) -> i16 {
@@ -101,12 +123,28 @@ impl<'a> EffectReadContext<'a> {
         &self.game.card_data
     }
 
-    pub fn player(&self, id: PlayerId) -> &Player {
+    pub fn player(&self) -> PlayerId {
+        self.player
+    }
+
+    pub fn player_state(&self, id: PlayerId) -> &Player {
         self.game.player(id)
     }
 
     pub fn my_player(&self) -> &Player {
         self.game.player(self.player)
+    }
+
+    pub fn replacement_cause(&self) -> Option<ReplacementCause> {
+        self.replacement_cause
+    }
+
+    pub fn replacement_source_controller(&self) -> Option<PlayerId> {
+        self.replacement_source_controller
+    }
+
+    pub fn replacement_subject_controller(&self) -> Option<PlayerId> {
+        self.replacement_subject_controller
     }
 
     pub fn opponent_id(&self) -> PlayerId {
@@ -805,6 +843,9 @@ impl<'a> EffectContext<'a> {
             source_card: self.source_card,
             source_permanent: self.source_permanent,
             player: self.player,
+            replacement_cause: None,
+            replacement_source_controller: None,
+            replacement_subject_controller: None,
             cost_target_card: self.cost_target_card,
             cost_target_from_hand: self.cost_target_from_hand,
         }

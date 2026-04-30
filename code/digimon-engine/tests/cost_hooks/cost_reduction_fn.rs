@@ -41,7 +41,7 @@ impl CardEffect for TrashSizeCostReduction {
         vec![Effect::before_pay_cost(card)
             .name("reduce by trash size")
             .condition(|_| true)
-            .cost_reduction_fn(|ctx| ctx.player(0).trash.len() as i32)
+            .cost_reduction_fn(|ctx| ctx.player_state(0).trash.len() as i32)
             .build()]
     }
 }

@@ -181,6 +181,9 @@ pub struct CompiledPredicate {
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
+    pub replacement_cause: Option<CompiledReplacementCause>,
+    pub replacement_source_is_opponent: Option<bool>,
+    pub replacement_subject_is_mine: Option<bool>,
     pub equals: Option<Vec<CompiledBindingCompare>>,
     pub not_equals: Option<Vec<CompiledBindingCompare>>,
     pub count_lte: Option<CompiledCountAggregate>,
@@ -199,6 +202,15 @@ pub struct CompiledPredicate {
 pub enum CompiledDpConstraint {
     Literal(i32),
     Formula(CompiledFormula),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledReplacementCause {
+    Battle,
+    OwnEffect,
+    OpponentEffect,
+    SecurityCheck,
+    Cost,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

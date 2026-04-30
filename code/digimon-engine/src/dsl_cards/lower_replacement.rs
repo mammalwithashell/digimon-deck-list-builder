@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::trigger_map::lookup_replacement_trigger;
@@ -39,14 +40,14 @@ fn new_when_would_builder(card: CardHandle, timing: EffectTiming) -> Option<Effe
 pub fn lower(
     card: CardHandle,
     scope: CompiledScope,
-    _active_when: Option<&CompiledPredicate>,
+    active_when: Option<&CompiledPredicate>,
     trigger: &str,
     process: &[CompiledStep],
 ) -> Option<Effect> {
     lower_with_raw(
         card,
         scope,
-        _active_when,
+        active_when,
         trigger,
         process,
         Arc::new(EngineRawRustRegistry::new()),
@@ -56,7 +57,7 @@ pub fn lower(
 pub fn lower_with_raw(
     card: CardHandle,
     scope: CompiledScope,
-    _active_when: Option<&CompiledPredicate>,
+    active_when: Option<&CompiledPredicate>,
     trigger: &str,
     process: &[CompiledStep],
     raw: Arc<EngineRawRustRegistry>,
@@ -71,6 +72,18 @@ pub fn lower_with_raw(
 
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
+    }
+
+    if let Some(active_when) = active_when {
+        let active_when = active_when.clone();
+        builder = builder.replacement_condition(move |ctx, subject| {
+            let subject = match *subject {
+                ReplacementSubject::Permanent(handle) => PredicateSubject::Permanent(handle),
+                ReplacementSubject::Card(handle, _) => PredicateSubject::Card(handle),
+                ReplacementSubject::Player(_) => PredicateSubject::None,
+            };
+            eval_predicate(&active_when, ctx, subject)
+        });
     }
 
     builder = builder.replacement_process(move |rctx| {

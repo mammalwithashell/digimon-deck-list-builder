@@ -331,6 +331,9 @@ fn compile_predicate(
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
         event_card_trait_has: p.event_card_trait_has.clone(),
+        replacement_cause: p.replacement_cause.map(compile_replacement_cause),
+        replacement_source_is_opponent: p.replacement_source_is_opponent,
+        replacement_subject_is_mine: p.replacement_subject_is_mine,
         equals: p
             .equals
             .as_ref()
@@ -423,6 +426,22 @@ fn compile_predicate(
             ))
         }),
         has_alt_path: p.has_alt_path.clone(),
+    }
+}
+
+fn compile_replacement_cause(
+    cause: crate::predicate::ReplacementCauseSpec,
+) -> CompiledReplacementCause {
+    match cause {
+        crate::predicate::ReplacementCauseSpec::Battle => CompiledReplacementCause::Battle,
+        crate::predicate::ReplacementCauseSpec::OwnEffect => CompiledReplacementCause::OwnEffect,
+        crate::predicate::ReplacementCauseSpec::OpponentEffect => {
+            CompiledReplacementCause::OpponentEffect
+        }
+        crate::predicate::ReplacementCauseSpec::SecurityCheck => {
+            CompiledReplacementCause::SecurityCheck
+        }
+        crate::predicate::ReplacementCauseSpec::Cost => CompiledReplacementCause::Cost,
     }
 }
 

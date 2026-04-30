@@ -1,4 +1,5 @@
 mod behavioral_end_to_end;
+mod context_predicates;
 mod deletion_replacements;
 mod dispatcher_core;
 mod dispatcher_guard;

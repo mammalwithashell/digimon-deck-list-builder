@@ -12,11 +12,12 @@ pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 's
 
 /// Replacement-effect candidate-filter closure. Evaluated in
 /// `replacement::collect_candidates` after `condition` for `WhenWouldBe*`
-/// timings, with `cause` threaded in. Returns `true` to keep the candidate
-/// in the dispatch list, `false` to skip — used by `<Scapegoat>` to suppress
-/// the outer "may" dialog when the deletion cause is `OwnEffect` (RULES_CONTEXT
-/// 16-31) and to suppress the dialog when there are no substitute candidates
-/// (mirrors DCGO `CanActivateScapegoat`'s `HasMatchConditionPermanent` gate).
+/// timings, with cause/source/subject replacement context attached to the
+/// read context. Returns `true` to keep the candidate in the dispatch list,
+/// `false` to skip — used by `<Scapegoat>` to suppress the outer "may" dialog
+/// when the deletion cause is `OwnEffect` (RULES_CONTEXT 16-31) and to
+/// suppress the dialog when there are no substitute candidates (mirrors DCGO
+/// `CanActivateScapegoat`'s `HasMatchConditionPermanent` gate).
 ///
 /// Distinct from `condition`:
 /// - `condition` is cause-agnostic and evaluated for every effect timing.
@@ -33,7 +34,7 @@ pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 's
 /// — passives use the registry's `ReplacementConditionFn`; effect-side
 /// candidate filtering uses this `EffectReplacementConditionFn`.
 pub type EffectReplacementConditionFn = Box<
-    dyn Fn(&EffectReadContext, crate::replacement::ReplacementCause) -> bool
+    dyn Fn(&EffectReadContext, &crate::replacement::ReplacementSubject) -> bool
         + Send
         + Sync
         + 'static,
@@ -76,10 +77,11 @@ pub struct Effect {
 
     // Behavior
     pub condition: Option<ConditionFn>,
-    /// Cause-aware candidate filter for `WhenWouldBe*` replacement timings.
+    /// Context-aware candidate filter for `WhenWouldBe*` replacement timings.
     /// Evaluated in `replacement::collect_candidates` AFTER `condition`,
-    /// with the `ReplacementCause` threaded in. Both must return true for
-    /// the candidate to be kept. See `EffectReplacementConditionFn`.
+    /// with replacement cause/source/subject context attached to the read
+    /// context. Both must return true for the candidate to be kept. See
+    /// `EffectReplacementConditionFn`.
     pub replacement_condition: Option<EffectReplacementConditionFn>,
     pub process: Option<ProcessFn>,
 
@@ -523,7 +525,7 @@ impl EffectBuilder {
         self
     }
 
-    /// Attach a cause-aware candidate filter for `WhenWouldBe*` replacements.
+    /// Attach a context-aware candidate filter for `WhenWouldBe*` replacements.
     /// Evaluated in `replacement::collect_candidates` after `condition`.
     /// See `EffectReplacementConditionFn` doc for the full contract; primary
     /// use is `<Scapegoat>` suppressing the outer "may" dialog on
@@ -531,7 +533,7 @@ impl EffectBuilder {
     /// no-substitute case mirroring DCGO `HasMatchConditionPermanent`.
     pub fn replacement_condition(
         mut self,
-        f: impl Fn(&EffectReadContext, crate::replacement::ReplacementCause) -> bool
+        f: impl Fn(&EffectReadContext, &crate::replacement::ReplacementSubject) -> bool
             + Send
             + Sync
             + 'static,

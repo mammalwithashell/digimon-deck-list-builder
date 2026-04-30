@@ -2,7 +2,7 @@
 
 use digimon_dsl::compiled::{
     CompiledBindingCompare, CompiledCardKind, CompiledColor, CompiledExistential,
-    CompiledPlayerRef, CompiledPredicate, CompiledZone,
+    CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause, CompiledZone,
 };
 
 use crate::card_source::CardHandle;
@@ -67,6 +67,9 @@ pub fn eval_predicate_with_bindings(
         }
     }
     if !eval_event_fields(pred, rctx) {
+        return false;
+    }
+    if !eval_replacement_fields(pred, rctx) {
         return false;
     }
     if let Some(want) = pred.in_breeding {
@@ -155,6 +158,61 @@ pub fn eval_predicate_with_bindings(
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h),
         PredicateSubject::None => eval_no_subject_fields(pred),
     }
+}
+
+fn eval_replacement_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> bool {
+    if let Some(want) = pred.replacement_cause {
+        let Some(actual) = rctx.replacement_cause() else {
+            return false;
+        };
+        if !replacement_cause_matches(want, actual) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.replacement_source_is_opponent {
+        let Some(controller) = rctx.replacement_source_controller() else {
+            return false;
+        };
+        let is_opponent = controller != rctx.player();
+        if is_opponent != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.replacement_subject_is_mine {
+        let Some(controller) = rctx.replacement_subject_controller() else {
+            return false;
+        };
+        let is_mine = controller == rctx.player();
+        if is_mine != want {
+            return false;
+        }
+    }
+    true
+}
+
+fn replacement_cause_matches(
+    want: CompiledReplacementCause,
+    actual: crate::replacement::ReplacementCause,
+) -> bool {
+    matches!(
+        (want, actual),
+        (
+            CompiledReplacementCause::Battle,
+            crate::replacement::ReplacementCause::Battle
+        ) | (
+            CompiledReplacementCause::OwnEffect,
+            crate::replacement::ReplacementCause::OwnEffect
+        ) | (
+            CompiledReplacementCause::OpponentEffect,
+            crate::replacement::ReplacementCause::OpponentEffect
+        ) | (
+            CompiledReplacementCause::SecurityCheck,
+            crate::replacement::ReplacementCause::SecurityCheck
+        ) | (
+            CompiledReplacementCause::Cost,
+            crate::replacement::ReplacementCause::Cost
+        )
+    )
 }
 
 fn compare_binding_values(

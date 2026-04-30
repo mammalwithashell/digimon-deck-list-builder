@@ -631,6 +631,31 @@ impl Game {
         &mut self.players[id as usize]
     }
 
+    pub fn owner_of_card(&self, handle: crate::card_source::CardHandle) -> Option<PlayerId> {
+        if let Some(owner) = self
+            .players
+            .iter()
+            .find(|player| player.contains_card(handle))
+            .map(|player| player.id)
+        {
+            return Some(owner);
+        }
+        if let Some(pending) = &self.pending_security {
+            if pending.card.handle() == handle {
+                return Some(pending.card.owner);
+            }
+        }
+        if let Some(pending) = &self.pending_option {
+            if pending.card.handle() == handle {
+                return Some(pending.owner);
+            }
+        }
+        self.revealed_cards
+            .iter()
+            .find(|card| card.handle() == handle)
+            .map(|card| card.owner)
+    }
+
     /// Get all non-eliminated opponents of a player.
     pub fn opponents(&self, id: PlayerId) -> Vec<PlayerId> {
         self.turn_order
