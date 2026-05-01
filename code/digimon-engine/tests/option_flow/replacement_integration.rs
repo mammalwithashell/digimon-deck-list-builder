@@ -10,14 +10,14 @@
 
 use std::sync::{Arc, Mutex};
 
-use digimon_engine::action::space::HAND_EFFECT_START;
+use digimon_engine::action::space::{HAND_EFFECT_START, REPLACEMENT_ACCEPT};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, Zone};
 use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::{ReplacementCause, ReplacementSubject};
-use digimon_engine::selection::OptionPlayResult;
+use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 // ─── Inline test-effect helpers ──────────────────────────────────────
 
@@ -120,6 +120,59 @@ impl CardEffect for WwbdCancelCostDeletion {
                 if matches!(rctx.cause, ReplacementCause::Cost) {
                     rctx.cancel();
                 }
+            })
+            .build()]
+    }
+}
+
+/// Optional WWBD replacement that only appears while the Delay option itself
+/// is being deleted as the replacement cost. Accepting it leaves the cost
+/// deletion unhandled, so the Delay should still reach trash afterward.
+struct PromptThenAllowDelayCost;
+impl CardEffect for PromptThenAllowDelayCost {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_would_be_deleted(card)
+            .name("Prompt before allowing Delay cost")
+            .optional()
+            .replacement_condition(|ctx, subject| {
+                if !matches!(ctx.replacement_cause(), Some(ReplacementCause::Cost)) {
+                    return false;
+                }
+                let Some(handle) = subject.permanent() else {
+                    return false;
+                };
+                ctx.game
+                    .player(handle.player)
+                    .battle_area
+                    .get(handle.index as usize)
+                    .is_some_and(|perm| perm.top_card().card_id(&ctx.game.card_data) == "BT17-097")
+            })
+            .replacement_process(|_| {})
+            .build()]
+    }
+}
+
+/// Post-cost observer that rewrites hand contents after the Delay option is
+/// trashed. The Delay hand prompt must reflect this post-cost hand state.
+struct ReplaceHandAfterDeletion;
+impl CardEffect for ReplaceHandAfterDeletion {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_any_deletion(card)
+            .name("Replace hand after deletion")
+            .process(|ctx| {
+                let Some(index) = ctx
+                    .game
+                    .player(0)
+                    .deck
+                    .iter()
+                    .position(|card| card.card_id(&ctx.game.card_data) == "IMPERIAL-NEW")
+                else {
+                    return;
+                };
+
+                ctx.game.player_mut(0).hand.clear();
+                let card = ctx.game.player_mut(0).deck.remove(index);
+                ctx.game.player_mut(0).hand.push(card);
             })
             .build()]
     }
@@ -591,4 +644,121 @@ fn bt17_097_unpaid_delay_cost_does_not_prevent_original_deletion() {
         "Delay option stayed on field because its cost deletion was cancelled"
     );
     assert!(!trash_contains(&r, 0, "BT17-097"));
+}
+
+#[test]
+fn bt17_097_delay_waits_for_pending_cost_replacement_before_hand_choice() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT17-097")
+        .expect("BT17-097 fixture is available")
+        .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
+        .add_card(trait_digimon_card(
+            "IMPERIAL-HAND",
+            "Imperial Hand",
+            &["Imperialdramon"],
+        ))
+        .add_card(digimon_card("COST-PROMPT", CardColor::Red))
+        .hand(0, &["IMPERIAL-HAND"])
+        .memory(0)
+        .start();
+    r.register_effect("COST-PROMPT", Arc::new(PromptThenAllowDelayCost));
+    r.place_on_field(0, "COST-PROMPT", Some(0));
+    let target = r.place_on_field(0, "FREE-TARGET", Some(0));
+    place_delay_option(&mut r, 0, "BT17-097");
+
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Delay cost replacement prompt is exposed before hand choice");
+    assert_eq!(pending.kind, SelectionKind::Replacement);
+    assert!(pending.valid_action_ids.contains(&REPLACEMENT_ACCEPT));
+    assert!(
+        find_battle_permanent(&r, 0, "BT17-097").is_some(),
+        "Delay source is not trashed until the cost prompt resolves"
+    );
+
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept cost replacement prompt");
+
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("paid Delay resumes into the hand choice");
+    assert_eq!(pending.kind, SelectionKind::EffectChoice);
+    assert!(pending.valid_action_ids.contains(&HAND_EFFECT_START));
+
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("select Imperialdramon-like hand target");
+
+    let target = find_battle_permanent(&r, 0, "FREE-TARGET").expect("target still present");
+    let target_stack = &r.game.player(0).battle_area[target.index as usize];
+    assert_eq!(
+        target_stack.top_card().card_id(&r.game.card_data),
+        "IMPERIAL-HAND"
+    );
+    assert!(trash_contains(&r, 0, "BT17-097"));
+}
+
+#[test]
+fn bt17_097_delay_rebuilds_hand_candidates_after_cost_triggers() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT17-097")
+        .expect("BT17-097 fixture is available")
+        .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
+        .add_card(trait_digimon_card(
+            "IMPERIAL-OLD",
+            "Imperial Old",
+            &["Imperialdramon"],
+        ))
+        .add_card(trait_digimon_card(
+            "IMPERIAL-NEW",
+            "Imperial New",
+            &["Imperialdramon"],
+        ))
+        .add_card(digimon_card("HAND-MUTATOR", CardColor::Red))
+        .hand(0, &["IMPERIAL-OLD"])
+        .deck(0, &["IMPERIAL-NEW"])
+        .memory(0)
+        .start();
+    r.register_effect("HAND-MUTATOR", Arc::new(ReplaceHandAfterDeletion));
+    r.place_on_field(0, "HAND-MUTATOR", Some(0));
+    let target = r.place_on_field(0, "FREE-TARGET", Some(0));
+    place_delay_option(&mut r, 0, "BT17-097");
+
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+
+    let choices = r
+        .game
+        .pending_selection
+        .as_ref()
+        .and_then(|selection| selection.effect_choices.as_ref())
+        .expect("Delay hand choice is exposed");
+    assert!(
+        choices.iter().any(|choice| choice.label == "Imperial New"),
+        "post-cost hand card is offered"
+    );
+    assert!(
+        !choices.iter().any(|choice| choice.label == "Imperial Old"),
+        "pre-cost stale hand card is not offered"
+    );
+
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("select post-cost Imperialdramon-like hand target");
+
+    let target = find_battle_permanent(&r, 0, "FREE-TARGET").expect("target still present");
+    let target_stack = &r.game.player(0).battle_area[target.index as usize];
+    assert_eq!(
+        target_stack.top_card().card_id(&r.game.card_data),
+        "IMPERIAL-NEW",
+        "hand prompt resolved the post-cost candidate"
+    );
 }

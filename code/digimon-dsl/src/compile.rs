@@ -706,14 +706,66 @@ fn compile_replacement_process(
         }
     }
 
-    if matches!(
-        r.outcome,
-        Some(crate::clause::ReplacementOutcome::Prevent)
-    ) {
+    if matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
         process.push(CompiledStep::CancelReplacement);
     }
 
     process
+}
+
+fn compile_replacement_trigger(
+    r: &crate::clause::ReplacementBody,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> String {
+    let trigger = r
+        .trigger
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let timing = r
+        .timing
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+
+    let value = match (trigger, timing) {
+        (Some(_), Some(_)) | (None, None) => {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: prefix.into(),
+                message: "replacement requires exactly one of timing or trigger".into(),
+            });
+            trigger.or(timing).unwrap_or_default()
+        }
+        (Some(value), None) | (None, Some(value)) => value,
+    };
+
+    if !value.is_empty() && !is_known_replacement_timing(value) {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: format!("{prefix}.timing"),
+            message: format!("unknown replacement timing: {value}"),
+        });
+    }
+
+    value.to_string()
+}
+
+fn is_known_replacement_timing(value: &str) -> bool {
+    matches!(
+        value,
+        "when_would_be_deleted"
+            | "when_would_leave_battle_area"
+            | "when_would_be_returned_to_hand"
+            | "when_would_be_returned_to_deck"
+            | "when_would_be_trashed"
+            | "when_would_be_de_digivolved"
+            | "when_would_lose_security"
+            | "when_would_draw"
+            | "when_would_place_in_security"
+    )
 }
 
 fn compile_declarative(
@@ -783,7 +835,7 @@ fn compile_declarative(
             summary_key,
         },
         B::Replacement(r) => {
-            let trigger = r.trigger.clone().or_else(|| r.timing.clone()).unwrap_or_default();
+            let trigger = compile_replacement_trigger(&r, prefix, card_id, errors);
             CompiledDeclarativeClause::Replacement {
                 scope,
                 active_when,
@@ -1400,8 +1452,65 @@ fn compile_step(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compiled::{
+        CompiledBindingRef, CompiledClause, CompiledCostDelta, CompiledDeclarativeClause,
+        CompiledPlayerRef, CompiledStep,
+    };
     use crate::loader::load_dir_ok;
+    use crate::CardSpec;
     use std::path::PathBuf;
+
+    fn parse_spec(yaml: &str) -> CardSpec {
+        serde_yml::from_str(yaml).expect("test YAML parses")
+    }
+
+    fn replacement_spec(effect_body: &str) -> CardSpec {
+        parse_spec(&format!(
+            r#"
+card: TEST-001
+name: "Replacement Test"
+kind: option
+color: [blue]
+cost: 0
+traits: []
+effects:
+  - kind: replacement
+{effect_body}
+"#
+        ))
+    }
+
+    fn compile_error_text(spec: &CardSpec) -> String {
+        compile(spec)
+            .expect_err("spec should fail compilation")
+            .into_iter()
+            .map(|err| err.to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn high_level_delay_replacement_body(timing_line: &str) -> String {
+        format!(
+            r#"    {timing_line}
+    active_when:
+      all:
+        - subject_trait: Free
+        - replacement_cause: opponent_effect
+    cost:
+      delay_self: true
+    choose:
+      from: hand
+      card_filter:
+        trait: Imperialdramon
+      min: 1
+      max: 1
+    outcome: prevent
+    then:
+      - digivolve_without_cost:
+          target: replacement_subject
+          card: chosen"#
+        )
+    }
 
     #[test]
     fn every_example_compiles() {
@@ -1426,6 +1535,81 @@ mod tests {
             failures.is_empty(),
             "compile failures:\n{}",
             failures.join("\n")
+        );
+    }
+
+    #[test]
+    fn high_level_delay_replacement_lowers_to_process_steps() {
+        let body = high_level_delay_replacement_body("timing: when_would_be_deleted");
+        let compiled = compile(&replacement_spec(&body)).expect("replacement compiles");
+        let CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+            trigger,
+            process,
+            ..
+        }) = &compiled.effects[0]
+        else {
+            panic!("expected replacement clause");
+        };
+
+        assert_eq!(trigger, "when_would_be_deleted");
+        assert!(
+            matches!(
+                process.as_slice(),
+                [
+                    CompiledStep::DeletePermanent {
+                        target: CompiledBindingRef::Source
+                    },
+                    CompiledStep::SelectHand {
+                        of: CompiledPlayerRef::You,
+                        bind_as: Some(chosen),
+                        optional: true,
+                        ..
+                    },
+                    CompiledStep::EffectInitiatedDigivolve {
+                        target: CompiledBindingRef::Named(target),
+                        from_hand: CompiledBindingRef::Named(card),
+                        cost: CompiledCostDelta::Free,
+                        ignore_requirements: true,
+                    },
+                    CompiledStep::CancelReplacement
+                ] if chosen == "chosen" && target == "replacement_subject" && card == "chosen"
+            ),
+            "unexpected replacement process: {process:#?}"
+        );
+    }
+
+    #[test]
+    fn replacement_requires_a_timing_or_trigger() {
+        let body = high_level_delay_replacement_body("");
+        let errors = compile_error_text(&replacement_spec(&body));
+
+        assert!(
+            errors.contains("requires exactly one of timing or trigger"),
+            "unexpected errors:\n{errors}"
+        );
+    }
+
+    #[test]
+    fn replacement_rejects_both_timing_and_trigger() {
+        let body = high_level_delay_replacement_body(
+            "timing: when_would_be_deleted\n    trigger: when_would_be_deleted",
+        );
+        let errors = compile_error_text(&replacement_spec(&body));
+
+        assert!(
+            errors.contains("requires exactly one of timing or trigger"),
+            "unexpected errors:\n{errors}"
+        );
+    }
+
+    #[test]
+    fn replacement_rejects_unknown_timing() {
+        let body = high_level_delay_replacement_body("timing: when_would_be_smudged");
+        let errors = compile_error_text(&replacement_spec(&body));
+
+        assert!(
+            errors.contains("unknown replacement timing"),
+            "unexpected errors:\n{errors}"
         );
     }
 }

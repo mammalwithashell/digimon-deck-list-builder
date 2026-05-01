@@ -15,8 +15,9 @@ use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{resolve_player, run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::trigger_map::lookup_replacement_trigger;
 use crate::effect::{Effect, EffectBuilder};
-use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::{EffectTiming, GamePhase};
+use crate::effect_context::{DelayCostStatus, EffectContext, EffectReadContext};
+use crate::enums::{EffectTiming, GamePhase, PlayerId};
+use crate::game::Game;
 use crate::permanent::OptionState;
 use crate::replacement::ReplacementSubject;
 use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
@@ -100,28 +101,33 @@ pub fn lower_with_raw(
             }
 
             let player = resolve_player(rctx.effect, delay_flow.of);
-            let candidates =
-                matching_hand_candidates(rctx.effect, player, &delay_flow.filter, HAND_MAIN_LIMIT);
-            if candidates.is_empty() {
-                return;
-            }
-            let subject_card = stable_replacement_subject_card(rctx.effect, rctx.subject);
-            if !rctx.effect.trash_delay_source() {
-                return;
-            }
-            let Some(subject) =
-                resolve_stable_replacement_subject(rctx.effect, rctx.subject, subject_card)
-            else {
+            let Some(source) = rctx.effect.source_permanent else {
                 return;
             };
+            let Some(source_card) = rctx.effect.permanent_top_card_handle(source) else {
+                return;
+            };
+            let subject_card = stable_replacement_subject_card(rctx.effect, rctx.subject);
 
-            install_delay_hand_digivolve_selection(
-                rctx.effect,
-                subject,
+            let continuation = DelayCostContinuation {
+                source_player: source.player,
+                source_card,
+                subject: rctx.subject,
+                subject_card,
                 player,
-                delay_flow.prompt.clone(),
-                candidates,
-            );
+                prompt: delay_flow.prompt.clone(),
+                filter: delay_flow.filter.clone(),
+            };
+
+            match rctx.effect.trash_delay_source_status() {
+                DelayCostStatus::Paid => {
+                    install_delay_hand_digivolve_after_paid(rctx.effect, &continuation);
+                }
+                DelayCostStatus::Pending => {
+                    arm_pending_delay_cost_continuation(rctx.effect.game, continuation);
+                }
+                DelayCostStatus::Unpaid => {}
+            };
         });
         return Some(builder.build());
     }
@@ -161,6 +167,17 @@ struct DelayHandDigivolveFlow {
     of: CompiledPlayerRef,
     filter: CompiledPredicate,
     prompt: String,
+}
+
+#[derive(Clone)]
+struct DelayCostContinuation {
+    source_player: PlayerId,
+    source_card: CardHandle,
+    subject: ReplacementSubject,
+    subject_card: Option<(PlayerId, CardHandle)>,
+    player: PlayerId,
+    prompt: String,
+    filter: CompiledPredicate,
 }
 
 impl DelayHandDigivolveFlow {
@@ -231,7 +248,7 @@ fn source_is_delayed_option(ctx: &EffectContext<'_>) -> bool {
 fn stable_replacement_subject_card(
     ctx: &EffectContext<'_>,
     subject: ReplacementSubject,
-) -> Option<(crate::enums::PlayerId, CardHandle)> {
+) -> Option<(PlayerId, CardHandle)> {
     let handle = subject.permanent()?;
     ctx.permanent_top_card_handle(handle)
         .map(|card| (handle.player, card))
@@ -255,7 +272,7 @@ fn resolve_stable_replacement_subject(
 
 fn matching_hand_candidates(
     ctx: &EffectContext<'_>,
-    player: crate::enums::PlayerId,
+    player: PlayerId,
     filter: &CompiledPredicate,
     limit: usize,
 ) -> Vec<CardHandle> {
@@ -275,7 +292,7 @@ fn matching_hand_candidates(
 fn install_delay_hand_digivolve_selection(
     ctx: &mut EffectContext<'_>,
     subject: ReplacementSubject,
-    player: crate::enums::PlayerId,
+    player: PlayerId,
     prompt: String,
     candidates: Vec<CardHandle>,
 ) {
@@ -325,4 +342,70 @@ fn install_delay_hand_digivolve_selection(
         }),
         on_decline: None,
     });
+}
+
+fn arm_pending_delay_cost_continuation(game: &mut Game, continuation: DelayCostContinuation) {
+    let Some(mut selection) = game.pending_selection.take() else {
+        continue_delay_cost_after_selection(game, continuation);
+        return;
+    };
+
+    let original_callback = selection.callback;
+    let callback_continuation = continuation.clone();
+    selection.callback = Box::new(move |game, action_id| {
+        original_callback(game, action_id);
+        continue_delay_cost_after_selection(game, callback_continuation);
+    });
+
+    let original_decline = selection.on_decline.take();
+    selection.on_decline = Some(Box::new(move |game| {
+        if let Some(original_decline) = original_decline {
+            original_decline(game);
+        }
+        continue_delay_cost_after_selection(game, continuation);
+    }));
+
+    game.pending_selection = Some(selection);
+}
+
+fn continue_delay_cost_after_selection(game: &mut Game, continuation: DelayCostContinuation) {
+    if game.pending_selection.is_some() {
+        arm_pending_delay_cost_continuation(game, continuation);
+        return;
+    }
+
+    let mut ctx = EffectContext::new(game, continuation.source_card, None, continuation.player);
+    install_delay_hand_digivolve_after_paid(&mut ctx, &continuation);
+}
+
+fn install_delay_hand_digivolve_after_paid(
+    ctx: &mut EffectContext<'_>,
+    continuation: &DelayCostContinuation,
+) {
+    if !ctx.delay_source_card_in_trash(continuation.source_player, continuation.source_card) {
+        return;
+    }
+
+    let Some(subject) =
+        resolve_stable_replacement_subject(ctx, continuation.subject, continuation.subject_card)
+    else {
+        return;
+    };
+    let candidates = matching_hand_candidates(
+        ctx,
+        continuation.player,
+        &continuation.filter,
+        HAND_MAIN_LIMIT,
+    );
+    if candidates.is_empty() {
+        return;
+    }
+
+    install_delay_hand_digivolve_selection(
+        ctx,
+        subject,
+        continuation.player,
+        continuation.prompt.clone(),
+        candidates,
+    );
 }

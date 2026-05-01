@@ -422,6 +422,13 @@ pub struct EffectContext<'a> {
     pub cost_target_from_hand: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DelayCostStatus {
+    Paid,
+    Unpaid,
+    Pending,
+}
+
 impl<'a> EffectContext<'a> {
     pub fn new(
         game: &'a mut Game,
@@ -859,21 +866,34 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn trash_delay_source(&mut self) -> bool {
+        matches!(self.trash_delay_source_status(), DelayCostStatus::Paid)
+    }
+
+    pub fn trash_delay_source_status(&mut self) -> DelayCostStatus {
         let Some(source) = self.source_permanent else {
-            return false;
+            return DelayCostStatus::Unpaid;
         };
         let Some(source_card) = self.permanent_top_card_handle(source) else {
-            return false;
+            return DelayCostStatus::Unpaid;
         };
         self.game
             .delete_permanent_with_cause(source, ReplacementCause::Cost);
-        self.game.pending_selection.is_none()
-            && self
-                .find_battle_permanent_containing_card(source.player, source_card)
-                .is_none()
+        if self.game.pending_selection.is_some() {
+            return DelayCostStatus::Pending;
+        }
+        if self.delay_source_card_in_trash(source.player, source_card) {
+            DelayCostStatus::Paid
+        } else {
+            DelayCostStatus::Unpaid
+        }
+    }
+
+    pub fn delay_source_card_in_trash(&self, player: PlayerId, source_card: CardHandle) -> bool {
+        self.find_battle_permanent_containing_card(player, source_card)
+            .is_none()
             && self
                 .game
-                .player(source.player)
+                .player(player)
                 .trash
                 .iter()
                 .any(|card| card.handle() == source_card)

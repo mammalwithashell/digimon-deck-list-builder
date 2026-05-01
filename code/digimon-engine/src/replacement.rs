@@ -902,9 +902,18 @@ fn make_accept_callback(
         // in `effect_queue.rs`, which `take()`s the slot and treats `None`
         // as "decline → original event proceeds") misinterpret.
         // Order matters: parked-check BEFORE the slot write.
-        if game.parked_replacement.is_some() {
+        let current_accept_parked = game.parked_replacement.as_ref().is_some_and(|parked| {
+            parked.subject == subject
+                && parked.cause == cause
+                && parked.original_destination == original_destination
+                && parked.source_card == source_card
+                && parked.source_permanent == source_permanent
+                && parked.controller == controller
+        });
+        if current_accept_parked {
             return;
         }
+        let has_unrelated_parked_replacement = game.parked_replacement.is_some();
 
         game.replacement_pending_outcome = Some(outcome);
 
@@ -915,6 +924,9 @@ fn make_accept_callback(
         run_commit_with_flag(game, |game| {
             commit_deferred_outcome(game, subject, cause, original_destination, outcome);
         });
+        if has_unrelated_parked_replacement {
+            game.replacement_pending_outcome = None;
+        }
     })
 }
 
