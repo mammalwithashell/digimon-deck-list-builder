@@ -43,7 +43,11 @@ use ::digimon_engine::deck_tools;
 use ::digimon_engine::enums::{CardKind as RustCardKind, GamePhase as RustGamePhase};
 use ::digimon_engine::events::GameEvent;
 use ::digimon_engine::rules::CardRestriction;
-use ::digimon_engine::tensor::TENSOR_SIZE;
+use ::digimon_engine::tensor::{MAX_SOURCES, TENSOR_SIZE};
+use ::digimon_engine::tensor_profile::{
+    all_profile_ids, default_profile, profile_by_id, TensorProfile as RustTensorProfile,
+    STANDARD_V1_PROFILE_ID,
+};
 use ::digimon_engine::HeadlessRunner;
 
 /// Embedding dimension for the warm-start card embedding table. Mirrors
@@ -112,6 +116,7 @@ pub enum CardKind {
     Option,
     DigiEgg,
     Token,
+    Dual,
 }
 
 impl From<RustCardKind> for CardKind {
@@ -122,6 +127,7 @@ impl From<RustCardKind> for CardKind {
             RustCardKind::Option => CardKind::Option,
             RustCardKind::DigiEgg => CardKind::DigiEgg,
             RustCardKind::Token => CardKind::Token,
+            RustCardKind::Dual => CardKind::Dual,
         }
     }
 }
@@ -384,6 +390,63 @@ fn load_tested_cards() -> std::collections::HashSet<String> {
 #[pyfunction]
 fn is_card_tested(card_id: &str) -> bool {
     deck_tools::is_card_tested(card_id)
+}
+
+#[pyclass(module = "digimon_engine", name = "TensorProfile")]
+#[derive(Clone)]
+pub struct TensorProfile {
+    #[pyo3(get)]
+    pub id: String,
+    #[pyo3(get)]
+    pub version: u32,
+    #[pyo3(get)]
+    pub tensor_size: usize,
+    #[pyo3(get)]
+    pub field_slots: usize,
+    #[pyo3(get)]
+    pub slot_size: usize,
+    #[pyo3(get)]
+    pub max_sources: usize,
+    #[pyo3(get)]
+    pub card_id_slot_count: usize,
+    #[pyo3(get)]
+    pub scalar_slot_count: usize,
+    #[pyo3(get)]
+    pub card_id_positions: Vec<usize>,
+    #[pyo3(get)]
+    pub scalar_positions: Vec<usize>,
+}
+
+fn py_tensor_profile(profile: &RustTensorProfile) -> TensorProfile {
+    let (card_id_positions, scalar_positions) = profile.positions();
+    TensorProfile {
+        id: profile.id.to_string(),
+        version: profile.version,
+        tensor_size: profile.tensor_size,
+        field_slots: profile.field_slots,
+        slot_size: profile.slot_size,
+        max_sources: MAX_SOURCES,
+        card_id_slot_count: profile.card_id_slot_count,
+        scalar_slot_count: profile.scalar_slot_count,
+        card_id_positions,
+        scalar_positions,
+    }
+}
+
+#[pyfunction]
+#[pyo3(signature = (profile_id = None))]
+fn get_tensor_profile(profile_id: Option<String>) -> PyResult<TensorProfile> {
+    let profile = match profile_id {
+        None => default_profile(),
+        Some(id) => profile_by_id(&id)
+            .ok_or_else(|| PyValueError::new_err(format!("unknown tensor profile: {id}")))?,
+    };
+    Ok(py_tensor_profile(&profile))
+}
+
+#[pyfunction]
+fn list_tensor_profiles() -> Vec<String> {
+    all_profile_ids().into_iter().map(str::to_string).collect()
 }
 
 /// Python-visible wrapper around the Rust `CardRegistry`.
@@ -859,6 +922,10 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<CardRegistry>()?;
     m.add("REGISTRY_CAPACITY", REGISTRY_CAPACITY)?;
     m.add("EMBEDDING_DIM", EMBEDDING_DIM)?;
+    m.add_class::<TensorProfile>()?;
+    m.add_function(wrap_pyfunction!(get_tensor_profile, m)?)?;
+    m.add_function(wrap_pyfunction!(list_tensor_profiles, m)?)?;
+    m.add("TENSOR_PROFILE_ID", STANDARD_V1_PROFILE_ID)?;
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;

@@ -297,3 +297,36 @@ class TestActionAndTensorConstants:
         from digimon_engine import TENSOR_SIZE
         # Per TENSOR_SPEC.md the canonical size is 1375
         assert TENSOR_SIZE > 0
+
+
+class TestTensorProfiles:
+    def test_tensor_profile_id_constant(self):
+        from digimon_engine import TENSOR_PROFILE_ID
+
+        assert TENSOR_PROFILE_ID == "standard_v1"
+
+    def test_list_tensor_profiles(self):
+        from digimon_engine import list_tensor_profiles
+
+        assert list_tensor_profiles() == ["standard_v1"]
+
+    def test_get_default_tensor_profile(self):
+        from digimon_engine import TENSOR_SIZE, get_tensor_profile
+
+        profile = get_tensor_profile()
+        assert profile.id == "standard_v1"
+        assert profile.version == 1
+        assert profile.tensor_size == TENSOR_SIZE
+        assert profile.card_id_slot_count == 520
+        assert profile.scalar_slot_count == 855
+        assert len(profile.card_id_positions) == 520
+        assert len(profile.scalar_positions) == 855
+        assert profile.card_id_positions[0] == 10
+        assert profile.scalar_positions[0] == 0
+
+    def test_get_unknown_tensor_profile_raises(self):
+        import pytest
+        from digimon_engine import get_tensor_profile
+
+        with pytest.raises(ValueError, match="unknown tensor profile"):
+            get_tensor_profile("missing")
