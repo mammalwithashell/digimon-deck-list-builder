@@ -9,7 +9,8 @@ use digimon_engine::tensor::{
     TRASH_SIZE,
 };
 use digimon_engine::tensor_profile::{
-    all_profile_ids, default_profile, profile_by_id, TensorSectionKind, STANDARD_V1_PROFILE_ID,
+    all_profile_ids, default_profile, profile_by_id, TensorFieldKind, TensorSectionKind,
+    STANDARD_V1_PROFILE_ID,
 };
 
 #[test]
@@ -21,6 +22,8 @@ fn default_profile_is_standard_v1() {
     assert_eq!(profile.tensor_size, TENSOR_SIZE);
     assert_eq!(profile.field_slots, FIELD_SLOTS);
     assert_eq!(profile.slot_size, SLOT_SIZE);
+    assert_eq!(profile.max_sources, MAX_SOURCES);
+    assert_eq!(profile.slot_layout.size, SLOT_SIZE);
     assert_eq!(profile.card_id_slot_count, 520);
     assert_eq!(profile.scalar_slot_count, 855);
 }
@@ -206,4 +209,64 @@ fn standard_profile_slot_field_offsets_match_tensor_layout_constants() {
     assert_eq!(SOURCE_OPT_STATE_OFFSET, SOURCE_CARD_ID_OFFSET + 1);
     assert_eq!(SOURCE_DP_CONTRIBUTION_OFFSET, SOURCE_OPT_STATE_OFFSET + 1);
     assert!(SOURCE_DP_CONTRIBUTION_OFFSET < SOURCE_ENTRY_SIZE);
+}
+
+#[test]
+fn standard_profile_slot_layout_is_auditable_metadata() {
+    let profile = default_profile();
+
+    assert_eq!(profile.max_sources, MAX_SOURCES);
+    assert_eq!(profile.slot_layout.size, SLOT_SIZE);
+    assert_eq!(profile.slot_layout.source_start, SLOT_SOURCE_START_OFFSET);
+    assert_eq!(profile.slot_layout.max_sources, MAX_SOURCES);
+
+    let header_fields: Vec<_> = profile
+        .slot_layout
+        .header_fields
+        .iter()
+        .map(|field| (field.id, field.offset, field.kind))
+        .collect();
+    assert_eq!(
+        header_fields,
+        vec![
+            ("top_card_id", SLOT_TOP_CARD_OFFSET, TensorFieldKind::CardId),
+            ("dp", SLOT_DP_OFFSET, TensorFieldKind::Scalar),
+            ("suspended", SLOT_SUSPENDED_OFFSET, TensorFieldKind::Scalar),
+            ("opt_total", SLOT_OPT_TOTAL_OFFSET, TensorFieldKind::Scalar),
+            ("opt_used", SLOT_OPT_USED_OFFSET, TensorFieldKind::Scalar),
+            (
+                "linked_count",
+                SLOT_LINKED_COUNT_OFFSET,
+                TensorFieldKind::Scalar,
+            ),
+            (
+                "source_count",
+                SLOT_SOURCE_COUNT_OFFSET,
+                TensorFieldKind::Scalar,
+            ),
+        ]
+    );
+
+    let source_fields: Vec<_> = profile
+        .slot_layout
+        .source_fields
+        .iter()
+        .map(|field| (field.id, field.offset, field.kind))
+        .collect();
+    assert_eq!(
+        source_fields,
+        vec![
+            ("card_id", SOURCE_CARD_ID_OFFSET, TensorFieldKind::CardId),
+            (
+                "opt_state",
+                SOURCE_OPT_STATE_OFFSET,
+                TensorFieldKind::Scalar,
+            ),
+            (
+                "dp_contribution",
+                SOURCE_DP_CONTRIBUTION_OFFSET,
+                TensorFieldKind::Scalar,
+            ),
+        ]
+    );
 }

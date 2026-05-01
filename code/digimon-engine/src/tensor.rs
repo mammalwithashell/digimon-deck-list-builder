@@ -10,7 +10,7 @@ use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
-use crate::tensor_profile;
+use crate::tensor_profile::{self, TensorSlotHeaderField, TensorSourceField};
 
 // ─── Tensor Layout Constants ──────────────────────────────────────────
 
@@ -292,31 +292,48 @@ fn write_slot(
     card_data: &[CardData],
     registry: &CardRegistry,
 ) {
+    let slot_layout = tensor_profile::default_profile().slot_layout;
+    let top_card_offset = slot_layout.header_offset(TensorSlotHeaderField::TopCardId);
+    let dp_offset = slot_layout.header_offset(TensorSlotHeaderField::Dp);
+    let suspended_offset = slot_layout.header_offset(TensorSlotHeaderField::Suspended);
+    let opt_total_offset = slot_layout.header_offset(TensorSlotHeaderField::OptTotal);
+    let opt_used_offset = slot_layout.header_offset(TensorSlotHeaderField::OptUsed);
+    let linked_count_offset = slot_layout.header_offset(TensorSlotHeaderField::LinkedCount);
+    let source_count_offset = slot_layout.header_offset(TensorSlotHeaderField::SourceCount);
+    let source_card_id_offset = slot_layout.source_offset(TensorSourceField::CardId);
+    let source_opt_state_offset = slot_layout.source_offset(TensorSourceField::OptState);
+    let source_dp_contribution_offset =
+        slot_layout.source_offset(TensorSourceField::DpContribution);
     let top = perm.top_card();
 
-    tensor[base + SLOT_TOP_CARD_OFFSET] = registry.get_index(&top.card_id(card_data)) as f32;
+    tensor[base + top_card_offset] = registry.get_index(&top.card_id(card_data)) as f32;
 
-    tensor[base + SLOT_DP_OFFSET] = perm.base_dp(card_data).unwrap_or(0) as f32 / DP_NORM;
+    tensor[base + dp_offset] = perm.base_dp(card_data).unwrap_or(0) as f32 / DP_NORM;
 
-    tensor[base + SLOT_SUSPENDED_OFFSET] = if perm.is_suspended { 1.0 } else { 0.0 };
+    tensor[base + suspended_offset] = if perm.is_suspended { 1.0 } else { 0.0 };
 
     if let Some(h) = handle {
-        tensor[base + SLOT_OPT_TOTAL_OFFSET] = game.opt_total(h) as f32;
-        tensor[base + SLOT_OPT_USED_OFFSET] = game.opt_used(h) as f32;
+        tensor[base + opt_total_offset] = game.opt_total(h) as f32;
+        tensor[base + opt_used_offset] = game.opt_used(h) as f32;
     }
 
-    tensor[base + SLOT_LINKED_COUNT_OFFSET] = perm.linked_cards.len() as f32;
+    tensor[base + linked_count_offset] = perm.linked_cards.len() as f32;
 
-    tensor[base + SLOT_SOURCE_COUNT_OFFSET] = perm.card_sources.len() as f32;
+    tensor[base + source_count_offset] = perm.card_sources.len() as f32;
 
     // Sources: [card_id, opt_state, dp_contribution] × MAX_SOURCES
-    let src_base = base + SLOT_SOURCE_START_OFFSET;
-    for (j, src) in perm.card_sources.iter().take(MAX_SOURCES).enumerate() {
+    let src_base = base + slot_layout.source_start;
+    for (j, src) in perm
+        .card_sources
+        .iter()
+        .take(slot_layout.max_sources)
+        .enumerate()
+    {
         let off = src_base + j * SOURCE_ENTRY_SIZE;
-        tensor[off + SOURCE_CARD_ID_OFFSET] = registry.get_index(&src.card_id(card_data)) as f32;
+        tensor[off + source_card_id_offset] = registry.get_index(&src.card_id(card_data)) as f32;
         if let Some(h) = handle {
-            tensor[off + SOURCE_OPT_STATE_OFFSET] = game.source_opt_state(h, j);
-            tensor[off + SOURCE_DP_CONTRIBUTION_OFFSET] =
+            tensor[off + source_opt_state_offset] = game.source_opt_state(h, j);
+            tensor[off + source_dp_contribution_offset] =
                 game.source_dp_contribution(h, j) as f32 / DP_NORM;
         }
     }

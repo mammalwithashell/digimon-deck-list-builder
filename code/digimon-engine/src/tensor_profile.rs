@@ -29,12 +29,64 @@ pub struct TensorSection {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TensorFieldKind {
+    CardId,
+    Scalar,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TensorSlotField {
+    pub id: &'static str,
+    pub offset: usize,
+    pub kind: TensorFieldKind,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TensorSlotLayout {
+    pub size: usize,
+    pub source_start: usize,
+    pub max_sources: usize,
+    pub header_fields: &'static [TensorSlotField],
+    pub source_fields: &'static [TensorSlotField],
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TensorSlotHeaderField {
+    TopCardId,
+    Dp,
+    Suspended,
+    OptTotal,
+    OptUsed,
+    LinkedCount,
+    SourceCount,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TensorSourceField {
+    CardId,
+    OptState,
+    DpContribution,
+}
+
+impl TensorSlotLayout {
+    pub fn header_offset(&self, field: TensorSlotHeaderField) -> usize {
+        self.header_fields[field as usize].offset
+    }
+
+    pub fn source_offset(&self, field: TensorSourceField) -> usize {
+        self.source_fields[field as usize].offset
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TensorProfile {
     pub id: &'static str,
     pub version: u32,
     pub tensor_size: usize,
     pub field_slots: usize,
     pub slot_size: usize,
+    pub max_sources: usize,
+    pub slot_layout: TensorSlotLayout,
     pub card_id_slot_count: usize,
     pub scalar_slot_count: usize,
     pub sections: &'static [TensorSection],
@@ -58,9 +110,11 @@ impl TensorProfile {
                     card_positions.extend(section.start..section.start + section.len);
                 }
                 TensorSectionKind::PermanentSlots => {
-                    for slot_base in (section.start..section.start + section.len).step_by(SLOT_SIZE)
+                    for slot_base in
+                        (section.start..section.start + section.len).step_by(self.slot_layout.size)
                     {
                         permanent_slot_positions(
+                            self.slot_layout,
                             slot_base,
                             &mut card_positions,
                             &mut scalar_positions,
@@ -157,6 +211,70 @@ const STANDARD_V1_SECTIONS: &[TensorSection] = &[
     },
 ];
 
+const STANDARD_V1_SLOT_HEADER_FIELDS: &[TensorSlotField] = &[
+    TensorSlotField {
+        id: "top_card_id",
+        offset: SLOT_TOP_CARD_OFFSET,
+        kind: TensorFieldKind::CardId,
+    },
+    TensorSlotField {
+        id: "dp",
+        offset: SLOT_DP_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "suspended",
+        offset: SLOT_SUSPENDED_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "opt_total",
+        offset: SLOT_OPT_TOTAL_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "opt_used",
+        offset: SLOT_OPT_USED_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "linked_count",
+        offset: SLOT_LINKED_COUNT_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "source_count",
+        offset: SLOT_SOURCE_COUNT_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+];
+
+const STANDARD_V1_SOURCE_FIELDS: &[TensorSlotField] = &[
+    TensorSlotField {
+        id: "card_id",
+        offset: SOURCE_CARD_ID_OFFSET,
+        kind: TensorFieldKind::CardId,
+    },
+    TensorSlotField {
+        id: "opt_state",
+        offset: SOURCE_OPT_STATE_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "dp_contribution",
+        offset: SOURCE_DP_CONTRIBUTION_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+];
+
+const STANDARD_V1_SLOT_LAYOUT: TensorSlotLayout = TensorSlotLayout {
+    size: SLOT_SIZE,
+    source_start: SLOT_SOURCE_START_OFFSET,
+    max_sources: MAX_SOURCES,
+    header_fields: STANDARD_V1_SLOT_HEADER_FIELDS,
+    source_fields: STANDARD_V1_SOURCE_FIELDS,
+};
+
 const PERMANENT_SLOT_CARD_ID_COUNT: usize = 1 + MAX_SOURCES;
 const PERMANENT_SLOT_SCALAR_COUNT: usize =
     SLOT_HEADER_SIZE - 1 + MAX_SOURCES * (SOURCE_ENTRY_SIZE - 1);
@@ -175,19 +293,12 @@ const STANDARD_V1_PROFILE: TensorProfile = TensorProfile {
     tensor_size: TENSOR_SIZE,
     field_slots: FIELD_SLOTS,
     slot_size: SLOT_SIZE,
+    max_sources: MAX_SOURCES,
+    slot_layout: STANDARD_V1_SLOT_LAYOUT,
     card_id_slot_count: CARD_ID_SLOT_COUNT,
     scalar_slot_count: SCALAR_SLOT_COUNT,
     sections: STANDARD_V1_SECTIONS,
 };
-
-const PERMANENT_SLOT_SCALAR_OFFSETS: &[usize] = &[
-    SLOT_DP_OFFSET,
-    SLOT_SUSPENDED_OFFSET,
-    SLOT_OPT_TOTAL_OFFSET,
-    SLOT_OPT_USED_OFFSET,
-    SLOT_LINKED_COUNT_OFFSET,
-    SLOT_SOURCE_COUNT_OFFSET,
-];
 
 pub fn default_profile() -> TensorProfile {
     STANDARD_V1_PROFILE
@@ -209,22 +320,26 @@ pub fn standard_v1_positions() -> (Vec<usize>, Vec<usize>) {
 }
 
 fn permanent_slot_positions(
+    layout: TensorSlotLayout,
     slot_base: usize,
     card_positions: &mut Vec<usize>,
     scalar_positions: &mut Vec<usize>,
 ) {
-    card_positions.push(slot_base + SLOT_TOP_CARD_OFFSET);
-    scalar_positions.extend(
-        PERMANENT_SLOT_SCALAR_OFFSETS
-            .iter()
-            .map(|offset| slot_base + offset),
-    );
+    for field in layout.header_fields {
+        match field.kind {
+            TensorFieldKind::CardId => card_positions.push(slot_base + field.offset),
+            TensorFieldKind::Scalar => scalar_positions.push(slot_base + field.offset),
+        }
+    }
 
-    let source_base = slot_base + SLOT_SOURCE_START_OFFSET;
-    for source_index in 0..MAX_SOURCES {
+    let source_base = slot_base + layout.source_start;
+    for source_index in 0..layout.max_sources {
         let source_offset = source_base + source_index * SOURCE_ENTRY_SIZE;
-        card_positions.push(source_offset + SOURCE_CARD_ID_OFFSET);
-        scalar_positions.push(source_offset + SOURCE_OPT_STATE_OFFSET);
-        scalar_positions.push(source_offset + SOURCE_DP_CONTRIBUTION_OFFSET);
+        for field in layout.source_fields {
+            match field.kind {
+                TensorFieldKind::CardId => card_positions.push(source_offset + field.offset),
+                TensorFieldKind::Scalar => scalar_positions.push(source_offset + field.offset),
+            }
+        }
     }
 }
