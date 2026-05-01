@@ -19,9 +19,7 @@ import torch.nn as nn
 from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
-from engine_py_legacy.engine.data.tensor_layout import (
-    CARD_ID_POSITIONS, SCALAR_POSITIONS, NUM_CARD_SLOTS, NUM_SCALAR_SLOTS,
-)  # parity-doc: tensor_layout stays on Python engine
+from digimon_gym.tensor_profiles import get_tensor_profile
 from digimon_engine import REGISTRY_CAPACITY, EMBEDDING_DIM
 
 
@@ -35,18 +33,26 @@ class CardEmbeddingExtractor(BaseFeaturesExtractor):
         vocab_size: int = REGISTRY_CAPACITY,
         embedding_dim: int = EMBEDDING_DIM,
         pretrained_embeddings: Optional[np.ndarray] = None,
+        tensor_profile_id: Optional[str] = None,
     ):
         super().__init__(observation_space, features_dim)
+
+        profile = get_tensor_profile(tensor_profile_id)
+        if observation_space.shape != (profile.tensor_size,):
+            raise ValueError(
+                f"observation space shape {observation_space.shape} does not match "
+                f"tensor profile {profile.id} size {profile.tensor_size}"
+            )
 
         # Index tensors for splitting observations (registered as buffers so
         # they move to the correct device automatically with .to())
         self.register_buffer(
             'card_id_indices',
-            torch.tensor(CARD_ID_POSITIONS, dtype=torch.long),
+            torch.tensor(profile.card_id_positions, dtype=torch.long),
         )
         self.register_buffer(
             'scalar_indices',
-            torch.tensor(SCALAR_POSITIONS, dtype=torch.long),
+            torch.tensor(profile.scalar_positions, dtype=torch.long),
         )
 
         # Trainable card embedding table (padding_idx=0 keeps the zero-vector fixed)
@@ -60,8 +66,8 @@ class CardEmbeddingExtractor(BaseFeaturesExtractor):
                     pretrained_embeddings[:n].astype(np.float32)
                 )
 
-        # Projection: (NUM_SCALAR_SLOTS + NUM_CARD_SLOTS * embedding_dim) -> features_dim
-        combined_dim = NUM_SCALAR_SLOTS + NUM_CARD_SLOTS * embedding_dim
+        # Projection: (scalar slots + card slots * embedding_dim) -> features_dim
+        combined_dim = profile.scalar_slot_count + profile.card_id_slot_count * embedding_dim
         self.projection = nn.Sequential(
             nn.Linear(combined_dim, features_dim),
             nn.ReLU(),
