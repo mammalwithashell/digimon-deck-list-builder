@@ -1824,6 +1824,37 @@ game.source_opt_state(h, i)       -> f32        // per-source offset +1
 
 Each one iterates effects via `CardEffectRegistry::get(card_id).effects(handle)`, applies the inherited/top filter (`is_under == effect.inherited`), and evaluates conditions through `EffectReadContext`. You can call them yourself in tests or diagnostics.
 
+### Tensor profile metadata
+
+The Rust engine exposes the canonical tensor profile registry from `tensor_profile.rs`. Use it when code needs layout metadata such as card-ID positions, scalar positions, section boundaries, or slot/source fields.
+
+```rust
+use digimon_engine::tensor_profile::{
+    all_profile_ids,
+    default_profile,
+    profile_by_id,
+    STANDARD_V1_PROFILE_ID,
+};
+
+let profile = default_profile();
+assert_eq!(profile.id, STANDARD_V1_PROFILE_ID);
+assert_eq!(profile.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
+let (card_id_positions, scalar_positions) = profile.positions();
+```
+
+The PyO3 bindings expose the same default profile metadata:
+
+```python
+from digimon_engine import TENSOR_PROFILE_ID, get_tensor_profile
+
+profile = get_tensor_profile()
+assert profile.id == TENSOR_PROFILE_ID == "standard_v1"
+assert profile.tensor_size == 1375
+assert len(profile.card_id_positions) == 520
+```
+
+RL feature extractors should use `digimon_gym.tensor_profiles.get_tensor_profile()` instead of importing the legacy Python tensor layout directly.
+
 ---
 
 ## Writing a card effect (TDD walkthrough)

@@ -18,6 +18,27 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 | `MAX_SECURITY` | 10 | |
 | `MAX_REVEALED` | 10 | |
 
+## Tensor Profiles
+
+The canonical board tensor profile is `standard_v1`:
+
+| Field | Value |
+|---|---:|
+| `id` | `standard_v1` |
+| `version` | 1 |
+| `tensor_size` | 1375 |
+| `field_slots` | 14 |
+| `slot_size` | 40 |
+| `max_sources` | 11 |
+| `card_id_slot_count` | 520 |
+| `scalar_slot_count` | 855 |
+
+The profile registry lives in `code/digimon-engine/src/tensor_profile.rs`. A profile is metadata for describing and auditing the tensor layout; it does not change tensor writer values, legal action masks, or action IDs.
+
+`standard_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets imported from `tensor.rs` instead of magic numeric indices.
+
+Future tensor profiles must define their own profile id and version, and must include matching tests and documentation updates.
+
 ## Top-Level Layout
 
 | Index Range | Size | Section |
