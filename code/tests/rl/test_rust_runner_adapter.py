@@ -11,11 +11,11 @@ pytest.importorskip("digimon_engine")
 DECK = ["ST1-01"] * 5 + ["ST1-03"] * 45
 
 
-def _rust_env(monkeypatch: pytest.MonkeyPatch):
+def _rust_env(monkeypatch: pytest.MonkeyPatch, **kwargs):
     monkeypatch.setenv("DIGIMON_BACKEND", "rust")
     import digimon_gym.digimon_gym as gym_mod
 
-    return gym_mod.DigimonEnv(deck1=DECK, deck2=DECK)
+    return gym_mod.DigimonEnv(deck1=DECK, deck2=DECK, **kwargs)
 
 
 def test_rust_env_reports_current_player_without_legacy_game_object(monkeypatch):
@@ -26,6 +26,19 @@ def test_rust_env_reports_current_player_without_legacy_game_object(monkeypatch)
     assert env.current_player_id in (1, 2)
     assert env.is_game_over is False
     assert env.winner_id is None
+
+
+def test_rust_env_ansi_render_uses_backend_neutral_state(monkeypatch):
+    env = _rust_env(monkeypatch, render_mode="ansi")
+    env.reset(seed=7)
+
+    rendered = env.render()
+
+    assert isinstance(rendered, str)
+    assert "Turn" in rendered
+    assert "Phase" in rendered
+    assert "P1" in rendered
+    assert "P2" in rendered
 
 
 def test_rust_env_step_computes_reward_without_runner_game_attribute(monkeypatch):

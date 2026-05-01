@@ -283,16 +283,33 @@ class DigimonEnv(gymnasium.Env):
             String representation when render_mode='ansi', None otherwise.
         """
         if self.render_mode == "ansi" and self.runner:
-            state = self.runner.game.to_json()
+            to_ui_json = getattr(self.runner, "to_ui_json", None)
+            if to_ui_json is not None:
+                state = to_ui_json()
+            else:
+                game = getattr(self.runner, "game", None)
+                if game is None:
+                    return None
+                state = game.to_json()
+
+            player1 = state.get("player1", state.get("Player1", {}))
+            player2 = state.get("player2", state.get("Player2", {}))
+            turn_count = state.get("turnCount", state.get("TurnCount", 0))
+            phase = state.get("currentPhase", state.get("CurrentPhase", "Unknown"))
+            memory = state.get("memoryGauge", state.get("MemoryGauge", 0))
+            is_game_over = state.get("isGameOver", state.get("IsGameOver", False))
+            winner = state.get("winner", state.get("Winner"))
             lines = [
-                f"Turn {state['TurnCount']} | Phase: {state['CurrentPhase']} | Memory: {state['MemoryGauge']}",
-                f"P1: Hand={state['Player1']['HandCount']}, Security={state['Player1']['SecurityCount']}, "
-                f"Board={state['Player1']['BattleAreaCount']}",
-                f"P2: Hand={state['Player2']['HandCount']}, Security={state['Player2']['SecurityCount']}, "
-                f"Board={state['Player2']['BattleAreaCount']}",
+                f"Turn {turn_count} | Phase: {phase} | Memory: {memory}",
+                f"P1: Hand={player1.get('handCount', player1.get('HandCount', 0))}, "
+                f"Security={player1.get('securityCount', player1.get('SecurityCount', 0))}, "
+                f"Board={player1.get('battleAreaCount', player1.get('BattleAreaCount', 0))}",
+                f"P2: Hand={player2.get('handCount', player2.get('HandCount', 0))}, "
+                f"Security={player2.get('securityCount', player2.get('SecurityCount', 0))}, "
+                f"Board={player2.get('battleAreaCount', player2.get('BattleAreaCount', 0))}",
             ]
-            if state["IsGameOver"]:
-                lines.append(f"Game Over! Winner: Player {state['Winner']}")
+            if is_game_over:
+                lines.append(f"Game Over! Winner: Player {winner}")
             return "\n".join(lines)
         return None
 
