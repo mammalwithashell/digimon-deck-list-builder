@@ -46,7 +46,6 @@ use ::digimon_engine::rules::CardRestriction;
 use ::digimon_engine::tensor::{MAX_SOURCES, TENSOR_SIZE};
 use ::digimon_engine::tensor_profile::{
     all_profile_ids, default_profile, profile_by_id, TensorProfile as RustTensorProfile,
-    STANDARD_V1_PROFILE_ID,
 };
 use ::digimon_engine::HeadlessRunner;
 
@@ -925,7 +924,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<TensorProfile>()?;
     m.add_function(wrap_pyfunction!(get_tensor_profile, m)?)?;
     m.add_function(wrap_pyfunction!(list_tensor_profiles, m)?)?;
-    m.add("TENSOR_PROFILE_ID", STANDARD_V1_PROFILE_ID)?;
+    m.add("TENSOR_PROFILE_ID", default_profile().id)?;
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;

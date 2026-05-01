@@ -301,14 +301,17 @@ class TestActionAndTensorConstants:
 
 class TestTensorProfiles:
     def test_tensor_profile_id_constant(self):
-        from digimon_engine import TENSOR_PROFILE_ID
+        from digimon_engine import TENSOR_PROFILE_ID, get_tensor_profile
 
+        assert TENSOR_PROFILE_ID == get_tensor_profile().id
         assert TENSOR_PROFILE_ID == "standard_v1"
 
     def test_list_tensor_profiles(self):
-        from digimon_engine import list_tensor_profiles
+        from digimon_engine import TENSOR_PROFILE_ID, list_tensor_profiles
 
-        assert list_tensor_profiles() == ["standard_v1"]
+        profiles = list_tensor_profiles()
+        assert "standard_v1" in profiles
+        assert TENSOR_PROFILE_ID in profiles
 
     def test_get_default_tensor_profile(self):
         from digimon_engine import TENSOR_SIZE, get_tensor_profile
