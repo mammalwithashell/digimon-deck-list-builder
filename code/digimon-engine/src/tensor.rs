@@ -10,68 +10,27 @@ use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
-use crate::tensor_profile::{self, TensorSlotHeaderField, TensorSourceField};
+use crate::tensor_profiles::{self, TensorSlotHeaderField, TensorSourceField};
 
-// ─── Tensor Layout Constants ──────────────────────────────────────────
+// ─── Standard V1 Tensor Layout Constants ──────────────────────────────
+//
+// `tensor_profiles::standard::v1` owns these values. This module re-exports
+// them because it is the Standard v1 tensor writer and many callers still
+// import the constants from `tensor`.
 
-pub const FIELD_SLOTS: usize = 14;
-pub const MAX_HAND: usize = 20;
-pub const MAX_TRASH: usize = 45;
-pub const MAX_SECURITY: usize = 10;
-pub const MAX_SOURCES: usize = 11;
-pub const MAX_REVEALED: usize = 10;
-
-pub const SOURCE_ENTRY_SIZE: usize = 3; // card_id + opt_state + dp_contribution
-pub const SLOT_TOP_CARD_OFFSET: usize = 0;
-pub const SLOT_DP_OFFSET: usize = 1;
-pub const SLOT_SUSPENDED_OFFSET: usize = 2;
-pub const SLOT_OPT_TOTAL_OFFSET: usize = 3;
-pub const SLOT_OPT_USED_OFFSET: usize = 4;
-pub const SLOT_LINKED_COUNT_OFFSET: usize = 5;
-pub const SLOT_SOURCE_COUNT_OFFSET: usize = 6;
-pub const SLOT_SOURCE_START_OFFSET: usize = 7;
-pub const SLOT_HEADER_SIZE: usize = SLOT_SOURCE_START_OFFSET; // top card ID + 6 scalar fields
-pub const SLOT_SIZE: usize = SLOT_HEADER_SIZE + MAX_SOURCES * SOURCE_ENTRY_SIZE; // 40
-pub const SOURCE_CARD_ID_OFFSET: usize = 0;
-pub const SOURCE_OPT_STATE_OFFSET: usize = 1;
-pub const SOURCE_DP_CONTRIBUTION_OFFSET: usize = 2;
+pub use crate::tensor_profiles::standard::v1::{
+    BATTLE_SIZE, BREEDING_SIZE, FIELD_SLOTS, GLOBAL_SIZE, HAND_SIZE, MAX_HAND, MAX_REVEALED,
+    MAX_SECURITY, MAX_SOURCES, MAX_TRASH, OFF_GLOBAL, OFF_MY_BATTLE, OFF_MY_BREEDING,
+    OFF_MY_HAND, OFF_MY_SECURITY, OFF_MY_TRASH, OFF_OPP_BATTLE, OFF_OPP_BREEDING, OFF_OPP_HAND,
+    OFF_OPP_SECURITY, OFF_OPP_TRASH, OFF_REVEALED, OFF_SELECTION, REVEALED_SIZE, SECURITY_SIZE,
+    SELECTION_SIZE, SLOT_DP_OFFSET, SLOT_HEADER_SIZE, SLOT_LINKED_COUNT_OFFSET,
+    SLOT_OPT_TOTAL_OFFSET, SLOT_OPT_USED_OFFSET, SLOT_SIZE, SLOT_SOURCE_COUNT_OFFSET,
+    SLOT_SOURCE_START_OFFSET, SLOT_SUSPENDED_OFFSET, SLOT_TOP_CARD_OFFSET, SOURCE_CARD_ID_OFFSET,
+    SOURCE_DP_CONTRIBUTION_OFFSET, SOURCE_ENTRY_SIZE, SOURCE_OPT_STATE_OFFSET, TENSOR_SIZE,
+    TRASH_SIZE,
+};
 
 pub const DP_NORM: f32 = 30000.0;
-
-// Section sizes
-pub const GLOBAL_SIZE: usize = 10;
-pub const BATTLE_SIZE: usize = FIELD_SLOTS * SLOT_SIZE; // 560
-pub const HAND_SIZE: usize = MAX_HAND; // 20
-pub const TRASH_SIZE: usize = MAX_TRASH; // 45
-pub const SECURITY_SIZE: usize = MAX_SECURITY; // 10
-pub const BREEDING_SIZE: usize = SLOT_SIZE; // 40
-pub const REVEALED_SIZE: usize = MAX_REVEALED; // 10
-pub const SELECTION_SIZE: usize = 5;
-
-/// Total tensor size: 10 + 560 + 560 + 20 + 20 + 45 + 45 + 10 + 10 + 40 + 40 + 10 + 5 = 1375
-pub const TENSOR_SIZE: usize = GLOBAL_SIZE
-    + BATTLE_SIZE * 2
-    + HAND_SIZE * 2
-    + TRASH_SIZE * 2
-    + SECURITY_SIZE * 2
-    + BREEDING_SIZE * 2
-    + REVEALED_SIZE
-    + SELECTION_SIZE;
-
-// Section start offsets
-pub const OFF_GLOBAL: usize = 0;
-pub const OFF_MY_BATTLE: usize = OFF_GLOBAL + GLOBAL_SIZE; // 10
-pub const OFF_OPP_BATTLE: usize = OFF_MY_BATTLE + BATTLE_SIZE; // 570
-pub const OFF_MY_HAND: usize = OFF_OPP_BATTLE + BATTLE_SIZE; // 1130
-pub const OFF_OPP_HAND: usize = OFF_MY_HAND + HAND_SIZE; // 1150
-pub const OFF_MY_TRASH: usize = OFF_OPP_HAND + HAND_SIZE; // 1170
-pub const OFF_OPP_TRASH: usize = OFF_MY_TRASH + TRASH_SIZE; // 1215
-pub const OFF_MY_SECURITY: usize = OFF_OPP_TRASH + TRASH_SIZE; // 1260
-pub const OFF_OPP_SECURITY: usize = OFF_MY_SECURITY + SECURITY_SIZE; // 1270
-pub const OFF_MY_BREEDING: usize = OFF_OPP_SECURITY + SECURITY_SIZE; // 1280
-pub const OFF_OPP_BREEDING: usize = OFF_MY_BREEDING + BREEDING_SIZE; // 1320
-pub const OFF_REVEALED: usize = OFF_OPP_BREEDING + BREEDING_SIZE; // 1360
-pub const OFF_SELECTION: usize = OFF_REVEALED + REVEALED_SIZE; // 1370
 
 // ─── Tensor Builder ───────────────────────────────────────────────────
 
@@ -257,7 +216,7 @@ pub fn build_tensor(game: &Game, player_id: PlayerId, registry: &CardRegistry) -
 /// Compute which tensor positions hold card IDs vs scalar values.
 /// Used by the features extractor to split for embedding lookup.
 pub fn compute_positions() -> (Vec<usize>, Vec<usize>) {
-    tensor_profile::standard_v1_positions()
+    tensor_profiles::standard::v1::PROFILE.positions()
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -292,7 +251,7 @@ fn write_slot(
     card_data: &[CardData],
     registry: &CardRegistry,
 ) {
-    let slot_layout = tensor_profile::default_profile().slot_layout;
+    let slot_layout = tensor_profiles::standard::v1::PROFILE.slot_layout;
     let top_card_offset = slot_layout.header_offset(TensorSlotHeaderField::TopCardId);
     let dp_offset = slot_layout.header_offset(TensorSlotHeaderField::Dp);
     let suspended_offset = slot_layout.header_offset(TensorSlotHeaderField::Suspended);
