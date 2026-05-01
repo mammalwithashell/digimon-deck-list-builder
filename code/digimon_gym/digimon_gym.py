@@ -8,6 +8,7 @@ Wraps HeadlessGame to provide a standard Gymnasium interface with:
 """
 
 import os
+import random
 import numpy as np
 import logging
 from typing import List, Tuple, Dict, Any, Optional
@@ -21,7 +22,7 @@ except ImportError:
     RustHeadlessGame = None
 
 
-def _make_runner(deck1: List[str], deck2: List[str]):
+def _make_runner(deck1: List[str], deck2: List[str], seed: Optional[int] = None):
     """Build the game runner chosen by the `DIGIMON_BACKEND` env var.
 
     - `DIGIMON_BACKEND=rust` → `RustHeadlessGame` (requires the `digimon_engine`
@@ -29,8 +30,8 @@ def _make_runner(deck1: List[str], deck2: List[str]):
     - anything else (including unset) → Python `HeadlessGame`.
 
     Both runners expose the same duck-typed surface: `step`, `get_action_mask`,
-    `get_board_tensor`, `is_game_over`, plus a `game` attribute used by reward
-    shaping below.
+    `get_board_tensor`, and `is_game_over`. Rust runners also expose
+    `get_rl_state()` for backend-neutral RL metadata.
     """
     backend = os.environ.get("DIGIMON_BACKEND", "py").lower()
     if backend == "rust":
@@ -39,8 +40,24 @@ def _make_runner(deck1: List[str], deck2: List[str]):
                 "DIGIMON_BACKEND=rust but digimon_engine wheel is not installed. "
                 "Run `cd digimon-engine-py && maturin develop --release`."
             )
-        return RustHeadlessGame(deck1, deck2)
-    return HeadlessGame(deck1, deck2)
+        return RustHeadlessGame(deck1, deck2, seed=seed)
+    if seed is None:
+        return HeadlessGame(deck1, deck2)
+    rng_state = random.getstate()
+    original_choice = random.choice
+
+    def seeded_choice(seq):
+        if list(seq) == [True, False]:
+            return seed % 2 == 0
+        return original_choice(seq)
+
+    try:
+        random.seed(seed)
+        random.choice = seeded_choice
+        return HeadlessGame(deck1, deck2)
+    finally:
+        random.choice = original_choice
+        random.setstate(rng_state)
 from engine_py_legacy.engine.game import (
     FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND,
     SECURITY_TARGET, BREEDING_SLOT,
@@ -108,8 +125,59 @@ class DigimonEnv(gymnasium.Env):
 
     @property
     def game(self):
-        """Back-compat accessor for the underlying Game instance."""
-        return self.runner.game if self.runner else None
+        """Back-compat accessor for the legacy Python Game instance.
+
+        Rust runners intentionally do not expose a Python Game object. Use
+        current_player_id, is_game_over, winner_id, and _rl_state() for
+        backend-neutral RL code.
+        """
+        return getattr(self.runner, "game", None) if self.runner else None
+
+    def _rl_state(self) -> Dict[str, Any]:
+        if self.runner is None:
+            return {}
+        get_state = getattr(self.runner, "get_rl_state", None)
+        if get_state is not None:
+            return dict(get_state())
+        game = getattr(self.runner, "game", None)
+        if game is None:
+            return {}
+        winner = getattr(game, "winner", None)
+        winner_id = getattr(winner, "player_id", winner)
+        return {
+            "game_over": bool(getattr(game, "game_over", False)),
+            "winner_id": winner_id,
+            "current_player_id": int(getattr(game, "current_player_id", 1)),
+            "phase": getattr(getattr(game, "current_phase", None), "name", None),
+            "memory": getattr(game, "memory", 0),
+            "p1_security": len(game.player1.security_cards),
+            "p2_security": len(game.player2.security_cards),
+            "p1_total_dp": sum((p.dp or 0) for p in game.player1.battle_area),
+            "p2_total_dp": sum((p.dp or 0) for p in game.player2.battle_area),
+        }
+
+    @property
+    def current_player_id(self) -> int:
+        return int(self._rl_state().get("current_player_id", 1))
+
+    @property
+    def is_game_over(self) -> bool:
+        if self.runner is None:
+            return False
+        return bool(self._rl_state().get("game_over", self.runner.is_game_over))
+
+    @property
+    def winner_id(self) -> Optional[int]:
+        winner = self._rl_state().get("winner_id")
+        return int(winner) if winner is not None else None
+
+    def greedy_action(self) -> int:
+        if self.runner is None:
+            return ACTION_PASS_TURN
+        choose = getattr(self.runner, "greedy_action", None)
+        if choose is not None:
+            return int(choose())
+        return greedy_policy(self)
 
     def reset(self, seed: Optional[int] = None,
               options: Optional[Dict[str, Any]] = None
@@ -133,7 +201,7 @@ class DigimonEnv(gymnasium.Env):
             deck1 = options.get("deck1", deck1)
             deck2 = options.get("deck2", deck2)
 
-        self.runner = _make_runner(deck1, deck2)
+        self.runner = _make_runner(deck1, deck2, seed=seed)
         self._step_count = 0
 
         obs = self.runner.get_board_tensor(1)
@@ -157,7 +225,7 @@ class DigimonEnv(gymnasium.Env):
         self._step_count += 1
 
         obs = self.runner.get_board_tensor(1)
-        terminated = self.runner.is_game_over
+        terminated = self.is_game_over
         truncated = self._step_count >= self.max_turns * 10  # safety limit
         reward = self._compute_reward(terminated)
 
@@ -194,31 +262,19 @@ class DigimonEnv(gymnasium.Env):
             - Security delta: (my_security - opp_security) × 0.01
             - Board presence: (my_total_DP - opp_total_DP) × 0.0001
         """
-        game = self.runner.game
+        state = self._rl_state()
 
-        # Terminal reward
-        if terminated and game.game_over:
-            if game.winner and game.winner.player_id == 1:
+        if terminated and bool(state.get("game_over", False)):
+            winner_id = state.get("winner_id")
+            if winner_id == 1:
                 return 1.0
-            elif game.winner:
+            if winner_id == 2:
                 return -1.0
             return 0.0
 
-        # Dense shaping
-        me = game.player1
-        opp = game.player2
-        reward = 0.0
-
-        # Security delta
-        sec_delta = len(me.security_cards) - len(opp.security_cards)
-        reward += sec_delta * 0.01
-
-        # Board presence (total DP — None for tamers/eggs, treat as 0)
-        my_dp = sum((p.dp or 0) for p in me.battle_area)
-        opp_dp = sum((p.dp or 0) for p in opp.battle_area)
-        reward += (my_dp - opp_dp) * 0.0001
-
-        return reward
+        sec_delta = int(state.get("p1_security", 0)) - int(state.get("p2_security", 0))
+        dp_delta = int(state.get("p1_total_dp", 0)) - int(state.get("p2_total_dp", 0))
+        return float(sec_delta * 0.01 + dp_delta * 0.0001)
 
     def render(self) -> Optional[str]:
         """Render the current game state.
@@ -227,16 +283,33 @@ class DigimonEnv(gymnasium.Env):
             String representation when render_mode='ansi', None otherwise.
         """
         if self.render_mode == "ansi" and self.runner:
-            state = self.runner.game.to_json()
+            to_ui_json = getattr(self.runner, "to_ui_json", None)
+            if to_ui_json is not None:
+                state = to_ui_json()
+            else:
+                game = getattr(self.runner, "game", None)
+                if game is None:
+                    return None
+                state = game.to_json()
+
+            player1 = state.get("player1", state.get("Player1", {}))
+            player2 = state.get("player2", state.get("Player2", {}))
+            turn_count = state.get("turnCount", state.get("TurnCount", 0))
+            phase = state.get("currentPhase", state.get("CurrentPhase", "Unknown"))
+            memory = state.get("memoryGauge", state.get("MemoryGauge", 0))
+            is_game_over = state.get("isGameOver", state.get("IsGameOver", False))
+            winner = state.get("winner", state.get("Winner"))
             lines = [
-                f"Turn {state['TurnCount']} | Phase: {state['CurrentPhase']} | Memory: {state['MemoryGauge']}",
-                f"P1: Hand={state['Player1']['HandCount']}, Security={state['Player1']['SecurityCount']}, "
-                f"Board={state['Player1']['BattleAreaCount']}",
-                f"P2: Hand={state['Player2']['HandCount']}, Security={state['Player2']['SecurityCount']}, "
-                f"Board={state['Player2']['BattleAreaCount']}",
+                f"Turn {turn_count} | Phase: {phase} | Memory: {memory}",
+                f"P1: Hand={player1.get('handCount', player1.get('HandCount', 0))}, "
+                f"Security={player1.get('securityCount', player1.get('SecurityCount', 0))}, "
+                f"Board={player1.get('battleAreaCount', player1.get('BattleAreaCount', 0))}",
+                f"P2: Hand={player2.get('handCount', player2.get('HandCount', 0))}, "
+                f"Security={player2.get('securityCount', player2.get('SecurityCount', 0))}, "
+                f"Board={player2.get('battleAreaCount', player2.get('BattleAreaCount', 0))}",
             ]
-            if state["IsGameOver"]:
-                lines.append(f"Game Over! Winner: Player {state['Winner']}")
+            if is_game_over:
+                lines.append(f"Game Over! Winner: Player {winner}")
             return "\n".join(lines)
         return None
 
@@ -318,6 +391,9 @@ def greedy_policy(env) -> int:
     """
     if isinstance(env, DigimonEnv):
         mask = np.asarray(env.get_action_mask())
+        rust_greedy = getattr(env.runner, "greedy_action", None) if env.runner else None
+        if rust_greedy is not None:
+            return int(rust_greedy())
         game = env.game
     else:
         mask = np.asarray(env.get_action_mask())

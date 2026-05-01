@@ -93,6 +93,8 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     if !option_use_requirement_or_color_available(card, game, player_id) {
                         continue;
                     }
+                } else if me.battle_area.len() >= game.rules.field_slots as usize {
+                    continue;
                 }
                 mask[i] = 1.0;
             }
@@ -455,7 +457,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             }
             // Move from breeding (61): requires Digimon at level >= 3
             if let Some(ref perm) = me.breeding_area {
-                if perm.level(&game.card_data).unwrap_or(0) >= 3 {
+                if perm.level(&game.card_data).unwrap_or(0) >= 3
+                    && me.battle_area.len() < game.rules.field_slots as usize
+                {
                     mask[MOVE_FROM_BREEDING as usize] = 1.0;
                 }
             }

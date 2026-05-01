@@ -254,17 +254,27 @@ pub fn decks_delete(app: AppHandle, deck_id: String) -> Result<bool, String> {
 pub fn deck_folders_list(app: AppHandle) -> Result<Vec<DeckFolder>, String> {
     let path = library_metadata_path(&app)?;
     let mut metadata = ensure_default_folders(&path)?;
-    metadata
-        .folders
-        .sort_by(|a, b| a.sort_order.cmp(&b.sort_order).then_with(|| a.name.cmp(&b.name)));
+    metadata.folders.sort_by(|a, b| {
+        a.sort_order
+            .cmp(&b.sort_order)
+            .then_with(|| a.name.cmp(&b.name))
+    });
     Ok(metadata.folders)
 }
 
 #[tauri::command]
-pub fn deck_folders_create(app: AppHandle, name: String, sort_order: Option<i32>) -> Result<DeckFolder, String> {
+pub fn deck_folders_create(
+    app: AppHandle,
+    name: String,
+    sort_order: Option<i32>,
+) -> Result<DeckFolder, String> {
     let path = library_metadata_path(&app)?;
     let mut metadata = ensure_default_folders(&path)?;
-    if metadata.folders.iter().any(|f| f.name.eq_ignore_ascii_case(name.trim())) {
+    if metadata
+        .folders
+        .iter()
+        .any(|f| f.name.eq_ignore_ascii_case(name.trim()))
+    {
         return Err("Folder name already exists".into());
     }
     let now = chrono::Utc::now().to_rfc3339();

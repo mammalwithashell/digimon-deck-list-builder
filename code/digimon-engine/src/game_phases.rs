@@ -109,7 +109,25 @@ impl Game {
 
         // Breeding phase
         self.current_phase = GamePhase::Breeding;
-        // Breeding actions handled via step() — move to main if no breeding action
+        if !self.has_actionable_breeding_option(tp) {
+            self.enter_main_phase();
+        }
+    }
+
+    fn has_actionable_breeding_option(&self, player_id: PlayerId) -> bool {
+        let player = self.player(player_id);
+        if player.breeding_area.is_none() && !player.digitama_deck.is_empty() {
+            return true;
+        }
+        let Some(perm) = player.breeding_area.as_ref() else {
+            return false;
+        };
+        if perm.level(&self.card_data).unwrap_or(0) >= 3
+            && player.battle_area.len() < self.rules.field_slots as usize
+        {
+            return true;
+        }
+        false
     }
 
     /// Advance from breeding to main phase.

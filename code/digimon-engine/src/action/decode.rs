@@ -98,7 +98,9 @@ impl Game {
                     let _ = self.play_option_from_hand(tp, hand_idx);
                 }
                 Some(CardKind::Digimon) | Some(CardKind::Tamer) => {
-                    let _ = self.play_from_hand(tp, hand_idx);
+                    if self.play_from_hand(tp, hand_idx).is_some() {
+                        self.check_turn_end();
+                    }
                 }
                 // DigiEgg / Token / missing — not playable via Main-phase
                 // hand-play. Silent no-op matches Python's decoder.
@@ -178,10 +180,14 @@ impl Game {
         let tp = self.turn_player();
         match action_id {
             HATCH => {
-                self.hatch(tp);
+                if self.hatch(tp) {
+                    self.enter_main_phase();
+                }
             }
             MOVE_FROM_BREEDING => {
-                self.move_from_breeding(tp);
+                if self.move_from_breeding(tp) {
+                    self.enter_main_phase();
+                }
             }
             PASS => {
                 // Breeding pass: advance to Main phase. Python's action_breeding_pass

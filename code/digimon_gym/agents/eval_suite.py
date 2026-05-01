@@ -121,15 +121,12 @@ class HeldOutEvalSuite:
         terminated = truncated = False
 
         while not (terminated or truncated):
-            game = env.runner.game
-            action = agent_fn(env) if game.current_player_id == 1 else opponent_fn(env)
+            action = agent_fn(env) if env.current_player_id == 1 else opponent_fn(env)
             _obs, _reward, terminated, truncated, _info = env.step(int(action))
 
-        game = env.runner.game
-        if not getattr(game, "game_over", False):
+        if not env.is_game_over:
             return "draw"
-        winner = getattr(game, "winner", None)
-        winner_id = getattr(winner, "player_id", winner)
+        winner_id = env.winner_id
         if winner_id == 1:
             return "win"
         if winner_id == 2:

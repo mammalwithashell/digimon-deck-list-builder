@@ -551,20 +551,20 @@ Runtime lookup from card ID strings (e.g. `"BT1-001"`) to integer indices used i
 
 ---
 
-### 7.3 Tensor Layout Map
+### 7.3 Tensor Profile Metadata
 
-**Module:** `code/engine_py_legacy/engine/data/tensor_layout.py`
+**Canonical current profile:** `code/digimon-engine/src/tensor_profiles/standard/v1.rs`
 
-Computes which positions in the 1375-float observation tensor hold card IDs vs scalar values. Used by `CardEmbeddingExtractor` to split the tensor for GPU-side embedding lookup.
+The Rust tensor profile registry describes which positions in the 1375-float observation tensor hold card IDs vs scalar values. It is exposed to Python by `digimon_engine.get_tensor_profile()` and consumed through `digimon_gym.tensor_profiles.get_tensor_profile()`. `CardEmbeddingExtractor` uses the RL wrapper to split the tensor for GPU-side embedding lookup.
 
 | Name | Value | Description |
 |---|---|---|
-| `CARD_ID_POSITIONS` | list of 520 ints | Tensor indices holding card IDs |
-| `SCALAR_POSITIONS` | list of 855 ints | Tensor indices holding scalar values |
-| `NUM_CARD_SLOTS` | 520 | Length of `CARD_ID_POSITIONS` |
-| `NUM_SCALAR_SLOTS` | 855 | Length of `SCALAR_POSITIONS` |
+| `card_id_positions` | list of 520 ints | Tensor indices holding card IDs |
+| `scalar_positions` | list of 855 ints | Tensor indices holding scalar values |
+| `card_id_slot_count` | 520 | Length of `card_id_positions` |
+| `scalar_slot_count` | 855 | Length of `scalar_positions` |
 
-All positions are computed deterministically from game constants (`FIELD_SLOTS`, `SLOT_SIZE`, `MAX_SOURCES`, etc.) — nothing is hardcoded. The module asserts that card + scalar positions sum to `TENSOR_SIZE` (1375).
+All positions are computed deterministically from profile-owned sections, slot header fields, source fields, and source stride metadata using named Rust tensor offsets (`FIELD_SLOTS`, `SLOT_SIZE`, `MAX_SOURCES`, etc.). The profile asserts that card + scalar positions sum to `TENSOR_SIZE` (1375).
 
 Card ID positions include:
 - Top card ID in each battle area slot (28 slots × 1)
@@ -576,12 +576,16 @@ Card ID positions include:
 - Revealed card IDs (10)
 
 ```python
-from digimon_gym.engine.data.tensor_layout import CARD_ID_POSITIONS, SCALAR_POSITIONS
+from digimon_gym.tensor_profiles import get_tensor_profile
+
+profile = get_tensor_profile()
 
 # Used internally by CardEmbeddingExtractor
-card_ids = observations[:, CARD_ID_POSITIONS].long()   # (batch, 520)
-scalars = observations[:, SCALAR_POSITIONS]             # (batch, 855)
+card_ids = observations[:, profile.card_id_positions].long()   # (batch, 520)
+scalars = observations[:, profile.scalar_positions]             # (batch, 855)
 ```
+
+`code/engine_py_legacy/engine/data/tensor_layout.py` remains a legacy fallback only while migration/parity support remains.
 
 ---
 

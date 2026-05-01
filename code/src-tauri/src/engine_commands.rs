@@ -21,6 +21,7 @@ use digimon_engine::game::Game;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::rules::Rules;
 use digimon_engine::tensor::build_tensor;
+use digimon_engine::tensor_profiles::default_profile;
 use serde::{Deserialize, Serialize};
 
 use crate::inference_state::InferenceState;
@@ -126,6 +127,7 @@ fn card_kind_str(k: CardKind) -> &'static str {
         CardKind::Option => "Option",
         CardKind::DigiEgg => "DigiEgg",
         CardKind::Token => "Token",
+        CardKind::Dual => "Dual",
     }
 }
 
@@ -283,6 +285,7 @@ fn synth_card(id: &str, name: &str, kind: CardKind, dp: Option<i32>, cost: u16) 
         index: 0,
         norm_id: 0.0,
         keywords: Vec::new(),
+        dual: None,
     }
 }
 
@@ -507,9 +510,13 @@ pub struct GameEventDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TensorSummaryDto {
     pub player_id: PlayerId,
+    pub profile_id: String,
+    pub profile_version: u16,
     pub tensor_size: usize,
     pub mask_size: usize,
     pub legal_action_count: usize,
+    pub card_id_slot_count: usize,
+    pub scalar_slot_count: usize,
     pub turn_count: u16,
     pub phase: String,
     pub memory: i16,
@@ -915,11 +922,16 @@ fn tensor_summary_for(
     mask: &[f32],
 ) -> TensorSummaryDto {
     let tensor = build_tensor(game, player_id, registry);
+    let profile = default_profile();
     TensorSummaryDto {
         player_id,
+        profile_id: profile.id.to_string(),
+        profile_version: profile.version as u16,
         tensor_size: tensor.len(),
         mask_size: mask.len(),
         legal_action_count: mask.iter().filter(|&&v| v > 0.0).count(),
+        card_id_slot_count: profile.card_id_slot_count,
+        scalar_slot_count: profile.scalar_slot_count,
         turn_count: game.turn_count,
         phase: format!("{:?}", game.current_phase),
         memory: game.memory,
@@ -1186,6 +1198,8 @@ mod tests {
         let summary = tensor_summary_for(&game, pid, &registry, &mask);
 
         assert_eq!(summary.player_id, pid);
+        assert_eq!(summary.profile_id, "standard_v1");
+        assert_eq!(summary.profile_version, 1);
         assert_eq!(summary.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
         assert_eq!(
             summary.mask_size,
@@ -1193,6 +1207,8 @@ mod tests {
         );
         assert_eq!(summary.tensor_size, 1375);
         assert_eq!(summary.mask_size, 2168);
+        assert_eq!(summary.card_id_slot_count, 520);
+        assert_eq!(summary.scalar_slot_count, 855);
         assert!(summary.legal_action_count > 0);
         assert_eq!(summary.phase, format!("{:?}", game.current_phase));
     }

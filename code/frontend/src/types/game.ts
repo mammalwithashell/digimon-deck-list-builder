@@ -109,7 +109,7 @@ export interface HandCardInfo {
   level: number | null;
   dp: number | null;
   colors: number[];
-  cardKind: number; // 0=Digimon, 1=Tamer, 2=Option, 3=DigiEgg
+  cardKind: number; // 0=Digimon, 1=Tamer, 2=Option/Dual, 3=DigiEgg
   evoCosts: { color: number; level: number; cost: number }[];
 }
 
@@ -183,9 +183,13 @@ export interface DecodedAction {
 
 export interface TensorSummary {
   playerId: number;
+  profileId: string;
+  profileVersion: number;
   tensorSize: number;
   maskSize: number;
   legalActionCount: number;
+  cardIdSlotCount: number;
+  scalarSlotCount: number;
   turnCount: number;
   phase: string;
   memory: number;

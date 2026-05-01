@@ -1,9 +1,16 @@
 use std::collections::HashMap;
 
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{
+    BREEDING_TARGET, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, HATCH,
+    MOVE_FROM_BREEDING, PLAY_HAND_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
+use digimon_engine::card_source::CardSource;
 use digimon_engine::enums::*;
 use digimon_engine::game::Game;
+use digimon_engine::permanent::Permanent;
 use digimon_engine::rules::Rules;
 
 /// Build a minimal card database for testing.
@@ -33,6 +40,14 @@ fn test_card_db() -> HashMap<String, CardData> {
             "effect_description_eng": "", "inherited_effect_description_eng": "",
             "security_effect_description_eng": "",
             "evo_costs": [{"card_color": 0, "level": 3, "memory_cost": 2}]
+        },
+        "BT1-011": {
+            "card_id": "BT1-011", "card_name_eng": "Training Agumon",
+            "card_effect_class_name": "BT1_011", "play_cost": 3, "dp": 2000,
+            "level": 3, "card_kind": 0, "rarity": 0, "card_colors": [0],
+            "type_eng": ["Reptile"], "form_eng": ["Rookie"], "attribute_eng": ["Vaccine"],
+            "effect_description_eng": "＜Training＞", "inherited_effect_description_eng": "",
+            "security_effect_description_eng": "", "evo_costs": []
         },
         "BT1-085": {
             "card_id": "BT1-085", "card_name_eng": "Tai Kamiya",
@@ -154,14 +169,278 @@ fn breeding_hatch_and_move() {
     // Can't hatch again (breeding area occupied)
     assert!(!game.hatch(tp));
 
-    // Move from breeding to battle area
+    // Can't move a level-2 egg directly to the battle area.
+    assert!(!game.move_from_breeding(tp));
+    assert!(game.player(tp).breeding_area.is_some());
+    assert_eq!(game.player(tp).field_count(), 0);
+
+    // Move a level-3 permanent from breeding to battle area.
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+    game.player_mut(tp).breeding_area = Some(Permanent::new(
+        CardSource::new(agumon_idx, tp, 999),
+        game.turn_count,
+    ));
     assert!(game.move_from_breeding(tp));
     assert!(game.player(tp).breeding_area.is_none());
     assert_eq!(game.player(tp).field_count(), 1);
 
-    // Verify the permanent is a DigiEgg
+    // Verify the permanent is the level-3 Digimon.
     let perm = &game.player(tp).battle_area[0];
-    assert!(perm.is_digi_egg(&game.card_data));
+    assert_eq!(perm.level(&game.card_data), Some(3));
+}
+
+#[test]
+fn decode_hatch_advances_to_main_phase() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let rules = Rules::standard();
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    assert_eq!(game.current_phase, GamePhase::Breeding);
+    game.decode_action(HATCH, game.turn_player());
+
+    assert_eq!(game.current_phase, GamePhase::Main);
+}
+
+#[test]
+fn decode_move_from_breeding_advances_to_main_phase() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let rules = Rules::standard();
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    let tp = game.turn_player();
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+    game.player_mut(tp).breeding_area = Some(Permanent::new(
+        CardSource::new(agumon_idx, tp, 999),
+        game.turn_count,
+    ));
+
+    assert_eq!(game.current_phase, GamePhase::Breeding);
+    game.decode_action(MOVE_FROM_BREEDING, tp);
+
+    assert_eq!(game.current_phase, GamePhase::Main);
+}
+
+#[test]
+fn decode_move_from_breeding_rejects_level_2_and_stays_in_breeding_phase() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let rules = Rules::standard();
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    let tp = game.turn_player();
+    let egg_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-001")
+        .expect("Koromon in test card DB");
+    game.player_mut(tp).breeding_area = Some(Permanent::new(
+        CardSource::new(egg_idx, tp, 998),
+        game.turn_count,
+    ));
+
+    assert_eq!(game.current_phase, GamePhase::Breeding);
+    game.decode_action(MOVE_FROM_BREEDING, tp);
+
+    assert_eq!(
+        game.current_phase,
+        GamePhase::Breeding,
+        "illegal level-2 move must not advance as though the move resolved",
+    );
+    assert!(
+        game.player(tp).breeding_area.is_some(),
+        "level-2 permanent must remain in breeding",
+    );
+    assert_eq!(
+        game.player(tp).field_count(),
+        0,
+        "level-2 permanent must not enter the battle area",
+    );
+}
+
+#[test]
+fn main_phase_play_mask_respects_full_field_but_keeps_options() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let mut rules = Rules::standard();
+    rules.field_slots = 1;
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+    game.enter_main_phase();
+
+    let tp = game.turn_player();
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+    let tai_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-085")
+        .expect("Tai in test card DB");
+    let option_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-093")
+        .expect("Gaia Force in test card DB");
+
+    game.player_mut(tp).battle_area = vec![Permanent::new(
+        CardSource::new(agumon_idx, tp, 900),
+        game.turn_count,
+    )];
+    game.player_mut(tp).hand = vec![
+        CardSource::new(agumon_idx, tp, 901),
+        CardSource::new(tai_idx, tp, 902),
+        CardSource::new(option_idx, tp, 903),
+    ];
+    game.set_memory(10);
+
+    let mask = build_action_mask(&game, tp);
+
+    assert_eq!(
+        mask[(PLAY_HAND_START + 0) as usize],
+        0.0,
+        "Digimon hand play must be masked off when battle area is full",
+    );
+    assert_eq!(
+        mask[(PLAY_HAND_START + 1) as usize],
+        0.0,
+        "Tamer hand play must be masked off when battle area is full",
+    );
+    assert_eq!(
+        mask[(PLAY_HAND_START + 2) as usize],
+        1.0,
+        "Option use does not add a battle-area permanent and can remain legal",
+    );
+}
+
+#[test]
+fn full_field_masks_breeding_move_and_skips_breeding_phase() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let mut rules = Rules::standard();
+    rules.field_slots = 1;
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    let tp = game.turn_player();
+    let next = game.next_clockwise(tp);
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+
+    game.player_mut(tp).breeding_area = Some(Permanent::new(
+        CardSource::new(agumon_idx, tp, 910),
+        game.turn_count,
+    ));
+    game.player_mut(tp).battle_area = vec![Permanent::new(
+        CardSource::new(agumon_idx, tp, 911),
+        game.turn_count,
+    )];
+
+    let mask = build_action_mask(&game, tp);
+    assert_eq!(
+        mask[MOVE_FROM_BREEDING as usize], 0.0,
+        "MOVE_FROM_BREEDING must be masked off when battle area is full",
+    );
+
+    game.player_mut(next).breeding_area = Some(Permanent::new(
+        CardSource::new(agumon_idx, next, 912),
+        game.turn_count,
+    ));
+    game.player_mut(next).battle_area = vec![Permanent::new(
+        CardSource::new(agumon_idx, next, 913),
+        game.turn_count,
+    )];
+
+    game.enter_main_phase();
+    game.set_memory(0);
+    game.pass_turn();
+
+    assert_eq!(game.turn_player(), next);
+    assert_eq!(
+        game.current_phase,
+        GamePhase::Main,
+        "full field means the next player's level >= 3 breeding permanent is not actionable",
+    );
+}
+
+#[test]
+fn training_carrier_does_not_keep_turn_in_breeding_when_only_training_is_available() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let mut rules = Rules::standard();
+    rules.field_slots = 1;
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    let tp = game.turn_player();
+    let next = game.next_clockwise(tp);
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+    let training_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-011")
+        .expect("Training Agumon in test card DB");
+
+    game.player_mut(next).breeding_area = Some(Permanent::new(
+        CardSource::new(training_idx, next, 920),
+        game.turn_count,
+    ));
+    game.player_mut(next).battle_area = vec![Permanent::new(
+        CardSource::new(agumon_idx, next, 921),
+        game.turn_count,
+    )];
+
+    game.enter_main_phase();
+    game.set_memory(0);
+    game.pass_turn();
+
+    assert_eq!(game.turn_player(), next);
+    assert_eq!(
+        game.current_phase,
+        GamePhase::Main,
+        "Training from breeding is surfaced through the Main-phase mask, so it must not park the turn in Breeding"
+    );
+
+    let mask = build_action_mask(&game, next);
+    let breeding_training_bit =
+        FIELD_EFFECT_START + BREEDING_TARGET * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN;
+    assert_eq!(
+        mask[breeding_training_bit as usize],
+        1.0,
+        "Main-phase mask should surface the breeding-area Training activation"
+    );
+    assert_eq!(
+        mask[MOVE_FROM_BREEDING as usize],
+        0.0,
+        "full field keeps move unavailable; Training is the only relevant action"
+    );
 }
 
 #[test]
@@ -257,10 +536,11 @@ fn card_registry_with_real_db() {
     let db = test_card_db();
     let reg = CardRegistry::from_cards(&db);
 
-    assert_eq!(reg.count(), 5);
-    // All 5 test cards should have non-zero indices
+    assert_eq!(reg.count(), 6);
+    // All 6 test cards should have non-zero indices
     assert!(reg.get_index("BT1-001") > 0);
     assert!(reg.get_index("BT1-010") > 0);
+    assert!(reg.get_index("BT1-011") > 0);
     assert!(reg.get_index("BT1-025") > 0);
     assert!(reg.get_index("BT1-085") > 0);
     assert!(reg.get_index("BT1-093") > 0);

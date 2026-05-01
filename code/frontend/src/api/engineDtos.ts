@@ -5,7 +5,7 @@
 export interface CardDto {
   card_id: string;
   card_name: string;
-  card_kind: 'Digimon' | 'Tamer' | 'Option' | 'DigiEgg';
+  card_kind: 'Digimon' | 'Tamer' | 'Option' | 'DigiEgg' | 'Dual';
   level: number | null;
   dp: number | null;
   play_cost: number;

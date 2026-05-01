@@ -74,29 +74,32 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                 # Digimon or Tamer on the field to play an Option card.
                 # Cards with match_color_requirement=False bypass this check.
                 # IGNORE_COLOR_REQUIREMENT aura modifiers also bypass this check.
-                if card.is_option and card.match_color_requirement:
-                    # Check if any IGNORE_COLOR_REQUIREMENT modifier is active
-                    ignore_color = False
-                    if hasattr(game, 'modifiers'):
-                        ctx = {'card': card, 'player': me}
-                        for entry in game.modifiers._modifiers.get(ModifierType.IGNORE_COLOR_REQUIREMENT, []):
-                            if entry.condition is None or entry.condition(None, ctx):
-                                ignore_color = True
-                                break
-                    if not ignore_color:
-                        option_colors = set(card.card_colors)
-                        has_color_match = any(
-                            bool(option_colors & set(p.top_card.card_colors))
-                            for p in me.battle_area
-                            if p.top_card and (p.is_digimon or p.is_tamer)
-                        )
-                        if (not has_color_match and me.breeding_area and me.breeding_area.top_card
-                                and me.breeding_area.is_digimon):
-                            has_color_match = bool(
-                                option_colors & set(me.breeding_area.top_card.card_colors)
+                if card.is_option:
+                    if card.match_color_requirement:
+                        # Check if any IGNORE_COLOR_REQUIREMENT modifier is active
+                        ignore_color = False
+                        if hasattr(game, 'modifiers'):
+                            ctx = {'card': card, 'player': me}
+                            for entry in game.modifiers._modifiers.get(ModifierType.IGNORE_COLOR_REQUIREMENT, []):
+                                if entry.condition is None or entry.condition(None, ctx):
+                                    ignore_color = True
+                                    break
+                        if not ignore_color:
+                            option_colors = set(card.card_colors)
+                            has_color_match = any(
+                                bool(option_colors & set(p.top_card.card_colors))
+                                for p in me.battle_area
+                                if p.top_card and (p.is_digimon or p.is_tamer)
                             )
-                        if not has_color_match:
-                            continue
+                            if (not has_color_match and me.breeding_area and me.breeding_area.top_card
+                                    and me.breeding_area.is_digimon):
+                                has_color_match = bool(
+                                    option_colors & set(me.breeding_area.top_card.card_colors)
+                                )
+                            if not has_color_match:
+                                continue
+                elif len(me.battle_area) >= FIELD_SLOTS:
+                    continue
                 mask[i] = 1.0
 
         # Attack (100-399): 100 + attacker*TARGETS_PER_ATTACKER + target

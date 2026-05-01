@@ -140,10 +140,23 @@ impl Game {
     /// deletes don't shift later indices out from under us.
     pub fn move_from_breeding(&mut self, player_id: PlayerId) -> bool {
         let field_slots = self.rules.field_slots;
-        let player = self.player_mut(player_id);
-        if player.battle_area.len() >= field_slots as usize {
-            return false;
+        {
+            let player = self.player(player_id);
+            if player.battle_area.len() >= field_slots as usize {
+                return false;
+            }
+            let can_move = player
+                .breeding_area
+                .as_ref()
+                .and_then(|perm| perm.level(&self.card_data))
+                .unwrap_or(0)
+                >= 3;
+            if !can_move {
+                return false;
+            }
         }
+
+        let player = self.player_mut(player_id);
         if let Some(perm) = player.breeding_area.take() {
             player.battle_area.push(perm);
             let moved_handle = PermanentHandle {
@@ -263,7 +276,6 @@ impl Game {
         cost_target_from_hand: bool,
     ) -> PlayFromHandCostResult {
         let field_slots = self.rules.field_slots;
-
         // Borrow-check-friendly pre-checks: gather everything we need from
         // immutable borrows before taking a mutable borrow.
         let card_kind = {

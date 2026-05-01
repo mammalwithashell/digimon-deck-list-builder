@@ -18,6 +18,75 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 | `MAX_SECURITY` | 10 | |
 | `MAX_REVEALED` | 10 | |
 
+## Tensor Profiles
+
+The canonical board tensor profile is `standard_v1`:
+
+| Field | Value |
+|---|---:|
+| `id` | `standard_v1` |
+| `version` | 1 |
+| `tensor_size` | 1375 |
+| `field_slots` | 14 |
+| `slot_size` | 40 |
+| `max_sources` | 11 |
+| `card_id_slot_count` | 520 |
+| `scalar_slot_count` | 855 |
+
+Canonical tensor profile definitions live under `code/digimon-engine/src/tensor_profiles/<game_mode>/<version>.rs`. The current profile is defined in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`, which owns the Standard v1 tensor size, section ranges, slot shape, and derived card/scalar positions. `code/digimon-engine/src/tensor.rs` is the Standard v1 tensor writer and compatibility surface; it re-exports the current layout constants but does not own them.
+
+`standard_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets defined with the profile-owned layout constants instead of magic numeric indices.
+
+### `standard_v1` Sections
+
+| Section id | Start offset | Length | Kind |
+|---|---:|---:|---|
+| `global` | `OFF_GLOBAL` = 0 | `GLOBAL_SIZE` = 10 | `Scalars` |
+| `my_battle` | `OFF_MY_BATTLE` = 10 | `BATTLE_SIZE` = 560 | `PermanentSlots` |
+| `opponent_battle` | `OFF_OPP_BATTLE` = 570 | `BATTLE_SIZE` = 560 | `PermanentSlots` |
+| `my_hand` | `OFF_MY_HAND` = 1130 | `HAND_SIZE` = 20 | `CardIds` |
+| `opponent_hand` | `OFF_OPP_HAND` = 1150 | `HAND_SIZE` = 20 | `CardIds` |
+| `my_trash` | `OFF_MY_TRASH` = 1170 | `TRASH_SIZE` = 45 | `CardIds` |
+| `opponent_trash` | `OFF_OPP_TRASH` = 1215 | `TRASH_SIZE` = 45 | `CardIds` |
+| `my_security` | `OFF_MY_SECURITY` = 1260 | `SECURITY_SIZE` = 10 | `CardIds` |
+| `opponent_security` | `OFF_OPP_SECURITY` = 1270 | `SECURITY_SIZE` = 10 | `CardIds` |
+| `my_breeding` | `OFF_MY_BREEDING` = 1280 | `BREEDING_SIZE` = 40 | `PermanentSlots` |
+| `opponent_breeding` | `OFF_OPP_BREEDING` = 1320 | `BREEDING_SIZE` = 40 | `PermanentSlots` |
+| `revealed` | `OFF_REVEALED` = 1360 | `REVEALED_SIZE` = 10 | `CardIds` |
+| `selection` | `OFF_SELECTION` = 1370 | `SELECTION_SIZE` = 5 | `Scalars` |
+
+### Permanent Slot Header Fields
+
+| Field id | Offset | Kind |
+|---|---:|---|
+| `top_card_id` | `SLOT_TOP_CARD_OFFSET` = 0 | `CardId` |
+| `dp` | `SLOT_DP_OFFSET` = 1 | `Scalar` |
+| `suspended` | `SLOT_SUSPENDED_OFFSET` = 2 | `Scalar` |
+| `opt_total` | `SLOT_OPT_TOTAL_OFFSET` = 3 | `Scalar` |
+| `opt_used` | `SLOT_OPT_USED_OFFSET` = 4 | `Scalar` |
+| `linked_count` | `SLOT_LINKED_COUNT_OFFSET` = 5 | `Scalar` |
+| `source_count` | `SLOT_SOURCE_COUNT_OFFSET` = 6 | `Scalar` |
+
+### Source Entry Fields
+
+| Field id | Per-source offset | Kind |
+|---|---:|---|
+| `card_id` | `SOURCE_CARD_ID_OFFSET` = 0 | `CardId` |
+| `opt_state` | `SOURCE_OPT_STATE_OFFSET` = 1 | `Scalar` |
+| `dp_contribution` | `SOURCE_DP_CONTRIBUTION_OFFSET` = 2 | `Scalar` |
+
+### Source Stride
+
+| Field | Value |
+|---|---:|
+| `source_start` | `SLOT_SOURCE_START_OFFSET` = 7 |
+| `source_entry_size` | `SOURCE_ENTRY_SIZE` = 3 |
+| `max_sources` | `MAX_SOURCES` = 11 |
+| `slot_header_size` | `SLOT_HEADER_SIZE` = 7 |
+| `slot_size` | `SLOT_SIZE` = `SLOT_HEADER_SIZE + MAX_SOURCES * SOURCE_ENTRY_SIZE` = 40 |
+
+Future tensor profiles must define their own profile id and version, and must include matching tests and documentation updates.
+
 ## Top-Level Layout
 
 | Index Range | Size | Section |
@@ -99,7 +168,9 @@ Start at `+7`, bottom-to-top ordering.
 Card identities are encoded as integer registry indices (float-cast):
 
 - `0` means empty/padding
-- Each card gets a stable integer index from `CardRegistry` (1-based, sorted alphabetically)
+- Production card indices come from stable explicit `index` values in `data/cards.json`
+- Legacy/test card data without explicit indices uses a deterministic sorted fallback
+- `CardRegistry` rejects duplicate explicit indices
 - The `CardEmbeddingExtractor` contains a trainable `nn.Embedding(20000, 16)` that maps
   these integers to learned 16-float vectors on the GPU
 - The embedding table is part of the model checkpoint — no external files at inference
@@ -108,11 +179,17 @@ Card identities are encoded as integer registry indices (float-cast):
 
 ### Tensor Layout Metadata
 
-`code/engine_py_legacy/engine/data/tensor_layout.py` exports:
+Canonical tensor layout metadata lives in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`,
+is exposed to Python by `digimon_engine.get_tensor_profile()`, and is consumed through
+`digimon_gym.tensor_profiles.get_tensor_profile()`.
 
-- `CARD_ID_POSITIONS`: list of 520 tensor indices that hold card IDs
-- `SCALAR_POSITIONS`: list of 855 tensor indices that hold scalar values
-- Used by `CardEmbeddingExtractor` to split observations for embedding lookup
+The profile provides:
+
+- `card_id_positions`: list of 520 tensor indices that hold card IDs
+- `scalar_positions`: list of 855 tensor indices that hold scalar values
+- Metadata used by `CardEmbeddingExtractor` to split observations for embedding lookup
+
+`code/engine_py_legacy/engine/data/tensor_layout.py` remains a legacy fallback only.
 
 ## Selection Context (`1370-1374`)
 
