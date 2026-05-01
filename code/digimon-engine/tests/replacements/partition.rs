@@ -5,7 +5,8 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, ModifierType};
+use digimon_engine::modifiers::PlayerModifierEntry;
 use digimon_engine::replacement::ReplacementCause;
 
 fn colored_card(id: &str, color: CardColor, level: u8) -> CardData {
@@ -67,6 +68,28 @@ impl CardEffect for PaildramonPartition {
                             ctx.cancel_current_replacement();
                         }
                     },
+                );
+            })
+            .build()]
+    }
+}
+
+struct OnPlayInstallEffectPlayFloodgate;
+
+impl CardEffect for OnPlayInstallEffectPlayFloodgate {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Install effect-play floodgate")
+            .process(|ctx| {
+                ctx.game.modifiers.add_player_modifier(
+                    ctx.player,
+                    PlayerModifierEntry::simple(
+                        ModifierType::CannotPlayDigimonByEffect,
+                        0,
+                        Expiry::EndOfTurn,
+                        None,
+                        ctx.player,
+                    ),
                 );
             })
             .build()]
@@ -286,4 +309,53 @@ fn bt16_025_partition_failed_source_play_does_not_cancel_or_strand_cards() {
             "{id} should be trashed by the original deletion when Partition play fails"
         );
     }
+}
+
+#[test]
+fn bt16_025_partition_places_all_sources_before_draining_on_play_effects() {
+    let mut r = DebugRunner::builder()
+        .add_card(colored_card("BT16-025", CardColor::Blue, 5))
+        .add_card(colored_card("BLUE-LV4", CardColor::Blue, 4))
+        .add_card(colored_card("GREEN-LV4", CardColor::Green, 4))
+        .start();
+    r.register_effect("BT16-025", Arc::new(PaildramonPartition));
+    r.register_effect("BLUE-LV4", Arc::new(OnPlayInstallEffectPlayFloodgate));
+
+    let carrier = r.place_stack(0, &["BLUE-LV4", "GREEN-LV4", "BT16-025"]);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Partition");
+    r.game
+        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .expect("pick blue source");
+    r.game
+        .resolve_selection(0, encode_source_select(0, 1).unwrap())
+        .expect("pick green source");
+
+    let field_ids: Vec<String> = r.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&r.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        field_ids,
+        vec![
+            "BT16-025".to_string(),
+            "BLUE-LV4".to_string(),
+            "GREEN-LV4".to_string()
+        ],
+        "Partition must place every selected source before the first source's OnPlay floodgate drains"
+    );
+    assert!(
+        r.game
+            .modifiers
+            .player_has(0, ModifierType::CannotPlayDigimonByEffect),
+        "the first source's OnPlay still drains after the batch placement"
+    );
+    assert!(
+        r.game.players[0].hand.is_empty(),
+        "batch placement must not strand the second selected source in hand"
+    );
 }

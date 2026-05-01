@@ -795,6 +795,109 @@ impl Game {
         Some(entered)
     }
 
+    pub fn play_source_refs_from_effect_without_cost(
+        &mut self,
+        selected: Vec<crate::selection::SourceSelectionRef>,
+    ) -> bool {
+        let mut required_slots_by_player = vec![0usize; self.players.len()];
+        for source_ref in &selected {
+            let Some(permanent) = self
+                .player(source_ref.permanent.player)
+                .battle_area
+                .get(source_ref.permanent.index as usize)
+            else {
+                return false;
+            };
+            let Some(pos) = permanent
+                .card_sources
+                .iter()
+                .position(|source| source.handle() == source_ref.card)
+            else {
+                return false;
+            };
+            if pos + 1 >= permanent.card_sources.len() {
+                return false;
+            }
+            let player_index = source_ref.permanent.player as usize;
+            let Some(required_slots) = required_slots_by_player.get_mut(player_index) else {
+                return false;
+            };
+            *required_slots += 1;
+            if !self.can_play_card_from_effect_without_cost(
+                source_ref.permanent.player,
+                source_ref.card,
+                *required_slots,
+            ) {
+                return false;
+            }
+        }
+
+        let mut removed: Vec<(PlayerId, CardSource)> = Vec::with_capacity(selected.len());
+        for source_ref in selected {
+            let Some(permanent) = self
+                .player_mut(source_ref.permanent.player)
+                .battle_area
+                .get_mut(source_ref.permanent.index as usize)
+            else {
+                return false;
+            };
+            let Some(pos) = permanent
+                .card_sources
+                .iter()
+                .position(|source| source.handle() == source_ref.card)
+            else {
+                return false;
+            };
+            if pos + 1 >= permanent.card_sources.len() {
+                return false;
+            }
+            removed.push((
+                source_ref.permanent.player,
+                permanent.card_sources.remove(pos),
+            ));
+        }
+
+        let turn = self.turn_count;
+        let mut entered = Vec::with_capacity(removed.len());
+        for (player_id, card_source) in removed {
+            let card = card_source.handle();
+            let emitted_card_id = card_source.card_id(&self.card_data).to_string();
+            let player = self.player_mut(player_id);
+            player
+                .battle_area
+                .push(crate::permanent::Permanent::new(card_source, turn));
+            let field_index = player.battle_area.len() - 1;
+            let permanent = PermanentHandle {
+                player: player_id,
+                index: field_index as u8,
+            };
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Play {
+                seq,
+                player: player_id,
+                card_id: emitted_card_id,
+                field_index: field_index as u8,
+            });
+            entered.push((player_id, field_index, permanent, card));
+        }
+
+        for (player_id, field_index, _, _) in entered.iter().copied() {
+            self.fire_on_play(player_id, field_index);
+        }
+        for (player_id, _, permanent, card) in entered {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnEnterFieldAnyone,
+                crate::selection::TriggerSource::EnteredField {
+                    player: player_id,
+                    permanent,
+                    card,
+                },
+            );
+        }
+        self.drain_effect_queue();
+        true
+    }
+
     pub fn can_play_card_from_effect_without_cost(
         &self,
         player_id: PlayerId,

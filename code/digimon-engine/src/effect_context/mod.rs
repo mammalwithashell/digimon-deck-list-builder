@@ -2146,54 +2146,8 @@ impl<'a> EffectContext<'a> {
         &mut self,
         selected: Vec<SourceSelectionRef>,
     ) -> bool {
-        let mut required_slots_by_player = vec![0usize; self.game.players.len()];
-        for source_ref in &selected {
-            let Some(permanent) = self
-                .game
-                .player(source_ref.permanent.player)
-                .battle_area
-                .get(source_ref.permanent.index as usize)
-            else {
-                return false;
-            };
-            let Some(pos) = permanent
-                .card_sources
-                .iter()
-                .position(|source| source.handle() == source_ref.card)
-            else {
-                return false;
-            };
-            if pos + 1 >= permanent.card_sources.len() {
-                return false;
-            }
-            let player_index = source_ref.permanent.player as usize;
-            let Some(required_slots) = required_slots_by_player.get_mut(player_index) else {
-                return false;
-            };
-            *required_slots += 1;
-            if !self.game.can_play_card_from_effect_without_cost(
-                source_ref.permanent.player,
-                source_ref.card,
-                *required_slots,
-            ) {
-                return false;
-            }
-        }
-
-        for source_ref in selected {
-            let player = source_ref.permanent.player;
-            let Some(card) = self.game.remove_source_ref(source_ref) else {
-                return false;
-            };
-            if self
-                .game
-                .play_card_from_effect_without_cost(player, card)
-                .is_none()
-            {
-                return false;
-            }
-        }
-        true
+        self.game
+            .play_source_refs_from_effect_without_cost(selected)
     }
 
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
