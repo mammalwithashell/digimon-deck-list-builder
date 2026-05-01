@@ -55,7 +55,11 @@ impl HeadlessRunner {
     ) -> Result<Self, String> {
         let registry = CardRegistry::from_cards(all_card_data);
         let decks = vec![deck1_ids.clone(), deck2_ids.clone()];
-        let game = Game::new(&decks, all_card_data, Rules::standard(), seed)?;
+        let mut game = Game::new(&decks, all_card_data, Rules::standard(), seed)?;
+        // Python HeadlessGame exposes turn 1 during the mulligan decision
+        // window; keep the RL runner tensor contract aligned while core Game
+        // remains responsible for finalizing setup after mulligans.
+        game.turn_count = 1;
 
         // Do NOT capture initial state here — security is not yet dealt
         // (Game is still in Mulligan phase). Capture lazily on first step()

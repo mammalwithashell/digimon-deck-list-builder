@@ -22,8 +22,10 @@ def test_player1_and_player2_observations_differ_after_asymmetric_play():
         deck2=["ST1-01"] * 5 + ["ST1-03"] * 45,
     )
     env.reset(seed=99)
-    valid = np.where(env.action_mask() > 0)[0]
-    env.step(int(valid[0]))
+    for _ in range(3):
+        valid = np.where(env.action_mask() > 0)[0]
+        assert len(valid) > 0
+        env.step(int(valid[0]))
 
     obs_p1 = env.runner.get_board_tensor(1)
     obs_p2 = env.runner.get_board_tensor(2)
