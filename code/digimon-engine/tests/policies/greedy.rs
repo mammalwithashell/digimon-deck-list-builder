@@ -9,7 +9,6 @@ use digimon_engine::action::space::{
     SECURITY_TARGET,
 };
 use digimon_engine::card_data::CardData;
-use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::GamePhase;
 use digimon_engine::permanent::Permanent;
@@ -98,6 +97,19 @@ fn deck_with_level3() -> Vec<String> {
         d.push("BT1-025".to_string());
     }
     d
+}
+
+fn move_hand_card_to_breeding(runner: &mut DebugRunner, hand_idx: usize) {
+    let rookie = runner.game.players[0].hand.remove(hand_idx);
+    runner.game.players[0].breeding_area = Some(Permanent::new(rookie, runner.game.turn_count));
+    runner.game.current_phase = GamePhase::Breeding;
+}
+
+fn breeding_move_or_pass_mask() -> Vec<f32> {
+    let mut mask = vec![0.0f32; ACTION_SPACE_SIZE];
+    mask[MOVE_FROM_BREEDING as usize] = 1.0;
+    mask[PASS as usize] = 1.0;
+    mask
 }
 
 #[test]
@@ -281,19 +293,43 @@ fn breeding_holds_vanilla_level3_without_evolution_in_hand() {
         .with_card_data(db)
         .hand(0, &["BT1-082"])
         .start();
-    let data_index = runner.game.players[0].hand[0].data_index;
-    let rookie = CardSource::new(data_index, 0, runner.game.next_card_index());
-    runner.game.players[0].breeding_area = Some(Permanent::new(rookie, runner.game.turn_count));
-    runner.game.players[0].hand.clear();
-    runner.game.current_phase = GamePhase::Breeding;
-
-    let mut mask = vec![0.0f32; ACTION_SPACE_SIZE];
-    mask[MOVE_FROM_BREEDING as usize] = 1.0;
-    mask[PASS as usize] = 1.0;
+    move_hand_card_to_breeding(&mut runner, 0);
 
     assert_eq!(
-        greedy_action(&runner.game, &mask),
+        greedy_action(&runner.game, &breeding_move_or_pass_mask()),
         PASS,
         "greedy should not move a vanilla level-3 out of breeding when no matching evolution is in hand"
+    );
+}
+
+#[test]
+fn breeding_moves_resource_flow_level3_without_evolution_in_hand() {
+    let db = test_card_db();
+    let mut runner = DebugRunner::builder()
+        .with_card_data(db)
+        .hand(0, &["BT1-081"])
+        .start();
+    move_hand_card_to_breeding(&mut runner, 0);
+
+    assert_eq!(
+        greedy_action(&runner.game, &breeding_move_or_pass_mask()),
+        MOVE_FROM_BREEDING,
+        "greedy should move a level-3 with resource-flow text even without a matching evolution in hand"
+    );
+}
+
+#[test]
+fn breeding_moves_vanilla_level3_with_valid_evolution_in_hand() {
+    let db = test_card_db();
+    let mut runner = DebugRunner::builder()
+        .with_card_data(db)
+        .hand(0, &["BT1-082", "BT1-025"])
+        .start();
+    move_hand_card_to_breeding(&mut runner, 0);
+
+    assert_eq!(
+        greedy_action(&runner.game, &breeding_move_or_pass_mask()),
+        MOVE_FROM_BREEDING,
+        "greedy should move a vanilla level-3 when a matching evolution is available in hand"
     );
 }

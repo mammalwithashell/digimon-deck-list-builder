@@ -15,6 +15,7 @@ use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::timing_map::compiled_timing_to_engine;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::EffectTiming;
+use crate::resource_flow::identifier_indicates_resource_flow;
 
 pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> {
     lower_with_raw(card, clause, Arc::new(EngineRawRustRegistry::new()))
@@ -127,13 +128,7 @@ fn step_provides_resource_flow(step: &CompiledStep) -> bool {
         | CompiledStep::AddToHandFromDeck { .. }
         | CompiledStep::AddToHandFromTrash { .. }
         | CompiledStep::AddToHandFromReveal { .. } => true,
-        CompiledStep::RawRust { fn_name, .. } => {
-            let name = fn_name.to_ascii_lowercase();
-            (name.contains("add") && name.contains("hand"))
-                || name.contains("draw")
-                || name.contains("search")
-                || name.contains("save")
-        }
+        CompiledStep::RawRust { fn_name, .. } => identifier_indicates_resource_flow(fn_name),
         CompiledStep::AsSelectingPlayer { body, .. }
         | CompiledStep::ForEach { body, .. }
         | CompiledStep::PerSelected { body, .. }

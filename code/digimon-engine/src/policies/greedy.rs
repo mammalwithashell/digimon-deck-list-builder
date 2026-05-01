@@ -26,8 +26,9 @@ use crate::action::space::{
     TARGETS_PER_ATTACKER,
 };
 use crate::card_data::CardData;
-use crate::enums::{CardKind, GamePhase, Keyword, PlayerId};
+use crate::enums::{CardKind, GamePhase, PlayerId};
 use crate::game::Game;
+use crate::resource_flow::card_data_indicates_resource_flow;
 use crate::selection::SelectionKind;
 
 /// Pick the next action for a `PlayerKind::Greedy` seat, using the
@@ -320,12 +321,7 @@ fn best_setup_play(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
 
 fn card_has_resource_flow(game: &Game, card: &crate::card_source::CardSource) -> bool {
     let data = &game.card_data[card.data_index];
-    if data.keywords.iter().any(|kw| {
-        matches!(
-            kw,
-            Keyword::DrawX(_) | Keyword::Save | Keyword::MaterialSave(_)
-        )
-    }) {
+    if card_data_indicates_resource_flow(data) {
         return true;
     }
 
@@ -339,17 +335,7 @@ fn card_has_resource_flow(game: &Game, card: &crate::card_source::CardSource) ->
         }
     }
 
-    text_indicates_resource_flow(data)
-}
-
-fn text_indicates_resource_flow(data: &CardData) -> bool {
-    let text = data.text_for_search_all_faces().to_ascii_lowercase();
-    text.contains("draw")
-        || text.contains("<save>")
-        || text.contains("＜save＞")
-        || text.contains("material save")
-        || (text.contains("add") && text.contains("hand"))
-        || text.contains("search")
+    false
 }
 
 /// Best attack: prioritize lethal security hits, then security pressure,
@@ -414,9 +400,9 @@ fn best_attack(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
     best.map(|(_, a)| a)
 }
 
-/// Best play from hand: prefer Digimon that build a curve before
-/// expensive hard-plays. Then favor bigger bodies, lower cost, and stable
-/// lower hand indices. Option/Tamer cards still fall back to cost sorting.
+/// Best fallback play from hand: prefer Digimon that build a curve before
+/// expensive hard-plays, then sort non-Digimon by kind/cost/index. Tamers
+/// are normally handled earlier by `best_setup_play`.
 fn best_play(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
     let player = game.player(pid);
     let mut best: Option<((i32, i32, i32, i32, i32), u16)> = None;
@@ -430,8 +416,8 @@ fn best_play(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
         }
         let card = &player.hand[hand_idx as usize];
         let kind_score = match card.card_kind(&game.card_data) {
-            CardKind::Tamer => 3,
-            CardKind::Digimon => 2,
+            CardKind::Digimon => 3,
+            CardKind::Tamer => 2,
             CardKind::Option => 1,
             _ => 0,
         };
@@ -480,4 +466,40 @@ fn best_trash_choice(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
         }
     }
     best.map(|(_, a)| a)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::*;
+    use crate::action::space::PLAY_HAND_START;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+
+    #[test]
+    fn fallback_best_play_prefers_curve_digimon_over_tamer() {
+        let mut rookie = make_test_card("BT1-010", "Agumon");
+        rookie.level = Some(3);
+        rookie.dp = Some(2000);
+
+        let mut tamer = make_test_card("BT1-080", "Setup Tamer");
+        tamer.card_kind = CardKind::Tamer;
+        tamer.level = None;
+        tamer.dp = None;
+
+        let db = HashMap::from([
+            (rookie.card_id.clone(), rookie),
+            (tamer.card_id.clone(), tamer),
+        ]);
+        let runner = DebugRunner::builder()
+            .with_card_data(db)
+            .hand(0, &["BT1-080", "BT1-010"])
+            .start();
+        let valid = vec![PLAY_HAND_START, PLAY_HAND_START + 1];
+
+        assert_eq!(
+            best_play(&runner.game, 0, &valid),
+            Some(PLAY_HAND_START + 1)
+        );
+    }
 }
