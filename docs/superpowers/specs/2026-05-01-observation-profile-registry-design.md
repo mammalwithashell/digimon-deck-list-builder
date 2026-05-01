@@ -63,12 +63,19 @@ Expose stable string IDs:
 | Profile | String ID | Purpose |
 |---|---|---|
 | `CompactV1` | `compact_v1` | Current 1375-float baseline |
-| `V2PendingAblation` | `v2_pending_ablation` | Compact-ish board plus rich pending-choice metadata |
-| `V2Lite` | `v2_lite` | Fair-information v2 without full action-id table |
+| `V2PendingAblation` | `v2_pending_ablation` | Compact/fair board plus rich pending-choice metadata, used to isolate pending metadata value |
+| `V2Lite` | `v2_lite` | First serious fair-information v2 profile with structured board, hand, known-zone, and pending-choice tables |
 | `V2Full` | `v2_full` | Full v2 including `action_id_features[2168][16]` |
 | `OmniscientDebug` | `omniscient_debug` | Test-only profile that may expose hidden identities |
 
 `compact_v1` should remain the initial default until at least one v2 profile is implemented and verified.
+
+`v2_pending_ablation` and `v2_lite` have different jobs:
+
+- `v2_pending_ablation` answers "do rich pending-choice rows help?" while keeping the rest of the observation close to the compact baseline.
+- `v2_lite` answers "does the practical v2 observation improve training?" and is the first profile intended for serious pilot runs.
+
+Use `v2_pending_ablation` for controlled comparison runs against `compact_v1`, especially trigger-order and pending-selection scenarios. Do not treat it as the production stepping stone unless the ablation result justifies prioritizing pending metadata before the rest of the v2 board layout.
 
 ## Layout Metadata
 
@@ -78,6 +85,7 @@ Each profile exposes a complete layout description:
 pub struct ObservationLayout {
     pub profile_id: &'static str,
     pub tensor_version: u16,
+    pub feature_schema_version: &'static str,
     pub tensor_size: usize,
     pub card_id_positions: Vec<usize>,
     pub scalar_positions: Vec<usize>,
@@ -103,11 +111,50 @@ pub struct ObservationSchema {
 
 The layout metadata must satisfy:
 
+- `feature_schema_version` is non-empty
 - `card_id_positions.len() + scalar_positions.len() == tensor_size`
 - the two position lists have no overlap
 - the union covers every index from `0..tensor_size`
 - every card ID position corresponds to an integer registry ID field
 - every non-card scalar position is in `scalar_positions`
+
+## Feature Schema Version
+
+Each profile module owns a required feature-schema version constant:
+
+```rust
+pub const FEATURE_SCHEMA_VERSION: &str = "v2_lite.1";
+```
+
+The constant lives next to that profile's section table and card/scalar position builder, for example in `observation/v2_lite.rs`. It is copied into `ObservationLayout.feature_schema_version` and returned through PyO3.
+
+The version is profile-specific, not global. Initial suggested values:
+
+| Profile | Initial feature schema version |
+|---|---|
+| `compact_v1` | `compact_v1.1` |
+| `v2_pending_ablation` | `v2_pending_ablation.1` |
+| `v2_lite` | `v2_lite.1` |
+| `v2_full` | `v2_full.1` |
+| `omniscient_debug` | `omniscient_debug.1` |
+
+Bump the profile's feature-schema version in the same commit when:
+
+- the meaning, scale, bucket boundaries, or normalization of an existing feature changes
+- a reserved index becomes an assigned feature
+- a field moves between card ID and scalar interpretation
+- a row order or prompt-row alignment rule changes
+- hidden-information policy changes for that profile
+
+Shape and position changes already affect `layout_hash` through section metadata and position lists, but the schema version should still bump for human-readable artifact inspection. Do not bump it for pure refactors that leave tensor values, layout metadata, and feature meanings unchanged.
+
+Mechanical enforcement:
+
+- `ObservationLayout` cannot be constructed without `feature_schema_version`.
+- The layout hash builder serializes `feature_schema_version` into the canonical hash input.
+- Layout tests assert the version is non-empty for every profile.
+- Snapshot tests pin each implemented profile's `feature_schema_version` and `layout_hash`, so semantic edits require an intentional snapshot update.
+- A unit test should clone a layout with only `feature_schema_version` changed and verify the hash changes.
 
 ## Layout Hash
 
@@ -117,16 +164,16 @@ Hash inputs:
 
 - profile ID
 - tensor version
+- feature-schema version string
 - tensor size
 - section names, offsets, sizes, and shapes
 - card ID positions
 - scalar positions
-- feature-schema version string
 - action space size when action metadata is included
 
 Use a stable hash such as SHA-256 over canonical JSON. The hash does not need to include runtime card data or deck contents.
 
-If a feature's meaning changes while shape stays the same, bump the feature-schema version string so the hash changes.
+If a feature's meaning changes while shape stays the same, bump the profile's `FEATURE_SCHEMA_VERSION` constant so the hash changes.
 
 ## Rust API
 
@@ -210,6 +257,7 @@ digimon_engine.get_observation_layout(profile_id: str | None = None) -> dict
 {
     "profile_id": "v2_lite",
     "tensor_version": 2,
+    "feature_schema_version": "v2_lite.1",
     "tensor_size": 8320,
     "card_id_positions": [...],
     "scalar_positions": [...],
@@ -279,6 +327,7 @@ On runner creation:
 info = {
     "action_mask": self.action_mask(),
     "tensor_profile": self.tensor_profile,
+    "tensor_feature_schema_version": self.observation_layout["feature_schema_version"],
     "tensor_layout_hash": self.observation_layout["layout_hash"],
 }
 ```
@@ -335,6 +384,7 @@ Every trained model artifact should record:
 {
   "observation_profile": "v2_lite",
   "tensor_version": 2,
+  "feature_schema_version": "v2_lite.1",
   "tensor_size": 8320,
   "tensor_layout_hash": "sha256:...",
   "action_space_size": 2168,
@@ -350,6 +400,7 @@ For ONNX export, include the same metadata in the ONNX sidecar manifest. If ONNX
 Model loading/evaluation should check:
 
 - environment profile ID matches artifact profile ID
+- feature schema version matches
 - tensor size matches
 - layout hash matches
 - action space size matches
@@ -374,6 +425,7 @@ DIGIMON_TENSOR_PROFILE=v2_lite python -m digimon_gym.agents.pilot_training
 Training logs should print:
 
 - profile ID
+- feature schema version
 - tensor size
 - card slot count
 - scalar slot count
@@ -401,6 +453,14 @@ Suggested shape:
 - `pending_choice_features`
 - no full `action_id_features`
 
+This profile should keep the non-pending board representation intentionally close to `compact_v1`, except for fairness fixes needed by the Rust profile system. Its comparison target is:
+
+```text
+compact_v1 vs v2_pending_ablation
+```
+
+Use it when you want a narrow answer about pending-choice metadata, such as whether trigger-order rows improve simultaneous-effect sequencing. Do not use it to evaluate the full v2 board design, because it intentionally omits `permanent_slots[2][15][96]`, own-hand rows, and known-zone rows from `v2_lite`.
+
 ### `v2_lite`
 
 Purpose: first serious v2 training profile.
@@ -417,6 +477,15 @@ Includes:
 Excludes:
 
 - full `action_id_features[2168][16]`
+
+Its comparison targets are:
+
+```text
+compact_v1 vs v2_lite
+v2_pending_ablation vs v2_lite
+```
+
+The first comparison measures practical end-to-end value. The second separates "pending metadata helped" from "the structured v2 board helped."
 
 ### `v2_full`
 
@@ -452,7 +521,10 @@ Add tests for:
 - profile parser accepts known IDs and rejects unknown IDs
 - `list_observation_profiles()` includes every implemented profile
 - every layout covers its tensor exactly once
+- every layout has a non-empty `feature_schema_version`
 - layout hash changes when a test-only schema string changes
+- layout hash changes when only `feature_schema_version` changes
+- layout snapshots pin `feature_schema_version` and `layout_hash`
 - PyO3 `get_observation_layout()` matches Rust layout metadata
 - `RustHeadlessGame(observation_profile=...)` returns tensors of the selected size
 - `DigimonEnv(tensor_profile=...)` creates the matching observation space
