@@ -1,7 +1,11 @@
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming, PlaySource};
+use digimon_engine::permanent::{Permanent, PermanentHandle};
 use digimon_engine::selection::TriggerSource;
+use std::sync::Arc;
 
 fn digimon_card(id: &str, name: &str, traits: &[&str], dp: i32) -> CardData {
     CardData {
@@ -23,6 +27,40 @@ fn digimon_card(id: &str, name: &str, traits: &[&str], dp: i32) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+    }
+}
+
+fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Option,
+        level: None,
+        dp: None,
+        play_cost: 0,
+        colors: vec![CardColor::Red],
+        traits: traits.iter().map(|t| t.to_string()).collect(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        dual: None,
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+struct DelayOptionNoop;
+impl CardEffect for DelayOptionNoop {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Delay noop")
+            .delay(DelayTrigger::EndOfYourNextTurn)
+            .process(|_ctx| {})
+            .build()]
     }
 }
 
@@ -83,6 +121,52 @@ effects:
         .security(1, &["SEC-VAC"])
         .build();
     let observer = runner.place_on_field(1, "DSL-EVT-OBS", None);
+    let attacker = runner.place_on_field(0, "ATTACKER", None);
+    let revealed = runner.game.players[1].security[0].handle();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnSecurityCheck,
+        TriggerSource::OnSecurityCheck {
+            attacker,
+            defender: observer.player,
+            revealed_card: revealed,
+            was_face_up: false,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.memory(), 3);
+}
+
+#[test]
+fn event_target_trait_predicate_still_matches_security_attacker() {
+    let yaml = r#"
+card: DSL-EVT-TARGET-TRAIT
+name: Event Target Trait
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_security_check
+    condition: { event_target_trait_has: Dragon }
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card(
+            "SEC-VAC",
+            "Security Vaccine",
+            &["Vaccine"],
+            1000,
+        ))
+        .add_card(digimon_card("ATTACKER", "Attacker", &["Dragon"], 2000))
+        .security(1, &["SEC-VAC"])
+        .build();
+    let observer = runner.place_on_field(1, "DSL-EVT-TARGET-TRAIT", None);
     let attacker = runner.place_on_field(0, "ATTACKER", None);
     let revealed = runner.game.players[1].security[0].handle();
 
@@ -179,5 +263,425 @@ effects:
             .face_up_security
             .contains(&revealed.0),
         "event_card binding should let the observer mark the revealed card face-up"
+    );
+}
+
+#[test]
+fn on_move_event_target_trait_predicate_matches_moved_permanent() {
+    let yaml = r#"
+card: DSL-MOVE-OBS
+name: Move Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_move
+    condition: { event_target_trait_has: Rock }
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BABY-ROCK", "Rock Baby", &["Rock"], 1000))
+        .build();
+    let observer = runner.place_on_field(0, "DSL-MOVE-OBS", None);
+    let moved = runner.place_on_field(0, "BABY-ROCK", None);
+    let event_card = runner.game.players[moved.player as usize].battle_area[moved.index as usize]
+        .top_card()
+        .handle();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnMove,
+        TriggerSource::MovedFromBreeding {
+            player: 0,
+            permanent: PermanentHandle {
+                player: moved.player,
+                index: moved.index,
+            },
+            card: event_card,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.memory(), 2);
+    assert_eq!(observer.player, 0);
+}
+
+#[test]
+fn on_move_real_breeding_dispatch_supplies_moved_card_context() {
+    let yaml = r#"
+card: DSL-MOVE-REAL-OBS
+name: Real Move Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - when: on_move
+    condition: { event_target_trait_has: Rock }
+    process:
+      - gain_memory: 2
+"#;
+
+    let mut moved_card = digimon_card("BABY-ROCK", "Rock Baby", &["Rock"], 1000);
+    moved_card.level = Some(2);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(moved_card)
+        .digitama(0, &["BABY-ROCK"])
+        .memory(10)
+        .build();
+
+    runner.place_on_field(0, "DSL-MOVE-REAL-OBS", None);
+
+    assert!(runner.game.hatch(0), "hatch Rock baby into breeding");
+    let after_hatch = runner.memory();
+
+    assert!(
+        runner.game.move_from_breeding(0),
+        "move Rock baby from breeding to battle"
+    );
+    assert_eq!(
+        runner.memory(),
+        after_hatch + 2,
+        "real move dispatch should expose moved card trait context"
+    );
+}
+
+#[test]
+fn hatch_does_not_fire_on_move_observers() {
+    let yaml = r#"
+card: DSL-MOVE-HATCH-OBS
+name: Hatch Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - when: on_move
+    condition: { event_target_trait_has: Rock }
+    process:
+      - gain_memory: 2
+"#;
+
+    let mut moved_card = digimon_card("BABY-HATCH-ROCK", "Hatch Rock Baby", &["Rock"], 1000);
+    moved_card.level = Some(2);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(moved_card)
+        .digitama(0, &["BABY-HATCH-ROCK"])
+        .memory(10)
+        .build();
+
+    runner.place_on_field(0, "DSL-MOVE-HATCH-OBS", None);
+    let before = runner.memory();
+
+    assert!(runner.game.hatch(0), "hatch Rock baby into breeding");
+    assert_eq!(
+        runner.memory(),
+        before,
+        "hatch into breeding must not fire OnMove"
+    );
+}
+
+#[test]
+fn on_digivolve_event_card_trait_predicate_matches_new_top_card() {
+    let yaml = r#"
+card: DSL-DIGI-OBS
+name: Digivolve Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolve
+    condition: { event_card_trait_has: Mineral }
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BASE", "Base", &[], 1000))
+        .add_card({
+            let mut card = digimon_card("EVO-MINERAL", "Mineral Evo", &["Mineral"], 3000);
+            card.level = Some(4);
+            card.evo_costs = vec![EvoCost {
+                card_color: CardColor::Red as u8,
+                level: 3,
+                memory_cost: 0,
+            }];
+            card
+        })
+        .hand(0, &["EVO-MINERAL"])
+        .build();
+    runner.place_on_field(0, "DSL-DIGI-OBS", None);
+    let target = runner.place_on_field(0, "BASE", None);
+    runner.game.enter_main_phase();
+
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, target.index as usize, PlaySource::ByDigivolve,));
+
+    assert_eq!(runner.memory(), 3);
+}
+
+#[test]
+fn on_digivolve_event_target_binding_resolves_digivolved_permanent() {
+    let yaml = r#"
+card: DSL-DIGI-BIND
+name: Digivolve Binder
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolve
+    process:
+      - add_dp_modifier:
+          target: event_target
+          value: 1000
+          expiry: end_of_turn
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BASE", "Base", &[], 1000))
+        .add_card({
+            let mut card = digimon_card("EVO-TARGET", "Target Evo", &[], 3000);
+            card.level = Some(4);
+            card.evo_costs = vec![EvoCost {
+                card_color: CardColor::Red as u8,
+                level: 3,
+                memory_cost: 0,
+            }];
+            card
+        })
+        .hand(0, &["EVO-TARGET"])
+        .build();
+    let observer = runner.place_on_field(0, "DSL-DIGI-BIND", None);
+    let target = runner.place_on_field(0, "BASE", None);
+    runner.game.enter_main_phase();
+
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, target.index as usize, PlaySource::ByDigivolve,));
+
+    assert_eq!(
+        runner.effective_dp(target),
+        Some(4000),
+        "event_target should bind to the just-digivolved permanent"
+    );
+    assert_eq!(
+        runner.effective_dp(observer),
+        Some(2000),
+        "observer should not receive its own event_target modifier"
+    );
+}
+
+#[test]
+fn on_enter_field_anyone_event_card_trait_predicate_matches_entering_card() {
+    let yaml = r#"
+card: DSL-ENTER-OBS
+name: Enter Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_enter_field_anyone
+    condition: { event_card_trait_has: Royal Knight }
+    process:
+      - gain_memory: 4
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card({
+            let mut card = digimon_card("RK-ENTER", "Royal Knight", &["Royal Knight"], 3000);
+            card.play_cost = 0;
+            card
+        })
+        .hand(1, &["RK-ENTER"])
+        .memory(10)
+        .build();
+    runner.place_on_field(0, "DSL-ENTER-OBS", None);
+
+    let before = runner.memory();
+    assert_eq!(runner.play(1, 0), Some(0));
+
+    assert_eq!(
+        runner.memory(),
+        before + 4,
+        "observer should see the entering card traits through event context"
+    );
+}
+
+#[test]
+fn on_option_placed_event_card_trait_predicate_matches_placed_option() {
+    let yaml = r#"
+card: DSL-OPT-OBS
+name: Option Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_option_placed
+    condition: { event_card_trait_has: Royal Knight }
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(option_card(
+            "RK-OPTION",
+            "Royal Knight Option",
+            &["Royal Knight"],
+        ))
+        .hand(0, &["RK-OPTION"])
+        .build();
+    runner.register_effect("RK-OPTION", Arc::new(DelayOptionNoop));
+    runner.place_on_field(0, "DSL-OPT-OBS", None);
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    let battle_before = runner.battle_area_size(0);
+    let _ = runner.game.play_option_from_hand(0, 0);
+
+    assert_eq!(
+        runner.battle_area_size(0),
+        battle_before + 1,
+        "Delay option should be placed before OnOptionPlaced observers resolve"
+    );
+
+    assert_eq!(runner.memory(), before + 2);
+}
+
+#[test]
+fn on_digivolution_card_trashed_event_card_trait_predicate_matches_trashed_source() {
+    let yaml = r#"
+card: DSL-SOURCE-TRASH-OBS
+name: Source Trash Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolution_card_trashed
+    condition: { event_card_trait_has: Mineral }
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("TOP", "Top", &[], 4000))
+        .add_card(digimon_card(
+            "UNDER-MINERAL",
+            "Under Mineral",
+            &["Mineral"],
+            1000,
+        ))
+        .build();
+    runner.place_on_field(0, "DSL-SOURCE-TRASH-OBS", None);
+    let host = {
+        let g = runner.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER-MINERAL")
+            .unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+
+    assert!(runner.game_mut().return_to_hand(host).is_some());
+
+    assert_eq!(runner.memory(), 3);
+}
+
+struct DeleteSelfThenPlayNext;
+
+impl CardEffect for DeleteSelfThenPlayNext {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Delete self then play next card")
+            .process(|ctx| {
+                if let Some(handle) = ctx.source_permanent {
+                    ctx.delete_permanent(handle);
+                }
+                let _ = ctx.play_from_hand_free(ctx.player, 0);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_enter_field_event_target_trait_uses_event_card_when_entered_handle_is_stale() {
+    let yaml = r#"
+card: DSL-ENTER-STALE-OBS
+name: Enter Stale Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_enter_field_anyone
+    condition: { event_target_trait_has: Royal Knight }
+    process:
+      - gain_memory: 5
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card({
+            let mut card = digimon_card("SELF-ROYAL", "Self Royal", &["Royal Knight"], 3000);
+            card.play_cost = 0;
+            card
+        })
+        .add_card({
+            let mut card = digimon_card("DECOY", "Decoy", &[], 1000);
+            card.play_cost = 0;
+            card
+        })
+        .hand(1, &["SELF-ROYAL", "DECOY"])
+        .memory(10)
+        .build();
+    runner.register_effect("SELF-ROYAL", Arc::new(DeleteSelfThenPlayNext));
+    runner.place_on_field(0, "DSL-ENTER-STALE-OBS", None);
+
+    let before = runner.memory();
+    assert_eq!(runner.play(1, 0), Some(0));
+
+    assert_eq!(
+        runner.memory(),
+        before + 5,
+        "event_target_trait_has should not inspect a different permanent through a stale event_permanent handle"
     );
 }

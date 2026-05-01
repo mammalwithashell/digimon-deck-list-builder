@@ -313,6 +313,7 @@ impl Game {
             blocker: None,
             is_vortex: vortex,
             is_overclock,
+            declaration_committed: false,
             cancelled: false,
             battle_occurred: false,
             return_phase,
@@ -339,35 +340,8 @@ impl Game {
             }
         }
 
-        // Mark attacker as attacking (§2.2 parity).
-        if let Some(perm) = self
-            .player_mut(attacker.player)
-            .battle_area
-            .get_mut(attacker.index as usize)
-        {
-            perm.is_attacking = true;
-        }
-
-        // Suspend + record attack — skipped for Overclock, which attacks
-        // without suspending.
-        if !is_overclock {
-            self.suspend_and_count_attack(attacker);
-        }
-
-        // Fire OnAttack (may install a PendingSelection via a triggered
-        // effect; the drainer returns and we check below).
-        self.fire_on_attack(attacker);
-
-        // If OnAttack parked a selection, pause — advance_pending_attack
-        // will fire again when that selection resolves and drain re-enters
-        // this path.
-        if self.pending_selection.is_some() {
-            return AttackResult::InProgress;
-        }
-
-        // OnAttack may have deleted the attacker. Bail early.
-        if !self.handle_valid(attacker) {
-            return self.cleanup_attack(AttackResult::Invalid);
+        if let Some(result) = self.commit_attack_declaration(attacker) {
+            return result;
         }
 
         // Vortex short-circuits interrupts.
@@ -402,6 +376,7 @@ impl Game {
             let state = pa.state;
             let attacker = pa.attacker;
             let cancelled = pa.cancelled;
+            let declaration_committed = pa.declaration_committed;
 
             // Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
             // replacement (or a `ctx.cancel_attack()` from a later phase)
@@ -413,15 +388,30 @@ impl Game {
                 return self.cleanup_attack(AttackResult::Cancelled);
             }
 
-            // Attacker validity check: OnAttack / interrupt effects may
-            // have deleted it. Any state past Declared requires a live
-            // attacker (except Cleanup, which runs regardless).
-            if state != AttackState::Cleanup && !self.handle_valid(attacker) {
-                return self.cleanup_attack(AttackResult::Invalid);
+            if state != AttackState::Cleanup {
+                if declaration_committed {
+                    // Attacker liveness check: OnAttack / interrupt effects
+                    // may have deleted or moved it. Handles are slot-based, so
+                    // require the slot to still be the in-flight attacker
+                    // rather than merely any valid Digimon.
+                    if !self.handle_still_attacking(attacker) {
+                        return self.cleanup_attack(AttackResult::Invalid);
+                    }
+                } else if !self.handle_valid(attacker) {
+                    // Pre-observable replacement resume: the attacker has not
+                    // yet been marked attacking, so the normal validity gate is
+                    // the only committed state available.
+                    return self.cleanup_attack(AttackResult::Invalid);
+                }
             }
 
             match state {
                 AttackState::Declared => {
+                    if !declaration_committed {
+                        if let Some(result) = self.commit_attack_declaration(attacker) {
+                            return result;
+                        }
+                    }
                     // Declared is transient — begin_attack transitions it
                     // immediately. If we're still here, fall through.
                     self.transition_attack_state(AttackState::AllianceOpen);
@@ -541,6 +531,21 @@ impl Game {
                     return self.cleanup_attack(AttackResult::Invalid);
                 }
             }
+        }
+    }
+
+    /// Cancel the active attack from an effect body.
+    ///
+    /// If this is called while the effect queue is draining, cleanup is
+    /// deferred to the normal attack resume hook so `EndOfAttack` fires once.
+    pub fn cancel_pending_attack_from_effect(&mut self) {
+        let Some(pending) = self.pending_attack.as_mut() else {
+            return;
+        };
+        pending.cancelled = true;
+
+        if self.pending_selection.is_none() && self.effect_chain_depth == 0 {
+            let _ = self.cleanup_attack(AttackResult::Cancelled);
         }
     }
 
@@ -2045,6 +2050,62 @@ impl Game {
             .unwrap_or(false)
     }
 
+    fn handle_still_attacking(&self, handle: PermanentHandle) -> bool {
+        self.player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|p| {
+                p.is_attacking
+                    && p.is_digimon(&self.card_data)
+                    && matches!(p.option_state, crate::permanent::OptionState::Standard)
+            })
+            .unwrap_or(false)
+    }
+
+    fn commit_attack_declaration(&mut self, attacker: PermanentHandle) -> Option<AttackResult> {
+        let is_overclock = match self.pending_attack.as_ref() {
+            Some(pa) if pa.declaration_committed => return None,
+            Some(pa) => pa.is_overclock,
+            None => return Some(AttackResult::Invalid),
+        };
+
+        // Mark attacker as attacking (§2.2 parity).
+        if let Some(perm) = self
+            .player_mut(attacker.player)
+            .battle_area
+            .get_mut(attacker.index as usize)
+        {
+            perm.is_attacking = true;
+        }
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.declaration_committed = true;
+        }
+
+        // Suspend + record attack — skipped for Overclock, which attacks
+        // without suspending.
+        if !is_overclock {
+            self.suspend_and_count_attack(attacker);
+        }
+
+        // Fire OnAttack (may install a PendingSelection via a triggered
+        // effect; the drainer returns and callers check below).
+        self.fire_on_attack(attacker);
+
+        if self.pending_selection.is_some() {
+            return Some(AttackResult::InProgress);
+        }
+
+        // OnAttack may have deleted or moved the attacker, and field indices
+        // can shift into the old handle. Bail unless the handle still points
+        // at a live attacking permanent. This intentionally allows legal
+        // same-permanent stack changes such as digivolution/de-digivolution.
+        if !self.handle_still_attacking(attacker) {
+            return Some(self.cleanup_attack(AttackResult::Invalid));
+        }
+
+        None
+    }
+
     /// Fire OnAttack effects for the attacker, then WhenAttacking for every
     /// permanent in the attacker's battle area (observer timing).
     ///
@@ -2057,6 +2118,9 @@ impl Game {
             crate::selection::TriggerSource::Permanent(handle),
         );
         self.drain_effect_queue();
+        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
+            return;
+        }
 
         // WhenAttacking: observer timing — fires for every permanent in the
         // attacker's battle area right after OnAttack. Distinct from OnAttack
@@ -2067,6 +2131,9 @@ impl Game {
             crate::selection::TriggerSource::PlayerBattleArea(handle.player),
         );
         self.drain_effect_queue();
+        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
+            return;
+        }
 
         // Phase 9 Task 8 — OnAllyAttack fan-out. Observer timing firing on
         // every permanent in the attacker-controller's battle area EXCEPT
@@ -2088,6 +2155,9 @@ impl Game {
             }
         }
         self.drain_effect_queue();
+        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
+            return;
+        }
 
         // Phase 9 Task 8 — OnOpponentAttack fan-out. Observer timing on
         // every permanent in the non-attacker controller's battle area.

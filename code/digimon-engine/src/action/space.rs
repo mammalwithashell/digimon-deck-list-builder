@@ -60,6 +60,8 @@ pub const SOURCES_PER_FIELD: u16 = 12;
 pub const MAX_FIELD_SLOTS: u16 = 14;
 pub const SECURITY_TARGET: u16 = 14; // attack target index for security
 pub const BREEDING_TARGET: u16 = 14; // digivolve target for breeding area
+pub const BREEDING_SELECT_PLAYER_0: u16 = BREEDING_TARGET;
+pub const BREEDING_SELECT_PLAYER_1: u16 = BREEDING_TARGET + 1;
 
 /// Within the 10-slot per-permanent effect sub-range, index 2 is the
 /// conventional slot for the [Field] [Main] activated ability (§4.5c).
@@ -95,6 +97,14 @@ pub fn encode_attack(attacker: u16, target: u16) -> u16 {
     ATTACK_START + attacker * TARGETS_PER_ATTACKER + target
 }
 
+pub fn encode_breeding_select(player: u8) -> Option<u16> {
+    match player {
+        0 => Some(BREEDING_SELECT_PLAYER_0),
+        1 => Some(BREEDING_SELECT_PLAYER_1),
+        _ => None,
+    }
+}
+
 /// Decode a digivolve action into (hand_index, field_index).
 /// field_index 14 = breeding area.
 pub fn decode_digivolve(action: u16) -> (u16, u16) {
@@ -123,6 +133,14 @@ pub fn decode_source_select(action: u16) -> (u16, u16) {
     let field = offset / SOURCES_PER_FIELD;
     let source = offset % SOURCES_PER_FIELD;
     (field, source)
+}
+
+/// Encode a source selection from (field_index, source_index).
+pub fn encode_source_select(field: u16, source: u16) -> Option<u16> {
+    if field >= MAX_FIELD_SLOTS || source >= SOURCES_PER_FIELD {
+        return None;
+    }
+    Some(SOURCE_SELECT_START + field * SOURCES_PER_FIELD + source)
 }
 
 #[cfg(test)]

@@ -210,6 +210,9 @@ pub struct CompiledPredicate {
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
+    pub replacement_cause: Option<CompiledReplacementCause>,
+    pub replacement_source_is_opponent: Option<bool>,
+    pub replacement_subject_is_mine: Option<bool>,
     pub equals: Option<Vec<CompiledBindingCompare>>,
     pub not_equals: Option<Vec<CompiledBindingCompare>>,
     pub count_lte: Option<CompiledCountAggregate>,
@@ -229,6 +232,15 @@ pub struct CompiledPredicate {
 pub enum CompiledDpConstraint {
     Literal(i32),
     Formula(CompiledFormula),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledReplacementCause {
+    Battle,
+    OwnEffect,
+    OpponentEffect,
+    SecurityCheck,
+    Cost,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -351,6 +363,7 @@ pub enum CompiledDeclarativeClause {
         when_playing_this: bool,
         when_any_ally_played: Option<CompiledPredicate>,
         condition: Option<CompiledPredicate>,
+        optional: bool,
         once_per_turn: bool,
         amount: Option<i32>,
         amount_fn: Option<CompiledFormula>,
@@ -446,6 +459,7 @@ pub enum CompiledTiming {
     OnSuspend,
     OnUnsuspend,
     OnHatch,
+    OnMove,
     OnDigivolve,
     OnDnaDigivolve,
     OnDigixros,
@@ -554,6 +568,9 @@ pub enum CompiledStep {
     },
     DeletePermanent {
         target: CompiledBindingRef,
+    },
+    DeleteBoundPermanents {
+        binding: String,
     },
     ReturnToHand {
         target: CompiledBindingRef,
@@ -718,6 +735,28 @@ pub enum CompiledStep {
         prompt_key: Option<String>,
         optional: bool,
     },
+    SelectOwnSources {
+        min: u8,
+        max: u8,
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
+    SelectOpponentDpBudget {
+        dp_budget: i32,
+        min_picks: u8,
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
+    SelectOwnBreedingPermanent {
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
+    TrashSelectedSources {
+        source_refs: String,
+    },
     SelectReveal {
         of: CompiledPlayerRef,
         filter: CompiledPredicate,
@@ -790,6 +829,9 @@ pub enum CompiledStep {
         body: Vec<CompiledStep>,
     },
     Optional(Vec<CompiledStep>),
+    EndAttack {
+        enabled: bool,
+    },
     CancelReplacement,
     HandleReplacement,
     RedirectReplacement {

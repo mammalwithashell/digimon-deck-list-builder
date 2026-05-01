@@ -58,6 +58,20 @@ impl std::ops::BitOrAssign for UnionZoneSet {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SourceSelectionRef {
+    pub permanent: PermanentHandle,
+    pub field_index: u8,
+    pub source_index: u8,
+    pub card: CardHandle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct BreedingPermanentSelectionRef {
+    pub player: PlayerId,
+    pub card: CardHandle,
+}
+
 /// Called when a selection resolves with a concrete action ID.
 pub type SelectionCallback = Box<dyn FnOnce(&mut crate::game::Game, u16) + Send + Sync + 'static>;
 
@@ -116,6 +130,12 @@ pub enum SelectionKind {
     /// EffectChoice action range (accept) + PASS (decline). `valid_action_ids`
     /// holds exactly one ACCEPT entry; `is_optional = true` admits PASS.
     Replacement,
+    /// Pick source cards across one or more own battle-area permanents.
+    SourceMulti { min: u8, max: u8, picked: u8 },
+    /// Pick opponent permanents whose total DP is capped by a remaining budget.
+    DpBudget { remaining_dp: i32, picked: u8 },
+    /// Pick the selecting player's breeding-area permanent.
+    BreedingPermanent,
 }
 
 /// One branch of a `SelectionKind::EffectChoice` prompt.
@@ -255,6 +275,21 @@ pub struct QueuedEffect {
     /// Card ID string, carried so the drainer can re-look-up the effect
     /// from the registry without scanning zones for a matching `CardHandle`.
     pub card_id: String,
+    /// True only for queue entries originally collected from a below-top
+    /// digivolution source scan. Prevents top-card effects from gaining
+    /// source-position liveness after being covered by a later digivolution.
+    pub allow_below_top_liveness: bool,
+}
+
+/// Queued triggered effect parked after its `pay_cost_fn` installed a
+/// mandatory/optional selection. The cost callback has already returned
+/// `true`; once the selection chain resolves, the effect resumes at the
+/// max-per-turn record + process stage. If the callback explicitly declines
+/// the pay cost, this parked entry is discarded.
+#[derive(Debug, Clone)]
+pub struct PendingPayCostEffect {
+    pub queued_effect: QueuedEffect,
+    pub declined: bool,
 }
 
 /// Describes where a trigger is firing from. Consumed by
@@ -289,6 +324,47 @@ pub enum TriggerSource {
         defender: PlayerId,
         revealed_card: CardHandle,
         was_face_up: bool,
+    },
+    /// Observer timing fired after a breeding-area permanent moves to the
+    /// battle area. Scans the moving player's battle area while carrying the
+    /// moved permanent/card as event context.
+    MovedFromBreeding {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
+    /// Observer timing fired after a battle-area permanent digivolves. Scans
+    /// battle areas while carrying the just-digivolved permanent/card as
+    /// event context.
+    Digivolved {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
+    /// Observer timing fired after a permanent enters the battle area. Scans
+    /// all players' battle areas while carrying the entering permanent/card
+    /// as event context.
+    EnteredField {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
+    /// Observer timing fired after a persistent Option enters the battle area.
+    /// Scans all players' battle areas while carrying the placed Option
+    /// permanent/card as event context.
+    OptionPlaced {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
+    /// Observer timing fired after a card under a permanent's top card is
+    /// trashed from that digivolution stack. Scans all players' battle areas
+    /// while carrying the former host and trashed source card as event context.
+    SourceTrashedFromStack {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        card: CardHandle,
     },
 }
 
@@ -503,6 +579,11 @@ pub struct PendingAttack {
     /// suspend-on-declare step is suppressed. Matches Python
     /// `resolve_attack(..., without_suspend=True)`.
     pub is_overclock: bool,
+    /// True once declaration has crossed the observable boundary: attacker was
+    /// marked attacking, suspend/attack count was applied when appropriate, and
+    /// `OnAttack` / declared-attack observer windows have begun. Optional
+    /// pre-declaration replacements can park while this is still false.
+    pub declaration_committed: bool,
     /// Phase 9: set by a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
     /// replacement whose process calls `rctx.cancel()`. `advance_pending_attack`
     /// detects this and short-circuits directly to `Cleanup`. EndOfAttack

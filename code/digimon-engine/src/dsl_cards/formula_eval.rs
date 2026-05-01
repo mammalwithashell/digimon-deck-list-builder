@@ -314,6 +314,9 @@ fn target_permanent<'a>(
     ctx: &'a EffectContext<'_>,
     target: PermanentHandle,
 ) -> Option<&'a crate::permanent::Permanent> {
+    if target.index == crate::action::space::BREEDING_TARGET as u8 {
+        return ctx.game.player(target.player).breeding_area.as_ref();
+    }
     ctx.game
         .player(target.player)
         .battle_area
@@ -324,6 +327,9 @@ fn target_permanent_read<'a>(
     ctx: &'a EffectReadContext<'_>,
     target: PermanentHandle,
 ) -> Option<&'a Permanent> {
+    if target.index == crate::action::space::BREEDING_TARGET as u8 {
+        return ctx.game.player(target.player).breeding_area.as_ref();
+    }
     ctx.game
         .player(target.player)
         .battle_area

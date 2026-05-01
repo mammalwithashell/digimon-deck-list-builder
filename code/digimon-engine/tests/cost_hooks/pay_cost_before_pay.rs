@@ -153,7 +153,16 @@ fn pay_cost_fn_gates_reduction_in_play_path() {
     let trash_before = r.game.players[0].trash.len();
     let memory_before = r.memory();
 
-    r.play(0, 0);
+    assert!(
+        r.play(0, 0).is_none(),
+        "paid reducer should park until its cost is explicitly accepted"
+    );
+    assert_eq!(
+        r.game.players[0].deck.len(),
+        deck_before,
+        "pay_cost_fn must not run before acceptance"
+    );
+    r.execute_branch(0).expect("accept paid reducer");
 
     // pay_cost_fn fired: 2 cards moved deck → trash
     assert_eq!(
@@ -205,7 +214,11 @@ fn pay_cost_fn_returning_false_skips_reduction_but_play_proceeds() {
     let trash_before = r.game.players[0].trash.len();
     let memory_before = r.memory(); // 10
 
-    r.play(0, 0);
+    assert!(
+        r.play(0, 0).is_none(),
+        "paid reducer should park even when its pay_cost_fn may fail"
+    );
+    r.execute_branch(0).expect("accept paid reducer");
 
     // 0 cards trashed — pay_cost_fn returned false, no mutation
     assert_eq!(

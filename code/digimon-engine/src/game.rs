@@ -13,8 +13,8 @@ use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
 use crate::selection::{
-    EffectQueue, PendingAttack, PendingOption, PendingSecurity, PendingSelection,
-    SecurityResolutionState, SelectionError,
+    EffectQueue, PendingAttack, PendingOption, PendingPayCostEffect, PendingSecurity,
+    PendingSelection, SecurityResolutionState, SelectionError,
 };
 use crate::token_registry::TokenRegistry;
 use crate::trigger_context::TriggerContext;
@@ -123,6 +123,14 @@ pub struct Game {
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).
     pub effect_queue: EffectQueue,
+    /// Queued triggered effect parked while its `pay_cost_fn` resolves a
+    /// player selection. Resumed by `resolve_selection` before ordinary queue
+    /// draining continues.
+    pub pending_pay_cost_effect: Option<PendingPayCostEffect>,
+    /// Outer pay-cost continuations parked beneath the current one. This is
+    /// populated when a pay-cost selection callback drains another queued
+    /// effect that itself parks for a pay-cost selection.
+    pub pending_pay_cost_stack: Vec<PendingPayCostEffect>,
     /// In-flight attack, if any. Installed by `begin_attack`, advanced by
     /// the combat state machine, cleared by `cleanup_attack`.
     /// Always `None` until the combat state machine lands (PR4).
@@ -135,6 +143,13 @@ pub struct Game {
     /// Phase 8: in-flight Option card resolution. Set when an Option is
     /// played and cleared after dispose. Dispatch lands in Tasks 2-6.
     pub pending_option: Option<PendingOption>,
+    /// Continuation marker for Delay/Training Option placement observers.
+    /// Option play normally calls `check_turn_end` after disposal. If
+    /// placement observers park a selection after `pending_option` has already
+    /// been consumed, this marker lets `resolve_generic_selection` run the
+    /// turn-end check after the observer queue settles.
+    #[doc(hidden)]
+    pub(crate) pending_option_placed_turn_check: bool,
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
@@ -494,9 +509,12 @@ impl Game {
             revealed_cards: Vec::new(),
             pending_selection: None,
             effect_queue: EffectQueue::new(),
+            pending_pay_cost_effect: None,
+            pending_pay_cost_stack: Vec::new(),
             pending_attack: None,
             pending_security: None,
             pending_option: None,
+            pending_option_placed_turn_check: false,
             security_resolution: None,
             effect_chain_depth: 0,
             logger: Box::new(SilentLogger),
@@ -613,6 +631,31 @@ impl Game {
         &mut self.players[id as usize]
     }
 
+    pub fn owner_of_card(&self, handle: crate::card_source::CardHandle) -> Option<PlayerId> {
+        if let Some(owner) = self
+            .players
+            .iter()
+            .find(|player| player.contains_card(handle))
+            .map(|player| player.id)
+        {
+            return Some(owner);
+        }
+        if let Some(pending) = &self.pending_security {
+            if pending.card.handle() == handle {
+                return Some(pending.card.owner);
+            }
+        }
+        if let Some(pending) = &self.pending_option {
+            if pending.card.handle() == handle {
+                return Some(pending.owner);
+            }
+        }
+        self.revealed_cards
+            .iter()
+            .find(|card| card.handle() == handle)
+            .map(|card| card.owner)
+    }
+
     /// Get all non-eliminated opponents of a player.
     pub fn opponents(&self, id: PlayerId) -> Vec<PlayerId> {
         self.turn_order
@@ -643,6 +686,255 @@ impl Game {
             return Err(SelectionError::NoPendingSelection);
         }
         self.resolve_generic_selection(player, action_id)
+    }
+
+    /// Mark the currently parked pay-cost effect as declined. Selection
+    /// callbacks installed by `pay_cost_fn` can call this after the player
+    /// declines or the selected cost cannot be paid; the parked process tail
+    /// will be discarded when the selection chain unwinds.
+    pub fn decline_pending_pay_cost(&mut self) {
+        if let Some(pending) = self.pending_pay_cost_effect.as_mut() {
+            pending.declined = true;
+        }
+    }
+
+    /// Trash a source selected through `EffectContext::select_own_sources`.
+    /// Returns `true` when the stable source handle was found and moved.
+    pub fn trash_source_ref(&mut self, source_ref: crate::selection::SourceSelectionRef) -> bool {
+        let Some(permanent) = self
+            .player_mut(source_ref.permanent.player)
+            .battle_area
+            .get_mut(source_ref.permanent.index as usize)
+        else {
+            return false;
+        };
+        let Some(pos) = permanent
+            .card_sources
+            .iter()
+            .position(|source| source.handle() == source_ref.card)
+        else {
+            return false;
+        };
+        let removed = permanent.card_sources.remove(pos);
+        self.player_mut(source_ref.permanent.player)
+            .trash
+            .push(removed);
+        true
+    }
+
+    pub fn remove_source_ref(
+        &mut self,
+        source_ref: crate::selection::SourceSelectionRef,
+    ) -> Option<crate::card_source::CardHandle> {
+        let permanent = self
+            .player_mut(source_ref.permanent.player)
+            .battle_area
+            .get_mut(source_ref.permanent.index as usize)?;
+        let pos = permanent
+            .card_sources
+            .iter()
+            .position(|source| source.handle() == source_ref.card)?;
+        if pos + 1 >= permanent.card_sources.len() {
+            return None;
+        }
+        let removed = permanent.card_sources.remove(pos);
+        let card = removed.handle();
+        self.player_mut(source_ref.permanent.player)
+            .hand
+            .push(removed);
+        Some(card)
+    }
+
+    pub fn play_card_from_effect_without_cost(
+        &mut self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> Option<PermanentHandle> {
+        let hand_index = self
+            .player(player_id)
+            .hand
+            .iter()
+            .position(|source| source.handle() == card)?;
+        if !self.can_play_card_from_effect_without_cost(player_id, card, 1) {
+            return None;
+        }
+
+        let turn = self.turn_count;
+        let card_source = self.player_mut(player_id).hand.remove(hand_index);
+        let perm = crate::permanent::Permanent::new(card_source, turn);
+        self.player_mut(player_id).battle_area.push(perm);
+        let field_index = self.player(player_id).battle_area.len() - 1;
+        let entered = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        let entered_card = self.players[player_id as usize].battle_area[field_index]
+            .top_card()
+            .handle();
+        let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
+            .top_card()
+            .card_id(&self.card_data)
+            .to_string();
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Play {
+            seq,
+            player: player_id,
+            card_id: emitted_card_id,
+            field_index: field_index as u8,
+        });
+        self.fire_on_play(player_id, field_index);
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnEnterFieldAnyone,
+            crate::selection::TriggerSource::EnteredField {
+                player: player_id,
+                permanent: entered,
+                card: entered_card,
+            },
+        );
+        self.drain_effect_queue();
+        Some(entered)
+    }
+
+    pub fn play_source_refs_from_effect_without_cost(
+        &mut self,
+        selected: Vec<crate::selection::SourceSelectionRef>,
+    ) -> bool {
+        let mut required_slots_by_player = vec![0usize; self.players.len()];
+        for source_ref in &selected {
+            let Some(permanent) = self
+                .player(source_ref.permanent.player)
+                .battle_area
+                .get(source_ref.permanent.index as usize)
+            else {
+                return false;
+            };
+            let Some(pos) = permanent
+                .card_sources
+                .iter()
+                .position(|source| source.handle() == source_ref.card)
+            else {
+                return false;
+            };
+            if pos + 1 >= permanent.card_sources.len() {
+                return false;
+            }
+            let player_index = source_ref.permanent.player as usize;
+            let Some(required_slots) = required_slots_by_player.get_mut(player_index) else {
+                return false;
+            };
+            *required_slots += 1;
+            if !self.can_play_card_from_effect_without_cost(
+                source_ref.permanent.player,
+                source_ref.card,
+                *required_slots,
+            ) {
+                return false;
+            }
+        }
+
+        let mut removed: Vec<(PlayerId, CardSource)> = Vec::with_capacity(selected.len());
+        for source_ref in selected {
+            let Some(permanent) = self
+                .player_mut(source_ref.permanent.player)
+                .battle_area
+                .get_mut(source_ref.permanent.index as usize)
+            else {
+                return false;
+            };
+            let Some(pos) = permanent
+                .card_sources
+                .iter()
+                .position(|source| source.handle() == source_ref.card)
+            else {
+                return false;
+            };
+            if pos + 1 >= permanent.card_sources.len() {
+                return false;
+            }
+            removed.push((
+                source_ref.permanent.player,
+                permanent.card_sources.remove(pos),
+            ));
+        }
+
+        let turn = self.turn_count;
+        let mut entered = Vec::with_capacity(removed.len());
+        for (player_id, card_source) in removed {
+            let card = card_source.handle();
+            let emitted_card_id = card_source.card_id(&self.card_data).to_string();
+            let player = self.player_mut(player_id);
+            player
+                .battle_area
+                .push(crate::permanent::Permanent::new(card_source, turn));
+            let field_index = player.battle_area.len() - 1;
+            let permanent = PermanentHandle {
+                player: player_id,
+                index: field_index as u8,
+            };
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Play {
+                seq,
+                player: player_id,
+                card_id: emitted_card_id,
+                field_index: field_index as u8,
+            });
+            entered.push((player_id, field_index, permanent, card));
+        }
+
+        for (player_id, field_index, _, _) in entered.iter().copied() {
+            self.fire_on_play(player_id, field_index);
+        }
+        for (player_id, _, permanent, card) in entered {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnEnterFieldAnyone,
+                crate::selection::TriggerSource::EnteredField {
+                    player: player_id,
+                    permanent,
+                    card,
+                },
+            );
+        }
+        self.drain_effect_queue();
+        true
+    }
+
+    pub fn can_play_card_from_effect_without_cost(
+        &self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+        required_slots: usize,
+    ) -> bool {
+        let Some(player) = self.players.get(player_id as usize) else {
+            return false;
+        };
+        if player.battle_area.len() + required_slots > self.rules.field_slots as usize {
+            return false;
+        }
+        let Some(card_kind) = self.card_kind_for_handle(card) else {
+            return false;
+        };
+        if card_kind == crate::enums::CardKind::Digimon
+            && self.modifiers.player_has(
+                player_id,
+                crate::enums::ModifierType::CannotPlayDigimonByEffect,
+            )
+        {
+            return false;
+        }
+        if card_kind == crate::enums::CardKind::Tamer
+            && self.modifiers.player_has(
+                player_id,
+                crate::enums::ModifierType::CannotPlayTamerByEffect,
+            )
+        {
+            return false;
+        }
+        true
+    }
+
+    pub fn card(&self, card: crate::card_source::CardHandle) -> &CardData {
+        self.card_data_for_handle(card)
+            .expect("card handle must resolve to card data")
     }
 
     /// Fire all applicable replacement effects for the given would-event.
@@ -1865,6 +2157,7 @@ mod current_attacker_tests {
             blocker: None,
             is_vortex: false,
             is_overclock: false,
+            declaration_committed: true,
             cancelled: false,
             battle_occurred: false,
             return_phase: crate::enums::GamePhase::Main,
@@ -1903,6 +2196,7 @@ mod current_attacker_tests {
             blocker: None,
             is_vortex: false,
             is_overclock: false,
+            declaration_committed: true,
             cancelled: false,
             battle_occurred: false,
             return_phase: crate::enums::GamePhase::Main,

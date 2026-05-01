@@ -33,7 +33,11 @@ pub struct PredicateSpec {
     pub color_is: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_only: Option<Vec<ColorSpec>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "trait",
+        alias = "subject_trait"
+    )]
     pub trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form_is: Option<String>,
@@ -117,6 +121,12 @@ pub struct PredicateSpec {
     pub event_target_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub replacement_cause: Option<ReplacementCauseSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub replacement_source_is_opponent: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub replacement_subject_is_mine: Option<bool>,
 
     // Binding comparisons
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -143,7 +153,7 @@ pub struct PredicateSpec {
     pub all_permanents: Option<Box<ExistentialPredicate>>,
 
     // Compound
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", alias = "all")]
     pub all_of: Vec<PredicateSpec>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub any_of: Vec<PredicateSpec>,
@@ -168,6 +178,16 @@ pub struct PredicateSpec {
 pub enum DpConstraint {
     Literal(i32),
     Formula(FormulaSpec),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ReplacementCauseSpec {
+    Battle,
+    OwnEffect,
+    OpponentEffect,
+    SecurityCheck,
+    Cost,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

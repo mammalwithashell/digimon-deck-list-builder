@@ -2,7 +2,7 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-04-28
+Last updated: 2026-04-30
 
 ## Resolved Gaps
 
@@ -110,14 +110,16 @@ Last updated: 2026-04-28
 - **Suggested change:** Extend delayed-option state with an event trigger and predicate, enqueue/expose a Delay activation action when that event fires, and add DSL timing mappings for `on_suspend`/`on_ally_played` event-gated Delay clauses.
 - **Workaround:** None without approximating the activation timing.
 
-### Replacement Cause Gate for "Other Than By Your Effects" [G-REPLACEMENT-CAUSE-GATE]
-- **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)
-- **Scope:** Rust DSL replacement lowering and replacement evaluator context.
-- **Card(s):** EX9-032 Karakurumon, EX7-027 Chaperomon, BT22-036 Kazuchimon, plus other Puppet replacement/prevention clauses.
-- **Effect text:** "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
-- **What's missing:** `kind: replacement` accepts `active_when`, but the current lowering path ignores it. The replacement context also is not exposed to DSL predicates in a way that can distinguish your own effects from battle, opponent effects, rule processing, or other causes.
-- **Suggested change:** Evaluate replacement `active_when` predicates against replacement context before offering the prevention/cost choice, and add predicate leaves for replacement cause/controller such as `replacement_cause_not: own_effect`.
-- **Workaround:** None for faithful Puppet prevention text. Omitting the gate would allow illegal prevention against your own effects.
+### Cost and Replacement Framework
+
+Resolved by Group 3:
+- BT13-007 King Drasil_7D6 and ST21-13 Matt Ishida & T.K. Takaishi can both reduce AD1-025 Omnimon before memory is paid because AD1-025 has both `[Royal Knight]` and `[ADVENTURE]`.
+- Triggered effect costs may install pending selections and resume process only after cost payment.
+- Optional cost decline skips process without hidden auto-selection.
+- Replacement predicates can inspect cause, source controller, and subject controller.
+- Partition source requirements are enforced before prevention.
+- Delay options can pay themselves as replacement costs and prevent deletion.
+- Effects can end a pending attack after a printed cost resolves.
 
 ### ~~When Attacking Selection Phase Override~~ — RESOLVED 2026-04-02
 - **Discovered in:** BT24-024 Submarimon fix-card review
@@ -158,29 +160,28 @@ Last updated: 2026-04-28
 - **Scope:** Rust engine (`code/digimon-engine/`) only. Python engine resolves inherited effects via `card_sources[:-1]` scanning in `_collect_triggered_effects`.
 - **Card(s):** BT21-008 Elizamon — inherited `[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory.` Almost all Lv3+ Digimon in this archetype have a similar inherited triggered effect; this gap blocks the inherited half of every one of them.
 - **Effect text:** any DSL clause with `scope: inherited` + a triggered timing.
-- **What's missing:** `enqueue_from_permanent` in `code/digimon-engine/src/effect_queue.rs` only collects effects from the **top card** of a permanent. It already handles two sideways-inheritance cases (Phase 8 Task 4: `linked_cards`; Phase 8 Task 5: `OptionState::Training`), but it does NOT iterate `card_sources[0..n-1]` (the digivolution stack below the top card) for `effect.inherited = true` triggered effects. Cards compiled with `scope: inherited` set `effect.inherited = true`, but no dispatch path fires them when this card is in someone else's digivolution stack.
-- **Affected cards:** every YAML card with `scope: inherited` and a triggered timing.
-- **Suggested change:** in `enqueue_from_permanent` after the top-card scan, iterate `perm.card_sources[0..len-1]`. For each source, call `effects_for_card` and collect effects where `effect.inherited && timing_flag_matches(effect, timing)`. Attribute the queued effect to the hosting permanent's controller and `source_permanent`, with `source_card` pointing at the digivolution source's card handle (same pattern as the linked-cards branch).
-- **Workaround:** None — BLOCKED.
+- **Status:** Fixed for battle-area permanent dispatch on 2026-04-29. `enqueue_from_permanent` now preserves top-card / linked / Training dispatch, then scans below-top `card_sources` and queues only matching `effect.inherited == true` effects with `source_permanent` set to the carrier and `source_card` set to the inherited source card.
+- **Affected cards:** YAML cards with `scope: inherited` and a triggered timing can now fire from below the top card when the relevant event is already dispatched to the carrier permanent's battle-area observer path.
+- **Regression coverage:** `bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn` and `buried_non_inherited_triggered_effect_does_not_fire_from_source_position`.
+- **Remaining limits:** This does not add new event fire sites. Source-trash paths outside the `Game::return_to_hand` event-payload slice, breeding-area dispatch, and effect-driven security-removal fan-out remain separate gaps. Group 2 closed the shared source, DP-budget, breeding-permanent, and empty-tail selection primitives on 2026-04-29.
 
 ### `max_per_turn` (Once-Per-Turn) Not Enforced for Triggered Effects  [G-OPT-TRIGGERED]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
 - **Scope:** Rust engine.
 - **Card(s):** EX11-008 Elizamon (inherited OPT clause); applies to every DSL card with `once_per_turn: true` on a triggered clause.
 - **Effect text:** any clause that combines `[Once Per Turn]` with a non-Main triggered timing (`OnLoseSecurity`, `WhenAttacking`, `OnPlay`, `OnDigivolving`, etc.).
-- **What's missing:** `once_per_turn: true` in YAML correctly lowers to `Effect::max_per_turn = 1`, but `run_queued_effect_inner` in `effect_queue.rs` does NOT consult `max_per_turn` when dispatching triggered effects through the queue. OPT is enforced only for activated `Main*` effects in `game_actions.rs`. Triggered effects with OPT can therefore fire more than once per turn.
-- **Suggested change:** in the queue-drain path, before invoking each queued effect's process closure, consult `Permanent::activation_count(source_card, slot) >= effect.max_per_turn` (already tracked) and skip if exceeded; call `Permanent::record_activation` after a successful invocation.
-- **Workaround:** None — BLOCKED for tests; cards still partially work (the effect just over-fires).
+- **Status:** Fixed for permanent-backed queued triggered effects on 2026-04-29. `run_queued_effect_inner` now checks `Permanent::activation_count(source_card, slot) >= effect.max_per_turn` before processing and records activation before `process`, matching the existing activated field-main timing.
+- **Regression coverage:** `bt21_008_inherited_opt_blocks_second_trigger_same_turn`.
+- **Remaining limits:** This only enforces the existing queued-effect activation counter. It does not add optional prompt/action-space handling, source-trash paths outside the `Game::return_to_hand` event-payload slice, or breeding dispatch.
 
-### `EffectTiming::OnMove` Missing  [G-ON-MOVE]
+### `EffectTiming::OnMove` for Breeding-to-Battle Movement  [G-ON-MOVE]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
 - **Scope:** Rust engine + DSL (hybrid; see `qa/dsl-vocab-gaps.md` for DSL half).
 - **Card(s):** EX11-008 Elizamon — `[When Moving] [On Play]` shared body; BT16-082 Ukkomon — entire [Your Turn][OPT] triggered effect (observer in battle area watches any own Digimon move from breeding). Other archetypes will surface this for cards with "[When one of your Digimon moves from the breeding area]" observer triggers.
 - **Effect text (EX11-008):** "[When Moving] 1 of your Digimon ... gains <Raid> and +3000 DP for the turn."
 - **Effect text (BT16-082):** "[Your Turn][Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, reveal the top 3 cards of your deck. Add 1 Digimon card or Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, you may hatch in your breeding area."
-- **What's missing:** `EffectTiming::OnMove` variant + dispatch hook in `game_actions::move_from_breeding()`. DCGO maps to `EffectTiming.OnMove`; Rust has no equivalent. The closest existing variant `OnHatch` fires when an egg moves digitama→breeding — a different event. BT16-082 is a battle-area observer card (not the moving card itself); the OnMove dispatch needs to fire `enqueue_triggered` over the controller's battle area (analogous to `OnEnterFieldAnyone` fan-out) so observer permanents like Ukkomon see the event.
-- **Suggested change:** (1) Add `EffectTiming::OnMove` to `src/enums.rs`. (2) In `game_actions::move_from_breeding`, after the permanent moves to battle_area: fire `enqueue_triggered(EffectTiming::OnMove, TriggerSource::PlayerBattleArea(player_id))` so all observer permanents in the controller's battle area see the event. (3) Add `CompiledTiming::OnMoveFromBreeding` to `digimon-dsl/src/compiled.rs` and map it in `timing_map.rs`.
-- **Workaround:** EX11-008 — handled only the `[On Play]` half in YAML. BT16-082 — structural stub with `on_play` timing + raw_rust no-op (`bt16_082_on_move_noop`).
+- **Status:** Fixed for breeding-to-battle movement on 2026-04-29. `EffectTiming::OnMove`, `Effect::on_move(card)`, DSL `when: on_move`, and `TriggerSource::MovedFromBreeding { player, permanent, card }` now carry the moved battle-area permanent and top/source card after `Game::move_from_breeding` commits. Regression coverage: `on_move_fires_after_breeding_permanent_moves_to_battle`; direct DSL event-context coverage: `on_move_event_target_trait_predicate_matches_moved_permanent` proves `event_target_trait_has` sees the moved permanent/card.
+- **Remaining limits:** This does not add generic breeding-area trigger fan-out, extra pending selections, reveal/add-to-hand handling for BT16-082, or the unrelated `OnPlay`/`WhenDigivolving` body work for multi-timing cards.
 
 ### `dp_lte` Predicate Compiled but Not Evaluated in `eval_card_fields`  [G-DP-LTE-PREDICATE]
 - **Discovered in:** Medusamon archetype, BT21-015 Cyclonemon DSL implementation (2026-04-27)
@@ -246,6 +247,7 @@ Last updated: 2026-04-28
 - **What's missing:** `on_digivolve` fires via `TriggerSource::PlayerBattleArea(pid)` in `game_actions.rs`, which sets every permanent's effect as an observer. When constructing the `TriggerContext`, `target_permanent` is set to the observer permanent (the tamer itself), NOT the permanent that just digivolved. Therefore: (a) a trait filter on the newly-digivolved card ("digivolve INTO a Reptile/Dragonkin") cannot be expressed in the condition predicate, and (b) the DP-modifier target ("that Digimon") cannot be bound to the newly-digivolved card.
 - **Suggested change:** Add a `digivolve_target: Option<PermanentHandle>` field to `TriggerSource::PlayerBattleArea` (or a sibling `DigivolveTarget` variant). Populate it in `fire_on_digivolve` with the permanent that just completed digivolution. Thread it through to `TriggerContext::target_permanent` for each observer's effect dispatch, or add a distinct `digivolve_target` field to `TriggerContext` so observer effects can reference both "the observer" and "the card that digivolved".
 - **Workaround:** `any_permanent` condition over own battle area with `trait_has: Reptile/Dragonkin` (over-fires if a matching ally is on board but a non-matching Digimon digivolved). `select_own_permanent` prompt for DP modifier target (player picks instead of auto-targeting). Two tests `#[ignore]`'d.
+- **Updated 2026-04-29:** Normal battle-area `Game::digivolve_from_hand` now dispatches `OnDigivolve` via `TriggerSource::Digivolved { player, permanent, card }`, and `TriggerContext.event_permanent` / `event_card` identify the just-digivolved permanent and new top card. `event_card_trait_has` is proven against the new top card by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_card_trait_predicate_matches_new_top_card`, and `target: event_target` binding is proven to affect the just-digivolved permanent by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_target_binding_resolves_digivolved_permanent`. Keep effect-initiated digivolve, DNA digivolve, and breeding-area digivolve as open follow-ups unless separately tested.
 
 ### `OnEnterFieldAnyone` Observer Context Missing Entering-Permanent Reference  [G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER]
 - **Discovered in:** Medusamon archetype, EX11-054 Owen Dreadnought DSL implementation (2026-04-27)
@@ -256,6 +258,7 @@ Last updated: 2026-04-28
 - **Related gap:** G-ON-DIGIVOLVE-TRAIT-FILTER (same limitation for `on_digivolve`). Both share the same root cause: the trigger source variant doesn't carry the triggering permanent's handle.
 - **Suggested change:** Add `entering_permanent: Option<PermanentHandle>` to `TriggerContext` (alongside existing `target_permanent`). Populate it in `game_actions.rs::broadcast_on_enter_field_anyone` (and the digivolve broadcast) with the handle of the card that just entered/digivolved. Add a matching `entering_permanent_trait_has` DSL BoolPredicate leaf in `predicate.rs` that reads `ctx.trigger_context.entering_permanent`.
 - **Workaround:** `kind: raw_rust` no-op placeholder (`ex11_054_all_turns_noop`). See `qa/dsl-vocab-gaps.md` entry `G-ENTERING-PERMANENT-TRAIT`.
+- **Updated 2026-04-29:** Normal hand-played battle-area permanents now dispatch `OnEnterFieldAnyone` via `TriggerSource::EnteredField { player, permanent, card }`, and `TriggerContext.event_permanent` / `event_card` identify the entering permanent and card. `event_card_trait_has` is proven against the entering card by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_enter_field_anyone_event_card_trait_predicate_matches_entering_card`. Keep effect-created permanents, token play, option placement, play-from-trash context, and breeding-area observer fan-out as open follow-ups unless separately tested.
 
 ### `count_lte` Aggregate Predicate (Non-Security) Not Evaluated  [G-COUNT-LTE-EVAL]
 - **Discovered in:** Medusamon archetype, BT21-017 Dimetromon DSL implementation (2026-04-27)
@@ -275,6 +278,7 @@ Last updated: 2026-04-28
 - **What's missing:** `GameEvent::Digivolve` is defined in `events.rs` as "for future wiring — not emitted yet." Even if an observer could use raw_rust to read `ctx.game.events`, the digivolve-detection path is unavailable. Blocks raw_rust workarounds for G-ON-DIGIVOLVE-TRAIT-FILTER that try to infer "which permanent just digivolved" via the event log.
 - **Suggested change:** Emit `GameEvent::Digivolve { player, permanent: PermanentHandle }` inside the digivolve execution path (wherever `fire_on_digivolve` is called). This unblocks event-log-based raw_rust workarounds until the full TriggerContext fix lands.
 - **Workaround:** None — raw_rust event-log detection blocked until emission is wired.
+- **Updated 2026-04-29:** `Game::digivolve_from_hand` now emits `GameEvent::Digivolve { player, top_card_id, field_index, from_stack_top }` after stack mutation. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- game_event_digivolve_is_emitted_with_new_top_card_and_field_index`. Effect-initiated digivolve, DNA digivolve, and breeding-area digivolve event-log coverage remain open.
 
 ### `EffectTiming::Declarative` Never Fired — Filtered Aura / Grant-Keyword Runtime Gap  [G-DECLARATIVE-KEYWORD]
 - **Discovered in:** Medusamon archetype — BT21-029, EX11-012, EX11-054 (grant_keyword), BT5-008 (filtered aura), 2026-04-27
@@ -309,6 +313,7 @@ Last updated: 2026-04-28
 - **Affected pattern:** Any YAML where `as_selecting_player { body: [select_hand, ...] }` is followed by sibling steps, and the opponent may have an empty hand. The sibling steps after `as_selecting_player` are silently skipped in the empty-hand scenario.
 - **Suggested change:** When `install_select_hand` detects `valid_action_ids.is_empty()` and `optional=true`, it should run the callback synchronously with a sentinel `NO_SELECTION` index (or call `drain_dsl_outer_tail` directly) rather than just returning. For `optional=false` with an empty hand, the current silent-skip behavior may be acceptable — but `drain_dsl_outer_tail` should still fire.
 - **Workaround:** Move subsequent steps that must fire unconditionally INSIDE the `as_selecting_player` body (at the cost of tying them to the selection resolution). Steps after the body that require unconditional execution in the empty-hand case cannot be expressed in the current DSL. The BT21-024 empty-hand test is `#[ignore]`'d with this gap tag.
+- **Updated 2026-04-29:** Empty inner selection handling now preserves the outer tail for `select_material` and the new `select_own_sources` path. Covered by `empty_select_material_runs_outer_tail_synchronously` and `empty_select_own_sources_runs_outer_tail_synchronously`. Other legacy selection installers should use the same "no candidates means no park" pattern when they grow empty-candidate tests.
 
 ### Multi-Select of Opponent Battle-Area Permanents with Running DP-Sum Cap  [G-MULTI-SELECT-OPP-DP-SUM]
 - **Discovered in:** Medusamon Batch 10, LM-021 Agumon - Bond of Bravery DSL implementation (2026-04-28)
@@ -318,6 +323,15 @@ Last updated: 2026-04-28
 - **What's missing:** `EffectContext` exposes only single-target selection (`select_opponent_permanent`) and count-capped multi-target selection (`select_count_capped_multi`, which caps by pick count, not by DP sum). There is no primitive for iterative multi-select where each pick reduces a remaining DP budget and the player may stop at any point once they have at least one selection (DCGO: `canEndNotMax: true`, `canTargetConditionByPreSelectedList` with dynamic remainder). The running DP-sum cap requires: (a) tracking cumulative DP of already-selected targets, (b) re-filtering valid candidates after each pick to exclude those whose DP would exceed the remaining budget, and (c) allowing early termination once at least one target is picked. None of these are available in the current selection state machine.
 - **Suggested change:** Add a `select_opponent_permanent_dp_sum(description, self_dp, callback)` method to `EffectContext` that: (1) initializes a `remaining_budget = self_dp`; (2) presents a filtered pick from `opponent.battle_area` where `perm.dp <= remaining_budget`; (3) after each pick, subtracts the picked card's DP from `remaining_budget` and repeats if budget > 0 and valid candidates remain; (4) allows the player to stop picking at any point; (5) calls `callback` once on all selected handles. Alternatively, extend `PendingSelection` with a `DpBudget(u32)` variant that the selection engine drains per-pick.
 - **Workaround:** `raw_rust: { fn: lm_021_delete_dp_sum }` and `raw_rust: { fn: bt17_018_delete_opp_digimon_dp_budget }` — both fall back to single-pick with a DP <= budget filter. Full multi-pick semantics are deferred until this gap closes.
+- **Updated 2026-04-29:** Resolved for opponent battle-area DP-budget selection. `EffectContext::select_opponent_permanents_by_dp_budget` installs `SelectionKind::DpBudget`, filters remaining affordable targets after each pick, and exposes PASS after `min_picks`. DSL `select_opponent_dp_budget` binds the chosen permanents and `delete_bound_permanents` consumes them. Covered by `dp_budget_selection_tracks_remaining_dp_and_allows_pass_after_min`, `dp_budget_selection_finishes_when_no_targets_fit`, `dp_budget_selection_mask_exposes_only_remaining_affordable_targets`, and `dsl_select_dp_budget_deletes_bound_permanents`.
+
+### Cross-Permanent Rocks Source Selection Resolved  [G-ROCKS-SOURCE-SELECTION-DSL]
+- **Discovered in:** Rocks / RockClose archetype assessment (2026-04-29 follow-up).
+- **Scope:** Rust engine + DSL.
+- **Card(s):** EX10-032 Proganomon, EX10-028 Landramon, EX8-070 Zofr Kabus, EX10-036 Magneticdramon, EX10-033 / EX11-044 / EX8-055 Pyramidimon source-trash bodies.
+- **Status:** Resolved for the shared selection primitive. `EffectContext::select_own_sources` supports exact-N and up-to-N source choices across own battle-area stacks, binds stable `SourceSelectionRef` values, and DSL `trash_selected_sources` consumes those refs without a fake permanent prompt.
+- **Regression coverage:** `source_multi::exact_two_sources_can_be_selected_across_own_battle_area`, `source_multi::up_to_sources_enables_pass_only_after_minimum_is_met`, `source_multi_mask_only_exposes_selecting_players_pending_actions`, `select_own_sources_binds_source_refs_for_trashing`, and `empty_select_own_sources_runs_outer_tail_synchronously`.
+- **Remaining limits:** Triggered-body cost ordering, Fragment / Digi-Burst / replacement integration, and card-specific Rocks bodies remain separate gaps.
 
 ### `IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask  [G-IGNORE-COLOR-MASK]
 - **Discovered in:** Medusamon Batch 11, ST22-08 Offensive Plug-In V DSL implementation (2026-04-27)
@@ -336,22 +350,6 @@ Last updated: 2026-04-28
 - **What's missing:** The engine's `DelayTrigger` enum (in `src/enums.rs`) only has two variants: `EndOfThisTurn` and `EndOfYourNextTurn`. The DSL `kind: delay` lowerer in `src/dsl_cards/lower_delay.rs` maps `"end_of_your_turn"` to `EndOfThisTurn` and everything else to `EndOfYourNextTurn`. Both variants fire at END-of-turn. LM-027's Delay activates at the START of the controller's next turn (DCGO: `EffectTiming.OnStartTurn` with `CanDeclareOptionDelayEffect`). There is no `DelayTrigger::StartOfYourNextTurn` variant, and the DSL `kind: delay` path has no lowering route for start-of-turn firing. The entire Delay clause body is therefore unimplementable with native DSL.
 - **Suggested change:** (1) Add `StartOfYourNextTurn` variant to `DelayTrigger` in `src/enums.rs`. (2) Add a `"start_of_your_turn"` token (or `"start_of_next_turn"`) in the DSL timing map (`timing_map.rs`) that lowers to `DelayTrigger::StartOfYourNextTurn`. (3) Wire `StartOfYourNextTurn` firing into the game's start-of-turn hook (`game_phases.rs::begin_turn`): after incrementing `turn_number`, scan all permanents for `Delay` state with `trigger == StartOfYourNextTurn` and fire those. This is symmetric to the end-of-turn Delay drain already implemented.
 - **Workaround:** `kind: raw_rust` no-op placeholder (`lm_027_delay_start_of_turn_noop`) preserving the clause-index slot. All Delay behavioral tests are `#[ignore]`'d.
-
-### Partition Source Enforcement + Source Selection  [G-PARTITION-SOURCE-ENFORCEMENT]
-- **Discovered in:** BG Imperial Rust DSL readiness assessment, BT16-025 Paildramon (2026-04-28)
-- **Scope:** Rust engine + DSL (hybrid).
-- **Card(s):** BT16-025 Paildramon — "＜Partition (Blue Lv.4 & Green Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)"
-- **What's missing:** `code/digimon-engine/src/dsl_cards/lower_partition.rs` documents Phase 1 as granting `Keyword::Partition` and a declarative marker only. It accepts `active_when` and `sources`, but ignores them, and its configured process body fires as an `OnDeletion` body instead of a leave-field replacement with source-list validation. The required source choices need nested `PendingSelection::Source` inside the replacement window.
-- **Suggested change:** Add a Partition replacement path that runs before the leave-field event commits, checks the source predicates against the carrier's digivolution stack, presents the eligible source choices to the player, plays exactly one source per printed predicate without paying costs, and respects exclusions for battle and the controller's own effects.
-- **Workaround:** None for faithful Rust DSL. A marker keyword alone is insufficient.
-
-### Delay-as-Replacement for Deletion Prevention  [G-DELAY-REPLACEMENT-PREVENT-DELETION]
-- **Discovered in:** BG Imperial Rust DSL readiness assessment, BT17-097 Return to the Primogenitor (2026-04-28)
-- **Scope:** Rust engine + DSL (hybrid).
-- **Card(s):** BT17-097 Return to the Primogenitor — "[All Turns] When one of your Digimon with the [Free] trait would be deleted other than by one of your effects, ＜Delay＞ ... By digivolving that Digimon into a Digimon card with [Imperialdramon] in its name in your hand without paying the cost, prevent that deletion."
-- **What's missing:** Current Delay lowering schedules `EffectTiming::DelayEffect` at end-turn style triggers. There is no engine path that lets a battle-area Delay option participate in `WhenWouldBeDeleted`, pay its trash-this-option cost, run an effect-initiated digivolve on the threatened permanent, and then prevent the original deletion if the digivolve succeeds.
-- **Suggested change:** Add a replacement-window Delay activation flow for eligible option permanents. The flow should surface an optional player choice, move the Delay option to trash as cost, run a filtered hand digivolve into the threatened permanent without paying cost, and return a prevent-deletion replacement result.
-- **Workaround:** None for faithful Rust DSL. Treating this as a scheduled Delay effect loses the timing and prevention semantics.
 
 ### `EffectContext::add_security_option_to_hand` Missing  [G-ADD-OPTION-SELF-TO-HAND]
 - **Discovered in:** Medusamon Batch 12, LM-027 Red Scramble DSL implementation (2026-04-28). Also previously surfaced by ST22-08 Offensive Plug-In V (Batch 11) and EX6-072 pattern.
@@ -400,7 +398,7 @@ Last updated: 2026-04-28
 - **First test:** place `BT13-007` in player 0 breeding, put one Royal Knight in player 0 battle area, enter main phase, and assert the top digitama plus that Royal Knight are placed under King Drasil while the Royal Knight leaves battle.
 - **Workaround:** None — BLOCKED. Moving King Drasil to battle just to reuse `PlayerBattleArea` would change legal zones and action masks.
 
-### Breeding-Area Pending Selection / Permanent Handles Missing  [G-BREEDING-PERMANENT-SELECTION]
+### Breeding-Area Pending Selection / Permanent Handles  [G-BREEDING-PERMANENT-SELECTION]
 - **Discovered in:** Royal Knights archetype assessment (2026-04-28)
 - **Scope:** Rust engine + DSL.
 - **Card(s):** BT20-083 Omekamon — `[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area.` Also BT13-093 Omekamon, BT13-110 Royal Knights of the Purge, BT13-112 Omnimon, EX11-053 Omekamon, and BT23-072 King Drasil_7D6, all of which target or play cards from a breeding-area King Drasil stack.
@@ -409,6 +407,8 @@ Last updated: 2026-04-28
 - **Suggested change:** Introduce a stable way to address breeding permanents in selections, such as `PermanentHandle::Breeding { player }` or a new `PermanentRef` enum with `BattleArea(PermanentHandle)` and `Breeding(PlayerId)`. Add an action-mask/decoder path for selecting the breeding slot, then update `select_own_permanent` / `select_any_permanent` prefilters to include it when the compiled predicate allows `CompiledZone::Breeding`.
 - **First test:** trigger `BT20-083` On Deletion with a `BT13-007` in breeding and assert a pending selection offers the breeding King Drasil rather than silently doing nothing.
 - **Workaround:** None faithful. Auto-selecting the only breeding permanent hides a gameplay choice and fails when future cards offer multiple legal destinations across battle/breeding zones.
+- **Updated 2026-04-29:** Resolved for pending selection and DSL binding without fake battle-area handles. `EffectContext::select_own_breeding_permanent` installs `SelectionKind::BreedingPermanent`, masks only the phase-scoped breeding selection action (`encode_breeding_select(player)`), and DSL `select_own_breeding_permanent` binds a `BreedingPermanentRef`. Covered by `breeding_permanent_selection_targets_breeding_without_fake_battle_handle`, `breeding_selection_mask_exposes_only_breeding_select_action`, and `dsl_select_breeding_permanent_binds_target`.
+- **Remaining limits:** This does not solve breeding-area trigger fan-out, effect-initiated movement to or from the breeding stack, or source placement under a selected breeding permanent. Those remain under `G-BREEDING-TRIGGER-DISPATCH` and the relevant zone-movement gaps.
 
 ### Option-Placed Observer Timing Missing  [G-OPTION-PLACED-TIMING]
 - **Discovered in:** Royal Knights archetype assessment (2026-04-28)
@@ -419,3 +419,12 @@ Last updated: 2026-04-28
 - **Suggested change:** Add `EffectTiming::OnOptionPlaced` and fire it after `dispose_option` / option placement helpers create the delayed/training/field Option permanent. Dispatch should scan relevant observers, including breeding-area sources once `G-BREEDING-TRIGGER-DISPATCH` is fixed, and should set trigger context fields for the placed card, owner, and permanent if one exists.
 - **First test:** place `BT13-110` Royal Knights of the Purge into battle while `BT13-007` is in breeding with its inherited effect active, then assert the King Drasil controller gains 1 memory exactly once per turn.
 - **Workaround:** None — BLOCKED for the inherited memory trigger. Piggybacking on `OnEnterFieldAnyone` would over-fire for Digimon/Tamers and lacks the Option-specific trait context.
+- **Updated 2026-04-29:** Delay-style Option placement through `Game::play_option_from_hand` now dispatches `OnOptionPlaced` via `TriggerSource::OptionPlaced { player, permanent, card }`, and the placed Option is exposed through `TriggerContext.event_permanent`, `event_card`, and `source_player`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed_fires_after_delay_option_enters_battle_area` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_option_placed_event_card_trait_predicate_matches_placed_option`. Keep transient Standard options, security-effect placement, Link, Training, breeding-area observer fan-out, and once-per-turn Royal Knights inherited behavior as open follow-ups unless separately tested.
+
+### `OnAllyAttack` / `OnOpponentAttack` Declared-Attack Observer Timing
+- **Discovered in:** Dark Masters / Rocks archetype assessments (2026-04-29 follow-up)
+- **Scope:** Rust engine runtime context.
+- **Card(s):** BT15-008 Muchomon (`OnAllyAttack`-style "when one of your Digimon attacks a player"); EX10-003 Tumblemon and EX8-050 Gogmamon (`OnOpponentAttack`-style defender-side inherited observers, still blocked on follow-up cost/cancel primitives).
+- **Effect text:** "When one of your red Digimon attacks a player..." / "When one of your opponent's Digimon attacks..."
+- **Updated 2026-04-29:** Battle-area declared-attack observers now dispatch from the real combat state machine. `OnAllyAttack` scans the attacker's controller battle area and excludes the attacking permanent; `OnOpponentAttack` scans the defending player's battle area before Alliance/Counter/Block windows. `EffectReadContext` / `EffectContext` expose `attack_attacker()` and `attack_target()` over the live pending attack, with `attack_target()` reporting the effective target after substitution, including accepted optional target substitutions. `PendingAttack::declaration_committed` keeps optional pre-declaration replacement resumes legal while accepted pre-declaration cancel/substitute outcomes mutate the pending attack before declaration commits; `resolve_generic_selection` resumes parked attacks after replacement accept/decline resolution so normal `decode_action` callers cannot strand a pending attack. Post-declaration resumes require the original handle to still be a live attacking permanent. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- declared_attack_fires_ally_and_opponent_observers_with_attack_context on_ally_attack_does_not_fire_on_the_attacker_itself attack_target_context_reports_effective_declared_target_after_substitution accepted_predeclare_cancel_replacement_cancels_before_observers declined_predeclare_replacement_resumes_attack_declaration accepted_predeclare_target_substitution_updates_attack_context attack_resume_after_trigger_order_does_not_alias_removed_attacker on_ally_attack_still_fires_if_attacker_stack_changes_during_on_attack on_ally_attack_does_not_fire_if_attacker_left_during_on_attack on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker`, plus `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- on_ally_attack` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- on_opponent_attack`.
+- **Remaining limits:** First-class DSL predicates such as attack-target kind / attacker trait are still follow-ups. Breeding-area observer fan-out is not proven by this slice.

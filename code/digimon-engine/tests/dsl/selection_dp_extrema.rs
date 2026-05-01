@@ -238,6 +238,7 @@ effects:
         blocker: None,
         is_vortex: false,
         is_overclock: false,
+        declaration_committed: true,
         cancelled: false,
         battle_occurred: false,
         return_phase: GamePhase::Main,

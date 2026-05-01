@@ -228,6 +228,10 @@ fn parse_card_color(raw: u8) -> CardColor {
 }
 
 impl CardData {
+    pub fn is_color(&self, color: CardColor) -> bool {
+        self.colors.contains(&color)
+    }
+
     pub fn is_digimon_card_for_search(&self) -> bool {
         matches!(
             self.card_kind,

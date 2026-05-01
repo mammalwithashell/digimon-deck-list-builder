@@ -131,3 +131,43 @@ fn select_material_missing_binding_silent_noop() {
         "missing binding → SelectMaterial no-ops; the tail still runs synchronously"
     );
 }
+
+#[test]
+fn empty_select_material_runs_outer_tail_synchronously() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .add_card(make_test_card("STACK", "STACK"))
+        .hand(0, &["SRC"])
+        .build();
+
+    let perm_handle = runner.place_on_field(0, "STACK", None);
+    let src_card = runner.game.players[0].hand[0].handle();
+    let memory_before = runner.game.memory;
+
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", perm_handle);
+
+    let steps = vec![
+        CompiledStep::SelectMaterial {
+            of_permanent: CompiledBindingRef::Named("target".to_string()),
+            filter: CompiledPredicate::default(),
+            bind_as: Some("mat".to_string()),
+            prompt: "Pick a material".to_string(),
+            prompt_key: None,
+            optional: false,
+        },
+        CompiledStep::GainMemory(3),
+    ];
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 3,
+        "empty SelectMaterial no-ops and outer tail continues"
+    );
+}

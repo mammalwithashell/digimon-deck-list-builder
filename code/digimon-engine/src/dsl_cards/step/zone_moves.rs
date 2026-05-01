@@ -80,6 +80,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
 
+        CompiledStep::TrashSelectedSources { source_refs } => {
+            if let Some(source_refs) = bindings.get_source_refs(source_refs) {
+                for source_ref in source_refs {
+                    ctx.trash_card_source(source_ref.permanent, source_ref.card);
+                }
+            }
+            true
+        }
+
         CompiledStep::ReturnToDeckFromReveal { of, card, position } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;

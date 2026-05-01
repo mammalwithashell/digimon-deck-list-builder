@@ -12,11 +12,12 @@ pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 's
 
 /// Replacement-effect candidate-filter closure. Evaluated in
 /// `replacement::collect_candidates` after `condition` for `WhenWouldBe*`
-/// timings, with `cause` threaded in. Returns `true` to keep the candidate
-/// in the dispatch list, `false` to skip — used by `<Scapegoat>` to suppress
-/// the outer "may" dialog when the deletion cause is `OwnEffect` (RULES_CONTEXT
-/// 16-31) and to suppress the dialog when there are no substitute candidates
-/// (mirrors DCGO `CanActivateScapegoat`'s `HasMatchConditionPermanent` gate).
+/// timings, with cause/source/subject replacement context attached to the
+/// read context. Returns `true` to keep the candidate in the dispatch list,
+/// `false` to skip — used by `<Scapegoat>` to suppress the outer "may" dialog
+/// when the deletion cause is `OwnEffect` (RULES_CONTEXT 16-31) and to
+/// suppress the dialog when there are no substitute candidates (mirrors DCGO
+/// `CanActivateScapegoat`'s `HasMatchConditionPermanent` gate).
 ///
 /// Distinct from `condition`:
 /// - `condition` is cause-agnostic and evaluated for every effect timing.
@@ -33,7 +34,7 @@ pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 's
 /// — passives use the registry's `ReplacementConditionFn`; effect-side
 /// candidate filtering uses this `EffectReplacementConditionFn`.
 pub type EffectReplacementConditionFn = Box<
-    dyn Fn(&EffectReadContext, crate::replacement::ReplacementCause) -> bool
+    dyn Fn(&EffectReadContext, &crate::replacement::ReplacementSubject) -> bool
         + Send
         + Sync
         + 'static,
@@ -76,10 +77,11 @@ pub struct Effect {
 
     // Behavior
     pub condition: Option<ConditionFn>,
-    /// Cause-aware candidate filter for `WhenWouldBe*` replacement timings.
+    /// Context-aware candidate filter for `WhenWouldBe*` replacement timings.
     /// Evaluated in `replacement::collect_candidates` AFTER `condition`,
-    /// with the `ReplacementCause` threaded in. Both must return true for
-    /// the candidate to be kept. See `EffectReplacementConditionFn`.
+    /// with replacement cause/source/subject context attached to the read
+    /// context. Both must return true for the candidate to be kept. See
+    /// `EffectReplacementConditionFn`.
     pub replacement_condition: Option<EffectReplacementConditionFn>,
     pub process: Option<ProcessFn>,
 
@@ -314,6 +316,11 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnHatch)
     }
 
+    /// Fires when a breeding-area Digimon moves into the battle area.
+    pub fn on_move(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnMove)
+    }
+
     /// Fires when an opponent's security card is removed from their security stack.
     /// Medusamon core archetype observer.
     pub fn on_opponent_security_removed(card: CardHandle) -> EffectBuilder {
@@ -324,6 +331,11 @@ impl Effect {
     /// Rocks core archetype observer.
     pub fn on_digivolution_card_trashed(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnDigivolutionCardTrashed)
+    }
+
+    /// Fires after a persistent Option card is placed in the battle area.
+    pub fn on_option_placed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnOptionPlaced)
     }
 
     /// Builder constructor for a BeforePayCost effect — fires during cost
@@ -517,7 +529,7 @@ impl EffectBuilder {
         self
     }
 
-    /// Attach a cause-aware candidate filter for `WhenWouldBe*` replacements.
+    /// Attach a context-aware candidate filter for `WhenWouldBe*` replacements.
     /// Evaluated in `replacement::collect_candidates` after `condition`.
     /// See `EffectReplacementConditionFn` doc for the full contract; primary
     /// use is `<Scapegoat>` suppressing the outer "may" dialog on
@@ -525,7 +537,7 @@ impl EffectBuilder {
     /// no-substitute case mirroring DCGO `HasMatchConditionPermanent`.
     pub fn replacement_condition(
         mut self,
-        f: impl Fn(&EffectReadContext, crate::replacement::ReplacementCause) -> bool
+        f: impl Fn(&EffectReadContext, &crate::replacement::ReplacementSubject) -> bool
             + Send
             + Sync
             + 'static,
@@ -595,9 +607,11 @@ impl EffectBuilder {
     /// The closure receives `&mut EffectContext` so it can trash cards,
     /// suspend permanents, or otherwise mutate game state to pay the cost.
     ///
-    /// **v1 constraint:** synchronous — the closure must NOT install a
-    /// `PendingSelection`. For selection-gated pay-costs, fold the selection
-    /// into `process` for now. See Phase 5 non-goals.
+    /// Queued triggered effects may install a `PendingSelection` while paying
+    /// the cost. In that case the effect parks before `process`, resumes only
+    /// after the selection chain resolves, and can be discarded by calling
+    /// `EffectContext::decline_pending_pay_cost()` from the selection
+    /// callback.
     ///
     /// Phase 5 dispatch wires up in Tasks 3-4.
     pub fn pay_cost_fn<F>(mut self, f: F) -> Self
@@ -606,6 +620,14 @@ impl EffectBuilder {
     {
         self.inner.pay_cost_fn = Some(Box::new(f));
         self
+    }
+
+    /// Alias for [`Self::pay_cost_fn`].
+    pub fn pay_cost<F>(self, f: F) -> Self
+    where
+        F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static,
+    {
+        self.pay_cost_fn(f)
     }
 
     /// Attach a replacement-effect process for "Would*" timings.

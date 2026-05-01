@@ -26,7 +26,8 @@ use crate::enums::{CardKind, EffectSourceKind, EffectTiming, GamePhase, PlayerId
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{
-    EffectChoiceEntry, PendingSelection, QueuedEffect, SelectionKind, TriggerSource,
+    EffectChoiceEntry, PendingPayCostEffect, PendingSelection, QueuedEffect, SelectionKind,
+    TriggerSource,
 };
 use crate::trigger_context::TriggerContext;
 
@@ -90,6 +91,77 @@ impl Game {
                     };
                     let trigger_context = self.trigger_context_for_source(&source, Some(handle));
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
+            TriggerSource::MovedFromBreeding { player, .. } => {
+                let count = self.player(player).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player,
+                        index: i as u8,
+                    };
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
+            TriggerSource::Digivolved { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
+            TriggerSource::EnteredField { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
+            TriggerSource::OptionPlaced { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
+            TriggerSource::SourceTrashedFromStack { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
                 }
             }
         }
@@ -235,6 +307,70 @@ impl Game {
                 event_card: Some(revealed_card),
                 source_player: Some(defender),
                 was_security_skill: false,
+                ..TriggerContext::default()
+            },
+            TriggerSource::MovedFromBreeding {
+                player,
+                permanent,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(permanent),
+                event_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::Digivolved {
+                player,
+                permanent,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(permanent),
+                event_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::EnteredField {
+                player,
+                permanent,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(permanent),
+                event_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::OptionPlaced {
+                player,
+                permanent,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(permanent),
+                event_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::SourceTrashedFromStack {
+                player,
+                host,
+                host_card,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                event_source_card: Some(card),
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
+                source_player: Some(player),
+                ..TriggerContext::default()
             },
         }
     }
@@ -296,6 +432,7 @@ impl Game {
                 is_optional: effect.optional,
                 is_turn_player,
                 card_id: card_id.clone(),
+                allow_below_top_liveness: false,
             });
         }
     }
@@ -366,6 +503,7 @@ impl Game {
                     is_optional: effect.optional,
                     is_turn_player,
                     card_id: card_id.clone(),
+                    allow_below_top_liveness: false,
                 });
             }
         }
@@ -415,6 +553,7 @@ impl Game {
                     is_optional: effect.optional,
                     is_turn_player,
                     card_id: linked_card_id.clone(),
+                    allow_below_top_liveness: false,
                 });
             }
         }
@@ -506,8 +645,57 @@ impl Game {
                         is_optional: effect.optional,
                         is_turn_player,
                         card_id: training_card_id.clone(),
+                        allow_below_top_liveness: false,
                     });
                 }
+            }
+        }
+
+        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind)> = {
+            let Some(perm) = self
+                .players
+                .get(handle.player as usize)
+                .and_then(|p| p.battle_area.get(handle.index as usize))
+            else {
+                return;
+            };
+            let stack_len = perm.card_sources.len();
+            perm.card_sources
+                .iter()
+                .take(stack_len.saturating_sub(1))
+                .map(|c| {
+                    (
+                        c.card_id(&self.card_data).to_string(),
+                        c.handle(),
+                        source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                    )
+                })
+                .collect()
+        };
+        for (source_card_id, inherited_source, inherited_source_kind) in inherited_sources {
+            let Some(effects) = self.effects_for_card(&source_card_id, inherited_source) else {
+                continue;
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if !effect.inherited {
+                    continue;
+                }
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card: inherited_source,
+                    source_permanent: Some(handle),
+                    source_kind: inherited_source_kind,
+                    controller: handle.player,
+                    timing,
+                    trigger_context,
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: source_card_id.clone(),
+                    allow_below_top_liveness: true,
+                });
             }
         }
     }
@@ -551,51 +739,31 @@ impl Game {
     }
 
     fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
-        // Source permanent may have been deleted by a prior effect in this
-        // batch. Skip silently — matches Python behavior.
-        if let Some(perm_handle) = qe.source_permanent {
-            let Some(perm) = self
-                .players
-                .get(perm_handle.player as usize)
-                .and_then(|p| p.battle_area.get(perm_handle.index as usize))
-            else {
-                return;
-            };
-            // Also skip if the specific source card has been shuffled out
-            // of the top-card slot (e.g. permanent digivolved mid-batch).
-            // Phase 8 Task 4: a sideways-inherited effect's source_card is a
-            // card in `linked_cards`, not the top card — accept either.
-            // Phase 8 Task 5: a Training-sideways effect's source_card lives
-            // on a different `OptionState::Training` permanent the same
-            // owner controls; scan the owner's battle_area for it.
-            let top_matches = perm.top_card().card_index == qe.source_card.0;
-            let linked_matches = perm
-                .linked_cards
-                .iter()
-                .any(|c| c.card_index == qe.source_card.0);
-            let training_matches = self
-                .players
-                .get(perm_handle.player as usize)
-                .map(|p| {
-                    p.battle_area.iter().any(|pp| {
-                        matches!(
-                            pp.option_state,
-                            crate::permanent::OptionState::Training { .. }
-                        ) && pp.top_card().card_index == qe.source_card.0
-                    })
-                })
-                .unwrap_or(false);
-            if !top_matches && !linked_matches && !training_matches {
-                return;
-            }
-        }
-
         let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
             return;
         };
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
             return;
         };
+
+        if !self.queued_effect_source_is_live(&qe, effect) {
+            return;
+        }
+
+        if effect.max_per_turn > 0 {
+            if let Some(perm_handle) = qe.source_permanent {
+                let Some(perm) = self
+                    .players
+                    .get(perm_handle.player as usize)
+                    .and_then(|p| p.battle_area.get(perm_handle.index as usize))
+                else {
+                    return;
+                };
+                if perm.activation_count(qe.source_card, qe.effect_slot) >= effect.max_per_turn {
+                    return;
+                }
+            }
+        }
 
         // Python parity (§2.5h): `_fire_security_skill` iterates
         // `effect_list(SecuritySkill)` and invokes the callback directly —
@@ -623,15 +791,10 @@ impl Game {
         // timing, pay_cost_fn still fires (intentional — pay-costs are
         // orthogonal to the condition-skipping behavior for security effects).
         //
-        // Phase 5 Task 3: pay-cost hook — fires after condition passes, before
-        // process. Mirrors the condition-check pattern above: borrow
-        // `&effect.pay_cost_fn` read-only, construct a fresh `EffectContext`
-        // for the mutable call, then drop both before the process block.
-        //
-        // v1 constraint: pay_cost_fn must be synchronous. Installing a
-        // PendingSelection inside the closure is undefined behavior for v1;
-        // cards needing selection-gated pay-costs should fold the selection
-        // into `process` instead. See Phase 5 non-goals.
+        // Pay-cost hook — fires after condition passes, before process.
+        // Triggered effects may install a PendingSelection while paying cost;
+        // in that case park the queued effect and resume the process tail
+        // after the selection chain resolves.
         if let Some(pay_cost) = &effect.pay_cost_fn {
             let mut ctx = EffectContext::new_with_source_kind(
                 self,
@@ -642,6 +805,54 @@ impl Game {
             );
             if !pay_cost(&mut ctx) {
                 return; // cost not paid; skip process (silent abort, mirrors failed condition)
+            }
+            if self.pending_selection.is_some() {
+                if let Some(outer) = self.pending_pay_cost_effect.take() {
+                    self.pending_pay_cost_stack.push(outer);
+                }
+                self.pending_pay_cost_effect = Some(PendingPayCostEffect {
+                    queued_effect: qe.clone(),
+                    declined: false,
+                });
+                return;
+            }
+        }
+
+        self.run_queued_effect_process_tail(&qe);
+    }
+
+    fn run_queued_effect_process_tail(&mut self, qe: &QueuedEffect) {
+        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+            return;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return;
+        };
+
+        if !self.queued_effect_source_is_live(qe, effect) {
+            return;
+        }
+
+        if effect.max_per_turn > 0 {
+            if let Some(perm_handle) = qe.source_permanent {
+                let Some(activation_count) = self
+                    .players
+                    .get(perm_handle.player as usize)
+                    .and_then(|p| p.battle_area.get(perm_handle.index as usize))
+                    .map(|perm| perm.activation_count(qe.source_card, qe.effect_slot))
+                else {
+                    return;
+                };
+                if activation_count >= effect.max_per_turn {
+                    return;
+                }
+                if let Some(perm) = self
+                    .players
+                    .get_mut(perm_handle.player as usize)
+                    .and_then(|p| p.battle_area.get_mut(perm_handle.index as usize))
+                {
+                    perm.record_activation(qe.source_card, qe.effect_slot);
+                }
             }
         }
 
@@ -654,6 +865,83 @@ impl Game {
                 qe.controller,
             );
             process(&mut ctx);
+        }
+    }
+
+    fn queued_effect_source_is_live(
+        &self,
+        qe: &QueuedEffect,
+        effect: &crate::effect::Effect,
+    ) -> bool {
+        // Source permanent may have been deleted by a prior effect in this
+        // batch or by a parked pay-cost selection callback. Skip silently —
+        // matches Python behavior.
+        let Some(perm_handle) = qe.source_permanent else {
+            return true;
+        };
+        let Some(perm) = self
+            .players
+            .get(perm_handle.player as usize)
+            .and_then(|p| p.battle_area.get(perm_handle.index as usize))
+        else {
+            return false;
+        };
+        // Also skip if the specific source card has been shuffled out of the
+        // top-card slot (e.g. permanent digivolved mid-batch).
+        // Phase 8 Task 4: a sideways-inherited effect's source_card is a card
+        // in `linked_cards`, not the top card — accept either.
+        // Phase 8 Task 5: a Training-sideways effect's source_card lives on a
+        // different `OptionState::Training` permanent the same owner controls;
+        // scan the owner's battle_area for it.
+        let top_matches =
+            !qe.allow_below_top_liveness && perm.top_card().card_index == qe.source_card.0;
+        let linked_matches = perm
+            .linked_cards
+            .iter()
+            .any(|c| c.card_index == qe.source_card.0);
+        let below_top_source_matches = perm
+            .card_sources
+            .iter()
+            .take(perm.card_sources.len().saturating_sub(1))
+            .any(|c| c.card_index == qe.source_card.0);
+        let inherited_source_matches =
+            below_top_source_matches && qe.allow_below_top_liveness && effect.inherited;
+        let training_matches = self
+            .players
+            .get(perm_handle.player as usize)
+            .map(|p| {
+                p.battle_area.iter().any(|pp| {
+                    matches!(
+                        pp.option_state,
+                        crate::permanent::OptionState::Training { .. }
+                    ) && pp.top_card().card_index == qe.source_card.0
+                })
+            })
+            .unwrap_or(false);
+        top_matches || linked_matches || inherited_source_matches || training_matches
+    }
+
+    fn resume_queued_effect_process_tail(&mut self, qe: QueuedEffect) {
+        let prev_effect_source = self.effect_source_player;
+        let prev_trigger_context = self.current_trigger_context;
+        self.effect_source_player = Some(qe.controller);
+        self.current_trigger_context = qe.trigger_context;
+        self.run_queued_effect_process_tail(&qe);
+        self.current_trigger_context = prev_trigger_context;
+        self.effect_source_player = prev_effect_source;
+    }
+
+    pub(crate) fn resume_pending_pay_cost_effect(&mut self) {
+        while self.pending_selection.is_none() {
+            if self.pending_pay_cost_effect.is_none() {
+                self.pending_pay_cost_effect = self.pending_pay_cost_stack.pop();
+            }
+            let Some(pending) = self.pending_pay_cost_effect.take() else {
+                return;
+            };
+            if !pending.declined {
+                self.resume_queued_effect_process_tail(pending.queued_effect);
+            }
         }
     }
 
@@ -821,6 +1109,10 @@ impl Game {
         }
 
         if self.pending_selection.is_none() {
+            self.resume_pending_pay_cost_effect();
+        }
+
+        if self.pending_selection.is_none() {
             crate::scheduled_effects::resume_scheduled_drain(self);
         }
 
@@ -859,6 +1151,17 @@ impl Game {
         if self.pending_selection.is_none() {
             self.advance_pending_option();
         }
+        if self.pending_selection.is_none() {
+            self.finish_pending_option_placed_turn_check();
+        }
+        // Some attack-time selections, especially optional pre-declare
+        // replacements, park `pending_attack` before declaration commits. Once
+        // the selection callback and any nested drains settle, resume the
+        // attack state machine so callers using the normal action decoder do
+        // not get a Main-phase mask while an attack is still pending.
+        if self.pending_selection.is_none() && self.pending_attack.is_some() {
+            self.advance_pending_attack();
+        }
         Ok(())
     }
 
@@ -896,7 +1199,9 @@ impl Game {
                     return;
                 }
                 self.dispose_option();
-                self.check_turn_end();
+                if self.pending_selection.is_none() {
+                    self.check_turn_end();
+                }
             }
             crate::selection::OptionResolutionPhase::ArtsSelectTarget => {
                 // Arts selection callbacks finish the flow directly.

@@ -53,7 +53,8 @@ impl Game {
             // already accept callbacks installed by later tasks.
             | GamePhase::SelectUnion
             | GamePhase::SelectPermutation
-            | GamePhase::SelectBudgeted => {
+            | GamePhase::SelectBudgeted
+            | GamePhase::SelectBreedingPermanent => {
                 let _ = self.resolve_selection(player_id, action_id);
             }
             GamePhase::EndOfTurnAction => self.decode_end_of_turn_action(action_id),

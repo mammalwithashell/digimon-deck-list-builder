@@ -184,7 +184,7 @@ effects:
                 assert_eq!(base, 0);
                 assert_eq!(
                     per,
-                    CompiledPerSelector::CardCountInZone {
+                    CompiledPerSelector::CardCountInZoneScoped {
                         of: CompiledPlayerRef::Opponent,
                         zone: CompiledZone::Trash,
                     }

@@ -118,6 +118,25 @@ impl Player {
         self.digitama_deck.shuffle(rng);
     }
 
+    pub fn contains_card(&self, handle: crate::card_source::CardHandle) -> bool {
+        self.hand.iter().any(|card| card.handle() == handle)
+            || self.deck.iter().any(|card| card.handle() == handle)
+            || self.trash.iter().any(|card| card.handle() == handle)
+            || self.security.iter().any(|card| card.handle() == handle)
+            || self
+                .digitama_deck
+                .iter()
+                .any(|card| card.handle() == handle)
+            || self
+                .breeding_area
+                .as_ref()
+                .is_some_and(|perm| permanent_contains_card(perm, handle))
+            || self
+                .battle_area
+                .iter()
+                .any(|perm| permanent_contains_card(perm, handle))
+    }
+
     /// Set up the security stack by moving cards from the top of the deck.
     pub fn setup_security(&mut self, count: u8) {
         for _ in 0..count {
@@ -247,4 +266,18 @@ impl Player {
             perm.is_suspended = false;
         }
     }
+}
+
+fn permanent_contains_card(
+    permanent: &crate::permanent::Permanent,
+    handle: crate::card_source::CardHandle,
+) -> bool {
+    permanent
+        .card_sources
+        .iter()
+        .any(|card| card.handle() == handle)
+        || permanent
+            .linked_cards
+            .iter()
+            .any(|card| card.handle() == handle)
 }

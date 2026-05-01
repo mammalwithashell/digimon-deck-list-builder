@@ -83,7 +83,20 @@ Action IDs are intentionally reused across phases.
 - Generic selection phases (`SelectTarget`, `SelectMaterial`, `SelectHand`, `SelectReveal`, `SelectEffectChoice`, `SelectSecurity`) use `pending_selection.valid_indices`.
 - `SelectTrash`: uses `pending_selection.valid_indices` when available, otherwise falls back to `130-179` (`130 + trash_idx`). Optional selections allow decline with `62`.
 - `SelectSource`: uses `pending_selection.valid_indices` when available, otherwise falls back to `2000-2167` (`2000 + field_idx * 12 + source_idx`). Optional selections allow decline with `62`.
+- `SelectBudgeted`: uses field-target action IDs for opponent battle-area permanents and allows decline with `62` once the minimum pick count is satisfied.
+- `SelectBreedingPermanent`: uses phase-scoped breeding selection IDs (`14` for player 0, `15` for player 1) for breeding-area permanent choices.
 - Optional selections allow decline with `62`.
+
+### Selection Primitive Reuse
+
+Group 2 selection primitives reuse existing action ranges and keep `ACTION_SPACE_SIZE = 2168`.
+
+- Cross-permanent source selections use `SOURCE_SELECT_START..SOURCE_SELECT_END`.
+- Up-to-N source selections expose `PASS` only after the minimum pick count is satisfied.
+- DP-budget permanent selections reuse field-target action IDs during `SelectBudgeted`.
+- Breeding permanent selections use phase-scoped breeding selection IDs only while `SelectBreedingPermanent` is pending.
+
+Any future expansion that requires more source slots, more breeding targets, or additional simultaneous selection surfaces must update this document, Rust constants, PyO3 constants, and RL environment constants in the same change.
 
 ## Selection Conventions
 
@@ -94,7 +107,7 @@ Action IDs are intentionally reused across phases.
 | `40-49` | Own security index |
 | `50-59` | Opponent security index |
 | `62` | Decline optional selection |
-| `99` | Own breeding permanent |
+| `14/15` | Own breeding permanent during `SelectBreedingPermanent` |
 | `100-113` | Own battle-area permanent |
 | `114-127` | Opponent battle-area permanent |
 | `130-179` | Trash-card index |
