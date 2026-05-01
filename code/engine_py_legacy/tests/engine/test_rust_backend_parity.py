@@ -140,8 +140,8 @@ def test_recording_returns_none_without_record_flag():
 
 def test_recording_has_expected_shape():
     rs = RustHeadlessGame(DECK1, DECK2, record_actions=True)
-    rs.step(62)
-    rs.step(62)
+    rs.step(0)
+    rs.step(0)
     rec = rs.get_recording()
     assert rec is not None
     for key in (
