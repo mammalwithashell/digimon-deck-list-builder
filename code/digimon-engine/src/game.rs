@@ -750,30 +750,12 @@ impl Game {
         player_id: PlayerId,
         card: crate::card_source::CardHandle,
     ) -> Option<PermanentHandle> {
-        let field_slots = self.rules.field_slots;
         let hand_index = self
             .player(player_id)
             .hand
             .iter()
             .position(|source| source.handle() == card)?;
-        if self.player(player_id).battle_area.len() >= field_slots as usize {
-            return None;
-        }
-        let card_kind = self.player(player_id).hand[hand_index].card_kind(&self.card_data);
-        if card_kind == crate::enums::CardKind::Digimon
-            && self.modifiers.player_has(
-                player_id,
-                crate::enums::ModifierType::CannotPlayDigimonByEffect,
-            )
-        {
-            return None;
-        }
-        if card_kind == crate::enums::CardKind::Tamer
-            && self.modifiers.player_has(
-                player_id,
-                crate::enums::ModifierType::CannotPlayTamerByEffect,
-            )
-        {
+        if !self.can_play_card_from_effect_without_cost(player_id, card, 1) {
             return None;
         }
 
@@ -813,10 +795,38 @@ impl Game {
         Some(entered)
     }
 
-    pub fn cancel_parked_replacement(&mut self) {
-        if let Some(parked) = self.parked_replacement.as_mut() {
-            parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
+    pub fn can_play_card_from_effect_without_cost(
+        &self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+        required_slots: usize,
+    ) -> bool {
+        let Some(player) = self.players.get(player_id as usize) else {
+            return false;
+        };
+        if player.battle_area.len() + required_slots > self.rules.field_slots as usize {
+            return false;
         }
+        let Some(card_kind) = self.card_kind_for_handle(card) else {
+            return false;
+        };
+        if card_kind == crate::enums::CardKind::Digimon
+            && self.modifiers.player_has(
+                player_id,
+                crate::enums::ModifierType::CannotPlayDigimonByEffect,
+            )
+        {
+            return false;
+        }
+        if card_kind == crate::enums::CardKind::Tamer
+            && self.modifiers.player_has(
+                player_id,
+                crate::enums::ModifierType::CannotPlayTamerByEffect,
+            )
+        {
+            return false;
+        }
+        true
     }
 
     pub fn card(&self, card: crate::card_source::CardHandle) -> &CardData {

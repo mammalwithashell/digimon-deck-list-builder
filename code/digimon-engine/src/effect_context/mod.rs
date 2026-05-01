@@ -800,8 +800,10 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Alias for [`Self::cancel_leave`] for replacement-process callbacks
+    /// whose card text names the current replacement rather than "leaving".
     pub fn cancel_current_replacement(&mut self) {
-        self.game.cancel_parked_replacement();
+        self.cancel_leave();
     }
 
     /// Mark the parked replacement as custom-handled — the process body has
@@ -2140,13 +2142,58 @@ impl<'a> EffectContext<'a> {
         true
     }
 
-    pub fn play_selected_sources_without_cost(&mut self, selected: Vec<SourceSelectionRef>) {
-        for source_ref in selected {
-            let player = source_ref.permanent.player;
-            if let Some(card) = self.game.remove_source_ref(source_ref) {
-                self.game.play_card_from_effect_without_cost(player, card);
+    pub fn play_selected_sources_without_cost(
+        &mut self,
+        selected: Vec<SourceSelectionRef>,
+    ) -> bool {
+        let mut required_slots_by_player = vec![0usize; self.game.players.len()];
+        for source_ref in &selected {
+            let Some(permanent) = self
+                .game
+                .player(source_ref.permanent.player)
+                .battle_area
+                .get(source_ref.permanent.index as usize)
+            else {
+                return false;
+            };
+            let Some(pos) = permanent
+                .card_sources
+                .iter()
+                .position(|source| source.handle() == source_ref.card)
+            else {
+                return false;
+            };
+            if pos + 1 >= permanent.card_sources.len() {
+                return false;
+            }
+            let player_index = source_ref.permanent.player as usize;
+            let Some(required_slots) = required_slots_by_player.get_mut(player_index) else {
+                return false;
+            };
+            *required_slots += 1;
+            if !self.game.can_play_card_from_effect_without_cost(
+                source_ref.permanent.player,
+                source_ref.card,
+                *required_slots,
+            ) {
+                return false;
             }
         }
+
+        for source_ref in selected {
+            let player = source_ref.permanent.player;
+            let Some(card) = self.game.remove_source_ref(source_ref) else {
+                return false;
+            };
+            if self
+                .game
+                .play_card_from_effect_without_cost(player, card)
+                .is_none()
+            {
+                return false;
+            }
+        }
+        true
     }
 
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.

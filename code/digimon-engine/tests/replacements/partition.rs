@@ -63,8 +63,9 @@ impl CardEffect for PaildramonPartition {
                         ),
                     ],
                     move |ctx, selected| {
-                        ctx.play_selected_sources_without_cost(selected);
-                        ctx.cancel_current_replacement();
+                        if ctx.play_selected_sources_without_cost(selected) {
+                            ctx.cancel_current_replacement();
+                        }
                     },
                 );
             })
@@ -198,4 +199,91 @@ fn bt16_025_partition_decline_allows_deletion() {
     assert!(trash_ids.contains(&"BT16-025".to_string()));
     assert!(trash_ids.contains(&"BLUE-LV4".to_string()));
     assert!(trash_ids.contains(&"GREEN-LV4".to_string()));
+}
+
+#[test]
+fn bt16_025_partition_masks_picks_that_cannot_complete_requirements() {
+    let mut r = DebugRunner::builder()
+        .add_card(colored_card("BT16-025", CardColor::Blue, 5))
+        .add_card(colored_card("BLUE-A", CardColor::Blue, 4))
+        .add_card(colored_card("BLUE-B", CardColor::Blue, 4))
+        .add_card(colored_card("GREEN-LV4", CardColor::Green, 4))
+        .start();
+    r.register_effect("BT16-025", Arc::new(PaildramonPartition));
+
+    let carrier = r.place_stack(0, &["BLUE-A", "BLUE-B", "GREEN-LV4", "BT16-025"]);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Partition");
+
+    r.game
+        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .expect("pick first blue source");
+
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("second source pick");
+    assert_eq!(
+        pending.valid_action_ids,
+        vec![encode_source_select(0, 2).unwrap()],
+        "after a Blue-only source is picked, only a Green-completing source remains selectable"
+    );
+}
+
+#[test]
+fn bt16_025_partition_failed_source_play_does_not_cancel_or_strand_cards() {
+    let mut r = DebugRunner::builder()
+        .add_card(colored_card("BT16-025", CardColor::Blue, 5))
+        .add_card(colored_card("BLUE-LV4", CardColor::Blue, 4))
+        .add_card(colored_card("GREEN-LV4", CardColor::Green, 4))
+        .add_card(colored_card("FILLER", CardColor::Red, 3))
+        .start();
+    r.register_effect("BT16-025", Arc::new(PaildramonPartition));
+
+    let carrier = r.place_stack(0, &["BLUE-LV4", "GREEN-LV4", "BT16-025"]);
+    for _ in 0..13 {
+        r.place_on_field(0, "FILLER", None);
+    }
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        r.game.rules.field_slots as usize,
+        "precondition: battle area is full, so Partition cannot play two sources"
+    );
+
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Partition");
+    r.game
+        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .expect("pick blue source");
+    r.game
+        .resolve_selection(0, encode_source_select(0, 1).unwrap())
+        .expect("pick green source");
+
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        13,
+        "failed Partition source play must leave the original deletion uncancelled"
+    );
+    assert!(
+        r.game.players[0].hand.is_empty(),
+        "failed Partition must not strand selected sources in hand"
+    );
+    let trash_ids: Vec<String> = r.game.players[0]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    for id in ["BT16-025", "BLUE-LV4", "GREEN-LV4"] {
+        assert!(
+            trash_ids.contains(&id.to_string()),
+            "{id} should be trashed by the original deletion when Partition play fails"
+        );
+    }
 }

@@ -425,29 +425,39 @@ impl<'a> EffectContext<'a> {
         if host.player != self.player {
             return;
         }
-        let available = partition_source_refs(self.game, host, &requirements);
-        if !partition_requirements_match(self.game, &requirements, &available) {
+        let requirements = std::sync::Arc::new(requirements);
+        if !partition_can_extend(self.game, host, &requirements, &[]) {
             return;
         }
 
-        let requirements = std::sync::Arc::new(requirements);
-        let filter_requirements = std::sync::Arc::clone(&requirements);
-        let callback_requirements = std::sync::Arc::clone(&requirements);
-        self.select_own_sources(
-            prompt,
-            count as u8,
-            count as u8,
-            move |game, source| {
-                source.permanent == host
-                    && filter_requirements
-                        .iter()
-                        .any(|requirement| (requirement.matches)(game, source))
-            },
-            move |ctx, selected| {
-                if partition_requirements_match(ctx.game, &callback_requirements, &selected) {
-                    callback(ctx, selected);
-                }
-            },
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let previous_phase = self.game.current_phase;
+        install_partition_source_selection(
+            self.game,
+            host,
+            controller,
+            selecting_player,
+            override_pin,
+            prompt.to_string(),
+            requirements,
+            Vec::new(),
+            source_card,
+            source_permanent,
+            previous_phase,
+            Box::new(move |game, selected| {
+                let mut ctx = EffectContext::new_with_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    controller,
+                    override_pin,
+                );
+                callback(&mut ctx, selected);
+            }),
         );
     }
 
@@ -1620,6 +1630,71 @@ fn partition_requirements_match(
     partition_match_from(game, requirements, selected, &mut used, 0)
 }
 
+fn partition_can_extend(
+    game: &Game,
+    host: PermanentHandle,
+    requirements: &[PartitionRequirement],
+    picked: &[SourceSelectionRef],
+) -> bool {
+    if picked.len() > requirements.len() {
+        return false;
+    }
+    if picked.len() == requirements.len() {
+        return partition_requirements_match(game, requirements, picked);
+    }
+    let candidates: Vec<SourceSelectionRef> = partition_source_refs(game, host, requirements)
+        .into_iter()
+        .filter(|candidate| !picked.iter().any(|p| p.card == candidate.card))
+        .collect();
+    partition_can_extend_from(game, requirements, picked.to_vec(), &candidates, 0)
+}
+
+fn partition_can_extend_from(
+    game: &Game,
+    requirements: &[PartitionRequirement],
+    picked: Vec<SourceSelectionRef>,
+    candidates: &[SourceSelectionRef],
+    start: usize,
+) -> bool {
+    if picked.len() == requirements.len() {
+        return partition_requirements_match(game, requirements, &picked);
+    }
+    for index in start..candidates.len() {
+        let mut next = picked.clone();
+        next.push(candidates[index]);
+        if partition_can_extend_from(game, requirements, next, candidates, index + 1) {
+            return true;
+        }
+    }
+    false
+}
+
+fn partition_next_candidates(
+    game: &Game,
+    host: PermanentHandle,
+    requirements: &[PartitionRequirement],
+    picked: &[SourceSelectionRef],
+) -> Vec<(u16, SourceSelectionRef)> {
+    use crate::action::space::encode_source_select;
+
+    partition_source_refs(game, host, requirements)
+        .into_iter()
+        .filter(|candidate| !picked.iter().any(|p| p.card == candidate.card))
+        .filter(|candidate| {
+            let mut next = picked.to_vec();
+            next.push(*candidate);
+            partition_can_extend(game, host, requirements, &next)
+        })
+        .filter_map(|source_ref| {
+            encode_source_select(
+                source_ref.field_index as u16,
+                source_ref.source_index as u16,
+            )
+            .map(|action_id| (action_id, source_ref))
+        })
+        .collect()
+}
+
 fn partition_match_from(
     game: &Game,
     requirements: &[PartitionRequirement],
@@ -1644,6 +1719,97 @@ fn partition_match_from(
         used[source_index] = false;
     }
     false
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_partition_source_selection(
+    game: &mut Game,
+    host: PermanentHandle,
+    controller: PlayerId,
+    selecting_player: PlayerId,
+    override_pin: Option<PlayerId>,
+    prompt: String,
+    requirements: std::sync::Arc<Vec<PartitionRequirement>>,
+    picked: Vec<SourceSelectionRef>,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    previous_phase: GamePhase,
+    final_callback: SourceFinalCallback,
+) {
+    use std::sync::{Arc, Mutex};
+
+    if picked.len() == requirements.len() {
+        if partition_requirements_match(game, &requirements, &picked) {
+            final_callback(game, picked);
+        }
+        return;
+    }
+
+    let candidates = partition_next_candidates(game, host, &requirements, &picked);
+    if candidates.is_empty() {
+        return;
+    }
+    let valid_action_ids: Vec<u16> = candidates.iter().map(|(action_id, _)| *action_id).collect();
+
+    let shared_cb: Arc<Mutex<Option<SourceFinalCallback>>> =
+        Arc::new(Mutex::new(Some(final_callback)));
+    let action_to_source = Arc::new(candidates);
+    let prompt_for_next = prompt.clone();
+    let requirements_for_next = std::sync::Arc::clone(&requirements);
+    let picked_for_pick = picked.clone();
+
+    game.current_phase = GamePhase::SelectSource;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::SourceMulti {
+            min: requirements.len() as u8,
+            max: requirements.len() as u8,
+            picked: picked.len() as u8,
+        },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: false,
+        prompt,
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        callback: Box::new(move |game: &mut Game, action_id: u16| {
+            let (_, source_ref) = action_to_source
+                .iter()
+                .find(|(candidate_action, _)| *candidate_action == action_id)
+                .copied()
+                .expect("partition source action must have been in valid_action_ids");
+            let mut next_picked = picked_for_pick;
+            next_picked.push(source_ref);
+
+            let next_cb: SourceFinalCallback = Box::new(move |game, picks| {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(
+                    cb_opt.is_some(),
+                    "partition source final callback already consumed"
+                );
+                if let Some(cb) = cb_opt {
+                    cb(game, picks);
+                }
+            });
+
+            install_partition_source_selection(
+                game,
+                host,
+                controller,
+                selecting_player,
+                override_pin,
+                prompt_for_next,
+                requirements_for_next,
+                next_picked,
+                source_card,
+                source_permanent,
+                previous_phase,
+                next_cb,
+            );
+        }),
+        on_decline: None,
+    });
 }
 
 fn source_multi_candidates(
