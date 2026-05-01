@@ -333,3 +333,51 @@ class TestTensorProfiles:
 
         with pytest.raises(ValueError, match="unknown tensor profile"):
             get_tensor_profile("missing")
+
+
+def _starter_decks():
+    return ["ST1-01"] * 5 + ["ST1-03"] * 45, ["ST1-01"] * 5 + ["ST1-03"] * 45
+
+
+def test_rust_headless_game_exposes_rl_state_snapshot():
+    import digimon_engine
+
+    deck1, deck2 = _starter_decks()
+    runner = digimon_engine.RustHeadlessGame(deck1, deck2, seed=123)
+    state = runner.get_rl_state()
+
+    assert state["game_over"] is False
+    assert state["winner_id"] is None
+    assert state["current_player_id"] in (1, 2)
+    assert state["phase"] == "Mulligan"
+    assert state["p1_security"] == 0
+    assert state["p2_security"] == 0
+    assert state["p1_total_dp"] == 0
+    assert state["p2_total_dp"] == 0
+
+
+def test_rust_headless_game_rejects_invalid_board_tensor_player_ids():
+    import pytest
+    import digimon_engine
+
+    deck1, deck2 = _starter_decks()
+    runner = digimon_engine.RustHeadlessGame(deck1, deck2, seed=123)
+
+    with pytest.raises(ValueError, match="player_id must be 1 or 2"):
+        runner.get_board_tensor(0)
+    with pytest.raises(ValueError, match="player_id must be 1 or 2"):
+        runner.get_board_tensor(3)
+
+
+def test_rust_headless_game_starts_with_explicit_mulligan_choices():
+    import numpy as np
+    import digimon_engine
+
+    deck1, deck2 = _starter_decks()
+    runner = digimon_engine.RustHeadlessGame(deck1, deck2, seed=123)
+    mask = np.asarray(runner.get_action_mask())
+
+    assert mask[0] == 1.0
+    assert mask[1] == 1.0
+    assert mask[60] == 0.0
+    assert mask[62] == 0.0

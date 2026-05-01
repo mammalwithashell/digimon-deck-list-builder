@@ -42,6 +42,7 @@ use ::digimon_engine::card_registry::{CardRegistry as RustCardRegistry, REGISTRY
 use ::digimon_engine::deck_tools;
 use ::digimon_engine::enums::{CardKind as RustCardKind, GamePhase as RustGamePhase};
 use ::digimon_engine::events::GameEvent;
+use ::digimon_engine::policies::greedy_action as choose_greedy_action;
 use ::digimon_engine::rules::CardRestriction;
 use ::digimon_engine::tensor::{MAX_SOURCES, TENSOR_SIZE};
 use ::digimon_engine::tensor_profile::{
@@ -567,15 +568,7 @@ impl RustHeadlessGame {
             seed,
         )
         .map_err(PyValueError::new_err)?;
-        // Auto-keep both players' mulligan so the runner behaves like Python
-        // `HeadlessGame`, which calls `game.start_game()` in its base class.
-        // Callers who want explicit mulligan decisions should call
-        // `accept_mulligan` before any `step`.
-        let mut this = Self { inner: runner };
-        while let Some(p) = this.inner.mulligan_current_player() {
-            let _ = this.inner.accept_mulligan(p, true);
-        }
-        Ok(this)
+        Ok(Self { inner: runner })
     }
 
     /// Execute a single action for the current decision player. No-op after
@@ -597,10 +590,37 @@ impl RustHeadlessGame {
         &self,
         py: Python<'py>,
         player_id: Option<u8>,
-    ) -> Bound<'py, PyArray1<f32>> {
-        let rust_pid = player_id.map(|p| p.saturating_sub(1));
+    ) -> PyResult<Bound<'py, PyArray1<f32>>> {
+        let rust_pid = match player_id {
+            None => None,
+            Some(pid) => Some(to_rust_pid(pid)?),
+        };
         let tensor = self.inner.get_board_tensor(rust_pid);
-        PyArray1::from_vec_bound(py, tensor)
+        Ok(PyArray1::from_vec_bound(py, tensor))
+    }
+
+    fn get_rl_state(&self, py: Python) -> PyResult<PyObject> {
+        let game = &self.inner.game;
+        let current_player = self.inner.current_decision_player() + 1;
+        let p1 = game.player(0);
+        let p2 = game.player(1);
+
+        let d = PyDict::new_bound(py);
+        d.set_item("game_over", game.game_over)?;
+        d.set_item("winner_id", to_python_pid(game.winner.unwrap_or(u8::MAX)))?;
+        d.set_item("current_player_id", current_player)?;
+        d.set_item("phase", game.current_phase.py_name())?;
+        d.set_item("memory", game.memory)?;
+        d.set_item("p1_security", p1.security.len())?;
+        d.set_item("p2_security", p2.security.len())?;
+        d.set_item("p1_total_dp", p1.total_field_dp(&game.card_data))?;
+        d.set_item("p2_total_dp", p2.total_field_dp(&game.card_data))?;
+        Ok(d.into_py(py))
+    }
+
+    fn greedy_action(&self) -> u16 {
+        let mask = self.inner.get_action_mask();
+        choose_greedy_action(&self.inner.game, &mask)
     }
 
     /// Run to conclusion. `policy_fn`, if provided, is
@@ -721,11 +741,14 @@ impl RustHeadlessGame {
         to_python_pid(self.inner.winner_id())
     }
 
+    #[getter]
+    fn current_player_id(&self) -> u8 {
+        self.inner.current_decision_player() + 1
+    }
+
     /// Manual mulligan override. `pid` is the Python player_id (1 or 2).
     fn accept_mulligan(&mut self, pid: u8, keep: bool) -> PyResult<()> {
-        let rust_pid = pid
-            .checked_sub(1)
-            .ok_or_else(|| PyValueError::new_err("player_id must be 1 or 2"))?;
+        let rust_pid = to_rust_pid(pid)?;
         self.inner
             .accept_mulligan(rust_pid, keep)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
@@ -736,6 +759,13 @@ impl RustHeadlessGame {
     #[getter]
     fn mulligan_current_player(&self) -> Option<u8> {
         to_python_pid(self.inner.mulligan_current_player().unwrap_or(u8::MAX))
+    }
+}
+
+fn to_rust_pid(py_pid: u8) -> PyResult<u8> {
+    match py_pid {
+        1 | 2 => Ok(py_pid - 1),
+        _ => Err(PyValueError::new_err("player_id must be 1 or 2")),
     }
 }
 

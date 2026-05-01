@@ -207,7 +207,7 @@ impl HeadlessRunner {
     /// Who is expected to submit the next action. In most phases that's
     /// `turn_player`; during a selection/interrupt it's the selecting
     /// player; during mulligan it's whoever is next in `mulligan_pending`.
-    fn current_decision_player(&self) -> PlayerId {
+    pub fn current_decision_player(&self) -> PlayerId {
         if let Some(p) = self.game.mulligan_current_player() {
             return p;
         }
