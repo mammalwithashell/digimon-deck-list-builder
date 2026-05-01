@@ -114,6 +114,7 @@ pub enum StepSpec {
     AddDpModifier(AddDpModifierArgs),
     AddModifier(AddModifierArgs),
     GrantKeyword(GrantKeywordArgs),
+    GrantEffectImmunity(GrantEffectImmunityArgs),
 
     // Selection
     SelectOwnPermanent(SelectFieldArgs),
@@ -216,6 +217,7 @@ impl Serialize for StepSpec {
             StepSpec::AddDpModifier(v) => kv!(s, "add_dp_modifier", v),
             StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
+            StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
             // Selection
             StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
             StepSpec::SelectOpponentPermanent(v) => kv!(s, "select_opponent_permanent", v),
@@ -342,6 +344,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_dp_modifier" => StepSpec::AddDpModifier(map.next_value()?),
             "add_modifier" => StepSpec::AddModifier(map.next_value()?),
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
+            "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
 
             // Selection
             "select_own_permanent" => StepSpec::SelectOwnPermanent(map.next_value()?),
@@ -425,6 +428,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_dp_modifier",
                         "add_modifier",
                         "grant_keyword",
+                        "grant_effect_immunity",
                         "select_own_permanent",
                         "select_opponent_permanent",
                         "select_any_permanent",
@@ -766,12 +770,54 @@ pub struct GrantKeywordArgs {
     pub value: Option<i32>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectSourceKindSpec {
+    Digimon,
+    Tamer,
+    Option,
+    Rule,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum EffectControllerSpec {
+    Any,
+    Opponent,
+    Own,
+}
+
+impl Default for EffectControllerSpec {
+    fn default() -> Self {
+        Self::Opponent
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GrantEffectImmunityArgs {
+    pub target: BindingRef,
+    pub source_kind: EffectSourceKindSpec,
+    #[serde(default)]
+    pub source_controller: EffectControllerSpec,
+    pub expiry: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum FieldSelector {
+    LowestDp,
+    HighestDp,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectFieldArgs {
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selector: Option<FieldSelector>,
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,

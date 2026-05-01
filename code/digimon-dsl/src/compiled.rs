@@ -26,6 +26,8 @@ pub struct CompiledCard {
     pub attribute: Option<String>,
     pub ace_overflow: Option<i32>,
     pub identity: Option<CompiledIdentity>,
+    pub dual: Option<CompiledDual>,
+    pub use_requirement: Option<CompiledPredicate>,
     pub alt_paths: Vec<CompiledAltPath>,
     pub effects: Vec<CompiledClause>,
 }
@@ -37,6 +39,7 @@ pub enum CompiledCardKind {
     Option,
     DigiEgg,
     Token,
+    Dual,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -48,6 +51,32 @@ pub enum CompiledColor {
     Black,
     Purple,
     White,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDual {
+    pub digimon: CompiledDualDigimon,
+    pub option: CompiledDualOption,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDualDigimon {
+    pub level: u8,
+    pub dp: i32,
+    pub colors: Vec<CompiledColor>,
+    pub traits: Vec<String>,
+    pub effect_text: String,
+    pub inherited_text: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDualOption {
+    pub use_cost: u16,
+    pub colors: Vec<CompiledColor>,
+    pub effect_text: String,
+    pub security_text: String,
+    pub keywords: Vec<String>,
+    pub use_requirement: Option<Box<CompiledPredicate>>,
 }
 
 // ── Identity ────────────────────────────────────────────────────────
@@ -189,6 +218,7 @@ pub struct CompiledPredicate {
     pub count_lte: Option<CompiledCountAggregate>,
     pub count_gte: Option<CompiledCountAggregate>,
     pub any_permanent: Option<Box<CompiledExistential>>,
+    pub any_field_permanent: Option<Box<CompiledExistential>>,
     pub no_permanent: Option<Box<CompiledExistential>>,
     pub all_permanents: Option<Box<CompiledExistential>>,
     pub all_of: Vec<CompiledPredicate>,
@@ -462,6 +492,27 @@ pub struct CompiledGrantKeywordValue {
     pub value: Option<i32>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledEffectSourceKind {
+    Digimon,
+    Tamer,
+    Option,
+    Rule,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledEffectController {
+    Any,
+    Opponent,
+    Own,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledFieldSelector {
+    LowestDp,
+    HighestDp,
+}
+
 // ── Steps ───────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -621,9 +672,16 @@ pub enum CompiledStep {
         expiry: String,
         value: Option<i32>,
     },
+    GrantEffectImmunity {
+        target: CompiledBindingRef,
+        source_kind: CompiledEffectSourceKind,
+        source_controller: CompiledEffectController,
+        expiry: String,
+    },
     SelectOwnPermanent {
         filter: CompiledPredicate,
         bind_as: Option<String>,
+        selector: Option<CompiledFieldSelector>,
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
@@ -631,6 +689,7 @@ pub enum CompiledStep {
     SelectOpponentPermanent {
         filter: CompiledPredicate,
         bind_as: Option<String>,
+        selector: Option<CompiledFieldSelector>,
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
@@ -638,6 +697,7 @@ pub enum CompiledStep {
     SelectAnyPermanent {
         filter: CompiledPredicate,
         bind_as: Option<String>,
+        selector: Option<CompiledFieldSelector>,
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
@@ -839,6 +899,8 @@ mod tests {
             attribute: None,
             ace_overflow: None,
             identity: None,
+            dual: None,
+            use_requirement: None,
             alt_paths: vec![],
             effects: vec![CompiledClause::Triggered(CompiledTriggeredClause {
                 when: vec![CompiledTiming::MainFromHand],
@@ -893,6 +955,8 @@ mod tests {
             attribute: None,
             ace_overflow: None,
             identity: None,
+            dual: None,
+            use_requirement: None,
             alt_paths: vec![],
             effects: vec![CompiledClause::Triggered(CompiledTriggeredClause {
                 when: vec![CompiledTiming::OnPlay],

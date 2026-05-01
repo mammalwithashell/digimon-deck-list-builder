@@ -45,6 +45,70 @@ cost: 0
 }
 
 #[test]
+fn parses_dual_card_metadata() {
+    let yaml = r#"
+card: DUAL-DSL
+name: Dual DSL
+kind: dual
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [red]
+    traits: [DualTrait]
+    effect_text: "[When Digivolving] Draw 1."
+    inherited_text: ""
+  option:
+    use_cost: 5
+    colors: [purple]
+    effect_text: "[Main] Gain 2 memory."
+    security_text: ""
+    keywords: [ArtsDigivolve]
+effects: []
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse dual yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile dual yaml");
+    assert_eq!(compiled.card, "DUAL-DSL");
+    assert!(compiled.dual.is_some());
+}
+
+#[test]
+fn parses_st23_09_docs_example() {
+    let yaml = include_str!("../../../../docs/examples/ST23-09-dual-card.yaml");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse ST23-09 example");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile ST23-09 example");
+    let dual = compiled.dual.as_ref().expect("compiled dual metadata");
+    assert!(dual.option.use_requirement.is_some());
+    assert!(compiled.effects.iter().any(|clause| {
+        matches!(
+            clause,
+            digimon_dsl::compiled::CompiledClause::Triggered(triggered)
+                if triggered.process.iter().any(|step| {
+                    matches!(
+                        step,
+                        digimon_dsl::compiled::CompiledStep::GrantEffectImmunity { .. }
+                    )
+                })
+        )
+    }));
+    assert!(compiled.effects.iter().any(|clause| {
+        matches!(
+            clause,
+            digimon_dsl::compiled::CompiledClause::Triggered(triggered)
+                if triggered.process.iter().any(|step| {
+                    matches!(
+                        step,
+                        digimon_dsl::compiled::CompiledStep::SelectOpponentPermanent {
+                            selector: Some(digimon_dsl::compiled::CompiledFieldSelector::HighestDp),
+                            ..
+                        }
+                    )
+                })
+        )
+    }));
+}
+
+#[test]
 fn rejects_unknown_top_level_field() {
     let yaml = r#"
 card: X-1

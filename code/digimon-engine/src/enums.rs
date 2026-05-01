@@ -12,6 +12,21 @@ pub enum CardKind {
     Option,
     DigiEgg,
     Token,
+    Dual,
+}
+
+/// Rules-facing source classification for a resolving effect.
+///
+/// This is intentionally distinct from activation zone/timing. A Digimon
+/// security effect is still a Digimon effect, and a DUAL card is an Option
+/// effect while being used as an Option but a Digimon effect once it is on a
+/// Digimon stack.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum EffectSourceKind {
+    Digimon,
+    Tamer,
+    Option,
+    Rule,
 }
 
 /// Card rarity.
@@ -421,6 +436,10 @@ pub enum Keyword {
     /// (cost) + place top deck card under self at stack bottom, face-down.
     /// Cost requires `is_suspended == false`. Wire-up Phase F §F4.
     Training,
+
+    /// Arts Digivolve — DUAL Option-use keyword that offers an optional
+    /// digivolution of the used Option card onto a legal Digimon target.
+    ArtsDigivolve,
 }
 
 /// Zone where a card can exist.

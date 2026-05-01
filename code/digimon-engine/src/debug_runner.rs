@@ -18,7 +18,9 @@ use std::collections::HashMap;
 #[cfg(feature = "dsl-yaml-loader")]
 use std::sync::{Arc, OnceLock};
 
-use crate::card_data::{CardData, DnaCost, DnaRequirement};
+use crate::card_data::{
+    CardData, DnaCost, DnaRequirement, DualCardData, DualDigimonFace, DualOptionFace,
+};
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
@@ -758,6 +760,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
             CompiledCardKind::Option => CardKind::Option,
             CompiledCardKind::DigiEgg => CardKind::DigiEgg,
             CompiledCardKind::Token => CardKind::Token,
+            CompiledCardKind::Dual => CardKind::Dual,
         },
         level: card.level,
         dp: card.dp,
@@ -778,6 +781,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         index: 0,
         norm_id: 0.0,
         keywords,
+        dual: card.dual.as_ref().map(compiled_dual_to_engine),
     }
 }
 
@@ -817,6 +821,52 @@ pub fn make_test_card(card_id: &str, card_name: &str) -> CardData {
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        dual: None,
+    }
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+fn compiled_dual_to_engine(dual: &digimon_dsl::compiled::CompiledDual) -> DualCardData {
+    DualCardData {
+        digimon: DualDigimonFace {
+            level: dual.digimon.level,
+            dp: dual.digimon.dp,
+            colors: dual
+                .digimon
+                .colors
+                .iter()
+                .copied()
+                .map(compiled_color_to_engine)
+                .collect(),
+            traits: dual.digimon.traits.clone(),
+            evo_costs: Vec::new(),
+            effect_text: dual.digimon.effect_text.clone(),
+            inherited_text: dual.digimon.inherited_text.clone(),
+            keywords: Vec::new(),
+        },
+        option: DualOptionFace {
+            use_cost: dual.option.use_cost,
+            colors: dual
+                .option
+                .colors
+                .iter()
+                .copied()
+                .map(compiled_color_to_engine)
+                .collect(),
+            effect_text: dual.option.effect_text.clone(),
+            security_text: dual.option.security_text.clone(),
+            keywords: dual
+                .option
+                .keywords
+                .iter()
+                .filter_map(|kw| match kw.as_str() {
+                    "ArtsDigivolve" | "Arts Digivolve" | "arts_digivolve" => {
+                        Some(Keyword::ArtsDigivolve)
+                    }
+                    _ => None,
+                })
+                .collect(),
+        },
     }
 }
 
@@ -840,6 +890,7 @@ pub fn make_test_egg(card_id: &str, card_name: &str) -> CardData {
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        dual: None,
     }
 }
 

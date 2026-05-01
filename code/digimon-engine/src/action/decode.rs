@@ -94,7 +94,7 @@ impl Game {
                 .get(hand_idx)
                 .map(|c| c.card_kind(&self.card_data));
             match card_kind {
-                Some(CardKind::Option) => {
+                Some(CardKind::Option) | Some(CardKind::Dual) => {
                     let _ = self.play_option_from_hand(tp, hand_idx);
                 }
                 Some(CardKind::Digimon) | Some(CardKind::Tamer) => {

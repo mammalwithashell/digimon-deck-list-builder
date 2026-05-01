@@ -38,6 +38,9 @@ pub const MOVE_FROM_BREEDING: u16 = 61;
 pub const PASS: u16 = 62;
 pub const DNA_DIGIVOLVE_START: u16 = 63;
 pub const DNA_DIGIVOLVE_END: u16 = 93;
+/// Selection-only action id for the controller's breeding-area permanent.
+/// `docs/ACTION_SPEC.md` reserves 99 for this convention.
+pub const BREEDING_SELECTION_TARGET: u16 = 99;
 pub const ATTACK_START: u16 = 100;
 pub const ATTACK_END: u16 = 400;
 pub const DIGIVOLVE_START: u16 = 400;

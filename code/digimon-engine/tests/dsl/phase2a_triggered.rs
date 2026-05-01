@@ -128,6 +128,8 @@ fn fixture_on_play_gain_memory(n: i32) -> CompiledCard {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Triggered(CompiledTriggeredClause {
             when: vec![CompiledTiming::OnPlay],

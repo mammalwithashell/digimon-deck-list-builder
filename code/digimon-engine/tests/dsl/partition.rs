@@ -30,6 +30,8 @@ fn fixture_partition(scope: CompiledScope) -> CompiledCard {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::Partition {
@@ -59,6 +61,8 @@ fn fixture_partition_with_sources(scope: CompiledScope) -> CompiledCard {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::Partition {

@@ -30,6 +30,7 @@ fn card(card_id: &str, kind: CardKind, play_cost: u16, traits: &[&str]) -> CardD
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

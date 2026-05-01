@@ -3,9 +3,11 @@
 
 mod cross_check;
 mod delay;
+mod effect_immunity_step;
 mod embedded_registry;
 mod i18n_scaffolding;
 mod loader;
+mod option_use_req;
 mod pack_file_loader;
 mod parse_alt_paths;
 mod parse_clauses;
@@ -89,5 +91,6 @@ mod real_cards_json;
 mod replacement;
 mod roundtrip;
 mod schema_export;
+mod selection_dp_extrema;
 mod standalone_declaratives_exit;
 mod validator;

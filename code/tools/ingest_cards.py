@@ -39,7 +39,12 @@ COLOR_MAP = {
 }
 
 KIND_MAP = {
-    "Digimon": 0, "Tamer": 1, "Option": 2, "Digi-Egg": 3,
+    "Digimon": 0, "Tamer": 1, "Option": 2, "Digi-Egg": 3, "Dual": 4,
+}
+
+DUAL_OPTION_COLOR_OVERRIDES = {
+    "ST23-09": ["Purple"],
+    "ST24-07": ["Yellow"],
 }
 
 RARITY_MAP = {
@@ -96,6 +101,39 @@ def parse_evo_costs(api_card):
             })
 
     return costs
+
+
+def parse_color_names(api_card):
+    colors = []
+    for key in ("color", "color2", "color3"):
+        name = api_card.get(key)
+        if name and name in COLOR_MAP and name not in colors:
+            colors.append(name)
+    return colors
+
+
+def parse_traits(api_card):
+    traits = []
+    for key in ["digi_type", "digi_type2", "digi_type3", "digi_type4"]:
+        val = api_card.get(key)
+        if val:
+            traits.append(val)
+    return traits
+
+
+def parse_option_color_names(api_card):
+    card_id = api_card["id"]
+    explicit = api_card.get("option_color") or api_card.get("option_color1")
+    if explicit:
+        colors = [explicit]
+        for key in ("option_color2", "option_color3"):
+            name = api_card.get(key)
+            if name and name not in colors:
+                colors.append(name)
+        return colors
+    if card_id in DUAL_OPTION_COLOR_OVERRIDES:
+        return list(DUAL_OPTION_COLOR_OVERRIDES[card_id])
+    raise ValueError(f"Missing Option-face color override for DUAL card {card_id}")
 
 
 def _card_color_to_json(color):
@@ -231,6 +269,28 @@ def convert_card(api_card):
         out["dna_costs"] = dna_costs_json
     if digixros_costs_json:
         out["digixros_costs"] = digixros_costs_json
+    if card_kind == KIND_MAP["Dual"]:
+        out["inherited_effect_description_eng"] = ""
+        out["security_effect_description_eng"] = ""
+        out["dual"] = {
+            "digimon": {
+                "level": api_card.get("level"),
+                "dp": api_card.get("dp"),
+                "colors": parse_color_names(api_card),
+                "traits": parse_traits(api_card),
+                "evo_costs": parse_evo_costs(api_card),
+                "effect_text": api_card.get("main_effect") or "",
+                "inherited_text": "",
+                "keywords": ["ArtsDigivolve"],
+            },
+            "option": {
+                "use_cost": api_card.get("play_cost") or 0,
+                "colors": parse_option_color_names(api_card),
+                "effect_text": api_card.get("source_effect") or "",
+                "security_text": "",
+                "keywords": ["ArtsDigivolve"],
+            },
+        }
     return out
 
 

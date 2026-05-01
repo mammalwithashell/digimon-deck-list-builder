@@ -9,8 +9,7 @@
 //!   `EffectContext` lifetimes.
 //! - Each entry stores a `CardHandle` (Copy) instead of a `CardSource`
 //!   (heavier clone). At fire time we reconstruct an `EffectContext` from
-//!   `(controller, card_handle, source_permanent)` — same parameter shape as
-//!   `EffectContext::new`.
+//!   `(controller, card_handle, source_permanent, source_kind)`.
 //! - `fire_scheduled_for_timing` drains in FIFO order. Effects scheduled
 //!   DURING a drain (from inside a firing body) land at the back of the queue
 //!   and do NOT fire in the same pass. Re-entrancy is bounded by the outer
@@ -23,7 +22,7 @@ use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
-use crate::enums::{EffectTiming, PlayerId};
+use crate::enums::{EffectSourceKind, EffectTiming, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
@@ -38,6 +37,8 @@ pub struct ScheduledEffect {
     pub source_card: CardHandle,
     /// Source permanent at schedule time, if any.
     pub source_permanent: Option<PermanentHandle>,
+    /// Rules-facing source classification at schedule time.
+    pub source_kind: EffectSourceKind,
     /// Controller of the scheduling effect — becomes `ctx.player` at fire time.
     pub controller: PlayerId,
     /// Bindings captured at schedule time and replayed into the body.
@@ -109,6 +110,7 @@ fn drain_scheduled_for_timing(game: &mut Game, t: EffectTiming, queued: Vec<Sche
             body,
             source_card,
             source_permanent,
+            source_kind,
             controller,
             captured_bindings,
             runtime,
@@ -127,7 +129,13 @@ fn drain_scheduled_for_timing(game: &mut Game, t: EffectTiming, queued: Vec<Sche
             game.dsl_outer_tail.is_none(),
             "scheduled effect fired while a previous parked selection is still outstanding"
         );
-        let mut ctx = EffectContext::new(game, source_card, source_permanent, controller);
+        let mut ctx = EffectContext::new_with_source_kind(
+            game,
+            source_card,
+            source_permanent,
+            source_kind,
+            controller,
+        );
         let outcome = run_steps_with_runtime(&body, &mut ctx, &mut bindings, &runtime);
         if matches!(outcome, RunOutcome::Parked) {
             let mut remaining = still_pending;

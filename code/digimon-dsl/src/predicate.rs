@@ -146,6 +146,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub any_permanent: Option<Box<ExistentialPredicate>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub any_field_permanent: Option<Box<ExistentialPredicate>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub no_permanent: Option<Box<ExistentialPredicate>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub all_permanents: Option<Box<ExistentialPredicate>>,

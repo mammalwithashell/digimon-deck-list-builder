@@ -833,6 +833,7 @@ impl Game {
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
+            source_kind: crate::enums::EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
                 use crate::enums::{Expiry, ModifierType};
@@ -1078,6 +1079,7 @@ impl Game {
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
+            source_kind: crate::enums::EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 // Match the resolved action_id back to a candidate.
                 let picked = valid_action_ids
@@ -1295,6 +1297,7 @@ impl Game {
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
+            source_kind: crate::enums::EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
                 let offset = action_id.saturating_sub(ATTACK_START);
@@ -1531,6 +1534,7 @@ impl Game {
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
+            source_kind: crate::enums::EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let offset = action_id.saturating_sub(ATTACK_START);
                 let new_index = (offset % TARGETS_PER_ATTACKER) as u8;

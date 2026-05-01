@@ -15,8 +15,19 @@ use crate::permanent::PermanentHandle;
 #[derive(Debug, Clone, Copy)]
 pub enum PredicateSubject {
     Permanent(PermanentHandle),
+    BreedingPermanent(PlayerId),
     Card(CardHandle),
     None,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PredicateContext {
+    CardSearchAny,
+    DigimonCardSearch,
+    OptionCardSearch,
+    FieldDigimon,
+    OptionUse,
+    DigivolutionRequirement,
 }
 
 pub fn eval_predicate(
@@ -142,6 +153,11 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(ex) = &pred.any_field_permanent {
+        if !field_existential_any(ex, rctx, bindings) {
+            return false;
+        }
+    }
     if let Some(ex) = &pred.no_permanent {
         if existential_any(ex, rctx, bindings) {
             return false;
@@ -156,6 +172,9 @@ pub fn eval_predicate_with_bindings(
     match subject {
         PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card),
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h),
+        PredicateSubject::BreedingPermanent(player) => {
+            eval_breeding_permanent_fields(pred, rctx, player)
+        }
         PredicateSubject::None => eval_no_subject_fields(pred),
     }
 }
@@ -265,6 +284,41 @@ fn existential_any(
     false
 }
 
+fn field_existential_any(
+    ex: &CompiledExistential,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> bool {
+    for p in existential_players(ex.of, rctx) {
+        let n = rctx.game.player(p).battle_area.len();
+        for i in 0..n {
+            let handle = PermanentHandle {
+                player: p,
+                index: i as u8,
+            };
+            if eval_predicate_with_bindings(
+                &ex.predicate,
+                rctx,
+                PredicateSubject::Permanent(handle),
+                bindings,
+            ) {
+                return true;
+            }
+        }
+        if rctx.game.player(p).breeding_area.is_some()
+            && eval_predicate_with_bindings(
+                &ex.predicate,
+                rctx,
+                PredicateSubject::BreedingPermanent(p),
+                bindings,
+            )
+        {
+            return true;
+        }
+    }
+    false
+}
+
 fn existential_all(
     ex: &CompiledExistential,
     rctx: &EffectReadContext<'_>,
@@ -326,7 +380,7 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
         let Some(data) = rctx.game.card_data_for_handle(card) else {
             return false;
         };
-        if !kind_matches(want, data.card_kind) {
+        if !kind_matches_card_search(want, data) {
             return false;
         }
     }
@@ -420,7 +474,7 @@ fn eval_card_fields(
     };
 
     if let Some(want) = pred.kind {
-        if !kind_matches(want, data.card_kind) {
+        if !kind_matches_card_search(want, data) {
             return false;
         }
     }
@@ -515,6 +569,15 @@ fn eval_permanent_fields(
     if !eval_card_fields(pred, rctx, top_handle) {
         return false;
     }
+    if let Some(want) = pred.kind {
+        let data = match rctx.game.card_data_for_handle(top_handle) {
+            Some(d) => d,
+            None => return false,
+        };
+        if !kind_matches_field(want, data.card_kind) {
+            return false;
+        }
+    }
     if let Some(want) = pred.is_suspended {
         if perm.is_suspended != want {
             return false;
@@ -558,11 +621,87 @@ fn eval_permanent_fields(
     true
 }
 
+fn eval_breeding_permanent_fields(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    player: PlayerId,
+) -> bool {
+    let Some(perm) = rctx.game.player(player).breeding_area.as_ref() else {
+        return false;
+    };
+    let top_handle = perm.top_card().handle();
+
+    let mut card_pred = pred.clone();
+    card_pred.kind = None;
+    if !eval_card_fields(&card_pred, rctx, top_handle) {
+        return false;
+    }
+
+    if let Some(want) = pred.kind {
+        let data = match rctx.game.card_data_for_handle(top_handle) {
+            Some(d) => d,
+            None => return false,
+        };
+        let matches_kind = match (want, data.card_kind) {
+            (CompiledCardKind::Digimon, CardKind::DigiEgg) => true,
+            _ => kind_matches_field(want, data.card_kind),
+        };
+        if !matches_kind {
+            return false;
+        }
+    }
+    if let Some(want) = pred.in_breeding {
+        if !want {
+            return false;
+        }
+    }
+    if !pred.zone.is_empty() && !pred.zone.contains(&CompiledZone::Breeding) {
+        return false;
+    }
+    if let Some(want) = pred.owner {
+        let matches = match want {
+            CompiledPlayerRef::You => player == rctx.player,
+            CompiledPlayerRef::Opponent => player == rctx.opponent_id(),
+            CompiledPlayerRef::Active => player == rctx.game.turn_player(),
+            CompiledPlayerRef::Any => true,
+        };
+        if !matches {
+            return false;
+        }
+    }
+
+    pred.is_suspended.is_none()
+        && pred.is_unsuspended.is_none()
+        && pred.stack_size_lte.is_none()
+        && pred.stack_size_gte.is_none()
+}
+
 fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {
     matches!(
         (want, got),
         (CompiledCardKind::Digimon, CardKind::Digimon)
             | (CompiledCardKind::Tamer, CardKind::Tamer)
+            | (CompiledCardKind::Option, CardKind::Option)
+            | (CompiledCardKind::DigiEgg, CardKind::DigiEgg)
+            | (CompiledCardKind::Token, CardKind::Token)
+    )
+}
+
+fn kind_matches_card_search(want: CompiledCardKind, data: &crate::card_data::CardData) -> bool {
+    match want {
+        CompiledCardKind::Digimon => matches!(data.card_kind, CardKind::Digimon | CardKind::Dual),
+        CompiledCardKind::Option => data.is_option_card_for_search(),
+        _ => kind_matches(want, data.card_kind),
+    }
+}
+
+fn kind_matches_field(want: CompiledCardKind, got: CardKind) -> bool {
+    matches!(
+        (want, got),
+        (
+            CompiledCardKind::Digimon,
+            CardKind::Digimon | CardKind::Dual
+        ) | (CompiledCardKind::Tamer, CardKind::Tamer)
             | (CompiledCardKind::Option, CardKind::Option)
             | (CompiledCardKind::DigiEgg, CardKind::DigiEgg)
             | (CompiledCardKind::Token, CardKind::Token)

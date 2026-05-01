@@ -63,6 +63,7 @@ fn select_any_permanent_can_bind_either_players_field() {
         CompiledStep::SelectAnyPermanent {
             filter: CompiledPredicate::default(),
             bind_as: Some("target".to_string()),
+            selector: None,
             prompt: "Pick anything".to_string(),
             prompt_key: None,
             optional: false,

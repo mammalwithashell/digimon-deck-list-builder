@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledScope, CompiledTriggeredClause};
+use digimon_dsl::compiled::{CompiledPredicate, CompiledScope, CompiledTriggeredClause};
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
@@ -22,6 +22,15 @@ pub fn lower_with_raw(
     card: CardHandle,
     clause: &CompiledTriggeredClause,
     raw: Arc<EngineRawRustRegistry>,
+) -> Vec<Effect> {
+    lower_with_raw_and_option_use_requirement(card, clause, raw, None)
+}
+
+pub fn lower_with_raw_and_option_use_requirement(
+    card: CardHandle,
+    clause: &CompiledTriggeredClause,
+    raw: Arc<EngineRawRustRegistry>,
+    option_use_requirement: Option<Arc<CompiledPredicate>>,
 ) -> Vec<Effect> {
     let mut out = Vec::new();
     for t in &clause.when {
@@ -58,6 +67,16 @@ pub fn lower_with_raw(
         }
         if optional {
             builder = builder.optional();
+        }
+        if matches!(
+            engine_timing,
+            EffectTiming::MainFromHand | EffectTiming::OptionMain
+        ) {
+            if let Some(use_req) = option_use_requirement.clone() {
+                builder = builder.option_color_requirement_bypass_condition(move |rctx| {
+                    eval_predicate(use_req.as_ref(), rctx, PredicateSubject::None)
+                });
+            }
         }
 
         if active_when.is_some() || condition.is_some() {

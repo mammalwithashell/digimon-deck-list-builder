@@ -30,6 +30,7 @@ fn fighter_with_keywords(id: &str, dp: i32, keywords: Vec<Keyword>) -> CardData 
         inherited_text: String::new(),
         security_text: String::new(),
         keywords,
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

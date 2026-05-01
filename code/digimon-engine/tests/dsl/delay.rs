@@ -32,6 +32,8 @@ fn fixture_delay(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard 
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::Delay {

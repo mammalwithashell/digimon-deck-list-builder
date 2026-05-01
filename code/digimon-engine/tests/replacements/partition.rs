@@ -25,6 +25,7 @@ fn colored_card(id: &str, color: CardColor, level: u8) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

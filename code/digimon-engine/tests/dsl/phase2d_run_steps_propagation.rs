@@ -34,6 +34,7 @@ fn outer_steps_wait_for_inner_park() {
                 CompiledStep::SelectOpponentPermanent {
                     filter: CompiledPredicate::default(),
                     bind_as: Some("tgt".to_string()),
+                    selector: None,
                     prompt: "Pick".to_string(),
                     prompt_key: None,
                     optional: false,

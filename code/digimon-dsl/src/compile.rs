@@ -13,6 +13,10 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
     let mut errors = Vec::new();
 
     let identity = spec.identity.as_ref().map(compile_identity);
+    let dual = spec
+        .dual
+        .as_ref()
+        .map(|dual| compile_dual(dual, &spec.card, &mut errors));
     let alt_paths = spec
         .alt_paths
         .iter()
@@ -25,6 +29,10 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         .enumerate()
         .map(|(i, c)| compile_clause(c, &format!("effects[{i}]"), &spec.card, &mut errors))
         .collect();
+    let use_requirement = spec
+        .use_requirement
+        .as_ref()
+        .map(|p| compile_predicate(p, "use_requirement", &spec.card, &mut errors));
 
     if !errors.is_empty() {
         return Err(errors);
@@ -43,6 +51,8 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         attribute: spec.attribute.clone(),
         ace_overflow: spec.ace_overflow,
         identity,
+        dual,
+        use_requirement,
         alt_paths,
         effects,
     })
@@ -58,6 +68,56 @@ fn compile_card_kind(k: crate::spec::CardKind) -> CompiledCardKind {
         S::Option => CompiledCardKind::Option,
         S::DigiEgg => CompiledCardKind::DigiEgg,
         S::Token => CompiledCardKind::Token,
+        S::Dual => CompiledCardKind::Dual,
+    }
+}
+
+fn compile_field_selector(s: crate::step::FieldSelector) -> CompiledFieldSelector {
+    match s {
+        crate::step::FieldSelector::LowestDp => CompiledFieldSelector::LowestDp,
+        crate::step::FieldSelector::HighestDp => CompiledFieldSelector::HighestDp,
+    }
+}
+
+fn compile_dual(
+    dual: &crate::spec::DualSpec,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> CompiledDual {
+    CompiledDual {
+        digimon: CompiledDualDigimon {
+            level: dual.digimon.level,
+            dp: dual.digimon.dp,
+            colors: dual
+                .digimon
+                .colors
+                .iter()
+                .map(|c| compile_color(*c))
+                .collect(),
+            traits: dual.digimon.traits.clone(),
+            effect_text: dual.digimon.effect_text.clone(),
+            inherited_text: dual.digimon.inherited_text.clone(),
+        },
+        option: CompiledDualOption {
+            use_cost: dual.option.use_cost,
+            colors: dual
+                .option
+                .colors
+                .iter()
+                .map(|c| compile_color(*c))
+                .collect(),
+            effect_text: dual.option.effect_text.clone(),
+            security_text: dual.option.security_text.clone(),
+            keywords: dual.option.keywords.clone(),
+            use_requirement: dual.option.use_requirement.as_ref().map(|p| {
+                Box::new(compile_predicate(
+                    p,
+                    "dual.option.use_requirement",
+                    card_id,
+                    errors,
+                ))
+            }),
+        },
     }
 }
 
@@ -366,6 +426,17 @@ fn compile_predicate(
                 predicate: compile_predicate(
                     &e.predicate,
                     &format!("{prefix}.any_permanent"),
+                    card_id,
+                    errors,
+                ),
+            })
+        }),
+        any_field_permanent: p.any_field_permanent.as_ref().map(|e| {
+            Box::new(CompiledExistential {
+                of: compile_player_ref(e.of),
+                predicate: compile_predicate(
+                    &e.predicate,
+                    &format!("{prefix}.any_field_permanent"),
                     card_id,
                     errors,
                 ),
@@ -985,6 +1056,25 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
     }
 }
 
+fn compile_effect_source_kind(kind: crate::step::EffectSourceKindSpec) -> CompiledEffectSourceKind {
+    match kind {
+        crate::step::EffectSourceKindSpec::Digimon => CompiledEffectSourceKind::Digimon,
+        crate::step::EffectSourceKindSpec::Tamer => CompiledEffectSourceKind::Tamer,
+        crate::step::EffectSourceKindSpec::Option => CompiledEffectSourceKind::Option,
+        crate::step::EffectSourceKindSpec::Rule => CompiledEffectSourceKind::Rule,
+    }
+}
+
+fn compile_effect_controller(
+    controller: crate::step::EffectControllerSpec,
+) -> CompiledEffectController {
+    match controller {
+        crate::step::EffectControllerSpec::Any => CompiledEffectController::Any,
+        crate::step::EffectControllerSpec::Opponent => CompiledEffectController::Opponent,
+        crate::step::EffectControllerSpec::Own => CompiledEffectController::Own,
+    }
+}
+
 fn compile_modifier_value(v: &crate::step::ModifierValueSpec) -> CompiledModifierValue {
     use crate::step::ModifierValueSpec as S;
     match v {
@@ -1211,10 +1301,17 @@ fn compile_step(
             expiry: a.expiry.clone(),
             value: a.value,
         },
+        S::GrantEffectImmunity(a) => CompiledStep::GrantEffectImmunity {
+            target: compile_binding_ref(&a.target),
+            source_kind: compile_effect_source_kind(a.source_kind),
+            source_controller: compile_effect_controller(a.source_controller),
+            expiry: a.expiry.clone(),
+        },
 
         S::SelectOwnPermanent(a) => CompiledStep::SelectOwnPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
+            selector: a.selector.map(compile_field_selector),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
@@ -1222,6 +1319,7 @@ fn compile_step(
         S::SelectOpponentPermanent(a) => CompiledStep::SelectOpponentPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
+            selector: a.selector.map(compile_field_selector),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
@@ -1229,6 +1327,7 @@ fn compile_step(
         S::SelectAnyPermanent(a) => CompiledStep::SelectAnyPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
+            selector: a.selector.map(compile_field_selector),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,

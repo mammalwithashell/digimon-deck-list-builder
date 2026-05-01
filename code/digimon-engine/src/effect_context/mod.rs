@@ -23,11 +23,12 @@ use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::enums::{
-    EffectTiming, Expiry, Keyword, ModifierType, PlaySource, PlayerId, StackPosition,
+    CardKind, EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType, PlaySource, PlayerId,
+    StackPosition,
 };
 use crate::game::Game;
 use crate::game_actions::PlayFromHandCostResult;
-use crate::modifiers::ModifierEntry;
+use crate::modifiers::{EffectControllerFilter, EffectImmunityFilter, ModifierEntry};
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
 use crate::replacement::{ReplacementCause, ReplacementSubject};
@@ -52,6 +53,38 @@ impl PartitionRequirement {
     }
 }
 
+fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
+    match kind {
+        CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => EffectSourceKind::Digimon,
+        CardKind::Tamer => EffectSourceKind::Tamer,
+        CardKind::Option => EffectSourceKind::Option,
+        CardKind::Token => EffectSourceKind::Rule,
+    }
+}
+
+fn infer_effect_source_kind(
+    game: &Game,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+) -> EffectSourceKind {
+    if let Some(h) = source_permanent {
+        if let Some(perm) = game
+            .players
+            .get(h.player as usize)
+            .and_then(|p| p.battle_area.get(h.index as usize))
+        {
+            if let Some(top) = perm.card_sources.last() {
+                if top.handle() == source_card {
+                    return source_kind_for_card_kind(top.card_kind(&game.card_data));
+                }
+            }
+        }
+    }
+    game.card_kind_for_handle(source_card)
+        .map(source_kind_for_card_kind)
+        .unwrap_or(EffectSourceKind::Rule)
+}
+
 /// Read-only view of game state for effect condition closures.
 ///
 /// Wraps `&Game` so conditions can be evaluated without a mutable borrow —
@@ -61,6 +94,7 @@ pub struct EffectReadContext<'a> {
     pub game: &'a Game,
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
+    pub source_kind: EffectSourceKind,
     pub player: PlayerId,
     replacement_cause: Option<ReplacementCause>,
     replacement_source_controller: Option<PlayerId>,
@@ -78,10 +112,22 @@ impl<'a> EffectReadContext<'a> {
         source_permanent: Option<PermanentHandle>,
         player: PlayerId,
     ) -> Self {
+        let source_kind = infer_effect_source_kind(game, source_card, source_permanent);
+        Self::new_with_source_kind(game, source_card, source_permanent, source_kind, player)
+    }
+
+    pub fn new_with_source_kind(
+        game: &'a Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        source_kind: EffectSourceKind,
+        player: PlayerId,
+    ) -> Self {
         Self {
             game,
             source_card,
             source_permanent,
+            source_kind,
             player,
             replacement_cause: None,
             replacement_source_controller: None,
@@ -99,10 +145,12 @@ impl<'a> EffectReadContext<'a> {
         cost_target_card: CardHandle,
         cost_target_from_hand: bool,
     ) -> Self {
+        let source_kind = infer_effect_source_kind(game, source_card, source_permanent);
         Self {
             game,
             source_card,
             source_permanent,
+            source_kind,
             player,
             replacement_cause: None,
             replacement_source_controller: None,
@@ -258,23 +306,25 @@ impl<'a> EffectReadContext<'a> {
         })
     }
 
+    pub fn source_kind(&self) -> EffectSourceKind {
+        self.source_kind
+    }
+
+    pub fn source_is_digimon(&self) -> bool {
+        self.source_kind == EffectSourceKind::Digimon
+    }
+
     /// Returns `true` if this effect's source card is a Tamer.
     ///
     /// Used by flood-gate discriminators like `CannotGainMemoryExceptFromTamers`
     /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
     /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
     pub fn source_is_tamer(&self) -> bool {
-        // Fast path: if we know the source permanent, check its top card directly.
-        if let Some(h) = self.source_permanent {
-            if let Some(perm) = self.game.player(h.player).battle_area.get(h.index as usize) {
-                return perm.is_tamer(&self.game.card_data);
-            }
-        }
-        // Slow path: source_permanent is None (e.g. effect from hand/trash/security).
-        self.game
-            .card_kind_for_handle(self.source_card)
-            .map(|k| k == crate::enums::CardKind::Tamer)
-            .unwrap_or(false)
+        self.source_kind == EffectSourceKind::Tamer
+    }
+
+    pub fn source_is_option(&self) -> bool {
+        self.source_kind == EffectSourceKind::Option
     }
 
     // ─── Security-check sugar (§2.5g) ────────────────────────────────
@@ -409,6 +459,8 @@ pub struct EffectContext<'a> {
     pub source_card: CardHandle,
     /// The permanent containing the source card, if applicable.
     pub source_permanent: Option<PermanentHandle>,
+    /// Rules-facing classification of the effect source.
+    pub source_kind: EffectSourceKind,
     /// Player who controls the source.
     pub player: PlayerId,
     /// Temporary override for `selecting_player` inside `as_selecting_player`
@@ -436,10 +488,22 @@ impl<'a> EffectContext<'a> {
         source_permanent: Option<PermanentHandle>,
         player: PlayerId,
     ) -> Self {
+        let source_kind = infer_effect_source_kind(game, source_card, source_permanent);
+        Self::new_with_source_kind(game, source_card, source_permanent, source_kind, player)
+    }
+
+    pub fn new_with_source_kind(
+        game: &'a mut Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        source_kind: EffectSourceKind,
+        player: PlayerId,
+    ) -> Self {
         Self {
             game,
             source_card,
             source_permanent,
+            source_kind,
             player,
             override_selecting_player: None,
             cost_target_card: None,
@@ -478,6 +542,25 @@ impl<'a> EffectContext<'a> {
         override_selecting_player: Option<PlayerId>,
     ) -> Self {
         let mut ctx = Self::new(game, source_card, source_permanent, controller);
+        ctx.override_selecting_player = override_selecting_player;
+        ctx
+    }
+
+    pub fn new_with_source_kind_and_override(
+        game: &'a mut Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        source_kind: EffectSourceKind,
+        controller: PlayerId,
+        override_selecting_player: Option<PlayerId>,
+    ) -> Self {
+        let mut ctx = Self::new_with_source_kind(
+            game,
+            source_card,
+            source_permanent,
+            source_kind,
+            controller,
+        );
         ctx.override_selecting_player = override_selecting_player;
         ctx
     }
@@ -533,6 +616,7 @@ impl<'a> EffectContext<'a> {
             body,
             source_card: self.source_card,
             source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
             controller: self.player,
             captured_bindings,
             scheduled_at_turn: self.game.turn_count,
@@ -669,23 +753,25 @@ impl<'a> EffectContext<'a> {
         })
     }
 
+    pub fn source_kind(&self) -> EffectSourceKind {
+        self.source_kind
+    }
+
+    pub fn source_is_digimon(&self) -> bool {
+        self.source_kind == EffectSourceKind::Digimon
+    }
+
     /// Returns `true` if this effect's source card is a Tamer.
     ///
     /// Used by flood-gate discriminators like `CannotGainMemoryExceptFromTamers`
     /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
     /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
     pub fn source_is_tamer(&self) -> bool {
-        // Fast path: if we know the source permanent, check its top card directly.
-        if let Some(h) = self.source_permanent {
-            if let Some(perm) = self.game.player(h.player).battle_area.get(h.index as usize) {
-                return perm.is_tamer(&self.game.card_data);
-            }
-        }
-        // Slow path: source_permanent is None (e.g. effect from hand/trash/security).
-        self.game
-            .card_kind_for_handle(self.source_card)
-            .map(|k| k == crate::enums::CardKind::Tamer)
-            .unwrap_or(false)
+        self.source_kind == EffectSourceKind::Tamer
+    }
+
+    pub fn source_is_option(&self) -> bool {
+        self.source_kind == EffectSourceKind::Option
     }
 
     // ─── Security-check sugar (§2.5g) ────────────────────────────────
@@ -979,6 +1065,7 @@ impl<'a> EffectContext<'a> {
             game: self.game,
             source_card: self.source_card,
             source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
             player: self.player,
             replacement_cause: None,
             replacement_source_controller: None,
@@ -1132,11 +1219,15 @@ impl<'a> EffectContext<'a> {
 
     // ─── Field mutations ──────────────────────────────────────────────
 
+    pub fn can_affect_permanent(&self, target: PermanentHandle) -> bool {
+        !self.game.progress_excludes(target, Some(self.player))
+            && !self
+                .game
+                .permanent_is_unaffected_by_effect(target, self.player, self.source_kind)
+    }
+
     pub fn delete_permanent(&mut self, target: PermanentHandle) {
-        // Phase B §B4: gate opponent-sourced effect deletes on Progress.
-        // Source is statically known here: `self.player` is the controller of
-        // the running effect.
-        if self.game.progress_excludes(target, Some(self.player)) {
+        if !self.can_affect_permanent(target) {
             return;
         }
         // Route through the Game-level fire-site so OnDeletion observers and
@@ -1167,9 +1258,7 @@ impl<'a> EffectContext<'a> {
         stop_at_level: Option<u8>,
         amount: Option<u8>,
     ) -> u8 {
-        // Phase B §B4: opponent-sourced de-digivolve on a Progress attacker
-        // is suppressed before any replacement window opens.
-        if self.game.progress_excludes(target, Some(self.player)) {
+        if !self.can_affect_permanent(target) {
             return 0;
         }
 
@@ -1306,9 +1395,8 @@ impl<'a> EffectContext<'a> {
 
     /// Suspend a permanent and fire `OnSuspend` observers.
     /// Delegates to `Game::suspend` — the canonical single-target chokepoint.
-    /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn suspend(&mut self, target: PermanentHandle) {
-        if self.game.progress_excludes(target, Some(self.player)) {
+        if !self.can_affect_permanent(target) {
             return;
         }
         self.game.suspend(target);
@@ -1317,6 +1405,9 @@ impl<'a> EffectContext<'a> {
     /// Unsuspend a permanent and fire `OnUnsuspend` observers.
     /// Delegates to `Game::unsuspend` — the canonical single-target chokepoint.
     pub fn unsuspend(&mut self, target: PermanentHandle) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
         self.game.unsuspend(target);
     }
 
@@ -2265,25 +2356,23 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
-    /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_hand(
         &mut self,
         target: PermanentHandle,
     ) -> Option<crate::card_source::CardHandle> {
-        if self.game.progress_excludes(target, Some(self.player)) {
+        if !self.can_affect_permanent(target) {
             return None;
         }
         self.game.return_to_hand(target)
     }
 
     /// Return a permanent's top card to its owner's deck. See `Game::return_to_deck`.
-    /// Phase B §B4: gated on Progress when the target is opponent-controlled.
     pub fn return_to_deck(
         &mut self,
         target: PermanentHandle,
         position: crate::enums::StackPosition,
     ) -> bool {
-        if self.game.progress_excludes(target, Some(self.player)) {
+        if !self.can_affect_permanent(target) {
             return false;
         }
         self.game.return_to_deck(target, position)
@@ -2418,14 +2507,7 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
-        // DCGO-faithful Progress gate. `progress_excludes` returns `true` iff
-        // the target is the current Progress attacker, the source is the
-        // opposite player, and the keyword/granted-modifier is live.
-        // Equivalent to DCGO's `targetPermanent.TopCard.CanNotBeAffected(...)`
-        // check that every `GiveEffectToPermanent/*.cs` helper performs.
-        // Hostility-blind and sign-blind by design — see plan
-        // docs/superpowers/plans/2026-04-24-progress-gate-broaden-modifier-scope.md.
-        if self.game.progress_excludes(target, Some(self.player)) {
+        if !self.can_affect_permanent(target) {
             return;
         }
         self.game.modifiers.add(
@@ -2434,7 +2516,31 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    pub fn add_effect_immunity_modifier(
+        &mut self,
+        target: PermanentHandle,
+        source_kind: EffectSourceKind,
+        controller: EffectControllerFilter,
+        expiry: Expiry,
+    ) -> bool {
+        if !self.can_affect_permanent(target) {
+            return false;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(ModifierType::CannotBeAffected, 0, expiry, self.player)
+                .with_effect_immunity_filter(EffectImmunityFilter {
+                    source_kind: Some(source_kind),
+                    controller,
+                }),
+        );
+        true
+    }
+
     pub fn grant_keyword(&mut self, target: PermanentHandle, keyword: Keyword, expiry: Expiry) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
         self.game
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);

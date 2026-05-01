@@ -62,6 +62,7 @@ fn fortitude_card(id: &str) -> CardData {
         // Printed-only Fortitude: the auto-install MUST be the sole source
         // of behavior. No hand-rolled CardEffect is registered.
         keywords: vec![Keyword::Fortitude],
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -84,6 +85,7 @@ fn plain_digimon(id: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

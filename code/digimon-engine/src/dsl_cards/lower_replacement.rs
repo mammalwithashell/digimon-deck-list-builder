@@ -316,6 +316,7 @@ fn install_delay_hand_digivolve_selection(
         .collect();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind();
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
@@ -328,6 +329,7 @@ fn install_delay_hand_digivolve_selection(
         effect_choices: Some(effect_choices),
         source_card,
         source_permanent,
+        source_kind,
         callback: Box::new(move |game, action_id| {
             let Some(idx) = action_id.checked_sub(HAND_EFFECT_START).map(|i| i as usize) else {
                 return;
@@ -335,7 +337,13 @@ fn install_delay_hand_digivolve_selection(
             let Some(card) = candidates.get(idx).copied() else {
                 return;
             };
-            let mut ctx = EffectContext::new(game, source_card, source_permanent, player);
+            let mut ctx = EffectContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
             if ctx.digivolve_replacement_subject_without_cost(subject, card) {
                 ctx.cancel_current_replacement();
             }

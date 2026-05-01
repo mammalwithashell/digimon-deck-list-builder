@@ -788,6 +788,7 @@ fn install_optional_selection(
         effect_choices: None,
         source_card: cand.source_card,
         source_permanent: cand.source_permanent,
+        source_kind: crate::enums::EffectSourceKind::Rule,
         callback,
         on_decline: Some(on_decline),
     });

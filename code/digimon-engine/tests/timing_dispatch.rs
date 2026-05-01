@@ -130,6 +130,7 @@ fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: card_id.to_string(),
         index: 0,
         norm_id: 0.0,
@@ -152,6 +153,7 @@ fn option_card_with_cost(card_id: &str, name: &str, play_cost: u16, traits: &[&s
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: card_id.to_string(),
         index: 0,
         norm_id: 0.0,
@@ -891,10 +893,7 @@ fn on_option_placed_does_not_fire_for_standard_option_sent_to_trash() {
 
     let result = r.game.play_option_from_hand(0, 0);
 
-    assert_eq!(
-        result,
-        digimon_engine::selection::OptionPlayResult::Trashed
-    );
+    assert_eq!(result, digimon_engine::selection::OptionPlayResult::Trashed);
     assert_eq!(
         r.memory(),
         before_memory,
@@ -1722,6 +1721,7 @@ fn lv4_digimon(card_id: &str, name: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: card_id.to_string(),
         index: 0,
         norm_id: 0.0,

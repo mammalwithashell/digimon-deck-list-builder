@@ -7,21 +7,34 @@
 
 use crate::card_source::CardSource;
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::{CardKind, EffectTiming, GamePhase, ModifierType, PlaySource, PlayerId};
+use crate::enums::{
+    CardKind, EffectSourceKind, EffectTiming, GamePhase, Keyword, ModifierType, PlaySource,
+    PlayerId,
+};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{
-    OptionPlayResult, OptionResolutionPhase, PendingOption, PendingSelection, QueuedEffect,
-    SelectionKind, TriggerSource,
+    OptionPlayResult, OptionResolutionPhase, OptionUseSource, PendingOption, PendingSelection,
+    QueuedEffect, SelectionKind, TriggerSource,
 };
 use rand::seq::SliceRandom;
 
 /// Source zone for `play_option_core`. Private to this module — the public
 /// API is the pair of `play_option_from_hand` / `play_option_from_trash`
 /// entry points.
+#[derive(Clone, Copy)]
 enum OptionSource {
     Hand(usize),
     Trash(usize),
+}
+
+impl OptionSource {
+    fn use_source(self) -> OptionUseSource {
+        match self {
+            OptionSource::Hand(_) => OptionUseSource::Hand,
+            OptionSource::Trash(_) => OptionUseSource::Trash,
+        }
+    }
 }
 
 /// Phase 8 Option subtype, inferred from effect flags. First-match-wins
@@ -34,6 +47,15 @@ enum OptionSubtype {
     Delay(crate::enums::DelayTrigger),
     Link,
     Training,
+}
+
+fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
+    match kind {
+        CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => EffectSourceKind::Digimon,
+        CardKind::Tamer => EffectSourceKind::Tamer,
+        CardKind::Option => EffectSourceKind::Option,
+        CardKind::Token => EffectSourceKind::Rule,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -327,6 +349,7 @@ impl Game {
             }
 
             let key = candidate.key.clone();
+            let source_kind = self.effect_source_kind_for_handle(key.source_card);
             let accept_key = key.clone();
             let decline_key = key.clone();
             let accept_processed = processed.clone();
@@ -361,6 +384,7 @@ impl Game {
                 }]),
                 source_card: key.source_card,
                 source_permanent: key.source_permanent,
+                source_kind,
                 callback: Box::new(move |game: &mut Game, _action_id: u16| {
                     let mut processed = accept_processed;
                     let mut reduction = accumulated_reduction;
@@ -593,6 +617,7 @@ impl Game {
         }
 
         // 2. Source validation + Option kind + color match.
+        let source_kind = source.use_source();
         let (card_handle, printed_cost, card_id) = {
             let player = self.player(player_id);
             let card = match source {
@@ -609,15 +634,20 @@ impl Game {
                     &player.trash[i]
                 }
             };
-            if card.card_kind(&self.card_data) != CardKind::Option {
+            if card.card_kind(&self.card_data) != CardKind::Option
+                && card.card_kind(&self.card_data) != CardKind::Dual
+            {
                 return OptionPlayResult::Invalid;
             }
-            if !crate::action::mask::option_color_match_available(card, player, &self.card_data) {
+            if !crate::action::mask::option_use_requirement_or_color_available(
+                card, self, player_id,
+            ) {
                 return OptionPlayResult::Invalid;
             }
             (
                 card.handle(),
-                card.play_cost(&self.card_data),
+                card.option_use_cost(&self.card_data)
+                    .unwrap_or_else(|| card.play_cost(&self.card_data)),
                 card.card_id(&self.card_data).to_string(),
             )
         };
@@ -638,6 +668,7 @@ impl Game {
         self.pending_option = Some(PendingOption {
             owner: player_id,
             card,
+            source_kind,
             resolution_phase: OptionResolutionPhase::MainEffectDrain,
         });
 
@@ -677,6 +708,10 @@ impl Game {
             return OptionPlayResult::Pending;
         }
 
+        if self.pending_option_can_arts_digivolve() && self.install_arts_digivolve_selection() {
+            return OptionPlayResult::Pending;
+        }
+
         // 7. Dispose per subtype (Standard → trash; Delay → park on field;
         // Link → install host-selection). `dispose_option` may install a
         // PendingSelection (Link flow); if so, return Pending and defer
@@ -687,6 +722,266 @@ impl Game {
         }
         self.check_turn_end();
         OptionPlayResult::Trashed
+    }
+
+    pub(crate) fn pending_option_can_arts_digivolve(&self) -> bool {
+        let Some(pending) = self.pending_option.as_ref() else {
+            return false;
+        };
+        if pending.card.card_kind(&self.card_data) != CardKind::Dual {
+            return false;
+        }
+        let data = &self.card_data[pending.card.data_index];
+        data.dual
+            .as_ref()
+            .map(|dual| {
+                data.keywords.contains(&Keyword::ArtsDigivolve)
+                    || dual.option.keywords.contains(&Keyword::ArtsDigivolve)
+                    || dual.digimon.keywords.contains(&Keyword::ArtsDigivolve)
+            })
+            .unwrap_or(false)
+    }
+
+    fn arts_digivolve_battle_targets(&self, owner: PlayerId) -> Vec<PermanentHandle> {
+        let Some(pending) = self.pending_option.as_ref() else {
+            return Vec::new();
+        };
+        let player = self.player(owner);
+        player
+            .battle_area
+            .iter()
+            .enumerate()
+            .filter_map(|(i, perm)| {
+                let handle = PermanentHandle {
+                    player: owner,
+                    index: i as u8,
+                };
+                if self.modifiers.has(handle, ModifierType::CannotDigivolve) {
+                    return None;
+                }
+                if self.can_digivolve(&pending.card, perm) {
+                    Some(handle)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn arts_digivolve_has_breeding_target(&self, owner: PlayerId) -> bool {
+        let Some(pending) = self.pending_option.as_ref() else {
+            return false;
+        };
+        let Some(breeding) = self.player(owner).breeding_area.as_ref() else {
+            return false;
+        };
+        self.can_digivolve(&pending.card, breeding)
+    }
+
+    pub(crate) fn install_arts_digivolve_selection(&mut self) -> bool {
+        use crate::action::space::encode_attack;
+
+        let Some(pending) = self.pending_option.as_ref() else {
+            return false;
+        };
+        let owner = pending.owner;
+        let source_card = pending.card.handle();
+        let targets = self.arts_digivolve_battle_targets(owner);
+        let has_breeding = self.arts_digivolve_has_breeding_target(owner);
+        if targets.is_empty() && !has_breeding {
+            return false;
+        }
+
+        let mut valid_action_ids: Vec<u16> = targets
+            .iter()
+            .map(|h| encode_attack(0, h.index as u16))
+            .collect();
+        if has_breeding {
+            valid_action_ids.push(crate::action::space::BREEDING_SELECTION_TARGET);
+        }
+        let target_snapshot = targets.clone();
+        let previous_phase = self.current_phase;
+
+        if let Some(pending) = self.pending_option.as_mut() {
+            pending.resolution_phase = OptionResolutionPhase::ArtsSelectTarget;
+        }
+        self.current_phase = GamePhase::SelectTarget;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::OwnField,
+            selecting_player: owner,
+            previous_phase,
+            valid_action_ids,
+            is_optional: true,
+            prompt: "Choose a card for Arts Digivolve, or pass to trash this Option".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Option,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+                if action_id == crate::action::space::BREEDING_SELECTION_TARGET {
+                    let _ = game.arts_digivolve_pending_option_onto_breeding(owner);
+                    return;
+                }
+                let offset = action_id.saturating_sub(ATTACK_START);
+                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+                if target_snapshot.iter().any(|h| h.index == target_index) {
+                    let target = PermanentHandle {
+                        player: owner,
+                        index: target_index,
+                    };
+                    let _ = game.arts_digivolve_pending_option_onto_battle(target);
+                }
+            }),
+            on_decline: Some(Box::new(|game: &mut Game| {
+                game.dispose_option();
+                game.check_turn_end();
+            })),
+        });
+        true
+    }
+
+    pub(crate) fn arts_digivolve_pending_option_onto_battle(
+        &mut self,
+        target: PermanentHandle,
+    ) -> bool {
+        if !self.pending_option_can_arts_digivolve() {
+            return false;
+        }
+        let Some(pending_ref) = self.pending_option.as_ref() else {
+            return false;
+        };
+        if pending_ref.owner != target.player {
+            return false;
+        }
+        let Some(perm) = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+        else {
+            return false;
+        };
+        if self.modifiers.has(target, ModifierType::CannotDigivolve) {
+            return false;
+        }
+        if !self.can_digivolve(&pending_ref.card, perm) {
+            return false;
+        }
+
+        let pending = self.pending_option.take().expect("checked above");
+        let arts_card_id = pending.card.card_id(&self.card_data).to_string();
+        let arts_card_handle = pending.card.handle();
+        let arts_owner = pending.owner;
+        let turn = self.turn_count;
+        self.player_mut(target.player).battle_area[target.index as usize]
+            .digivolve(pending.card, turn);
+        self.player_mut(target.player).draw();
+
+        self.run_rule_check_after_arts();
+
+        if self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .is_some()
+        {
+            self.enqueue_triggered(
+                EffectTiming::WhenDigivolving,
+                TriggerSource::Permanent(target),
+            );
+        } else {
+            self.enqueue_when_digivolving_from_arts_card(
+                &arts_card_id,
+                arts_card_handle,
+                arts_owner,
+            );
+        }
+        self.drain_effect_queue();
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                EffectTiming::OnDigivolve,
+                TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.drain_effect_queue();
+        self.check_turn_end();
+        true
+    }
+
+    fn enqueue_when_digivolving_from_arts_card(
+        &mut self,
+        card_id: &str,
+        card_handle: crate::card_source::CardHandle,
+        owner: PlayerId,
+    ) {
+        let Some(effects) = self.effects_for_card(card_id, card_handle) else {
+            return;
+        };
+        let tp = self.turn_player();
+        let is_turn_player = owner == tp;
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.timing != EffectTiming::WhenDigivolving {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: card_handle,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                controller: owner,
+                timing: EffectTiming::WhenDigivolving,
+                trigger_context: None,
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.to_string(),
+                allow_below_top_liveness: false,
+            });
+        }
+    }
+
+    pub(crate) fn arts_digivolve_pending_option_onto_breeding(&mut self, owner: PlayerId) -> bool {
+        if !self.pending_option_can_arts_digivolve() {
+            return false;
+        }
+        let Some(pending_ref) = self.pending_option.as_ref() else {
+            return false;
+        };
+        if pending_ref.owner != owner {
+            return false;
+        }
+        let Some(breeding) = self.player(owner).breeding_area.as_ref() else {
+            return false;
+        };
+        if !self.can_digivolve(&pending_ref.card, breeding) {
+            return false;
+        }
+
+        let pending = self.pending_option.take().expect("checked above");
+        let turn = self.turn_count;
+        if let Some(breeding) = self.player_mut(owner).breeding_area.as_mut() {
+            breeding.digivolve(pending.card, turn);
+        }
+        self.player_mut(owner).draw();
+        self.check_turn_end();
+        true
+    }
+
+    pub(crate) fn run_rule_check_after_arts(&mut self) {
+        let mut to_delete: Vec<PermanentHandle> = Vec::new();
+        for pid in 0..self.players.len() {
+            for (idx, perm) in self.players[pid].battle_area.iter().enumerate() {
+                let handle = PermanentHandle {
+                    player: pid as PlayerId,
+                    index: idx as u8,
+                };
+                if perm.is_digimon(&self.card_data) && self.effective_dp(handle).unwrap_or(1) <= 0 {
+                    to_delete.push(handle);
+                }
+            }
+        }
+        for handle in to_delete.into_iter().rev() {
+            self.delete_permanent_with_effects(handle);
+        }
     }
 
     /// Enqueue every `OptionMain` effect declared by `card_id` directly
@@ -712,6 +1007,7 @@ impl Game {
             self.effect_queue.push_back(QueuedEffect {
                 source_card: card_handle,
                 source_permanent: None,
+                source_kind: EffectSourceKind::Option,
                 controller: owner,
                 timing: EffectTiming::OptionMain,
                 trigger_context: None,
@@ -750,6 +1046,7 @@ impl Game {
             self.effect_queue.push_back(QueuedEffect {
                 source_card: card_handle,
                 source_permanent: None,
+                source_kind: EffectSourceKind::Option,
                 controller: owner,
                 timing: EffectTiming::CounterEffect,
                 trigger_context: None,
@@ -803,9 +1100,9 @@ impl Game {
                 // `try_replace(WhenWouldBeTrashed, ...)`. Cause is Cost
                 // (the Option was played from hand/trash and is being
                 // disposed as part of the play cost/resolution). Source
-                // zone is Hand — reflects where the Option came from.
+                // zone reflects where the Option was used from.
                 let card_handle = pending.card.handle();
-                let subject = ReplacementSubject::Card(card_handle, crate::enums::Zone::Hand);
+                let subject = ReplacementSubject::Card(card_handle, pending.source_kind.zone());
                 self.pending_option = Some(pending);
                 let outcome = self.try_replace(
                     EffectTiming::WhenWouldBeTrashed,
@@ -825,6 +1122,7 @@ impl Game {
                     self.pending_option = Some(PendingOption {
                         owner: pending.owner,
                         card: pending.card,
+                        source_kind: pending.source_kind,
                         resolution_phase: OptionResolutionPhase::Disposing,
                     });
                     return;
@@ -914,6 +1212,7 @@ impl Game {
                 self.pending_option = Some(PendingOption {
                     owner,
                     card: pending.card,
+                    source_kind: pending.source_kind,
                     resolution_phase: OptionResolutionPhase::LinkSelectHost,
                 });
                 self.install_link_host_selection(owner, source_card, candidates);
@@ -1025,6 +1324,7 @@ impl Game {
             effect_choices: None,
             source_card,
             source_permanent: None,
+            source_kind: EffectSourceKind::Option,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let offset = action_id.saturating_sub(ATTACK_START);
                 let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
@@ -1940,10 +2240,11 @@ impl Game {
         let from_stack_top = perm.top_card().card_id(&self.card_data).to_string();
         let top_card_id = card.card_id(&self.card_data).to_string();
 
-        let base_level = perm.top_card().level(&self.card_data).unwrap();
-        let base_colors = perm.top_card().colors(&self.card_data);
-        let evo_costs = &self.card_data[card.data_index].evo_costs;
-        let printed_cost = evo_costs
+        let base_top = perm.top_card();
+        let base_level = base_top.digimon_level(&self.card_data).unwrap();
+        let base_colors = base_top.digimon_colors(&self.card_data);
+        let printed_cost = card
+            .digivolution_costs(&self.card_data)
             .iter()
             .filter(|ec| {
                 ec.level == base_level
@@ -2052,10 +2353,11 @@ impl Game {
             return false;
         }
 
-        let base_level = breeding.top_card().level(&self.card_data).unwrap();
-        let base_colors = breeding.top_card().colors(&self.card_data);
-        let evo_costs = &self.card_data[card.data_index].evo_costs;
-        let printed_cost = evo_costs
+        let base_top = breeding.top_card();
+        let base_level = base_top.digimon_level(&self.card_data).unwrap();
+        let base_colors = base_top.digimon_colors(&self.card_data);
+        let printed_cost = card
+            .digivolution_costs(&self.card_data)
             .iter()
             .filter(|ec| {
                 ec.level == base_level
@@ -2348,6 +2650,15 @@ impl Game {
             });
         }
         candidates
+    }
+
+    fn effect_source_kind_for_handle(
+        &self,
+        handle: crate::card_source::CardHandle,
+    ) -> EffectSourceKind {
+        self.card_kind_for_handle(handle)
+            .map(source_kind_for_card_kind)
+            .unwrap_or(EffectSourceKind::Rule)
     }
 
     fn inspect_cost_reduction_candidate(
@@ -2689,6 +3000,7 @@ impl Game {
             effect_choices: None,
             source_card,
             source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 // Stage 1 resolution: action_id is the chosen first-material
                 // battle_area index for `selecting_player`.
@@ -2747,6 +3059,7 @@ impl Game {
                     effect_choices: None,
                     source_card,
                     source_permanent: None,
+                    source_kind: EffectSourceKind::Digimon,
                     callback: Box::new(move |game: &mut Game, action_id: u16| {
                         let second_idx = action_id as usize;
                         game.resolve_dna_digivolve_stage2(
