@@ -45,7 +45,7 @@ use ::digimon_engine::events::GameEvent;
 use ::digimon_engine::policies::greedy_action as choose_greedy_action;
 use ::digimon_engine::rules::CardRestriction;
 use ::digimon_engine::tensor::{MAX_SOURCES, TENSOR_SIZE};
-use ::digimon_engine::tensor_profile::{
+use ::digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorProfile as RustTensorProfile,
 };
 use ::digimon_engine::HeadlessRunner;
@@ -398,6 +398,8 @@ pub struct TensorProfile {
     #[pyo3(get)]
     pub id: String,
     #[pyo3(get)]
+    pub game_mode: String,
+    #[pyo3(get)]
     pub version: u32,
     #[pyo3(get)]
     pub tensor_size: usize,
@@ -421,6 +423,7 @@ fn py_tensor_profile(profile: &RustTensorProfile) -> TensorProfile {
     let (card_id_positions, scalar_positions) = profile.positions();
     TensorProfile {
         id: profile.id.to_string(),
+        game_mode: profile.game_mode.to_string(),
         version: profile.version,
         tensor_size: profile.tensor_size,
         field_slots: profile.field_slots,

@@ -13,6 +13,7 @@ from typing import Iterable
 @dataclass(frozen=True)
 class TensorProfile:
     id: str
+    game_mode: str
     version: int
     tensor_size: int
     field_slots: int
@@ -41,6 +42,7 @@ def get_tensor_profile(profile_id: str | None = None) -> TensorProfile:
     raw = get_profile(profile_id)
     return TensorProfile(
         id=raw.id,
+        game_mode=raw.game_mode,
         version=raw.version,
         tensor_size=raw.tensor_size,
         field_slots=raw.field_slots,
@@ -77,6 +79,7 @@ def _legacy_standard_v1() -> TensorProfile:
 
     return TensorProfile(
         id="standard_v1",
+        game_mode="standard",
         version=1,
         tensor_size=TENSOR_SIZE,
         field_slots=FIELD_SLOTS,

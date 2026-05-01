@@ -15,6 +15,7 @@ def test_default_tensor_profile_shape():
     profile = get_tensor_profile()
 
     assert profile.id == TENSOR_PROFILE_ID
+    assert profile.game_mode == "standard"
     assert profile.tensor_size == TENSOR_SIZE
     assert profile.card_id_slot_count == 520
     assert profile.scalar_slot_count == 855
@@ -66,6 +67,7 @@ def test_tensor_profile_falls_back_when_engine_function_missing(monkeypatch):
     profile = get_tensor_profile()
 
     assert profile.id == "standard_v1"
+    assert profile.game_mode == "standard"
     assert profile.card_id_slot_count == 520
     assert profile.scalar_slot_count == 855
 

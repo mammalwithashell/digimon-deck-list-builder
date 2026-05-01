@@ -318,6 +318,7 @@ class TestTensorProfiles:
 
         profile = get_tensor_profile()
         assert profile.id == "standard_v1"
+        assert profile.game_mode == "standard"
         assert profile.version == 1
         assert profile.tensor_size == TENSOR_SIZE
         assert profile.card_id_slot_count == 520
