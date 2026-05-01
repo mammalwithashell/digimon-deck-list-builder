@@ -158,14 +158,28 @@ fn breeding_hatch_and_move() {
     // Can't hatch again (breeding area occupied)
     assert!(!game.hatch(tp));
 
-    // Move from breeding to battle area
+    // Can't move a level-2 egg directly to the battle area.
+    assert!(!game.move_from_breeding(tp));
+    assert!(game.player(tp).breeding_area.is_some());
+    assert_eq!(game.player(tp).field_count(), 0);
+
+    // Move a level-3 permanent from breeding to battle area.
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+    game.player_mut(tp).breeding_area = Some(Permanent::new(
+        CardSource::new(agumon_idx, tp, 999),
+        game.turn_count,
+    ));
     assert!(game.move_from_breeding(tp));
     assert!(game.player(tp).breeding_area.is_none());
     assert_eq!(game.player(tp).field_count(), 1);
 
-    // Verify the permanent is a DigiEgg
+    // Verify the permanent is the level-3 Digimon.
     let perm = &game.player(tp).battle_area[0];
-    assert!(perm.is_digi_egg(&game.card_data));
+    assert_eq!(perm.level(&game.card_data), Some(3));
 }
 
 #[test]
@@ -207,6 +221,45 @@ fn decode_move_from_breeding_advances_to_main_phase() {
     game.decode_action(MOVE_FROM_BREEDING, tp);
 
     assert_eq!(game.current_phase, GamePhase::Main);
+}
+
+#[test]
+fn decode_move_from_breeding_rejects_level_2_and_stays_in_breeding_phase() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let rules = Rules::standard();
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    let tp = game.turn_player();
+    let egg_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-001")
+        .expect("Koromon in test card DB");
+    game.player_mut(tp).breeding_area = Some(Permanent::new(
+        CardSource::new(egg_idx, tp, 998),
+        game.turn_count,
+    ));
+
+    assert_eq!(game.current_phase, GamePhase::Breeding);
+    game.decode_action(MOVE_FROM_BREEDING, tp);
+
+    assert_eq!(
+        game.current_phase,
+        GamePhase::Breeding,
+        "illegal level-2 move must not advance as though the move resolved",
+    );
+    assert!(
+        game.player(tp).breeding_area.is_some(),
+        "level-2 permanent must remain in breeding",
+    );
+    assert_eq!(
+        game.player(tp).field_count(),
+        0,
+        "level-2 permanent must not enter the battle area",
+    );
 }
 
 #[test]
