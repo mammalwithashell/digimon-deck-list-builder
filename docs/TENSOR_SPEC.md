@@ -33,9 +33,9 @@ The canonical board tensor profile is `standard_v1`:
 | `card_id_slot_count` | 520 |
 | `scalar_slot_count` | 855 |
 
-The profile registry lives in `code/digimon-engine/src/tensor_profile.rs`. A profile is metadata for describing and auditing the tensor layout; it does not change tensor writer values, legal action masks, or action IDs.
+Canonical tensor profile definitions live under `code/digimon-engine/src/tensor_profiles/<game_mode>/<version>.rs`. The current profile is defined in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`, which owns the Standard v1 tensor size, section ranges, slot shape, and derived card/scalar positions. `code/digimon-engine/src/tensor.rs` is the Standard v1 tensor writer and compatibility surface; it re-exports the current layout constants but does not own them.
 
-`standard_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets imported from `tensor.rs` instead of magic numeric indices.
+`standard_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets defined with the profile-owned layout constants instead of magic numeric indices.
 
 ### `standard_v1` Sections
 
@@ -179,7 +179,7 @@ Card identities are encoded as integer registry indices (float-cast):
 
 ### Tensor Layout Metadata
 
-Canonical tensor layout metadata lives in `code/digimon-engine/src/tensor_profile.rs`,
+Canonical tensor layout metadata lives in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`,
 is exposed to Python by `digimon_engine.get_tensor_profile()`, and is consumed through
 `digimon_gym.tensor_profiles.get_tensor_profile()`.
 

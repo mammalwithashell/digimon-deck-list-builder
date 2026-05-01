@@ -1826,10 +1826,10 @@ Each one iterates effects via `CardEffectRegistry::get(card_id).effects(handle)`
 
 ### Tensor profile metadata
 
-The Rust engine exposes the canonical tensor profile registry from `tensor_profile.rs`. Use it when code needs layout metadata such as card-ID positions, scalar positions, section boundaries, or slot/source fields.
+The Rust engine exposes the canonical tensor profile registry from `tensor_profiles/`. Use it when code needs layout metadata such as card-ID positions, scalar positions, section boundaries, or slot/source fields.
 
 ```rust
-use digimon_engine::tensor_profile::{
+use digimon_engine::tensor_profiles::{
     all_profile_ids,
     default_profile,
     profile_by_id,
@@ -1841,6 +1841,8 @@ assert_eq!(profile.id, STANDARD_V1_PROFILE_ID);
 assert_eq!(profile.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
 let (card_id_positions, scalar_positions) = profile.positions();
 ```
+
+`digimon_engine::tensor_profile` remains as a temporary compatibility alias, but new code should use `digimon_engine::tensor_profiles`.
 
 The PyO3 bindings expose the same default profile metadata:
 

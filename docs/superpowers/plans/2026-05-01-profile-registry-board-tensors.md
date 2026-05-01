@@ -1,5 +1,7 @@
 # Profile Registry For Board Tensors Implementation Plan
 
+> Superseded follow-up: `docs/superpowers/plans/2026-05-01-profile-owned-tensor-layout.md` refactors this registry so profile modules own the layout constants under `tensor_profiles/<game_mode>/<version>.rs`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a canonical board-tensor profile registry so Rust, PyO3, RL feature extraction, Tauri summaries, and frontend debug UI all agree on the active tensor layout.

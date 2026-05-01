@@ -21,7 +21,7 @@ use digimon_engine::game::Game;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::rules::Rules;
 use digimon_engine::tensor::build_tensor;
-use digimon_engine::tensor_profile::default_profile;
+use digimon_engine::tensor_profiles::default_profile;
 use serde::{Deserialize, Serialize};
 
 use crate::inference_state::InferenceState;
