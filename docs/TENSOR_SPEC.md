@@ -168,7 +168,9 @@ Start at `+7`, bottom-to-top ordering.
 Card identities are encoded as integer registry indices (float-cast):
 
 - `0` means empty/padding
-- Each card gets a stable integer index from `CardRegistry` (1-based, sorted alphabetically)
+- Production card indices come from stable explicit `index` values in `data/cards.json`
+- Legacy/test card data without explicit indices uses a deterministic sorted fallback
+- `CardRegistry` rejects duplicate explicit indices
 - The `CardEmbeddingExtractor` contains a trainable `nn.Embedding(20000, 16)` that maps
   these integers to learned 16-float vectors on the GPU
 - The embedding table is part of the model checkpoint — no external files at inference
@@ -177,11 +179,17 @@ Card identities are encoded as integer registry indices (float-cast):
 
 ### Tensor Layout Metadata
 
-`code/engine_py_legacy/engine/data/tensor_layout.py` exports:
+Canonical tensor layout metadata lives in `code/digimon-engine/src/tensor_profile.rs`,
+is exposed to Python by `digimon_engine.get_tensor_profile()`, and is consumed through
+`digimon_gym.tensor_profiles.get_tensor_profile()`.
 
-- `CARD_ID_POSITIONS`: list of 520 tensor indices that hold card IDs
-- `SCALAR_POSITIONS`: list of 855 tensor indices that hold scalar values
-- Used by `CardEmbeddingExtractor` to split observations for embedding lookup
+The profile provides:
+
+- `card_id_positions`: list of 520 tensor indices that hold card IDs
+- `scalar_positions`: list of 855 tensor indices that hold scalar values
+- Metadata used by `CardEmbeddingExtractor` to split observations for embedding lookup
+
+`code/engine_py_legacy/engine/data/tensor_layout.py` remains a legacy fallback only.
 
 ## Selection Context (`1370-1374`)
 
