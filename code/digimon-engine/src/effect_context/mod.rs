@@ -16,6 +16,8 @@ mod selections;
 
 pub use selections::{CountCappedZone, DistinctByMode, EffectContextSelectorScope};
 
+pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
+
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
@@ -25,12 +27,31 @@ use crate::enums::{
     StackPosition,
 };
 use crate::game::Game;
+use crate::game_actions::PlayFromHandCostResult;
 use crate::modifiers::{EffectControllerFilter, EffectImmunityFilter, ModifierEntry};
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
+use crate::replacement::{ReplacementCause, ReplacementSubject};
 use crate::rules::Rules;
 use crate::scheduled_effects::ScheduledEffect;
 use digimon_dsl::compiled::CompiledStep;
+
+pub struct PartitionRequirement {
+    pub label: &'static str,
+    pub matches: Box<dyn Fn(&Game, SourceSelectionRef) -> bool + Send + Sync>,
+}
+
+impl PartitionRequirement {
+    pub fn new<F>(label: &'static str, matches: F) -> Self
+    where
+        F: Fn(&Game, SourceSelectionRef) -> bool + Send + Sync + 'static,
+    {
+        Self {
+            label,
+            matches: Box::new(matches),
+        }
+    }
+}
 
 fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
     match kind {
@@ -75,6 +96,13 @@ pub struct EffectReadContext<'a> {
     pub source_permanent: Option<PermanentHandle>,
     pub source_kind: EffectSourceKind,
     pub player: PlayerId,
+    replacement_cause: Option<ReplacementCause>,
+    replacement_source_controller: Option<PlayerId>,
+    replacement_subject_controller: Option<PlayerId>,
+    /// Card whose cost is currently being inspected by a BeforePayCost hook.
+    /// `None` outside play/digivolve cost calculation.
+    pub cost_target_card: Option<CardHandle>,
+    pub cost_target_from_hand: bool,
 }
 
 impl<'a> EffectReadContext<'a> {
@@ -101,7 +129,47 @@ impl<'a> EffectReadContext<'a> {
             source_permanent,
             source_kind,
             player,
+            replacement_cause: None,
+            replacement_source_controller: None,
+            replacement_subject_controller: None,
+            cost_target_card: None,
+            cost_target_from_hand: false,
         }
+    }
+
+    pub fn new_with_cost_target(
+        game: &'a Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        player: PlayerId,
+        cost_target_card: CardHandle,
+        cost_target_from_hand: bool,
+    ) -> Self {
+        let source_kind = infer_effect_source_kind(game, source_card, source_permanent);
+        Self {
+            game,
+            source_card,
+            source_permanent,
+            source_kind,
+            player,
+            replacement_cause: None,
+            replacement_source_controller: None,
+            replacement_subject_controller: None,
+            cost_target_card: Some(cost_target_card),
+            cost_target_from_hand,
+        }
+    }
+
+    pub fn with_replacement_context(
+        mut self,
+        cause: ReplacementCause,
+        source_controller: Option<PlayerId>,
+        subject_controller: Option<PlayerId>,
+    ) -> Self {
+        self.replacement_cause = Some(cause);
+        self.replacement_source_controller = source_controller;
+        self.replacement_subject_controller = subject_controller;
+        self
     }
 
     pub fn memory(&self) -> i16 {
@@ -120,12 +188,28 @@ impl<'a> EffectReadContext<'a> {
         &self.game.card_data
     }
 
-    pub fn player(&self, id: PlayerId) -> &Player {
+    pub fn player(&self) -> PlayerId {
+        self.player
+    }
+
+    pub fn player_state(&self, id: PlayerId) -> &Player {
         self.game.player(id)
     }
 
     pub fn my_player(&self) -> &Player {
         self.game.player(self.player)
+    }
+
+    pub fn replacement_cause(&self) -> Option<ReplacementCause> {
+        self.replacement_cause
+    }
+
+    pub fn replacement_source_controller(&self) -> Option<PlayerId> {
+        self.replacement_source_controller
+    }
+
+    pub fn replacement_subject_controller(&self) -> Option<PlayerId> {
+        self.replacement_subject_controller
     }
 
     pub fn opponent_id(&self) -> PlayerId {
@@ -159,7 +243,67 @@ impl<'a> EffectReadContext<'a> {
     pub fn source_permanent(&self) -> Option<&Permanent> {
         let h = self.source_permanent?;
         let player = self.game.player(h.player);
+        if h.index == crate::action::space::BREEDING_TARGET as u8 {
+            return player.breeding_area.as_ref();
+        }
         player.battle_area.get(h.index as usize)
+    }
+
+    pub fn cost_target_card_id(&self) -> Option<&str> {
+        self.cost_target_card
+            .and_then(|card| self.game.card_data_for_handle(card))
+            .map(|data| data.card_id.as_str())
+    }
+
+    pub fn cost_target_has_trait(&self, needle: &str) -> bool {
+        self.cost_target_card
+            .and_then(|card| self.game.card_data_for_handle(card))
+            .is_some_and(|data| data.traits.iter().any(|trait_name| trait_name == needle))
+    }
+
+    pub fn cost_target_from_hand(&self) -> bool {
+        self.cost_target_from_hand
+    }
+
+    pub fn cost_reduction_source(&self) -> Option<PermanentHandle> {
+        self.source_permanent
+    }
+
+    pub fn source_stack_source_count(&self) -> usize {
+        self.source_permanent()
+            .map(|perm| perm.card_sources.len().saturating_sub(1))
+            .unwrap_or(0)
+    }
+
+    pub fn event_permanent(&self) -> Option<PermanentHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_permanent)
+    }
+
+    pub fn event_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_card)
+    }
+
+    pub fn event_source_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_source_card)
+    }
+
+    pub fn event_host_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_host_card)
+    }
+
+    pub fn event_host_permanent(&self) -> Option<PermanentHandle> {
+        self.game.current_trigger_context.and_then(|trigger| {
+            let handle = trigger.event_host_permanent?;
+            live_event_permanent(self.game, handle, trigger.event_host_card)
+        })
     }
 
     pub fn source_kind(&self) -> EffectSourceKind {
@@ -192,6 +336,20 @@ impl<'a> EffectReadContext<'a> {
             .security_resolution
             .as_ref()
             .and_then(|s| s.attacker)
+    }
+
+    pub fn attack_attacker(&self) -> Option<PermanentHandle> {
+        self.game
+            .pending_attack
+            .as_ref()
+            .map(|attack| attack.attacker)
+    }
+
+    pub fn attack_target(&self) -> Option<crate::AttackTarget> {
+        self.game
+            .pending_attack
+            .as_ref()
+            .map(|attack| attack.effective_target)
     }
 
     pub fn security_digimon(&self) -> Option<CardHandle> {
@@ -277,6 +435,22 @@ impl<'a> EffectReadContext<'a> {
     }
 }
 
+fn live_event_permanent(
+    game: &Game,
+    handle: PermanentHandle,
+    expected_card: Option<CardHandle>,
+) -> Option<PermanentHandle> {
+    let card = game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+        .map(|perm| perm.top_card().handle())?;
+    match expected_card {
+        Some(expected_card) if card != expected_card => None,
+        _ => Some(handle),
+    }
+}
+
 /// The context passed to every effect's `process` closure.
 /// For `condition` closures see `EffectReadContext`.
 pub struct EffectContext<'a> {
@@ -294,6 +468,17 @@ pub struct EffectContext<'a> {
     /// `EffectContextSelectorScope::select_*` call, where it is set to the
     /// desired selector and cleared again before the method returns.
     pub(super) override_selecting_player: Option<PlayerId>,
+    /// Card whose cost is currently being inspected/resolved by a
+    /// BeforePayCost hook. `None` outside cost-reducer resolution.
+    pub cost_target_card: Option<CardHandle>,
+    pub cost_target_from_hand: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DelayCostStatus {
+    Paid,
+    Unpaid,
+    Pending,
 }
 
 impl<'a> EffectContext<'a> {
@@ -321,7 +506,23 @@ impl<'a> EffectContext<'a> {
             source_kind,
             player,
             override_selecting_player: None,
+            cost_target_card: None,
+            cost_target_from_hand: false,
         }
+    }
+
+    pub fn new_with_cost_target(
+        game: &'a mut Game,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        player: PlayerId,
+        cost_target_card: CardHandle,
+        cost_target_from_hand: bool,
+    ) -> Self {
+        let mut ctx = Self::new(game, source_card, source_permanent, player);
+        ctx.cost_target_card = Some(cost_target_card);
+        ctx.cost_target_from_hand = cost_target_from_hand;
+        ctx
     }
 
     /// Construct an `EffectContext` with an explicit selecting-player
@@ -424,6 +625,13 @@ impl<'a> EffectContext<'a> {
         self.game.scheduled_effects.push(entry);
     }
 
+    /// Decline the pay cost for a queued triggered effect that parked during
+    /// `pay_cost_fn`. The effect queue will discard the parked process tail
+    /// after the current selection callback unwinds.
+    pub fn decline_pending_pay_cost(&mut self) {
+        self.game.decline_pending_pay_cost();
+    }
+
     // ─── Read-only queries ────────────────────────────────────────────
 
     pub fn memory(&self) -> i16 {
@@ -482,7 +690,67 @@ impl<'a> EffectContext<'a> {
     pub fn source_permanent(&self) -> Option<&Permanent> {
         let h = self.source_permanent?;
         let player = self.game.player(h.player);
+        if h.index == crate::action::space::BREEDING_TARGET as u8 {
+            return player.breeding_area.as_ref();
+        }
         player.battle_area.get(h.index as usize)
+    }
+
+    pub fn cost_target_card_id(&self) -> Option<&str> {
+        self.cost_target_card
+            .and_then(|card| self.game.card_data_for_handle(card))
+            .map(|data| data.card_id.as_str())
+    }
+
+    pub fn cost_target_has_trait(&self, needle: &str) -> bool {
+        self.cost_target_card
+            .and_then(|card| self.game.card_data_for_handle(card))
+            .is_some_and(|data| data.traits.iter().any(|trait_name| trait_name == needle))
+    }
+
+    pub fn cost_target_from_hand(&self) -> bool {
+        self.cost_target_from_hand
+    }
+
+    pub fn cost_reduction_source(&self) -> Option<PermanentHandle> {
+        self.source_permanent
+    }
+
+    pub fn source_stack_source_count(&self) -> usize {
+        self.source_permanent()
+            .map(|perm| perm.card_sources.len().saturating_sub(1))
+            .unwrap_or(0)
+    }
+
+    pub fn event_permanent(&self) -> Option<PermanentHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_permanent)
+    }
+
+    pub fn event_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_card)
+    }
+
+    pub fn event_source_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_source_card)
+    }
+
+    pub fn event_host_card(&self) -> Option<CardHandle> {
+        self.game
+            .current_trigger_context
+            .and_then(|trigger| trigger.event_host_card)
+    }
+
+    pub fn event_host_permanent(&self) -> Option<PermanentHandle> {
+        self.game.current_trigger_context.and_then(|trigger| {
+            let handle = trigger.event_host_permanent?;
+            live_event_permanent(self.game, handle, trigger.event_host_card)
+        })
     }
 
     pub fn source_kind(&self) -> EffectSourceKind {
@@ -518,6 +786,20 @@ impl<'a> EffectContext<'a> {
             .security_resolution
             .as_ref()
             .and_then(|s| s.attacker)
+    }
+
+    pub fn attack_attacker(&self) -> Option<PermanentHandle> {
+        self.game
+            .pending_attack
+            .as_ref()
+            .map(|attack| attack.attacker)
+    }
+
+    pub fn attack_target(&self) -> Option<crate::AttackTarget> {
+        self.game
+            .pending_attack
+            .as_ref()
+            .map(|attack| attack.effective_target)
     }
 
     /// The handle of the security card currently being resolved (the card
@@ -611,6 +893,12 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Alias for [`Self::cancel_leave`] for replacement-process callbacks
+    /// whose card text names the current replacement rather than "leaving".
+    pub fn cancel_current_replacement(&mut self) {
+        self.cancel_leave();
+    }
+
     /// Mark the parked replacement as custom-handled — the process body has
     /// already mutated state and the original event should be skipped.
     /// Distinct from `cancel_leave` only at the doc level; both result in
@@ -663,6 +951,113 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    pub fn trash_delay_source(&mut self) -> bool {
+        matches!(self.trash_delay_source_status(), DelayCostStatus::Paid)
+    }
+
+    pub fn trash_delay_source_status(&mut self) -> DelayCostStatus {
+        let Some(source) = self.source_permanent else {
+            return DelayCostStatus::Unpaid;
+        };
+        let Some(source_card) = self.permanent_top_card_handle(source) else {
+            return DelayCostStatus::Unpaid;
+        };
+        self.game
+            .delete_permanent_with_cause(source, ReplacementCause::Cost);
+        if self.game.pending_selection.is_some() {
+            return DelayCostStatus::Pending;
+        }
+        if self.delay_source_card_in_trash(source.player, source_card) {
+            DelayCostStatus::Paid
+        } else {
+            DelayCostStatus::Unpaid
+        }
+    }
+
+    pub fn delay_source_card_in_trash(&self, player: PlayerId, source_card: CardHandle) -> bool {
+        self.find_battle_permanent_containing_card(player, source_card)
+            .is_none()
+            && self
+                .game
+                .player(player)
+                .trash
+                .iter()
+                .any(|card| card.handle() == source_card)
+    }
+
+    pub fn permanent_top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
+        self.game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|permanent| permanent.top_card().handle())
+    }
+
+    pub fn find_battle_permanent_containing_card(
+        &self,
+        player: PlayerId,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        self.game
+            .player(player)
+            .battle_area
+            .iter()
+            .position(|permanent| {
+                permanent
+                    .card_sources
+                    .iter()
+                    .chain(permanent.linked_cards.iter())
+                    .any(|source| source.handle() == card)
+            })
+            .map(|index| PermanentHandle {
+                player,
+                index: index as u8,
+            })
+    }
+
+    pub fn digivolve_replacement_subject_without_cost(
+        &mut self,
+        subject: ReplacementSubject,
+        card: CardHandle,
+    ) -> bool {
+        let Some(target) = subject.permanent() else {
+            return false;
+        };
+        if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
+            return false;
+        }
+
+        let Some(hand_index) = self
+            .game
+            .player(self.player)
+            .hand
+            .iter()
+            .position(|source| source.handle() == card)
+        else {
+            return false;
+        };
+
+        let turn = self.game.turn_count;
+        let card = self.game.player_mut(self.player).hand.remove(hand_index);
+        self.game.player_mut(target.player).battle_area[target.index as usize]
+            .digivolve(card, turn);
+
+        self.game.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            crate::selection::TriggerSource::Permanent(target),
+        );
+        self.game.drain_effect_queue();
+
+        for pid in 0..self.game.players.len() {
+            self.game.enqueue_triggered(
+                EffectTiming::OnDigivolve,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.game.drain_effect_queue();
+        true
+    }
+
     /// Reborrow this mut context as a read-only context — for condition
     /// closures, which take `&EffectReadContext`.
     pub fn as_read(&self) -> EffectReadContext<'_> {
@@ -672,6 +1067,11 @@ impl<'a> EffectContext<'a> {
             source_permanent: self.source_permanent,
             source_kind: self.source_kind,
             player: self.player,
+            replacement_cause: None,
+            replacement_source_controller: None,
+            replacement_subject_controller: None,
+            cost_target_card: self.cost_target_card,
+            cost_target_from_hand: self.cost_target_from_hand,
         }
     }
 
@@ -1308,9 +1708,19 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(card);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.play_from_hand_free(player, hand_index) {
-            Some(handle) => Some(handle),
-            None => {
+        match self.game.play_from_hand_with_cost_result(
+            player,
+            hand_index,
+            crate::enums::CostDelta::Free,
+            PlaySource::ByEffect,
+            false,
+        ) {
+            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
+                player,
+                index: field_index as u8,
+            }),
+            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Failed => {
                 // Rollback: pop the card back out of hand and restore it to
                 // the top of security so the failure is observable as a
                 // no-op. Restore face_up_security entry too in case the
@@ -1394,9 +1804,19 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.play_from_hand_with_cost(player, hand_index, cost_delta) {
-            Some(handle) => Some(handle),
-            None => {
+        match self.game.play_from_hand_with_cost_result(
+            player,
+            hand_index,
+            cost_delta,
+            PlaySource::ByEffect,
+            false,
+        ) {
+            PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
+                player,
+                index: field_index as u8,
+            }),
+            PlayFromHandCostResult::Pending => None,
+            PlayFromHandCostResult::Failed => {
                 // Rollback: pop the card out of hand and reinsert it at
                 // its original index in `target.card_sources` so the
                 // failure is a clean no-op for callers.
@@ -1927,6 +2347,14 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    pub fn play_selected_sources_without_cost(
+        &mut self,
+        selected: Vec<SourceSelectionRef>,
+    ) -> bool {
+        self.game
+            .play_source_refs_from_effect_without_cost(selected)
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     pub fn return_to_hand(
         &mut self,
@@ -2198,6 +2626,10 @@ impl<'a> EffectContext<'a> {
         };
         pa.cancelled = true;
         Ok(())
+    }
+
+    pub fn cancel_pending_attack(&mut self) {
+        self.game.cancel_pending_attack_from_effect();
     }
 
     /// Move the top of `player`'s digitama deck into the breeding area.

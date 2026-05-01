@@ -38,6 +38,23 @@ pub enum ReplacementSubject {
     Player(PlayerId),
 }
 
+impl ReplacementSubject {
+    pub fn permanent(self) -> Option<PermanentHandle> {
+        match self {
+            ReplacementSubject::Permanent(handle) => Some(handle),
+            _ => None,
+        }
+    }
+
+    pub fn controller(self, game: &crate::game::Game) -> Option<PlayerId> {
+        match self {
+            ReplacementSubject::Permanent(handle) => Some(handle.player),
+            ReplacementSubject::Card(handle, _zone) => game.owner_of_card(handle),
+            ReplacementSubject::Player(player) => Some(player),
+        }
+    }
+}
+
 /// The outcome a replacement effect sets. Mutually exclusive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReplacementOutcome {
@@ -127,39 +144,12 @@ pub struct ParkedReplacement {
 
 // ─── Dispatcher ────────────────────────────────────────────────────
 
-/// Controller of the subject for layering purposes.
-///
-/// Stub: `Card(_, Zone)` resolves via the card's owning player derived by
-/// scanning zones — but the hot path here is `Permanent` (which carries
-/// `handle.player`) and `Player`. For Task 2 the Card path is approximated
-/// by returning the first player (no callers yet); Task 3+ fire-sites will
-/// extend this when they start using the Card subject.
+/// Controller of the subject for layering and optional-prompt ownership.
 pub(crate) fn subject_controller_id(
     game: &crate::game::Game,
     subject: ReplacementSubject,
-) -> PlayerId {
-    match subject {
-        ReplacementSubject::Permanent(h) => h.player,
-        ReplacementSubject::Player(p) => p,
-        ReplacementSubject::Card(handle, _zone) => {
-            // Scan zones to find the owning player. Best-effort for Task 2;
-            // Task 3+ fire-sites are expected to always pass a Permanent or
-            // Player subject. Fall back to player 0 if not found.
-            for (pid, player) in game.players.iter().enumerate() {
-                let found = player
-                    .hand
-                    .iter()
-                    .chain(player.trash.iter())
-                    .chain(player.deck.iter())
-                    .chain(player.security.iter())
-                    .any(|cs| cs.handle() == handle);
-                if found {
-                    return pid as PlayerId;
-                }
-            }
-            0
-        }
-    }
+) -> Option<PlayerId> {
+    subject.controller(game)
 }
 
 /// What kind of candidate this is, for dispatch at run time.
@@ -274,7 +264,9 @@ fn try_replace_inner(
 ) -> ReplacementOutcome {
     // Collect candidates. We layer by controller: own_reps (subject's
     // controller) first, then opp_reps.
-    let subject_controller = subject_controller_id(game, subject);
+    let Some(subject_controller) = subject_controller_id(game, subject) else {
+        return ReplacementOutcome::None;
+    };
     let candidates = collect_candidates(game, timing, subject, cause);
 
     if candidates.is_empty() {
@@ -350,6 +342,8 @@ fn collect_candidates(
     cause: ReplacementCause,
 ) -> Vec<Candidate> {
     let mut out: Vec<Candidate> = Vec::new();
+    let replacement_source_controller = game.effect_source_player;
+    let replacement_subject_controller = subject.controller(game);
 
     // Snapshot subject's permanent (if any) so we can order subject-first.
     let subject_perm: Option<PermanentHandle> = match subject {
@@ -385,7 +379,12 @@ fn collect_candidates(
                 continue;
             }
             if let Some(cond) = &effect.condition {
-                let ctx = EffectReadContext::new(game, source_card, Some(h), h.player);
+                let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                    .with_replacement_context(
+                        cause,
+                        replacement_source_controller,
+                        replacement_subject_controller,
+                    );
                 if !cond(&ctx) {
                     continue;
                 }
@@ -396,8 +395,13 @@ fn collect_candidates(
             // `ReplacementCause::OwnEffect` (RULES_CONTEXT 16-31) and on the
             // no-substitute case (DCGO `HasMatchConditionPermanent`).
             if let Some(rcond) = &effect.replacement_condition {
-                let ctx = EffectReadContext::new(game, source_card, Some(h), h.player);
-                if !rcond(&ctx, cause) {
+                let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                    .with_replacement_context(
+                        cause,
+                        replacement_source_controller,
+                        replacement_subject_controller,
+                    );
+                if !rcond(&ctx, &subject) {
                     continue;
                 }
             }
@@ -521,7 +525,12 @@ fn passive_modifier_candidates(
             }
             if let Some(cond) = &entry.replacement_condition {
                 let read_ctx =
-                    EffectReadContext::new(game, CardHandle(0), Some(handle), handle.player);
+                    EffectReadContext::new(game, CardHandle(0), Some(handle), handle.player)
+                        .with_replacement_context(
+                            cause,
+                            game.effect_source_player,
+                            subject.controller(game),
+                        );
                 if !cond(&read_ctx, &subject) {
                     continue;
                 }
@@ -558,7 +567,12 @@ fn passive_modifier_candidates(
                 ReplacementSubject::Permanent(h) => Some(h),
                 _ => entry.source_permanent,
             };
-            let read_ctx = EffectReadContext::new(game, CardHandle(0), source_perm, target_player);
+            let read_ctx = EffectReadContext::new(game, CardHandle(0), source_perm, target_player)
+                .with_replacement_context(
+                    cause,
+                    game.effect_source_player,
+                    subject.controller(game),
+                );
             if !cond(&read_ctx, &subject) {
                 continue;
             }
@@ -889,9 +903,18 @@ fn make_accept_callback(
         // in `effect_queue.rs`, which `take()`s the slot and treats `None`
         // as "decline → original event proceeds") misinterpret.
         // Order matters: parked-check BEFORE the slot write.
-        if game.parked_replacement.is_some() {
+        let current_accept_parked = game.parked_replacement.as_ref().is_some_and(|parked| {
+            parked.subject == subject
+                && parked.cause == cause
+                && parked.original_destination == original_destination
+                && parked.source_card == source_card
+                && parked.source_permanent == source_permanent
+                && parked.controller == controller
+        });
+        if current_accept_parked {
             return;
         }
+        let has_unrelated_parked_replacement = game.parked_replacement.is_some();
 
         game.replacement_pending_outcome = Some(outcome);
 
@@ -902,6 +925,9 @@ fn make_accept_callback(
         run_commit_with_flag(game, |game| {
             commit_deferred_outcome(game, subject, cause, original_destination, outcome);
         });
+        if has_unrelated_parked_replacement {
+            game.replacement_pending_outcome = None;
+        }
     })
 }
 
@@ -960,6 +986,56 @@ fn commit_deferred_outcome(
     // Player) currently cover trash-by-effect / draw — those fire-sites
     // apply the outcome synchronously and don't use optional replacements
     // in v1.
+    if original_destination.is_none()
+        && cause == ReplacementCause::Battle
+        && game.pending_attack.is_some()
+    {
+        match outcome {
+            ReplacementOutcome::None | ReplacementOutcome::CustomHandled => {}
+            ReplacementOutcome::Cancelled => {
+                if let Some(pa) = game.pending_attack.as_mut() {
+                    pa.cancelled = true;
+                }
+            }
+            ReplacementOutcome::Substituted(new_subject) => {
+                let is_attacker_subject = game
+                    .pending_attack
+                    .as_ref()
+                    .map(|pa| subject == ReplacementSubject::Permanent(pa.attacker))
+                    .unwrap_or(false);
+                if is_attacker_subject {
+                    debug_assert!(
+                        false,
+                        "WhenWouldAttack Substituted outcome not supported in v1; \
+                         use WhenWouldBeAttackTarget for attack redirects"
+                    );
+                } else {
+                    let new_target = match new_subject {
+                        ReplacementSubject::Permanent(h) => crate::AttackTarget::Digimon(h),
+                        ReplacementSubject::Player(pid) => crate::AttackTarget::Player(pid),
+                        ReplacementSubject::Card(_, _) => {
+                            debug_assert!(
+                                false,
+                                "Attack target substitution does not accept Card subjects"
+                            );
+                            game.replacement_pending_outcome = None;
+                            return;
+                        }
+                    };
+                    game.apply_attack_target_substitution(new_target);
+                }
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(
+                    false,
+                    "Battle replacement Redirected outcome is not meaningful for attack shape"
+                );
+            }
+        }
+        game.replacement_pending_outcome = None;
+        return;
+    }
+
     let perm = match subject {
         ReplacementSubject::Permanent(h) => h,
         other => {

@@ -87,7 +87,8 @@ pub fn explain_action(game: &Game, player_id: PlayerId, action_id: u16) -> Actio
         | GamePhase::AllianceTiming
         | GamePhase::SelectUnion
         | GamePhase::SelectPermutation
-        | GamePhase::SelectBudgeted => explain_selection(game, player_id, action_id),
+        | GamePhase::SelectBudgeted
+        | GamePhase::SelectBreedingPermanent => explain_selection(game, player_id, action_id),
         GamePhase::Unsuspend | GamePhase::Draw | GamePhase::EndTurn | GamePhase::GameOver => base(
             game,
             player_id,
@@ -418,6 +419,35 @@ fn explain_selection(game: &Game, player_id: PlayerId, action_id: u16) -> Action
             ActionKind::Pass,
             "Pass / decline".to_string(),
         );
+    }
+
+    if game.current_phase == GamePhase::SelectBudgeted
+        && (ATTACK_START..ATTACK_END).contains(&action_id)
+    {
+        let (_, target) = decode_attack(action_id);
+        let opponent = game.next_clockwise(player_id);
+        let mut e = base(
+            game,
+            player_id,
+            action_id,
+            ActionKind::Selection,
+            format!("Select opponent slot {target}"),
+        );
+        e.target_zone = Some(ActionZone::Battle);
+        e.target_index = Some(target);
+        return with_battle_card(e, game, opponent, target);
+    }
+
+    if game.current_phase == GamePhase::SelectBreedingPermanent {
+        let mut e = base(
+            game,
+            player_id,
+            action_id,
+            ActionKind::Selection,
+            "Select breeding permanent".to_string(),
+        );
+        e.target_zone = Some(ActionZone::Breeding);
+        return with_breeding_card(e, game, player_id);
     }
 
     let mut e = base(

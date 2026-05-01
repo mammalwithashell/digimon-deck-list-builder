@@ -1095,10 +1095,10 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         Keyword::Scapegoat => vec![Effect::when_would_be_deleted(card)
             .name("<Scapegoat>")
             .optional()
-            .replacement_condition(|ctx, cause| {
+            .replacement_condition(|ctx, _subject| {
                 use crate::replacement::ReplacementCause;
                 // RULES_CONTEXT 16-31: skip own-effect deletions.
-                if matches!(cause, ReplacementCause::OwnEffect) {
+                if matches!(ctx.replacement_cause(), Some(ReplacementCause::OwnEffect)) {
                     return false;
                 }
                 // DCGO HasMatchConditionPermanent: at least one other own

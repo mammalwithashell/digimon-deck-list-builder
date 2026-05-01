@@ -54,7 +54,7 @@ pub enum GameEvent {
     },
 
     /// `player` digivolved `top` onto a permanent at `field_index`.
-    /// (Variant defined for future wiring — not emitted yet.)
+    /// Emitted by the normal battle-area `Game::digivolve_from_hand` path.
     Digivolve {
         seq: u64,
         player: PlayerId,

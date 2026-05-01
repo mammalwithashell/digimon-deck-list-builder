@@ -507,6 +507,7 @@ mod tests {
                     when_playing_this: true,
                     when_any_ally_played: None,
                     condition: None,
+                    optional: false,
                     once_per_turn: false,
                     amount: None,
                     amount_fn: Some(CompiledFormula::RawRust("formula_fn".into())),

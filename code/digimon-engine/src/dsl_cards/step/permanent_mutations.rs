@@ -22,6 +22,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::DeleteBoundPermanents { binding } => {
+            if let Some(mut handles) = bindings.get_permanent_list(binding) {
+                handles.sort_by_key(|h| (h.player, h.index));
+                handles.reverse();
+                for handle in handles {
+                    ctx.delete_permanent(handle);
+                }
+            }
+            true
+        }
         CompiledStep::ReturnToHand { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {

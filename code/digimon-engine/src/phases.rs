@@ -17,6 +17,7 @@ impl GamePhase {
                 | GamePhase::SelectUnion
                 | GamePhase::SelectPermutation
                 | GamePhase::SelectBudgeted
+                | GamePhase::SelectBreedingPermanent
         )
     }
 
@@ -61,9 +62,10 @@ impl GamePhase {
             // Phase 4 variants — tensor encoding TBD (Tasks 2-5); reuse
             // the nearest existing selection bucket as a placeholder so
             // training tensors stay in-range.
-            GamePhase::SelectUnion => 5.0,
-            GamePhase::SelectPermutation => 5.0,
-            GamePhase::SelectBudgeted => 5.0,
+            GamePhase::SelectUnion => 6.0,
+            GamePhase::SelectPermutation => 6.0,
+            GamePhase::SelectBudgeted => 6.0,
+            GamePhase::SelectBreedingPermanent => 6.0,
         }
     }
 }

@@ -6,13 +6,29 @@
 //! - The hand index is consumed (hand shrinks by 1).
 //! - The card lands on the battle area.
 
+use std::sync::Arc;
+
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCostDelta, CompiledPlayerRef, CompiledStep,
 };
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
-use digimon_engine::dsl_cards::step::run_step;
+use digimon_engine::dsl_cards::step::{run_step, run_steps, RunOutcome};
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
+use digimon_engine::rules::Rules;
+
+struct OptionalDslPlayReducer;
+impl CardEffect for OptionalDslPlayReducer {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::before_pay_cost(card)
+            .name("Optional DSL play reducer")
+            .optional()
+            .cost_reduction(1)
+            .build()]
+    }
+}
 
 #[test]
 fn play_from_hand_step_with_free_cost_delta_consumes_hand_and_keeps_memory() {
@@ -72,6 +88,68 @@ fn play_from_hand_step_with_free_cost_delta_consumes_hand_and_keeps_memory() {
         battle_before + 1,
         "battle area should gain 1 permanent (TST-B)"
     );
+}
+
+#[test]
+fn play_from_hand_step_parks_tail_behind_pending_cost_reducer() {
+    let mut rules = Rules::standard();
+    rules.memory_range = (-20, 25);
+    let mut runner = DebugRunner::builder()
+        .with_rules(rules)
+        .add_card(make_test_card("REDUCER", "Reducer"))
+        .add_card(make_test_card("PLAY-ME", "PlayMe"))
+        .hand(0, &["PLAY-ME"])
+        .memory(20)
+        .start();
+    runner.register_effect("REDUCER", Arc::new(OptionalDslPlayReducer));
+    let reducer = runner.place_on_field(0, "REDUCER", Some(0));
+    runner.game_mut().enter_main_phase();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_hand_index("idx", 0, 0);
+    let steps = vec![
+        CompiledStep::PlayFromHand {
+            of: CompiledPlayerRef::You,
+            hand_index: CompiledBindingRef::Named("idx".into()),
+            cost_delta: Some(CompiledCostDelta::Printed),
+        },
+        CompiledStep::GainMemory(3),
+    ];
+
+    let source_card = runner.game.players[0].battle_area[reducer.index as usize]
+        .top_card()
+        .handle();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(reducer), 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    assert!(runner.pending_selection().is_some());
+    assert_eq!(
+        runner.memory(),
+        20,
+        "tail GainMemory must not run before the reducer choice resolves"
+    );
+    assert_eq!(runner.game.players[0].hand.len(), 1);
+    assert!(runner.game.players[0]
+        .battle_area
+        .iter()
+        .all(|perm| perm.top_card().card_id(&runner.game.card_data) != "PLAY-ME"));
+
+    runner.execute_branch(0).expect("accept reducer");
+
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(
+        runner.memory(),
+        21,
+        "PLAY-ME costs 3, reducer lowers by 1, then deferred tail gains 3"
+    );
+    assert!(runner.game.players[0].hand.is_empty());
+    assert!(runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "PLAY-ME"));
 }
 
 // ─── PlayFromHandFree ────────────────────────────────────────────────────────

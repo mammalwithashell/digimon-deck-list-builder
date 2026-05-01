@@ -4,12 +4,19 @@
 //! compile and produce an Effect with the correct timing. Actual dispatch
 //! wiring is tested in subsequent Phase 1 tasks.
 
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
-use digimon_engine::card_source::CardHandle;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, CostDelta, EffectTiming, PlaySource};
-use std::sync::Arc;
+use digimon_engine::effect::{CardEffect, Effect, EffectBuilder};
+use digimon_engine::enums::{
+    CardColor, CardKind, CostDelta, DelayTrigger, EffectTiming, PlaySource,
+};
+use digimon_engine::events::GameEvent;
+use digimon_engine::permanent::{Permanent, PermanentHandle};
+use digimon_engine::replacement::ReplacementSubject;
+use digimon_engine::selection::AttackTarget;
+use std::sync::{Arc, Mutex};
 
 fn dummy() -> CardHandle {
     CardHandle(0)
@@ -62,11 +69,17 @@ fn new_effect_timings_are_constructible() {
     let e = Effect::on_hatch(card).build();
     assert_eq!(e.timing, EffectTiming::OnHatch);
 
+    let e = Effect::on_move(card).build();
+    assert_eq!(e.timing, EffectTiming::OnMove);
+
     let e = Effect::on_opponent_security_removed(card).build();
     assert_eq!(e.timing, EffectTiming::OnOpponentSecurityRemoved);
 
     let e = Effect::on_digivolution_card_trashed(card).build();
     assert_eq!(e.timing, EffectTiming::OnDigivolutionCardTrashed);
+
+    let e = Effect::on_option_placed(card).build();
+    assert_eq!(e.timing, EffectTiming::OnOptionPlaced);
 }
 
 #[test]
@@ -122,6 +135,33 @@ fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
         index: 0,
         norm_id: 0.0,
     }
+}
+
+fn option_card_with_cost(card_id: &str, name: &str, play_cost: u16, traits: &[&str]) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Option,
+        level: None,
+        dp: None,
+        play_cost,
+        colors: vec![CardColor::Red],
+        traits: traits.iter().map(|t| t.to_string()).collect(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        dual: None,
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    option_card_with_cost(card_id, name, 0, traits)
 }
 
 // ─── TEST-P1-T2 ───────────────────────────────────────────────────────────────
@@ -724,6 +764,927 @@ fn on_hatch_fires_when_egg_hatches() {
     );
 }
 
+struct OnMoveObserver;
+impl CardEffect for OnMoveObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_move(card)
+            .name("OnMove observer gains memory")
+            .condition(|ctx| ctx.event_permanent().is_some())
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
+
+#[test]
+fn on_move_fires_after_breeding_permanent_moves_to_battle() {
+    let mut baby = plain_digimon("BABY", "Baby", 0);
+    baby.level = Some(2);
+
+    let filler: Vec<&str> = vec!["FILLER"; 5];
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Move Observer", 3))
+        .add_card(baby)
+        .add_card(plain_digimon("FILLER", "Filler", 1))
+        .hand(0, &["OBS"])
+        .digitama(0, &["BABY"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(OnMoveObserver));
+
+    assert_eq!(r.play(0, 0), Some(0));
+    assert!(r.game.hatch(0), "hatch BABY into breeding");
+
+    let before = r.memory();
+    assert!(
+        r.game.move_from_breeding(0),
+        "breeding permanent should move"
+    );
+
+    assert_eq!(r.memory(), before + 1);
+}
+
+struct DelayOptionNoop;
+impl CardEffect for DelayOptionNoop {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Delay noop")
+            .delay(DelayTrigger::EndOfYourNextTurn)
+            .process(|_ctx| {})
+            .build()]
+    }
+}
+
+struct StandardOptionNoop;
+impl CardEffect for StandardOptionNoop {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Standard option noop")
+            .option_main()
+            .process(|_ctx| {})
+            .build()]
+    }
+}
+
+struct OnOptionPlacedObserver;
+impl CardEffect for OnOptionPlacedObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_option_placed(card)
+            .name("Option placed observer")
+            .condition(|ctx| ctx.event_card().is_some())
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
+
+struct OnOptionPlacedNoopObserver;
+impl CardEffect for OnOptionPlacedNoopObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_option_placed(card)
+            .name("Option placed noop observer")
+            .condition(|ctx| ctx.event_card().is_some())
+            .process(|_ctx| {})
+            .build()]
+    }
+}
+
+#[test]
+fn on_option_placed_fires_after_delay_option_enters_battle_area() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Option Observer", 3))
+        .add_card(option_card("OPT-DELAY", "Delay Option", &["Royal Knight"]))
+        .hand(0, &["OBS", "OPT-DELAY"])
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(OnOptionPlacedObserver));
+    r.register_effect("OPT-DELAY", Arc::new(DelayOptionNoop));
+
+    assert_eq!(r.play(0, 0), Some(0));
+    r.game.enter_main_phase();
+    let before = r.memory();
+    let battle_before = r.battle_area_size(0);
+    let _ = r.game.play_option_from_hand(0, 0);
+
+    assert_eq!(
+        r.battle_area_size(0),
+        battle_before + 1,
+        "Delay option should be placed as a battle-area option permanent"
+    );
+
+    assert_eq!(r.memory(), before + 1);
+}
+
+#[test]
+fn on_option_placed_does_not_fire_for_standard_option_sent_to_trash() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Option Observer", 3))
+        .add_card(option_card("OPT-STANDARD", "Standard Option", &[]))
+        .hand(0, &["OBS", "OPT-STANDARD"])
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(OnOptionPlacedObserver));
+    r.register_effect("OPT-STANDARD", Arc::new(StandardOptionNoop));
+
+    assert_eq!(r.play(0, 0), Some(0));
+    r.game.enter_main_phase();
+    let before_memory = r.memory();
+    let before_battle_area = r.battle_area_size(0);
+
+    let result = r.game.play_option_from_hand(0, 0);
+
+    assert_eq!(result, digimon_engine::selection::OptionPlayResult::Trashed);
+    assert_eq!(
+        r.memory(),
+        before_memory,
+        "OnOptionPlaced must not fire for standard options"
+    );
+    assert_eq!(
+        r.battle_area_size(0),
+        before_battle_area,
+        "standard options must not create battle-area option permanents"
+    );
+    assert!(
+        r.game
+            .player(0)
+            .trash
+            .iter()
+            .any(|card| card.card_id(&r.game.card_data) == "OPT-STANDARD"),
+        "standard option should resolve to trash"
+    );
+}
+
+#[test]
+fn delay_option_cost_crossing_turn_ends_after_on_option_placed_selection_resolves() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS-A", "Observer A", 0))
+        .add_card(plain_digimon("OBS-B", "Observer B", 0))
+        .add_card(option_card_with_cost(
+            "OPT-DELAY-COST",
+            "Delay Option Cost",
+            3,
+            &[],
+        ))
+        .hand(0, &["OBS-A", "OBS-B", "OPT-DELAY-COST"])
+        .memory(1)
+        .start();
+    r.register_effect("OBS-A", Arc::new(OnOptionPlacedNoopObserver));
+    r.register_effect("OBS-B", Arc::new(OnOptionPlacedNoopObserver));
+    r.register_effect("OPT-DELAY-COST", Arc::new(DelayOptionNoop));
+
+    assert_eq!(r.play(0, 0), Some(0));
+    assert_eq!(r.play(0, 0), Some(1));
+    r.game.enter_main_phase();
+
+    let result = r.game.play_option_from_hand(0, 0);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "two OnOptionPlaced observers should ask for trigger order"
+    );
+    assert_eq!(
+        r.game.turn_player(),
+        0,
+        "turn should not pass until the placed-option observer selection settles"
+    );
+    assert_eq!(
+        result,
+        digimon_engine::selection::OptionPlayResult::Pending,
+        "option play should pause on the trigger-order selection"
+    );
+
+    let (selecting_player, action_id) = {
+        let selection = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("trigger-order selection should be pending");
+        (selection.selecting_player, selection.valid_action_ids[0])
+    };
+    r.game
+        .resolve_selection(selecting_player, action_id)
+        .expect("resolving trigger order should succeed");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "all placed-option observers should settle after resolving trigger order"
+    );
+    assert_eq!(
+        r.game.turn_player(),
+        1,
+        "memory crossed to the opponent while playing the Delay option, so the turn should pass after observers settle"
+    );
+}
+
+struct SourceTrashObserver;
+impl CardEffect for SourceTrashObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("Source trash observer")
+            .condition(|ctx| ctx.event_card().is_some())
+            .process(|ctx| {
+                assert!(ctx.event_host_card().is_some());
+                assert!(ctx.event_source_card().is_some());
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+struct SourceTrashHostAliasGuard;
+impl CardEffect for SourceTrashHostAliasGuard {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("Source trash host alias guard")
+            .condition(|ctx| ctx.event_source_card().is_some())
+            .process(|ctx| {
+                if let Some(host) = ctx.event_host_permanent() {
+                    let aliased_id = ctx.game.player(host.player).battle_area[host.index as usize]
+                        .top_card()
+                        .card_id(ctx.card_data());
+                    assert_ne!(
+                        aliased_id, "OTHER",
+                        "stale source-trash host handle must not alias a shifted permanent"
+                    );
+                }
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_digivolution_card_trashed_context_carries_host_and_trashed_source() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Source Trash Observer", 3))
+        .add_card(plain_digimon("TOP", "Top", 4))
+        .add_card(plain_digimon("UNDER", "Under", 3))
+        .memory(5)
+        .start();
+    r.register_effect("OBS", Arc::new(SourceTrashObserver));
+
+    r.place_on_field(0, "OBS", None);
+    let host = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER")
+            .unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+
+    let before = r.memory();
+    assert!(
+        r.game_mut().return_to_hand(host).is_some(),
+        "return_to_hand should move TOP to hand and trash UNDER"
+    );
+
+    assert_eq!(r.memory(), before + 1);
+}
+
+#[test]
+fn source_trash_host_context_does_not_alias_shifted_permanent() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Source Trash Observer", 3))
+        .add_card(plain_digimon("TOP", "Top", 4))
+        .add_card(plain_digimon("UNDER", "Under", 3))
+        .add_card(plain_digimon("OTHER", "Other", 3))
+        .memory(5)
+        .start();
+    r.register_effect("OBS", Arc::new(SourceTrashHostAliasGuard));
+
+    let host = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER")
+            .unwrap();
+        let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+    r.place_on_field(0, "OTHER", None);
+    r.place_on_field(0, "OBS", None);
+
+    let before = r.memory();
+    assert!(r.game_mut().return_to_hand(host).is_some());
+
+    assert_eq!(r.memory(), before + 1);
+}
+
+struct AllyAttackObserver {
+    seen: Arc<Mutex<Vec<(PermanentHandle, AttackTarget)>>>,
+}
+
+impl CardEffect for AllyAttackObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = self.seen.clone();
+        vec![Effect::on_ally_attack(card)
+            .name("Ally attack observer")
+            .condition(|ctx| ctx.attack_attacker().is_some() && ctx.attack_target().is_some())
+            .process(move |ctx| {
+                seen.lock().unwrap().push((
+                    ctx.attack_attacker().expect("attacker context"),
+                    ctx.attack_target().expect("target context"),
+                ));
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+struct OpponentAttackObserver {
+    seen: Arc<Mutex<Vec<(PermanentHandle, AttackTarget)>>>,
+}
+
+impl CardEffect for OpponentAttackObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = self.seen.clone();
+        vec![Effect::on_opponent_attack(card)
+            .name("Opponent attack observer")
+            .condition(|ctx| ctx.attack_attacker().is_some() && ctx.attack_target().is_some())
+            .process(move |ctx| {
+                seen.lock().unwrap().push((
+                    ctx.attack_attacker().expect("attacker context"),
+                    ctx.attack_target().expect("target context"),
+                ));
+                ctx.gain_memory(2);
+            })
+            .build()]
+    }
+}
+
+struct SubstituteAttackTarget(PermanentHandle);
+impl CardEffect for SubstituteAttackTarget {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let replacement = self.0;
+        vec![
+            EffectBuilder::new(card, EffectTiming::WhenWouldBeAttackTarget)
+                .name("Substitute attack target")
+                .replacement_process(move |ctx| {
+                    ctx.substitute(ReplacementSubject::Permanent(replacement));
+                })
+                .build(),
+        ]
+    }
+}
+
+struct OptionalNoopWhenWouldAttack;
+impl CardEffect for OptionalNoopWhenWouldAttack {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![EffectBuilder::new(card, EffectTiming::WhenWouldAttack)
+            .name("Optional noop when would attack")
+            .optional()
+            .replacement_process(|_ctx| {})
+            .build()]
+    }
+}
+
+struct OptionalCancelWhenWouldAttack;
+impl CardEffect for OptionalCancelWhenWouldAttack {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![EffectBuilder::new(card, EffectTiming::WhenWouldAttack)
+            .name("Optional cancel when would attack")
+            .optional()
+            .replacement_process(|ctx| {
+                ctx.cancel();
+            })
+            .build()]
+    }
+}
+
+struct OptionalSubstituteAttackTarget(PermanentHandle);
+impl CardEffect for OptionalSubstituteAttackTarget {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let replacement = self.0;
+        vec![
+            EffectBuilder::new(card, EffectTiming::WhenWouldBeAttackTarget)
+                .name("Optional substitute attack target")
+                .optional()
+                .replacement_process(move |ctx| {
+                    ctx.substitute(ReplacementSubject::Permanent(replacement));
+                })
+                .build(),
+        ]
+    }
+}
+
+struct ReturnSelfOnAttack;
+impl CardEffect for ReturnSelfOnAttack {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_attack(card)
+            .name("Return self on attack")
+            .process(|ctx| {
+                if let Some(source) = ctx.source_permanent {
+                    ctx.game.return_to_hand(source);
+                }
+            })
+            .build()]
+    }
+}
+
+struct ReturnSelfWithTriggerOrderOnAttack;
+impl CardEffect for ReturnSelfWithTriggerOrderOnAttack {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![
+            Effect::on_attack(card)
+                .name("Return self on ordered attack trigger")
+                .process(|ctx| {
+                    if let Some(source) = ctx.source_permanent {
+                        ctx.game.return_to_hand(source);
+                    }
+                })
+                .build(),
+            Effect::on_attack(card)
+                .name("Noop ordered attack trigger")
+                .process(|_ctx| {})
+                .build(),
+        ]
+    }
+}
+
+struct AddTopSourceOnAttack;
+impl CardEffect for AddTopSourceOnAttack {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_attack(card)
+            .name("Add top source on attack")
+            .process(|ctx| {
+                if let Some(source) = ctx.source_permanent {
+                    let evo_idx = ctx
+                        .game
+                        .card_data
+                        .iter()
+                        .position(|c| c.card_id == "EVO-TOP")
+                        .expect("EVO-TOP fixture");
+                    let evo = CardSource::new(evo_idx, source.player, ctx.game.next_card_index());
+                    ctx.game.players[source.player as usize].battle_area[source.index as usize]
+                        .card_sources
+                        .push(evo);
+                }
+            })
+            .build()]
+    }
+}
+
+struct ReturnAttackerOnAllyAttack;
+impl CardEffect for ReturnAttackerOnAllyAttack {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_ally_attack(card)
+            .name("Return attacker on ally attack")
+            .process(|ctx| {
+                if let Some(attacker) = ctx.attack_attacker() {
+                    ctx.game.return_to_hand(attacker);
+                }
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn accepted_predeclare_cancel_replacement_cancels_before_observers() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("ALLY-OBS", "Ally Observer", 3))
+        .memory(5)
+        .start();
+    let ally_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect("ATTACKER", Arc::new(OptionalCancelWhenWouldAttack));
+    r.register_effect(
+        "ALLY-OBS",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY-OBS", None);
+    let before = r.memory();
+
+    let result = r.attack_player(attacker, 1, false);
+    assert_eq!(
+        result,
+        digimon_engine::combat::AttackResult::InProgress,
+        "optional pre-declare replacement should park the attack"
+    );
+    let selecting_player = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("replacement selection should be pending")
+        .selecting_player;
+    r.game.decode_action(REPLACEMENT_ACCEPT, selecting_player);
+
+    assert!(
+        r.game.pending_attack.is_none(),
+        "accepting the pre-declare cancel should resume and clear the attack"
+    );
+    assert_eq!(
+        r.memory(),
+        before,
+        "cancelled pre-declare attack should not fire declared-attack observers"
+    );
+    assert!(
+        ally_seen.lock().unwrap().is_empty(),
+        "declared-attack observers must not fire after accepted pre-declare cancel"
+    );
+}
+
+#[test]
+fn declined_predeclare_replacement_resumes_attack_declaration() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("ALLY-OBS", "Ally Observer", 3))
+        .memory(5)
+        .start();
+    let ally_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect("ATTACKER", Arc::new(OptionalNoopWhenWouldAttack));
+    r.register_effect(
+        "ALLY-OBS",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY-OBS", None);
+    let before = r.memory();
+
+    let result = r.attack_player(attacker, 1, false);
+    assert_eq!(
+        result,
+        digimon_engine::combat::AttackResult::InProgress,
+        "optional pre-declare replacement should park the attack"
+    );
+    let selecting_player = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("replacement selection should be pending")
+        .selecting_player;
+    r.game.decode_action(PASS, selecting_player);
+
+    assert!(
+        r.game.pending_attack.is_none(),
+        "declining the replacement should resume and finish the attack"
+    );
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "resumed declaration should still fire ally attack observers"
+    );
+    assert_eq!(
+        *ally_seen.lock().unwrap(),
+        vec![(attacker, AttackTarget::Player(1))]
+    );
+}
+
+#[test]
+fn accepted_predeclare_target_substitution_updates_attack_context() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("ALLY-OBS", "Ally Observer", 3))
+        .add_card(plain_digimon("DEF-A", "Original Defender", 3))
+        .add_card(plain_digimon("DEF-B", "Replacement Defender", 3))
+        .memory(5)
+        .start();
+    let ally_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect(
+        "ALLY-OBS",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY-OBS", None);
+    let original = r.place_on_field(1, "DEF-A", Some(0));
+    let replacement = r.place_on_field(1, "DEF-B", Some(0));
+    r.register_effect(
+        "DEF-A",
+        Arc::new(OptionalSubstituteAttackTarget(replacement)),
+    );
+
+    let result = r.attack_digimon(attacker, original, false);
+    assert_eq!(
+        result,
+        digimon_engine::combat::AttackResult::InProgress,
+        "optional target substitution should park the attack"
+    );
+    let selecting_player = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("replacement selection should be pending")
+        .selecting_player;
+    r.game.decode_action(REPLACEMENT_ACCEPT, selecting_player);
+
+    assert_eq!(
+        *ally_seen.lock().unwrap(),
+        vec![(attacker, AttackTarget::Digimon(replacement))],
+        "accepting the target substitution should update declared-attack context"
+    );
+    assert!(
+        r.game.pending_attack.is_none(),
+        "accepted target substitution should resume and finish the attack"
+    );
+}
+
+#[test]
+fn attack_resume_after_trigger_order_does_not_alias_removed_attacker() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("ALLY", "Shifted Ally", 3))
+        .memory(5)
+        .start();
+    r.register_effect("ATTACKER", Arc::new(ReturnSelfWithTriggerOrderOnAttack));
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY", None);
+
+    let result = r.attack_player(attacker, 1, false);
+    assert_eq!(
+        result,
+        digimon_engine::combat::AttackResult::InProgress,
+        "multiple OnAttack effects should park on TriggerOrder"
+    );
+    let (selecting_player, action_id) = {
+        let selection = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("trigger-order selection should be pending");
+        (selection.selecting_player, selection.valid_action_ids[0])
+    };
+    r.game
+        .resolve_selection(selecting_player, action_id)
+        .expect("return-self trigger should resolve");
+
+    assert_eq!(
+        r.game.advance_pending_attack(),
+        digimon_engine::combat::AttackResult::Invalid,
+        "resumed attack must not continue through the shifted ally in the old slot"
+    );
+}
+
+#[test]
+fn declared_attack_fires_ally_and_opponent_observers_with_attack_context() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("ALLY-OBS", "Ally Observer", 3))
+        .add_card(plain_digimon("OPP-OBS", "Opponent Observer", 3))
+        .memory(5)
+        .start();
+    let ally_seen = Arc::new(Mutex::new(Vec::new()));
+    let opponent_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect(
+        "ALLY-OBS",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+    r.register_effect(
+        "OPP-OBS",
+        Arc::new(OpponentAttackObserver {
+            seen: opponent_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY-OBS", None);
+    r.place_on_field(1, "OPP-OBS", None);
+    let expected_target = AttackTarget::Player(1);
+
+    let before = r.memory();
+    r.attack_player(attacker, 1, false);
+    r.auto_resolve()
+        .expect("attack prompts should auto-resolve");
+
+    assert_eq!(
+        r.memory(),
+        before + 3,
+        "ally observer should gain 1 and opponent observer should gain 2 at attack declaration"
+    );
+    assert_eq!(
+        *ally_seen.lock().unwrap(),
+        vec![(attacker, expected_target)]
+    );
+    assert_eq!(
+        *opponent_seen.lock().unwrap(),
+        vec![(attacker, expected_target)]
+    );
+}
+
+#[test]
+fn attack_target_context_reports_effective_declared_target_after_substitution() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("ALLY-OBS", "Ally Observer", 3))
+        .add_card(plain_digimon("DEF-A", "Original Defender", 3))
+        .add_card(plain_digimon("DEF-B", "Replacement Defender", 3))
+        .memory(5)
+        .start();
+    let ally_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect(
+        "ALLY-OBS",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY-OBS", None);
+    let original = r.place_on_field(1, "DEF-A", Some(0));
+    let replacement = r.place_on_field(1, "DEF-B", Some(0));
+    r.register_effect("DEF-A", Arc::new(SubstituteAttackTarget(replacement)));
+
+    r.attack_digimon(attacker, original, false);
+    r.auto_resolve()
+        .expect("attack prompts should auto-resolve");
+
+    assert_eq!(
+        *ally_seen.lock().unwrap(),
+        vec![(attacker, AttackTarget::Digimon(replacement))],
+        "declared-attack observers should see the live effective target after replacement"
+    );
+}
+
+#[test]
+fn on_ally_attack_still_fires_if_attacker_stack_changes_during_on_attack() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("EVO-TOP", "Evo Top", 4))
+        .add_card(plain_digimon("ALLY-OBS", "Ally Observer", 3))
+        .memory(5)
+        .start();
+    let ally_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect("ATTACKER", Arc::new(AddTopSourceOnAttack));
+    r.register_effect(
+        "ALLY-OBS",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY-OBS", None);
+    let before = r.memory();
+
+    r.attack_player(attacker, 1, false);
+    r.auto_resolve()
+        .expect("attack prompts should auto-resolve");
+
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "same-permanent stack changes must not suppress declared ally observers"
+    );
+    assert_eq!(
+        *ally_seen.lock().unwrap(),
+        vec![(attacker, AttackTarget::Player(1))]
+    );
+}
+
+#[test]
+fn on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("ALLY-REMOVE", "Ally Remove", 3))
+        .add_card(plain_digimon("OPP-OBS", "Opponent Observer", 3))
+        .memory(5)
+        .start();
+    let opponent_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect("ALLY-REMOVE", Arc::new(ReturnAttackerOnAllyAttack));
+    r.register_effect(
+        "OPP-OBS",
+        Arc::new(OpponentAttackObserver {
+            seen: opponent_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY-REMOVE", None);
+    r.place_on_field(1, "OPP-OBS", None);
+    let before = r.memory();
+
+    let result = r.attack_player(attacker, 1, false);
+    r.auto_resolve()
+        .expect("attack prompts should auto-resolve");
+
+    assert_eq!(
+        result,
+        digimon_engine::combat::AttackResult::Invalid,
+        "attack should stop after an ally observer removes the attacker"
+    );
+    assert_eq!(
+        r.memory(),
+        before,
+        "opponent observers must not fire after the attacker leaves during ally observer fan-out"
+    );
+    assert!(
+        opponent_seen.lock().unwrap().is_empty(),
+        "opponent observers must not receive stale attack context"
+    );
+}
+
+#[test]
+fn on_ally_attack_does_not_fire_if_attacker_left_during_on_attack() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER", "Attacker", 3))
+        .add_card(plain_digimon("ALLY-A", "Ally A", 3))
+        .add_card(plain_digimon("ALLY-B", "Ally B", 3))
+        .memory(5)
+        .start();
+    let ally_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect("ATTACKER", Arc::new(ReturnSelfOnAttack));
+    r.register_effect(
+        "ALLY-A",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+    r.register_effect(
+        "ALLY-B",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(0, "ALLY-A", None);
+    r.place_on_field(0, "ALLY-B", None);
+    let before = r.memory();
+
+    let result = r.attack_player(attacker, 1, false);
+    r.auto_resolve()
+        .expect("attack prompts should auto-resolve");
+
+    assert_eq!(
+        result,
+        digimon_engine::combat::AttackResult::Invalid,
+        "attack should stop after the attacker leaves during OnAttack"
+    );
+    assert_eq!(
+        r.memory(),
+        before,
+        "OnAllyAttack must not fire after the original attacker leaves"
+    );
+    assert!(
+        ally_seen.lock().unwrap().is_empty(),
+        "shifted battle-area slots must not receive stale attacker context"
+    );
+}
+
+#[test]
+fn on_ally_attack_does_not_fire_on_the_attacker_itself() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("ATTACKER-OBS", "Attacker Observer", 3))
+        .memory(5)
+        .start();
+    let ally_seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect(
+        "ATTACKER-OBS",
+        Arc::new(AllyAttackObserver {
+            seen: ally_seen.clone(),
+        }),
+    );
+
+    let attacker = r.place_on_field(0, "ATTACKER-OBS", Some(0));
+    let before = r.memory();
+
+    r.attack_player(attacker, 1, false);
+    r.auto_resolve()
+        .expect("attack prompts should auto-resolve");
+
+    assert_eq!(
+        r.memory(),
+        before,
+        "OnAllyAttack observers exclude the attacking permanent itself; use OnAttack for self"
+    );
+    assert!(
+        ally_seen.lock().unwrap().is_empty(),
+        "attacking permanent must not receive an OnAllyAttack payload"
+    );
+}
+
 // ─── TEST-P1-T12 ──────────────────────────────────────────────────────────────
 
 /// A CardEffect that grants +1 memory whenever any Digimon digivolves.
@@ -765,6 +1726,52 @@ fn lv4_digimon(card_id: &str, name: &str) -> CardData {
         index: 0,
         norm_id: 0.0,
     }
+}
+
+fn zero_cost_evo_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    let mut card = plain_digimon(card_id, name, 0);
+    card.level = Some(4);
+    card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost: 0,
+    }];
+    card
+}
+
+#[test]
+fn game_event_digivolve_is_emitted_with_new_top_card_and_field_index() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BASE", "Base", 3))
+        .add_card(zero_cost_evo_card("EVO", "Evolution", &[]))
+        .hand(0, &["EVO"])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "BASE", None);
+    r.game.enter_main_phase();
+
+    let checkpoint = r.event_checkpoint();
+    assert!(r
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve));
+
+    let events = r.events_since(checkpoint);
+    assert!(
+        events.iter().any(|event| matches!(
+            event,
+            GameEvent::Digivolve {
+                player: 0,
+                top_card_id,
+                field_index,
+                from_stack_top,
+                ..
+            } if top_card_id == "EVO"
+                && *field_index == base.index
+                && from_stack_top == "BASE"
+        )),
+        "digivolve should emit a GameEvent::Digivolve containing new top card and previous stack top"
+    );
 }
 
 #[test]

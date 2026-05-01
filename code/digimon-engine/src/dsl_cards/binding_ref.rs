@@ -34,15 +34,40 @@ pub fn resolve_binding_ref(
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
         | CompiledBindingRef::OfPermanent(name) => resolve_named(name, bindings),
-        CompiledBindingRef::EventTarget => ctx
-            .game
-            .current_trigger_context
-            .and_then(|t| t.target_permanent.map(ResolvedBinding::Permanent)),
+        CompiledBindingRef::EventTarget => ctx.game.current_trigger_context.and_then(|t| {
+            if let Some(handle) = t.event_permanent {
+                if live_event_permanent(ctx, handle, t.event_card).is_some() {
+                    return Some(ResolvedBinding::Permanent(handle));
+                }
+                return t.event_card.map(ResolvedBinding::Card);
+            }
+
+            t.target_permanent
+                .map(ResolvedBinding::Permanent)
+                .or_else(|| t.target_card.or(t.event_card).map(ResolvedBinding::Card))
+        }),
         CompiledBindingRef::EventCard => ctx
             .game
             .current_trigger_context
             .and_then(|t| t.event_card.or(t.target_card))
             .map(ResolvedBinding::Card),
+    }
+}
+
+fn live_event_permanent(
+    ctx: &EffectContext<'_>,
+    handle: PermanentHandle,
+    expected: Option<CardHandle>,
+) -> Option<PermanentHandle> {
+    let card = ctx
+        .game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+        .map(|perm| perm.top_card().handle())?;
+    match expected {
+        Some(expected) if card != expected => None,
+        _ => Some(handle),
     }
 }
 
@@ -55,6 +80,8 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
         BindingValue::Literal(v) => Some(ResolvedBinding::Literal(v)),
         BindingValue::PermanentList(v) => Some(ResolvedBinding::PermanentList(v)),
         BindingValue::CardList(v) => Some(ResolvedBinding::CardList(v)),
+        BindingValue::SourceRefs(_) => None,
+        BindingValue::BreedingPermanentRef(_) => None,
     }
 }
 

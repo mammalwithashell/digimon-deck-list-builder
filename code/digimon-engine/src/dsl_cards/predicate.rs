@@ -2,7 +2,7 @@
 
 use digimon_dsl::compiled::{
     CompiledBindingCompare, CompiledCardKind, CompiledColor, CompiledExistential,
-    CompiledPlayerRef, CompiledPredicate, CompiledZone,
+    CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause, CompiledZone,
 };
 
 use crate::card_source::CardHandle;
@@ -80,6 +80,35 @@ pub fn eval_predicate_with_bindings(
     if !eval_event_fields(pred, rctx) {
         return false;
     }
+    if !eval_replacement_fields(pred, rctx) {
+        return false;
+    }
+    if let Some(want) = pred.in_breeding {
+        let is_in_breeding = match subject {
+            PredicateSubject::Permanent(h) => {
+                h.index == crate::action::space::BREEDING_TARGET as u8
+            }
+            _ => rctx
+                .source_permanent
+                .is_some_and(|h| h.index == crate::action::space::BREEDING_TARGET as u8),
+        };
+        if is_in_breeding != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.on_field {
+        let is_on_field = match subject {
+            PredicateSubject::Permanent(h) => {
+                h.index != crate::action::space::BREEDING_TARGET as u8
+            }
+            _ => rctx
+                .source_permanent
+                .is_some_and(|h| h.index != crate::action::space::BREEDING_TARGET as u8),
+        };
+        if is_on_field != want {
+            return false;
+        }
+    }
 
     // Combinators — short-circuit on first failure.
     for child in &pred.all_of {
@@ -148,6 +177,61 @@ pub fn eval_predicate_with_bindings(
         }
         PredicateSubject::None => eval_no_subject_fields(pred),
     }
+}
+
+fn eval_replacement_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> bool {
+    if let Some(want) = pred.replacement_cause {
+        let Some(actual) = rctx.replacement_cause() else {
+            return false;
+        };
+        if !replacement_cause_matches(want, actual) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.replacement_source_is_opponent {
+        let Some(controller) = rctx.replacement_source_controller() else {
+            return false;
+        };
+        let is_opponent = controller != rctx.player();
+        if is_opponent != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.replacement_subject_is_mine {
+        let Some(controller) = rctx.replacement_subject_controller() else {
+            return false;
+        };
+        let is_mine = controller == rctx.player();
+        if is_mine != want {
+            return false;
+        }
+    }
+    true
+}
+
+fn replacement_cause_matches(
+    want: CompiledReplacementCause,
+    actual: crate::replacement::ReplacementCause,
+) -> bool {
+    matches!(
+        (want, actual),
+        (
+            CompiledReplacementCause::Battle,
+            crate::replacement::ReplacementCause::Battle
+        ) | (
+            CompiledReplacementCause::OwnEffect,
+            crate::replacement::ReplacementCause::OwnEffect
+        ) | (
+            CompiledReplacementCause::OpponentEffect,
+            crate::replacement::ReplacementCause::OpponentEffect
+        ) | (
+            CompiledReplacementCause::SecurityCheck,
+            crate::replacement::ReplacementCause::SecurityCheck
+        ) | (
+            CompiledReplacementCause::Cost,
+            crate::replacement::ReplacementCause::Cost
+        )
+    )
 }
 
 fn compare_binding_values(
@@ -339,6 +423,12 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
 
 fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
     let trigger = rctx.game.current_trigger_context?;
+    if let Some(handle) = trigger.event_permanent {
+        if let Some(card) = live_event_permanent_card(rctx, handle, trigger.event_card) {
+            return Some(card);
+        }
+        return trigger.event_card;
+    }
     if let Some(handle) = trigger.target_permanent {
         if let Some(card) = rctx
             .game
@@ -350,7 +440,27 @@ fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
             return Some(card);
         }
     }
-    trigger.target_card
+    if let Some(card) = trigger.target_card {
+        return Some(card);
+    }
+    trigger.event_card
+}
+
+fn live_event_permanent_card(
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+    expected: Option<CardHandle>,
+) -> Option<CardHandle> {
+    let card = rctx
+        .game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+        .map(|perm| perm.top_card().handle())?;
+    match expected {
+        Some(expected) if card != expected => None,
+        _ => Some(card),
+    }
 }
 
 fn eval_card_fields(
@@ -437,14 +547,22 @@ fn eval_permanent_fields(
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
 ) -> bool {
-    let perm = match rctx
-        .game
-        .player(handle.player)
-        .battle_area
-        .get(handle.index as usize)
-    {
-        Some(p) => p,
-        None => return false,
+    let in_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
+    let perm = if in_breeding {
+        match rctx.game.player(handle.player).breeding_area.as_ref() {
+            Some(p) => p,
+            None => return false,
+        }
+    } else {
+        match rctx
+            .game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+        {
+            Some(p) => p,
+            None => return false,
+        }
     };
     // Delegate the shared card fields to the card-handle path using the top card.
     let top_handle = perm.top_card().handle();
@@ -480,8 +598,13 @@ fn eval_permanent_fields(
             return false;
         }
     }
-    if !pred.zone.is_empty() && !pred.zone.contains(&CompiledZone::BattleArea) {
-        // Permanents always live in BattleArea — any zone list missing it fails.
+    if !pred.zone.is_empty()
+        && !pred.zone.contains(if in_breeding {
+            &CompiledZone::Breeding
+        } else {
+            &CompiledZone::BattleArea
+        })
+    {
         return false;
     }
     if let Some(want) = pred.owner {
