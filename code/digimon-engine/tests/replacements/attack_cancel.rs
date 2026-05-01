@@ -41,6 +41,20 @@ impl CardEffect for TumblemonCancelAttack {
     }
 }
 
+struct CountEndOfAttack(Arc<Mutex<u32>>);
+
+impl CardEffect for CountEndOfAttack {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let fired = self.0.clone();
+        vec![Effect::end_of_attack(card)
+            .name("Count EndOfAttack")
+            .process(move |_ctx| {
+                *fired.lock().unwrap() += 1;
+            })
+            .build()]
+    }
+}
+
 fn card_with_traits(id: &str, name: &str, traits: &[&str]) -> CardData {
     let mut card = make_test_card(id, name);
     card.traits = traits
@@ -48,6 +62,23 @@ fn card_with_traits(id: &str, name: &str, traits: &[&str]) -> CardData {
         .map(|trait_name| trait_name.to_string())
         .collect();
     card
+}
+
+#[test]
+fn cancel_pending_attack_outside_combat_is_noop() {
+    let end_of_attack = Arc::new(Mutex::new(0));
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("WITNESS", "Witness"))
+        .memory(2)
+        .start();
+    r.register_effect("WITNESS", Arc::new(CountEndOfAttack(end_of_attack.clone())));
+    r.place_on_field(0, "WITNESS", Some(0));
+
+    r.game.cancel_pending_attack_from_effect();
+
+    assert!(r.game.pending_attack.is_none());
+    assert_eq!(*end_of_attack.lock().unwrap(), 0);
+    assert_eq!(r.memory(), 2, "unrelated state was not mutated");
 }
 
 #[test]

@@ -539,9 +539,10 @@ impl Game {
     /// If this is called while the effect queue is draining, cleanup is
     /// deferred to the normal attack resume hook so `EndOfAttack` fires once.
     pub fn cancel_pending_attack_from_effect(&mut self) {
-        if let Some(pending) = self.pending_attack.as_mut() {
-            pending.cancelled = true;
-        }
+        let Some(pending) = self.pending_attack.as_mut() else {
+            return;
+        };
+        pending.cancelled = true;
 
         if self.pending_selection.is_none() && self.effect_chain_depth == 0 {
             let _ = self.cleanup_attack(AttackResult::Cancelled);
