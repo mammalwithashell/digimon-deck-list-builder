@@ -9,6 +9,7 @@ export function TensorDebugBadge({ summary }: TensorDebugBadgeProps) {
 
   return (
     <div className="ib-tensor-badge" aria-label="Board tensor summary">
+      <span>{summary.profileId}</span>
       <span>P{summary.playerId}</span>
       <span>T{summary.tensorSize}</span>
       <span>A{summary.maskSize}</span>

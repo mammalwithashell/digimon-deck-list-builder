@@ -80,9 +80,13 @@ interface DecodedActionDto {
 
 interface TensorSummaryDto {
   player_id: number;
+  profile_id: string;
+  profile_version: number;
   tensor_size: number;
   mask_size: number;
   legal_action_count: number;
+  card_id_slot_count: number;
+  scalar_slot_count: number;
   turn_count: number;
   phase: string;
   memory: number;
@@ -313,9 +317,13 @@ export function dtoToGameState(dto: GameStateDto): GameState {
 export function toTensorSummary(summary: TensorSummaryDto): TensorSummary {
   return {
     playerId: summary.player_id,
+    profileId: summary.profile_id,
+    profileVersion: summary.profile_version,
     tensorSize: summary.tensor_size,
     maskSize: summary.mask_size,
     legalActionCount: summary.legal_action_count,
+    cardIdSlotCount: summary.card_id_slot_count,
+    scalarSlotCount: summary.scalar_slot_count,
     turnCount: summary.turn_count,
     phase: summary.phase,
     memory: summary.memory,

@@ -183,9 +183,13 @@ export interface DecodedAction {
 
 export interface TensorSummary {
   playerId: number;
+  profileId: string;
+  profileVersion: number;
   tensorSize: number;
   maskSize: number;
   legalActionCount: number;
+  cardIdSlotCount: number;
+  scalarSlotCount: number;
   turnCount: number;
   phase: string;
   memory: number;
