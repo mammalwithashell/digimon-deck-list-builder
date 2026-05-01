@@ -722,6 +722,108 @@ impl Game {
         true
     }
 
+    pub fn remove_source_ref(
+        &mut self,
+        source_ref: crate::selection::SourceSelectionRef,
+    ) -> Option<crate::card_source::CardHandle> {
+        let permanent = self
+            .player_mut(source_ref.permanent.player)
+            .battle_area
+            .get_mut(source_ref.permanent.index as usize)?;
+        let pos = permanent
+            .card_sources
+            .iter()
+            .position(|source| source.handle() == source_ref.card)?;
+        if pos + 1 >= permanent.card_sources.len() {
+            return None;
+        }
+        let removed = permanent.card_sources.remove(pos);
+        let card = removed.handle();
+        self.player_mut(source_ref.permanent.player)
+            .hand
+            .push(removed);
+        Some(card)
+    }
+
+    pub fn play_card_from_effect_without_cost(
+        &mut self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> Option<PermanentHandle> {
+        let field_slots = self.rules.field_slots;
+        let hand_index = self
+            .player(player_id)
+            .hand
+            .iter()
+            .position(|source| source.handle() == card)?;
+        if self.player(player_id).battle_area.len() >= field_slots as usize {
+            return None;
+        }
+        let card_kind = self.player(player_id).hand[hand_index].card_kind(&self.card_data);
+        if card_kind == crate::enums::CardKind::Digimon
+            && self.modifiers.player_has(
+                player_id,
+                crate::enums::ModifierType::CannotPlayDigimonByEffect,
+            )
+        {
+            return None;
+        }
+        if card_kind == crate::enums::CardKind::Tamer
+            && self.modifiers.player_has(
+                player_id,
+                crate::enums::ModifierType::CannotPlayTamerByEffect,
+            )
+        {
+            return None;
+        }
+
+        let turn = self.turn_count;
+        let card_source = self.player_mut(player_id).hand.remove(hand_index);
+        let perm = crate::permanent::Permanent::new(card_source, turn);
+        self.player_mut(player_id).battle_area.push(perm);
+        let field_index = self.player(player_id).battle_area.len() - 1;
+        let entered = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        let entered_card = self.players[player_id as usize].battle_area[field_index]
+            .top_card()
+            .handle();
+        let emitted_card_id = self.players[player_id as usize].battle_area[field_index]
+            .top_card()
+            .card_id(&self.card_data)
+            .to_string();
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Play {
+            seq,
+            player: player_id,
+            card_id: emitted_card_id,
+            field_index: field_index as u8,
+        });
+        self.fire_on_play(player_id, field_index);
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnEnterFieldAnyone,
+            crate::selection::TriggerSource::EnteredField {
+                player: player_id,
+                permanent: entered,
+                card: entered_card,
+            },
+        );
+        self.drain_effect_queue();
+        Some(entered)
+    }
+
+    pub fn cancel_parked_replacement(&mut self) {
+        if let Some(parked) = self.parked_replacement.as_mut() {
+            parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
+        }
+    }
+
+    pub fn card(&self, card: crate::card_source::CardHandle) -> &CardData {
+        self.card_data_for_handle(card)
+            .expect("card handle must resolve to card data")
+    }
+
     /// Fire all applicable replacement effects for the given would-event.
     /// Returns the final `ReplacementOutcome` the caller must honor.
     ///

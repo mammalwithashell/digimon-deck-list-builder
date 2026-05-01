@@ -22,7 +22,7 @@
 //! parked, so state cannot drift.
 
 use crate::card_source::CardSource;
-use crate::effect_context::EffectContext;
+use crate::effect_context::{EffectContext, PartitionRequirement};
 use crate::enums::{CardKind, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
@@ -406,6 +406,48 @@ impl<'a> EffectContext<'a> {
                 );
                 callback(&mut ctx, picked);
             }),
+        );
+    }
+
+    pub fn select_partition_sources<C>(
+        &mut self,
+        host: PermanentHandle,
+        prompt: &str,
+        requirements: Vec<PartitionRequirement>,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, Vec<SourceSelectionRef>) + Send + Sync + 'static,
+    {
+        let count = requirements.len();
+        if count == 0 || count > u8::MAX as usize {
+            return;
+        }
+        if host.player != self.player {
+            return;
+        }
+        let available = partition_source_refs(self.game, host, &requirements);
+        if !partition_requirements_match(self.game, &requirements, &available) {
+            return;
+        }
+
+        let requirements = std::sync::Arc::new(requirements);
+        let filter_requirements = std::sync::Arc::clone(&requirements);
+        let callback_requirements = std::sync::Arc::clone(&requirements);
+        self.select_own_sources(
+            prompt,
+            count as u8,
+            count as u8,
+            move |game, source| {
+                source.permanent == host
+                    && filter_requirements
+                        .iter()
+                        .any(|requirement| (requirement.matches)(game, source))
+            },
+            move |ctx, selected| {
+                if partition_requirements_match(ctx.game, &callback_requirements, &selected) {
+                    callback(ctx, selected);
+                }
+            },
         );
     }
 
@@ -1531,6 +1573,78 @@ fn install_permutation_step(
 type SourceFilter = std::sync::Arc<dyn Fn(&Game, SourceSelectionRef) -> bool + Send + Sync>;
 type SourceFinalCallback =
     Box<dyn FnOnce(&mut Game, Vec<SourceSelectionRef>) + Send + Sync + 'static>;
+
+fn partition_source_refs(
+    game: &Game,
+    host: PermanentHandle,
+    requirements: &[PartitionRequirement],
+) -> Vec<SourceSelectionRef> {
+    use crate::action::space::SOURCES_PER_FIELD;
+
+    let Some(perm) = game
+        .player(host.player)
+        .battle_area
+        .get(host.index as usize)
+    else {
+        return Vec::new();
+    };
+    let source_count = perm.card_sources.len().saturating_sub(1);
+    let cap = source_count.min(SOURCES_PER_FIELD as usize);
+    let mut out = Vec::new();
+    for source_index in 0..cap {
+        let source_ref = SourceSelectionRef {
+            permanent: host,
+            field_index: host.index,
+            source_index: source_index as u8,
+            card: perm.card_sources[source_index].handle(),
+        };
+        if requirements
+            .iter()
+            .any(|requirement| (requirement.matches)(game, source_ref))
+        {
+            out.push(source_ref);
+        }
+    }
+    out
+}
+
+fn partition_requirements_match(
+    game: &Game,
+    requirements: &[PartitionRequirement],
+    selected: &[SourceSelectionRef],
+) -> bool {
+    if selected.len() != requirements.len() {
+        return false;
+    }
+    let mut used = vec![false; selected.len()];
+    partition_match_from(game, requirements, selected, &mut used, 0)
+}
+
+fn partition_match_from(
+    game: &Game,
+    requirements: &[PartitionRequirement],
+    selected: &[SourceSelectionRef],
+    used: &mut [bool],
+    requirement_index: usize,
+) -> bool {
+    if requirement_index == requirements.len() {
+        return true;
+    }
+    for source_index in 0..selected.len() {
+        if used[source_index] {
+            continue;
+        }
+        if !(requirements[requirement_index].matches)(game, selected[source_index]) {
+            continue;
+        }
+        used[source_index] = true;
+        if partition_match_from(game, requirements, selected, used, requirement_index + 1) {
+            return true;
+        }
+        used[source_index] = false;
+    }
+    false
+}
 
 fn source_multi_candidates(
     game: &Game,

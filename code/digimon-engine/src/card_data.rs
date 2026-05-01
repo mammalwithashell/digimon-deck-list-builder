@@ -190,6 +190,10 @@ fn parse_card_color(raw: u8) -> CardColor {
 }
 
 impl CardData {
+    pub fn is_color(&self, color: CardColor) -> bool {
+        self.colors.contains(&color)
+    }
+
     /// Load all card data from a cards.json file.
     pub fn load_from_file(path: &Path) -> Result<HashMap<String, CardData>, String> {
         let contents = std::fs::read_to_string(path)

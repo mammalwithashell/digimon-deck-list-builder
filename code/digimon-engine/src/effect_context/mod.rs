@@ -35,6 +35,23 @@ use crate::rules::Rules;
 use crate::scheduled_effects::ScheduledEffect;
 use digimon_dsl::compiled::CompiledStep;
 
+pub struct PartitionRequirement {
+    pub label: &'static str,
+    pub matches: Box<dyn Fn(&Game, SourceSelectionRef) -> bool + Send + Sync>,
+}
+
+impl PartitionRequirement {
+    pub fn new<F>(label: &'static str, matches: F) -> Self
+    where
+        F: Fn(&Game, SourceSelectionRef) -> bool + Send + Sync + 'static,
+    {
+        Self {
+            label,
+            matches: Box::new(matches),
+        }
+    }
+}
+
 /// Read-only view of game state for effect condition closures.
 ///
 /// Wraps `&Game` so conditions can be evaluated without a mutable borrow —
@@ -781,6 +798,10 @@ impl<'a> EffectContext<'a> {
         if let Some(parked) = self.game.parked_replacement.as_mut() {
             parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
         }
+    }
+
+    pub fn cancel_current_replacement(&mut self) {
+        self.game.cancel_parked_replacement();
     }
 
     /// Mark the parked replacement as custom-handled — the process body has
@@ -2117,6 +2138,15 @@ impl<'a> EffectContext<'a> {
         }
         self.game.drain_effect_queue();
         true
+    }
+
+    pub fn play_selected_sources_without_cost(&mut self, selected: Vec<SourceSelectionRef>) {
+        for source_ref in selected {
+            let player = source_ref.permanent.player;
+            if let Some(card) = self.game.remove_source_ref(source_ref) {
+                self.game.play_card_from_effect_without_cost(player, card);
+            }
+        }
     }
 
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.

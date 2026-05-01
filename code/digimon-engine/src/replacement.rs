@@ -39,6 +39,13 @@ pub enum ReplacementSubject {
 }
 
 impl ReplacementSubject {
+    pub fn permanent(self) -> Option<PermanentHandle> {
+        match self {
+            ReplacementSubject::Permanent(handle) => Some(handle),
+            _ => None,
+        }
+    }
+
     pub fn controller(self, game: &crate::game::Game) -> Option<PlayerId> {
         match self {
             ReplacementSubject::Permanent(handle) => Some(handle.player),
