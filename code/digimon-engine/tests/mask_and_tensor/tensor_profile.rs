@@ -101,8 +101,15 @@ fn standard_profile_card_and_scalar_positions_match_tensor_module() {
 
     let card_set: std::collections::BTreeSet<_> = profile_cards.iter().copied().collect();
     let scalar_set: std::collections::BTreeSet<_> = profile_scalars.iter().copied().collect();
+    let position_set: std::collections::BTreeSet<_> =
+        card_set.union(&scalar_set).copied().collect();
+    let expected_positions: std::collections::BTreeSet<_> = (0..profile.tensor_size).collect();
+
     assert!(card_set.is_disjoint(&scalar_set));
-    assert_eq!(card_set.len() + scalar_set.len(), profile.tensor_size);
+    assert!(position_set
+        .iter()
+        .all(|position| *position < profile.tensor_size));
+    assert_eq!(position_set, expected_positions);
 }
 
 #[test]
