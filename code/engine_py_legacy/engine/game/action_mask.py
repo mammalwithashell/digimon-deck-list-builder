@@ -97,6 +97,8 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                             )
                         if not has_color_match:
                             continue
+                elif len(me.battle_area) >= FIELD_SLOTS:
+                    continue
                 mask[i] = 1.0
 
         # Attack (100-399): 100 + attacker*TARGETS_PER_ATTACKER + target
