@@ -122,7 +122,9 @@ impl Game {
         let Some(perm) = player.breeding_area.as_ref() else {
             return false;
         };
-        if perm.level(&self.card_data).unwrap_or(0) >= 3 {
+        if perm.level(&self.card_data).unwrap_or(0) >= 3
+            && player.battle_area.len() < self.rules.field_slots as usize
+        {
             return true;
         }
         let top = perm.top_card();

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use digimon_engine::action::space::{HATCH, MOVE_FROM_BREEDING};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{HATCH, MOVE_FROM_BREEDING, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::card_source::CardSource;
@@ -206,6 +207,118 @@ fn decode_move_from_breeding_advances_to_main_phase() {
     game.decode_action(MOVE_FROM_BREEDING, tp);
 
     assert_eq!(game.current_phase, GamePhase::Main);
+}
+
+#[test]
+fn main_phase_play_mask_respects_full_field_but_keeps_options() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let mut rules = Rules::standard();
+    rules.field_slots = 1;
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+    game.enter_main_phase();
+
+    let tp = game.turn_player();
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+    let tai_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-085")
+        .expect("Tai in test card DB");
+    let option_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-093")
+        .expect("Gaia Force in test card DB");
+
+    game.player_mut(tp).battle_area = vec![Permanent::new(
+        CardSource::new(agumon_idx, tp, 900),
+        game.turn_count,
+    )];
+    game.player_mut(tp).hand = vec![
+        CardSource::new(agumon_idx, tp, 901),
+        CardSource::new(tai_idx, tp, 902),
+        CardSource::new(option_idx, tp, 903),
+    ];
+    game.set_memory(10);
+
+    let mask = build_action_mask(&game, tp);
+
+    assert_eq!(
+        mask[(PLAY_HAND_START + 0) as usize],
+        0.0,
+        "Digimon hand play must be masked off when battle area is full",
+    );
+    assert_eq!(
+        mask[(PLAY_HAND_START + 1) as usize],
+        0.0,
+        "Tamer hand play must be masked off when battle area is full",
+    );
+    assert_eq!(
+        mask[(PLAY_HAND_START + 2) as usize],
+        1.0,
+        "Option use does not add a battle-area permanent and can remain legal",
+    );
+}
+
+#[test]
+fn full_field_masks_breeding_move_and_skips_breeding_phase() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let mut rules = Rules::standard();
+    rules.field_slots = 1;
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    let tp = game.turn_player();
+    let next = game.next_clockwise(tp);
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+
+    game.player_mut(tp).breeding_area = Some(Permanent::new(
+        CardSource::new(agumon_idx, tp, 910),
+        game.turn_count,
+    ));
+    game.player_mut(tp).battle_area = vec![Permanent::new(
+        CardSource::new(agumon_idx, tp, 911),
+        game.turn_count,
+    )];
+
+    let mask = build_action_mask(&game, tp);
+    assert_eq!(
+        mask[MOVE_FROM_BREEDING as usize], 0.0,
+        "MOVE_FROM_BREEDING must be masked off when battle area is full",
+    );
+
+    game.player_mut(next).breeding_area = Some(Permanent::new(
+        CardSource::new(agumon_idx, next, 912),
+        game.turn_count,
+    ));
+    game.player_mut(next).battle_area = vec![Permanent::new(
+        CardSource::new(agumon_idx, next, 913),
+        game.turn_count,
+    )];
+
+    game.enter_main_phase();
+    game.set_memory(0);
+    game.pass_turn();
+
+    assert_eq!(game.turn_player(), next);
+    assert_eq!(
+        game.current_phase,
+        GamePhase::Main,
+        "full field means the next player's level >= 3 breeding permanent is not actionable",
+    );
 }
 
 #[test]
