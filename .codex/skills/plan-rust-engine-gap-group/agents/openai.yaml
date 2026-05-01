@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Rust Engine Gap Group"
+  short_description: "Plan a numbered Rust engine and DSL roadmap group."
+  default_prompt: "Plan group 5"
