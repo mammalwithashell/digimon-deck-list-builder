@@ -84,9 +84,11 @@ fn cancel_pending_attack_outside_combat_is_noop() {
 #[test]
 fn ex10_003_pay_cost_can_end_pending_attack() {
     let fired = Arc::new(Mutex::new(0));
+    let end_of_attack = Arc::new(Mutex::new(0));
     let mut r = DebugRunner::builder()
         .add_card(make_test_card("EX10-003", "Tumblemon"))
         .add_card(make_test_card("ATTACKER", "Attacker"))
+        .add_card(make_test_card("WITNESS", "Witness"))
         .add_card(card_with_traits("SRC1", "Mineral Source 1", &["Mineral"]))
         .add_card(card_with_traits("SRC2", "Mineral Source 2", &["Mineral"]))
         .add_card(card_with_traits("SRC3", "Rock Source 3", &["Rock"]))
@@ -94,8 +96,10 @@ fn ex10_003_pay_cost_can_end_pending_attack() {
         .security(0, &["SECURITY"])
         .start();
     r.register_effect("EX10-003", Arc::new(TumblemonCancelAttack(fired.clone())));
+    r.register_effect("WITNESS", Arc::new(CountEndOfAttack(end_of_attack.clone())));
 
     let blocker = r.place_stack(0, &["SRC1", "SRC2", "SRC3", "EX10-003"]);
+    r.place_on_field(0, "WITNESS", Some(0));
     let attacker = r.place_on_field(1, "ATTACKER", Some(0));
 
     r.attack_player(attacker, 0, false);
@@ -110,11 +114,17 @@ fn ex10_003_pay_cost_can_end_pending_attack() {
     r.game
         .resolve_selection(0, encode_source_select(blocker.index as u16, 1).unwrap())
         .unwrap();
+    assert_eq!(*end_of_attack.lock().unwrap(), 0);
     r.game
         .resolve_selection(0, encode_source_select(blocker.index as u16, 2).unwrap())
         .unwrap();
 
     assert_eq!(*fired.lock().unwrap(), 1);
+    assert_eq!(
+        *end_of_attack.lock().unwrap(),
+        1,
+        "source-cost attack cancel should run normal EndOfAttack cleanup exactly once"
+    );
     assert!(
         r.game.pending_attack.is_none(),
         "attack state is fully cleared"

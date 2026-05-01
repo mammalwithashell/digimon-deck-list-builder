@@ -309,6 +309,89 @@ effects:
 }
 
 #[test]
+fn on_move_real_breeding_dispatch_supplies_moved_card_context() {
+    let yaml = r#"
+card: DSL-MOVE-REAL-OBS
+name: Real Move Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - when: on_move
+    condition: { event_target_trait_has: Rock }
+    process:
+      - gain_memory: 2
+"#;
+
+    let mut moved_card = digimon_card("BABY-ROCK", "Rock Baby", &["Rock"], 1000);
+    moved_card.level = Some(2);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(moved_card)
+        .digitama(0, &["BABY-ROCK"])
+        .memory(10)
+        .build();
+
+    runner.place_on_field(0, "DSL-MOVE-REAL-OBS", None);
+
+    assert!(runner.game.hatch(0), "hatch Rock baby into breeding");
+    let after_hatch = runner.memory();
+
+    assert!(
+        runner.game.move_from_breeding(0),
+        "move Rock baby from breeding to battle"
+    );
+    assert_eq!(
+        runner.memory(),
+        after_hatch + 2,
+        "real move dispatch should expose moved card trait context"
+    );
+}
+
+#[test]
+fn hatch_does_not_fire_on_move_observers() {
+    let yaml = r#"
+card: DSL-MOVE-HATCH-OBS
+name: Hatch Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - when: on_move
+    condition: { event_target_trait_has: Rock }
+    process:
+      - gain_memory: 2
+"#;
+
+    let mut moved_card = digimon_card("BABY-HATCH-ROCK", "Hatch Rock Baby", &["Rock"], 1000);
+    moved_card.level = Some(2);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(moved_card)
+        .digitama(0, &["BABY-HATCH-ROCK"])
+        .memory(10)
+        .build();
+
+    runner.place_on_field(0, "DSL-MOVE-HATCH-OBS", None);
+    let before = runner.memory();
+
+    assert!(runner.game.hatch(0), "hatch Rock baby into breeding");
+    assert_eq!(
+        runner.memory(),
+        before,
+        "hatch into breeding must not fire OnMove"
+    );
+}
+
+#[test]
 fn on_digivolve_event_card_trait_predicate_matches_new_top_card() {
     let yaml = r#"
 card: DSL-DIGI-OBS

@@ -814,6 +814,17 @@ impl CardEffect for DelayOptionNoop {
     }
 }
 
+struct StandardOptionNoop;
+impl CardEffect for StandardOptionNoop {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Standard option noop")
+            .option_main()
+            .process(|_ctx| {})
+            .build()]
+    }
+}
+
 struct OnOptionPlacedObserver;
 impl CardEffect for OnOptionPlacedObserver {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
@@ -860,6 +871,48 @@ fn on_option_placed_fires_after_delay_option_enters_battle_area() {
     );
 
     assert_eq!(r.memory(), before + 1);
+}
+
+#[test]
+fn on_option_placed_does_not_fire_for_standard_option_sent_to_trash() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS", "Option Observer", 3))
+        .add_card(option_card("OPT-STANDARD", "Standard Option", &[]))
+        .hand(0, &["OBS", "OPT-STANDARD"])
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(OnOptionPlacedObserver));
+    r.register_effect("OPT-STANDARD", Arc::new(StandardOptionNoop));
+
+    assert_eq!(r.play(0, 0), Some(0));
+    r.game.enter_main_phase();
+    let before_memory = r.memory();
+    let before_battle_area = r.battle_area_size(0);
+
+    let result = r.game.play_option_from_hand(0, 0);
+
+    assert_eq!(
+        result,
+        digimon_engine::selection::OptionPlayResult::Trashed
+    );
+    assert_eq!(
+        r.memory(),
+        before_memory,
+        "OnOptionPlaced must not fire for standard options"
+    );
+    assert_eq!(
+        r.battle_area_size(0),
+        before_battle_area,
+        "standard options must not create battle-area option permanents"
+    );
+    assert!(
+        r.game
+            .player(0)
+            .trash
+            .iter()
+            .any(|card| card.card_id(&r.game.card_data) == "OPT-STANDARD"),
+        "standard option should resolve to trash"
+    );
 }
 
 #[test]

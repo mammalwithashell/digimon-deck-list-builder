@@ -59,37 +59,56 @@ fn exact_two_sources_can_be_selected_across_own_battle_area() {
         }
     );
     assert!(!sel.valid_action_ids.contains(&PASS));
-    assert!(sel
-        .valid_action_ids
-        .contains(&encode_source_select(first.index as u16, 0).unwrap()));
-    assert!(sel
-        .valid_action_ids
-        .contains(&encode_source_select(first.index as u16, 1).unwrap()));
-    assert!(sel
-        .valid_action_ids
-        .contains(&encode_source_select(second.index as u16, 0).unwrap()));
+    let first_source_a = encode_source_select(first.index as u16, 0).unwrap();
+    let first_source_b = encode_source_select(first.index as u16, 1).unwrap();
+    let first_top_action = encode_source_select(first.index as u16, 2).unwrap();
+    let second_source_c = encode_source_select(second.index as u16, 0).unwrap();
+    let second_top_action = encode_source_select(second.index as u16, 1).unwrap();
+
+    assert!(sel.valid_action_ids.contains(&first_source_a));
+    assert!(sel.valid_action_ids.contains(&first_source_b));
+    assert!(sel.valid_action_ids.contains(&second_source_c));
+    assert!(
+        !sel.valid_action_ids.contains(&first_top_action),
+        "top card of first stack must not be selectable as a source"
+    );
+    assert!(
+        !sel.valid_action_ids.contains(&second_top_action),
+        "top card of second stack must not be selectable as a source"
+    );
 
     r.game
-        .resolve_selection(p0, encode_source_select(first.index as u16, 1).unwrap())
+        .resolve_selection(p0, first_source_b)
         .expect("pick source B");
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("selection should continue after first source");
     assert_eq!(
-        r.game.pending_selection.as_ref().unwrap().kind,
+        sel.kind,
         SelectionKind::SourceMulti {
             min: 2,
             max: 2,
             picked: 1
         }
     );
-    assert!(!r
-        .game
-        .pending_selection
-        .as_ref()
-        .unwrap()
-        .valid_action_ids
-        .contains(&PASS));
+    assert!(!sel.valid_action_ids.contains(&PASS));
+    assert!(
+        !sel.valid_action_ids.contains(&first_source_b),
+        "already-picked source must not remain legal"
+    );
+    assert!(
+        !sel.valid_action_ids.contains(&first_top_action),
+        "top card of first stack must remain illegal"
+    );
+    assert!(
+        !sel.valid_action_ids.contains(&second_top_action),
+        "top card of second stack must remain illegal"
+    );
 
     r.game
-        .resolve_selection(p0, encode_source_select(second.index as u16, 0).unwrap())
+        .resolve_selection(p0, second_source_c)
         .expect("pick source C");
 
     let chosen = picked.lock().unwrap().clone();

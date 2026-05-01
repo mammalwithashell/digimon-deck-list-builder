@@ -10,7 +10,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use digimon_engine::action::space::{HAND_EFFECT_START, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
@@ -606,6 +606,53 @@ fn bt17_097_delay_before_subject_re_resolves_shifted_target() {
         "hand card digivolves onto the original threatened subject after Delay cost shifts indices"
     );
     assert!(trash_contains(&r, 0, "BT17-097"));
+}
+
+#[test]
+fn bt17_097_paid_delay_decline_commits_original_deletion() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT17-097")
+        .expect("BT17-097 fixture is available")
+        .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
+        .add_card(trait_digimon_card(
+            "IMPERIAL-HAND",
+            "Imperial Hand",
+            &["Imperialdramon"],
+        ))
+        .hand(0, &["IMPERIAL-HAND"])
+        .memory(0)
+        .start();
+
+    let target = r.place_on_field(0, "FREE-TARGET", Some(0));
+    place_delay_option(&mut r, 0, "BT17-097");
+
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "paid BT17-097 replacement should ask for a hand choice"
+    );
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline paid Delay hand choice");
+
+    assert!(
+        find_battle_permanent(&r, 0, "FREE-TARGET").is_none(),
+        "declining the hand choice should allow the original deletion"
+    );
+    assert!(
+        trash_contains(&r, 0, "BT17-097"),
+        "BT17-097 should be trashed after paying its Delay cost"
+    );
+    assert!(
+        r.game
+            .player(0)
+            .hand
+            .iter()
+            .any(|card| card.card_id(&r.game.card_data) == "IMPERIAL-HAND"),
+        "declined hand card should remain in hand"
+    );
 }
 
 #[test]
