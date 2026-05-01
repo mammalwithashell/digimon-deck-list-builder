@@ -1,4 +1,10 @@
-use digimon_engine::tensor::{compute_positions, FIELD_SLOTS, SLOT_SIZE, TENSOR_SIZE};
+use digimon_engine::tensor::{
+    compute_positions, FIELD_SLOTS, GLOBAL_SIZE, HAND_SIZE, MAX_SOURCES, OFF_GLOBAL, OFF_MY_BATTLE,
+    OFF_MY_BREEDING, OFF_MY_HAND, OFF_MY_SECURITY, OFF_MY_TRASH, OFF_OPP_BATTLE, OFF_OPP_BREEDING,
+    OFF_OPP_HAND, OFF_OPP_SECURITY, OFF_OPP_TRASH, OFF_REVEALED, OFF_SELECTION, REVEALED_SIZE,
+    SECURITY_SIZE, SELECTION_SIZE, SLOT_HEADER_SIZE, SLOT_SIZE, SOURCE_ENTRY_SIZE, TENSOR_SIZE,
+    TRASH_SIZE,
+};
 use digimon_engine::tensor_profile::{
     all_profile_ids, default_profile, profile_by_id, TensorSectionKind, STANDARD_V1_PROFILE_ID,
 };
@@ -74,4 +80,106 @@ fn standard_profile_marks_card_sections() {
     assert_eq!(global.kind, TensorSectionKind::Scalars);
     assert_eq!(global.start, 0);
     assert_eq!(global.len, 10);
+}
+
+#[test]
+fn standard_profile_sections_match_tensor_layout_constants() {
+    let profile = default_profile();
+
+    assert_eq!(
+        (
+            profile.section("global").unwrap().start,
+            profile.section("global").unwrap().len
+        ),
+        (OFF_GLOBAL, GLOBAL_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("my_battle").unwrap().start,
+            profile.section("my_battle").unwrap().len,
+        ),
+        (OFF_MY_BATTLE, FIELD_SLOTS * SLOT_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("opponent_battle").unwrap().start,
+            profile.section("opponent_battle").unwrap().len,
+        ),
+        (OFF_OPP_BATTLE, FIELD_SLOTS * SLOT_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("my_hand").unwrap().start,
+            profile.section("my_hand").unwrap().len
+        ),
+        (OFF_MY_HAND, HAND_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("opponent_hand").unwrap().start,
+            profile.section("opponent_hand").unwrap().len,
+        ),
+        (OFF_OPP_HAND, HAND_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("my_trash").unwrap().start,
+            profile.section("my_trash").unwrap().len
+        ),
+        (OFF_MY_TRASH, TRASH_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("opponent_trash").unwrap().start,
+            profile.section("opponent_trash").unwrap().len,
+        ),
+        (OFF_OPP_TRASH, TRASH_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("my_security").unwrap().start,
+            profile.section("my_security").unwrap().len,
+        ),
+        (OFF_MY_SECURITY, SECURITY_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("opponent_security").unwrap().start,
+            profile.section("opponent_security").unwrap().len,
+        ),
+        (OFF_OPP_SECURITY, SECURITY_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("my_breeding").unwrap().start,
+            profile.section("my_breeding").unwrap().len,
+        ),
+        (OFF_MY_BREEDING, SLOT_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("opponent_breeding").unwrap().start,
+            profile.section("opponent_breeding").unwrap().len,
+        ),
+        (OFF_OPP_BREEDING, SLOT_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("revealed").unwrap().start,
+            profile.section("revealed").unwrap().len
+        ),
+        (OFF_REVEALED, REVEALED_SIZE)
+    );
+    assert_eq!(
+        (
+            profile.section("selection").unwrap().start,
+            profile.section("selection").unwrap().len,
+        ),
+        (OFF_SELECTION, SELECTION_SIZE)
+    );
+
+    assert_eq!(
+        SLOT_HEADER_SIZE + SOURCE_ENTRY_SIZE * MAX_SOURCES,
+        SLOT_SIZE
+    );
 }

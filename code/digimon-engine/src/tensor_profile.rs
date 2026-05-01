@@ -1,6 +1,12 @@
 //! Registry metadata for observation tensor layouts.
 
-use crate::tensor::{FIELD_SLOTS, SLOT_SIZE, TENSOR_SIZE};
+use crate::tensor::{
+    BATTLE_SIZE, BREEDING_SIZE, FIELD_SLOTS, GLOBAL_SIZE, HAND_SIZE, MAX_SOURCES, OFF_GLOBAL,
+    OFF_MY_BATTLE, OFF_MY_BREEDING, OFF_MY_HAND, OFF_MY_SECURITY, OFF_MY_TRASH, OFF_OPP_BATTLE,
+    OFF_OPP_BREEDING, OFF_OPP_HAND, OFF_OPP_SECURITY, OFF_OPP_TRASH, OFF_REVEALED, OFF_SELECTION,
+    REVEALED_SIZE, SECURITY_SIZE, SELECTION_SIZE, SLOT_HEADER_SIZE, SLOT_SIZE, SOURCE_ENTRY_SIZE,
+    TENSOR_SIZE, TRASH_SIZE,
+};
 
 pub const STANDARD_V1_PROFILE_ID: &str = "standard_v1";
 
@@ -70,83 +76,95 @@ impl TensorProfile {
 const STANDARD_V1_SECTIONS: &[TensorSection] = &[
     TensorSection {
         id: "global",
-        start: 0,
-        len: 10,
+        start: OFF_GLOBAL,
+        len: GLOBAL_SIZE,
         kind: TensorSectionKind::Scalars,
     },
     TensorSection {
         id: "my_battle",
-        start: 10,
-        len: 560,
+        start: OFF_MY_BATTLE,
+        len: BATTLE_SIZE,
         kind: TensorSectionKind::PermanentSlots,
     },
     TensorSection {
         id: "opponent_battle",
-        start: 570,
-        len: 560,
+        start: OFF_OPP_BATTLE,
+        len: BATTLE_SIZE,
         kind: TensorSectionKind::PermanentSlots,
     },
     TensorSection {
         id: "my_hand",
-        start: 1130,
-        len: 20,
+        start: OFF_MY_HAND,
+        len: HAND_SIZE,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "opponent_hand",
-        start: 1150,
-        len: 20,
+        start: OFF_OPP_HAND,
+        len: HAND_SIZE,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "my_trash",
-        start: 1170,
-        len: 45,
+        start: OFF_MY_TRASH,
+        len: TRASH_SIZE,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "opponent_trash",
-        start: 1215,
-        len: 45,
+        start: OFF_OPP_TRASH,
+        len: TRASH_SIZE,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "my_security",
-        start: 1260,
-        len: 10,
+        start: OFF_MY_SECURITY,
+        len: SECURITY_SIZE,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "opponent_security",
-        start: 1270,
-        len: 10,
+        start: OFF_OPP_SECURITY,
+        len: SECURITY_SIZE,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "my_breeding",
-        start: 1280,
-        len: 40,
+        start: OFF_MY_BREEDING,
+        len: BREEDING_SIZE,
         kind: TensorSectionKind::PermanentSlots,
     },
     TensorSection {
         id: "opponent_breeding",
-        start: 1320,
-        len: 40,
+        start: OFF_OPP_BREEDING,
+        len: BREEDING_SIZE,
         kind: TensorSectionKind::PermanentSlots,
     },
     TensorSection {
         id: "revealed",
-        start: 1360,
-        len: 10,
+        start: OFF_REVEALED,
+        len: REVEALED_SIZE,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "selection",
-        start: 1370,
-        len: 5,
+        start: OFF_SELECTION,
+        len: SELECTION_SIZE,
         kind: TensorSectionKind::Scalars,
     },
 ];
+
+const PERMANENT_SLOT_CARD_ID_COUNT: usize = 1 + MAX_SOURCES;
+const PERMANENT_SLOT_SCALAR_COUNT: usize =
+    SLOT_HEADER_SIZE - 1 + MAX_SOURCES * (SOURCE_ENTRY_SIZE - 1);
+const PERMANENT_SLOT_COUNT: usize = FIELD_SLOTS * 2 + 2;
+const CARD_ID_SLOT_COUNT: usize = PERMANENT_SLOT_COUNT * PERMANENT_SLOT_CARD_ID_COUNT
+    + HAND_SIZE * 2
+    + TRASH_SIZE * 2
+    + SECURITY_SIZE * 2
+    + REVEALED_SIZE;
+const SCALAR_SLOT_COUNT: usize =
+    PERMANENT_SLOT_COUNT * PERMANENT_SLOT_SCALAR_COUNT + GLOBAL_SIZE + SELECTION_SIZE;
 
 const STANDARD_V1_PROFILE: TensorProfile = TensorProfile {
     id: STANDARD_V1_PROFILE_ID,
@@ -154,8 +172,8 @@ const STANDARD_V1_PROFILE: TensorProfile = TensorProfile {
     tensor_size: TENSOR_SIZE,
     field_slots: FIELD_SLOTS,
     slot_size: SLOT_SIZE,
-    card_id_slot_count: 520,
-    scalar_slot_count: 855,
+    card_id_slot_count: CARD_ID_SLOT_COUNT,
+    scalar_slot_count: SCALAR_SLOT_COUNT,
     sections: STANDARD_V1_SECTIONS,
 };
 
@@ -184,11 +202,11 @@ fn permanent_slot_positions(
     scalar_positions: &mut Vec<usize>,
 ) {
     card_positions.push(slot_base);
-    scalar_positions.extend(slot_base + 1..slot_base + 7);
+    scalar_positions.extend(slot_base + 1..slot_base + SLOT_HEADER_SIZE);
 
-    let source_base = slot_base + 7;
-    for source_index in 0..11 {
-        let source_offset = source_base + source_index * 3;
+    let source_base = slot_base + SLOT_HEADER_SIZE;
+    for source_index in 0..MAX_SOURCES {
+        let source_offset = source_base + source_index * SOURCE_ENTRY_SIZE;
         card_positions.push(source_offset);
         scalar_positions.push(source_offset + 1);
         scalar_positions.push(source_offset + 2);

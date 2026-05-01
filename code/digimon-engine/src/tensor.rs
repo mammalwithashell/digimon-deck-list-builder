@@ -22,19 +22,20 @@ pub const MAX_SOURCES: usize = 11;
 pub const MAX_REVEALED: usize = 10;
 
 pub const SOURCE_ENTRY_SIZE: usize = 3; // card_id + opt_state + dp_contribution
-pub const SLOT_SIZE: usize = 1 + 6 + MAX_SOURCES * SOURCE_ENTRY_SIZE; // 40
+pub const SLOT_HEADER_SIZE: usize = 7; // top card ID + 6 scalar fields
+pub const SLOT_SIZE: usize = SLOT_HEADER_SIZE + MAX_SOURCES * SOURCE_ENTRY_SIZE; // 40
 
 pub const DP_NORM: f32 = 30000.0;
 
 // Section sizes
-const GLOBAL_SIZE: usize = 10;
-const BATTLE_SIZE: usize = FIELD_SLOTS * SLOT_SIZE; // 560
-const HAND_SIZE: usize = MAX_HAND; // 20
-const TRASH_SIZE: usize = MAX_TRASH; // 45
-const SECURITY_SIZE: usize = MAX_SECURITY; // 10
-const BREEDING_SIZE: usize = SLOT_SIZE; // 40
-const REVEALED_SIZE: usize = MAX_REVEALED; // 10
-const SELECTION_SIZE: usize = 5;
+pub const GLOBAL_SIZE: usize = 10;
+pub const BATTLE_SIZE: usize = FIELD_SLOTS * SLOT_SIZE; // 560
+pub const HAND_SIZE: usize = MAX_HAND; // 20
+pub const TRASH_SIZE: usize = MAX_TRASH; // 45
+pub const SECURITY_SIZE: usize = MAX_SECURITY; // 10
+pub const BREEDING_SIZE: usize = SLOT_SIZE; // 40
+pub const REVEALED_SIZE: usize = MAX_REVEALED; // 10
+pub const SELECTION_SIZE: usize = 5;
 
 /// Total tensor size: 10 + 560 + 560 + 20 + 20 + 45 + 45 + 10 + 10 + 40 + 40 + 10 + 5 = 1375
 pub const TENSOR_SIZE: usize = GLOBAL_SIZE
@@ -47,19 +48,19 @@ pub const TENSOR_SIZE: usize = GLOBAL_SIZE
     + SELECTION_SIZE;
 
 // Section start offsets
-const OFF_GLOBAL: usize = 0;
+pub const OFF_GLOBAL: usize = 0;
 pub const OFF_MY_BATTLE: usize = OFF_GLOBAL + GLOBAL_SIZE; // 10
 pub const OFF_OPP_BATTLE: usize = OFF_MY_BATTLE + BATTLE_SIZE; // 570
-const OFF_MY_HAND: usize = OFF_OPP_BATTLE + BATTLE_SIZE; // 1130
-const OFF_OPP_HAND: usize = OFF_MY_HAND + HAND_SIZE; // 1150
-const OFF_MY_TRASH: usize = OFF_OPP_HAND + HAND_SIZE; // 1170
-const OFF_OPP_TRASH: usize = OFF_MY_TRASH + TRASH_SIZE; // 1215
-const OFF_MY_SECURITY: usize = OFF_OPP_TRASH + TRASH_SIZE; // 1260
-const OFF_OPP_SECURITY: usize = OFF_MY_SECURITY + SECURITY_SIZE; // 1270
-const OFF_MY_BREEDING: usize = OFF_OPP_SECURITY + SECURITY_SIZE; // 1280
-const OFF_OPP_BREEDING: usize = OFF_MY_BREEDING + BREEDING_SIZE; // 1320
-const OFF_REVEALED: usize = OFF_OPP_BREEDING + BREEDING_SIZE; // 1360
-const OFF_SELECTION: usize = OFF_REVEALED + REVEALED_SIZE; // 1370
+pub const OFF_MY_HAND: usize = OFF_OPP_BATTLE + BATTLE_SIZE; // 1130
+pub const OFF_OPP_HAND: usize = OFF_MY_HAND + HAND_SIZE; // 1150
+pub const OFF_MY_TRASH: usize = OFF_OPP_HAND + HAND_SIZE; // 1170
+pub const OFF_OPP_TRASH: usize = OFF_MY_TRASH + TRASH_SIZE; // 1215
+pub const OFF_MY_SECURITY: usize = OFF_OPP_TRASH + TRASH_SIZE; // 1260
+pub const OFF_OPP_SECURITY: usize = OFF_MY_SECURITY + SECURITY_SIZE; // 1270
+pub const OFF_MY_BREEDING: usize = OFF_OPP_SECURITY + SECURITY_SIZE; // 1280
+pub const OFF_OPP_BREEDING: usize = OFF_MY_BREEDING + BREEDING_SIZE; // 1320
+pub const OFF_REVEALED: usize = OFF_OPP_BREEDING + BREEDING_SIZE; // 1360
+pub const OFF_SELECTION: usize = OFF_REVEALED + REVEALED_SIZE; // 1370
 
 // ─── Tensor Builder ───────────────────────────────────────────────────
 
@@ -304,7 +305,7 @@ fn write_slot(
     tensor[base + 6] = perm.card_sources.len() as f32;
 
     // Sources: [card_id, opt_state, dp_contribution] × MAX_SOURCES
-    let src_base = base + 7;
+    let src_base = base + SLOT_HEADER_SIZE;
     for (j, src) in perm.card_sources.iter().take(MAX_SOURCES).enumerate() {
         let off = src_base + j * SOURCE_ENTRY_SIZE;
         tensor[off] = registry.get_index(&src.card_id(card_data)) as f32;
