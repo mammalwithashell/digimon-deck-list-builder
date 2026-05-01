@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
-import os
-
 import numpy as np
 import pytest
 
@@ -14,16 +11,15 @@ pytest.importorskip("digimon_engine")
 DECK = ["ST1-01"] * 5 + ["ST1-03"] * 45
 
 
-def _rust_env():
-    os.environ["DIGIMON_BACKEND"] = "rust"
+def _rust_env(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("DIGIMON_BACKEND", "rust")
     import digimon_gym.digimon_gym as gym_mod
 
-    importlib.reload(gym_mod)
     return gym_mod.DigimonEnv(deck1=DECK, deck2=DECK)
 
 
-def test_rust_env_reports_current_player_without_legacy_game_object():
-    env = _rust_env()
+def test_rust_env_reports_current_player_without_legacy_game_object(monkeypatch):
+    env = _rust_env(monkeypatch)
     _obs, _info = env.reset(seed=7)
 
     assert env.game is None
@@ -32,8 +28,8 @@ def test_rust_env_reports_current_player_without_legacy_game_object():
     assert env.winner_id is None
 
 
-def test_rust_env_step_computes_reward_without_runner_game_attribute():
-    env = _rust_env()
+def test_rust_env_step_computes_reward_without_runner_game_attribute(monkeypatch):
+    env = _rust_env(monkeypatch)
     _obs, info = env.reset(seed=7)
     valid = np.where(info["action_mask"] > 0)[0]
 
@@ -46,8 +42,8 @@ def test_rust_env_step_computes_reward_without_runner_game_attribute():
     assert next_info["action_mask"].shape == (env.action_space.n,)
 
 
-def test_rust_env_greedy_policy_uses_rust_policy_surface():
-    env = _rust_env()
+def test_rust_env_greedy_policy_uses_rust_policy_surface(monkeypatch):
+    env = _rust_env(monkeypatch)
     _obs, _info = env.reset(seed=7)
 
     import digimon_gym.digimon_gym as gym_mod
