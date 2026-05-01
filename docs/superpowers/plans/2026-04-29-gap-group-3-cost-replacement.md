@@ -1232,7 +1232,7 @@ git commit -m "feat: expose replacement context predicates"
 - Modify: `code/digimon-engine/src/effect_context/selections.rs`
 - Modify: `code/digimon-engine/src/replacement.rs`
 
-- [ ] **Step 1: Register the Partition test module**
+- [x] **Step 1: Register the Partition test module**
 
 Add to `code/digimon-engine/tests/replacements/main.rs`:
 
@@ -1240,7 +1240,7 @@ Add to `code/digimon-engine/tests/replacements/main.rs`:
 mod partition;
 ```
 
-- [ ] **Step 2: Write the failing BT16-025 Partition source test**
+- [x] **Step 2: Write the failing BT16-025 Partition source test**
 
 Create `code/digimon-engine/tests/replacements/partition.rs`:
 
@@ -1354,7 +1354,7 @@ fn bt16_025_partition_decline_allows_deletion() {
 }
 ```
 
-- [ ] **Step 3: Run the Partition test to verify it fails**
+- [x] **Step 3: Run the Partition test to verify it fails**
 
 Run:
 
@@ -1364,7 +1364,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements --
 
 Expected: FAIL because `PartitionRequirement`, `select_partition_sources`, `play_selected_sources_without_cost`, `cancel_current_replacement`, and `ReplacementSubject::permanent` do not exist.
 
-- [ ] **Step 4: Add Partition requirement and subject helpers**
+- [x] **Step 4: Add Partition requirement and subject helpers**
 
 In `effect_context/mod.rs`, add:
 
@@ -1400,7 +1400,7 @@ impl ReplacementSubject {
 }
 ```
 
-- [ ] **Step 5: Add the Partition selection helper**
+- [x] **Step 5: Add the Partition selection helper**
 
 In `effect_context/selections.rs`, implement:
 
@@ -1443,7 +1443,7 @@ impl<'a> EffectContext<'a> {
 
 If duplicate source selection can satisfy two requirements with one card, replace the final `all_requirements_met` with a bipartite matching helper over selected sources and requirement indices. Use that helper in this same task so a dual-color source cannot improperly satisfy two "1 each" slots by itself.
 
-- [ ] **Step 6: Add source play and replacement cancel helpers**
+- [x] **Step 6: Add source play and replacement cancel helpers**
 
 In `effect_context/mod.rs`, add:
 
@@ -1489,7 +1489,7 @@ Add corresponding `Game` helpers in `game.rs` or `replacement.rs`:
 
 `cancel_parked_replacement` must set the currently parked replacement outcome to `ReplacementOutcome::Cancelled` and allow the parked replacement drain to complete through the existing replacement resume hook.
 
-- [ ] **Step 7: Run Partition and nested replacement tests**
+- [x] **Step 7: Run Partition and nested replacement tests**
 
 Run:
 
@@ -1500,7 +1500,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements --
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add code/digimon-engine/src/effect_context/mod.rs code/digimon-engine/src/effect_context/selections.rs code/digimon-engine/src/replacement.rs code/digimon-engine/tests/replacements/main.rs code/digimon-engine/tests/replacements/partition.rs
@@ -1517,7 +1517,7 @@ git commit -m "feat: add partition source replacement flow"
 - Modify: `code/digimon-engine/src/effect_context/mod.rs`
 - Modify: `code/digimon-engine/src/dsl_cards/lower_replacement.rs`
 
-- [ ] **Step 1: Add the failing BT17-097 Delay prevention regression**
+- [x] **Step 1: Add the failing BT17-097 Delay prevention regression**
 
 Append to `code/digimon-engine/tests/option_flow/replacement_integration.rs`:
 
@@ -1558,7 +1558,7 @@ fn bt17_097_delay_prevents_deletion_and_digivolves_from_hand() {
 
 Keep the fixture card ID `BT17-097` in the test even if the first pass uses a synthetic DSL file.
 
-- [ ] **Step 2: Run the Delay prevention test to verify it fails**
+- [x] **Step 2: Run the Delay prevention test to verify it fails**
 
 Run:
 
@@ -1568,7 +1568,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- 
 
 Expected: FAIL because Delay-as-replacement is not lowered or does not park the replacement until the hand selection resolves.
 
-- [ ] **Step 3: Add Delay replacement lowering**
+- [x] **Step 3: Add Delay replacement lowering**
 
 In `lower_replacement.rs`, support a replacement process step with this shape:
 
@@ -1621,7 +1621,7 @@ builder = builder.replacement_process(move |rctx| {
 });
 ```
 
-- [ ] **Step 4: Add native helpers used by Delay replacement**
+- [x] **Step 4: Add native helpers used by Delay replacement**
 
 In `effect_context/mod.rs`, add:
 
@@ -1645,7 +1645,7 @@ In `effect_context/mod.rs`, add:
     }
 ```
 
-- [ ] **Step 5: Ensure no target or declined selection leaves replacement unhandled**
+- [x] **Step 5: Ensure no target or declined selection leaves replacement unhandled**
 
 Add this helper in `replacement.rs`:
 
@@ -1659,7 +1659,7 @@ Add this helper in `replacement.rs`:
 
 Use it in the hand-selection decline callback so the original deletion proceeds.
 
-- [ ] **Step 6: Run option flow regression tests**
+- [x] **Step 6: Run option flow regression tests**
 
 Run:
 
@@ -1670,7 +1670,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements --
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add code/digimon-engine/src/effect_context/mod.rs code/digimon-engine/src/replacement.rs code/digimon-engine/src/dsl_cards/lower_replacement.rs code/digimon-engine/tests/option_flow/replacement_integration.rs
@@ -1688,7 +1688,7 @@ git commit -m "feat: add delay prevention replacement flow"
 - Modify: `code/digimon-engine/src/effect_context/mod.rs`
 - Modify: `code/digimon-engine/src/dsl_cards/lower_replacement.rs`
 
-- [ ] **Step 1: Register the attack-cancel regression module**
+- [x] **Step 1: Register the attack-cancel regression module**
 
 Add to `code/digimon-engine/tests/replacements/main.rs`:
 
@@ -1696,7 +1696,7 @@ Add to `code/digimon-engine/tests/replacements/main.rs`:
 mod attack_cancel;
 ```
 
-- [ ] **Step 2: Write the failing EX10-003 attack cancellation regression**
+- [x] **Step 2: Write the failing EX10-003 attack cancellation regression**
 
 Create `code/digimon-engine/tests/replacements/attack_cancel.rs`:
 
@@ -1774,7 +1774,7 @@ fn ex10_003_pay_cost_can_end_pending_attack() {
 }
 ```
 
-- [ ] **Step 3: Run the attack-cancel test to verify it fails**
+- [x] **Step 3: Run the attack-cancel test to verify it fails**
 
 Run:
 
@@ -1784,7 +1784,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements --
 
 Expected: FAIL because `cancel_pending_attack` does not exist or does not resume/clear attack state after pay-cost selection.
 
-- [ ] **Step 4: Add the effect-context attack cancellation helper**
+- [x] **Step 4: Add the effect-context attack cancellation helper**
 
 In `effect_context/mod.rs`, add:
 
@@ -1794,7 +1794,7 @@ In `effect_context/mod.rs`, add:
     }
 ```
 
-- [ ] **Step 5: Add the combat cancellation implementation**
+- [x] **Step 5: Add the combat cancellation implementation**
 
 In `combat.rs`, add:
 
@@ -1814,7 +1814,7 @@ impl Game {
 
 If `advance_pending_attack` already clears cancelled attacks, keep the final `if` as a defensive no-op guard. Do not call battle resolution or security resolution in this helper.
 
-- [ ] **Step 6: Lower DSL attack-cancel step**
+- [x] **Step 6: Lower DSL attack-cancel step**
 
 In `lower_replacement.rs` or the DSL step lowering module that owns combat steps, map:
 
@@ -1828,7 +1828,7 @@ to:
 ctx.cancel_pending_attack();
 ```
 
-- [ ] **Step 7: Run combat and replacement regressions**
+- [x] **Step 7: Run combat and replacement regressions**
 
 Run:
 
@@ -1840,7 +1840,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- so
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add code/digimon-engine/src/combat.rs code/digimon-engine/src/effect_context/mod.rs code/digimon-engine/src/dsl_cards/lower_replacement.rs code/digimon-engine/tests/replacements/main.rs code/digimon-engine/tests/replacements/attack_cancel.rs
@@ -1856,7 +1856,7 @@ git commit -m "feat: allow effects to cancel pending attacks"
 - Modify: `qa/archetype-qa/engine-gaps.md`
 - Modify: `docs/superpowers/plans/2026-04-29-archetype-engine-dsl-gap-roadmap.md`
 
-- [ ] **Step 1: Update engine gap documentation**
+- [x] **Step 1: Update engine gap documentation**
 
 In `docs/RUST_ENGINE_GAPS.md`, mark the Group 3 cost/replacement items as covered by the new tests:
 
@@ -1879,7 +1879,7 @@ decline, replacement cause/controller predicates, Partition source selection,
 Delay-as-replacement prevention, and effect-driven pending attack cancellation.
 ```
 
-- [ ] **Step 2: Update archetype QA gaps**
+- [x] **Step 2: Update archetype QA gaps**
 
 In `qa/archetype-qa/engine-gaps.md`, replace the open Group 3 entries with:
 
@@ -1896,7 +1896,7 @@ Resolved by Group 3:
 - Effects can end a pending attack after a printed cost resolves.
 ```
 
-- [ ] **Step 3: Check off the parent roadmap Group 3 child-plan task**
+- [x] **Step 3: Check off the parent roadmap Group 3 child-plan task**
 
 In `docs/superpowers/plans/2026-04-29-archetype-engine-dsl-gap-roadmap.md`, under `Task 4: Create Child Plan for Cost and Replacement Framework`, mark the child-plan steps complete:
 
@@ -1918,7 +1918,7 @@ In `docs/superpowers/plans/2026-04-29-archetype-engine-dsl-gap-roadmap.md`, unde
   - `EX9-032` / `EX7-027` / `BT22-036` for replacement cause gate.
 ```
 
-- [ ] **Step 4: Run the full Group 3 verification set**
+- [x] **Step 4: Run the full Group 3 verification set**
 
 Run:
 
@@ -1934,7 +1934,7 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacem
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/RUST_ENGINE_GAPS.md qa/archetype-qa/engine-gaps.md docs/superpowers/plans/2026-04-29-archetype-engine-dsl-gap-roadmap.md

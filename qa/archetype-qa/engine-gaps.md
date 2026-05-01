@@ -2,7 +2,7 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 ## Resolved Gaps
 
@@ -110,14 +110,16 @@ Last updated: 2026-04-29
 - **Suggested change:** Extend delayed-option state with an event trigger and predicate, enqueue/expose a Delay activation action when that event fires, and add DSL timing mappings for `on_suspend`/`on_ally_played` event-gated Delay clauses.
 - **Workaround:** None without approximating the activation timing.
 
-### Replacement Cause Gate for "Other Than By Your Effects" [G-REPLACEMENT-CAUSE-GATE]
-- **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)
-- **Scope:** Rust DSL replacement lowering and replacement evaluator context.
-- **Card(s):** EX9-032 Karakurumon, EX7-027 Chaperomon, BT22-036 Kazuchimon, plus other Puppet replacement/prevention clauses.
-- **Effect text:** "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
-- **What's missing:** `kind: replacement` accepts `active_when`, but the current lowering path ignores it. The replacement context also is not exposed to DSL predicates in a way that can distinguish your own effects from battle, opponent effects, rule processing, or other causes.
-- **Suggested change:** Evaluate replacement `active_when` predicates against replacement context before offering the prevention/cost choice, and add predicate leaves for replacement cause/controller such as `replacement_cause_not: own_effect`.
-- **Workaround:** None for faithful Puppet prevention text. Omitting the gate would allow illegal prevention against your own effects.
+### Cost and Replacement Framework
+
+Resolved by Group 3:
+- BT13-007 King Drasil_7D6 and ST21-13 Matt Ishida & T.K. Takaishi can both reduce AD1-025 Omnimon before memory is paid because AD1-025 has both `[Royal Knight]` and `[ADVENTURE]`.
+- Triggered effect costs may install pending selections and resume process only after cost payment.
+- Optional cost decline skips process without hidden auto-selection.
+- Replacement predicates can inspect cause, source controller, and subject controller.
+- Partition source requirements are enforced before prevention.
+- Delay options can pay themselves as replacement costs and prevent deletion.
+- Effects can end a pending attack after a printed cost resolves.
 
 ### ~~When Attacking Selection Phase Override~~ — RESOLVED 2026-04-02
 - **Discovered in:** BT24-024 Submarimon fix-card review
@@ -349,22 +351,6 @@ Last updated: 2026-04-29
 - **Suggested change:** (1) Add `StartOfYourNextTurn` variant to `DelayTrigger` in `src/enums.rs`. (2) Add a `"start_of_your_turn"` token (or `"start_of_next_turn"`) in the DSL timing map (`timing_map.rs`) that lowers to `DelayTrigger::StartOfYourNextTurn`. (3) Wire `StartOfYourNextTurn` firing into the game's start-of-turn hook (`game_phases.rs::begin_turn`): after incrementing `turn_number`, scan all permanents for `Delay` state with `trigger == StartOfYourNextTurn` and fire those. This is symmetric to the end-of-turn Delay drain already implemented.
 - **Workaround:** `kind: raw_rust` no-op placeholder (`lm_027_delay_start_of_turn_noop`) preserving the clause-index slot. All Delay behavioral tests are `#[ignore]`'d.
 
-### Partition Source Enforcement + Source Selection  [G-PARTITION-SOURCE-ENFORCEMENT]
-- **Discovered in:** BG Imperial Rust DSL readiness assessment, BT16-025 Paildramon (2026-04-28)
-- **Scope:** Rust engine + DSL (hybrid).
-- **Card(s):** BT16-025 Paildramon — "＜Partition (Blue Lv.4 & Green Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)"
-- **What's missing:** `code/digimon-engine/src/dsl_cards/lower_partition.rs` documents Phase 1 as granting `Keyword::Partition` and a declarative marker only. It accepts `active_when` and `sources`, but ignores them, and its configured process body fires as an `OnDeletion` body instead of a leave-field replacement with source-list validation. The required source choices need nested `PendingSelection::Source` inside the replacement window.
-- **Suggested change:** Add a Partition replacement path that runs before the leave-field event commits, checks the source predicates against the carrier's digivolution stack, presents the eligible source choices to the player, plays exactly one source per printed predicate without paying costs, and respects exclusions for battle and the controller's own effects.
-- **Workaround:** None for faithful Rust DSL. A marker keyword alone is insufficient.
-
-### Delay-as-Replacement for Deletion Prevention  [G-DELAY-REPLACEMENT-PREVENT-DELETION]
-- **Discovered in:** BG Imperial Rust DSL readiness assessment, BT17-097 Return to the Primogenitor (2026-04-28)
-- **Scope:** Rust engine + DSL (hybrid).
-- **Card(s):** BT17-097 Return to the Primogenitor — "[All Turns] When one of your Digimon with the [Free] trait would be deleted other than by one of your effects, ＜Delay＞ ... By digivolving that Digimon into a Digimon card with [Imperialdramon] in its name in your hand without paying the cost, prevent that deletion."
-- **What's missing:** Current Delay lowering schedules `EffectTiming::DelayEffect` at end-turn style triggers. There is no engine path that lets a battle-area Delay option participate in `WhenWouldBeDeleted`, pay its trash-this-option cost, run an effect-initiated digivolve on the threatened permanent, and then prevent the original deletion if the digivolve succeeds.
-- **Suggested change:** Add a replacement-window Delay activation flow for eligible option permanents. The flow should surface an optional player choice, move the Delay option to trash as cost, run a filtered hand digivolve into the threatened permanent without paying cost, and return a prevent-deletion replacement result.
-- **Workaround:** None for faithful Rust DSL. Treating this as a scheduled Delay effect loses the timing and prevention semantics.
-
 ### `EffectContext::add_security_option_to_hand` Missing  [G-ADD-OPTION-SELF-TO-HAND]
 - **Discovered in:** Medusamon Batch 12, LM-027 Red Scramble DSL implementation (2026-04-28). Also previously surfaced by ST22-08 Offensive Plug-In V (Batch 11) and EX6-072 pattern.
 - **Scope:** Rust engine + DSL (hybrid).
@@ -441,4 +427,4 @@ Last updated: 2026-04-29
 - **Card(s):** BT15-008 Muchomon (`OnAllyAttack`-style "when one of your Digimon attacks a player"); EX10-003 Tumblemon and EX8-050 Gogmamon (`OnOpponentAttack`-style defender-side inherited observers, still blocked on follow-up cost/cancel primitives).
 - **Effect text:** "When one of your red Digimon attacks a player..." / "When one of your opponent's Digimon attacks..."
 - **Updated 2026-04-29:** Battle-area declared-attack observers now dispatch from the real combat state machine. `OnAllyAttack` scans the attacker's controller battle area and excludes the attacking permanent; `OnOpponentAttack` scans the defending player's battle area before Alliance/Counter/Block windows. `EffectReadContext` / `EffectContext` expose `attack_attacker()` and `attack_target()` over the live pending attack, with `attack_target()` reporting the effective target after substitution, including accepted optional target substitutions. `PendingAttack::declaration_committed` keeps optional pre-declaration replacement resumes legal while accepted pre-declaration cancel/substitute outcomes mutate the pending attack before declaration commits; `resolve_generic_selection` resumes parked attacks after replacement accept/decline resolution so normal `decode_action` callers cannot strand a pending attack. Post-declaration resumes require the original handle to still be a live attacking permanent. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- declared_attack_fires_ally_and_opponent_observers_with_attack_context on_ally_attack_does_not_fire_on_the_attacker_itself attack_target_context_reports_effective_declared_target_after_substitution accepted_predeclare_cancel_replacement_cancels_before_observers declined_predeclare_replacement_resumes_attack_declaration accepted_predeclare_target_substitution_updates_attack_context attack_resume_after_trigger_order_does_not_alias_removed_attacker on_ally_attack_still_fires_if_attacker_stack_changes_during_on_attack on_ally_attack_does_not_fire_if_attacker_left_during_on_attack on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker`, plus `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- on_ally_attack` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- on_opponent_attack`.
-- **Remaining limits:** First-class DSL predicates such as attack-target kind / attacker trait are still follow-ups, as are EX10-003-style triggered-body source-trash costs and attack cancellation. Breeding-area observer fan-out is not proven by this slice.
+- **Remaining limits:** First-class DSL predicates such as attack-target kind / attacker trait are still follow-ups. Breeding-area observer fan-out is not proven by this slice.

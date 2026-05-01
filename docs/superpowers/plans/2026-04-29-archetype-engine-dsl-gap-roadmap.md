@@ -397,37 +397,27 @@ git commit -m "docs: plan selection primitives"
 - Test: `code/digimon-engine/tests/replacements/*.rs`
 - Test: `code/digimon-engine/tests/option_flow/replacement_integration.rs`
 
-- [ ] **Step 1: Create the child plan file**
+- [x] Create `docs/superpowers/plans/2026-04-29-gap-group-3-cost-replacement.md`.
+- [x] Define slices for:
+  - `.pay_cost()` for non-BeforePayCost triggered effects.
+  - Stacked optional would-play cost reducers.
+  - Optional cost decline path through pending selection.
+  - Replacement context cause/controller predicate.
+  - Partition source enforcement and selection.
+  - Delay-as-replacement prevention.
+  - Attack cancellation return path.
+- [x] Require regression fixtures:
+  - `EX10-003` Tumblemon for attack cancellation.
+  - `AD1-025` Omnimon plus `BT13-007` King Drasil_7D6 plus `ST21-13` Matt Ishida & T.K. Takaishi for stacked play-cost reductions.
+  - `BT16-025` Paildramon for Partition source enforcement.
+  - `BT17-097` Return to the Primogenitor for Delay-as-replacement.
+  - `EX9-032` / `EX7-027` / `BT22-036` for replacement cause gate.
 
-Use this architecture statement:
-
-```markdown
-**Architecture:** Generalize effect activation costs so queued triggered effects can decline before process execution, then thread replacement cause/controller context through replacement predicates before exposing prevention choices.
-```
-
-- [ ] **Step 2: Define slices**
-
-Include these slices:
-
-```text
-1. `.pay_cost()` for non-BeforePayCost triggered effects.
-2. Optional cost decline path through pending selection.
-3. Replacement context cause/controller predicate.
-4. Partition source enforcement and selection.
-5. Delay-as-replacement prevention.
-6. Attack cancellation return path.
-```
-
-- [ ] **Step 3: Require regression fixtures**
-
-The child plan must name these first fixtures:
-
-```text
-EX10-003 Tumblemon for attack cancellation.
-BT16-025 Paildramon for Partition source enforcement.
-BT17-097 Return to the Primogenitor for Delay-as-replacement.
-EX9-032 / EX7-027 / BT22-036 for replacement cause gate.
-```
+Execution split plans:
+- `docs/superpowers/plans/2026-04-30-gap-group-3-task-4-partition.md`
+- `docs/superpowers/plans/2026-04-30-gap-group-3-task-5-delay-replacement.md`
+- `docs/superpowers/plans/2026-04-30-gap-group-3-task-6-attack-cancel.md`
+- `docs/superpowers/plans/2026-04-30-gap-group-3-task-7-docs-closure.md`
 
 - [ ] **Step 4: Commit the child plan**
 
