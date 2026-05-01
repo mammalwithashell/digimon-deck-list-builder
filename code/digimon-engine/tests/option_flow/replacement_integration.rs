@@ -10,10 +10,12 @@
 
 use std::sync::{Arc, Mutex};
 
+use digimon_engine::action::space::HAND_EFFECT_START;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, Zone};
+use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::{ReplacementCause, ReplacementSubject};
 use digimon_engine::selection::OptionPlayResult;
 
@@ -124,8 +126,51 @@ fn digimon_card(card_id: &str, color: CardColor) -> digimon_engine::CardData {
     cd
 }
 
+fn trait_digimon_card(card_id: &str, name: &str, traits: &[&str]) -> digimon_engine::CardData {
+    let mut cd = make_test_card(card_id, name);
+    cd.traits = traits.iter().map(|s| s.to_string()).collect();
+    cd
+}
+
 fn advance_to_main(r: &mut DebugRunner) {
     r.game.enter_main_phase();
+}
+
+fn find_battle_permanent(
+    r: &DebugRunner,
+    player: u8,
+    card_id: &str,
+) -> Option<digimon_engine::permanent::PermanentHandle> {
+    r.game
+        .player(player)
+        .battle_area
+        .iter()
+        .position(|perm| {
+            perm.card_sources
+                .iter()
+                .any(|source| source.card_id(&r.game.card_data) == card_id)
+        })
+        .map(|index| digimon_engine::permanent::PermanentHandle {
+            player,
+            index: index as u8,
+        })
+}
+
+fn trash_contains(r: &DebugRunner, player: u8, card_id: &str) -> bool {
+    r.game
+        .player(player)
+        .trash
+        .iter()
+        .any(|card| card.card_id(&r.game.card_data) == card_id)
+}
+
+fn place_delay_option(r: &mut DebugRunner, player: u8, card_id: &str) {
+    let handle = r.place_on_field(player, card_id, Some(0));
+    r.game.player_mut(player).battle_area[handle.index as usize].option_state =
+        OptionState::Delayed {
+            owner: player,
+            trash_on_turn: r.game.turn_count + 1,
+        };
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────
@@ -401,4 +446,60 @@ fn linked_card_trash_on_host_deletion_does_not_fire_wwbt() {
         0,
         "v1 constraint — linked-card host-cascade does NOT fire WWBT"
     );
+}
+
+#[test]
+fn bt17_097_delay_prevents_deletion_and_digivolves_from_hand() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT17-097")
+        .expect("BT17-097 fixture is available")
+        .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
+        .add_card(trait_digimon_card(
+            "IMPERIAL-HAND",
+            "Imperial Hand",
+            &["Imperialdramon"],
+        ))
+        .hand(0, &["IMPERIAL-HAND"])
+        .memory(0)
+        .start();
+
+    let target = r.place_on_field(0, "FREE-TARGET", Some(0));
+    place_delay_option(&mut r, 0, "BT17-097");
+
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "Delay prevention prompt is exposed"
+    );
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("select Imperialdramon-like hand target");
+
+    assert_eq!(r.battle_area_size(0), 1, "target survived as one stack");
+    let target = find_battle_permanent(&r, 0, "FREE-TARGET").expect("target still present");
+    let target_stack = &r.game.player(0).battle_area[target.index as usize];
+    assert_eq!(
+        target_stack.card_sources.len(),
+        2,
+        "hand card digivolved onto the target"
+    );
+    assert_eq!(
+        target_stack.top_card().card_id(&r.game.card_data),
+        "IMPERIAL-HAND",
+        "hand card is the new top card"
+    );
+    assert!(
+        trash_contains(&r, 0, "BT17-097"),
+        "Delay option paid itself to trash"
+    );
+
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no Delay remains, so no prevention prompt is exposed"
+    );
+    assert!(find_battle_permanent(&r, 0, "FREE-TARGET").is_none());
 }

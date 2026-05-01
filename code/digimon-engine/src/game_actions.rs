@@ -806,12 +806,16 @@ impl Game {
                 // zone is Hand — reflects where the Option came from.
                 let card_handle = pending.card.handle();
                 let subject = ReplacementSubject::Card(card_handle, crate::enums::Zone::Hand);
+                self.pending_option = Some(pending);
                 let outcome = self.try_replace(
                     EffectTiming::WhenWouldBeTrashed,
                     subject,
                     ReplacementCause::Cost,
                     Some(crate::enums::Zone::Trash),
                 );
+                let Some(pending) = self.pending_option.take() else {
+                    return;
+                };
 
                 if self.pending_selection.is_some() {
                     // Optional replacement installed a selection. Re-park

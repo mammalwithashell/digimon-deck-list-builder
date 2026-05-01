@@ -30,7 +30,7 @@ use crate::game_actions::PlayFromHandCostResult;
 use crate::modifiers::ModifierEntry;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
-use crate::replacement::ReplacementCause;
+use crate::replacement::{ReplacementCause, ReplacementSubject};
 use crate::rules::Rules;
 use crate::scheduled_effects::ScheduledEffect;
 use digimon_dsl::compiled::CompiledStep;
@@ -856,6 +856,57 @@ impl<'a> EffectContext<'a> {
         if let Some(parked) = self.game.parked_replacement.as_mut() {
             parked.outcome = crate::replacement::ReplacementOutcome::Substituted(subject);
         }
+    }
+
+    pub fn trash_delay_source(&mut self) -> bool {
+        let Some(source) = self.source_permanent else {
+            return false;
+        };
+        self.game
+            .delete_permanent_with_cause(source, ReplacementCause::Cost);
+        true
+    }
+
+    pub fn digivolve_replacement_subject_without_cost(
+        &mut self,
+        subject: ReplacementSubject,
+        card: CardHandle,
+    ) {
+        let Some(target) = subject.permanent() else {
+            return;
+        };
+        if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
+            return;
+        }
+
+        let Some(hand_index) = self
+            .game
+            .player(self.player)
+            .hand
+            .iter()
+            .position(|source| source.handle() == card)
+        else {
+            return;
+        };
+
+        let turn = self.game.turn_count;
+        let card = self.game.player_mut(self.player).hand.remove(hand_index);
+        self.game.player_mut(target.player).battle_area[target.index as usize]
+            .digivolve(card, turn);
+
+        self.game.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            crate::selection::TriggerSource::Permanent(target),
+        );
+        self.game.drain_effect_queue();
+
+        for pid in 0..self.game.players.len() {
+            self.game.enqueue_triggered(
+                EffectTiming::OnDigivolve,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        self.game.drain_effect_queue();
     }
 
     /// Reborrow this mut context as a read-only context — for condition

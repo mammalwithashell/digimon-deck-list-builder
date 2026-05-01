@@ -1,0 +1,29 @@
+card: BT17-097
+name: "BT17-097 Delay Prevention Fixture"
+kind: option
+color: [blue]
+cost: 0
+traits: []
+
+effects:
+  - kind: replacement
+    trigger: when_would_be_deleted
+    active_when:
+      all_of:
+        - trait_has: Free
+        - replacement_cause: opponent_effect
+    summary: "Delay: prevent deletion and digivolve from hand"
+    process:
+      - delete_permanent: { target: source }
+      - select_hand:
+          of: you
+          bind_as: chosen
+          optional: true
+          filter: { trait_has: Imperialdramon }
+          prompt: "Choose a card for BT17-097"
+      - effect_initiated_digivolve:
+          target: replacement_subject
+          from_hand: chosen
+          cost: free
+          ignore_requirements: true
+      - cancel_replacement: {}
