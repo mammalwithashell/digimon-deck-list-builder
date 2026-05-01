@@ -173,11 +173,15 @@ impl Game {
         source: PlaySource,
     ) -> Option<usize> {
         let turn = self.turn_count;
+        let field_slots = self.rules.field_slots;
         // Borrow-check-friendly pre-checks: gather everything we need from
         // immutable borrows before taking a mutable borrow.
         let (printed_cost, card_kind) = {
             let player = self.player(player_id);
             if hand_index >= player.hand.len() {
+                return None;
+            }
+            if player.battle_area.len() >= field_slots as usize {
                 return None;
             }
             let card = &player.hand[hand_index];
