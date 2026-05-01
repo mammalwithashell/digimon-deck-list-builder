@@ -108,6 +108,23 @@ impl CardEffect for LinkedWithWwbtWitness {
     }
 }
 
+/// Mandatory WWBD cancel replacement that only fires when a permanent would
+/// be deleted as Cost. Used to prove Delay prevention cannot proceed when
+/// the Delay option fails to pay itself to trash.
+struct WwbdCancelCostDeletion;
+impl CardEffect for WwbdCancelCostDeletion {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_would_be_deleted(card)
+            .name("Cancel cost deletion")
+            .replacement_process(|rctx| {
+                if matches!(rctx.cause, ReplacementCause::Cost) {
+                    rctx.cancel();
+                }
+            })
+            .build()]
+    }
+}
+
 // ─── Fixture helpers ──────────────────────────────────────────────────
 
 fn option_card(card_id: &str, cost: u16, color: CardColor) -> digimon_engine::CardData {
@@ -502,4 +519,76 @@ fn bt17_097_delay_prevents_deletion_and_digivolves_from_hand() {
         "no Delay remains, so no prevention prompt is exposed"
     );
     assert!(find_battle_permanent(&r, 0, "FREE-TARGET").is_none());
+}
+
+#[test]
+fn bt17_097_delay_before_subject_re_resolves_shifted_target() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT17-097")
+        .expect("BT17-097 fixture is available")
+        .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
+        .add_card(trait_digimon_card(
+            "IMPERIAL-HAND",
+            "Imperial Hand",
+            &["Imperialdramon"],
+        ))
+        .hand(0, &["IMPERIAL-HAND"])
+        .memory(0)
+        .start();
+
+    place_delay_option(&mut r, 0, "BT17-097");
+    let target = r.place_on_field(0, "FREE-TARGET", Some(0));
+
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("select Imperialdramon-like hand target");
+
+    let target = find_battle_permanent(&r, 0, "FREE-TARGET").expect("target still present");
+    let target_stack = &r.game.player(0).battle_area[target.index as usize];
+    assert_eq!(
+        target_stack.top_card().card_id(&r.game.card_data),
+        "IMPERIAL-HAND",
+        "hand card digivolves onto the original threatened subject after Delay cost shifts indices"
+    );
+    assert!(trash_contains(&r, 0, "BT17-097"));
+}
+
+#[test]
+fn bt17_097_unpaid_delay_cost_does_not_prevent_original_deletion() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT17-097")
+        .expect("BT17-097 fixture is available")
+        .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
+        .add_card(trait_digimon_card(
+            "IMPERIAL-HAND",
+            "Imperial Hand",
+            &["Imperialdramon"],
+        ))
+        .add_card(digimon_card("COST-GATE", CardColor::Red))
+        .hand(0, &["IMPERIAL-HAND"])
+        .memory(0)
+        .start();
+    r.register_effect("COST-GATE", Arc::new(WwbdCancelCostDeletion));
+    r.place_on_field(0, "COST-GATE", Some(0));
+    let target = r.place_on_field(0, "FREE-TARGET", Some(0));
+    place_delay_option(&mut r, 0, "BT17-097");
+
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "unpaid Delay must not expose the hand choice"
+    );
+    assert!(
+        find_battle_permanent(&r, 0, "FREE-TARGET").is_none(),
+        "original deletion proceeds when Delay cost is not paid"
+    );
+    assert!(
+        find_battle_permanent(&r, 0, "BT17-097").is_some(),
+        "Delay option stayed on field because its cost deletion was cancelled"
+    );
+    assert!(!trash_contains(&r, 0, "BT17-097"));
 }

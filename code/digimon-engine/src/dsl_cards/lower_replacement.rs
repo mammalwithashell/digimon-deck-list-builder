@@ -105,13 +105,19 @@ pub fn lower_with_raw(
             if candidates.is_empty() {
                 return;
             }
+            let subject_card = stable_replacement_subject_card(rctx.effect, rctx.subject);
             if !rctx.effect.trash_delay_source() {
                 return;
             }
+            let Some(subject) =
+                resolve_stable_replacement_subject(rctx.effect, rctx.subject, subject_card)
+            else {
+                return;
+            };
 
             install_delay_hand_digivolve_selection(
                 rctx.effect,
-                rctx.subject,
+                subject,
                 player,
                 delay_flow.prompt.clone(),
                 candidates,
@@ -222,6 +228,31 @@ fn source_is_delayed_option(ctx: &EffectContext<'_>) -> bool {
         .is_some_and(|perm| matches!(perm.option_state, OptionState::Delayed { .. }))
 }
 
+fn stable_replacement_subject_card(
+    ctx: &EffectContext<'_>,
+    subject: ReplacementSubject,
+) -> Option<(crate::enums::PlayerId, CardHandle)> {
+    let handle = subject.permanent()?;
+    ctx.permanent_top_card_handle(handle)
+        .map(|card| (handle.player, card))
+}
+
+fn resolve_stable_replacement_subject(
+    ctx: &EffectContext<'_>,
+    subject: ReplacementSubject,
+    stable_card: Option<(crate::enums::PlayerId, CardHandle)>,
+) -> Option<ReplacementSubject> {
+    if let Some((player, card)) = stable_card {
+        return ctx
+            .find_battle_permanent_containing_card(player, card)
+            .map(ReplacementSubject::Permanent);
+    }
+
+    let handle = subject.permanent()?;
+    ((handle.index as usize) < ctx.game.player(handle.player).battle_area.len())
+        .then_some(ReplacementSubject::Permanent(handle))
+}
+
 fn matching_hand_candidates(
     ctx: &EffectContext<'_>,
     player: crate::enums::PlayerId,
@@ -288,8 +319,9 @@ fn install_delay_hand_digivolve_selection(
                 return;
             };
             let mut ctx = EffectContext::new(game, source_card, source_permanent, player);
-            ctx.digivolve_replacement_subject_without_cost(subject, card);
-            ctx.cancel_current_replacement();
+            if ctx.digivolve_replacement_subject_without_cost(subject, card) {
+                ctx.cancel_current_replacement();
+            }
         }),
         on_decline: None,
     });

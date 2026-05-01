@@ -33,7 +33,11 @@ pub struct PredicateSpec {
     pub color_is: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_only: Option<Vec<ColorSpec>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "trait",
+        alias = "subject_trait"
+    )]
     pub trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form_is: Option<String>,
@@ -147,7 +151,7 @@ pub struct PredicateSpec {
     pub all_permanents: Option<Box<ExistentialPredicate>>,
 
     // Compound
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", alias = "all")]
     pub all_of: Vec<PredicateSpec>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub any_of: Vec<PredicateSpec>,

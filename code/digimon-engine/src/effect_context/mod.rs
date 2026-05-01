@@ -862,21 +862,63 @@ impl<'a> EffectContext<'a> {
         let Some(source) = self.source_permanent else {
             return false;
         };
+        let Some(source_card) = self.permanent_top_card_handle(source) else {
+            return false;
+        };
         self.game
             .delete_permanent_with_cause(source, ReplacementCause::Cost);
-        true
+        self.game.pending_selection.is_none()
+            && self
+                .find_battle_permanent_containing_card(source.player, source_card)
+                .is_none()
+            && self
+                .game
+                .player(source.player)
+                .trash
+                .iter()
+                .any(|card| card.handle() == source_card)
+    }
+
+    pub fn permanent_top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
+        self.game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|permanent| permanent.top_card().handle())
+    }
+
+    pub fn find_battle_permanent_containing_card(
+        &self,
+        player: PlayerId,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        self.game
+            .player(player)
+            .battle_area
+            .iter()
+            .position(|permanent| {
+                permanent
+                    .card_sources
+                    .iter()
+                    .chain(permanent.linked_cards.iter())
+                    .any(|source| source.handle() == card)
+            })
+            .map(|index| PermanentHandle {
+                player,
+                index: index as u8,
+            })
     }
 
     pub fn digivolve_replacement_subject_without_cost(
         &mut self,
         subject: ReplacementSubject,
         card: CardHandle,
-    ) {
+    ) -> bool {
         let Some(target) = subject.permanent() else {
-            return;
+            return false;
         };
         if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
-            return;
+            return false;
         }
 
         let Some(hand_index) = self
@@ -886,7 +928,7 @@ impl<'a> EffectContext<'a> {
             .iter()
             .position(|source| source.handle() == card)
         else {
-            return;
+            return false;
         };
 
         let turn = self.game.turn_count;
@@ -907,6 +949,7 @@ impl<'a> EffectContext<'a> {
             );
         }
         self.game.drain_effect_queue();
+        true
     }
 
     /// Reborrow this mut context as a read-only context — for condition

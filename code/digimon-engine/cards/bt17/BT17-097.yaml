@@ -7,23 +7,22 @@ traits: []
 
 effects:
   - kind: replacement
-    trigger: when_would_be_deleted
+    timing: when_would_be_deleted
     active_when:
-      all_of:
-        - trait_has: Free
+      all:
+        - subject_trait: Free
         - replacement_cause: opponent_effect
     summary: "Delay: prevent deletion and digivolve from hand"
-    process:
-      - delete_permanent: { target: source }
-      - select_hand:
-          of: you
-          bind_as: chosen
-          optional: true
-          filter: { trait_has: Imperialdramon }
-          prompt: "Choose a card for BT17-097"
-      - effect_initiated_digivolve:
+    cost:
+      delay_self: true
+    choose:
+      from: hand
+      card_filter:
+        trait: Imperialdramon
+      min: 1
+      max: 1
+    outcome: prevent
+    then:
+      - digivolve_without_cost:
           target: replacement_subject
-          from_hand: chosen
-          cost: free
-          ignore_requirements: true
-      - cancel_replacement: {}
+          card: chosen

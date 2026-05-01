@@ -642,6 +642,80 @@ fn compile_triggered(
     }
 }
 
+fn compile_replacement_process(
+    r: &crate::clause::ReplacementBody,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> Vec<CompiledStep> {
+    if !r.process.is_empty() {
+        return r
+            .process
+            .iter()
+            .enumerate()
+            .map(|(i, s)| compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors))
+            .collect();
+    }
+
+    let mut process = Vec::new();
+
+    if r.cost.as_ref().is_some_and(|cost| cost.delay_self) {
+        process.push(CompiledStep::DeletePermanent {
+            target: CompiledBindingRef::Source,
+        });
+    }
+
+    if let Some(choose) = &r.choose {
+        if choose.min != 1 || choose.max != 1 {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.choose"),
+                message: "replacement choose currently supports exactly min: 1, max: 1".into(),
+            });
+        }
+
+        process.push(CompiledStep::SelectHand {
+            of: CompiledPlayerRef::You,
+            filter: compile_predicate(
+                &choose.card_filter,
+                &format!("{prefix}.choose.card_filter"),
+                card_id,
+                errors,
+            ),
+            bind_as: Some("chosen".into()),
+            prompt: format!("Choose a card for {card_id}"),
+            prompt_key: None,
+            optional: true,
+        });
+    }
+
+    for (i, step) in r.then_steps.iter().enumerate() {
+        let args = &step.digivolve_without_cost;
+        process.push(CompiledStep::EffectInitiatedDigivolve {
+            target: compile_binding_ref(&args.target),
+            from_hand: compile_binding_ref(&args.card),
+            cost: CompiledCostDelta::Free,
+            ignore_requirements: true,
+        });
+        if r.choose.is_none() {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.then[{i}]"),
+                message: "replacement then steps currently require a choose block".into(),
+            });
+        }
+    }
+
+    if matches!(
+        r.outcome,
+        Some(crate::clause::ReplacementOutcome::Prevent)
+    ) {
+        process.push(CompiledStep::CancelReplacement);
+    }
+
+    process
+}
+
 fn compile_declarative(
     d: &crate::clause::DeclarativeClause,
     body: crate::clause::TypedDeclarativeBody,
@@ -708,19 +782,17 @@ fn compile_declarative(
             summary,
             summary_key,
         },
-        B::Replacement(r) => CompiledDeclarativeClause::Replacement {
-            scope,
-            active_when,
-            trigger: r.trigger,
-            process: r
-                .process
-                .iter()
-                .enumerate()
-                .map(|(i, s)| compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors))
-                .collect(),
-            summary,
-            summary_key,
-        },
+        B::Replacement(r) => {
+            let trigger = r.trigger.clone().or_else(|| r.timing.clone()).unwrap_or_default();
+            CompiledDeclarativeClause::Replacement {
+                scope,
+                active_when,
+                trigger,
+                process: compile_replacement_process(&r, prefix, card_id, errors),
+                summary,
+                summary_key,
+            }
+        }
         B::Partition(p) => CompiledDeclarativeClause::Partition {
             scope,
             active_when,
