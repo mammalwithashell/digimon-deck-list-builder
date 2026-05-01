@@ -50,6 +50,7 @@ fn save_card(id: &str) -> CardData {
         // Printed-only Save: the auto-install MUST be the sole source of
         // behavior. No hand-rolled CardEffect is registered.
         keywords: vec![Keyword::Save],
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -72,6 +73,7 @@ fn tamer_card(id: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -95,6 +97,7 @@ fn plain_digimon(id: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -398,6 +401,7 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
             inherited_text: String::new(),
             security_text: String::new(),
             keywords: vec![Keyword::Decoy, Keyword::Save],
+            dual: None,
             effect_class_name: id.replace('-', "_"),
             index: 0,
             norm_id: 0.0,

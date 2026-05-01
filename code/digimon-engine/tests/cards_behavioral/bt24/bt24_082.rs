@@ -243,7 +243,12 @@ fn bt24_082_clause1_start_of_main_no_panic() {
             .as_ref()
             .unwrap()
             .selecting_player;
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner
             .game
             .resolve_selection(player, action)
@@ -297,7 +302,12 @@ fn bt24_082_clause1_returns_self_to_deck_when_activated() {
             .unwrap()
             .selecting_player;
         // Use first action (may include PASS if available, or the only option).
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
         steps += 1;
@@ -354,7 +364,12 @@ fn bt24_082_clause1_elizamon_gate_blocked_when_digimon_present() {
             .as_ref()
             .unwrap()
             .selecting_player;
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
         steps += 1;

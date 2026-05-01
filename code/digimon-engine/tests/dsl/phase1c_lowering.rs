@@ -51,6 +51,8 @@ fn fixture_grant_keyword(keyword: &str, value: Option<i32>) -> CompiledCard {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::GrantKeyword {
@@ -98,6 +100,8 @@ fn fixture_aura_self_dp(amount: i32) -> CompiledCard {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::Aura {
@@ -144,6 +148,8 @@ fn fixture_aura_filtered(
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::Aura {
@@ -193,6 +199,8 @@ fn fixture_cost_reduction(amount: i32, condition: Option<CompiledPredicate>) -> 
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::CostReduction {
@@ -253,6 +261,8 @@ fn fixture_flood_gate(modifier: &str, target: CompiledPredicate) -> CompiledCard
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::FloodGate {

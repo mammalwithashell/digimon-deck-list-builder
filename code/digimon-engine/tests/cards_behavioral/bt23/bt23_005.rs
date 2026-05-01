@@ -132,9 +132,7 @@ fn bt23_005_inherited_aura_clause_has_correct_scope() {
 
     let aura = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            scope,
-            dp_modifier,
-            ..
+            scope, dp_modifier, ..
         }) => Some((*scope, *dp_modifier)),
         _ => None,
     });
@@ -145,11 +143,7 @@ fn bt23_005_inherited_aura_clause_has_correct_scope() {
         CompiledScope::Inherited,
         "the aura clause must have Inherited scope (active as a digivolution source)"
     );
-    assert_eq!(
-        dp,
-        Some(2000),
-        "the aura dp_modifier must be +2000 DP"
-    );
+    assert_eq!(dp, Some(2000), "the aura dp_modifier must be +2000 DP");
 }
 
 // ─── Section 2: Behavioral — inherited DP positive gate (your turn) ──────────

@@ -1,0 +1,103 @@
+# Example-only DUAL card YAML draft.
+#
+# Real card: ST23-09 Atratusmon/Eclipse Impact.
+# Source: https://digimoncardgame.fandom.com/wiki/ST23-09
+#
+# Keep this under docs/examples until local data/cards.json contains ST23-09.
+# The engine's cards/_examples fixtures are cross-checked against cards.json.
+
+card: ST23-09
+name: "Atratusmon/Eclipse Impact"
+kind: dual
+
+# Compatibility mirrors for the Digimon face. DUAL cards do not have a
+# Digimon play cost; the Option use cost lives at dual.option.use_cost.
+level: 6
+color: [green, black]
+dp: 12000
+traits: [Mutant, Glowing Dawn, BEATBREAK]
+form: Mega
+attribute: Data
+
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [green, black]
+    traits: [Mutant, Glowing Dawn, BEATBREAK]
+    effect_text: "Security A. +1, Reboot, Blocker. When digivolving or attacking once per turn: this Digimon is protected from opponent Digimon effects until their turn ends, then deletes an opponent's lowest-DP Digimon."
+    inherited_text: ""
+  option:
+    use_cost: 5
+    colors: [green]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
+        trait_has: BEATBREAK
+    effect_text: "Use requirement: BEATBREAK trait. Main: suspend an opposing Digimon, then return an opposing suspended highest-DP Digimon to the bottom of the deck. Arts Digivolve."
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: "Glowing Dawn"
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+  - kind: grant_keyword
+    keyword: Reboot
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # Digimon-face triggered effect.
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: false
+    summary: "Gain protection from opponent Digimon effects, then delete an opponent lowest-DP Digimon"
+    process:
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          selector: lowest_dp
+          prompt: "Delete opponent's lowest-DP Digimon"
+      - delete_permanent: { target: tgt }
+
+  # Option-face main effect. The DUAL/Arts substrate should offer Arts
+  # Digivolve after this Option-use effect resolves.
+  - when: main_from_hand
+    optional: false
+    summary: "Suspend an opponent Digimon, then bottom-deck an opponent suspended highest-DP Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: first
+          filter: { kind: digimon }
+          prompt: "Suspend opponent Digimon"
+      - suspend: { target: first }
+      - select_opponent_permanent:
+          bind_as: second
+          filter: { kind: digimon, is_suspended: true }
+          selector: highest_dp
+          prompt: "Return opponent's highest-DP suspended Digimon"
+      - return_to_deck: { target: second, position: bottom, include_sources: true }

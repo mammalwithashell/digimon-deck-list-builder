@@ -195,10 +195,7 @@ fn ex11_008_inherited_clause_shape() {
 #[test]
 fn ex11_008_on_play_installs_selection_after_play() {
     // Plain setup — no other Digimon; Elizamon is the only Reptile.
-    let mut runner = elizamon_builder()
-        .hand(0, &["EX11-008"])
-        .memory(10)
-        .start();
+    let mut runner = elizamon_builder().hand(0, &["EX11-008"]).memory(10).start();
 
     let _played = runner.play(0, 0).expect("Elizamon plays from hand");
 
@@ -337,10 +334,7 @@ fn ex11_008_on_play_can_self_target_when_elizamon_is_only_reptile() {
     // Elizamon itself has the Reptile trait; when it's the only Reptile/Dragonkin
     // on the field after play, it must appear as a valid selection target.
     // DCGO PermanentDigimonCondition does not exclude self.
-    let mut runner = elizamon_builder()
-        .hand(0, &["EX11-008"])
-        .memory(10)
-        .start();
+    let mut runner = elizamon_builder().hand(0, &["EX11-008"]).memory(10).start();
 
     let _played = runner.play(0, 0).expect("Elizamon plays");
 

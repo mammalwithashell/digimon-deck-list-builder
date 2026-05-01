@@ -171,12 +171,14 @@ fn bt24_018_has_on_opponent_security_removed_clause_opt_and_optional() {
 fn bt24_018_has_would_leave_battle_area_replacement_clause() {
     let card = compiled("BT24-018");
 
-    let has_replacement = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
-            trigger, ..
-        }) if trigger == "when_would_leave_battle_area"
-    ));
+    let has_replacement = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                trigger, ..
+            }) if trigger == "when_would_leave_battle_area"
+        )
+    });
 
     assert!(
         has_replacement,

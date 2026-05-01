@@ -54,10 +54,9 @@ const YAML: &str = include_str!("../../../cards/bt24/BT24-017.yaml");
 
 /// Compile BT24-017 from the production YAML and return the CompiledCard.
 fn compiled_bt24_017() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("BT24-017.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("BT24-017.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("BT24-017.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("BT24-017.yaml compiles");
     registry
         .lookup("BT24-017")
         .expect("BT24-017 in registry")
@@ -73,9 +72,10 @@ fn place_bt24_on_field(runner: &mut DebugRunner, player: u8) -> PermanentHandle 
 
 /// Enqueue and drain BT24-017's WhenDigivolving trigger for the given handle.
 fn trigger_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -166,7 +166,10 @@ fn bt24_017_grants_raid_keyword() {
         }) => keyword.eq_ignore_ascii_case("Raid"),
         _ => false,
     });
-    assert!(has_raid, "BT24-017 must declare a GrantKeyword(Raid) clause");
+    assert!(
+        has_raid,
+        "BT24-017 must declare a GrantKeyword(Raid) clause"
+    );
 }
 
 /// BT24-017 must declare Progress as a native keyword grant.
@@ -179,7 +182,10 @@ fn bt24_017_grants_progress_keyword() {
         }) => keyword.eq_ignore_ascii_case("Progress"),
         _ => false,
     });
-    assert!(has_progress, "BT24-017 must declare a GrantKeyword(Progress) clause");
+    assert!(
+        has_progress,
+        "BT24-017 must declare a GrantKeyword(Progress) clause"
+    );
 }
 
 /// BT24-017 must declare Piercing as a native keyword grant.
@@ -192,7 +198,10 @@ fn bt24_017_grants_piercing_keyword() {
         }) => keyword.eq_ignore_ascii_case("Piercing"),
         _ => false,
     });
-    assert!(has_piercing, "BT24-017 must declare a GrantKeyword(Piercing) clause");
+    assert!(
+        has_piercing,
+        "BT24-017 must declare a GrantKeyword(Piercing) clause"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -326,7 +335,9 @@ fn bt24_017_full_sequence_two_trash_two_tokens_dp_boost() {
         let idx = runner.game.next_card_index();
         runner.game.players[1]
             .trash
-            .push(digimon_engine::card_source::CardSource::new(data_idx, 1, idx));
+            .push(digimon_engine::card_source::CardSource::new(
+                data_idx, 1, idx,
+            ));
     }
 
     trigger_when_digivolving(&mut runner, bt24_handle);
@@ -334,10 +345,17 @@ fn bt24_017_full_sequence_two_trash_two_tokens_dp_boost() {
     // Resolve the OppField delete selection.
     {
         let (action, player) = {
-            let pending = runner.game.pending_selection.as_ref().expect("delete prompt");
+            let pending = runner
+                .game
+                .pending_selection
+                .as_ref()
+                .expect("delete prompt");
             (pending.valid_action_ids[0], pending.selecting_player)
         };
-        runner.game.resolve_selection(player, action).expect("delete");
+        runner
+            .game
+            .resolve_selection(player, action)
+            .expect("delete");
     }
     assert_eq!(runner.battle_area_size(1), 0, "opp Digimon deleted");
 
@@ -377,12 +395,20 @@ fn bt24_017_full_sequence_two_trash_two_tokens_dp_boost() {
     assert_eq!(token_count, 2, "2 Petrification Tokens must spawn");
 
     // +2000 per opp Digimon (2 tokens) until opp turn ends.
-    assert_eq!(runner.effective_dp(bt24_handle), Some(11000 + 4000), "+4000 boost");
+    assert_eq!(
+        runner.effective_dp(bt24_handle),
+        Some(11000 + 4000),
+        "+4000 boost"
+    );
 
     // After opp's turn ends the modifier expires.
     runner.end_turn();
     runner.end_turn();
-    assert_eq!(runner.effective_dp(bt24_handle), Some(11000), "boost expires");
+    assert_eq!(
+        runner.effective_dp(bt24_handle),
+        Some(11000),
+        "boost expires"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -491,7 +517,10 @@ fn bt24_017_less_than_two_trash_skips_token_play() {
             let pending = runner.game.pending_selection.as_ref().expect("delete");
             (pending.valid_action_ids[0], pending.selecting_player)
         };
-        runner.game.resolve_selection(player, action).expect("delete resolves");
+        runner
+            .game
+            .resolve_selection(player, action)
+            .expect("delete resolves");
     }
 
     let token_count = runner
@@ -504,8 +533,7 @@ fn bt24_017_less_than_two_trash_skips_token_play() {
         })
         .count();
     assert_eq!(
-        token_count,
-        0,
+        token_count, 0,
         "no tokens when opp cannot pay the return-2 cost"
     );
 }

@@ -62,6 +62,7 @@ fn select_then_if_your_turn_deletes_opponent_permanent() {
         CompiledStep::SelectOpponentPermanent {
             filter: CompiledPredicate::default(),
             bind_as: Some("tgt".to_string()),
+            selector: None,
             prompt: "Choose an opponent's Digimon to delete".to_string(),
             prompt_key: None,
             optional: false,
@@ -165,6 +166,7 @@ fn select_then_if_opponents_turn_buffs_opponent_permanent() {
         CompiledStep::SelectOpponentPermanent {
             filter: CompiledPredicate::default(),
             bind_as: Some("tgt".to_string()),
+            selector: None,
             prompt: "Choose an opponent Digimon".to_string(),
             prompt_key: None,
             optional: false,

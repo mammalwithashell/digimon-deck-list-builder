@@ -116,9 +116,7 @@ fn bt5_008_has_your_turn_aura_clause_shape() {
 
     let aura_clause = compiled.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            scope,
-            dp_modifier,
-            ..
+            scope, dp_modifier, ..
         }) => Some((*scope, *dp_modifier)),
         _ => None,
     });

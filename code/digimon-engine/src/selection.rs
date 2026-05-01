@@ -16,7 +16,7 @@
 use std::collections::VecDeque;
 
 use crate::card_source::{CardHandle, CardSource};
-use crate::enums::{EffectTiming, GamePhase, PlayerId};
+use crate::enums::{EffectSourceKind, EffectTiming, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
 use crate::trigger_context::TriggerContext;
 
@@ -154,6 +154,8 @@ pub struct PendingSelection {
     pub source_card: CardHandle,
     /// Permanent that installed this selection, if any.
     pub source_permanent: Option<PermanentHandle>,
+    /// Source-kind provenance to preserve across parked callbacks.
+    pub source_kind: EffectSourceKind,
     /// Fired with the chosen action ID. Runs exactly once.
     pub callback: SelectionCallback,
     /// Fired instead of `callback` when the player passes on an optional
@@ -173,6 +175,7 @@ impl std::fmt::Debug for PendingSelection {
             .field("effect_choices", &self.effect_choices)
             .field("source_card", &self.source_card)
             .field("source_permanent", &self.source_permanent)
+            .field("source_kind", &self.source_kind)
             .finish_non_exhaustive()
     }
 }
@@ -192,6 +195,7 @@ pub struct PendingSelectionView {
     pub effect_choices: Option<Vec<EffectChoiceEntry>>,
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
+    pub source_kind: EffectSourceKind,
 }
 
 impl PendingSelectionView {
@@ -222,6 +226,7 @@ impl PendingSelection {
             effect_choices: self.effect_choices.clone(),
             source_card: self.source_card,
             source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
         }
     }
 }
@@ -240,6 +245,7 @@ impl PendingSelection {
 pub struct QueuedEffect {
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
+    pub source_kind: EffectSourceKind,
     pub controller: PlayerId,
     pub timing: EffectTiming,
     pub trigger_context: Option<TriggerContext>,
@@ -307,7 +313,24 @@ pub struct PendingSecurity {
 pub struct PendingOption {
     pub owner: PlayerId,
     pub card: CardSource,
+    pub source_kind: OptionUseSource,
     pub resolution_phase: OptionResolutionPhase,
+}
+
+/// Source zone for an in-flight Option use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionUseSource {
+    Hand,
+    Trash,
+}
+
+impl OptionUseSource {
+    pub fn zone(self) -> crate::enums::Zone {
+        match self {
+            OptionUseSource::Hand => crate::enums::Zone::Hand,
+            OptionUseSource::Trash => crate::enums::Zone::Trash,
+        }
+    }
 }
 
 /// Outcome of a `play_option_from_hand` / `play_option_from_trash` call.
@@ -339,6 +362,7 @@ pub enum OptionPlayResult {
 pub enum OptionResolutionPhase {
     LinkSelectHost,
     MainEffectDrain,
+    ArtsSelectTarget,
     Disposing,
     Done,
 }

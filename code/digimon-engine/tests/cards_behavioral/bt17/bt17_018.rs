@@ -1,4 +1,4 @@
-﻿//! BT17-018 Gallantmon: Crimson Mode -- Digimon, Lv.7, Red, DP15000, Cost8.
+//! BT17-018 Gallantmon: Crimson Mode -- Digimon, Lv.7, Red, DP15000, Cost8.
 //! Traits: Holy Warrior
 //! Evo: Lv6 Red / cost 5; Lv6 with [Gallantmon] in name / cost 4
 //!
@@ -25,29 +25,34 @@
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::selection::SelectionKind;
-use digimon_engine::action::space::PASS;
 
 /// Push `n` synthetic trash cards (using card_id "TRASH-FILLER") into the given player's
 /// trash zone. The runner must have "TRASH-FILLER" registered in card_data (via add_card).
 fn add_n_trash(r: &mut DebugRunner, player: u8, n: usize) {
-    let data_idx = r.game.card_data.iter().position(|c| c.card_id == "TRASH-FILLER")
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "TRASH-FILLER")
         .expect("TRASH-FILLER must be registered via add_card");
     for _ in 0..n {
         let next = r.game.next_card_index();
-        r.game.players[player as usize].trash.push(CardSource::new(data_idx, player, next));
+        r.game.players[player as usize]
+            .trash
+            .push(CardSource::new(data_idx, player, next));
     }
 }
 
 const YAML: &str = include_str!("../../../cards/bt17/BT17-018.yaml");
 
 fn compiled_bt17_018() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("BT17-018.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("BT17-018.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("BT17-018.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("BT17-018.yaml compiles");
     registry
         .lookup("BT17-018")
         .expect("BT17-018 in registry")
@@ -129,7 +134,10 @@ fn bt17_018_has_blast_digivolve_alt_path() {
         .iter()
         .find(|p| p.kind == CompiledAltPathKind::BurstDigivolve);
     assert!(burst.is_some(), "Must have burst_digivolve alt-path");
-    assert!(burst.unwrap().marker, "Blast Digivolve must have marker: true");
+    assert!(
+        burst.unwrap().marker,
+        "Blast Digivolve must have marker: true"
+    );
 }
 
 #[test]
@@ -138,7 +146,10 @@ fn bt17_018_has_standard_digivolve_alt_path_lv6_cost5() {
     let standard = compiled.alt_paths.iter().find(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && !p.ignore_requirements
-            && matches!(p.cost, Some(digimon_dsl::compiled::CompiledCost::Literal(5)))
+            && matches!(
+                p.cost,
+                Some(digimon_dsl::compiled::CompiledCost::Literal(5))
+            )
     });
     assert!(standard.is_some(), "Must have Lv6/Cost5 digivolve alt-path");
 }
@@ -159,7 +170,10 @@ fn bt17_018_has_on_play_when_digivolving_clause() {
             None
         }
     });
-    assert!(clause.is_some(), "Must have [On Play][When Digivolving] clause");
+    assert!(
+        clause.is_some(),
+        "Must have [On Play][When Digivolving] clause"
+    );
     let c = clause.unwrap();
     assert!(!c.optional, "[On Play][When Digivolving] is mandatory");
     assert!(!c.once_per_turn, "[On Play][When Digivolving] has no OPT");
@@ -234,7 +248,11 @@ fn bt17_018_on_play_deletes_selected_digimon_within_dp_budget() {
     let opp_count_before = r.battle_area_size(1);
     r.fire_on_play(0, perm.index as usize);
     let _ = r.auto_resolve();
-    assert_eq!(r.battle_area_size(1), opp_count_before - 1, "Selected Digimon must be deleted");
+    assert_eq!(
+        r.battle_area_size(1),
+        opp_count_before - 1,
+        "Selected Digimon must be deleted"
+    );
 }
 
 #[test]
@@ -257,7 +275,10 @@ fn bt17_018_on_play_zero_pick_is_invalid_when_targets_exist() {
     let perm = r.place_on_field(0, "BT17-018", None);
     r.fire_on_play(0, perm.index as usize);
     let _view = r.pending_selection_view().expect("Selection installed");
-    assert!(!r.pending_is_optional(), "Delete is mandatory (canNoSelect: false)");
+    assert!(
+        !r.pending_is_optional(),
+        "Delete is mandatory (canNoSelect: false)"
+    );
 }
 
 // --- Section 3b: Security trash behavioral ---
@@ -273,7 +294,10 @@ fn bt17_018_when_attacking_trashes_correct_security_count() {
     add_n_trash(&mut r, 1, 10);
 
     let security_before = r.security_count(1);
-    assert!(security_before >= 2, "Test setup: P1 needs >=2 security; got {security_before}");
+    assert!(
+        security_before >= 2,
+        "Test setup: P1 needs >=2 security; got {security_before}"
+    );
     r.attack_digimon(attacker_perm, defender_perm, false);
     let _ = r.auto_resolve();
     assert_eq!(
@@ -296,7 +320,11 @@ fn bt17_018_when_attacking_zero_trashes_when_insufficient_trash() {
     let security_before = r.security_count(1);
     r.attack_digimon(attacker_perm, defender_perm, false);
     let _ = r.auto_resolve();
-    assert_eq!(r.security_count(1), security_before, "5 trash -> no security trashed");
+    assert_eq!(
+        r.security_count(1),
+        security_before,
+        "5 trash -> no security trashed"
+    );
 }
 
 // --- Section 4: Event-log assertions ---

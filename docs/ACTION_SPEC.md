@@ -100,6 +100,8 @@ Action IDs are intentionally reused across phases.
 | `130-179` | Trash-card index |
 | `1000-1009` | Effect branch choice |
 
+Arts Digivolve uses `99` for the controller's breeding-area target during its optional selection prompt.
+
 ## Attack Formula
 
 `action_id = 100 + attacker_slot * 15 + target`

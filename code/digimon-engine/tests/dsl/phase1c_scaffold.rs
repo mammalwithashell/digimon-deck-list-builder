@@ -20,6 +20,8 @@ fn dsl_card_effect_with_no_clauses_emits_no_effects() {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![],
     };

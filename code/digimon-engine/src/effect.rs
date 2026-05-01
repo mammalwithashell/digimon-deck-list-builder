@@ -115,6 +115,9 @@ pub struct Effect {
     /// True for an Option's [Main] body effect. Set by `.option_main()` /
     /// `.link()` / `.training()`. Dispatch wires in Tasks 2-6.
     pub option_main: bool,
+    /// Optional condition that lets this Option satisfy its play color
+    /// requirement through printed `<Use Req. (...)>` text.
+    pub option_color_requirement_bypass: Option<ConditionFn>,
     /// Delay trigger for a Delay Option's body. Set by `.delay(trigger)`.
     pub delay_trigger: Option<DelayTrigger>,
     /// Memory cost paid to link this card to a host Digimon. Set by
@@ -405,6 +408,7 @@ impl EffectBuilder {
                 applies_to_opponent_security_dp: false,
                 replacement_process: None,
                 option_main: false,
+                option_color_requirement_bypass: None,
                 delay_trigger: None,
                 link_cost: None,
                 link_filter: None,
@@ -623,6 +627,17 @@ impl EffectBuilder {
     pub fn option_main(mut self) -> Self {
         self.inner.timing = EffectTiming::OptionMain;
         self.inner.option_main = true;
+        self
+    }
+
+    /// Attach an Option-use requirement predicate. When this condition is
+    /// true, the option may be used even if no matching-color Digimon/Tamer is
+    /// present.
+    pub fn option_color_requirement_bypass_condition<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
+    {
+        self.inner.option_color_requirement_bypass = Some(Box::new(f));
         self
     }
 

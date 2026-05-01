@@ -15,7 +15,10 @@
 //! `phase2f2_modifier_formula::add_dp_modifier_formula_large_value_passes_through`
 //! which guards against an unannounced narrowing change.
 
-use digimon_dsl::compiled::{CompiledModifierTarget, CompiledModifierValue, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledEffectController, CompiledEffectSourceKind, CompiledModifierTarget,
+    CompiledModifierValue, CompiledStep,
+};
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
@@ -23,6 +26,8 @@ use crate::dsl_cards::expiry_map::lookup_expiry;
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::step::StepRuntime;
 use crate::effect_context::EffectContext;
+use crate::enums::EffectSourceKind;
+use crate::modifiers::EffectControllerFilter;
 use crate::permanent::PermanentHandle;
 
 /// Resolve a `CompiledModifierValue` to the `i32` the engine modifier APIs
@@ -67,6 +72,37 @@ fn resolve_expiry(verb: &str, raw: &str) -> Option<crate::enums::Expiry> {
             );
             None
         }
+    }
+}
+
+fn resolve_permanent_target(
+    target: &CompiledBindingRef,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> Option<PermanentHandle> {
+    if matches!(target, CompiledBindingRef::SelfRef) {
+        return ctx.source_permanent;
+    }
+    match resolve_binding_ref(target, ctx, bindings) {
+        Some(ResolvedBinding::Permanent(h)) => Some(h),
+        _ => None,
+    }
+}
+
+fn lower_effect_source_kind(kind: CompiledEffectSourceKind) -> EffectSourceKind {
+    match kind {
+        CompiledEffectSourceKind::Digimon => EffectSourceKind::Digimon,
+        CompiledEffectSourceKind::Tamer => EffectSourceKind::Tamer,
+        CompiledEffectSourceKind::Option => EffectSourceKind::Option,
+        CompiledEffectSourceKind::Rule => EffectSourceKind::Rule,
+    }
+}
+
+fn lower_effect_controller(controller: CompiledEffectController) -> EffectControllerFilter {
+    match controller {
+        CompiledEffectController::Any => EffectControllerFilter::Any,
+        CompiledEffectController::Opponent => EffectControllerFilter::OpponentOnly,
+        CompiledEffectController::Own => EffectControllerFilter::OwnOnly,
     }
 }
 
@@ -146,6 +182,26 @@ pub fn try_run(
             {
                 ctx.grant_keyword(h, kw, expiry);
             }
+            true
+        }
+        CompiledStep::GrantEffectImmunity {
+            target,
+            source_kind,
+            source_controller,
+            expiry,
+        } => {
+            let Some(expiry) = resolve_expiry("grant_effect_immunity", expiry) else {
+                return true;
+            };
+            let Some(h) = resolve_permanent_target(target, ctx, bindings) else {
+                return true;
+            };
+            ctx.add_effect_immunity_modifier(
+                h,
+                lower_effect_source_kind(*source_kind),
+                lower_effect_controller(*source_controller),
+                expiry,
+            );
             true
         }
         _ => false,

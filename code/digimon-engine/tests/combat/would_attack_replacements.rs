@@ -431,6 +431,7 @@ fn when_would_be_attack_target_opponent_cancel_filter() {
             source_player: 1,
             cause_filter: Some(ReplacementCause::OpponentEffect),
             replacement_condition: None,
+            effect_immunity_filter: None,
         },
     );
 

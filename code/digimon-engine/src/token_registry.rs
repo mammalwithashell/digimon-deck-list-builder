@@ -59,6 +59,7 @@ impl TokenDef {
             keywords: Vec::new(),
             index: 0,
             norm_id: 0.0,
+            dual: None,
         }
     }
 }

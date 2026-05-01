@@ -90,9 +90,7 @@ fn cyclonemon_with_nonts_lv3() -> DebugRunner {
 #[test]
 fn bt24_011_has_exactly_three_declarative_clauses_and_no_triggered() {
     let runner = cyclonemon_runner();
-    let compiled = runner
-        .compiled_card("BT24-011")
-        .expect("BT24-011 compiles");
+    let compiled = runner.compiled_card("BT24-011").expect("BT24-011 compiles");
 
     let triggered_count = compiled
         .effects
@@ -119,9 +117,7 @@ fn bt24_011_has_exactly_three_declarative_clauses_and_no_triggered() {
 #[test]
 fn bt24_011_clause0_is_own_rush() {
     let runner = cyclonemon_runner();
-    let compiled = runner
-        .compiled_card("BT24-011")
-        .expect("BT24-011 compiles");
+    let compiled = runner.compiled_card("BT24-011").expect("BT24-011 compiles");
 
     let rush_clause = compiled.effects.iter().find(|c| {
         matches!(
@@ -143,9 +139,7 @@ fn bt24_011_clause0_is_own_rush() {
 #[test]
 fn bt24_011_clause1_is_own_raid() {
     let runner = cyclonemon_runner();
-    let compiled = runner
-        .compiled_card("BT24-011")
-        .expect("BT24-011 compiles");
+    let compiled = runner.compiled_card("BT24-011").expect("BT24-011 compiles");
 
     let own_raid = compiled.effects.iter().find(|c| {
         matches!(
@@ -167,9 +161,7 @@ fn bt24_011_clause1_is_own_raid() {
 #[test]
 fn bt24_011_clause2_is_inherited_raid() {
     let runner = cyclonemon_runner();
-    let compiled = runner
-        .compiled_card("BT24-011")
-        .expect("BT24-011 compiles");
+    let compiled = runner.compiled_card("BT24-011").expect("BT24-011 compiles");
 
     let inherited_raid = compiled.effects.iter().find(|c| {
         matches!(
@@ -199,9 +191,7 @@ fn bt24_011_clause2_is_inherited_raid() {
 #[test]
 fn bt24_011_alt_paths_contain_standard_and_ts_digivolve() {
     let runner = cyclonemon_runner();
-    let compiled = runner
-        .compiled_card("BT24-011")
-        .expect("BT24-011 compiles");
+    let compiled = runner.compiled_card("BT24-011").expect("BT24-011 compiles");
 
     // Must have at least 2 digivolve paths.
     let digivolve_paths: Vec<&CompiledAltPath> = compiled
@@ -238,7 +228,10 @@ fn bt24_011_alt_paths_contain_standard_and_ts_digivolve() {
 
     // The TS path must require Lv3.
     if let Some(ts_path) = ts_path {
-        let from = ts_path.from.as_ref().expect("TS path must have from filter");
+        let from = ts_path
+            .from
+            .as_ref()
+            .expect("TS path must have from filter");
         assert_eq!(
             from.level_eq,
             Some(3),
@@ -251,9 +244,7 @@ fn bt24_011_alt_paths_contain_standard_and_ts_digivolve() {
 #[test]
 fn bt24_011_standard_digivolve_path_costs_2() {
     let runner = cyclonemon_runner();
-    let compiled = runner
-        .compiled_card("BT24-011")
-        .expect("BT24-011 compiles");
+    let compiled = runner.compiled_card("BT24-011").expect("BT24-011 compiles");
 
     // Standard path: level_eq 3, no trait requirement.
     let standard_path = compiled.alt_paths.iter().find(|p| {
@@ -311,7 +302,10 @@ fn bt24_011_rush_allows_attack_on_turn_played() {
     // Play BT24-011 on turn 1.
     runner.play(0, 0).expect("play Cyclonemon from hand");
 
-    let cyclonemon = PermanentHandle { player: 0, index: 0 };
+    let cyclonemon = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
 
     // Rush must exempt Cyclonemon from summoning sickness.
     // Compute action mask for player 0; encode_attack(attacker_idx, target_idx).
@@ -342,7 +336,10 @@ fn bt24_011_non_rush_digimon_cannot_attack_same_turn() {
     runner.game.players[1].battle_area[opp_defender.index as usize].is_suspended = true;
 
     runner.play(0, 0).expect("play plain Lv4 from hand");
-    let attacker = PermanentHandle { player: 0, index: 0 };
+    let attacker = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
 
     let mask = build_action_mask(&runner.game, 0);
     let attack_action = encode_attack(attacker.index as u16, opp_defender.index as u16) as usize;
@@ -603,9 +600,7 @@ fn bt24_011_inherited_raid_absent_without_source() {
 #[test]
 fn bt24_011_alt_digi_ts_path_exists_structurally() {
     let runner = cyclonemon_runner();
-    let compiled = runner
-        .compiled_card("BT24-011")
-        .expect("BT24-011 compiles");
+    let compiled = runner.compiled_card("BT24-011").expect("BT24-011 compiles");
 
     let ts_path = compiled.alt_paths.iter().find(|p| {
         p.kind == CompiledAltPathKind::Digivolve
@@ -629,9 +624,7 @@ fn bt24_011_alt_digi_ts_path_exists_structurally() {
 #[test]
 fn bt24_011_alt_digi_ts_path_requires_ts_trait() {
     let runner = cyclonemon_runner();
-    let compiled = runner
-        .compiled_card("BT24-011")
-        .expect("BT24-011 compiles");
+    let compiled = runner.compiled_card("BT24-011").expect("BT24-011 compiles");
 
     let ts_path = compiled.alt_paths.iter().find(|p| {
         p.kind == CompiledAltPathKind::Digivolve

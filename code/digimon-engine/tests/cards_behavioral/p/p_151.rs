@@ -201,8 +201,7 @@ fn p_151_clause_2_is_inherited_on_security() {
 
     let has_inherited_security = compiled.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity)
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
         }
         _ => false,
     });
@@ -528,8 +527,7 @@ fn p_151_security_clause_compiles_as_inherited_on_security() {
 
     let has_security_clause = compiled.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity)
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
         }
         _ => false,
     });

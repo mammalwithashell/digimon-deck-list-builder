@@ -108,10 +108,7 @@ fn bt18_087_clause1_start_of_your_turn_face_up_not_optional() {
         !clause1.optional,
         "clause 1 is not optional — memory gate fires automatically"
     );
-    assert!(
-        !clause1.once_per_turn,
-        "clause 1 is not once_per_turn"
-    );
+    assert!(!clause1.once_per_turn, "clause 1 is not once_per_turn");
 }
 
 /// Clause 2 must be on_opponent_security_removed, FaceUp scope, not optional.
@@ -346,10 +343,7 @@ fn bt18_087_clause2_fires_and_suspends_owen_when_opponent_loses_security() {
     let owen_suspended = runner.game.players[0]
         .battle_area
         .iter()
-        .any(|p| {
-            p.top_card().card_id(&runner.game.card_data) == "BT18-087"
-                && p.is_suspended
-        });
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT18-087" && p.is_suspended);
 
     let pending_delete = runner
         .pending_kind()
@@ -509,10 +503,7 @@ fn bt18_087_clause2_owen_remains_suspended_after_full_resolution() {
     let owen_suspended = runner.game.players[0]
         .battle_area
         .iter()
-        .any(|p| {
-            p.top_card().card_id(&runner.game.card_data) == "BT18-087"
-                && p.is_suspended
-        });
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT18-087" && p.is_suspended);
 
     assert!(
         owen_suspended,
@@ -575,7 +566,8 @@ fn bt18_087_clause2_cannot_fire_twice_while_suspended_after_first_activation() {
     // The opponent may have lost another security card (from the attack itself),
     // but Owen's effect must NOT fire a second deletion.
     assert_eq!(
-        opp_field_after_second, runner.battle_area_size(1),
+        opp_field_after_second,
+        runner.battle_area_size(1),
         "Owen suspended after first activation blocks second clause 2 fire"
     );
     // The simpler assertion: opp field should NOT be 0 (no second delete).

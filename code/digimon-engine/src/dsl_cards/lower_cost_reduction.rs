@@ -30,9 +30,10 @@ fn evaluate_amount(
     // target (e.g. `CardCountInZoneScoped`) evaluate correctly; formulas that
     // DO dereference it (e.g. `StackSize`, `MaterialCount`) call
     // `battle_area.get(255)` which returns `None` and safely short-circuit to 0.
-    let target = rctx
-        .source_permanent
-        .unwrap_or(PermanentHandle { player: rctx.player, index: 255 });
+    let target = rctx.source_permanent.unwrap_or(PermanentHandle {
+        player: rctx.player,
+        index: 255,
+    });
     formula_eval::evaluate_read_with_raw(formula, rctx, target, raw)
 }
 

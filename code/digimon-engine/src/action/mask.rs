@@ -74,16 +74,23 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
                 let card = &me.hand[i];
-                let cost = card.play_cost(&game.card_data) as i16;
+                let is_option_use = card.card_kind(&game.card_data) == CardKind::Option
+                    || card.card_kind(&game.card_data) == CardKind::Dual;
+                let cost = if is_option_use {
+                    card.option_use_cost(&game.card_data)
+                        .unwrap_or_else(|| card.play_cost(&game.card_data))
+                } else {
+                    card.play_cost(&game.card_data)
+                } as i16;
                 // Memory check: card is affordable if memory - cost >= memory_min
                 if (game.memory - cost) < game.rules.memory_range.0 {
                     continue;
                 }
-                // §4.2 Option color requirement: an Option is only playable
-                // when the player has a Digimon or Tamer of a matching color
-                // on the field or in the breeding area.
-                if card.card_kind(&game.card_data) == CardKind::Option {
-                    if !option_color_match_available(card, me, &game.card_data) {
+                // §4.2 Option color requirement: an Option is playable when
+                // the player has a matching-color Digimon/Tamer, or when a
+                // printed Use Req. predicate satisfies that requirement.
+                if is_option_use {
+                    if !option_use_requirement_or_color_available(card, game, player_id) {
                         continue;
                     }
                 }
@@ -201,7 +208,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // Full digivolve validation (alt-digi, modifiers) deferred.
             for h in 0..max_hand as usize {
                 let card = &me.hand[h];
-                if card.card_kind(&game.card_data) != CardKind::Digimon {
+                if !card.is_digimon_card_for_search(&game.card_data) {
                     continue;
                 }
                 let max_field = me.battle_area.len().min(FIELD_SLOTS);
@@ -600,14 +607,18 @@ pub(crate) fn option_color_match_available(
     me: &crate::player::Player,
     card_data: &[crate::card_data::CardData],
 ) -> bool {
-    let option_colors = card.colors(card_data);
+    let option_colors = card.option_colors(card_data);
 
     // Battle area: Digimon or Tamer with an overlapping color.
     for perm in &me.battle_area {
         if !perm.is_digimon(card_data) && !perm.is_tamer(card_data) {
             continue;
         }
-        let perm_colors = perm.top_card().colors(card_data);
+        let perm_colors = if perm.is_digimon(card_data) {
+            perm.top_card().digimon_colors(card_data)
+        } else {
+            perm.top_card().colors(card_data)
+        };
         if option_colors.iter().any(|c| perm_colors.contains(c)) {
             return true;
         }
@@ -616,7 +627,7 @@ pub(crate) fn option_color_match_available(
     // Breeding area: only Digimon counts (Tamers can't be in breeding).
     if let Some(ref breeding) = me.breeding_area {
         if breeding.is_digimon(card_data) {
-            let perm_colors = breeding.top_card().colors(card_data);
+            let perm_colors = breeding.top_card().digimon_colors(card_data);
             if option_colors.iter().any(|c| perm_colors.contains(c)) {
                 return true;
             }
@@ -624,6 +635,37 @@ pub(crate) fn option_color_match_available(
     }
 
     false
+}
+
+/// Option-use legality for the color requirement. A true printed Use Req.
+/// predicate satisfies the requirement; otherwise normal color matching still
+/// applies.
+pub(crate) fn option_use_requirement_or_color_available(
+    card: &crate::card_source::CardSource,
+    game: &Game,
+    player_id: PlayerId,
+) -> bool {
+    if option_color_match_available(card, game.player(player_id), &game.card_data) {
+        return true;
+    }
+
+    let card_id = card.card_id(&game.card_data);
+    let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
+        return false;
+    };
+    let ctx = EffectReadContext::new(game, card.handle(), None, player_id);
+    effects.iter().any(|effect| {
+        if !matches!(
+            effect.timing,
+            EffectTiming::MainFromHand | EffectTiming::OptionMain
+        ) {
+            return false;
+        }
+        effect
+            .option_color_requirement_bypass
+            .as_ref()
+            .is_some_and(|condition| condition(&ctx))
+    })
 }
 
 /// Basic attack eligibility: unsuspended Digimon not played this turn,
@@ -661,22 +703,22 @@ fn can_basic_digivolve(
     base: &crate::permanent::Permanent,
     card_data: &[CardData],
 ) -> bool {
-    let card_meta = &card_data[card.data_index];
     let base_top = base.top_card();
     let base_meta = &card_data[base_top.data_index];
 
     // Base must be Digimon or DigiEgg
-    if base_meta.card_kind != CardKind::Digimon && base_meta.card_kind != CardKind::DigiEgg {
+    if !base_top.is_digimon_card_for_search(card_data) && base_meta.card_kind != CardKind::DigiEgg {
         return false;
     }
 
-    let base_level = match base_meta.level {
+    let base_level = match base_top.digimon_level(card_data) {
         Some(l) => l,
         None => return false,
     };
+    let base_colors = base_top.digimon_colors(card_data);
 
     // Find a matching evo_cost
-    for evo in &card_meta.evo_costs {
+    for evo in card.digivolution_costs(card_data) {
         if evo.level != base_level {
             continue;
         }
@@ -684,7 +726,7 @@ fn can_basic_digivolve(
             Some(c) => c,
             None => continue,
         };
-        if !base_meta.colors.contains(&color) {
+        if !base_colors.contains(&color) {
             continue;
         }
         return true;

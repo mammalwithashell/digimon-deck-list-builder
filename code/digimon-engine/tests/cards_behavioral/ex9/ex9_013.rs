@@ -45,10 +45,9 @@ const YAML: &str = include_str!("../../../cards/ex9/EX9-013.yaml");
 
 /// Compile EX9-013 from production YAML.
 fn compiled_ex9_013() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("EX9-013.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("EX9-013.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("EX9-013.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("EX9-013.yaml compiles");
     registry
         .lookup("EX9-013")
         .expect("EX9-013 in registry")
@@ -94,7 +93,11 @@ fn ex9_013_has_two_digivolve_alt_paths() {
         .iter()
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .collect();
-    assert_eq!(digi_paths.len(), 2, "Should have standard (Lv5/4) + alt-digi (Lv5+Greymon|DM/3) paths");
+    assert_eq!(
+        digi_paths.len(),
+        2,
+        "Should have standard (Lv5/4) + alt-digi (Lv5+Greymon|DM/3) paths"
+    );
 }
 
 #[test]
@@ -103,9 +106,15 @@ fn ex9_013_standard_alt_path_cost_4() {
     let standard = compiled.alt_paths.iter().find(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && !p.ignore_requirements
-            && matches!(p.cost, Some(digimon_dsl::compiled::CompiledCost::Literal(4)))
+            && matches!(
+                p.cost,
+                Some(digimon_dsl::compiled::CompiledCost::Literal(4))
+            )
     });
-    assert!(standard.is_some(), "Should have a Lv5/Cost4 standard digivolve path");
+    assert!(
+        standard.is_some(),
+        "Should have a Lv5/Cost4 standard digivolve path"
+    );
 }
 
 #[test]
@@ -114,7 +123,10 @@ fn ex9_013_alt_digi_path_cost_3_ignore_requirements() {
     let alt_digi = compiled.alt_paths.iter().find(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && p.ignore_requirements
-            && matches!(p.cost, Some(digimon_dsl::compiled::CompiledCost::Literal(3)))
+            && matches!(
+                p.cost,
+                Some(digimon_dsl::compiled::CompiledCost::Literal(3))
+            )
     });
     assert!(
         alt_digi.is_some(),
@@ -200,11 +212,17 @@ fn ex9_013_has_on_play_when_digivolving_triggered_clause() {
             None
         }
     });
-    assert!(clause.is_some(), "Should have [On Play][When Digivolving] triggered clause");
+    assert!(
+        clause.is_some(),
+        "Should have [On Play][When Digivolving] triggered clause"
+    );
     let c = clause.unwrap();
     // `scope: own` in DSL maps to `CompiledScope::FaceUp` (own/face-up effects)
     assert_eq!(c.scope, CompiledScope::FaceUp);
-    assert!(!c.optional, "De-Digivolve 3 is mandatory (DCGO canNoSelect: false)");
+    assert!(
+        !c.optional,
+        "De-Digivolve 3 is mandatory (DCGO canNoSelect: false)"
+    );
     assert!(!c.once_per_turn, "De-Digivolve 3 has no [Once Per Turn]");
 }
 
@@ -222,11 +240,20 @@ fn ex9_013_has_end_of_your_turn_optional_triggered_clause() {
             None
         }
     });
-    assert!(clause.is_some(), "Should have EndOfYourTurn triggered clause");
+    assert!(
+        clause.is_some(),
+        "Should have EndOfYourTurn triggered clause"
+    );
     let c = clause.unwrap();
-    assert!(c.optional, "DNA digivolve clause is optional ('2 of your Digimon may')");
+    assert!(
+        c.optional,
+        "DNA digivolve clause is optional ('2 of your Digimon may')"
+    );
     assert_eq!(c.scope, CompiledScope::FaceUp);
-    assert!(!c.once_per_turn, "No [Once Per Turn] on End-of-Turn DNA clause");
+    assert!(
+        !c.once_per_turn,
+        "No [Once Per Turn] on End-of-Turn DNA clause"
+    );
 }
 
 #[test]
@@ -263,7 +290,11 @@ fn ex9_013_de_digivolve_positive_opponent_digimon_prompts_selection() {
     runner.fire_on_play(0, perm.index as usize);
 
     let kind = runner.pending_kind().expect("Selection should install");
-    assert_eq!(kind, SelectionKind::OppField, "Should be OppField selection for opponent Digimon (select_opponent_permanent)");
+    assert_eq!(
+        kind,
+        SelectionKind::OppField,
+        "Should be OppField selection for opponent Digimon (select_opponent_permanent)"
+    );
 }
 
 // ─── Section 3: De-Digivolve 3 behavioral ────────────────────────────────────
@@ -275,10 +306,17 @@ fn ex9_013_de_digivolve_on_play_targets_exactly_one_opponent_digimon() {
     let perm = runner.place_on_field(0, "EX9-013", None);
     runner.fire_on_play(0, perm.index as usize);
 
-    assert!(runner.pending_selection().is_some(), "Selection should be pending");
+    assert!(
+        runner.pending_selection().is_some(),
+        "Selection should be pending"
+    );
     let view = runner.pending_selection_view().unwrap();
     // OppField kind installs for select_opponent_permanent
-    assert_eq!(view.kind, SelectionKind::OppField, "select_opponent_permanent installs OppField selection");
+    assert_eq!(
+        view.kind,
+        SelectionKind::OppField,
+        "select_opponent_permanent installs OppField selection"
+    );
     assert_eq!(
         view.valid_action_ids.len(),
         1,
@@ -319,13 +357,20 @@ fn ex9_013_de_digivolve_fires_on_when_digivolving_timing() {
     runner.place_on_field(1, "OPP-DIG", None);
     let blitz = runner.place_on_field(0, "EX9-013", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(blitz));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(blitz),
+    );
     runner.game.drain_effect_queue();
 
-    let kind = runner.pending_kind().expect("WhenDigivolving should prompt");
-    assert_eq!(kind, SelectionKind::OppField, "select_opponent_permanent installs OppField");
+    let kind = runner
+        .pending_kind()
+        .expect("WhenDigivolving should prompt");
+    assert_eq!(
+        kind,
+        SelectionKind::OppField,
+        "select_opponent_permanent installs OppField"
+    );
 }
 
 // ─── Section 4: End-of-Turn optional DNA clause ──────────────────────────────

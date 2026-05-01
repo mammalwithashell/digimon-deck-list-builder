@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use crate::enums::{Expiry, Keyword, ModifierType, PlayerId};
+use crate::enums::{EffectSourceKind, Expiry, Keyword, ModifierType, PlayerId};
 use crate::permanent::PermanentHandle;
 
 /// A single modifier entry.
@@ -23,6 +23,21 @@ pub struct ModifierEntry {
     pub cause_filter: Option<crate::replacement::ReplacementCause>,
     /// Optional runtime condition for passive replacements. None = always applies.
     pub replacement_condition: Option<crate::replacement::ReplacementConditionFn>,
+    /// Optional source-kind/controller filter for CannotBeAffected-style gates.
+    pub effect_immunity_filter: Option<EffectImmunityFilter>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectControllerFilter {
+    Any,
+    OpponentOnly,
+    OwnOnly,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EffectImmunityFilter {
+    pub source_kind: Option<EffectSourceKind>,
+    pub controller: EffectControllerFilter,
 }
 
 impl std::fmt::Debug for ModifierEntry {
@@ -33,6 +48,7 @@ impl std::fmt::Debug for ModifierEntry {
             .field("expiry", &self.expiry)
             .field("source_player", &self.source_player)
             .field("cause_filter", &self.cause_filter)
+            .field("effect_immunity_filter", &self.effect_immunity_filter)
             .finish_non_exhaustive()
     }
 }
@@ -47,6 +63,7 @@ impl ModifierEntry {
             source_player,
             cause_filter: None,
             replacement_condition: None,
+            effect_immunity_filter: None,
         }
     }
 
@@ -65,6 +82,7 @@ impl ModifierEntry {
             source_player,
             cause_filter: default_passive_cause_filter(modifier),
             replacement_condition: None,
+            effect_immunity_filter: None,
         }
     }
 
@@ -79,6 +97,35 @@ impl ModifierEntry {
     pub fn with_condition(mut self, cond: crate::replacement::ReplacementConditionFn) -> Self {
         self.replacement_condition = Some(cond);
         self
+    }
+
+    pub fn with_effect_immunity_filter(mut self, filter: EffectImmunityFilter) -> Self {
+        self.effect_immunity_filter = Some(filter);
+        self
+    }
+
+    pub fn cannot_be_affected_by_opponents_source_kind(
+        source_kind: EffectSourceKind,
+        expiry: Expiry,
+        source_player: PlayerId,
+    ) -> Self {
+        Self::simple(ModifierType::CannotBeAffected, 0, expiry, source_player)
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: Some(source_kind),
+                controller: EffectControllerFilter::OpponentOnly,
+            })
+    }
+
+    pub fn cannot_be_affected_by_any_source_kind(
+        source_kind: EffectSourceKind,
+        expiry: Expiry,
+        source_player: PlayerId,
+    ) -> Self {
+        Self::simple(ModifierType::CannotBeAffected, 0, expiry, source_player)
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: Some(source_kind),
+                controller: EffectControllerFilter::Any,
+            })
     }
 }
 
@@ -104,6 +151,7 @@ pub struct PlayerModifierEntry {
     pub cause_filter: Option<crate::replacement::ReplacementCause>,
     /// Optional runtime condition for passive replacements. None = always applies.
     pub replacement_condition: Option<crate::replacement::ReplacementConditionFn>,
+    pub effect_immunity_filter: Option<EffectImmunityFilter>,
 }
 
 impl std::fmt::Debug for PlayerModifierEntry {
@@ -115,6 +163,7 @@ impl std::fmt::Debug for PlayerModifierEntry {
             .field("source_permanent", &self.source_permanent)
             .field("source_player", &self.source_player)
             .field("cause_filter", &self.cause_filter)
+            .field("effect_immunity_filter", &self.effect_immunity_filter)
             .finish_non_exhaustive()
     }
 }
@@ -136,6 +185,7 @@ impl PlayerModifierEntry {
             source_player,
             cause_filter: None,
             replacement_condition: None,
+            effect_immunity_filter: None,
         }
     }
 
@@ -156,6 +206,7 @@ impl PlayerModifierEntry {
             source_player,
             cause_filter: default_passive_cause_filter(modifier),
             replacement_condition: None,
+            effect_immunity_filter: None,
         }
     }
 

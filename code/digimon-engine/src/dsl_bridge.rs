@@ -40,19 +40,27 @@ impl RealCardDataAdapter {
         })?;
         let mut cards = HashMap::new();
         for (card_id, data) in parsed {
+            let kind = engine_card_kind_to_dsl(data.card_kind);
+            let level = data.digimon_level();
+            let dp = data.digimon_dp();
+            let cost = data
+                .option_use_cost()
+                .map(i32::from)
+                .or(Some(data.play_cost as i32));
+            let colors = data
+                .digimon_colors()
+                .iter()
+                .map(|c| engine_color_to_dsl(*c))
+                .collect();
             cards.insert(
                 card_id,
                 RealRow {
                     name: data.card_name,
-                    kind: engine_card_kind_to_dsl(data.card_kind),
-                    level: data.level,
-                    dp: data.dp,
-                    cost: Some(data.play_cost as i32),
-                    colors: data
-                        .colors
-                        .iter()
-                        .map(|c| engine_color_to_dsl(*c))
-                        .collect(),
+                    kind,
+                    level,
+                    dp,
+                    cost,
+                    colors,
                 },
             );
         }
@@ -68,6 +76,7 @@ fn engine_card_kind_to_dsl(k: crate::enums::CardKind) -> CardKind {
         E::Option => CardKind::Option,
         E::DigiEgg => CardKind::DigiEgg,
         E::Token => CardKind::Token,
+        E::Dual => CardKind::Dual,
     }
 }
 

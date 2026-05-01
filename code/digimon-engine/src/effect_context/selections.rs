@@ -183,6 +183,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -198,12 +199,14 @@ impl<'a> EffectContext<'a> {
             effect_choices: None,
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let hand_index = action_id.saturating_sub(PLAY_HAND_START) as usize;
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -246,6 +249,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -261,12 +265,14 @@ impl<'a> EffectContext<'a> {
             effect_choices: None,
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let trash_index = action_id.saturating_sub(TRASH_EFFECT_START) as usize;
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -330,6 +336,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -345,12 +352,14 @@ impl<'a> EffectContext<'a> {
             effect_choices: None,
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let (_, source_idx) = crate::action::space::decode_source_select(action_id);
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -393,6 +402,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -408,12 +418,14 @@ impl<'a> EffectContext<'a> {
             effect_choices: Some(choices),
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let choice_index = action_id.saturating_sub(HAND_EFFECT_START) as usize;
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -454,6 +466,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -469,12 +482,14 @@ impl<'a> EffectContext<'a> {
             effect_choices: None,
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(SEL_REVEAL_START) as usize;
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -529,6 +544,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -544,12 +560,14 @@ impl<'a> EffectContext<'a> {
             effect_choices: None,
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(base) as usize;
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -633,6 +651,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let user_callback: Box<
             dyn FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync,
         > = Box::new(callback);
@@ -649,6 +668,7 @@ impl<'a> EffectContext<'a> {
             effect_choices: None,
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 debug_assert!(
                     action_id < PLAY_HAND_END || action_id >= TRASH_EFFECT_START,
@@ -664,10 +684,11 @@ impl<'a> EffectContext<'a> {
                     let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
                     game.player(of_player).hand[idx].handle()
                 };
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -724,6 +745,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let previous_phase = self.game.current_phase;
         let prompt_owned = prompt.to_string();
 
@@ -731,10 +753,11 @@ impl<'a> EffectContext<'a> {
             dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
         > = Box::new(
             move |game: &mut Game, ordered: Vec<crate::card_source::CardHandle>| {
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -749,6 +772,7 @@ impl<'a> EffectContext<'a> {
             prompt_owned,
             source_card,
             source_permanent,
+            source_kind,
             selecting_player,
             previous_phase,
             final_callback,
@@ -867,6 +891,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let previous_phase = self.game.current_phase;
         let prompt_owned = prompt.to_string();
 
@@ -874,10 +899,11 @@ impl<'a> EffectContext<'a> {
             dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
         > = Box::new(
             move |game: &mut Game, picks: Vec<crate::card_source::CardHandle>| {
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -898,6 +924,7 @@ impl<'a> EffectContext<'a> {
             prompt_owned,
             source_card,
             source_permanent,
+            source_kind,
             selecting_player,
             previous_phase,
             final_callback,
@@ -1030,6 +1057,7 @@ impl<'a> EffectContext<'a> {
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
         let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
 
         // Wrap the user callback: at resolution time we need to build a
         // fresh EffectContext, decode the action ID to a PermanentHandle,
@@ -1049,6 +1077,7 @@ impl<'a> EffectContext<'a> {
             effect_choices: None,
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 // Decode: action - ATTACK_START gives (0-indexed) slot. Since
                 // we always encode with attacker=0, the modulus isolates
@@ -1059,10 +1088,11 @@ impl<'a> EffectContext<'a> {
                     player: target_player,
                     index: target_index,
                 };
-                let mut ctx = EffectContext::new_with_override(
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
                     source_permanent,
+                    source_kind,
                     controller,
                     override_pin,
                 );
@@ -1317,6 +1347,7 @@ fn install_permutation_step(
     prompt: String,
     source_card: crate::card_source::CardHandle,
     source_permanent: Option<crate::permanent::PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
     selecting_player: crate::enums::PlayerId,
     previous_phase: GamePhase,
     final_callback: Box<dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync>,
@@ -1340,6 +1371,7 @@ fn install_permutation_step(
         effect_choices: None,
         source_card,
         source_permanent,
+        source_kind,
         callback: Box::new(move |game: &mut Game, action_id: u16| {
             debug_assert!(
                 action_id >= SEL_REVEAL_START && action_id < SEL_REVEAL_START + remaining.len() as u16,
@@ -1364,6 +1396,7 @@ fn install_permutation_step(
                     prompt,
                     source_card,
                     source_permanent,
+                    source_kind,
                     selecting_player,
                     previous_phase,
                     final_callback,
@@ -1410,6 +1443,7 @@ fn install_count_capped_step(
     prompt: String,
     source_card: crate::card_source::CardHandle,
     source_permanent: Option<crate::permanent::PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
     selecting_player: PlayerId,
     previous_phase: GamePhase,
     final_callback: Box<dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync>,
@@ -1462,6 +1496,7 @@ fn install_count_capped_step(
         effect_choices: None,
         source_card,
         source_permanent,
+        source_kind,
         callback: Box::new(move |game: &mut Game, action_id: u16| {
             debug_assert!(
                 action_id >= range_start
@@ -1608,6 +1643,7 @@ fn install_count_capped_step(
                 prompt,
                 source_card,
                 source_permanent,
+                source_kind,
                 selecting_player,
                 previous_phase,
                 next_cb,

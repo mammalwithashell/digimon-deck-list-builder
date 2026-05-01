@@ -174,6 +174,7 @@ fn select_own_permanent_parks_selection() {
         let steps = vec![CompiledStep::SelectOwnPermanent {
             filter: CompiledPredicate::default(),
             bind_as: Some("tgt".to_string()),
+            selector: None,
             prompt: "Choose your Digimon".to_string(),
             prompt_key: None,
             optional: false,
@@ -217,6 +218,7 @@ fn select_opponent_permanent_parks_selection() {
         let steps = vec![CompiledStep::SelectOpponentPermanent {
             filter: CompiledPredicate::default(),
             bind_as: Some("tgt".to_string()),
+            selector: None,
             prompt: "Choose opponent Digimon".to_string(),
             prompt_key: None,
             optional: false,

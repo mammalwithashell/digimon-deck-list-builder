@@ -46,6 +46,38 @@ class TestConvertCardTriColor:
         ))
         assert card["card_colors"] == [COLOR_MAP["Red"], COLOR_MAP["Blue"]]
 
+    def test_digimoncard_io_dual_row_maps_to_dual_payload(self):
+        row = {
+            "id": "ST24-07",
+            "name": "ShineGreymon",
+            "type": "Dual",
+            "level": 6,
+            "play_cost": 5,
+            "evolution_cost": 4,
+            "color": "Yellow",
+            "color2": "Red",
+            "digi_type": "Light Dragon",
+            "digi_type2": "DATA SQUAD",
+            "dp": 12000,
+            "main_effect": "[When Digivolving] Do the Digimon side.",
+            "source_effect": "Use Requirement: DATA SQUAD trait\n[Main] Do the Option side.",
+            "alt_effect": "[Digivolve] Lv.5 w/[RizeGreymon] in name or w/[DATA SQUAD] trait: Cost 3",
+        }
+
+        card = convert_card(row)
+
+        assert card["card_kind"] == 4
+        assert card["play_cost"] == 5
+        assert card["level"] == 6
+        assert card["dp"] == 12000
+        assert card["effect_description_eng"] == "[When Digivolving] Do the Digimon side."
+        assert card["inherited_effect_description_eng"] == ""
+        assert card["dual"]["option"]["use_cost"] == 5
+        assert card["dual"]["option"]["effect_text"].startswith("Use Requirement")
+        assert card["dual"]["digimon"]["effect_text"].startswith("[When Digivolving]")
+        assert card["dual"]["option"]["colors"] == ["Yellow"]
+        assert card["dual"]["digimon"]["colors"] == ["Yellow", "Red"]
+
 
 class TestParseEvoCostsThirdPath:
     def test_three_evo_costs_emitted(self):
@@ -132,7 +164,7 @@ class TestProductionCardsJsonTriColor:
 
     def test_magnamon_x_antibody_tricolor(self):
         import json as _json
-        d = _json.load(open(CARDS_JSON))
+        d = _json.load(open(CARDS_JSON, encoding="utf-8"))
         cards = d if isinstance(d, list) else list(d.values())
         c = next(x for x in cards if x.get("card_id") == "BT16-102")
         assert set(c["card_colors"]) == {
@@ -141,7 +173,7 @@ class TestProductionCardsJsonTriColor:
 
     def test_alphamon_ouryuken_tricolor(self):
         import json as _json
-        d = _json.load(open(CARDS_JSON))
+        d = _json.load(open(CARDS_JSON, encoding="utf-8"))
         cards = d if isinstance(d, list) else list(d.values())
         c = next(x for x in cards if x.get("card_id") == "BT20-060")
         assert set(c["card_colors"]) == {

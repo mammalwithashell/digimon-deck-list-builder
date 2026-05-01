@@ -61,6 +61,7 @@ fn make_digimon_filler(id: &str) -> digimon_engine::card_data::CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: vec![],
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -121,7 +122,8 @@ fn bt21_026_declarative_keywords_are_rush_raid_blocker() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword, ..
+                keyword,
+                ..
             }) => Some(keyword.as_str()),
             _ => None,
         })
@@ -201,7 +203,10 @@ fn bt21_026_rush_is_face_up_scope() {
             }) if keyword == "Rush" && *scope == CompiledScope::FaceUp
         )
     });
-    assert!(found, "Rush must be a FaceUp-scope grant_keyword declarative");
+    assert!(
+        found,
+        "Rush must be a FaceUp-scope grant_keyword declarative"
+    );
 }
 
 /// Blocker keyword grant clause has FaceUp scope.
@@ -222,7 +227,10 @@ fn bt21_026_blocker_is_face_up_scope() {
             }) if keyword == "Blocker" && *scope == CompiledScope::FaceUp
         )
     });
-    assert!(found, "Blocker must be a FaceUp-scope grant_keyword declarative");
+    assert!(
+        found,
+        "Blocker must be a FaceUp-scope grant_keyword declarative"
+    );
 }
 
 /// Raid keyword grant clause has FaceUp scope.
@@ -243,7 +251,10 @@ fn bt21_026_raid_is_face_up_scope() {
             }) if keyword == "Raid" && *scope == CompiledScope::FaceUp
         )
     });
-    assert!(found, "Raid must be a FaceUp-scope grant_keyword declarative");
+    assert!(
+        found,
+        "Raid must be a FaceUp-scope grant_keyword declarative"
+    );
 }
 
 // ============================================================================
@@ -337,6 +348,7 @@ fn bt21_026_cost_reduction_does_not_leak_to_other_cards() {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: vec![],
+        dual: None,
         effect_class_name: "OTHER_DIGI".to_string(),
         index: 0,
         norm_id: 0.0,

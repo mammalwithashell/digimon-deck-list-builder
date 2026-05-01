@@ -199,10 +199,7 @@ fn p_035_clause_1_is_delay_end_of_your_next_turn() {
                 trigger
             );
         }
-        other => panic!(
-            "clause 1 must be Declarative(Delay); got {:?}",
-            other
-        ),
+        other => panic!("clause 1 must be Declarative(Delay); got {:?}", other),
     }
 }
 
@@ -221,11 +218,10 @@ fn p_035_delay_clause_process_has_gain_memory_2() {
     let compiled = runner.compiled_card("P-035").expect("P-035 compiled");
     match &compiled.effects[1] {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay { process, .. }) => {
-            assert!(
-                !process.is_empty(),
-                "Delay process must be non-empty"
-            );
-            let has_gain_2 = process.iter().any(|s| matches!(s, CompiledStep::GainMemory(2)));
+            assert!(!process.is_empty(), "Delay process must be non-empty");
+            let has_gain_2 = process
+                .iter()
+                .any(|s| matches!(s, CompiledStep::GainMemory(2)));
             assert!(
                 has_gain_2,
                 "Delay process must contain GainMemory(2); got {:?}",
@@ -251,15 +247,11 @@ fn p_035_clause_2_is_inherited_security_skill() {
     let compiled = runner.compiled_card("P-035").expect("P-035 compiled");
     let is_inherited_security = match &compiled.effects[2] {
         CompiledClause::Triggered(t) => {
-            t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnSecurity)
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
         }
         CompiledClause::Declarative(CompiledDeclarativeClause::RawRust {
             scope, triggers, ..
-        }) => {
-            *scope == CompiledScope::Inherited
-                && triggers.contains(&CompiledTiming::OnSecurity)
-        }
+        }) => *scope == CompiledScope::Inherited && triggers.contains(&CompiledTiming::OnSecurity),
         _ => false,
     };
     assert!(
@@ -423,8 +415,7 @@ fn p_035_main_blue_digimon_is_not_eligible_for_selection() {
     let hand_after = runner.game.players[0].hand.len();
     // Expected once filter enforcement lands: hand = 1 (P-035 stays, no card added).
     assert_eq!(
-        hand_after,
-        1,
+        hand_after, 1,
         "Blue Digimon must not be eligible for selection; hand must be 1 (P-035 only)"
     );
 }
@@ -479,8 +470,7 @@ fn p_035_main_red_option_is_not_eligible_for_selection() {
 
     let hand_after = runner.game.players[0].hand.len();
     assert_eq!(
-        hand_after,
-        0,
+        hand_after, 0,
         "Red Option is not a Digimon card; hand must be empty"
     );
 }
@@ -545,7 +535,12 @@ fn p_035_main_deck_size_shrinks_by_one_when_card_added() {
         .add_card(filler("FILL-D"))
         .hand(0, &["P-035"])
         // 8 cards in deck: last = top; RED-D1 is at top (revealed first)
-        .deck(0, &["FILL-A", "FILL-B", "FILL-C", "FILL-D", "FILL-A", "FILL-B", "FILL-C", "RED-D1"])
+        .deck(
+            0,
+            &[
+                "FILL-A", "FILL-B", "FILL-C", "FILL-D", "FILL-A", "FILL-B", "FILL-C", "RED-D1",
+            ],
+        )
         .deck(1, &["FILL-A"])
         .memory(10)
         .start();
@@ -583,7 +578,12 @@ fn p_035_main_deck_size_unchanged_when_no_card_added() {
         .add_card(make_blue_digimon("BLUE-D6"))
         .hand(0, &["P-035"])
         // 6 blue Digimon in deck — none eligible; all 4 revealed must return to bottom.
-        .deck(0, &["BLUE-D1", "BLUE-D2", "BLUE-D3", "BLUE-D4", "BLUE-D5", "BLUE-D6"])
+        .deck(
+            0,
+            &[
+                "BLUE-D1", "BLUE-D2", "BLUE-D3", "BLUE-D4", "BLUE-D5", "BLUE-D6",
+            ],
+        )
         .deck(1, &["BLUE-D1"])
         .memory(10)
         .start();
@@ -594,8 +594,7 @@ fn p_035_main_deck_size_unchanged_when_no_card_added() {
     let deck_after = runner.deck_size(0);
 
     assert_eq!(
-        deck_after,
-        deck_before,
+        deck_after, deck_before,
         "When no eligible card is selected, all 4 revealed cards return to deck bottom; \
          deck size must be unchanged: before={deck_before}, after={deck_after}"
     );
@@ -619,11 +618,7 @@ fn p_035_inherited_security_has_inherited_scope() {
         .start();
 
     let compiled = runner.compiled_card("P-035").expect("P-035 compiled");
-    assert_eq!(
-        compiled.effects.len(),
-        3,
-        "P-035 must have 3 clauses"
-    );
+    assert_eq!(compiled.effects.len(), 3, "P-035 must have 3 clauses");
 
     let scope = match &compiled.effects[2] {
         CompiledClause::Triggered(t) => t.scope,

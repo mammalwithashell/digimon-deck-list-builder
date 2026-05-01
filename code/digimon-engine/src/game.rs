@@ -1228,12 +1228,12 @@ impl Game {
     /// Python's `can_digivolve(card, base_perm)` validator. Used by
     /// `combat::try_enter_counter` for §2.3 parity.
     pub fn can_digivolve(&self, card: &CardSource, perm: &crate::permanent::Permanent) -> bool {
-        let Some(base_level) = perm.top_card().level(&self.card_data) else {
+        let base_top = perm.top_card();
+        let Some(base_level) = base_top.digimon_level(&self.card_data) else {
             return false;
         };
-        let base_colors = perm.top_card().colors(&self.card_data);
-        let evo_costs = &self.card_data[card.data_index].evo_costs;
-        evo_costs.iter().any(|ec| {
+        let base_colors = base_top.digimon_colors(&self.card_data);
+        card.digivolution_costs(&self.card_data).iter().any(|ec| {
             ec.level == base_level
                 && crate::action::mask::evo_color(ec.card_color)
                     .map(|c| base_colors.contains(&c))
@@ -1372,6 +1372,36 @@ impl Game {
                 target,
                 crate::enums::ModifierType::ImmunityToOpponentEffects,
             )
+    }
+
+    pub fn permanent_is_unaffected_by_effect(
+        &self,
+        target: PermanentHandle,
+        effect_controller: crate::enums::PlayerId,
+        source_kind: crate::enums::EffectSourceKind,
+    ) -> bool {
+        use crate::modifiers::EffectControllerFilter;
+
+        self.modifiers
+            .get(target, crate::enums::ModifierType::CannotBeAffected)
+            .into_iter()
+            .any(|entry| {
+                let Some(filter) = entry.effect_immunity_filter else {
+                    return true;
+                };
+                let source_kind_matches = filter
+                    .source_kind
+                    .map(|expected| expected == source_kind)
+                    .unwrap_or(true);
+                if !source_kind_matches {
+                    return false;
+                }
+                match filter.controller {
+                    EffectControllerFilter::Any => true,
+                    EffectControllerFilter::OpponentOnly => effect_controller != target.player,
+                    EffectControllerFilter::OwnOnly => effect_controller == target.player,
+                }
+            })
     }
 
     /// Returns `true` when an effect is currently resolving AND its
@@ -1794,6 +1824,7 @@ mod current_attacker_tests {
             effect_class_name: id.replace('-', "_"),
             index: 0,
             norm_id: 0.0,
+            dual: None,
         }
     }
 

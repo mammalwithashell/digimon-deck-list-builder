@@ -139,8 +139,16 @@ fn bt21_072_structural_inherited_aura_your_turn_dp_2000() {
     });
 
     let (scope, dp, has_active_when) = aura.expect("Expected an Aura declarative clause");
-    assert_eq!(scope, CompiledScope::Inherited, "Aura must be Inherited scope");
-    assert_eq!(dp, Some(2000), "Inherited aura must carry +2000 dp_modifier");
+    assert_eq!(
+        scope,
+        CompiledScope::Inherited,
+        "Aura must be Inherited scope"
+    );
+    assert_eq!(
+        dp,
+        Some(2000),
+        "Inherited aura must carry +2000 dp_modifier"
+    );
     assert!(
         has_active_when,
         "Inherited aura must have active_when (your_turn gate)"
@@ -163,8 +171,7 @@ fn bt21_072_structural_no_triggered_clauses() {
         .count();
 
     assert_eq!(
-        triggered_count,
-        0,
+        triggered_count, 0,
         "No triggered clauses expected: [WhenDigivolving] and [AllTurns] are BLOCKED"
     );
 }
@@ -247,18 +254,20 @@ fn bt21_072_inherited_aura_contributes_2000_dp_your_turn() {
         let next_idx = game.next_card_index();
         let carrier_src = CardSource::new(carrier_data_idx, 0, next_idx);
         let turn = game.turn_count;
-        game.players[0].battle_area[perm_handle.index as usize]
-            .digivolve(carrier_src, turn);
+        game.players[0].battle_area[perm_handle.index as usize].digivolve(carrier_src, turn);
     }
 
-    assert_eq!(runner.turn_player(), 0, "precondition: P0 must be the turn player");
+    assert_eq!(
+        runner.turn_player(),
+        0,
+        "precondition: P0 must be the turn player"
+    );
 
     // source_dp_contribution at index 0 = BT21-072 inherited contribution.
     let contribution = runner.game.source_dp_contribution(perm_handle, 0);
 
     assert_eq!(
-        contribution,
-        2000,
+        contribution, 2000,
         "Arresterdramon: Superior Mode inherited aura must contribute +2000 DP \
          on controller's turn; got {contribution}"
     );
@@ -295,19 +304,21 @@ fn bt21_072_inherited_aura_contributes_zero_dp_opponents_turn() {
         let next_idx = game.next_card_index();
         let carrier_src = CardSource::new(carrier_data_idx, 0, next_idx);
         let turn = game.turn_count;
-        game.players[0].battle_area[perm_handle.index as usize]
-            .digivolve(carrier_src, turn);
+        game.players[0].battle_area[perm_handle.index as usize].digivolve(carrier_src, turn);
     }
 
     // Advance to opponent's turn.
     runner.end_turn();
-    assert_ne!(runner.turn_player(), 0, "precondition: P0 must NOT be the turn player");
+    assert_ne!(
+        runner.turn_player(),
+        0,
+        "precondition: P0 must NOT be the turn player"
+    );
 
     let contribution = runner.game.source_dp_contribution(perm_handle, 0);
 
     assert_eq!(
-        contribution,
-        0,
+        contribution, 0,
         "Inherited aura must be inactive on opponent's turn (active_when: your_turn); \
          got {contribution}"
     );

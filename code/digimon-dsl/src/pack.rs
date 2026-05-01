@@ -105,6 +105,10 @@ where
 }
 
 fn collect_card_raw_rust_fns(card: &CompiledCard, names: &mut BTreeSet<String>) {
+    collect_optional_predicate_raw_rust_fns(card.use_requirement.as_ref(), names);
+    if let Some(dual) = &card.dual {
+        collect_optional_predicate_raw_rust_fns(dual.option.use_requirement.as_deref(), names);
+    }
     for alt_path in &card.alt_paths {
         collect_alt_path_raw_rust_fns(alt_path, names);
     }
@@ -337,6 +341,7 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
     }
     for existential in [
         &predicate.any_permanent,
+        &predicate.any_field_permanent,
         &predicate.no_permanent,
         &predicate.all_permanents,
     ]
@@ -407,6 +412,8 @@ mod tests {
             attribute: None,
             ace_overflow: None,
             identity: None,
+            dual: None,
+            use_requirement: None,
             alt_paths: vec![],
             effects: vec![],
         };
@@ -431,6 +438,43 @@ mod tests {
             attribute: None,
             ace_overflow: None,
             identity: None,
+            dual: Some(CompiledDual {
+                digimon: CompiledDualDigimon {
+                    level: 3,
+                    dp: 2000,
+                    colors: vec![CompiledColor::Red],
+                    traits: vec![],
+                    effect_text: String::new(),
+                    inherited_text: String::new(),
+                },
+                option: CompiledDualOption {
+                    use_cost: 3,
+                    colors: vec![CompiledColor::Red],
+                    effect_text: String::new(),
+                    security_text: String::new(),
+                    keywords: vec![],
+                    use_requirement: Some(Box::new(CompiledPredicate {
+                        any_field_permanent: Some(Box::new(CompiledExistential {
+                            of: CompiledPlayerRef::You,
+                            predicate: CompiledPredicate {
+                                dp_gte: Some(CompiledDpConstraint::Formula(
+                                    CompiledFormula::RawRust(
+                                        "dual_use_req_nested_formula_fn".into(),
+                                    ),
+                                )),
+                                ..Default::default()
+                            },
+                        })),
+                        ..Default::default()
+                    })),
+                },
+            }),
+            use_requirement: Some(CompiledPredicate {
+                dp_lte: Some(CompiledDpConstraint::Formula(CompiledFormula::RawRust(
+                    "use_req_formula_fn".into(),
+                ))),
+                ..Default::default()
+            }),
             alt_paths: vec![],
             effects: vec![
                 CompiledClause::Declarative(CompiledDeclarativeClause::RawRust {
@@ -476,7 +520,13 @@ mod tests {
         let pack = CardPack::from_compiled_cards("raw-pack", vec![card]);
         assert_eq!(
             pack.manifest.required_raw_rust_fns,
-            vec!["formula_fn", "step_fn", "whole_clause_fn"]
+            vec![
+                "dual_use_req_nested_formula_fn",
+                "formula_fn",
+                "step_fn",
+                "use_req_formula_fn",
+                "whole_clause_fn"
+            ]
         );
     }
 

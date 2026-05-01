@@ -980,19 +980,27 @@ All 13 new `ModifierType` variants added in Phase 6:
 
 ---
 
-### `source_is_tamer` Helper
+### Effect Source Kind Helpers
 
-`EffectContext::source_is_tamer()` — returns `true` when the effect currently resolving was installed by a Tamer card. Matches DCGO's `ICardEffect.IsTamerEffect` property.
+Every resolving effect carries an explicit `EffectSourceKind`: `Digimon`, `Tamer`, `Option`, or `Rule`. This is assigned when the effect is queued and preserved through pending selection callbacks. Security is not a source kind: a Digimon card's security effect is still a Digimon effect. DUAL cards are context-sensitive: Option use is `Option`; effects after Arts Digivolve are `Digimon`.
 
 ```rust
 // On EffectContext (mutable):
+pub fn source_kind(&self) -> EffectSourceKind
+pub fn source_is_digimon(&self) -> bool
 pub fn source_is_tamer(&self) -> bool
+pub fn source_is_option(&self) -> bool
 
 // On EffectReadContext (read-only, for cost-reduction closures):
+pub fn source_kind(&self) -> EffectSourceKind
+pub fn source_is_digimon(&self) -> bool
 pub fn source_is_tamer(&self) -> bool
+pub fn source_is_option(&self) -> bool
 ```
 
-**Implementation:** fast path via `source_permanent` + `CardData.card_kind` lookup; slow-path fallback via `Game::card_kind_for_handle` for cases where the effect has a `source_card` but no `source_permanent` (e.g. hand effects). `Game::card_kind_for_handle(CardHandle) -> Option<CardKind>` is `pub(crate)`.
+`source_is_tamer()` is retained as a compatibility helper for flood gates like `CannotGainMemoryExceptFromTamers`, but it now reads the explicit source-kind field rather than inferring from card kind at resolver time.
+
+`CannotBeAffected` supports source-kind-aware filters through `ModifierEntry::cannot_be_affected_by_opponents_source_kind(...)`. The central gate is `Game::permanent_is_unaffected_by_effect(target, effect_controller, source_kind)` and card-script mutations route through `EffectContext::can_affect_permanent`.
 
 **Usage in `CannotGainMemoryExceptFromTamers`:**
 
@@ -1225,12 +1233,19 @@ pub struct Permanent {
 pub struct PendingOption {
     pub owner: PlayerId,
     pub card: CardSource,
+    pub source_kind: OptionUseSource,
     pub resolution_phase: OptionResolutionPhase,
+}
+
+pub enum OptionUseSource {
+    Hand,
+    Trash,
 }
 
 pub enum OptionResolutionPhase {
     LinkSelectHost,     // waiting on a host-pick for a Plug-In
     MainEffectDrain,    // body running
+    ArtsSelectTarget,   // optional Arts Digivolve target prompt
     Disposing,          // cleanup window
     Done,               // terminal — cleared next tick
 }
@@ -1247,6 +1262,24 @@ pub enum OptionPlayResult {
 // game.rs — single-slot pending state
 pub pending_option: Option<PendingOption>;
 ```
+
+### DUAL cards and Arts Digivolve
+
+DUAL cards are represented as `CardKind::Dual` with explicit `dual.digimon` and
+`dual.option` face metadata. Use face-aware helpers such as
+`CardSource::option_use_cost`, `CardSource::option_colors`,
+`CardSource::digimon_level`, `CardSource::digimon_dp`,
+`CardSource::digimon_colors`, and `CardSource::digivolution_costs`; do not read
+`play_cost`, `colors`, `level`, `dp`, or `evo_costs` directly when DUAL behavior
+depends on a specific face.
+
+When a DUAL card is used as an Option, `PendingOption.source_kind` records the
+use source. Arts Digivolve is offered only after true Option use, never after a
+direct `[Main]` activation from hand. The optional Arts branch is surfaced as a
+`PendingSelection`: PASS declines and sends the Option to normal cleanup; choosing
+a legal battle-area or breeding-area target stacks the pending card as a
+digivolution card, performs the normal draw and rule check, then fires
+`WhenDigivolving` for the new stack.
 
 ### `EffectTiming` variants (seven wired)
 
@@ -1931,6 +1964,53 @@ Before claiming IMPLEMENTED, re-read the card text against the implementation an
 6. Inherited effects use `Effect::inherited(card)`, not `Effect::on_play(card)` with a manual under-the-stack check.
 7. Trait / name matching uses `CardSource::contains_card_name` / trait accessors (case-insensitive), not raw string equality.
 8. Every closure is `Send + Sync + 'static` — if you have lifetime errors, you're capturing a borrow; use handles (`Copy`) instead.
+
+---
+
+## DSL Card Authoring Primitives
+
+These YAML primitives are preferred over raw Rust closures for common option legality, immunity, and DP-extrema targeting text.
+
+### DSL Option Use Requirements
+
+Top-level `use_requirement` declares an Option-use permission that can satisfy the normal color requirement when an Option is used from hand:
+
+```yaml
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: BEATBREAK
+```
+
+`any_field_permanent` scans the player's battle area and breeding area. DUAL option faces may declare their own requirement under `dual.option.use_requirement`; that face-specific requirement is the one used for option-face legality.
+
+### DSL Source-Kind Effect Immunity
+
+Use `grant_effect_immunity` for text like "isn't affected by your opponent's Digimon effects":
+
+```yaml
+- grant_effect_immunity:
+    target: self
+    source_kind: digimon
+    source_controller: opponent
+    expiry: end_of_opponents_turn
+```
+
+`source_kind` supports `digimon`, `tamer`, `option`, and `rule`. `source_controller` supports controller filters such as `opponent` and `you`; inherited effects on a stack are Digimon effects because they belong to the top Digimon.
+
+### DSL DP-Extrema Field Selection
+
+Use a field selection `selector` when card text restricts the target to the lowest-DP or highest-DP eligible permanent:
+
+```yaml
+- select_opponent_permanent:
+    bind_as: tgt
+    filter: { kind: digimon }
+    selector: lowest_dp
+    prompt: "Choose lowest DP Digimon"
+```
+
+Selectors are applied after predicate filtering and at selection install time. Ties remain legal choices; if no filtered candidate has effective DP, no pending selection is installed.
 
 ---
 

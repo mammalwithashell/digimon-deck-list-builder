@@ -39,7 +39,9 @@
 
 #![allow(dead_code, unused_imports)]
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming};
@@ -88,7 +90,10 @@ fn bt24_089_is_option_cost_3() {
         .compiled_card("BT24-089")
         .expect("BT24-089 compiled card present");
 
-    assert_eq!(compiled.kind, digimon_dsl::compiled::CompiledCardKind::Option);
+    assert_eq!(
+        compiled.kind,
+        digimon_dsl::compiled::CompiledCardKind::Option
+    );
     assert_eq!(compiled.cost, Some(3));
 }
 
@@ -268,7 +273,10 @@ fn bt24_089_main_from_hand_installs_zone_choice_prompt() {
     // Activate the [Main] effect while BT24-089 is still in hand at index 0.
     // This fires EffectTiming::MainFromHand which is distinct from OnPlay.
     let fired = runner.game.activate_hand_main(0, 0);
-    assert!(fired, "activate_hand_main must return true for BT24-089 at hand index 0");
+    assert!(
+        fired,
+        "activate_hand_main must return true for BT24-089 at hand index 0"
+    );
 
     // The Main clause fires and should install a zone_choice selection
     // (effect_choice: "From hand" / "From trash") since Elizamon is in hand.
@@ -580,9 +588,10 @@ fn bt24_089_security_clause_no_panic() {
     // Actually fire via placing in security and manually triggering:
     let field_handle = runner.place_on_field(0, "BT24-089", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(field_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
     runner.game.drain_effect_queue();
 
     // Drain any selections.

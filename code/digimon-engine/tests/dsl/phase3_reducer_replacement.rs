@@ -78,6 +78,8 @@ fn compiled_replacement_card(
         attribute: None,
         ace_overflow: None,
         identity: None,
+        dual: None,
+        use_requirement: None,
         alt_paths: vec![],
         effects: vec![CompiledClause::Declarative(
             CompiledDeclarativeClause::Replacement {

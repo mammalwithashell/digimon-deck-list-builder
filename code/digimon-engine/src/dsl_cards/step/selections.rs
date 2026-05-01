@@ -12,7 +12,9 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone};
+use digimon_dsl::compiled::{
+    CompiledFieldSelector, CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone,
+};
 
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
@@ -32,6 +34,97 @@ fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Opti
         CompiledDistinctBy::Level => DistinctByMode::Level,
         CompiledDistinctBy::Name => DistinctByMode::Name,
     })
+}
+
+fn collect_matching_permanents(
+    ctx: &EffectContext<'_>,
+    player: u8,
+    filter: &CompiledPredicate,
+) -> Vec<PermanentHandle> {
+    let read = ctx.as_read();
+    let mut handles = Vec::new();
+    for index in 0..read.game.player(player).battle_area.len() {
+        let handle = PermanentHandle {
+            player,
+            index: index as u8,
+        };
+        if eval_predicate(filter, &read, PredicateSubject::Permanent(handle)) {
+            handles.push(handle);
+        }
+    }
+    handles
+}
+
+fn collect_matching_any_permanents(
+    ctx: &EffectContext<'_>,
+    excluded: Option<PermanentHandle>,
+    filter: &CompiledPredicate,
+) -> Vec<PermanentHandle> {
+    let read = ctx.as_read();
+    let mut handles = Vec::new();
+    for player in 0..read.game.players.len() {
+        let player = player as u8;
+        for index in 0..read.game.player(player).battle_area.len() {
+            let handle = PermanentHandle {
+                player,
+                index: index as u8,
+            };
+            if Some(handle) == excluded {
+                continue;
+            }
+            if eval_predicate(filter, &read, PredicateSubject::Permanent(handle)) {
+                handles.push(handle);
+            }
+        }
+    }
+    handles
+}
+
+fn selected_dp_extreme(
+    game: &crate::game::Game,
+    handles: &[PermanentHandle],
+    selector: CompiledFieldSelector,
+) -> Option<i32> {
+    let values = handles.iter().filter_map(|h| game.effective_dp(*h));
+    match selector {
+        CompiledFieldSelector::LowestDp => values.min(),
+        CompiledFieldSelector::HighestDp => values.max(),
+    }
+}
+
+#[derive(Clone, Copy)]
+enum SelectedDp {
+    Any,
+    Exact(i32),
+    None,
+}
+
+fn select_dp_extreme(
+    game: &crate::game::Game,
+    handles: &[PermanentHandle],
+    selector: Option<CompiledFieldSelector>,
+) -> SelectedDp {
+    match selector {
+        None => SelectedDp::Any,
+        Some(selector) => match selected_dp_extreme(game, handles, selector) {
+            Some(dp) => SelectedDp::Exact(dp),
+            None => SelectedDp::None,
+        },
+    }
+}
+
+fn matches_selected_dp(
+    game: &crate::game::Game,
+    handle: PermanentHandle,
+    selected_dp: SelectedDp,
+) -> bool {
+    match selected_dp {
+        SelectedDp::Any => true,
+        SelectedDp::Exact(dp) => game
+            .effective_dp(handle)
+            .is_some_and(|candidate_dp| candidate_dp == dp),
+        SelectedDp::None => false,
+    }
 }
 
 fn run_tail_preserving_trigger_context(
@@ -100,6 +193,7 @@ pub fn try_install(
         CompiledStep::SelectOwnPermanent {
             filter,
             bind_as,
+            selector,
             prompt,
             optional,
             ..
@@ -107,6 +201,7 @@ pub fn try_install(
             install_select_own_permanent(
                 ctx,
                 filter.clone(),
+                *selector,
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -119,6 +214,7 @@ pub fn try_install(
         CompiledStep::SelectOpponentPermanent {
             filter,
             bind_as,
+            selector,
             prompt,
             optional,
             ..
@@ -126,6 +222,7 @@ pub fn try_install(
             install_select_opponent_permanent(
                 ctx,
                 filter.clone(),
+                *selector,
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -138,6 +235,7 @@ pub fn try_install(
         CompiledStep::SelectAnyPermanent {
             filter,
             bind_as,
+            selector,
             prompt,
             optional,
             ..
@@ -146,6 +244,7 @@ pub fn try_install(
                 ctx,
                 filter.clone(),
                 None,
+                *selector,
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -405,6 +504,7 @@ fn install_select_trash(
 fn install_select_own_permanent(
     ctx: &mut EffectContext<'_>,
     filter: CompiledPredicate,
+    selector: Option<CompiledFieldSelector>,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -416,16 +516,9 @@ fn install_select_own_permanent(
     // result (e.g. "kind: token" with no tokens on field) short-circuits
     // without installing a PendingSelection. Mirrors install_select_any_permanent.
     let target_player = ctx.player;
-    let read = ctx.as_read();
-    let has_candidates = (0..read.game.player(target_player).battle_area.len()).any(|i| {
-        let h = PermanentHandle {
-            player: target_player,
-            index: i as u8,
-        };
-        eval_predicate(&filter, &read, PredicateSubject::Permanent(h))
-    });
-    drop(read);
-    if !has_candidates {
+    let candidates = collect_matching_permanents(ctx, target_player, &filter);
+    let selected_dp = select_dp_extreme(ctx.game, &candidates, selector);
+    if candidates.is_empty() {
         return;
     }
 
@@ -433,18 +526,21 @@ fn install_select_own_permanent(
     let trigger_context = ctx.game.current_trigger_context;
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
     let player = ctx.player;
     ctx.select_own_permanent(
         &prompt,
         optional,
         move |game, handle| {
-            let read_ctx = crate::effect_context::EffectReadContext::new(
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
                 game,
                 source_card,
                 source_permanent,
+                source_kind,
                 player,
             );
             eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && matches_selected_dp(game, handle, selected_dp)
         },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
@@ -459,6 +555,7 @@ fn install_select_own_permanent(
 fn install_select_opponent_permanent(
     ctx: &mut EffectContext<'_>,
     filter: CompiledPredicate,
+    selector: Option<CompiledFieldSelector>,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -469,16 +566,12 @@ fn install_select_opponent_permanent(
     // Pre-filter candidates using the compiled predicate so that an empty
     // result short-circuits without installing a PendingSelection.
     let opponent = ctx.game.next_clockwise(ctx.player);
-    let read = ctx.as_read();
-    let has_candidates = (0..read.game.player(opponent).battle_area.len()).any(|i| {
-        let h = PermanentHandle {
-            player: opponent,
-            index: i as u8,
-        };
-        eval_predicate(&filter, &read, PredicateSubject::Permanent(h))
-    });
-    drop(read);
-    if !has_candidates {
+    let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter)
+        .into_iter()
+        .filter(|handle| !ctx.game.progress_excludes(*handle, Some(ctx.player)))
+        .collect();
+    let selected_dp = select_dp_extreme(ctx.game, &candidates, selector);
+    if candidates.is_empty() {
         return;
     }
 
@@ -486,18 +579,22 @@ fn install_select_opponent_permanent(
     let trigger_context = ctx.game.current_trigger_context;
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
     let player = ctx.player;
     ctx.select_opponent_permanent(
         &prompt,
         optional,
         move |game, handle| {
-            let read_ctx = crate::effect_context::EffectReadContext::new(
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
                 game,
                 source_card,
                 source_permanent,
+                source_kind,
                 player,
             );
-            eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
+            !game.progress_excludes(handle, Some(player))
+                && eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && matches_selected_dp(game, handle, selected_dp)
         },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
@@ -514,6 +611,7 @@ fn install_select_any_permanent(
     ctx: &mut EffectContext<'_>,
     filter: CompiledPredicate,
     excluded: Option<PermanentHandle>,
+    selector: Option<CompiledFieldSelector>,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -523,26 +621,18 @@ fn install_select_any_permanent(
 ) {
     use crate::action::space::encode_attack;
 
-    let candidates: Vec<(u16, PermanentHandle)> = {
-        let read = ctx.as_read();
-        let mut candidates = Vec::new();
-        for player in 0..read.game.players.len() {
-            let player = player as u8;
-            for index in 0..read.game.player(player).battle_area.len() {
-                let handle = PermanentHandle {
-                    player,
-                    index: index as u8,
-                };
-                if Some(handle) == excluded {
-                    continue;
-                }
-                if eval_predicate(&filter, &read, PredicateSubject::Permanent(handle)) {
-                    candidates.push((encode_attack(player as u16, index as u16), handle));
-                }
-            }
-        }
-        candidates
-    };
+    let handles = collect_matching_any_permanents(ctx, excluded, &filter);
+    let selected_dp = select_dp_extreme(ctx.game, &handles, selector);
+    let candidates: Vec<(u16, PermanentHandle)> = handles
+        .into_iter()
+        .filter(|handle| matches_selected_dp(ctx.game, *handle, selected_dp))
+        .map(|handle| {
+            (
+                encode_attack(handle.player as u16, handle.index as u16),
+                handle,
+            )
+        })
+        .collect();
 
     if candidates.is_empty() {
         return;
@@ -554,6 +644,7 @@ fn install_select_any_permanent(
     let override_pin = ctx.override_selecting_player();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
 
@@ -569,6 +660,7 @@ fn install_select_any_permanent(
         effect_choices: None,
         source_card,
         source_permanent,
+        source_kind,
         callback: Box::new(move |game, action_id| {
             let Some((_, handle)) = candidates
                 .iter()
@@ -578,10 +670,11 @@ fn install_select_any_permanent(
                 return;
             };
 
-            let mut cb_ctx = EffectContext::new_with_override(
+            let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
                 game,
                 source_card,
                 source_permanent,
+                source_kind,
                 controller,
                 override_pin,
             );
@@ -644,6 +737,7 @@ fn install_select_dna_pair(
     let override_pin = ctx.override_selecting_player();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
     let previous_phase = ctx.game.current_phase;
 
     ctx.game.current_phase = GamePhase::SelectTarget;
@@ -657,6 +751,7 @@ fn install_select_dna_pair(
         effect_choices: None,
         source_card,
         source_permanent,
+        source_kind,
         callback: Box::new(move |game, action_id| {
             let Some((_, left)) = candidates
                 .iter()
@@ -666,10 +761,11 @@ fn install_select_dna_pair(
                 return;
             };
 
-            let mut cb_ctx = EffectContext::new_with_override(
+            let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
                 game,
                 source_card,
                 source_permanent,
+                source_kind,
                 controller,
                 override_pin,
             );
@@ -679,6 +775,7 @@ fn install_select_dna_pair(
                 &mut cb_ctx,
                 right_filter,
                 Some(left),
+                None,
                 Some(bind_right_as),
                 prompt,
                 optional,

@@ -150,7 +150,9 @@ fn bt16_082_on_move_noop(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings)
 /// And this function should be removed.
 ///
 /// Tracked in `qa/dsl-vocab-gaps.md` under G-PLAYER-FLOOD-GATE-DSL.
-fn bt5_008_opp_cannot_reduce_digivolve_cost(_handle: crate::card_source::CardHandle) -> Vec<Effect> {
+fn bt5_008_opp_cannot_reduce_digivolve_cost(
+    _handle: crate::card_source::CardHandle,
+) -> Vec<Effect> {
     // No-op: returns an empty effect list.
     // Full implementation blocked by G-PLAYER-FLOOD-GATE-DSL and missing
     // CannotReduceDigivolveCost enforcement in scan_before_pay_cost_reduction.
@@ -654,18 +656,13 @@ fn bt20_102_boardwipe_and_return(ctx: &mut EffectContext<'_>, _bindings: &mut Bi
     // contains_card_name scans card_sources + top card. Top card name is
     // "Omnimon (X Antibody)" which contains "X Antibody" → condition always true
     // for a standalone BT20-102, and also true when stacked on an "Omnimon" source.
-    let condition_met = ctx
-        .game
-        .player(controller)
-        .battle_area
-        .iter()
-        .any(|perm| {
-            let top = perm.top_card();
-            let data = &ctx.game.card_data[top.data_index];
-            data.card_id == "BT20-102"
-                && (perm.contains_card_name("Omnimon", &ctx.game.card_data)
-                    || perm.contains_card_name("X Antibody", &ctx.game.card_data))
-        });
+    let condition_met = ctx.game.player(controller).battle_area.iter().any(|perm| {
+        let top = perm.top_card();
+        let data = &ctx.game.card_data[top.data_index];
+        data.card_id == "BT20-102"
+            && (perm.contains_card_name("Omnimon", &ctx.game.card_data)
+                || perm.contains_card_name("X Antibody", &ctx.game.card_data))
+    });
 
     if condition_met {
         // ─── Steps 2–4: Conditional board-wipe via callback chain ────────────
@@ -734,10 +731,10 @@ fn bt20_102_boardwipe_and_return(ctx: &mut EffectContext<'_>, _bindings: &mut Bi
                     "Choose 1 of your opponent's Digimon to return to the bottom of their deck",
                     false,
                     |game, h| {
-                        let data =
-                            &game.card_data[game.player(h.player).battle_area[h.index as usize]
-                                .top_card()
-                                .data_index];
+                        let data = &game.card_data[game.player(h.player).battle_area
+                            [h.index as usize]
+                            .top_card()
+                            .data_index];
                         data.card_kind == CardKind::Digimon
                     },
                     |ctx, selected| {
@@ -1066,28 +1063,67 @@ fn bt21_093_delete_highest_dp_opponent(_ctx: &mut EffectContext<'_>, _bindings: 
 
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
-    r.register_step("ex11_012_return_trash_to_deck_bottom", ex11_012_return_trash_to_deck_bottom);
+    r.register_step(
+        "ex11_012_return_trash_to_deck_bottom",
+        ex11_012_return_trash_to_deck_bottom,
+    );
     r.register_declarative("ex11_054_all_turns_noop", ex11_054_all_turns_noop);
-    r.register_declarative("bt24_012_would_leave_replacement", bt24_012_would_leave_replacement);
+    r.register_declarative(
+        "bt24_012_would_leave_replacement",
+        bt24_012_would_leave_replacement,
+    );
     r.register_step("bt16_082_on_move_noop", bt16_082_on_move_noop);
-    r.register_declarative("bt5_008_opp_cannot_reduce_digivolve_cost", bt5_008_opp_cannot_reduce_digivolve_cost);
-    r.register_step("p_137_opp_adds_top_security_to_hand", p_137_opp_adds_top_security_to_hand);
+    r.register_declarative(
+        "bt5_008_opp_cannot_reduce_digivolve_cost",
+        bt5_008_opp_cannot_reduce_digivolve_cost,
+    );
+    r.register_step(
+        "p_137_opp_adds_top_security_to_hand",
+        p_137_opp_adds_top_security_to_hand,
+    );
     r.register_formula("ex8_074_suspended_dp_cap", ex8_074_suspended_dp_cap);
-    r.register_step("bt8_097_opp_cannot_play_digimon_by_effect", bt8_097_opp_cannot_play_digimon_by_effect);
-    r.register_step("bt23_014_opp_cannot_play_from_trash", bt23_014_opp_cannot_play_from_trash);
+    r.register_step(
+        "bt8_097_opp_cannot_play_digimon_by_effect",
+        bt8_097_opp_cannot_play_digimon_by_effect,
+    );
+    r.register_step(
+        "bt23_014_opp_cannot_play_from_trash",
+        bt23_014_opp_cannot_play_from_trash,
+    );
     r.register_formula("bt23_014_dynamic_dp_cap", bt23_014_dynamic_dp_cap);
-    r.register_step("bt9_112_delete_lowest_cost_digimon", bt9_112_delete_lowest_cost_digimon);
-    r.register_step("bt17_018_delete_opp_digimon_dp_budget", bt17_018_delete_opp_digimon_dp_budget);
-    r.register_step("bt17_018_trash_security_per_ten_trash", bt17_018_trash_security_per_ten_trash);
+    r.register_step(
+        "bt9_112_delete_lowest_cost_digimon",
+        bt9_112_delete_lowest_cost_digimon,
+    );
+    r.register_step(
+        "bt17_018_delete_opp_digimon_dp_budget",
+        bt17_018_delete_opp_digimon_dp_budget,
+    );
+    r.register_step(
+        "bt17_018_trash_security_per_ten_trash",
+        bt17_018_trash_security_per_ten_trash,
+    );
     r.register_step("lm_021_delete_dp_sum", lm_021_delete_dp_sum);
-    r.register_step("bt20_102_boardwipe_and_return", bt20_102_boardwipe_and_return);
+    r.register_step(
+        "bt20_102_boardwipe_and_return",
+        bt20_102_boardwipe_and_return,
+    );
     r.register_declarative("bt20_016_dna_on_deletion", bt20_016_dna_on_deletion);
-    r.register_declarative("lm_027_delay_start_of_turn_noop", lm_027_delay_start_of_turn_noop);
+    r.register_declarative(
+        "lm_027_delay_start_of_turn_noop",
+        lm_027_delay_start_of_turn_noop,
+    );
     r.register_step("lm_027_add_self_to_hand", lm_027_add_self_to_hand);
     r.register_step("ex7_074_add_self_to_hand", ex7_074_add_self_to_hand);
     r.register_step("p_206_add_self_to_hand", p_206_add_self_to_hand);
-    r.register_formula("bt21_093_cost_reduction_amount", bt21_093_cost_reduction_amount);
-    r.register_step("bt21_093_delete_highest_dp_opponent", bt21_093_delete_highest_dp_opponent);
+    r.register_formula(
+        "bt21_093_cost_reduction_amount",
+        bt21_093_cost_reduction_amount,
+    );
+    r.register_step(
+        "bt21_093_delete_highest_dp_opponent",
+        bt21_093_delete_highest_dp_opponent,
+    );
     r
 }
 

@@ -129,6 +129,13 @@ Card information hidden from both players: **Deck**, **Digi-Egg Deck**, **Hand**
 - Card plugged in sideways. Not a card on the field (4-7-4). Not a stacked/digi card
 - If a card with a link card becomes a new card, link card is trashed (4-7-6)
 
+### Effect Source Kind
+- Engine effects are classified as exactly one of: Digimon, Tamer, Option, or Rule.
+- Security is an activation zone/timing, not a source kind. A Digimon card revealed in security with a security effect is still a Digimon effect; an Option security effect is an Option effect; a Tamer security effect is a Tamer effect.
+- Inherited effects from digivolution cards belong to the top Digimon and are Digimon effects.
+- DUAL cards use context: when used as an Option from hand/trash they are Option effects; after Arts Digivolve places the card on a stack, its stack effects are Digimon effects.
+- Immunity such as "unaffected by your opponent's Digimon effects" checks both effect controller and source kind, and only blocks mutations that affect the protected permanent.
+
 ### Deletion (4-13)
 - Deletion processing = the card is trashed (4-13-1)
 - When a trigger-type effect triggers on deletion, it triggers in the area where the card was deleted, pending activation until the card moves to trash (4-13-2)
@@ -155,6 +162,9 @@ Card information hidden from both players: **Deck**, **Digi-Egg Deck**, **Hand**
 - To use an Option card, you must have a Digimon or Tamer of matching color on your field (battle area or breeding area) (4-19-2)
 - Multicolor Options require all colors to be met (4-19-3)
 - **Option from security: color requirements are ignored** (4-19-5)
+
+### Option Use Requirement
+`<Use Req. (...)>` is an Option-use permission that can satisfy the color requirement for using that Option. The predicate scans the player's field, which includes the battle area and breeding area. Digimon and Tamers can satisfy the requirement in the battle area. Digimon and Digi-Eggs can satisfy it in the breeding area. Option permanents in the battle area do not satisfy a Use Req that asks for Digimon or Tamers.
 
 ---
 

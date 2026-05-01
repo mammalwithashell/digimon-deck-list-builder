@@ -39,6 +39,7 @@ fn make_digimon(id: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -61,6 +62,7 @@ fn make_tamer(id: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
@@ -83,6 +85,7 @@ fn make_filler() -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: "FILL".to_string(),
         index: 0,
         norm_id: 0.0,
@@ -332,6 +335,7 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
             inherited_text: String::new(),
             security_text: String::new(),
             keywords: Vec::new(),
+            dual: None,
             effect_class_name: "REDUCER".to_string(),
             index: 0,
             norm_id: 0.0,
@@ -389,12 +393,10 @@ fn cannot_reduce_play_cost_suppresses_when_playing_this_hand_reducer() {
     struct HandSelfReducer;
     impl CardEffect for HandSelfReducer {
         fn effects(&self, card: CardHandle) -> Vec<Effect> {
-            vec![
-                Effect::before_pay_cost(card)
-                    .when_playing_this()
-                    .cost_reduction(3)
-                    .build(),
-            ]
+            vec![Effect::before_pay_cost(card)
+                .when_playing_this()
+                .cost_reduction(3)
+                .build()]
         }
     }
 
@@ -418,6 +420,7 @@ fn cannot_reduce_play_cost_suppresses_when_playing_this_hand_reducer() {
             inherited_text: String::new(),
             security_text: String::new(),
             keywords: Vec::new(),
+            dual: None,
             effect_class_name: "SELF_REDUCER".to_string(),
             index: 0,
             norm_id: 0.0,
@@ -472,6 +475,7 @@ fn make_attacker() -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: "ATK".to_string(),
         index: 0,
         norm_id: 0.0,

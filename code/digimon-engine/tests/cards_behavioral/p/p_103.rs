@@ -33,7 +33,9 @@
 
 #![allow(dead_code, unused_imports)]
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
@@ -96,7 +98,10 @@ fn p_103_is_option_cost_2() {
         .compiled_card("P-103")
         .expect("P-103 compiled card present");
 
-    assert_eq!(compiled.kind, digimon_dsl::compiled::CompiledCardKind::Option);
+    assert_eq!(
+        compiled.kind,
+        digimon_dsl::compiled::CompiledCardKind::Option
+    );
     assert_eq!(compiled.cost, Some(2));
 }
 
@@ -179,10 +184,7 @@ fn p_103_clause1_is_delay_declarative() {
         )
     });
 
-    assert!(
-        has_delay,
-        "Clause 1 must be a declarative Delay clause"
-    );
+    assert!(has_delay, "Clause 1 must be a declarative Delay clause");
 }
 
 /// Clause 2 fires at on_security with Inherited scope.
@@ -307,8 +309,18 @@ fn p_103_main_reveals_red_card_adds_to_hand() {
     // Drain any selections choosing the first action each time (auto-pick red card).
     let mut steps = 0;
     while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let player = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
         steps += 1;
@@ -362,8 +374,18 @@ fn p_103_main_no_red_card_in_top2_no_add_to_hand() {
     // Drain any selections.
     let mut steps = 0;
     while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let player = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
         steps += 1;
@@ -391,7 +413,7 @@ fn p_103_main_empty_deck_no_panic() {
         .add_card(make_filler("FILL"))
         .hand(0, &["P-103"])
         .hand(1, &["FILL"])
-        .deck(0, &[])   // empty deck
+        .deck(0, &[]) // empty deck
         .deck(1, &["FILL"])
         .memory(10)
         .start();
@@ -401,8 +423,18 @@ fn p_103_main_empty_deck_no_panic() {
     // Drain any selections.
     let mut steps = 0;
     while runner.game.pending_selection.is_some() && steps < 10 {
-        let player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let player = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
         steps += 1;
@@ -483,12 +515,10 @@ fn p_103_delay_body_installs_digimon_selection_when_conditions_met() {
     // Advance to next turn's end to trigger the Delay body.
     // end_turn moves to opponent's turn; a second end_turn returns to player 0.
     // Then trigger the delayed option scan manually via enqueue_triggered.
-    runner
-        .game
-        .enqueue_triggered(
-            EffectTiming::DelayEffect,
-            TriggerSource::Permanent(_delay_perm),
-        );
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(_delay_perm),
+    );
     runner.game.drain_effect_queue();
 
     // The Delay body should have installed a pending selection (select_own_permanent
@@ -498,8 +528,18 @@ fn p_103_delay_body_installs_digimon_selection_when_conditions_met() {
     // This tests the positive branch — at least CARRIER is on field.
     if runner.game.pending_selection.is_some() {
         // Confirm selection is present — this is the digimon-picker.
-        let player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let player = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
     }
@@ -526,16 +566,22 @@ fn p_103_delay_body_optional_target_when_no_digimon_on_field() {
     let delay_perm = runner.place_on_field(0, "P-103", Some(0));
 
     // Trigger Delay body.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
 
     // Drain any selections (should be none, since select_own_permanent is optional
     // and no Digimon is on field, or should auto-skip).
     let mut steps = 0;
     while runner.game.pending_selection.is_some() && steps < 10 {
-        let player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
+        let player = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
         // PASS if available (optional), else take first action.
         let action = {
             let ps = runner.game.pending_selection.as_ref().unwrap();
@@ -576,16 +622,27 @@ fn p_103_delay_body_digivolves_with_cost_reduction_2() {
     let _field_before = runner.game.players[0].battle_area.len();
 
     // Trigger the Delay body.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
     runner.game.drain_effect_queue();
 
     // Drive all selections to completion (choosing first available action each time).
     let mut steps = 0;
     while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let player = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
         steps += 1;
@@ -656,16 +713,27 @@ fn p_103_security_clause_fires_without_panic() {
     let field_handle = runner.place_on_field(0, "P-103", Some(0));
 
     // Fire the SecuritySkill timing for this permanent.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::Permanent(field_handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(field_handle),
+    );
     runner.game.drain_effect_queue();
 
     // Drain any selections.
     let mut steps = 0;
     while runner.game.pending_selection.is_some() && steps < 10 {
-        let player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
-        let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let player = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
+        let action = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(player, action).ok();
         runner.game.drain_effect_queue();
         steps += 1;

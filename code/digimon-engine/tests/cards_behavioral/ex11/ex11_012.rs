@@ -53,7 +53,8 @@ fn ex11_012_compiles_with_rush_and_progress_keywords() {
         .iter()
         .filter_map(|clause| match clause {
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword, ..
+                keyword,
+                ..
             }) => Some(keyword.as_str()),
             _ => None,
         })
@@ -302,7 +303,8 @@ fn would_leave_with_token_on_field_cancel_leave_by_deleting_token() {
     assert_eq!(r.battle_area_size(0), 2, "Medusamon + 1 token");
 
     // Trigger WhenWouldLeaveBattleArea via a delete-with-cause call.
-    r.game.delete_permanent_with_cause(medusa, ReplacementCause::OpponentEffect);
+    r.game
+        .delete_permanent_with_cause(medusa, ReplacementCause::OpponentEffect);
 
     // The replacement installed a PendingSelection for the token cost.
     assert!(
@@ -348,7 +350,8 @@ fn would_leave_with_no_token_proceeds_normally() {
     let (mut r, medusa) = runner_with_medusamon();
     assert_eq!(r.battle_area_size(0), 1);
 
-    r.game.delete_permanent_with_cause(medusa, ReplacementCause::OpponentEffect);
+    r.game
+        .delete_permanent_with_cause(medusa, ReplacementCause::OpponentEffect);
 
     // No pending selection should remain after the process (0 token candidates
     // → optional select short-circuits → cancel_replacement never fires →
