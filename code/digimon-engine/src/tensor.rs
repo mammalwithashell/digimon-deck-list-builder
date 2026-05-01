@@ -22,8 +22,19 @@ pub const MAX_SOURCES: usize = 11;
 pub const MAX_REVEALED: usize = 10;
 
 pub const SOURCE_ENTRY_SIZE: usize = 3; // card_id + opt_state + dp_contribution
-pub const SLOT_HEADER_SIZE: usize = 7; // top card ID + 6 scalar fields
+pub const SLOT_TOP_CARD_OFFSET: usize = 0;
+pub const SLOT_DP_OFFSET: usize = 1;
+pub const SLOT_SUSPENDED_OFFSET: usize = 2;
+pub const SLOT_OPT_TOTAL_OFFSET: usize = 3;
+pub const SLOT_OPT_USED_OFFSET: usize = 4;
+pub const SLOT_LINKED_COUNT_OFFSET: usize = 5;
+pub const SLOT_SOURCE_COUNT_OFFSET: usize = 6;
+pub const SLOT_SOURCE_START_OFFSET: usize = 7;
+pub const SLOT_HEADER_SIZE: usize = SLOT_SOURCE_START_OFFSET; // top card ID + 6 scalar fields
 pub const SLOT_SIZE: usize = SLOT_HEADER_SIZE + MAX_SOURCES * SOURCE_ENTRY_SIZE; // 40
+pub const SOURCE_CARD_ID_OFFSET: usize = 0;
+pub const SOURCE_OPT_STATE_OFFSET: usize = 1;
+pub const SOURCE_DP_CONTRIBUTION_OFFSET: usize = 2;
 
 pub const DP_NORM: f32 = 30000.0;
 
@@ -283,35 +294,30 @@ fn write_slot(
 ) {
     let top = perm.top_card();
 
-    // +0: top card ID
-    tensor[base] = registry.get_index(&top.card_id(card_data)) as f32;
+    tensor[base + SLOT_TOP_CARD_OFFSET] = registry.get_index(&top.card_id(card_data)) as f32;
 
-    // +1: DP (normalized)
-    tensor[base + 1] = perm.base_dp(card_data).unwrap_or(0) as f32 / DP_NORM;
+    tensor[base + SLOT_DP_OFFSET] = perm.base_dp(card_data).unwrap_or(0) as f32 / DP_NORM;
 
-    // +2: suspended
-    tensor[base + 2] = if perm.is_suspended { 1.0 } else { 0.0 };
+    tensor[base + SLOT_SUSPENDED_OFFSET] = if perm.is_suspended { 1.0 } else { 0.0 };
 
-    // +3: OPT total, +4: OPT used — raw counts (Python matches).
     if let Some(h) = handle {
-        tensor[base + 3] = game.opt_total(h) as f32;
-        tensor[base + 4] = game.opt_used(h) as f32;
+        tensor[base + SLOT_OPT_TOTAL_OFFSET] = game.opt_total(h) as f32;
+        tensor[base + SLOT_OPT_USED_OFFSET] = game.opt_used(h) as f32;
     }
 
-    // +5: linked card count
-    tensor[base + 5] = perm.linked_cards.len() as f32;
+    tensor[base + SLOT_LINKED_COUNT_OFFSET] = perm.linked_cards.len() as f32;
 
-    // +6: source count
-    tensor[base + 6] = perm.card_sources.len() as f32;
+    tensor[base + SLOT_SOURCE_COUNT_OFFSET] = perm.card_sources.len() as f32;
 
     // Sources: [card_id, opt_state, dp_contribution] × MAX_SOURCES
-    let src_base = base + SLOT_HEADER_SIZE;
+    let src_base = base + SLOT_SOURCE_START_OFFSET;
     for (j, src) in perm.card_sources.iter().take(MAX_SOURCES).enumerate() {
         let off = src_base + j * SOURCE_ENTRY_SIZE;
-        tensor[off] = registry.get_index(&src.card_id(card_data)) as f32;
+        tensor[off + SOURCE_CARD_ID_OFFSET] = registry.get_index(&src.card_id(card_data)) as f32;
         if let Some(h) = handle {
-            tensor[off + 1] = game.source_opt_state(h, j);
-            tensor[off + 2] = game.source_dp_contribution(h, j) as f32 / DP_NORM;
+            tensor[off + SOURCE_OPT_STATE_OFFSET] = game.source_opt_state(h, j);
+            tensor[off + SOURCE_DP_CONTRIBUTION_OFFSET] =
+                game.source_dp_contribution(h, j) as f32 / DP_NORM;
         }
     }
 }

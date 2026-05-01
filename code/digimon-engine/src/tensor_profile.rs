@@ -4,8 +4,11 @@ use crate::tensor::{
     BATTLE_SIZE, BREEDING_SIZE, FIELD_SLOTS, GLOBAL_SIZE, HAND_SIZE, MAX_SOURCES, OFF_GLOBAL,
     OFF_MY_BATTLE, OFF_MY_BREEDING, OFF_MY_HAND, OFF_MY_SECURITY, OFF_MY_TRASH, OFF_OPP_BATTLE,
     OFF_OPP_BREEDING, OFF_OPP_HAND, OFF_OPP_SECURITY, OFF_OPP_TRASH, OFF_REVEALED, OFF_SELECTION,
-    REVEALED_SIZE, SECURITY_SIZE, SELECTION_SIZE, SLOT_HEADER_SIZE, SLOT_SIZE, SOURCE_ENTRY_SIZE,
-    TENSOR_SIZE, TRASH_SIZE,
+    REVEALED_SIZE, SECURITY_SIZE, SELECTION_SIZE, SLOT_DP_OFFSET, SLOT_HEADER_SIZE,
+    SLOT_LINKED_COUNT_OFFSET, SLOT_OPT_TOTAL_OFFSET, SLOT_OPT_USED_OFFSET, SLOT_SIZE,
+    SLOT_SOURCE_COUNT_OFFSET, SLOT_SOURCE_START_OFFSET, SLOT_SUSPENDED_OFFSET,
+    SLOT_TOP_CARD_OFFSET, SOURCE_CARD_ID_OFFSET, SOURCE_DP_CONTRIBUTION_OFFSET, SOURCE_ENTRY_SIZE,
+    SOURCE_OPT_STATE_OFFSET, TENSOR_SIZE, TRASH_SIZE,
 };
 
 pub const STANDARD_V1_PROFILE_ID: &str = "standard_v1";
@@ -177,6 +180,15 @@ const STANDARD_V1_PROFILE: TensorProfile = TensorProfile {
     sections: STANDARD_V1_SECTIONS,
 };
 
+const PERMANENT_SLOT_SCALAR_OFFSETS: &[usize] = &[
+    SLOT_DP_OFFSET,
+    SLOT_SUSPENDED_OFFSET,
+    SLOT_OPT_TOTAL_OFFSET,
+    SLOT_OPT_USED_OFFSET,
+    SLOT_LINKED_COUNT_OFFSET,
+    SLOT_SOURCE_COUNT_OFFSET,
+];
+
 pub fn default_profile() -> TensorProfile {
     STANDARD_V1_PROFILE
 }
@@ -201,14 +213,18 @@ fn permanent_slot_positions(
     card_positions: &mut Vec<usize>,
     scalar_positions: &mut Vec<usize>,
 ) {
-    card_positions.push(slot_base);
-    scalar_positions.extend(slot_base + 1..slot_base + SLOT_HEADER_SIZE);
+    card_positions.push(slot_base + SLOT_TOP_CARD_OFFSET);
+    scalar_positions.extend(
+        PERMANENT_SLOT_SCALAR_OFFSETS
+            .iter()
+            .map(|offset| slot_base + offset),
+    );
 
-    let source_base = slot_base + SLOT_HEADER_SIZE;
+    let source_base = slot_base + SLOT_SOURCE_START_OFFSET;
     for source_index in 0..MAX_SOURCES {
         let source_offset = source_base + source_index * SOURCE_ENTRY_SIZE;
-        card_positions.push(source_offset);
-        scalar_positions.push(source_offset + 1);
-        scalar_positions.push(source_offset + 2);
+        card_positions.push(source_offset + SOURCE_CARD_ID_OFFSET);
+        scalar_positions.push(source_offset + SOURCE_OPT_STATE_OFFSET);
+        scalar_positions.push(source_offset + SOURCE_DP_CONTRIBUTION_OFFSET);
     }
 }
