@@ -42,7 +42,9 @@ No trained pilot models need to be preserved, so v2 can be a breaking observatio
 
 ## High-Level Shape
 
-V2 remains a single flat `float32` vector, but its sections are table-shaped:
+The v2 family remains a single flat `float32` vector, but its sections are table-shaped.
+
+The first implementation target should be `v2_lite`, because it keeps the mechanically important state and pending-choice metadata while avoiding the large full action-id table:
 
 ```text
 global_features[64]
@@ -52,31 +54,178 @@ own_hand[30][32]
 known_zone_cards[120][8]
 decision_context[64]
 pending_choice_features[32][96]
-action_id_features[2168][16]
 reserved[256]
 ```
 
-The proposed total size is:
+The proposed lite size is:
 
 ```text
-TENSOR_SIZE_V2 = 43008
+TENSOR_SIZE_V2_LITE = 8320
 ```
 
-This is intentionally larger than v1. The action-id table accounts for most of the size. It is shallow by design; rich effect-choice semantics live in `pending_choice_features`.
+The full experimental profile appends a shallow action-id table:
+
+```text
+action_id_features[2168][16]
+```
+
+The full profile size is:
+
+```text
+TENSOR_SIZE_V2_FULL = 43008
+```
+
+This split makes `v2_lite` the default serious training candidate and keeps `v2_full` available for profiling whether full action-local metadata improves play strength enough to pay for the speed and memory cost.
 
 ## Top-Level Layout
 
-| Section | Shape | Size | Notes |
-|---|---:|---:|---|
-| `global_features` | `[64]` | `64` | Phase, turn, memory, format-level state |
-| `player_summary` | `[2][32]` | `64` | Observer first, opponent second |
-| `permanent_slots` | `[2][15][96]` | `2880` | 14 battle slots plus breeding slot |
-| `own_hand` | `[30][32]` | `960` | One row per action-addressable hand slot |
-| `known_zone_cards` | `[120][8]` | `960` | Trash, known security, revealed cards |
-| `decision_context` | `[64]` | `64` | Current decision player and prompt summary |
-| `pending_choice_features` | `[32][96]` | `3072` | Rich metadata for current prompt rows |
-| `action_id_features` | `[2168][16]` | `34688` | Shallow metadata aligned to raw action IDs |
-| `reserved` | `[256]` | `256` | Zero-filled until assigned |
+`v2_lite` exact layout:
+
+| Section | Offset | Shape | Size | Notes |
+|---|---:|---:|---:|---|
+| `global_features` | `0` | `[64]` | `64` | Phase, turn, memory, format-level state |
+| `player_summary` | `64` | `[2][32]` | `64` | Observer first, opponent second |
+| `permanent_slots` | `128` | `[2][15][96]` | `2880` | 14 battle slots plus breeding slot |
+| `own_hand` | `3008` | `[30][32]` | `960` | One row per action-addressable hand slot |
+| `known_zone_cards` | `3968` | `[120][8]` | `960` | Trash, known security, revealed cards |
+| `decision_context` | `4928` | `[64]` | `64` | Current decision player and prompt summary |
+| `pending_choice_features` | `4992` | `[32][96]` | `3072` | Rich metadata for current prompt rows |
+| `reserved` | `8064` | `[256]` | `256` | Zero-filled until assigned |
+
+`v2_lite` section constants:
+
+```text
+OFF_GLOBAL_FEATURES = 0
+OFF_PLAYER_SUMMARY = 64
+OFF_PERMANENT_SLOTS = 128
+OFF_OWN_HAND = 3008
+OFF_KNOWN_ZONE_CARDS = 3968
+OFF_DECISION_CONTEXT = 4928
+OFF_PENDING_CHOICE_FEATURES = 4992
+OFF_RESERVED = 8064
+TENSOR_SIZE_V2_LITE = 8320
+```
+
+`v2_full` inserts `action_id_features[2168][16]` at `8064` and shifts `reserved` to `42752`:
+
+```text
+OFF_ACTION_ID_FEATURES_V2_FULL = 8064
+OFF_RESERVED_V2_FULL = 42752
+TENSOR_SIZE_V2_FULL = 43008
+```
+
+The `reserved` section is deliberately present in both profiles. Reserved indices are zero-filled placeholders for future features, keywords, protections, and low-risk scalar additions. They are not card ID positions until a future layout version explicitly assigns them.
+
+## V2 Lite Row Layout Details
+
+These row offsets make the profile registry and feature extractor deterministic before implementation starts.
+
+### Permanent Slot Row
+
+`PERMANENT_SLOT_SIZE = 96`.
+
+| Offset | Count | Group |
+|---:|---:|---|
+| `0` | `8` | presence, controller, zone flags, normalized slot index |
+| `8` | `1` | top-card ID registry index |
+| `9` | `12` | top-card static data |
+| `21` | `12` | current state |
+| `33` | `10` | current legal affordances |
+| `43` | `12` | keywords |
+| `55` | `8` | protections/floodgates |
+| `63` | `33` | source entries, `11` entries of `(card ID, OPT state, DP contribution)` |
+
+Card ID positions in each permanent row:
+
+```text
+top_card_id = row_base + 8
+source_card_id[source_idx] = row_base + 63 + source_idx * 3
+```
+
+### Own Hand Row
+
+`OWN_HAND_ROW_SIZE = 32`.
+
+| Offset | Field |
+|---:|---|
+| `0` | active flag |
+| `1` | card ID registry index |
+| `2-7` | kind flags, including DUAL |
+| `8-14` | color flags |
+| `15` | level bucket |
+| `16` | DP bucket |
+| `17` | play-cost bucket |
+| `18` | option-use-cost bucket |
+| `19` | legal play action now |
+| `20` | legal hand-main effect now |
+| `21` | legal digivolve action now |
+| `22` | legal DNA digivolve action now |
+| `23` | legal counter/blast action now |
+| `24` | printed keyword summary bucket |
+| `25-31` | reserved |
+
+Card ID position in each own-hand row:
+
+```text
+hand_card_id = row_base + 1
+```
+
+### Known Zone Card Row
+
+`KNOWN_ZONE_CARD_ROW_SIZE = 8`.
+
+| Offset | Field |
+|---:|---|
+| `0` | active/known flag |
+| `1` | card ID registry index, `0` if unknown or padding |
+| `2` | owner relative flag |
+| `3` | zone enum/flag bucket |
+| `4` | normalized zone index |
+| `5` | card kind bucket |
+| `6` | level bucket or `0` |
+| `7` | cost/DP bucket depending on card kind |
+
+Card ID position in each known-zone row:
+
+```text
+known_card_id = row_base + 1
+```
+
+### Pending Choice Row
+
+`PENDING_CHOICE_ROW_SIZE = 96`.
+
+| Offset | Count | Group |
+|---:|---:|---|
+| `0` | `8` | active/legal flags, raw action ID, row index, total choices |
+| `8` | `10` | selection shape |
+| `18` | `4` | optionality |
+| `22` | `12` | timing |
+| `34` | `10` | source provenance |
+| `44` | `1` | source card ID registry index |
+| `45` | `16` | effect categories |
+| `61` | `12` | target profile |
+| `73` | `7` | duration/protection |
+| `80` | `8` | numeric buckets |
+| `88` | `8` | reserved |
+
+Card ID position in each pending-choice row:
+
+```text
+pending_source_card_id = row_base + 44
+```
+
+### V2 Lite Card And Scalar Positions
+
+`CARD_ID_POSITIONS_V2_LITE` should contain exactly:
+
+- `30` permanent top-card IDs.
+- `330` permanent source-card IDs.
+- `30` own-hand card IDs.
+- `120` known-zone card IDs.
+- `32` pending-choice source-card IDs.
+
+That is `542` card ID positions total. `SCALAR_POSITIONS_V2_LITE` should contain the remaining `7778` positions, and the two lists must cover `0..8320` exactly once.
 
 ## Perspective And Hidden Information
 
@@ -334,7 +483,7 @@ The current `EffectChoiceEntry.label` is useful for debugging but must not be pa
 
 ## Action ID Features
 
-`action_id_features[2168][16]` is a shallow action-aligned table.
+`action_id_features[2168][16]` is a shallow action-aligned table for `v2_full` only. It is intentionally excluded from `v2_lite`.
 
 Rows are aligned directly to raw action IDs:
 
@@ -342,7 +491,7 @@ Rows are aligned directly to raw action IDs:
 row action_id = metadata for that action ID in the current phase/state
 ```
 
-This table does not replace the action mask. It gives the policy a small amount of action-local context:
+This table does not replace the action mask. It gives the policy a small amount of action-local context when the full profile is selected:
 
 | Offset | Field |
 |---:|---|
@@ -365,7 +514,7 @@ This table does not replace the action mask. It gives the policy a small amount 
 
 For illegal actions, static decode fields may still be populated, but state-dependent fields should be zero unless meaningful. The legal flag must always agree with the mask exposed through `info["action_mask"]`.
 
-This table is intentionally small. Rich card/effect meaning belongs in the hand/permanent/pending-choice sections.
+This table is intentionally shallow. Rich card/effect meaning belongs in the hand/permanent/pending-choice sections. If profiling shows that `v2_full` is too slow for the learning benefit it provides, keep the profile registry support and leave `v2_lite` as the default.
 
 ## Effect Metadata Contract
 
@@ -405,7 +554,7 @@ Card ID positions include:
 - known zone card IDs
 - pending choice source-card IDs
 
-`action_id_features` should not contain card IDs in v2. It references source/target zones and indices instead.
+`action_id_features` should not contain card IDs in `v2_full`. It references source/target zones and indices instead.
 
 The Rust engine should export v2 card/scalar positions through PyO3 or a generated Rust-owned layout file. `code/digimon_gym/agents/features_extractor.py` should stop importing tensor layout from `engine_py_legacy`.
 
@@ -425,18 +574,18 @@ Expected engine/RL surfaces to update:
 
 Preferred implementation shape:
 
-- Introduce `build_tensor_v2`.
+- Introduce profile-specific tensor builders, starting with `build_tensor_v2_lite`.
 - Keep `build_tensor` as an alias only if the migration needs a short transition.
 - Export `TENSOR_VERSION = 2`.
-- Export `TENSOR_SIZE = TENSOR_SIZE_V2` once `DigimonEnv` has switched.
-- Add `compute_positions_v2`.
+- Export `TENSOR_SIZE = TENSOR_SIZE_V2_LITE` only after `DigimonEnv` has intentionally switched its default profile.
+- Add profile-specific position generation, starting with `compute_positions_v2_lite`.
 
 ## Invariants
 
-1. `action_id_features[action_id][0] == get_action_mask(player)[action_id]`.
-2. Every nonzero card ID field is listed in `CARD_ID_POSITIONS_V2`.
-3. No scalar field is listed in `CARD_ID_POSITIONS_V2`.
-4. `CARD_ID_POSITIONS_V2` and `SCALAR_POSITIONS_V2` cover every tensor index exactly once.
+1. For `v2_full`, `action_id_features[action_id][0] == get_action_mask(player)[action_id]`.
+2. Every nonzero card ID field is listed in the active profile's card ID positions.
+3. No scalar field is listed in the active profile's card ID positions.
+4. The active profile's card ID positions and scalar positions cover every tensor index exactly once.
 5. Opponent hidden hand identities never appear in the default v2 observation.
 6. Face-down security identities never appear in the default v2 observation.
 7. Breeding slot `14` has `zone_breeding = 1` and all battle-only affordances set false.
@@ -448,7 +597,10 @@ Preferred implementation shape:
 
 Add focused tests before or alongside implementation:
 
-- Tensor size is `43008`.
+- `v2_lite` tensor size is `8320`.
+- `v2_lite` layout section offsets match the spec exactly.
+- `CARD_ID_POSITIONS_V2_LITE` has `542` entries.
+- `SCALAR_POSITIONS_V2_LITE` has `7778` entries.
 - Layout position coverage is exact.
 - Opponent hand IDs are absent from observer tensor.
 - Face-down security IDs are absent for both players.
@@ -461,7 +613,7 @@ Add focused tests before or alongside implementation:
 - `TriggerOrder` rows include source card, source kind, timing, optionality, and effect category metadata.
 - DUAL Option use encodes `source_kind = Option`.
 - DUAL after Arts Digivolve encodes `source_kind = Digimon` for stack effects.
-- Action legal bits match the engine action mask.
+- For `v2_full`, action legal bits match the engine action mask.
 - Python `DigimonEnv.observation_space.shape` matches Rust `TENSOR_SIZE`.
 - `CardEmbeddingExtractor` consumes Rust-owned v2 positions, not legacy Python layout.
 
@@ -469,18 +621,19 @@ Add focused tests before or alongside implementation:
 
 This design intentionally stops short of a task-by-task implementation plan. The next step should be a separate implementation plan that covers:
 
-1. Add v2 layout constants and tests.
-2. Write the v2 tensor builder without switching `DigimonEnv`.
+1. Add `v2_lite` layout constants and tests.
+2. Write the `v2_lite` tensor builder without switching `DigimonEnv`.
 3. Export v2 constants and card/scalar positions through PyO3.
 4. Update Python feature extraction to read Rust-owned positions.
-5. Add action-id feature table generation.
-6. Add pending-choice metadata plumbing, starting with `TriggerOrder`.
-7. Switch `DigimonEnv` to v2 once Rust and Python smoke tests pass.
-8. Update docs and remove v1-only assumptions.
+5. Add pending-choice metadata plumbing, starting with `TriggerOrder`.
+6. Switch `DigimonEnv` to `v2_lite` once Rust and Python smoke tests pass.
+7. Profile training throughput and memory against `compact_v1`.
+8. Add `v2_full` action-id feature table generation only if profiling justifies the experiment.
+9. Update docs and remove v1-only assumptions.
 
 ## Open Risks
 
-- `action_id_features[2168][16]` increases input size substantially. It is acceptable for first training runs, but a later action-conditioned extractor may use it more efficiently.
+- `v2_full` action-id features increase input size substantially. This is why `v2_lite` is the first implementation target.
 - Some effect metadata will be unknown until raw Rust effects are annotated or DSL lowering can infer categories.
 - Breeding handle-dependent fields may be incomplete until the engine has a stable location handle for breeding permanents.
 - Full legal-action metadata is useful, but the existing SB3 policy head still emits raw action logits. The table prepares for a better extractor/head without requiring one immediately.
@@ -489,9 +642,9 @@ This design intentionally stops short of a task-by-task implementation plan. The
 
 The design is ready to implement when reviewers agree on:
 
-- `TENSOR_SIZE_V2 = 43008` as the first v2 target.
+- `TENSOR_SIZE_V2_LITE = 8320` as the first v2 target.
 - Unified `permanent_slots[2][15]` with breeding at slot `14`.
 - Default fair-information observation.
 - Rich `pending_choice_features[32][96]` row-aligned to prompt order.
-- Shallow `action_id_features[2168][16]` row-aligned to action IDs.
+- `v2_full` keeps shallow `action_id_features[2168][16]` as an experimental profile, not the default implementation target.
 - Structured effect observation metadata as the source for effect-category features.
