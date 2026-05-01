@@ -127,12 +127,7 @@ impl Game {
         {
             return true;
         }
-        let top = perm.top_card();
-        self.card_data[top.data_index]
-            .keywords
-            .contains(&Keyword::Training)
-            && !perm.is_suspended
-            && !player.deck.is_empty()
+        false
     }
 
     /// Advance from breeding to main phase.

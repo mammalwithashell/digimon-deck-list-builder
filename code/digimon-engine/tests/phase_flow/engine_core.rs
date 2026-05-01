@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::space::{HATCH, MOVE_FROM_BREEDING, PLAY_HAND_START};
+use digimon_engine::action::space::{
+    BREEDING_TARGET, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, HATCH,
+    MOVE_FROM_BREEDING, PLAY_HAND_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::card_source::CardSource;
@@ -37,6 +40,14 @@ fn test_card_db() -> HashMap<String, CardData> {
             "effect_description_eng": "", "inherited_effect_description_eng": "",
             "security_effect_description_eng": "",
             "evo_costs": [{"card_color": 0, "level": 3, "memory_cost": 2}]
+        },
+        "BT1-011": {
+            "card_id": "BT1-011", "card_name_eng": "Training Agumon",
+            "card_effect_class_name": "BT1_011", "play_cost": 3, "dp": 2000,
+            "level": 3, "card_kind": 0, "rarity": 0, "card_colors": [0],
+            "type_eng": ["Reptile"], "form_eng": ["Rookie"], "attribute_eng": ["Vaccine"],
+            "effect_description_eng": "＜Training＞", "inherited_effect_description_eng": "",
+            "security_effect_description_eng": "", "evo_costs": []
         },
         "BT1-085": {
             "card_id": "BT1-085", "card_name_eng": "Tai Kamiya",
@@ -375,6 +386,64 @@ fn full_field_masks_breeding_move_and_skips_breeding_phase() {
 }
 
 #[test]
+fn training_carrier_does_not_keep_turn_in_breeding_when_only_training_is_available() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let mut rules = Rules::standard();
+    rules.field_slots = 1;
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    let tp = game.turn_player();
+    let next = game.next_clockwise(tp);
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+    let training_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-011")
+        .expect("Training Agumon in test card DB");
+
+    game.player_mut(next).breeding_area = Some(Permanent::new(
+        CardSource::new(training_idx, next, 920),
+        game.turn_count,
+    ));
+    game.player_mut(next).battle_area = vec![Permanent::new(
+        CardSource::new(agumon_idx, next, 921),
+        game.turn_count,
+    )];
+
+    game.enter_main_phase();
+    game.set_memory(0);
+    game.pass_turn();
+
+    assert_eq!(game.turn_player(), next);
+    assert_eq!(
+        game.current_phase,
+        GamePhase::Main,
+        "Training from breeding is surfaced through the Main-phase mask, so it must not park the turn in Breeding"
+    );
+
+    let mask = build_action_mask(&game, next);
+    let breeding_training_bit =
+        FIELD_EFFECT_START + BREEDING_TARGET * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN;
+    assert_eq!(
+        mask[breeding_training_bit as usize],
+        1.0,
+        "Main-phase mask should surface the breeding-area Training activation"
+    );
+    assert_eq!(
+        mask[MOVE_FROM_BREEDING as usize],
+        0.0,
+        "full field keeps move unavailable; Training is the only relevant action"
+    );
+}
+
+#[test]
 fn memory_system() {
     let db = test_card_db();
     let deck = test_deck();
@@ -467,10 +536,11 @@ fn card_registry_with_real_db() {
     let db = test_card_db();
     let reg = CardRegistry::from_cards(&db);
 
-    assert_eq!(reg.count(), 5);
-    // All 5 test cards should have non-zero indices
+    assert_eq!(reg.count(), 6);
+    // All 6 test cards should have non-zero indices
     assert!(reg.get_index("BT1-001") > 0);
     assert!(reg.get_index("BT1-010") > 0);
+    assert!(reg.get_index("BT1-011") > 0);
     assert!(reg.get_index("BT1-025") > 0);
     assert!(reg.get_index("BT1-085") > 0);
     assert!(reg.get_index("BT1-093") > 0);
