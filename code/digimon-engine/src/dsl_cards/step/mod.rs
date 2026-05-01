@@ -4,6 +4,7 @@
 //!           + control-flow steps (Optional, If).
 
 pub mod as_selecting_player;
+pub mod combat;
 pub mod control_flow;
 pub mod draw;
 pub mod iteration;
@@ -341,6 +342,9 @@ pub fn run_step_with_runtime(
         return;
     }
     if schedule_delayed::try_run(step, ctx, bindings, runtime) {
+        return;
+    }
+    if combat::try_run(step, ctx) {
         return;
     }
     if replacement_outcome::try_run(step, ctx, bindings) {

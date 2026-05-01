@@ -141,7 +141,8 @@ pub enum StepSpec {
     ScheduleDelayed(ScheduleDelayedStep),
     Optional(OptionalStep),
 
-    // Replacement process outcomes
+    // Combat / replacement process outcomes
+    EndAttack(bool),
     CancelReplacement(EmptyArgs),
     HandleReplacement(EmptyArgs),
     RedirectReplacement(RedirectReplacementArgs),
@@ -241,7 +242,8 @@ impl Serialize for StepSpec {
             StepSpec::PerSelected(v) => kv!(s, "per_selected", v),
             StepSpec::ScheduleDelayed(v) => kv!(s, "schedule_delayed", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
-            // Replacement process outcomes
+            // Combat / replacement process outcomes
+            StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
             StepSpec::RedirectReplacement(v) => kv!(s, "redirect_replacement", v),
@@ -369,7 +371,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "schedule_delayed" => StepSpec::ScheduleDelayed(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
 
-            // Replacement process outcomes
+            // Combat / replacement process outcomes
+            "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
             "redirect_replacement" => StepSpec::RedirectReplacement(map.next_value()?),
@@ -444,6 +447,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "per_selected",
                         "schedule_delayed",
                         "optional",
+                        "end_attack",
                         "cancel_replacement",
                         "handle_replacement",
                         "redirect_replacement",

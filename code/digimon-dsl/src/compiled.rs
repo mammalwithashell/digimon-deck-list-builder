@@ -769,6 +769,9 @@ pub enum CompiledStep {
         body: Vec<CompiledStep>,
     },
     Optional(Vec<CompiledStep>),
+    EndAttack {
+        enabled: bool,
+    },
     CancelReplacement,
     HandleReplacement,
     RedirectReplacement {

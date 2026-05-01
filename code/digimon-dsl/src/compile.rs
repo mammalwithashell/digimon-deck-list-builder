@@ -1431,6 +1431,7 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.optional[{i}]"), card_id, errors))
                 .collect(),
         ),
+        S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,
         S::HandleReplacement(_) => CompiledStep::HandleReplacement,
         S::RedirectReplacement(r) => CompiledStep::RedirectReplacement {

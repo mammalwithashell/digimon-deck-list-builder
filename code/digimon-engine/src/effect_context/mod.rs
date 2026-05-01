@@ -2522,6 +2522,10 @@ impl<'a> EffectContext<'a> {
         Ok(())
     }
 
+    pub fn cancel_pending_attack(&mut self) {
+        self.game.cancel_pending_attack_from_effect();
+    }
+
     /// Move the top of `player`'s digitama deck into the breeding area.
     ///
     /// Returns `true` if a hatch occurred — i.e. the breeding slot was
