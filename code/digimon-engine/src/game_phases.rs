@@ -392,6 +392,7 @@ impl Game {
             effect_choices: None,
             source_card,
             source_permanent: Some(overclock_handle),
+            source_kind: crate::enums::EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let offset = action_id.saturating_sub(ATTACK_START);
                 let sacrifice_index = (offset % TARGETS_PER_ATTACKER) as u8;

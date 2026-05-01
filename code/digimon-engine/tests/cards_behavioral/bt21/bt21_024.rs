@@ -98,7 +98,10 @@ fn bt21_024_has_one_alt_path_digivolve_lv4_cost3() {
         Some(digimon_dsl::compiled::CompiledCost::Literal(3)),
         "digivolve cost must be 3"
     );
-    assert!(!path.ignore_requirements, "standard path must not ignore requirements");
+    assert!(
+        !path.ignore_requirements,
+        "standard path must not ignore requirements"
+    );
 }
 
 /// BT21-024 has exactly one triggered clause (OnPlay + WhenDigivolving) and one
@@ -474,7 +477,10 @@ fn bt21_024_play_event_fires_on_play() {
 
     let events = runner.events_since(cp);
     let play_event = events.iter().any(|e| matches!(e, GameEvent::Play { .. }));
-    assert!(play_event, "Play event must fire when Cyberdramon enters the field");
+    assert!(
+        play_event,
+        "Play event must fire when Cyberdramon enters the field"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

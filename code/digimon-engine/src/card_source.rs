@@ -99,6 +99,42 @@ impl CardSource {
         data[self.data_index].dp
     }
 
+    pub fn is_digimon_card_for_search(&self, data: &[CardData]) -> bool {
+        data[self.data_index].is_digimon_card_for_search()
+    }
+
+    pub fn is_option_card_for_search(&self, data: &[CardData]) -> bool {
+        data[self.data_index].is_option_card_for_search()
+    }
+
+    pub fn digimon_level(&self, data: &[CardData]) -> Option<u8> {
+        data[self.data_index].digimon_level()
+    }
+
+    pub fn digimon_dp(&self, data: &[CardData]) -> Option<i32> {
+        data[self.data_index].digimon_dp()
+    }
+
+    pub fn digimon_colors<'a>(&self, data: &'a [CardData]) -> &'a [CardColor] {
+        data[self.data_index].digimon_colors()
+    }
+
+    pub fn option_colors<'a>(&self, data: &'a [CardData]) -> &'a [CardColor] {
+        data[self.data_index].option_colors()
+    }
+
+    pub fn option_use_cost(&self, data: &[CardData]) -> Option<u16> {
+        data[self.data_index].option_use_cost()
+    }
+
+    pub fn digivolution_costs<'a>(&self, data: &'a [CardData]) -> &'a [crate::card_data::EvoCost] {
+        data[self.data_index].digivolution_costs()
+    }
+
+    pub fn text_for_search_all_faces(&self, data: &[CardData]) -> String {
+        data[self.data_index].text_for_search_all_faces()
+    }
+
     pub fn is_digimon(&self, data: &[CardData]) -> bool {
         data[self.data_index].card_kind == CardKind::Digimon
     }

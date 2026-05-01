@@ -70,6 +70,39 @@ pub struct DnaCost {
     pub memory_cost: i16,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DualCardData {
+    pub digimon: DualDigimonFace,
+    pub option: DualOptionFace,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DualDigimonFace {
+    pub level: u8,
+    pub dp: i32,
+    pub colors: Vec<CardColor>,
+    pub traits: Vec<String>,
+    pub evo_costs: Vec<EvoCost>,
+    #[serde(default)]
+    pub effect_text: String,
+    #[serde(default)]
+    pub inherited_text: String,
+    #[serde(default)]
+    pub keywords: Vec<crate::enums::Keyword>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DualOptionFace {
+    pub use_cost: u16,
+    pub colors: Vec<CardColor>,
+    #[serde(default)]
+    pub effect_text: String,
+    #[serde(default)]
+    pub security_text: String,
+    #[serde(default)]
+    pub keywords: Vec<crate::enums::Keyword>,
+}
+
 /// Static card metadata loaded from cards.json.
 /// One instance per unique card_id, shared across all game instances.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,6 +140,8 @@ pub struct CardData {
     /// query considers both sources.
     #[serde(default)]
     pub keywords: Vec<crate::enums::Keyword>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dual: Option<DualCardData>,
 }
 
 /// Raw JSON shape from cards.json — matches the actual file format.
@@ -153,6 +188,8 @@ struct RawCard {
     /// Pre-computed index / REGISTRY_CAPACITY. Absent in legacy format.
     #[serde(default)]
     norm_id: f32,
+    #[serde(default)]
+    dual: Option<DualCardData>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -168,6 +205,7 @@ fn parse_card_kind(raw: u8) -> CardKind {
         1 => CardKind::Tamer,
         2 => CardKind::Option,
         3 => CardKind::DigiEgg,
+        4 => CardKind::Dual,
         _ => CardKind::Digimon, // fallback
     }
 }
@@ -190,6 +228,72 @@ fn parse_card_color(raw: u8) -> CardColor {
 }
 
 impl CardData {
+    pub fn is_digimon_card_for_search(&self) -> bool {
+        matches!(
+            self.card_kind,
+            CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual
+        )
+    }
+
+    pub fn is_option_card_for_search(&self) -> bool {
+        matches!(self.card_kind, CardKind::Option | CardKind::Dual)
+    }
+
+    pub fn digimon_level(&self) -> Option<u8> {
+        self.dual.as_ref().map(|d| d.digimon.level).or(self.level)
+    }
+
+    pub fn digimon_dp(&self) -> Option<i32> {
+        self.dual.as_ref().map(|d| d.digimon.dp).or(self.dp)
+    }
+
+    pub fn digimon_colors(&self) -> &[CardColor] {
+        self.dual
+            .as_ref()
+            .map(|d| d.digimon.colors.as_slice())
+            .unwrap_or(self.colors.as_slice())
+    }
+
+    pub fn option_colors(&self) -> &[CardColor] {
+        self.dual
+            .as_ref()
+            .map(|d| d.option.colors.as_slice())
+            .unwrap_or(self.colors.as_slice())
+    }
+
+    pub fn option_use_cost(&self) -> Option<u16> {
+        match self.card_kind {
+            CardKind::Option => Some(self.play_cost),
+            CardKind::Dual => self.dual.as_ref().map(|d| d.option.use_cost),
+            _ => None,
+        }
+    }
+
+    pub fn digivolution_costs(&self) -> &[EvoCost] {
+        self.dual
+            .as_ref()
+            .map(|d| d.digimon.evo_costs.as_slice())
+            .unwrap_or(self.evo_costs.as_slice())
+    }
+
+    pub fn text_for_search_all_faces(&self) -> String {
+        if let Some(dual) = &self.dual {
+            return [
+                dual.digimon.effect_text.as_str(),
+                dual.digimon.inherited_text.as_str(),
+                dual.option.effect_text.as_str(),
+                dual.option.security_text.as_str(),
+            ]
+            .join("\n");
+        }
+        [
+            self.effect_text.as_str(),
+            self.inherited_text.as_str(),
+            self.security_text.as_str(),
+        ]
+        .join("\n")
+    }
+
     /// Load all card data from a cards.json file.
     pub fn load_from_file(path: &Path) -> Result<HashMap<String, CardData>, String> {
         let contents = std::fs::read_to_string(path)
@@ -253,6 +357,7 @@ impl CardData {
                 effect_class_name: raw_card.card_effect_class_name,
                 index: raw_card.index,
                 norm_id: raw_card.norm_id,
+                dual: raw_card.dual,
             };
             cards.insert(id, card);
         }
@@ -331,6 +436,7 @@ pub fn parse_printed_keywords(
                 ("Iceclad", Keyword::Iceclad),
                 ("Execute", Keyword::Execute),
                 ("Training", Keyword::Training),
+                ("Arts Digivolve", Keyword::ArtsDigivolve),
             ] {
                 if trimmed.starts_with(prefix) {
                     push_unique(kw, &mut found);
@@ -526,5 +632,63 @@ mod tests {
                 parsed,
             );
         }
+    }
+
+    #[test]
+    fn parses_dual_card_payload() {
+        let json = r#"{
+            "DUAL-001": {
+                "card_id": "DUAL-001",
+                "card_name_eng": "Dual Test",
+                "card_kind": 4,
+                "play_cost": 5,
+                "dp": 12000,
+                "level": 6,
+                "card_colors": [0, 2],
+                "type_eng": ["TestTrait"],
+                "form_eng": ["Mega"],
+                "attribute_eng": ["Vaccine"],
+                "effect_description_eng": "＜Raid＞\\n[When Digivolving] Draw 1.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": [{"card_color": 0, "level": 5, "memory_cost": 3}],
+                "dual": {
+                    "digimon": {
+                        "level": 6,
+                        "dp": 12000,
+                        "colors": ["Red", "Yellow"],
+                        "traits": ["Mega", "Vaccine", "TestTrait"],
+                        "evo_costs": [{"card_color": 0, "level": 5, "memory_cost": 3}],
+                        "effect_text": "＜Raid＞\\n[When Digivolving] Draw 1.",
+                        "inherited_text": ""
+                    },
+                    "option": {
+                        "use_cost": 5,
+                        "colors": ["Purple"],
+                        "effect_text": "Use Requirement: TestTrait trait\\n[Main] Delete 1 Digimon.",
+                        "security_text": ""
+                    }
+                }
+            }
+        }"#;
+
+        let cards = CardData::load_from_str(json).expect("dual card parses");
+        let card = cards.get("DUAL-001").expect("card exists");
+        assert_eq!(card.card_kind, CardKind::Dual);
+        assert_eq!(card.level, Some(6));
+        assert_eq!(card.dp, Some(12000));
+        assert_eq!(card.play_cost, 5);
+        assert!(card.dual.is_some());
+        let dual = card.dual.as_ref().unwrap();
+        assert_eq!(dual.option.use_cost, 5);
+        assert_eq!(dual.option.colors, vec![CardColor::Purple]);
+        assert_eq!(dual.digimon.colors, vec![CardColor::Red, CardColor::Yellow]);
+    }
+
+    #[test]
+    fn parses_arts_digivolve_keyword() {
+        use crate::enums::Keyword;
+        let kws = parse_printed_keywords("＜Arts Digivolve＞", "", "");
+        assert!(kws.contains(&Keyword::ArtsDigivolve));
     }
 }

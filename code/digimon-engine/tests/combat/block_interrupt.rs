@@ -37,6 +37,7 @@ fn strong_digimon(card_id: &str, dp: i32) -> digimon_engine::card_data::CardData
         inherited_text: String::new(),
         security_text: String::new(),
         keywords: Vec::new(),
+        dual: None,
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

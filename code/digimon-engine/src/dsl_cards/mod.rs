@@ -26,7 +26,7 @@ pub mod trigger_map;
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::CompiledCard;
+use digimon_dsl::compiled::{CompiledCard, CompiledCardKind, CompiledPredicate};
 use digimon_dsl::CardRegistry as DslCardRegistry;
 
 use crate::card_source::CardHandle;
@@ -65,13 +65,15 @@ impl CardEffect for DslCardEffect {
         use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
 
         let mut out = Vec::new();
+        let option_use_requirement = option_use_requirement_for_card(&self.compiled);
         'clause: for clause in &self.compiled.effects {
             match clause {
                 CompiledClause::Triggered(clause) => {
-                    out.extend(lower_triggered::lower_with_raw(
+                    out.extend(lower_triggered::lower_with_raw_and_option_use_requirement(
                         card,
                         clause,
                         self.raw.clone(),
+                        option_use_requirement.clone(),
                     ));
                 }
                 CompiledClause::Declarative(decl) => match decl {
@@ -229,6 +231,22 @@ impl CardEffect for DslCardEffect {
             }
         }
         out
+    }
+}
+
+fn option_use_requirement_for_card(card: &CompiledCard) -> Option<Arc<CompiledPredicate>> {
+    match card.kind {
+        CompiledCardKind::Option => card
+            .use_requirement
+            .as_ref()
+            .map(|predicate| Arc::new(predicate.clone())),
+        CompiledCardKind::Dual => card.dual.as_ref().and_then(|dual| {
+            dual.option
+                .use_requirement
+                .as_ref()
+                .map(|predicate| Arc::new((**predicate).clone()))
+        }),
+        _ => None,
     }
 }
 

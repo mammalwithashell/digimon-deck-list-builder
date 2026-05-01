@@ -124,15 +124,13 @@ fn bt9_112_clause_b_fires_on_on_play_and_when_digivolving() {
         clause_b.when.contains(&CompiledTiming::WhenDigivolving),
         "clause B must include WhenDigivolving"
     );
-    assert!(
-        !clause_b.optional,
-        "clause B is mandatory (no 'you may')"
+    assert!(!clause_b.optional, "clause B is mandatory (no 'you may')");
+    assert!(!clause_b.once_per_turn, "clause B has no [Once Per Turn]");
+    assert_eq!(
+        clause_b.scope,
+        CompiledScope::FaceUp,
+        "clause B is own-scope"
     );
-    assert!(
-        !clause_b.once_per_turn,
-        "clause B has no [Once Per Turn]"
-    );
-    assert_eq!(clause_b.scope, CompiledScope::FaceUp, "clause B is own-scope");
 }
 
 /// Clause C fires on EndOfOpponentsTurn and is [Once Per Turn].
@@ -153,10 +151,7 @@ fn bt9_112_clause_c_fires_on_end_of_opponents_turn_and_is_opt() {
         .find(|t| t.when.contains(&CompiledTiming::EndOfOpponentsTurn))
         .expect("clause C (end_of_opponents_turn) must exist");
 
-    assert!(
-        clause_c.once_per_turn,
-        "clause C must be [Once Per Turn]"
-    );
+    assert!(clause_c.once_per_turn, "clause C must be [Once Per Turn]");
     assert!(
         !clause_c.optional,
         "clause C is mandatory — no 'you may' in printed text"
@@ -180,12 +175,10 @@ fn bt9_112_cost_reduction_declarative_compiles() {
     let runner = runner();
     let card = runner.compiled_card("BT9-112").expect("BT9-112 in pack");
     assert!(
-        card.effects
-            .iter()
-            .any(|c| matches!(
-                c,
-                CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { .. })
-            )),
+        card.effects.iter().any(|c| matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { .. })
+        )),
         "CostReduction declarative must be present and compiled"
     );
 }
@@ -215,14 +208,16 @@ fn bt9_112_clause_b_deletes_lv4_digimon() {
     let opp_before = runner.battle_area_size(1);
     assert_eq!(opp_before, 1);
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnPlay,
-        TriggerSource::Permanent(handle),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(handle));
     runner.game.drain_effect_queue();
 
     // No pending selection — for_each is automatic.
-    assert!(runner.game.pending_selection.is_none(), "no pending selection expected");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no pending selection expected"
+    );
 
     // Lv4 Digimon should have been deleted by the ≤Lv4 delete pass.
     assert_eq!(
@@ -238,13 +233,15 @@ fn bt9_112_clause_b_no_crash_when_opponent_has_no_digimon() {
     let mut runner = runner();
     let handle = runner.place_on_field(0, "BT9-112", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnPlay,
-        TriggerSource::Permanent(handle),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(handle));
     runner.game.drain_effect_queue();
 
-    assert!(runner.game.pending_selection.is_none(), "no selection expected");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no selection expected"
+    );
     assert_eq!(runner.battle_area_size(1), 0, "opponent field still empty");
 }
 
@@ -267,10 +264,9 @@ fn bt9_112_clause_b_lv5_digimon_not_deleted_if_stays_above_lv4() {
     let handle = runner.place_on_field(0, "BT9-112", Some(0));
     runner.place_on_field(1, "OPP-LV5-B", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnPlay,
-        TriggerSource::Permanent(handle),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(handle));
     runner.game.drain_effect_queue();
 
     assert!(runner.game.pending_selection.is_none());
@@ -341,10 +337,9 @@ fn bt9_112_clause_b_deletes_all_lv4_or_lower_spares_lv5() {
 
     assert_eq!(runner.battle_area_size(1), 3);
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnPlay,
-        TriggerSource::Permanent(handle),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(handle));
     runner.game.drain_effect_queue();
 
     assert!(runner.game.pending_selection.is_none());
@@ -401,7 +396,10 @@ fn bt9_112_clause_c_deletes_lowest_cost_digimon_on_end_of_opp_turn() {
     runner.game.drain_effect_queue();
 
     // No pending selection — for_each (via raw_rust) is automatic.
-    assert!(runner.game.pending_selection.is_none(), "clause C should not install a selection");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "clause C should not install a selection"
+    );
 
     // The raw_rust step deletes all lowest-cost Digimon.
     // CHEAP (cost 3) should be deleted; EXPENSIVE (cost 7) should survive.

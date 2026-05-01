@@ -63,7 +63,16 @@ fn elizamon_runner() -> DebugRunner {
         .add_card(make_filler("FILLER-3"))
         .hand(0, &["BT21-008"])
         // Deck: last = top. So top = REPTILE-1, LIBERATOR-1, FILLER-1.
-        .deck(0, &["FILLER-2", "FILLER-3", "FILLER-1", "LIBERATOR-1", "REPTILE-1"])
+        .deck(
+            0,
+            &[
+                "FILLER-2",
+                "FILLER-3",
+                "FILLER-1",
+                "LIBERATOR-1",
+                "REPTILE-1",
+            ],
+        )
         .memory(10)
         .start()
 }
@@ -73,7 +82,10 @@ fn elizamon_runner() -> DebugRunner {
 /// inherited` requirement (is_under = true for Elizamon's source slot).
 ///
 /// Returns the handle of the stacked permanent.
-fn place_elizamon_as_source(runner: &mut DebugRunner, security_cards: &[&str]) -> digimon_engine::permanent::PermanentHandle {
+fn place_elizamon_as_source(
+    runner: &mut DebugRunner,
+    security_cards: &[&str],
+) -> digimon_engine::permanent::PermanentHandle {
     // First ensure we have a security stack for P1 if needed.
     for _ in security_cards {
         // caller pre-populates security; this function just does the stack setup
@@ -119,7 +131,11 @@ fn bt21_008_has_exactly_two_triggered_clauses() {
         })
         .collect();
 
-    assert_eq!(triggered.len(), 2, "BT21-008 must have exactly 2 triggered clauses");
+    assert_eq!(
+        triggered.len(),
+        2,
+        "BT21-008 must have exactly 2 triggered clauses"
+    );
 }
 
 #[test]
@@ -143,8 +159,15 @@ fn bt21_008_on_play_clause_is_face_up_scope_not_opt() {
         .find(|t| t.when.contains(&CompiledTiming::OnPlay))
         .expect("OnPlay clause must exist");
 
-    assert_eq!(on_play.scope, CompiledScope::FaceUp, "OnPlay clause must have FaceUp (default own) scope");
-    assert!(!on_play.once_per_turn, "OnPlay clause must NOT be once_per_turn");
+    assert_eq!(
+        on_play.scope,
+        CompiledScope::FaceUp,
+        "OnPlay clause must have FaceUp (default own) scope"
+    );
+    assert!(
+        !on_play.once_per_turn,
+        "OnPlay clause must NOT be once_per_turn"
+    );
     assert!(!on_play.optional, "OnPlay clause must NOT be optional");
 }
 
@@ -170,11 +193,19 @@ fn bt21_008_inherited_clause_is_opt_and_on_opponent_security_removed() {
         .expect("Inherited clause must exist");
 
     assert!(
-        inherited.when.contains(&CompiledTiming::OnOpponentSecurityRemoved),
+        inherited
+            .when
+            .contains(&CompiledTiming::OnOpponentSecurityRemoved),
         "Inherited clause must fire on OnOpponentSecurityRemoved"
     );
-    assert!(inherited.once_per_turn, "Inherited clause must be once_per_turn");
-    assert!(!inherited.optional, "Inherited clause is always active when conditions met (not user-optional)");
+    assert!(
+        inherited.once_per_turn,
+        "Inherited clause must be once_per_turn"
+    );
+    assert!(
+        !inherited.optional,
+        "Inherited clause is always active when conditions met (not user-optional)"
+    );
 }
 
 // ── Section 2: Condition gating for inherited clause ────────────────────���───
@@ -279,9 +310,18 @@ fn bt21_008_on_play_adds_two_cards_to_hand_and_returns_remainder() {
     );
     {
         let view = runner.pending_selection_view().unwrap();
-        assert_eq!(view.kind, SelectionKind::Reveal, "first selection must be Reveal");
-        assert!(!runner.pending_is_optional(), "OnPlay reveal selections are mandatory (optional: false)");
-        runner.execute_action(0, view.valid_action_ids[0]).expect("first pick");
+        assert_eq!(
+            view.kind,
+            SelectionKind::Reveal,
+            "first selection must be Reveal"
+        );
+        assert!(
+            !runner.pending_is_optional(),
+            "OnPlay reveal selections are mandatory (optional: false)"
+        );
+        runner
+            .execute_action(0, view.valid_action_ids[0])
+            .expect("first pick");
     }
 
     // Second pending selection: Reveal — pick index 0 of remaining.
@@ -291,8 +331,14 @@ fn bt21_008_on_play_adds_two_cards_to_hand_and_returns_remainder() {
     );
     {
         let view = runner.pending_selection_view().unwrap();
-        assert_eq!(view.kind, SelectionKind::Reveal, "second selection must be Reveal");
-        runner.execute_action(0, view.valid_action_ids[0]).expect("second pick");
+        assert_eq!(
+            view.kind,
+            SelectionKind::Reveal,
+            "second selection must be Reveal"
+        );
+        runner
+            .execute_action(0, view.valid_action_ids[0])
+            .expect("second pick");
     }
 
     let _ = runner.auto_resolve();
@@ -304,7 +350,11 @@ fn bt21_008_on_play_adds_two_cards_to_hand_and_returns_remainder() {
         "deck should have 2 fewer cards (3 revealed, 1 returned)"
     );
     // Hand: started with 1 (Elizamon), played it, gained 2 → 2.
-    assert_eq!(runner.hand_size(0), 2, "hand should have 2 cards from picks");
+    assert_eq!(
+        runner.hand_size(0),
+        2,
+        "hand should have 2 cards from picks"
+    );
     // Field: Elizamon on field.
     assert_eq!(runner.battle_area_size(0), 1, "Elizamon on field");
 }

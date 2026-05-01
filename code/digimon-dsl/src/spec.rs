@@ -39,6 +39,12 @@ pub struct CardSpec {
     /// Identity section (§3.4) — name aliases, mostly X-Antibody.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub identity: Option<crate::identity::IdentitySpec>,
+    /// DUAL card face metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dual: Option<DualSpec>,
+    /// Optional Option-use requirement that can satisfy color requirements.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_requirement: Option<crate::predicate::PredicateSpec>,
     /// Alternate entry paths — digivolve / DNA / DigiXros / etc.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub alt_paths: Vec<crate::alt_path::AltPathSpec>,
@@ -70,6 +76,45 @@ pub enum CardKind {
     Option,
     DigiEgg,
     Token,
+    Dual,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DualSpec {
+    pub digimon: DualDigimonSpec,
+    pub option: DualOptionSpec,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DualDigimonSpec {
+    pub level: u8,
+    pub dp: i32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub colors: Vec<ColorSpec>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub traits: Vec<String>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub effect_text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub inherited_text: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DualOptionSpec {
+    pub use_cost: u16,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub colors: Vec<ColorSpec>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub effect_text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub security_text: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keywords: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_requirement: Option<crate::predicate::PredicateSpec>,
 }
 
 #[derive(

@@ -61,10 +61,9 @@ const YAML: &str = include_str!("../../../cards/ex8/EX8-074.yaml");
 
 /// Compile EX8-074 from the production YAML.
 fn compiled_ex8_074() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("EX8-074.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("EX8-074.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("EX8-074.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("EX8-074.yaml compiles");
     registry
         .lookup("EX8-074")
         .expect("EX8-074 in registry")
@@ -142,7 +141,10 @@ fn ex8_074_structural_alliance_keyword_present() {
             }) if keyword == "Alliance"
         )
     });
-    assert!(has_alliance, "EX8-074 must have a declarative Alliance keyword grant");
+    assert!(
+        has_alliance,
+        "EX8-074 must have a declarative Alliance keyword grant"
+    );
 }
 
 /// The Vortex keyword grant must be present as a declarative clause.
@@ -159,7 +161,10 @@ fn ex8_074_structural_vortex_keyword_present() {
             }) if keyword == "Vortex"
         )
     });
-    assert!(has_vortex, "EX8-074 must have a declarative Vortex keyword grant");
+    assert!(
+        has_vortex,
+        "EX8-074 must have a declarative Vortex keyword grant"
+    );
 }
 
 /// A cost_reduction clause must be present.
@@ -173,7 +178,10 @@ fn ex8_074_structural_cost_reduction_present() {
             CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { .. })
         )
     });
-    assert!(has_cr, "EX8-074 must have a cost_reduction declarative clause (BeforePayCost)");
+    assert!(
+        has_cr,
+        "EX8-074 must have a cost_reduction declarative clause (BeforePayCost)"
+    );
 }
 
 /// The [When Digivolving] clause must be optional and NOT once_per_turn.
@@ -191,12 +199,19 @@ fn ex8_074_structural_when_digivolving_optional_not_opt() {
         .find(|t| t.when.contains(&CompiledTiming::WhenDigivolving));
 
     let wd = wd.expect("EX8-074 must have a WhenDigivolving triggered clause");
-    assert!(wd.optional, "WhenDigivolving clause must be optional ('you may')");
+    assert!(
+        wd.optional,
+        "WhenDigivolving clause must be optional ('you may')"
+    );
     assert!(
         !wd.once_per_turn,
         "WhenDigivolving clause must NOT be once_per_turn"
     );
-    assert_eq!(wd.scope, CompiledScope::FaceUp, "WhenDigivolving clause must be face_up scope");
+    assert_eq!(
+        wd.scope,
+        CompiledScope::FaceUp,
+        "WhenDigivolving clause must be face_up scope"
+    );
 }
 
 /// The [All Turns][OPT] on_enter_field_anyone clause must be optional and once_per_turn.
@@ -379,8 +394,7 @@ fn ex8_074_when_digivolving_full_decline_leaves_state_unchanged() {
         "No opponent permanent should be deleted on full decline"
     );
     assert_eq!(
-        runner.game.players[0].battle_area[1].is_suspended,
-        ally_suspended_before,
+        runner.game.players[0].battle_area[1].is_suspended, ally_suspended_before,
         "Ally suspension state should be unchanged after full decline"
     );
 }
@@ -404,7 +418,9 @@ fn ex8_074_when_digivolving_delete_removes_opp_digimon() {
     // Decline suspend sub-clause (PASS).
     if let Some(sel) = runner.pending_selection() {
         let player = sel.selecting_player;
-        runner.execute_action(player, digimon_engine::action::space::PASS).ok();
+        runner
+            .execute_action(player, digimon_engine::action::space::PASS)
+            .ok();
         runner.game.drain_effect_queue();
     }
 

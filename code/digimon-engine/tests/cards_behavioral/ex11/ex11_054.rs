@@ -196,9 +196,7 @@ fn ex11_054_start_of_turn_does_not_lower_memory_above_3() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::StartOfYourTurn) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::StartOfYourTurn) => {
                 Some(t)
             }
             _ => None,
@@ -222,9 +220,7 @@ fn ex11_054_security_clause_plays_without_cost() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
             _ => None,
         })
         .next()
@@ -359,7 +355,9 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
             .position(|c| c.card_id == "REPTILE")
             .unwrap();
         let card_index = runner.game.next_card_index();
-        runner.game.players[0].hand.push(CardSource::new(data_idx, 0, card_index));
+        runner.game.players[0]
+            .hand
+            .push(CardSource::new(data_idx, 0, card_index));
     }
     runner.play(0, 0); // play REPTILE from hand
 
@@ -385,7 +383,10 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
         .battle_area
         .get(owen.index as usize)
         .unwrap();
-    assert!(owen_perm.is_suspended, "Owen must be suspended after activation");
+    assert!(
+        owen_perm.is_suspended,
+        "Owen must be suspended after activation"
+    );
 
     // Draw: hand grew by 1.
     assert_eq!(runner.hand_size(0), hand_before + 1, "Draw 1 must fire");
@@ -422,7 +423,9 @@ fn ex11_054_all_turns_does_not_trigger_without_reptile_or_dragonkin() {
             .position(|c| c.card_id == "PLAIN")
             .unwrap();
         let card_index = runner.game.next_card_index();
-        runner.game.players[0].hand.push(CardSource::new(data_idx, 0, card_index));
+        runner.game.players[0]
+            .hand
+            .push(CardSource::new(data_idx, 0, card_index));
     }
     runner.play(0, 0);
 
@@ -467,9 +470,7 @@ fn ex11_054_all_turns_does_not_offer_activation_when_tamer_already_suspended() {
     let owen = runner.place_on_field(0, "EX11-054", None);
 
     // Pre-suspend Owen manually.
-    runner
-        .game
-        .players[0]
+    runner.game.players[0]
         .battle_area
         .get_mut(owen.index as usize)
         .unwrap()
@@ -484,7 +485,9 @@ fn ex11_054_all_turns_does_not_offer_activation_when_tamer_already_suspended() {
             .position(|c| c.card_id == "REPTILE-2")
             .unwrap();
         let card_index = runner.game.next_card_index();
-        runner.game.players[0].hand.push(CardSource::new(data_idx, 0, card_index));
+        runner.game.players[0]
+            .hand
+            .push(CardSource::new(data_idx, 0, card_index));
     }
     runner.play(0, 0);
 

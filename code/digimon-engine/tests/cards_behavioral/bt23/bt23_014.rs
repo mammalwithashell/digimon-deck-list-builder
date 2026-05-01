@@ -59,7 +59,10 @@ fn bt23_014_has_triggered_clauses_covering_on_play() {
         _ => false,
     });
 
-    assert!(has_on_play, "BT23-014 must have at least one [On Play] triggered clause");
+    assert!(
+        has_on_play,
+        "BT23-014 must have at least one [On Play] triggered clause"
+    );
 }
 
 #[test]
@@ -74,7 +77,10 @@ fn bt23_014_has_triggered_clauses_covering_when_digivolving() {
         _ => false,
     });
 
-    assert!(has_wd, "BT23-014 must have at least one [When Digivolving] triggered clause");
+    assert!(
+        has_wd,
+        "BT23-014 must have at least one [When Digivolving] triggered clause"
+    );
 }
 
 #[test]
@@ -89,7 +95,10 @@ fn bt23_014_has_triggered_clause_covering_when_attacking() {
         _ => false,
     });
 
-    assert!(has_wa, "BT23-014 must have a [When Attacking] triggered clause for the delete effect");
+    assert!(
+        has_wa,
+        "BT23-014 must have a [When Attacking] triggered clause for the delete effect"
+    );
 }
 
 #[test]
@@ -159,10 +168,10 @@ fn bt23_014_on_play_installs_cannot_play_digimon_by_effect_on_opponent() {
 
     // No modifier before play.
     assert!(
-        !runner
-            .game
-            .modifiers
-            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect),
+        !runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
+        ),
         "opponent must NOT have CannotPlayDigimonByEffect before Gallantmon is played"
     );
 
@@ -172,10 +181,10 @@ fn bt23_014_on_play_installs_cannot_play_digimon_by_effect_on_opponent() {
 
     // Floodgate modifier must be installed on opponent (player 1).
     assert!(
-        runner
-            .game
-            .modifiers
-            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect),
+        runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
+        ),
         "CannotPlayDigimonByEffect must be installed on opponent after [On Play]"
     );
 }
@@ -185,10 +194,10 @@ fn bt23_014_on_play_installs_cannot_play_tamer_by_effect_on_opponent() {
     let mut runner = gallantmon_in_hand();
 
     assert!(
-        !runner
-            .game
-            .modifiers
-            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect),
+        !runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
+        ),
         "opponent must NOT have CannotPlayTamerByEffect before Gallantmon is played"
     );
 
@@ -196,10 +205,10 @@ fn bt23_014_on_play_installs_cannot_play_tamer_by_effect_on_opponent() {
     runner.auto_resolve();
 
     assert!(
-        runner
-            .game
-            .modifiers
-            .player_has(1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect),
+        runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
+        ),
         "CannotPlayTamerByEffect must be installed on opponent after [On Play]"
     );
 }
@@ -214,8 +223,14 @@ fn bt23_014_floodgate_modifiers_still_active_during_opponents_turn() {
     runner.auto_resolve();
 
     // Both modifiers installed.
-    assert!(runner.game.modifiers.player_has(1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect));
-    assert!(runner.game.modifiers.player_has(1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect));
+    assert!(runner.game.modifiers.player_has(
+        1,
+        digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
+    ));
+    assert!(runner.game.modifiers.player_has(
+        1,
+        digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
+    ));
 
     // End player 0's turn → transition to player 1's turn.
     runner.end_turn();
@@ -223,11 +238,17 @@ fn bt23_014_floodgate_modifiers_still_active_during_opponents_turn() {
     // During player 1's turn the modifiers should still be active.
     // (EndOfOpponentsTurn from P0's view = expires when P1's turn ends, not begins.)
     assert!(
-        runner.game.modifiers.player_has(1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect),
+        runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
+        ),
         "CannotPlayDigimonByEffect must still be active DURING opponent's turn"
     );
     assert!(
-        runner.game.modifiers.player_has(1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect),
+        runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
+        ),
         "CannotPlayTamerByEffect must still be active DURING opponent's turn"
     );
 }
@@ -245,11 +266,17 @@ fn bt23_014_floodgate_modifiers_expire_after_opponents_turn_ends() {
 
     // After opponent's turn fully ends, both modifiers must be gone.
     assert!(
-        !runner.game.modifiers.player_has(1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect),
+        !runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
+        ),
         "CannotPlayDigimonByEffect must expire after opponent's turn ends"
     );
     assert!(
-        !runner.game.modifiers.player_has(1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect),
+        !runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayTamerByEffect
+        ),
         "CannotPlayTamerByEffect must expire after opponent's turn ends"
     );
 }
@@ -280,7 +307,10 @@ fn bt23_014_floodgate_blocks_digimon_play_from_trash_by_effect() {
 
     // Verify the floodgate modifier is installed.
     assert!(
-        runner.game.modifiers.player_has(1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect),
+        runner.game.modifiers.player_has(
+            1,
+            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect
+        ),
         "CannotPlayDigimonByEffect must be installed"
     );
 
@@ -403,7 +433,10 @@ fn bt23_014_compiled_card_has_when_attacking_clause() {
         })
         .count();
 
-    assert_eq!(wa_count, 1, "BT23-014 must have exactly 1 [When Attacking] clause");
+    assert_eq!(
+        wa_count, 1,
+        "BT23-014 must have exactly 1 [When Attacking] clause"
+    );
 }
 
 #[test]

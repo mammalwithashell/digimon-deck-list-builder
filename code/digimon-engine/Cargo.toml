@@ -119,3 +119,11 @@ path = "tests/keyword_phase_e/main.rs"
 [[test]]
 name = "keyword_phase_f"
 path = "tests/keyword_phase_f/main.rs"
+
+[[test]]
+name = "dual_cards"
+path = "tests/dual_cards/main.rs"
+
+[[test]]
+name = "effect_source_kind"
+path = "tests/effect_source_kind/main.rs"

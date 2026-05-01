@@ -201,18 +201,27 @@ fn bt8_097_main_installs_cannot_play_digimon_by_effect_on_opponent() {
 
     // No modifier before activation.
     assert!(
-        !runner.game.modifiers.player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        !runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "opponent must NOT have CannotPlayDigimonByEffect before [Main] activates"
     );
 
     // Activate [Main] effect from hand (fires MainFromHand timing).
     let fired = runner.game.activate_hand_main(0, 0);
-    assert!(fired, "activate_hand_main must return true for BT8-097 at hand index 0");
+    assert!(
+        fired,
+        "activate_hand_main must return true for BT8-097 at hand index 0"
+    );
     runner.auto_resolve();
 
     // Floodgate modifier must be installed on opponent (player 1).
     assert!(
-        runner.game.modifiers.player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "CannotPlayDigimonByEffect must be installed on opponent after [Main] fires"
     );
 }
@@ -227,7 +236,10 @@ fn bt8_097_main_does_not_install_cannot_play_tamer_by_effect() {
     runner.auto_resolve();
 
     assert!(
-        !runner.game.modifiers.player_has(1, ModifierType::CannotPlayTamerByEffect),
+        !runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayTamerByEffect),
         "BT8-097 printed text restricts Digimon only, not Tamers — \
          CannotPlayTamerByEffect must NOT be installed"
     );
@@ -246,7 +258,10 @@ fn bt8_097_floodgate_modifier_active_during_opponents_turn() {
     runner.auto_resolve();
 
     assert!(
-        runner.game.modifiers.player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "modifier must be installed after [Main]"
     );
 
@@ -255,7 +270,10 @@ fn bt8_097_floodgate_modifier_active_during_opponents_turn() {
 
     // Still active DURING player 1's turn.
     assert!(
-        runner.game.modifiers.player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "CannotPlayDigimonByEffect must remain active DURING opponent's turn \
          (expires only when their turn ENDS)"
     );
@@ -274,7 +292,10 @@ fn bt8_097_floodgate_modifier_expires_after_opponents_turn_ends() {
     runner.end_turn();
 
     assert!(
-        !runner.game.modifiers.player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        !runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "CannotPlayDigimonByEffect must expire after opponent's turn fully ends"
     );
 }
@@ -475,7 +496,10 @@ fn bt8_097_security_installs_cannot_play_digimon_by_effect_modifier() {
     let handle = runner.place_on_field(0, "BT8-097", None);
 
     assert!(
-        !runner.game.modifiers.player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        !runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "modifier must not be present before security effect fires"
     );
 
@@ -486,7 +510,10 @@ fn bt8_097_security_installs_cannot_play_digimon_by_effect_modifier() {
     runner.game.drain_effect_queue();
 
     assert!(
-        runner.game.modifiers.player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "CannotPlayDigimonByEffect must be installed on opponent after [Security] fires"
     );
 }
@@ -559,7 +586,7 @@ fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_permanent() {
     let mut opp_digi = make_test_card("CR-OPP-DIGI", "CrOppDigi");
     opp_digi.card_kind = CardKind::Digimon;
     opp_digi.dp = Some(7000); // high DP — won't be deleted (G-PRED-DP-LTE open,
-                               // but at 7000 should survive once gap closes too)
+                              // but at 7000 should survive once gap closes too)
     opp_digi.level = Some(5);
 
     let mut runner = DebugRunner::builder()

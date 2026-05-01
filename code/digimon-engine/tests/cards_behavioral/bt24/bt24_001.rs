@@ -108,7 +108,11 @@ fn bt24_001_has_exactly_one_triggered_clause() {
         })
         .collect();
 
-    assert_eq!(triggered.len(), 1, "BT24-001 must have exactly 1 triggered clause");
+    assert_eq!(
+        triggered.len(),
+        1,
+        "BT24-001 must have exactly 1 triggered clause"
+    );
 }
 
 #[test]
@@ -134,7 +138,9 @@ fn bt24_001_inherited_clause_is_on_opponent_security_removed() {
         "BT24-001 clause must have Inherited scope"
     );
     assert!(
-        clause.when.contains(&CompiledTiming::OnOpponentSecurityRemoved),
+        clause
+            .when
+            .contains(&CompiledTiming::OnOpponentSecurityRemoved),
         "BT24-001 clause must fire on OnOpponentSecurityRemoved"
     );
 }
@@ -156,8 +162,14 @@ fn bt24_001_inherited_clause_is_opt_and_optional() {
         .collect();
 
     let clause = triggered[0];
-    assert!(clause.once_per_turn, "BT24-001 clause must be once_per_turn");
-    assert!(clause.optional, "BT24-001 clause must be optional (\"you may\")");
+    assert!(
+        clause.once_per_turn,
+        "BT24-001 clause must be once_per_turn"
+    );
+    assert!(
+        clause.optional,
+        "BT24-001 clause must be optional (\"you may\")"
+    );
 }
 
 // ── Section 2: Condition gating ─────────────────────────────────────────────
@@ -262,11 +274,16 @@ fn bt24_001_declining_does_not_delete_digimon() {
     runner.attack_player(carrier, 1, false);
 
     // Expect: optional selection is installed (PASS is valid).
-    assert!(runner.pending_is_optional(), "delete selection must be optional (\"you may\")");
+    assert!(
+        runner.pending_is_optional(),
+        "delete selection must be optional (\"you may\")"
+    );
 
     // Decline.
     use digimon_engine::action::space as action;
-    runner.execute_action(0, action::PASS).expect("decline must be valid");
+    runner
+        .execute_action(0, action::PASS)
+        .expect("decline must be valid");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -312,7 +329,9 @@ fn bt24_001_accepting_deletes_low_dp_digimon() {
     // Accept: pick the first (only) eligible target.
     {
         let view = runner.pending_selection_view().unwrap();
-        runner.execute_action(0, view.valid_action_ids[0]).expect("select LOW-DP-1");
+        runner
+            .execute_action(0, view.valid_action_ids[0])
+            .expect("select LOW-DP-1");
     }
     let _ = runner.auto_resolve();
 
@@ -408,7 +427,9 @@ fn bt24_001_opt_blocks_second_trigger_same_turn() {
     );
     {
         let view = runner.pending_selection_view().unwrap();
-        runner.execute_action(0, view.valid_action_ids[0]).expect("first delete");
+        runner
+            .execute_action(0, view.valid_action_ids[0])
+            .expect("first delete");
     }
     let _ = runner.auto_resolve();
 

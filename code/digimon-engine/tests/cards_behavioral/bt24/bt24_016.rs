@@ -142,7 +142,11 @@ fn bt24_016_own_triggered_clause_has_correct_shape() {
                 && t.when.contains(&CompiledTiming::WhenAttacking)
         })
         .expect("clause 3 must be present: [WhenDigivolving, WhenAttacking]");
-    assert_eq!(clause3.scope, CompiledScope::FaceUp, "clause 3 is own-scope");
+    assert_eq!(
+        clause3.scope,
+        CompiledScope::FaceUp,
+        "clause 3 is own-scope"
+    );
     assert!(clause3.once_per_turn, "clause 3 must be OPT");
     assert!(
         !clause3.optional,
@@ -171,10 +175,7 @@ fn bt24_016_inherited_clause_has_correct_shape() {
         "clause 4 must be inherited scope"
     );
     assert!(clause4.once_per_turn, "clause 4 must be OPT");
-    assert!(
-        clause4.optional,
-        "clause 4 is optional (\"you may play\")"
-    );
+    assert!(clause4.optional, "clause 4 is optional (\"you may play\")");
     // active_when must be set (all_turns: true)
     assert!(
         clause4.active_when.is_some(),

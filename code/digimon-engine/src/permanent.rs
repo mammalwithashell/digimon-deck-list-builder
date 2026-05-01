@@ -133,7 +133,15 @@ impl Permanent {
 
     /// Whether the top card is a Digimon.
     pub fn is_digimon(&self, data: &[CardData]) -> bool {
-        self.top_card().card_kind(data) == CardKind::Digimon
+        matches!(
+            self.top_card().card_kind(data),
+            CardKind::Digimon | CardKind::Dual
+        )
+    }
+
+    /// Whether the top card is an Option permanent.
+    pub fn is_option(&self, data: &[CardData]) -> bool {
+        self.top_card().card_kind(data) == CardKind::Option
     }
 
     /// Whether the top card is a Tamer.

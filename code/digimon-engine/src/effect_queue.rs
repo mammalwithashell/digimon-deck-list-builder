@@ -22,7 +22,7 @@
 use crate::action::space::{HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS};
 use crate::card_source::CardHandle;
 use crate::effect_context::EffectContext;
-use crate::enums::{EffectTiming, GamePhase, PlayerId};
+use crate::enums::{CardKind, EffectSourceKind, EffectTiming, GamePhase, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{
@@ -33,6 +33,15 @@ use crate::trigger_context::TriggerContext;
 /// Max iterations the drainer will take before aborting a suspected infinite
 /// chain. Matches Python's `_resolve_effect_stack` limit.
 pub const MAX_CHAIN_DEPTH: u16 = 50;
+
+fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
+    match kind {
+        CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => EffectSourceKind::Digimon,
+        CardKind::Tamer => EffectSourceKind::Tamer,
+        CardKind::Option => EffectSourceKind::Option,
+        CardKind::Token => EffectSourceKind::Rule,
+    }
+}
 
 impl Game {
     // ─── Public API ─────────────────────────────────────────────────
@@ -257,6 +266,7 @@ impl Game {
         }
         let card_id = pending.card.card_id(&self.card_data).to_string();
         let source_card = card;
+        let source_kind = source_kind_for_card_kind(pending.card.card_kind(&self.card_data));
 
         let Some(effects) = self.effects_for_card(&card_id, source_card) else {
             return;
@@ -278,6 +288,7 @@ impl Game {
             self.effect_queue.push_back(QueuedEffect {
                 source_card,
                 source_permanent: None,
+                source_kind,
                 controller: defender,
                 timing,
                 trigger_context,
@@ -315,6 +326,7 @@ impl Game {
         let top = perm.top_card();
         let card_id = top.card_id(&self.card_data).to_string();
         let source_card = top.handle();
+        let top_source_kind = source_kind_for_card_kind(top.card_kind(&self.card_data));
 
         let tp = self.turn_player();
         let is_turn_player = handle.player == tp;
@@ -346,6 +358,7 @@ impl Game {
                 self.effect_queue.push_back(QueuedEffect {
                     source_card,
                     source_permanent: Some(handle),
+                    source_kind: top_source_kind,
                     controller: handle.player,
                     timing,
                     trigger_context,
@@ -360,7 +373,7 @@ impl Game {
         // Phase 8 Task 4: sideways inheritance from linked cards. Snapshot
         // linked-card identity first to drop the `perm` borrow before
         // iterating (effects_for_card borrows &self).
-        let linked_sources: Vec<(String, crate::card_source::CardHandle)> = {
+        let linked_sources: Vec<(String, crate::card_source::CardHandle, EffectSourceKind)> = {
             let perm = self
                 .players
                 .get(handle.player as usize)
@@ -369,12 +382,18 @@ impl Game {
                 Some(p) => p
                     .linked_cards
                     .iter()
-                    .map(|c| (c.card_id(&self.card_data).to_string(), c.handle()))
+                    .map(|c| {
+                        (
+                            c.card_id(&self.card_data).to_string(),
+                            c.handle(),
+                            source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                        )
+                    })
                     .collect(),
                 None => Vec::new(),
             }
         };
-        for (linked_card_id, linked_source) in linked_sources {
+        for (linked_card_id, linked_source, linked_source_kind) in linked_sources {
             let Some(effects) = self.effects_for_card(&linked_card_id, linked_source) else {
                 continue;
             };
@@ -388,6 +407,7 @@ impl Game {
                 self.effect_queue.push_back(QueuedEffect {
                     source_card: linked_source,
                     source_permanent: Some(handle),
+                    source_kind: linked_source_kind,
                     controller: handle.player,
                     timing,
                     trigger_context,
@@ -439,7 +459,7 @@ impl Game {
             })
             .unwrap_or(false);
         if !self_is_training {
-            let training_sources: Vec<(String, crate::card_source::CardHandle)> = {
+            let training_sources: Vec<(String, crate::card_source::CardHandle, EffectSourceKind)> = {
                 let p = match self.players.get(handle.player as usize) {
                     Some(p) => p,
                     None => return,
@@ -452,14 +472,18 @@ impl Game {
                             crate::permanent::OptionState::Training { .. }
                         ) {
                             let top = perm.top_card();
-                            Some((top.card_id(&self.card_data).to_string(), top.handle()))
+                            Some((
+                                top.card_id(&self.card_data).to_string(),
+                                top.handle(),
+                                source_kind_for_card_kind(top.card_kind(&self.card_data)),
+                            ))
                         } else {
                             None
                         }
                     })
                     .collect()
             };
-            for (training_card_id, training_source) in training_sources {
+            for (training_card_id, training_source, training_source_kind) in training_sources {
                 let Some(effects) = self.effects_for_card(&training_card_id, training_source)
                 else {
                     continue;
@@ -474,6 +498,7 @@ impl Game {
                     self.effect_queue.push_back(QueuedEffect {
                         source_card: training_source,
                         source_permanent: Some(handle),
+                        source_kind: training_source_kind,
                         controller: handle.player,
                         timing,
                         trigger_context,
@@ -582,8 +607,13 @@ impl Game {
         let skip_condition = qe.timing == EffectTiming::SecuritySkill;
         if !skip_condition {
             if let Some(cond) = &effect.condition {
-                let ctx =
-                    EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
+                let ctx = EffectContext::new_with_source_kind(
+                    self,
+                    qe.source_card,
+                    qe.source_permanent,
+                    qe.source_kind,
+                    qe.controller,
+                );
                 if !cond(&ctx.as_read()) {
                     return;
                 }
@@ -603,16 +633,26 @@ impl Game {
         // cards needing selection-gated pay-costs should fold the selection
         // into `process` instead. See Phase 5 non-goals.
         if let Some(pay_cost) = &effect.pay_cost_fn {
-            let mut ctx =
-                EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
+            let mut ctx = EffectContext::new_with_source_kind(
+                self,
+                qe.source_card,
+                qe.source_permanent,
+                qe.source_kind,
+                qe.controller,
+            );
             if !pay_cost(&mut ctx) {
                 return; // cost not paid; skip process (silent abort, mirrors failed condition)
             }
         }
 
         if let Some(process) = &effect.process {
-            let mut ctx =
-                EffectContext::new(self, qe.source_card, qe.source_permanent, qe.controller);
+            let mut ctx = EffectContext::new_with_source_kind(
+                self,
+                qe.source_card,
+                qe.source_permanent,
+                qe.source_kind,
+                qe.controller,
+            );
             process(&mut ctx);
         }
     }
@@ -667,6 +707,7 @@ impl Game {
         let head_qe = &self.effect_queue[bundle[0]];
         let source_card = head_qe.source_card;
         let source_permanent = head_qe.source_permanent;
+        let source_kind = head_qe.source_kind;
 
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
@@ -684,6 +725,7 @@ impl Game {
             effect_choices: Some(choices),
             source_card,
             source_permanent,
+            source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
                 // Find the i-th entry in `game.effect_queue` controlled by
@@ -848,8 +890,16 @@ impl Game {
                 // Dispatch on the card's subtype flags. Standard → trash;
                 // Delay → park on field (Task 3). Link / Training land in
                 // Tasks 4-5 via the same dispatcher.
+                if self.pending_option_can_arts_digivolve()
+                    && self.install_arts_digivolve_selection()
+                {
+                    return;
+                }
                 self.dispose_option();
                 self.check_turn_end();
+            }
+            crate::selection::OptionResolutionPhase::ArtsSelectTarget => {
+                // Arts selection callbacks finish the flow directly.
             }
             crate::selection::OptionResolutionPhase::LinkSelectHost => {
                 // Unwind happens in install_link_host_selection's callback
