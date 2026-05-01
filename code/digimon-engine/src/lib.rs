@@ -39,7 +39,8 @@ pub mod runners;
 pub mod scheduled_effects;
 pub mod selection;
 pub mod tensor;
-pub mod tensor_profile;
+pub mod tensor_profiles;
+pub use tensor_profiles as tensor_profile;
 pub mod token_registry;
 pub mod trigger_context;
 
