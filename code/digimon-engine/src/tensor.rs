@@ -10,6 +10,7 @@ use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
+use crate::tensor_profile;
 
 // ─── Tensor Layout Constants ──────────────────────────────────────────
 
@@ -244,94 +245,7 @@ pub fn build_tensor(game: &Game, player_id: PlayerId, registry: &CardRegistry) -
 /// Compute which tensor positions hold card IDs vs scalar values.
 /// Used by the features extractor to split for embedding lookup.
 pub fn compute_positions() -> (Vec<usize>, Vec<usize>) {
-    let mut card_positions = Vec::new();
-    let mut scalar_positions = Vec::new();
-
-    // Global section: all scalars
-    for i in 0..GLOBAL_SIZE {
-        scalar_positions.push(i);
-    }
-
-    let mut off = GLOBAL_SIZE;
-
-    // My battle area
-    for i in 0..FIELD_SLOTS {
-        slot_positions(
-            off + i * SLOT_SIZE,
-            &mut card_positions,
-            &mut scalar_positions,
-        );
-    }
-    off += BATTLE_SIZE;
-
-    // Opp battle area
-    for i in 0..FIELD_SLOTS {
-        slot_positions(
-            off + i * SLOT_SIZE,
-            &mut card_positions,
-            &mut scalar_positions,
-        );
-    }
-    off += BATTLE_SIZE;
-
-    // My hand
-    for i in 0..MAX_HAND {
-        card_positions.push(off + i);
-    }
-    off += HAND_SIZE;
-
-    // Opp hand
-    for i in 0..MAX_HAND {
-        card_positions.push(off + i);
-    }
-    off += HAND_SIZE;
-
-    // My trash
-    for i in 0..MAX_TRASH {
-        card_positions.push(off + i);
-    }
-    off += TRASH_SIZE;
-
-    // Opp trash
-    for i in 0..MAX_TRASH {
-        card_positions.push(off + i);
-    }
-    off += TRASH_SIZE;
-
-    // My security
-    for i in 0..MAX_SECURITY {
-        card_positions.push(off + i);
-    }
-    off += SECURITY_SIZE;
-
-    // Opp security
-    for i in 0..MAX_SECURITY {
-        card_positions.push(off + i);
-    }
-    off += SECURITY_SIZE;
-
-    // My breeding
-    slot_positions(off, &mut card_positions, &mut scalar_positions);
-    off += BREEDING_SIZE;
-
-    // Opp breeding
-    slot_positions(off, &mut card_positions, &mut scalar_positions);
-    off += BREEDING_SIZE;
-
-    // Revealed cards
-    for i in 0..MAX_REVEALED {
-        card_positions.push(off + i);
-    }
-    off += REVEALED_SIZE;
-
-    // Selection context: all scalars
-    for i in 0..SELECTION_SIZE {
-        scalar_positions.push(off + i);
-    }
-
-    card_positions.sort();
-    scalar_positions.sort();
-    (card_positions, scalar_positions)
+    tensor_profile::standard_v1_positions()
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -459,28 +373,6 @@ fn write_card_ids(
 ) {
     for (i, card) in cards.iter().take(limit).enumerate() {
         tensor[start + i] = registry.get_index(&card.card_id(card_data)) as f32;
-    }
-}
-
-/// Enumerate card_id and scalar positions within one SLOT_SIZE block.
-fn slot_positions(
-    slot_base: usize,
-    card_positions: &mut Vec<usize>,
-    scalar_positions: &mut Vec<usize>,
-) {
-    // +0: top card ID
-    card_positions.push(slot_base);
-    // +1..+6: scalars
-    for j in 1..7 {
-        scalar_positions.push(slot_base + j);
-    }
-    // Sources: MAX_SOURCES × (card_id, opt_state, dp_contribution)
-    let src_base = slot_base + 7;
-    for s in 0..MAX_SOURCES {
-        let off = src_base + s * SOURCE_ENTRY_SIZE;
-        card_positions.push(off); // card_id
-        scalar_positions.push(off + 1); // opt_state
-        scalar_positions.push(off + 2); // dp_contribution
     }
 }
 
