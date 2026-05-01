@@ -8,7 +8,8 @@ use digimon_engine::tensor::{
     SOURCE_DP_CONTRIBUTION_OFFSET, SOURCE_ENTRY_SIZE, SOURCE_OPT_STATE_OFFSET, TENSOR_SIZE,
     TRASH_SIZE,
 };
-use digimon_engine::tensor_profile::{
+use digimon_engine::tensor_profiles::standard;
+use digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorFieldKind, TensorSectionKind,
     STANDARD_V1_PROFILE_ID,
 };
@@ -18,6 +19,7 @@ fn default_profile_is_standard_v1() {
     let profile = default_profile();
 
     assert_eq!(profile.id, STANDARD_V1_PROFILE_ID);
+    assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.version, 1);
     assert_eq!(profile.tensor_size, TENSOR_SIZE);
     assert_eq!(profile.field_slots, FIELD_SLOTS);
@@ -36,7 +38,30 @@ fn registry_resolves_standard_profile_by_id() {
 
     let profile = profile_by_id(STANDARD_V1_PROFILE_ID).unwrap();
     assert_eq!(profile.id, "standard_v1");
+    assert_eq!(profile.game_mode, "standard");
     assert!(profile_by_id("missing_profile").is_none());
+}
+
+#[test]
+fn standard_family_resolves_profile_by_version() {
+    let profile = standard::profile_by_version(1).unwrap();
+
+    assert_eq!(standard::DEFAULT_PROFILE, standard::v1::PROFILE);
+    assert_eq!(profile, standard::v1::PROFILE);
+    assert!(standard::profile_by_version(2).is_none());
+}
+
+#[test]
+fn standard_v1_owns_tensor_layout_constants() {
+    assert_eq!(standard::v1::PROFILE.tensor_size, standard::v1::TENSOR_SIZE);
+    assert_eq!(standard::v1::PROFILE.field_slots, standard::v1::FIELD_SLOTS);
+    assert_eq!(standard::v1::PROFILE.slot_size, standard::v1::SLOT_SIZE);
+    assert_eq!(standard::v1::PROFILE.max_sources, standard::v1::MAX_SOURCES);
+
+    assert_eq!(TENSOR_SIZE, standard::v1::TENSOR_SIZE);
+    assert_eq!(FIELD_SLOTS, standard::v1::FIELD_SLOTS);
+    assert_eq!(SLOT_SIZE, standard::v1::SLOT_SIZE);
+    assert_eq!(MAX_SOURCES, standard::v1::MAX_SOURCES);
 }
 
 #[test]
@@ -46,6 +71,9 @@ fn standard_profile_sections_cover_tensor_without_overlap() {
 
     for section in profile.sections {
         assert!(section.start + section.len <= profile.tensor_size);
+        if section.kind == TensorSectionKind::PermanentSlots {
+            assert_eq!(section.len % profile.slot_layout.size, 0);
+        }
         covered.extend(section.start..section.start + section.len);
     }
 
@@ -61,12 +89,20 @@ fn standard_profile_sections_cover_tensor_without_overlap() {
 fn standard_profile_card_and_scalar_positions_match_tensor_module() {
     let profile = default_profile();
     let (profile_cards, profile_scalars) = profile.positions();
+    let (v1_cards, v1_scalars) = standard::v1::PROFILE.positions();
     let (tensor_cards, tensor_scalars) = compute_positions();
 
+    assert_eq!(profile_cards, v1_cards);
+    assert_eq!(profile_scalars, v1_scalars);
     assert_eq!(profile_cards, tensor_cards);
     assert_eq!(profile_scalars, tensor_scalars);
     assert_eq!(profile_cards.len(), profile.card_id_slot_count);
     assert_eq!(profile_scalars.len(), profile.scalar_slot_count);
+
+    let card_set: std::collections::BTreeSet<_> = profile_cards.iter().copied().collect();
+    let scalar_set: std::collections::BTreeSet<_> = profile_scalars.iter().copied().collect();
+    assert!(card_set.is_disjoint(&scalar_set));
+    assert_eq!(card_set.len() + scalar_set.len(), profile.tensor_size);
 }
 
 #[test]
@@ -270,5 +306,17 @@ fn standard_profile_slot_layout_is_auditable_metadata() {
                 TensorFieldKind::Scalar,
             ),
         ]
+    );
+}
+
+#[test]
+fn singular_tensor_profile_alias_still_works() {
+    let singular = digimon_engine::tensor_profile::default_profile();
+    let plural = digimon_engine::tensor_profiles::default_profile();
+
+    assert_eq!(singular, plural);
+    assert_eq!(
+        digimon_engine::tensor_profile::STANDARD_V1_PROFILE_ID,
+        "standard_v1"
     );
 }
