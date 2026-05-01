@@ -208,7 +208,12 @@ const CARD_KIND_INDEX: Record<CardDto['card_kind'], number> = {
   Tamer: 1,
   Option: 2,
   DigiEgg: 3,
+  Dual: 2,
 };
+
+function mapCardKind(cardKind: CardDto['card_kind'] | string): number {
+  return CARD_KIND_INDEX[cardKind as CardDto['card_kind']] ?? 2;
+}
 
 const COLOR_INDEX: Record<string, number> = {
   Red: 0,
@@ -276,7 +281,7 @@ function toPlayerState(player: PlayerDto, memory: number): PlayerState {
       level: c.level,
       dp: c.dp,
       colors: mapColors(c.colors),
-      cardKind: CARD_KIND_INDEX[c.card_kind] ?? 0,
+      cardKind: mapCardKind(c.card_kind),
       evoCosts: [],
     })),
     securityCount: player.security_count,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ActionTrace, TensorSummary } from '@/types/game';
-import { toTensorSummary } from './gameApi';
+import { dtoToGameState, toTensorSummary } from './gameApi';
 
 describe('toTensorSummary', () => {
   it('translates tensor profile metadata', () => {
@@ -66,5 +66,54 @@ describe('engine trace types', () => {
     expect(trace.tensorSummary?.tensorSize).toBe(1375);
     expect(trace.tensorSummary?.maskSize).toBe(2168);
     expect(trace.decoded.label).toBe('Pass / decline');
+  });
+});
+
+describe('dtoToGameState', () => {
+  it('maps dual cards to the option-compatible card kind', () => {
+    const state = dtoToGameState({
+      turn_count: 1,
+      turn_player: 0,
+      current_phase: 'Main',
+      memory: 0,
+      game_over: false,
+      winner: null,
+      mulligan_current_player: null,
+      mulligan_used: [false, false],
+      players: [
+        {
+          id: 0,
+          hand: [
+            {
+              card_id: 'DUAL-001',
+              card_name: 'Dual Test',
+              card_kind: 'Dual',
+              level: 6,
+              dp: 12000,
+              play_cost: 5,
+              colors: ['Purple'],
+            },
+          ],
+          battle_area: [],
+          breeding: null,
+          deck_count: 49,
+          trash_count: 0,
+          security_count: 5,
+          is_eliminated: false,
+        },
+        {
+          id: 1,
+          hand: [],
+          battle_area: [],
+          breeding: null,
+          deck_count: 50,
+          trash_count: 0,
+          security_count: 5,
+          is_eliminated: false,
+        },
+      ],
+    });
+
+    expect(state.player1.handCards[0]?.cardKind).toBe(2);
   });
 });
