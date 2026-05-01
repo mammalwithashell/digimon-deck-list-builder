@@ -89,6 +89,9 @@ def random_policy(env: DigimonEnv) -> int:
     valid = np.where(mask > 0)[0]
     if len(valid) == 0:
         return ACTION_PASS_TURN
+    rng = getattr(env, "np_random", None)
+    if rng is not None:
+        return int(rng.choice(valid))
     return int(np.random.choice(valid))
 
 

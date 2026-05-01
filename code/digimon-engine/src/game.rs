@@ -442,13 +442,21 @@ impl Game {
             players.push(player);
         }
 
-        // Initial turn order (before coin flip).
+        // Initial turn order / coin flip. Seeded games use a backend-neutral
+        // starting-player selection so Rust/Python parity does not depend on
+        // matching RNG algorithms. Preserve the historical RNG consumption for
+        // seeded games so deck/mulligan reshuffles remain stable.
         let mut turn_order: Vec<PlayerId> = (0..rules.player_count).collect();
-        // Coin flip: randomize which player goes first. For N-player we shuffle
-        // the whole order so EDH-style modes pick a starting player uniformly.
-        // Matches Python's `random.choice([True, False])` for 2-player, and
-        // extends the concept cleanly to multiplayer.
-        turn_order.shuffle(&mut rng);
+        if let Some(s) = seed {
+            let mut consumed_turn_order = turn_order.clone();
+            consumed_turn_order.shuffle(&mut rng);
+            if !turn_order.is_empty() {
+                let start = (s as usize) % turn_order.len();
+                turn_order.rotate_left(start);
+            }
+        } else {
+            turn_order.shuffle(&mut rng);
+        }
         let memory_pair = if turn_order.len() >= 2 {
             (turn_order[0], turn_order[1])
         } else {

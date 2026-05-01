@@ -8,6 +8,7 @@ Wraps HeadlessGame to provide a standard Gymnasium interface with:
 """
 
 import os
+import random
 import numpy as np
 import logging
 from typing import List, Tuple, Dict, Any, Optional
@@ -21,7 +22,7 @@ except ImportError:
     RustHeadlessGame = None
 
 
-def _make_runner(deck1: List[str], deck2: List[str]):
+def _make_runner(deck1: List[str], deck2: List[str], seed: Optional[int] = None):
     """Build the game runner chosen by the `DIGIMON_BACKEND` env var.
 
     - `DIGIMON_BACKEND=rust` → `RustHeadlessGame` (requires the `digimon_engine`
@@ -39,8 +40,24 @@ def _make_runner(deck1: List[str], deck2: List[str]):
                 "DIGIMON_BACKEND=rust but digimon_engine wheel is not installed. "
                 "Run `cd digimon-engine-py && maturin develop --release`."
             )
-        return RustHeadlessGame(deck1, deck2)
-    return HeadlessGame(deck1, deck2)
+        return RustHeadlessGame(deck1, deck2, seed=seed)
+    if seed is None:
+        return HeadlessGame(deck1, deck2)
+    rng_state = random.getstate()
+    original_choice = random.choice
+
+    def seeded_choice(seq):
+        if list(seq) == [True, False]:
+            return seed % 2 == 0
+        return original_choice(seq)
+
+    try:
+        random.seed(seed)
+        random.choice = seeded_choice
+        return HeadlessGame(deck1, deck2)
+    finally:
+        random.choice = original_choice
+        random.setstate(rng_state)
 from engine_py_legacy.engine.game import (
     FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND,
     SECURITY_TARGET, BREEDING_SLOT,
@@ -184,7 +201,7 @@ class DigimonEnv(gymnasium.Env):
             deck1 = options.get("deck1", deck1)
             deck2 = options.get("deck2", deck2)
 
-        self.runner = _make_runner(deck1, deck2)
+        self.runner = _make_runner(deck1, deck2, seed=seed)
         self._step_count = 0
 
         obs = self.runner.get_board_tensor(1)

@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
+use digimon_engine::action::space::{HATCH, MOVE_FROM_BREEDING};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
+use digimon_engine::card_source::CardSource;
 use digimon_engine::enums::*;
 use digimon_engine::game::Game;
+use digimon_engine::permanent::Permanent;
 use digimon_engine::rules::Rules;
 
 /// Build a minimal card database for testing.
@@ -162,6 +165,47 @@ fn breeding_hatch_and_move() {
     // Verify the permanent is a DigiEgg
     let perm = &game.player(tp).battle_area[0];
     assert!(perm.is_digi_egg(&game.card_data));
+}
+
+#[test]
+fn decode_hatch_advances_to_main_phase() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let rules = Rules::standard();
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    assert_eq!(game.current_phase, GamePhase::Breeding);
+    game.decode_action(HATCH, game.turn_player());
+
+    assert_eq!(game.current_phase, GamePhase::Main);
+}
+
+#[test]
+fn decode_move_from_breeding_advances_to_main_phase() {
+    let db = test_card_db();
+    let deck = test_deck();
+    let rules = Rules::standard();
+
+    let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
+    game.start_game();
+
+    let tp = game.turn_player();
+    let agumon_idx = game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "BT1-010")
+        .expect("Agumon in test card DB");
+    game.player_mut(tp).breeding_area = Some(Permanent::new(
+        CardSource::new(agumon_idx, tp, 999),
+        game.turn_count,
+    ));
+
+    assert_eq!(game.current_phase, GamePhase::Breeding);
+    game.decode_action(MOVE_FROM_BREEDING, tp);
+
+    assert_eq!(game.current_phase, GamePhase::Main);
 }
 
 #[test]

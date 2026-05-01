@@ -16,6 +16,19 @@ DECK_B = ["ST1-01"] * 5 + ["ST1-03"] * 45
 SEED = 12345
 
 
+@pytest.fixture(autouse=True)
+def _restore_backend_after_test():
+    old_backend = os.environ.get("DIGIMON_BACKEND")
+    yield
+    if old_backend is None:
+        os.environ.pop("DIGIMON_BACKEND", None)
+    else:
+        os.environ["DIGIMON_BACKEND"] = old_backend
+    import digimon_gym.digimon_gym as gym_mod
+
+    importlib.reload(gym_mod)
+
+
 def _make_env(backend: str):
     os.environ["DIGIMON_BACKEND"] = backend
     import digimon_gym.digimon_gym as gym_mod
