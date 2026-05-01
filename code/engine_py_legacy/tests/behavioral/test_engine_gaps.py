@@ -262,22 +262,42 @@ def test_1d_conditional_color_bypass():
     assert card4.match_color_requirement is False
 
 
-def test_option_color_bypass_stays_playable_on_full_field():
-    """Full field blocks non-Options but not color-bypass Option use."""
+def test_options_stay_playable_on_full_field_when_requirements_pass():
+    """Full field blocks non-Options, not legal Option use."""
     game = make_game()
     game.current_phase = GamePhase.Main
     game.memory = 3
 
-    option = make_card(
+    static_bypass_option = make_card(
         "OPT-001",
-        "BypassOption",
+        "StaticBypassOption",
         kind=CardKind.Option,
         play_cost=3,
         owner=game.player1,
     )
-    option._match_color_requirement = False
+    static_bypass_option._match_color_requirement = False
+    function_bypass_option = make_card(
+        "OPT-002",
+        "FunctionBypassOption",
+        kind=CardKind.Option,
+        play_cost=3,
+        owner=game.player1,
+    )
+    function_bypass_option._match_color_requirement_fn = lambda: False
+    matching_color_option = make_card(
+        "OPT-003",
+        "MatchingColorOption",
+        kind=CardKind.Option,
+        play_cost=3,
+        owner=game.player1,
+    )
     digimon = make_card("DIGI-001", "BlockedDigimon", play_cost=3, owner=game.player1)
-    game.player1.hand_cards = [option, digimon]
+    game.player1.hand_cards = [
+        static_bypass_option,
+        function_bypass_option,
+        matching_color_option,
+        digimon,
+    ]
 
     for i in range(FIELD_SLOTS):
         card = make_card(f"FIELD-{i:02}", f"Field{i}", owner=game.player1)
@@ -288,7 +308,9 @@ def test_option_color_bypass_stays_playable_on_full_field():
     mask = build_action_mask(game, 1)
 
     assert mask[0] == 1.0
-    assert mask[1] == 0.0
+    assert mask[1] == 1.0
+    assert mask[2] == 1.0
+    assert mask[3] == 0.0
 
 
 def test_2_may_attack():
