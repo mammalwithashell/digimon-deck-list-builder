@@ -24,6 +24,7 @@ fn default_profile_is_standard_v1() {
     assert_eq!(profile.slot_size, SLOT_SIZE);
     assert_eq!(profile.max_sources, MAX_SOURCES);
     assert_eq!(profile.slot_layout.size, SLOT_SIZE);
+    assert_eq!(profile.slot_layout.source_entry_size, SOURCE_ENTRY_SIZE);
     assert_eq!(profile.card_id_slot_count, 520);
     assert_eq!(profile.scalar_slot_count, 855);
 }
@@ -218,6 +219,7 @@ fn standard_profile_slot_layout_is_auditable_metadata() {
     assert_eq!(profile.max_sources, MAX_SOURCES);
     assert_eq!(profile.slot_layout.size, SLOT_SIZE);
     assert_eq!(profile.slot_layout.source_start, SLOT_SOURCE_START_OFFSET);
+    assert_eq!(profile.slot_layout.source_entry_size, SOURCE_ENTRY_SIZE);
     assert_eq!(profile.slot_layout.max_sources, MAX_SOURCES);
 
     let header_fields: Vec<_> = profile

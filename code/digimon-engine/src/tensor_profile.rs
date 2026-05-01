@@ -45,6 +45,7 @@ pub struct TensorSlotField {
 pub struct TensorSlotLayout {
     pub size: usize,
     pub source_start: usize,
+    pub source_entry_size: usize,
     pub max_sources: usize,
     pub header_fields: &'static [TensorSlotField],
     pub source_fields: &'static [TensorSlotField],
@@ -270,6 +271,7 @@ const STANDARD_V1_SOURCE_FIELDS: &[TensorSlotField] = &[
 const STANDARD_V1_SLOT_LAYOUT: TensorSlotLayout = TensorSlotLayout {
     size: SLOT_SIZE,
     source_start: SLOT_SOURCE_START_OFFSET,
+    source_entry_size: SOURCE_ENTRY_SIZE,
     max_sources: MAX_SOURCES,
     header_fields: STANDARD_V1_SLOT_HEADER_FIELDS,
     source_fields: STANDARD_V1_SOURCE_FIELDS,
@@ -334,7 +336,7 @@ fn permanent_slot_positions(
 
     let source_base = slot_base + layout.source_start;
     for source_index in 0..layout.max_sources {
-        let source_offset = source_base + source_index * SOURCE_ENTRY_SIZE;
+        let source_offset = source_base + source_index * layout.source_entry_size;
         for field in layout.source_fields {
             match field.kind {
                 TensorFieldKind::CardId => card_positions.push(source_offset + field.offset),
