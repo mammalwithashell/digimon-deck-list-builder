@@ -50,3 +50,27 @@ def test_rust_env_greedy_policy_uses_rust_policy_surface(monkeypatch):
 
     action = gym_mod.greedy_policy(env)
     assert env.action_mask()[action] > 0
+
+
+def test_opponent_wrapper_reset_and_step_work_with_rust_runner(monkeypatch):
+    from digimon_gym.agents.pilot_training import OpponentWrapper
+    import digimon_gym.digimon_gym as gym_mod
+
+    env = _rust_env(monkeypatch)
+    wrapped = OpponentWrapper(env, opponent_fn=gym_mod.greedy_policy)
+    obs, info = wrapped.reset(seed=11)
+
+    assert env.current_player_id == 1 or env.is_game_over
+
+    if env.is_game_over:
+        return
+
+    valid = np.where(info["action_mask"] > 0)[0]
+    obs, reward, terminated, truncated, info = wrapped.step(int(valid[0]))
+
+    assert obs.shape == env.observation_space.shape
+    assert isinstance(reward, float)
+    assert isinstance(terminated, bool)
+    assert isinstance(truncated, bool)
+    assert info["action_mask"].shape == (env.action_space.n,)
+    assert env.current_player_id == 1 or terminated or truncated

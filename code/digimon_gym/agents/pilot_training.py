@@ -219,11 +219,10 @@ class OpponentWrapper(gymnasium.Wrapper):
 
     def _advance_opponent(self, obs, info):
         """Play opponent turns after reset until Player 1 acts."""
-        game = self._unwrapped_env.game
-        if game is None or game.game_over:
+        if self._unwrapped_env.is_game_over:
             return obs, info
 
-        while game.current_player_id != 1 and not game.game_over:
+        while self._unwrapped_env.current_player_id != 1 and not self._unwrapped_env.is_game_over:
             opp_action = self.opponent_fn(self._unwrapped_env)
             obs, _, terminated, truncated, info = self.env.step(int(opp_action))
             if terminated or truncated:
@@ -232,31 +231,20 @@ class OpponentWrapper(gymnasium.Wrapper):
         return obs, info
 
     def _play_opponent(self, obs, info):
-        """Auto-play Player 2 turns until Player 1 acts or game ends.
-
-        Returns only terminal reward (win/loss) from the opponent
-        sequence. Dense shaping rewards from individual opponent steps
-        are discarded — they reflect board changes the agent cannot
-        influence and would add noise to the learning signal.
-        """
-        game = self._unwrapped_env.game
+        """Auto-play Player 2 turns until Player 1 acts or game ends."""
         terminal_reward = 0.0
 
-        while (game is not None
-               and not game.game_over
-               and game.current_player_id != 1):
+        while (
+            not self._unwrapped_env.is_game_over
+            and self._unwrapped_env.current_player_id != 1
+        ):
             opp_action = self.opponent_fn(self._unwrapped_env)
-            obs, reward, terminated, truncated, info = self.env.step(
-                int(opp_action)
-            )
+            obs, reward, terminated, truncated, info = self.env.step(int(opp_action))
             if terminated or truncated:
-                # Only the terminal reward (±1.0 win/loss) is meaningful
                 terminal_reward = reward
                 return obs, info, terminal_reward, terminated, truncated
 
-        terminated = game.game_over if game else True
-        truncated = False
-        return obs, info, terminal_reward, terminated, truncated
+        return obs, info, terminal_reward, self._unwrapped_env.is_game_over, False
 
 
 # ─── Callbacks ───────────────────────────────────────────────────────
@@ -378,15 +366,16 @@ class WinRateCallback(BaseCallback):
             total_steps += steps
 
             # Use the actual game outcome instead of reward as a proxy
-            game = None
             won = False
             is_draw = False
+            winner_id = None
             if eval_env is not None:
-                game = _unwrap_to_digimon_env(eval_env).game
-            if game is not None and game.winner is not None:
-                if game.winner.player_id == 1:
-                    wins += 1
-                    won = True
+                winner_id = _unwrap_to_digimon_env(eval_env).winner_id
+            if winner_id == 1:
+                wins += 1
+                won = True
+            elif winner_id == 2:
+                pass
             else:
                 draws += 1
                 is_draw = True
