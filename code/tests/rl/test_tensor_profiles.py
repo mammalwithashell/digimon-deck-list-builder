@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import builtins
+import importlib.machinery
 import sys
 from types import SimpleNamespace
 
@@ -70,6 +72,42 @@ def test_tensor_profile_falls_back_when_engine_function_missing(monkeypatch):
     assert profile.game_mode == "standard"
     assert profile.card_id_slot_count == 520
     assert profile.scalar_slot_count == 855
+
+
+def test_tensor_profile_falls_back_when_engine_module_absent(monkeypatch):
+    from digimon_gym.tensor_profiles import get_tensor_profile, list_tensor_profiles
+
+    monkeypatch.delitem(sys.modules, "digimon_engine", raising=False)
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
+
+    profile = get_tensor_profile()
+
+    assert profile.id == "standard_v1"
+    assert profile.game_mode == "standard"
+    assert list_tensor_profiles() == ["standard_v1"]
+
+
+def test_tensor_profile_does_not_hide_engine_import_error(monkeypatch):
+    from digimon_gym.tensor_profiles import get_tensor_profile, list_tensor_profiles
+
+    original_import = builtins.__import__
+
+    def broken_import(name, *args, **kwargs):
+        if name == "digimon_engine":
+            raise ImportError("binding load failed")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.delitem(sys.modules, "digimon_engine", raising=False)
+    monkeypatch.setattr(
+        "importlib.util.find_spec",
+        lambda name: importlib.machinery.ModuleSpec(name, loader=None),
+    )
+    monkeypatch.setattr(builtins, "__import__", broken_import)
+
+    with pytest.raises(ImportError, match="binding load failed"):
+        get_tensor_profile()
+    with pytest.raises(ImportError, match="binding load failed"):
+        list_tensor_profiles()
 
 
 def test_tensor_profile_malformed_engine_profile_raises(monkeypatch):

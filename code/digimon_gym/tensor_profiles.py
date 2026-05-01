@@ -6,6 +6,9 @@ before a local PyO3 wheel has been rebuilt, and it must match standard_v1.
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
+import sys
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -26,9 +29,8 @@ class TensorProfile:
 
 
 def get_tensor_profile(profile_id: str | None = None) -> TensorProfile:
-    try:
-        import digimon_engine
-    except ImportError:
+    digimon_engine = _load_digimon_engine()
+    if digimon_engine is None:
         if profile_id not in (None, "standard_v1"):
             raise ValueError(f"unknown tensor profile: {profile_id}") from None
         return _legacy_standard_v1()
@@ -56,9 +58,8 @@ def get_tensor_profile(profile_id: str | None = None) -> TensorProfile:
 
 
 def list_tensor_profiles() -> list[str]:
-    try:
-        import digimon_engine
-    except ImportError:
+    digimon_engine = _load_digimon_engine()
+    if digimon_engine is None:
         return ["standard_v1"]
 
     list_profiles = getattr(digimon_engine, "list_tensor_profiles", None)
@@ -66,6 +67,17 @@ def list_tensor_profiles() -> list[str]:
         return ["standard_v1"]
 
     return list(list_profiles())
+
+
+def _load_digimon_engine():
+    loaded = sys.modules.get("digimon_engine")
+    if loaded is not None:
+        return loaded
+
+    if importlib.util.find_spec("digimon_engine") is None:
+        return None
+
+    return importlib.import_module("digimon_engine")
 
 
 def _legacy_standard_v1() -> TensorProfile:
