@@ -20,11 +20,11 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 
 ## Tensor Profiles
 
-The canonical board tensor profile is `standard_v1`:
+The canonical board tensor profile is `standard_compact_v1`:
 
 | Field | Value |
 |---|---:|
-| `id` | `standard_v1` |
+| `id` | `standard_compact_v1` |
 | `version` | 1 |
 | `tensor_size` | 1375 |
 | `field_slots` | 14 |
@@ -33,11 +33,13 @@ The canonical board tensor profile is `standard_v1`:
 | `card_id_slot_count` | 520 |
 | `scalar_slot_count` | 855 |
 
+`standard_v1` and `compact_v1` are compatibility aliases for older code and design notes. New code and model metadata should write `standard_compact_v1`.
+
 Canonical tensor profile definitions live under `code/digimon-engine/src/tensor_profiles/<game_mode>/<version>.rs`. The current profile is defined in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`, which owns the Standard v1 tensor size, section ranges, slot shape, and derived card/scalar positions. `code/digimon-engine/src/tensor.rs` is the Standard v1 tensor writer and compatibility surface; it re-exports the current layout constants but does not own them.
 
-`standard_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets defined with the profile-owned layout constants instead of magic numeric indices.
+`standard_compact_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets defined with the profile-owned layout constants instead of magic numeric indices.
 
-### `standard_v1` Sections
+### `standard_compact_v1` Sections
 
 | Section id | Start offset | Length | Kind |
 |---|---:|---:|---|

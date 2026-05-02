@@ -44,7 +44,7 @@ No trained pilot models need to be preserved, so v2 can be a breaking observatio
 
 The v2 family remains a single flat `float32` vector, but its sections are table-shaped.
 
-The first implementation target should be `v2_lite`, because it keeps the mechanically important state and pending-choice metadata while avoiding the large full action-id table:
+The first implementation target should be `standard_lite_v2`, because it keeps the mechanically important state and pending-choice metadata while avoiding the large full action-id table:
 
 ```text
 global_features[64]
@@ -63,7 +63,7 @@ The proposed lite size is:
 TENSOR_SIZE_V2_LITE = 8320
 ```
 
-The full experimental profile appends a shallow action-id table:
+The full experimental profile is `standard_full_v2`. It appends a shallow action-id table:
 
 ```text
 action_id_features[2168][16]
@@ -75,11 +75,11 @@ The full profile size is:
 TENSOR_SIZE_V2_FULL = 43008
 ```
 
-This split makes `v2_lite` the default serious training candidate and keeps `v2_full` available for profiling whether full action-local metadata improves play strength enough to pay for the speed and memory cost.
+This split makes `standard_lite_v2` the default serious training candidate and keeps `standard_full_v2` available for profiling whether full action-local metadata improves play strength enough to pay for the speed and memory cost.
 
 ## Top-Level Layout
 
-`v2_lite` exact layout:
+`standard_lite_v2` exact layout:
 
 | Section | Offset | Shape | Size | Notes |
 |---|---:|---:|---:|---|
@@ -92,7 +92,7 @@ This split makes `v2_lite` the default serious training candidate and keeps `v2_
 | `pending_choice_features` | `4992` | `[32][96]` | `3072` | Rich metadata for current prompt rows |
 | `reserved` | `8064` | `[256]` | `256` | Zero-filled until assigned |
 
-`v2_lite` section constants:
+`standard_lite_v2` section constants:
 
 ```text
 OFF_GLOBAL_FEATURES = 0
@@ -106,7 +106,7 @@ OFF_RESERVED = 8064
 TENSOR_SIZE_V2_LITE = 8320
 ```
 
-`v2_full` inserts `action_id_features[2168][16]` at `8064` and shifts `reserved` to `42752`:
+`standard_full_v2` inserts `action_id_features[2168][16]` at `8064` and shifts `reserved` to `42752`:
 
 ```text
 OFF_ACTION_ID_FEATURES_V2_FULL = 8064
@@ -483,7 +483,7 @@ The current `EffectChoiceEntry.label` is useful for debugging but must not be pa
 
 ## Action ID Features
 
-`action_id_features[2168][16]` is a shallow action-aligned table for `v2_full` only. It is intentionally excluded from `v2_lite`.
+`action_id_features[2168][16]` is a shallow action-aligned table for `standard_full_v2` only. It is intentionally excluded from `standard_lite_v2`.
 
 Rows are aligned directly to raw action IDs:
 
@@ -514,7 +514,7 @@ This table does not replace the action mask. It gives the policy a small amount 
 
 For illegal actions, static decode fields may still be populated, but state-dependent fields should be zero unless meaningful. The legal flag must always agree with the mask exposed through `info["action_mask"]`.
 
-This table is intentionally shallow. Rich card/effect meaning belongs in the hand/permanent/pending-choice sections. If profiling shows that `v2_full` is too slow for the learning benefit it provides, keep the profile registry support and leave `v2_lite` as the default.
+This table is intentionally shallow. Rich card/effect meaning belongs in the hand/permanent/pending-choice sections. If profiling shows that `standard_full_v2` is too slow for the learning benefit it provides, keep the profile registry support and leave `standard_lite_v2` as the default.
 
 ## Effect Metadata Contract
 
@@ -554,7 +554,7 @@ Card ID positions include:
 - known zone card IDs
 - pending choice source-card IDs
 
-`action_id_features` should not contain card IDs in `v2_full`. It references source/target zones and indices instead.
+`action_id_features` should not contain card IDs in `standard_full_v2`. It references source/target zones and indices instead.
 
 The Rust engine should export v2 card/scalar positions through PyO3 or a generated Rust-owned layout file. `code/digimon_gym/agents/features_extractor.py` should stop importing tensor layout from `engine_py_legacy`.
 
@@ -582,7 +582,7 @@ Preferred implementation shape:
 
 ## Invariants
 
-1. For `v2_full`, `action_id_features[action_id][0] == get_action_mask(player)[action_id]`.
+1. For `standard_full_v2`, `action_id_features[action_id][0] == get_action_mask(player)[action_id]`.
 2. Every nonzero card ID field is listed in the active profile's card ID positions.
 3. No scalar field is listed in the active profile's card ID positions.
 4. The active profile's card ID positions and scalar positions cover every tensor index exactly once.
@@ -597,8 +597,8 @@ Preferred implementation shape:
 
 Add focused tests before or alongside implementation:
 
-- `v2_lite` tensor size is `8320`.
-- `v2_lite` layout section offsets match the spec exactly.
+- `standard_lite_v2` tensor size is `8320`.
+- `standard_lite_v2` layout section offsets match the spec exactly.
 - `CARD_ID_POSITIONS_V2_LITE` has `542` entries.
 - `SCALAR_POSITIONS_V2_LITE` has `7778` entries.
 - Layout position coverage is exact.
@@ -613,7 +613,7 @@ Add focused tests before or alongside implementation:
 - `TriggerOrder` rows include source card, source kind, timing, optionality, and effect category metadata.
 - DUAL Option use encodes `source_kind = Option`.
 - DUAL after Arts Digivolve encodes `source_kind = Digimon` for stack effects.
-- For `v2_full`, action legal bits match the engine action mask.
+- For `standard_full_v2`, action legal bits match the engine action mask.
 - Python `DigimonEnv.observation_space.shape` matches Rust `TENSOR_SIZE`.
 - `CardEmbeddingExtractor` consumes Rust-owned v2 positions, not legacy Python layout.
 
@@ -621,19 +621,19 @@ Add focused tests before or alongside implementation:
 
 This design intentionally stops short of a task-by-task implementation plan. The next step should be a separate implementation plan that covers:
 
-1. Add `v2_lite` layout constants and tests.
-2. Write the `v2_lite` tensor builder without switching `DigimonEnv`.
+1. Add `standard_lite_v2` layout constants and tests.
+2. Write the `standard_lite_v2` tensor builder without switching `DigimonEnv`.
 3. Export v2 constants and card/scalar positions through PyO3.
 4. Update Python feature extraction to read Rust-owned positions.
 5. Add pending-choice metadata plumbing, starting with `TriggerOrder`.
-6. Switch `DigimonEnv` to `v2_lite` once Rust and Python smoke tests pass.
-7. Profile training throughput and memory against `compact_v1`.
-8. Add `v2_full` action-id feature table generation only if profiling justifies the experiment.
+6. Switch `DigimonEnv` to `standard_lite_v2` once Rust and Python smoke tests pass.
+7. Profile training throughput and memory against `standard_compact_v1`.
+8. Add `standard_full_v2` action-id feature table generation only if profiling justifies the experiment.
 9. Update docs and remove v1-only assumptions.
 
 ## Open Risks
 
-- `v2_full` action-id features increase input size substantially. This is why `v2_lite` is the first implementation target.
+- `standard_full_v2` action-id features increase input size substantially. This is why `standard_lite_v2` is the first implementation target.
 - Some effect metadata will be unknown until raw Rust effects are annotated or DSL lowering can infer categories.
 - Breeding handle-dependent fields may be incomplete until the engine has a stable location handle for breeding permanents.
 - Full legal-action metadata is useful, but the existing SB3 policy head still emits raw action logits. The table prepares for a better extractor/head without requiring one immediately.
@@ -646,5 +646,5 @@ The design is ready to implement when reviewers agree on:
 - Unified `permanent_slots[2][15]` with breeding at slot `14`.
 - Default fair-information observation.
 - Rich `pending_choice_features[32][96]` row-aligned to prompt order.
-- `v2_full` keeps shallow `action_id_features[2168][16]` as an experimental profile, not the default implementation target.
+- `standard_full_v2` keeps shallow `action_id_features[2168][16]` as an experimental profile, not the default implementation target.
 - Structured effect observation metadata as the source for effect-category features.

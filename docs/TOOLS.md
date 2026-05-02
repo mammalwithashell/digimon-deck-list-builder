@@ -555,7 +555,7 @@ Runtime lookup from card ID strings (e.g. `"BT1-001"`) to integer indices used i
 
 **Canonical current profile:** `code/digimon-engine/src/tensor_profiles/standard/v1.rs`
 
-The Rust tensor profile registry describes which positions in the 1375-float observation tensor hold card IDs vs scalar values. It is exposed to Python by `digimon_engine.get_tensor_profile()` and consumed through `digimon_gym.tensor_profiles.get_tensor_profile()`. `CardEmbeddingExtractor` uses the RL wrapper to split the tensor for GPU-side embedding lookup.
+The Rust tensor profile registry describes which positions in the 1375-float observation tensor hold card IDs vs scalar values. The current canonical profile ID is `standard_compact_v1`; `standard_v1` and `compact_v1` are accepted only as legacy aliases. It is exposed to Python by `digimon_engine.get_tensor_profile()` and consumed through `digimon_gym.tensor_profiles.get_tensor_profile()`. `CardEmbeddingExtractor` uses the RL wrapper to split the tensor for GPU-side embedding lookup.
 
 | Name | Value | Description |
 |---|---|---|

@@ -1833,11 +1833,11 @@ use digimon_engine::tensor_profiles::{
     all_profile_ids,
     default_profile,
     profile_by_id,
-    STANDARD_V1_PROFILE_ID,
+    STANDARD_COMPACT_V1_PROFILE_ID,
 };
 
 let profile = default_profile();
-assert_eq!(profile.id, STANDARD_V1_PROFILE_ID);
+assert_eq!(profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
 assert_eq!(profile.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
 let (card_id_positions, scalar_positions) = profile.positions();
 ```
@@ -1850,7 +1850,7 @@ The PyO3 bindings expose the same default profile metadata:
 from digimon_engine import TENSOR_PROFILE_ID, get_tensor_profile
 
 profile = get_tensor_profile()
-assert profile.id == TENSOR_PROFILE_ID == "standard_v1"
+assert profile.id == TENSOR_PROFILE_ID == "standard_compact_v1"
 assert profile.tensor_size == 1375
 assert len(profile.card_id_positions) == 520
 ```

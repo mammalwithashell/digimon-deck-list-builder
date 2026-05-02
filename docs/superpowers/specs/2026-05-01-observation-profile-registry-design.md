@@ -50,11 +50,11 @@ Add an engine-owned profile identifier:
 
 ```rust
 pub enum ObservationProfileId {
-    CompactV1,
-    V2PendingAblation,
-    V2Lite,
-    V2Full,
-    OmniscientDebug,
+    StandardCompactV1,
+    StandardPendingAblationV2,
+    StandardLiteV2,
+    StandardFullV2,
+    StandardOmniscientDebugV1,
 }
 ```
 
@@ -62,20 +62,20 @@ Expose stable string IDs:
 
 | Profile | String ID | Purpose |
 |---|---|---|
-| `CompactV1` | `compact_v1` | Current 1375-float baseline |
-| `V2PendingAblation` | `v2_pending_ablation` | Compact/fair board plus rich pending-choice metadata, used to isolate pending metadata value |
-| `V2Lite` | `v2_lite` | First serious fair-information v2 profile with structured board, hand, known-zone, and pending-choice tables |
-| `V2Full` | `v2_full` | Full v2 including `action_id_features[2168][16]` |
-| `OmniscientDebug` | `omniscient_debug` | Test-only profile that may expose hidden identities |
+| `StandardCompactV1` | `standard_compact_v1` | Current 1375-float Standard baseline |
+| `StandardPendingAblationV2` | `standard_pending_ablation_v2` | Standard compact/fair board plus rich pending-choice metadata, used to isolate pending metadata value |
+| `StandardLiteV2` | `standard_lite_v2` | First serious fair-information Standard v2 profile with structured board, hand, known-zone, and pending-choice tables |
+| `StandardFullV2` | `standard_full_v2` | Standard v2 including `action_id_features[2168][16]` |
+| `StandardOmniscientDebugV1` | `standard_omniscient_debug_v1` | Test-only Standard profile that may expose hidden identities |
 
-`compact_v1` should remain the initial default until at least one v2 profile is implemented and verified.
+`standard_compact_v1` should remain the initial default until at least one v2 profile is implemented and verified. `standard_v1` and `compact_v1` are legacy aliases only; new metadata should write `standard_compact_v1`.
 
-`v2_pending_ablation` and `v2_lite` have different jobs:
+`standard_pending_ablation_v2` and `standard_lite_v2` have different jobs:
 
-- `v2_pending_ablation` answers "do rich pending-choice rows help?" while keeping the rest of the observation close to the compact baseline.
-- `v2_lite` answers "does the practical v2 observation improve training?" and is the first profile intended for serious pilot runs.
+- `standard_pending_ablation_v2` answers "do rich pending-choice rows help?" while keeping the rest of the observation close to the compact baseline.
+- `standard_lite_v2` answers "does the practical v2 observation improve training?" and is the first profile intended for serious pilot runs.
 
-Use `v2_pending_ablation` for controlled comparison runs against `compact_v1`, especially trigger-order and pending-selection scenarios. Do not treat it as the production stepping stone unless the ablation result justifies prioritizing pending metadata before the rest of the v2 board layout.
+Use `standard_pending_ablation_v2` for controlled comparison runs against `standard_compact_v1`, especially trigger-order and pending-selection scenarios. Do not treat it as the production stepping stone unless the ablation result justifies prioritizing pending metadata before the rest of the v2 board layout.
 
 ## Layout Metadata
 
@@ -123,20 +123,20 @@ The layout metadata must satisfy:
 Each profile module owns a required feature-schema version constant:
 
 ```rust
-pub const FEATURE_SCHEMA_VERSION: &str = "v2_lite.1";
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.1";
 ```
 
-The constant lives next to that profile's section table and card/scalar position builder, for example in `observation/v2_lite.rs`. It is copied into `ObservationLayout.feature_schema_version` and returned through PyO3.
+The constant lives next to that profile's section table and card/scalar position builder, for example in `observation/standard_lite_v2.rs`. It is copied into `ObservationLayout.feature_schema_version` and returned through PyO3.
 
 The version is profile-specific, not global. Initial suggested values:
 
 | Profile | Initial feature schema version |
 |---|---|
-| `compact_v1` | `compact_v1.1` |
-| `v2_pending_ablation` | `v2_pending_ablation.1` |
-| `v2_lite` | `v2_lite.1` |
-| `v2_full` | `v2_full.1` |
-| `omniscient_debug` | `omniscient_debug.1` |
+| `standard_compact_v1` | `standard_compact_v1.1` |
+| `standard_pending_ablation_v2` | `standard_pending_ablation_v2.1` |
+| `standard_lite_v2` | `standard_lite_v2.1` |
+| `standard_full_v2` | `standard_full_v2.1` |
+| `standard_omniscient_debug_v1` | `standard_omniscient_debug_v1.1` |
 
 Bump the profile's feature-schema version in the same commit when:
 
@@ -184,10 +184,10 @@ observation/
   mod.rs
   profile.rs
   layout.rs
-  compact_v1.rs
-  v2_pending_ablation.rs
-  v2_lite.rs
-  v2_full.rs
+  standard_compact_v1.rs
+  standard_pending_ablation_v2.rs
+  standard_lite_v2.rs
+  standard_full_v2.rs
 ```
 
 Core API:
@@ -207,8 +207,8 @@ pub fn build_observation_tensor(
 
 Keep `tensor.rs` as a compatibility layer if needed:
 
-- `TENSOR_SIZE` remains `compact_v1` while the default is `compact_v1`.
-- `build_tensor(...)` delegates to `build_observation_tensor(..., CompactV1)`.
+- `TENSOR_SIZE` remains `standard_compact_v1` while the default is `standard_compact_v1`.
+- `build_tensor(...)` delegates to `build_observation_tensor(..., StandardCompactV1)`.
 - New code should use the observation profile API.
 
 Once a v2 profile becomes the default, `TENSOR_SIZE` can point to the selected default profile, but profile-specific code should avoid relying on a global size.
@@ -255,9 +255,9 @@ digimon_engine.get_observation_layout(profile_id: str | None = None) -> dict
 
 ```python
 {
-    "profile_id": "v2_lite",
+    "profile_id": "standard_lite_v2",
     "tensor_version": 2,
-    "feature_schema_version": "v2_lite.1",
+    "feature_schema_version": "standard_lite_v2.1",
     "tensor_size": 8320,
     "card_id_positions": [...],
     "scalar_positions": [...],
@@ -299,7 +299,7 @@ Keep module-level `TENSOR_SIZE` temporarily as the default profile size for back
 `DigimonEnv` should accept a tensor profile:
 
 ```python
-env = DigimonEnv(tensor_profile="v2_lite")
+env = DigimonEnv(tensor_profile="standard_lite_v2")
 ```
 
 Resolution order:
@@ -318,8 +318,8 @@ On initialization:
 On runner creation:
 
 - pass `observation_profile=self.tensor_profile` to `RustHeadlessGame`
-- for Python legacy backend, only allow `compact_v1` unless a Python-side profile exists
-- fail fast if `DIGIMON_BACKEND != rust` and a non-`compact_v1` profile is requested
+- for Python legacy backend, only allow `standard_compact_v1` unless a Python-side profile exists
+- fail fast if `DIGIMON_BACKEND != rust` and a non-`standard_compact_v1` profile is requested
 
 `reset()` and `step()` should include profile metadata in `info`:
 
@@ -382,9 +382,9 @@ Every trained model artifact should record:
 
 ```json
 {
-  "observation_profile": "v2_lite",
+  "observation_profile": "standard_lite_v2",
   "tensor_version": 2,
-  "feature_schema_version": "v2_lite.1",
+  "feature_schema_version": "standard_lite_v2.1",
   "tensor_size": 8320,
   "tensor_layout_hash": "sha256:...",
   "action_space_size": 2168,
@@ -413,13 +413,13 @@ This prevents silent cross-profile evaluation bugs.
 Add a training flag:
 
 ```bash
-python -m digimon_gym.agents.pilot_training --tensor-profile v2_lite
+python -m digimon_gym.agents.pilot_training --tensor-profile standard_lite_v2
 ```
 
 Also support:
 
 ```bash
-DIGIMON_TENSOR_PROFILE=v2_lite python -m digimon_gym.agents.pilot_training
+DIGIMON_TENSOR_PROFILE=standard_lite_v2 python -m digimon_gym.agents.pilot_training
 ```
 
 Training logs should print:
@@ -438,11 +438,11 @@ This makes speed/sample-efficiency comparisons easier to interpret.
 
 Initial profile set:
 
-### `compact_v1`
+### `standard_compact_v1`
 
 Current `1375`-float tensor. Used as the baseline and fallback.
 
-### `v2_pending_ablation`
+### `standard_pending_ablation_v2`
 
 Purpose: isolate the value of rich pending-choice metadata without paying for the full v2 board/action table.
 
@@ -453,15 +453,15 @@ Suggested shape:
 - `pending_choice_features`
 - no full `action_id_features`
 
-This profile should keep the non-pending board representation intentionally close to `compact_v1`, except for fairness fixes needed by the Rust profile system. Its comparison target is:
+This profile should keep the non-pending board representation intentionally close to `standard_compact_v1`, except for fairness fixes needed by the Rust profile system. Its comparison target is:
 
 ```text
-compact_v1 vs v2_pending_ablation
+standard_compact_v1 vs standard_pending_ablation_v2
 ```
 
-Use it when you want a narrow answer about pending-choice metadata, such as whether trigger-order rows improve simultaneous-effect sequencing. Do not use it to evaluate the full v2 board design, because it intentionally omits `permanent_slots[2][15][96]`, own-hand rows, and known-zone rows from `v2_lite`.
+Use it when you want a narrow answer about pending-choice metadata, such as whether trigger-order rows improve simultaneous-effect sequencing. Do not use it to evaluate the full v2 board design, because it intentionally omits `permanent_slots[2][15][96]`, own-hand rows, and known-zone rows from `standard_lite_v2`.
 
-### `v2_lite`
+### `standard_lite_v2`
 
 Purpose: first serious v2 training profile.
 
@@ -481,19 +481,19 @@ Excludes:
 Its comparison targets are:
 
 ```text
-compact_v1 vs v2_lite
-v2_pending_ablation vs v2_lite
+standard_compact_v1 vs standard_lite_v2
+standard_pending_ablation_v2 vs standard_lite_v2
 ```
 
 The first comparison measures practical end-to-end value. The second separates "pending metadata helped" from "the structured v2 board helped."
 
-### `v2_full`
+### `standard_full_v2`
 
 Purpose: test whether full action-id metadata improves wall-clock learning enough to justify the speed cost.
 
-Includes `v2_lite` plus shallow `action_id_features[2168][16]`.
+Includes `standard_lite_v2` plus shallow `action_id_features[2168][16]`.
 
-### `omniscient_debug`
+### `standard_omniscient_debug_v1`
 
 Purpose: tests and controlled experiments only.
 
@@ -528,29 +528,29 @@ Add tests for:
 - PyO3 `get_observation_layout()` matches Rust layout metadata
 - `RustHeadlessGame(observation_profile=...)` returns tensors of the selected size
 - `DigimonEnv(tensor_profile=...)` creates the matching observation space
-- Python legacy backend rejects non-`compact_v1` profiles
+- Python legacy backend rejects non-`standard_compact_v1` profiles
 - `CardEmbeddingExtractor` uses layout-provided positions
 - model metadata validation rejects mismatched layout hashes
 
 ## Migration Plan Sketch
 
-1. Add Rust profile/layout structs with `compact_v1`.
-2. Make `tensor.rs` delegate to `compact_v1` through the profile registry.
+1. Add Rust profile/layout structs with `standard_compact_v1`.
+2. Make `tensor.rs` delegate to `standard_compact_v1` through the profile registry.
 3. Export profile list and layout metadata through PyO3.
 4. Add `observation_profile` to `RustHeadlessGame`.
 5. Add `tensor_profile` to `DigimonEnv`.
 6. Update `CardEmbeddingExtractor` to consume layout metadata from policy kwargs.
 7. Add model artifact metadata writing and loading checks.
-8. Implement `v2_pending_ablation`.
-9. Implement `v2_lite`.
-10. Implement `v2_full` only after profiling justifies it.
+8. Implement `standard_pending_ablation_v2`.
+9. Implement `standard_lite_v2`.
+10. Implement `standard_full_v2` only after profiling justifies it.
 
 ## Acceptance Criteria
 
 The design is ready to implement when reviewers agree that:
 
 - profile selection and layout metadata are one contract
-- `compact_v1` remains available as a baseline
+- `standard_compact_v1` remains available as a baseline
 - Rust owns layout metadata for Rust-built tensors
 - Python feature extraction stops depending on legacy tensor layout for Rust profiles
 - model artifacts record profile ID, tensor size, and layout hash
