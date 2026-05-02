@@ -847,6 +847,7 @@ pub enum CompiledStep {
         when: CompiledTiming,
         body: Vec<CompiledStep>,
     },
+    PlaceSelfAsDelayOption,
     Optional(Vec<CompiledStep>),
     EndAttack {
         enabled: bool,

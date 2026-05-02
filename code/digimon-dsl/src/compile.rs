@@ -1570,6 +1570,7 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                 .collect(),
         },
+        S::PlaceSelfAsDelayOption(_) => CompiledStep::PlaceSelfAsDelayOption,
         // OptionalStep is a newtype wrapping Vec<StepSpec> — access via .0
         S::Optional(o) => CompiledStep::Optional(
             o.0.iter()

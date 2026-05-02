@@ -344,6 +344,10 @@ pub fn run_step_with_runtime(
     if schedule_delayed::try_run(step, ctx, bindings, runtime) {
         return;
     }
+    if matches!(step, CompiledStep::PlaceSelfAsDelayOption) {
+        ctx.place_self_as_delay_option_permanent();
+        return;
+    }
     if combat::try_run(step, ctx) {
         return;
     }

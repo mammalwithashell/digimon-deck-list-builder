@@ -23,8 +23,8 @@ use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::enums::{
-    CardKind, EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType, PlaySource, PlayerId,
-    StackPosition,
+    CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType,
+    PlaySource, PlayerId, StackPosition,
 };
 use crate::game::Game;
 use crate::game_actions::PlayFromHandCostResult;
@@ -635,6 +635,71 @@ impl<'a> EffectContext<'a> {
             runtime,
         };
         self.game.scheduled_effects.push(entry);
+    }
+
+    pub fn place_self_as_delay_option_permanent(&mut self) {
+        let Some(source_perm) = self.source_permanent else {
+            return;
+        };
+        if !matches!(
+            self.game.card_kind_for_handle(self.source_card),
+            Some(CardKind::Option)
+        ) {
+            return;
+        }
+        let Some(source_card) =
+            self.remove_source_card_from_permanent(source_perm, self.source_card)
+        else {
+            return;
+        };
+
+        // The physical Option moves to its card owner/controller's battle area,
+        // matching normal Delay placement from hand/trash.
+        let owner = source_card.owner;
+        let placed_card = source_card.handle();
+        let trigger = DelayTrigger::EndOfYourNextTurn;
+        let mut permanent = Permanent::new(source_card, self.game.turn_count);
+        permanent.option_state = crate::permanent::OptionState::Delayed {
+            owner,
+            trash_on_turn: self.game.compute_delay_trash_turn(owner, trigger),
+            trigger,
+            placed_on_turn: self.game.turn_count,
+        };
+        self.game.player_mut(owner).battle_area.push(permanent);
+
+        let handle = PermanentHandle {
+            player: owner,
+            index: (self.game.player(owner).battle_area.len() - 1) as u8,
+        };
+        self.game.enqueue_triggered(
+            EffectTiming::OnOptionPlaced,
+            crate::selection::TriggerSource::OptionPlaced {
+                player: owner,
+                permanent: handle,
+                card: placed_card,
+            },
+        );
+        self.game.drain_effect_queue();
+    }
+
+    fn remove_source_card_from_permanent(
+        &mut self,
+        source_perm: PermanentHandle,
+        source_card: CardHandle,
+    ) -> Option<crate::card_source::CardSource> {
+        let permanent = self
+            .game
+            .player_mut(source_perm.player)
+            .battle_area
+            .get_mut(source_perm.index as usize)?;
+        let pos = permanent
+            .card_sources
+            .iter()
+            .position(|card| card.handle() == source_card)?;
+        if pos + 1 == permanent.card_sources.len() {
+            return None;
+        }
+        Some(permanent.card_sources.remove(pos))
     }
 
     /// Decline the pay cost for a queued triggered effect that parked during

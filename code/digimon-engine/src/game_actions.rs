@@ -1473,7 +1473,7 @@ impl Game {
     ///
     /// Multi-player extension is deferred — the plan locks 2-player
     /// semantics for v1.
-    fn compute_delay_trash_turn(
+    pub(crate) fn compute_delay_trash_turn(
         &self,
         owner: PlayerId,
         trigger: crate::enums::DelayTrigger,

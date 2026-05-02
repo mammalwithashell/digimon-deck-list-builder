@@ -8,12 +8,17 @@
 
 use digimon_dsl::compiled::{
     CompiledCard, CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledPredicate,
-    CompiledScope, CompiledTiming,
+    CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::card_source::CardHandle;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::dsl_cards::bindings::Bindings;
+use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::dsl_cards::DslCardEffect;
 use digimon_engine::effect::CardEffect;
-use digimon_engine::enums::{DelayTrigger, EffectTiming};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectSourceKind, EffectTiming};
+use digimon_engine::permanent::OptionState;
 use std::sync::Arc;
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
@@ -175,4 +180,80 @@ fn delay_event_trigger_lowers_to_on_event_delay() {
         effects[0].condition.is_some(),
         "Delay active_when should lower to a runtime condition"
     );
+}
+
+#[test]
+fn place_self_as_delay_option_step_parses_and_compiles() {
+    let yaml = r#"
+card: TEST-PLACE
+name: "Inherited Security Placement"
+kind: option
+color: [red]
+cost: 0
+traits: []
+effects:
+  - scope: inherited
+    when: on_security
+    process:
+      - place_self_as_delay_option: {}
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    assert!(matches!(
+        triggered.process.as_slice(),
+        [CompiledStep::PlaceSelfAsDelayOption]
+    ));
+}
+
+#[test]
+fn place_self_as_delay_option_step_lowers_to_placement_helper() {
+    let mut host_card = make_test_card("HOST", "HOST");
+    host_card.colors = vec![CardColor::Red];
+    let mut option = make_test_card("P-035", "P-035");
+    option.card_kind = CardKind::Option;
+    option.level = None;
+    option.dp = None;
+    option.colors = vec![CardColor::Red];
+
+    let mut runner = DebugRunner::builder()
+        .add_card(host_card)
+        .add_card(option)
+        .start();
+    let host = runner.place_on_field(0, "HOST", Some(0));
+    let source = runner.push_source(host, "P-035");
+
+    let step = CompiledStep::PlaceSelfAsDelayOption;
+    let mut bindings = Bindings::new();
+    {
+        let mut ctx = EffectContext::new_with_source_kind(
+            &mut runner.game,
+            source,
+            Some(host),
+            EffectSourceKind::Option,
+            0,
+        );
+        run_steps(&[step], &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.player(0).battle_area[host.index as usize]
+            .card_sources
+            .len(),
+        1
+    );
+    let placed = runner
+        .game
+        .player(0)
+        .battle_area
+        .last()
+        .expect("placed option permanent");
+    assert!(matches!(
+        placed.option_state,
+        OptionState::Delayed { owner: 0, .. }
+    ));
+    assert_eq!(placed.top_card().card_id(&runner.game.card_data), "P-035");
 }
