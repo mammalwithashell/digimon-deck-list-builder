@@ -351,14 +351,14 @@ Resolved by Group 3:
 - **Suggested change:** (1) Add `StartOfYourNextTurn` variant to `DelayTrigger` in `src/enums.rs`. (2) Add a `"start_of_your_turn"` token (or `"start_of_next_turn"`) in the DSL timing map (`timing_map.rs`) that lowers to `DelayTrigger::StartOfYourNextTurn`. (3) Wire `StartOfYourNextTurn` firing into the game's start-of-turn hook (`game_phases.rs::begin_turn`): after incrementing `turn_number`, scan all permanents for `Delay` state with `trigger == StartOfYourNextTurn` and fire those. This is symmetric to the end-of-turn Delay drain already implemented.
 - **Workaround:** `kind: raw_rust` no-op placeholder (`lm_027_delay_start_of_turn_noop`) preserving the clause-index slot. All Delay behavioral tests are `#[ignore]`'d.
 
-### `EffectContext::add_security_option_to_hand` Missing  [G-ADD-OPTION-SELF-TO-HAND]
+### `EffectContext::add_pending_security_to_hand`  [G-ADD-OPTION-SELF-TO-HAND]
 - **Discovered in:** Medusamon Batch 12, LM-027 Red Scramble DSL implementation (2026-04-28). Also previously surfaced by ST22-08 Offensive Plug-In V (Batch 11) and EX6-072 pattern.
 - **Scope:** Rust engine + DSL (hybrid).
 - **Card(s):** LM-027 Red Scramble — "[Security] … Then, add this card to the hand." Also ST22-08 Offensive Plug-In V and any option card whose Security clause ends with returning itself to hand.
 - **Effect text:** "Then, add this card to the hand." — the currently-resolving security option card moves to the controller's hand.
-- **What's missing:** DCGO implements this via `CardEffectCommons.AddThisCardToHand(card, activateClass)` which moves the option card from security-resolution staging to the controller's hand. In the Rust engine, no analogous `EffectContext` method exists. During Security resolution, the option card lives in `Game.pending_security` (after being popped from the security stack but before being trashed). `EffectContext` has no way to reference `pending_security` and move it to `players[controller].hand`.
-- **Suggested change:** Add `pub fn add_pending_security_to_hand(&mut self)` to `EffectContext`. Implementation: if `self.game.pending_security.is_some()`, take it and push to `self.game.players[self.player].hand`. Add a DSL step verb `add_this_option_to_hand: {}` that lowers to this method call.
-- **Workaround:** `raw_rust: { fn: lm_027_add_self_to_hand }` — registered as a step in `src/cards/raw_rust/mod.rs` but implemented as a no-op until the engine method exists.
+- **Status:** Resolved for the narrow pending-security disposition slice on 2026-05-01. `EffectContext::add_pending_security_to_hand()` consumes `Game.pending_security` and pushes the revealed card to the defender/controller hand so the security dispose phase cannot trash it. DSL `add_this_option_to_hand: {}` lowers to the method. Legacy raw-rust shims now delegate to the method; new scripts should use the native step.
+- **Coverage:** `debug_runner_dsl::security_dsl_adds_currently_resolving_option_to_hand`; `lm_027_security_adds_card_to_hand_after_play`.
+- **Remaining related work:** ST22-08, P-206, EX7-074, and sibling Options may still be blocked by other gaps such as DP/play-cost predicates, Plug-In/Link, Delay timing, or broader Option play-flow disposition.
 
 <!-- Entry template:
 ### {Gap Title}

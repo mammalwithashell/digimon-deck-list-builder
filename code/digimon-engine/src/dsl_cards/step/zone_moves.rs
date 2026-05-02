@@ -69,6 +69,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
 
+        CompiledStep::AddThisOptionToHand => {
+            ctx.add_pending_security_to_hand();
+            true
+        }
+
         CompiledStep::TrashFromReveal { of, card } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;

@@ -542,6 +542,7 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    AddThisOptionToHand,
     TrashFromHandByIndex {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
