@@ -1,12 +1,18 @@
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::StackPosition;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SourceSelectionRef;
 
+fn ace_card(card_id: &str, card_name: &str) -> digimon_engine::CardData {
+    let mut ace = make_test_card(card_id, card_name);
+    ace.ace_overflow = Some(-4);
+    ace
+}
+
 #[test]
 fn ace_overflow_loses_memory_when_top_card_leaves_battle_area() {
-    let mut ace = make_test_card("ACE-RUNTIME", "Ace Runtime");
-    ace.ace_overflow = Some(-4);
+    let ace = ace_card("ACE-RUNTIME", "Ace Runtime");
 
     let mut runner = DebugRunner::builder().add_card(ace).memory(3).start();
 
@@ -18,8 +24,7 @@ fn ace_overflow_loses_memory_when_top_card_leaves_battle_area() {
 
 #[test]
 fn ace_overflow_loses_memory_when_source_leaves_under_stack() {
-    let mut ace = make_test_card("ACE-SOURCE", "Ace Source");
-    ace.ace_overflow = Some(-4);
+    let ace = ace_card("ACE-SOURCE", "Ace Source");
     let top = make_test_card("TOP", "Top");
 
     let mut runner = DebugRunner::builder()
@@ -53,5 +58,71 @@ fn ace_overflow_loses_memory_when_source_leaves_under_stack() {
     };
 
     assert!(runner.game.trash_source_ref(source_ref));
+    assert_eq!(runner.game.memory, -1);
+}
+
+#[test]
+fn ace_overflow_loses_memory_when_top_card_returns_to_hand() {
+    let mut runner = DebugRunner::builder()
+        .add_card(ace_card("ACE-HAND", "Ace Hand"))
+        .memory(3)
+        .start();
+
+    let handle = runner.place_on_field(0, "ACE-HAND", Some(0));
+
+    assert!(
+        runner.game.return_to_hand(handle).is_some(),
+        "ACE top card should return to hand"
+    );
+    assert_eq!(runner.game.memory, -1);
+}
+
+#[test]
+fn ace_overflow_loses_memory_when_top_card_returns_to_deck() {
+    let mut runner = DebugRunner::builder()
+        .add_card(ace_card("ACE-DECK", "Ace Deck"))
+        .memory(3)
+        .start();
+
+    let handle = runner.place_on_field(0, "ACE-DECK", Some(0));
+
+    assert!(
+        runner.game.return_to_deck(handle, StackPosition::Bottom),
+        "ACE top card should return to deck"
+    );
+    assert_eq!(runner.game.memory, -1);
+}
+
+#[test]
+fn ace_overflow_loses_memory_when_source_leaves_via_return_to_hand_stack_cleanup() {
+    let mut runner = DebugRunner::builder()
+        .add_card(ace_card("ACE-SOURCE-HAND", "Ace Source Hand"))
+        .add_card(make_test_card("TOP-HAND", "Top Hand"))
+        .memory(3)
+        .start();
+
+    let stack = runner.place_stack(0, &["ACE-SOURCE-HAND", "TOP-HAND"]);
+
+    assert!(
+        runner.game.return_to_hand(stack).is_some(),
+        "top card should return to hand and sources should leave the stack"
+    );
+    assert_eq!(runner.game.memory, -1);
+}
+
+#[test]
+fn ace_overflow_loses_memory_when_source_leaves_via_return_to_deck_stack_cleanup() {
+    let mut runner = DebugRunner::builder()
+        .add_card(ace_card("ACE-SOURCE-DECK", "Ace Source Deck"))
+        .add_card(make_test_card("TOP-DECK", "Top Deck"))
+        .memory(3)
+        .start();
+
+    let stack = runner.place_stack(0, &["ACE-SOURCE-DECK", "TOP-DECK"]);
+
+    assert!(
+        runner.game.return_to_deck(stack, StackPosition::Bottom),
+        "top card should return to deck and sources should leave the stack"
+    );
     assert_eq!(runner.game.memory, -1);
 }

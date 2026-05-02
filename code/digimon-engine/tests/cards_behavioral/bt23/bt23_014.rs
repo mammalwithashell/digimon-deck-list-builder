@@ -401,12 +401,10 @@ fn bt23_014_when_attacking_with_target_reduces_opp_field() {
     runner.attack_player(gallantmon, 1, false);
     runner.auto_resolve();
 
-    // After combat + auto-resolve, expect opp count to have decreased due to deletion
-    // OR combat resolution. Either way, the test validates the WA path fires.
     let opp_count_after = runner.game.players[1].battle_area.len();
     assert!(
-        opp_count_after <= opp_count_before,
-        "After [When Attacking] with eligible target, opp count should not increase; \
+        opp_count_after < opp_count_before,
+        "After [When Attacking] delete fires and auto-resolves, opp battle area should shrink; \
          before={}, after={}",
         opp_count_before,
         opp_count_after
