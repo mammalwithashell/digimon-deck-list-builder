@@ -99,7 +99,7 @@ Last updated: 2026-04-30
 - **Effect text:** "Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn."
 - **Resolution:** `src/cards/tokens/familiar.rs` now implements the mandatory `OnDeletion` effect using the opponent-permanent selection path and applies -3000 DP until end of turn. Token card-data construction is also covered by an all-registered-token invariant so future token definitions must synthesize complete `CardData`.
 - **Covered by:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- token`, `cargo test --manifest-path code/digimon-engine/Cargo.toml token_registry`, and the full `cargo test --manifest-path code/digimon-engine/Cargo.toml`.
-- **Remaining limits:** This closes the Familiar token deletion text only. Overclock sacrifice filtering and event-gated Delay windows remain separate Puppet blockers.
+- **Remaining limits:** This closes the Familiar token deletion text only. Event-gated Delay windows remain a separate Puppet blocker.
 
 ### Event-Gated Delay Activation Windows [G-DELAY-EVENT-GATED]
 - **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)
