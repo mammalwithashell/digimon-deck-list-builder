@@ -1,0 +1,80 @@
+card: BT24-018
+name: Styracomon
+kind: digimon
+level: 7
+color: [red]
+cost: 14
+dp: 14000
+traits: [Dragonkin, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6 }
+    cost: 4
+
+effects:
+  # Clause (a) — Progress keyword
+  - kind: grant_keyword
+    keyword: Progress
+
+  # Clause (b) — Piercing keyword
+  - kind: grant_keyword
+    keyword: Piercing
+
+  # Clause (c) — Blocker keyword
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # Clause (d) — Armor Purge keyword
+  - kind: grant_keyword
+    keyword: ArmorPurge
+
+  # Clause (e) — [When Digivolving] may trash any 1 opp security; then may unsuspend
+  # "You may trash any 1 of your opponent's security cards.
+  #  Then, this Digimon may unsuspend."
+  # Gap: DSL only has trash_top_security; arbitrary-index security trash requires
+  # raw_rust step (G-TRASH-SELECTED-SECURITY).
+  - when: when_digivolving
+    optional: true
+    process:
+      - select_security:
+          of: opponent
+          bind_as: sec_target
+          filter: {}
+          prompt: "Trash 1 of your opponent's security cards"
+      - raw_rust: { fn: bt24_018_trash_selected_security }
+      - optional:
+          - unsuspend: { target: self }
+
+  # Clause (f) — [All Turns][OPT] When opp security removed, may delete 1 opp Digimon
+  - when: on_opponent_security_removed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: tgt }
+
+  # Clause (g) — [All Turns][OPT] When own Reptile/Dragonkin would leave, pay cost
+  # "When any of your [Reptile] or [Dragonkin] trait Digimon would leave the
+  #  battle area, by deleting 1 of your opponent's lowest DP Digimon, they don't leave."
+  #
+  # Gaps:
+  #   G-OPT-TRIGGERED: OPT on would-replacement timings not yet supported declaratively.
+  #   G-EVENT-TARGET-OWNER: no predicate to filter leaving permanent by owner.
+  #
+  # Both gaps require the process to be handled entirely via raw_rust.
+  # The bt24_018_would_leave_replacement fn is responsible for:
+  #   - Checking subject belongs to THIS card's controller (G-EVENT-TARGET-OWNER)
+  #   - Checking subject has Reptile or Dragonkin trait
+  #   - OPT hash-check + lock (G-OPT-TRIGGERED)
+  #   - Verifying opponent has >= 1 Digimon (cost payable)
+  #   - Installing optional replacement accept/decline dialog
+  #   - On accept: selecting+deleting opponent's lowest DP Digimon
+  #   - Setting game.dsl_replacement_outcome = Cancelled so the subject stays
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    process:
+      - raw_rust: { fn: bt24_018_would_leave_replacement }

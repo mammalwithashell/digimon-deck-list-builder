@@ -1,0 +1,70 @@
+card: EX11-054
+name: Owen Dreadnought
+kind: tamer
+color: [red]
+cost: 4
+traits: [LIBERATOR]
+
+# Clause 1 — [Start of Your Turn] If your memory is 2 or less, set it to 3.
+#
+# Identical pattern to BT22-084 Nokia Shiramine and BT18-087 Owen Dreadnought (BT18).
+# DSL: when: start_of_your_turn, condition: memory_lte: 2, process: set_memory: 3.
+#
+# Clause 2 — [All Turns] When your Digimon are played or digivolve, if any of them
+# have the [Reptile] or [Dragonkin] trait, by suspending this Tamer, <Draw 1>.
+# After, 1 of your Digimon with <Progress> gets +3000 DP for the turn.
+#
+# HYBRID GAP — this clause is a no-op raw_rust placeholder pending gap closure:
+#
+# Engine gap: `OnEnterFieldAnyone` and `OnDigivolve` observers fire with
+#   `TriggerContext { target_permanent: Some(owen_handle) }`, not the handle of the
+#   card that just entered/digivolved. The engine's `trigger_context_for_source`
+#   (effect_queue.rs) iterates permanents and sets `target_permanent = source_permanent`
+#   (i.e. the observer's own permanent), so observer cards have no way to inspect the
+#   traits of the entering/digivolving permanent. Additionally, `GameEvent::Digivolve`
+#   is "defined for future wiring — not emitted yet" (events.rs), blocking even
+#   event-log approaches for the digivolve half of the trigger.
+#
+# DSL gap: no `entering_permanent_trait_has` / `digivolving_permanent_trait_has`
+#   BoolPredicate leaf exists. Once the engine threads `entering_permanent:
+#   Option<PermanentHandle>` through TriggerContext, a matching DSL predicate would
+#   let this clause be expressed natively without raw_rust.
+#
+# G-DECLARATIVE-KEYWORD (Progress): The +3000 DP sub-step targets a Digimon with
+#   <Progress>. Progress is granted to Medusamon (EX11-012) via `kind: grant_keyword`,
+#   but the G-DECLARATIVE-KEYWORD gap means declarative clauses are never fired at
+#   runtime, so no Progress modifier is installed. Even if the observer mechanism
+#   worked, `select_own_permanent { has_keyword: Progress }` would find zero
+#   candidates. Both gaps must close before this clause is implementable.
+#
+# Placeholder registration: `ex11_054_all_turns_noop` (declarative, returns vec![]).
+# The function is registered in `code/digimon-engine/src/cards/raw_rust/mod.rs`.
+# See `qa/dsl-vocab-gaps.md` entry for `entering_permanent_trait_has`.
+#
+# Clause 3 — [Security] Play this card without paying the cost.
+# DSL: when: on_security, process: play_from_security: {}
+# Same pattern as BT18-087, BT22-084, BT21-015.
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] Memory gate ────────────────────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory ≤ 2, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [All Turns] Reptile/Dragonkin observer — HYBRID GAP ─────────
+  #
+  # No-op placeholder. See gap commentary above and qa/dsl-vocab-gaps.md.
+  # Triggers: on_enter_field_anyone (play half) + on_digivolve (digivolve half).
+  # Both timings map to real engine timings; the raw_rust fn is a no-op until
+  # the TriggerContext gap is resolved.
+  - kind: raw_rust
+    fn: ex11_054_all_turns_noop
+    triggers: [on_enter_field_anyone, on_digivolve]
+
+  # ─── Clause 3: [Security] Play without paying the cost ─────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,34 @@
+card: BT23-005
+name: Elizamon
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 1000
+traits: [Reptile, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 0
+
+# Clause 1 — [Your Turn] cost reduction on self-digivolve into Reptile/Dragonkin.
+# BLOCKED: DSL lacks a `when_this_digivolves_into` + `target_trait_has` trigger.
+# `CostReductionBody` only supports `when_playing_this` (play from hand) and
+# `when_any_ally_played` (observer on ally entering field). There is no knob for
+# "when THIS permanent is the source being digivolved FROM and the target card
+# has trait X". The engine's `scan_before_pay_cost_reduction` receives no
+# information about the digivolution target card, so the condition closure cannot
+# filter by the target's traits. Logged to qa/dsl-vocab-gaps.md.
+#
+# Clause 2 — [Inherited] [Your Turn] This Digimon gets +2000 DP.
+# The DSL self-aura (empty target predicate) with scope: inherited sets the
+# static `dp_modifier` field on the Effect, which `source_dp_contribution` reads.
+# `active_when: { your_turn: true }` gates it to the controller's turn.
+
+effects:
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

@@ -1,0 +1,42 @@
+card: BT22-084
+name: Nokia Shiramine
+kind: tamer
+color: [red, blue]
+cost: 5
+effects:
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: [start_of_your_main_phase, on_play]
+    optional: true
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: digimon }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            any_of:
+              - name_contains: "Agumon"
+              - name_contains: "Gabumon"
+          prompt: "Play for free"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      any_of:
+        - name_contains: "Greymon"
+        - name_contains: "Garurumon"
+        - name_contains: "Omnimon"
+    dp_modifier: 1000
+
+  - when: on_security
+    process:
+      - play_from_security: {}

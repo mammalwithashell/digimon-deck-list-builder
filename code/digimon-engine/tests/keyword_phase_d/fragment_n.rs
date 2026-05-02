@@ -1,0 +1,391 @@
+//! Phase D Task 4 — `Keyword::Fragment(N)` auto-install behavioral tests.
+//!
+//! A card declaring ONLY `keywords: vec![Keyword::Fragment(N)]` (no hand-rolled
+//! `CardEffect`) must, on `WhenWouldBeDeleted`:
+//!   1. If `card_sources.len() >= N + 1`: park an outer optional accept
+//!      dialog ("you may"). On accept, park a multi-pick selection over
+//!      the carrier's digivolution sources; the controller picks N to trash;
+//!      the original deletion is cancelled (carrier survives with the
+//!      remaining sources). On decline, original deletion proceeds.
+//!   2. If `card_sources.len() < N + 1`: gate fails — no selection is parked,
+//!      original deletion proceeds normally.
+//!   3. The auto-install must self-scope: when a NEIGHBORING permanent is
+//!      deleted, the Fragment carrier's replacement must NOT fire.
+//!
+//! Mirrors DCGO `Fragment.cs:23-77`. The auto-install uses `Effect::optional()`
+//! with an outer accept dialog because Fragment is "by [Effect]" per
+//! RULES_CONTEXT 16-36 ("Processing: Optional") and DCGO
+//! `Fragment.cs:37` calls `SetUpActivateClass(..., isOptional=true, ...)`.
+//! `Fragment.cs:38`'s `canNoSelect: () => false` governs only the inner
+//! source-pick UI once the player has accepted the outer dialog.
+
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardSource;
+use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::enums::{CardColor, CardKind, Keyword};
+
+use super::helpers::{assert_outer_accept_dialog_shape, drain_outer_accept_dialog};
+
+const FRAGMENT_N: u8 = 2;
+
+fn fragment_card(id: &str) -> CardData {
+    CardData {
+        card_id: id.to_string(),
+        card_name: id.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(5),
+        dp: Some(5000),
+        play_cost: 5,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        // Printed-only Fragment(N): the auto-install MUST be the sole
+        // source of behavior. No hand-rolled CardEffect is registered.
+        keywords: vec![Keyword::Fragment(FRAGMENT_N)],
+        dual: None,
+        effect_class_name: id.replace('-', "_"),
+        index: 0,
+        norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
+    }
+}
+
+fn plain_digimon(id: &str) -> CardData {
+    CardData {
+        card_id: id.to_string(),
+        card_name: id.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(3),
+        dp: Some(3000),
+        play_cost: 3,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        dual: None,
+        effect_class_name: id.replace('-', "_"),
+        index: 0,
+        norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
+    }
+}
+
+/// Append `card_id` on top of a field permanent's digivolution stack so that
+/// it becomes the new visible top (since `top_card() = card_sources.last()`).
+fn push_source_card(r: &mut DebugRunner, player: u8, field_index: usize, card_id: &str) {
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("push_source_card: unknown card_id {}", card_id));
+    let card_index = r.game.next_card_index();
+    let card = CardSource::new(data_idx, player, card_index);
+    r.game.players[player as usize].battle_area[field_index]
+        .card_sources
+        .push(card);
+}
+
+// ─── Test 1: happy path — picks N, cancels deletion, carrier survives ───────
+
+#[test]
+fn fragment_2_picks_two_sources_and_cancels_deletion() {
+    let mut r = DebugRunner::builder()
+        .add_card(fragment_card("FRAG"))
+        .add_card(plain_digimon("SRC-A"))
+        .add_card(plain_digimon("SRC-B"))
+        .add_card(plain_digimon("SRC-C"))
+        .start();
+
+    // Build the carrier on the field as the top, with 3 sources beneath.
+    // Stack: [SRC-A, SRC-B, SRC-C, FRAG]  (index 0=bottom, last=top)
+    let frag = r.place_on_field(0, "SRC-A", None);
+    push_source_card(&mut r, 0, frag.index as usize, "SRC-B");
+    push_source_card(&mut r, 0, frag.index as usize, "SRC-C");
+    push_source_card(&mut r, 0, frag.index as usize, "FRAG");
+    {
+        let perm = &r.game.players[0].battle_area[frag.index as usize];
+        assert_eq!(perm.card_sources.len(), 4, "preconditions: 4-card stack");
+        assert_eq!(
+            perm.top_card().card_id(&r.game.card_data),
+            "FRAG",
+            "FRAG is the visible top"
+        );
+    }
+
+    let trash_before = r.game.players[0].trash.len();
+    r.game.delete_permanent_with_effects(frag);
+
+    // Optional Fragment auto-install: outer accept dialog comes first.
+    assert_outer_accept_dialog_shape(&r);
+    assert_eq!(
+        r.game.pending_selection.as_ref().unwrap().selecting_player,
+        0,
+        "carrier owner selects"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
+
+    // Multi-pick chain: pick 2 sources. Each pick uses the first available
+    // valid action id.
+    for _ in 0..FRAGMENT_N {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("inner multi-pick step must be installed");
+        let action = pending.valid_action_ids[0];
+        let player = pending.selecting_player;
+        r.game.resolve_selection(player, action).expect("pick");
+    }
+
+    // Carrier survived (deletion cancelled).
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "FRAG must survive when Fragment cancels deletion"
+    );
+    let surviving = &r.game.players[0].battle_area[0];
+    assert_eq!(
+        surviving.top_card().card_id(&r.game.card_data),
+        "FRAG",
+        "carrier still has FRAG as the top card"
+    );
+    // Two sources were trashed; 2 cards remain in the stack: 1 source + top.
+    assert_eq!(
+        surviving.card_sources.len(),
+        4 - FRAGMENT_N as usize,
+        "2 sources trashed → 2-card stack remaining (1 source + top)"
+    );
+    // Trash gained N cards.
+    assert_eq!(
+        r.game.players[0].trash.len(),
+        trash_before + FRAGMENT_N as usize,
+        "trash gained exactly N cards"
+    );
+}
+
+// ─── Test 2: gate fail — fewer than N sources → no park → normal deletion ───
+
+#[test]
+fn fragment_2_with_only_one_source_does_not_park() {
+    // Stack: [ONLY-SRC, FRAG] — only 1 source under the top, but N=2 required.
+    let mut r = DebugRunner::builder()
+        .add_card(fragment_card("FRAG"))
+        .add_card(plain_digimon("ONLY-SRC"))
+        .start();
+
+    let frag = r.place_on_field(0, "ONLY-SRC", None);
+    push_source_card(&mut r, 0, frag.index as usize, "FRAG");
+    {
+        let perm = &r.game.players[0].battle_area[frag.index as usize];
+        assert_eq!(perm.card_sources.len(), 2, "preconditions: 1-source stack");
+    }
+
+    r.game.delete_permanent_with_effects(frag);
+
+    // Gate fails: card_sources.len() (= 2) < N + 1 (= 3). The auto-install
+    // body must early-return without parking, and the original deletion must
+    // proceed normally.
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no selection should be installed when source count is below N+1 — \
+         got {:?}",
+        r.game.pending_selection.as_ref().map(|s| &s.kind),
+    );
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        0,
+        "FRAG must be deleted normally when Fragment gate fails"
+    );
+}
+
+// ─── Test 3: self-scope — closure no-ops on neighbor's deletion ─────────────
+
+/// When a NEIGHBORING permanent is deleted, the Fragment carrier's auto-install
+/// must NOT mutate any state — the carrier and its sources stay intact and
+/// the neighbor is deleted normally.
+///
+/// **Substrate note**: Phase C's dispatcher pushes a candidate from every
+/// battle-area permanent's effects whose timing matches, so the Fragment
+/// carrier's optional outer-accept dialog MAY be installed when a neighbor
+/// is being deleted. We drain any installed dialog by accepting; the body's
+/// `if Some(subject) != me_perm` guard then returns early without setting
+/// any outcome or installing a nested source-pick, so the original neighbor
+/// deletion proceeds. (A future dispatcher-level self-scope filter would
+/// suppress the dialog entirely; tracked separately.)
+#[test]
+fn fragment_does_not_fire_on_neighbor_deletion() {
+    let mut r = DebugRunner::builder()
+        .add_card(fragment_card("FRAG"))
+        .add_card(plain_digimon("SRC-A"))
+        .add_card(plain_digimon("SRC-B"))
+        .add_card(plain_digimon("SRC-C"))
+        .add_card(plain_digimon("NEIGHBOR"))
+        .start();
+
+    // FRAG carrier with 3 sources beneath.
+    let frag = r.place_on_field(0, "SRC-A", None);
+    push_source_card(&mut r, 0, frag.index as usize, "SRC-B");
+    push_source_card(&mut r, 0, frag.index as usize, "SRC-C");
+    push_source_card(&mut r, 0, frag.index as usize, "FRAG");
+
+    // Plain neighbor (no Fragment, no other keywords).
+    let neighbor = r.place_on_field(0, "NEIGHBOR", None);
+
+    let battle_area_before = r.game.players[0].battle_area.len();
+    assert_eq!(battle_area_before, 2);
+
+    // Snapshot Fragment carrier's stack composition for later comparison.
+    let frag_stack_before: Vec<String> = r.game.players[0].battle_area[frag.index as usize]
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    let trash_size_before = r.game.players[0].trash.len();
+
+    // Delete the neighbor.
+    r.game.delete_permanent_with_effects(neighbor);
+
+    // Fragment is OPTIONAL → the candidate-walk MAY install an outer accept
+    // dialog for the carrier even when the subject is the neighbor. Drain it
+    // by accepting; the body's self-scope guard then no-ops and the original
+    // neighbor deletion proceeds. (`drain_outer_accept_dialog` asserts the
+    // dialog's valid_action_ids are exactly {REPLACEMENT_ACCEPT, PASS}.)
+    drain_outer_accept_dialog(&mut r, REPLACEMENT_ACCEPT);
+
+    // After draining: no further selection should be pending. The body's
+    // self-scope guard MUST have prevented any nested source-pick selection.
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Fragment closure must self-scope-no-op for a neighbor's deletion (no \
+         nested source-pick selection); got {:?}",
+        r.game.pending_selection.as_ref().map(|s| &s.kind),
+    );
+
+    // Behavioral outcome: neighbor was deleted normally; FRAG is intact.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "neighbor was deleted → only FRAG remains"
+    );
+    let frag_perm = &r.game.players[0].battle_area[0];
+    assert_eq!(
+        frag_perm.top_card().card_id(&r.game.card_data),
+        "FRAG",
+        "FRAG carrier untouched by neighbor's deletion"
+    );
+    let frag_stack_after: Vec<String> = frag_perm
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        frag_stack_after, frag_stack_before,
+        "FRAG's stack must be unchanged"
+    );
+    // No FRAG-stack cards moved to trash (only the neighbor itself).
+    assert_eq!(
+        r.game.players[0].trash.len(),
+        trash_size_before + 1,
+        "exactly 1 card (the neighbor) was added to trash"
+    );
+    assert_eq!(
+        r.game.players[0]
+            .trash
+            .last()
+            .unwrap()
+            .card_id(&r.game.card_data),
+        "NEIGHBOR",
+        "the trashed card is the neighbor"
+    );
+}
+
+// ─── Test 4: outer-accept decline → no inner pick → plain deletion ──────────
+
+/// When the carrier's controller DECLINES the outer accept dialog (chooses
+/// PASS instead of REPLACEMENT_ACCEPT), Fragment must NOT install the inner
+/// source-pick selection. The original deletion proceeds unchanged: the
+/// carrier is trashed and the entire stack lands in the trash exactly like a
+/// plain deletion. This proves the printed "you may" semantics — declining
+/// skips the replacement entirely.
+#[test]
+fn fragment_2_declining_outer_accept_proceeds_with_plain_deletion() {
+    let mut r = DebugRunner::builder()
+        .add_card(fragment_card("FRAG"))
+        .add_card(plain_digimon("SRC-A"))
+        .add_card(plain_digimon("SRC-B"))
+        .add_card(plain_digimon("SRC-C"))
+        .start();
+
+    // Stack: [SRC-A, SRC-B, SRC-C, FRAG] — gate passes (4 cards ≥ N+1=3).
+    let frag = r.place_on_field(0, "SRC-A", None);
+    push_source_card(&mut r, 0, frag.index as usize, "SRC-B");
+    push_source_card(&mut r, 0, frag.index as usize, "SRC-C");
+    push_source_card(&mut r, 0, frag.index as usize, "FRAG");
+
+    let stack_before: Vec<String> = r.game.players[0].battle_area[frag.index as usize]
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    let trash_before = r.game.players[0].trash.len();
+
+    r.game.delete_permanent_with_effects(frag);
+
+    // Outer accept dialog installs.
+    assert_outer_accept_dialog_shape(&r);
+
+    // DECLINE the dialog (PASS is admitted implicitly via is_optional).
+    r.game.resolve_selection(0, PASS).expect("decline");
+
+    // No inner source-pick selection should be installed.
+    assert!(
+        r.game.pending_selection.is_none(),
+        "declining the outer accept dialog must NOT install an inner source-\
+         pick selection; got {:?}",
+        r.game.pending_selection.as_ref().map(|s| &s.kind),
+    );
+
+    // Original deletion proceeded: carrier is gone from the battle area.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        0,
+        "FRAG carrier must be deleted normally when outer accept is declined"
+    );
+
+    // Plain deletion sends the entire stack to the trash.
+    assert_eq!(
+        r.game.players[0].trash.len(),
+        trash_before + stack_before.len(),
+        "all 4 cards from the stack must land in trash on plain deletion; \
+         expected {}, got {}",
+        trash_before + stack_before.len(),
+        r.game.players[0].trash.len(),
+    );
+    let trashed_ids: std::collections::HashSet<String> = r.game.players[0]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    for id in &stack_before {
+        assert!(
+            trashed_ids.contains(id),
+            "plain deletion must trash {} (entire stack); trash = {:?}",
+            id,
+            trashed_ids,
+        );
+    }
+}

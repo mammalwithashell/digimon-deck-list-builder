@@ -9,27 +9,27 @@ It focuses on stable contracts and implementation shape, not static snapshot met
 
 The repository contains four major surfaces:
 
-1. Headless Digimon game engine (`digimon_gym/engine/`)
-2. RL environment and pilot training (`digimon_gym/digimon_gym.py`, `digimon_gym/agents/`)
-3. FastAPI backend (`digimon_gym/api.py`, `digimon_gym/routers/`, `digimon_gym/db/routers/`)
-4. React frontend (`frontend/src/`)
+1. Headless Digimon game engine — Rust target (`code/digimon-engine/`) + sunset Python reference (`code/engine_py_legacy/engine/`)
+2. RL environment and pilot training (`code/digimon_gym/digimon_gym.py`, `code/digimon_gym/agents/`)
+3. FastAPI backend (`code/server/api.py`, `code/server/routers/`, `code/server/db/routers/`)
+4. React frontend (`code/frontend/src/`)
 
-It also includes an admin AI workflow for issue triage, AI task dispatch, autofix apply, and promotion auditing (`digimon_gym/ai/`, `/admin/*` routes).
+It also includes an admin AI workflow for issue triage, AI task dispatch, autofix apply, and promotion auditing (`code/server/ai/`, `/admin/*` routes).
 
 ## Key Repository Paths
 
-- `digimon_gym/engine/game.py`: core rules engine, tensor writer, action mask, action decoder
-- `digimon_gym/engine/data/enums.py`: phase and enum definitions
-- `digimon_gym/digimon_gym.py`: `DigimonEnv` and compatibility wrapper
-- `digimon_gym/agents/pilot_training.py`: MLP/LSTM pilot training entrypoint
-- `digimon_gym/agents/maskable_recurrent/`: custom recurrent+mask PPO stack
-- `digimon_gym/api.py`: app assembly and router registration
-- `digimon_gym/routers/`: gameplay-facing routers
-- `digimon_gym/db/routers/`: auth/decks/friends/users/issues/admin routers
-- `digimon_gym/ai/`: dispatcher, worker, retrieval, batch orchestrator, apply engine
-- `frontend/src/App.tsx`: route map
-- `frontend/src/pages/`: primary UI pages
-- `frontend/src/api/`: backend API clients
+- `code/digimon-engine/src/game.rs`: core Rust rules engine, tensor writer, action mask, action decoder
+- `code/engine_py_legacy/engine/data/enums.py`: legacy Python phase and enum definitions (sunset reference)
+- `code/digimon_gym/digimon_gym.py`: `DigimonEnv` and compatibility wrapper
+- `code/digimon_gym/agents/pilot_training.py`: MLP/LSTM pilot training entrypoint
+- `code/digimon_gym/agents/maskable_recurrent/`: custom recurrent+mask PPO stack
+- `code/server/api.py`: app assembly and router registration
+- `code/server/routers/`: gameplay-facing routers
+- `code/server/db/routers/`: auth/decks/friends/users/issues/admin routers
+- `code/server/ai/`: dispatcher, worker, retrieval, batch orchestrator, apply engine
+- `code/frontend/src/App.tsx`: route map
+- `code/frontend/src/pages/`: primary UI pages
+- `code/frontend/src/api/`: backend API clients
 - `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, `AGENTS.md`, `docs/TRAINING_RUNBOOK.md`: behavior contracts
 
 ## RL and Game Contracts
@@ -67,7 +67,7 @@ Current `GamePhase` values include core, selection, and interrupt phases:
 
 ### App Assembly
 
-`digimon_gym/api.py` mounts:
+`code/server/api.py` mounts:
 
 - DB-backed routers:
   - `/auth/*`
@@ -111,7 +111,7 @@ Legacy aliases are present in several routers for compatibility.
 
 ### Routes
 
-`frontend/src/App.tsx` defines:
+`code/frontend/src/App.tsx` defines:
 
 - Public: `/`, `/login`, `/register`
 - Auth-guarded: `/game/:id?`, `/deckbuilder/:id?`
@@ -125,8 +125,8 @@ Legacy aliases are present in several routers for compatibility.
 
 ### Frontend Action/Phase Constants
 
-- `frontend/src/utils/constants.ts`
-- `frontend/src/utils/actionDecoder.ts`
+- `code/frontend/src/utils/constants.ts`
+- `code/frontend/src/utils/actionDecoder.ts`
 
 Keep these aligned with backend constants.
 
@@ -160,22 +160,23 @@ Run from repo root unless noted.
 ```bash
 # Install
 pip install -r requirements.txt
+pip install -e .
 
 # Backend API
-python -m uvicorn digimon_gym.api:app --reload --reload-dir digimon_gym
+python -m uvicorn server.api:app --reload --reload-dir code/server
 
 # Frontend
-cd frontend
+cd code/frontend
 npm install
 npm run dev
 
-# Tests
-python -m pytest tests -v
+# Tests (testpaths = code/tests)
+python -m pytest -v
 
 # Targeted tests
-python -m pytest tests/test_tensor_and_actions.py -v
-python -m pytest tests/test_phase_decoders.py -v
-python -m pytest tests/test_maskable_recurrent.py -v
+python -m pytest code/tests/engine -v
+python -m pytest code/tests/runners -v
+python -m pytest code/tests/rl -v
 
 # RL training
 python -m digimon_gym.agents.pilot_training --timesteps 500000

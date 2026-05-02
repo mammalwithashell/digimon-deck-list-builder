@@ -1,0 +1,104 @@
+# LM-021 Agumon - Bond of Bravery — Digimon, Lv.7, Red, DP 14000, Cost 8.
+# Traits: Unknown
+# Evo: Lv.6 Red / Cost 3
+#
+# Printed card text:
+#
+# [Hand] [Counter] <Blast Digivolve>
+# [On Play] [When Digivolving] Delete any number of your opponent's Digimon
+#   whose total DP adds up to equal or less than this Digimon's DP.
+# [When Attacking] [Once Per Turn] If you have a Tamer, trash the top card
+#   of your opponent's security stack.
+#
+# Inherited: Ace Overflow <-5>
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/LM/Red/LM_021.cs
+#
+# Clause layout:
+#   Clause 1: [Hand][Counter] <Blast Digivolve> → grant_keyword declarative
+#   Clause 2: [On Play][When Digivolving] DP-sum multi-delete → raw_rust step
+#   Clause 3: [When Attacking][Once Per Turn] tamer condition → trash_top_security
+#   Inherited: Ace Overflow <-5>
+
+card: LM-021
+name: "Agumon - Bond of Bravery"
+kind: digimon
+level: 7
+color: [red]
+cost: 8
+dp: 14000
+traits: [Unknown]
+
+# ─── Inherited: Ace Overflow <-5> ────────────────────────────────────────────
+# "Ace Overflow <-5> (As this card moves from the field or under a card to an
+#  area other than those, lose 5 memory.)"
+ace_overflow: -5
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# Standard digivolve: Lv.6 Red / Cost 3.
+# Blast Digivolve ([Hand][Counter]): burst_digivolve with marker: true, cost 0.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 3
+
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
+effects:
+  # ─── Clause 1: [Hand][Counter] <Blast Digivolve> ─────────────────────────────
+  # "Blast Digivolve (Your Digimon may digivolve into this card without paying
+  #  the cost.)"
+  # DCGO: BlastDigivolveEffect at OnCounterTiming.
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+  # ─── Clause 2: [On Play][When Digivolving] DP-sum multi-delete ───────────────
+  # "Delete any number of your opponent's Digimon whose total DP adds up to equal
+  #  or less than this Digimon's DP (14000)."
+  #
+  # Mandatory when eligible targets exist (DCGO: canNoSelect: false in
+  # SetUpActivateClass; canEndNotMax: true allows early stop with fewer picks).
+  #
+  # BLOCKED: G-MULTI-SELECT-OPP-DP-SUM
+  #   Engine lacks multi-select of opponent battle-area permanents with a running
+  #   DP-sum cap (per-pick remainder tracks remaining budget). DCGO uses
+  #   `SelectPermanentEffect` with `canTargetConditionByPreSelectedList` and
+  #   `canEndSelectCondition` (total ≤ self.DP). `select_count_capped_multi` caps
+  #   pick COUNT, not DP sum. `select_opponent_permanent` is single-target only.
+  #
+  #   This clause is implemented via raw_rust step `lm_021_delete_dp_sum` as an
+  #   escape hatch that falls back to single-pick until the gap is resolved.
+  #   Tracked in qa/archetype-qa/engine-gaps.md under G-MULTI-SELECT-OPP-DP-SUM.
+  #
+  # Condition: ≥1 opponent Digimon on battle area (mirrors DCGO CanActivateCondition).
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete opp Digimon with total DP ≤ 14000"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - raw_rust: { fn: lm_021_delete_dp_sum }
+
+  # ─── Clause 3: [When Attacking][Once Per Turn] tamer-gated security trash ────
+  # "If you have a Tamer, trash the top card of your opponent's security stack."
+  #
+  # DCGO (LM_021.cs, ActivateClass): CanActivateCondition checks
+  # HasMatchConditionPermanent(p, IsTamer) on the active player's field.
+  #
+  # GAP G-OPT-TRIGGERED: once_per_turn: true is compiled to max_per_turn=1 but
+  # triggered OPT lockout is not yet enforced by run_queued_effect_inner.
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] If you have a Tamer, trash 1 security"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+    process:
+      - trash_top_security: { of: opponent }

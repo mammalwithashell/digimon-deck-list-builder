@@ -1,0 +1,33 @@
+card: EX6-072
+name: Mega Digimon Assembly!
+kind: option
+color: [white]
+cost: 4
+
+effects:
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: opponent
+        kind: digimon
+        level_gte: 6
+    modifier: IgnoreColorRequirement
+    target: { owner: you }
+    summary: "Ignore color requirements while opponent has level 6+"
+
+  - kind: raw_rust
+    fn: ex6_072_main_dna_digivolve_from_field_and_hand
+    triggers: [main_from_hand]
+
+  - when: on_security
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+          prompt: "Return a level 6 or higher Digimon"
+      - add_to_hand_from_trash: { of: you, card: pick }
+      - raw_rust: { fn: ex6_072_add_self_to_hand }

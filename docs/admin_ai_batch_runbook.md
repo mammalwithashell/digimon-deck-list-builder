@@ -20,9 +20,10 @@ Operational reference for `/admin/*` AI task and batch workflows.
 
 - `script`: target generated script only.
 - `script_engine`: script + engine python files.
-- `script_engine_transpiler`: script + engine + transpiler python files.
 
 A deny list blocks out-of-scope and sensitive paths.
+
+> Note: a third profile `script_engine_transpiler` is still accepted by the API and DB schema for backward compatibility with old rows, but the transpiler package has been removed; do not use it for new tasks.
 
 ## Environment and Guards
 

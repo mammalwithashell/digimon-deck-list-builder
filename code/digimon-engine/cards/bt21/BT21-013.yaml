@@ -1,0 +1,95 @@
+card: BT21-013
+name: Agunimon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Wizard, Hero]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 2
+
+effects:
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] You may place 1 [Hybrid]/[Hero] Digimon from hand or trash as bottom source under self or a red Tamer with inherited effects"
+    process:
+      - select_own_permanent:
+          bind_as: dest
+          optional: true
+          filter:
+            any_of:
+              - card_number_is: "BT21-013"
+              - all_of:
+                  - kind: tamer
+                  - color_is: red
+                  - has_inherited: {}
+          prompt: "Choose a destination: this Digimon or a red Tamer with inherited effects"
+      - select_effect_choice:
+          bind_as: zone_choice
+          labels:
+            - "From hand"
+            - "From trash"
+          prompt: "Select a [Hybrid] or [Hero] Digimon from which area?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: source_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Hybrid
+                        - trait_has: Hero
+                prompt: "Choose a [Hybrid] or [Hero] Digimon from hand"
+            - place_as_bottom_source:
+                source: source_card
+                target: dest
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: source_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Hybrid
+                        - trait_has: Hero
+                prompt: "Choose a [Hybrid] or [Hero] Digimon from trash"
+            - place_as_bottom_source:
+                source: source_card
+                target: dest
+
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] This Digimon may digivolve into a red [Hybrid]/[Hero] Digimon in hand, cost -1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: red
+              - any_of:
+                  - trait_has: Hybrid
+                  - trait_has: Hero
+          prompt: "Choose a red [Hybrid] or [Hero] Digimon to digivolve into"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

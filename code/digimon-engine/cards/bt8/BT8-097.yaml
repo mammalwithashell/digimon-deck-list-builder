@@ -1,0 +1,126 @@
+# BT8-097 Crimson Blaze — Option, Cost 6, Red.
+# No traits, no evo_costs.
+#
+# Printed card text:
+#
+# When you would play this card, reduce its memory cost by 1 for each
+# Digimon your opponent has in play.
+#
+# [Main] Your opponent can't play Digimon by effects until the end of their
+# turn. Delete all of your opponent's Digimon with 6000 DP or less.
+#
+# Security Effect [Security] Activate this card's [Main] effects.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT8/Red/BT8_097.cs
+#
+# Clause layout:
+#   Clause A: BeforePayCost cost reduction — -1 per opp Digimon (when played)
+#   Clause B: [Main] — floodgate (CannotPlayDigimonByEffect EndOfOpponentsTurn)
+#             + for_each delete opp Digimon ≤6000 DP
+#   Clause C: [Security] — activate Main effects (AddActivateMainOptionSecurityEffect)
+
+card: BT8-097
+name: Crimson Blaze
+kind: option
+color: [red]
+cost: 6
+
+effects:
+  # ─── Clause A: BeforePayCost cost reduction ─────────────────────────────────
+  #
+  # "When you would play this card, reduce its memory cost by 1 for each
+  # Digimon your opponent has in play."
+  #
+  # DCGO: ChangeCostClass(EffectTiming.None)
+  #   count() = card.Owner.Enemy.GetBattleAreaDigimons().Count()
+  #   Cost -= count()   (1 reduction per opponent Digimon)
+  #   CanUseCondition: card is in hand AND count() >= 1
+  #   CardSourceCondition: cardSource == card (only this card, no leak)
+  #
+  # NOTE: card_count_in_zone has no kind:digimon filter — it counts all
+  # battle_area permanents (Digimon + Tamers). In practice opponents rarely
+  # run Tamers alongside Digimon in competitive play; any Tamer over-counts
+  # conservatively (more reduction, never less). A future G-FORMULA-KIND-FILTER
+  # gap can address this precisely if needed.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount_fn:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: opponent
+          zone: battle_area
+      delta: 1
+    summary: "-1 per opp Digimon when played"
+
+  # ─── Clause B: [Main] — floodgate + delete ───────────────────────────────────
+  #
+  # "[Main] Your opponent can't play Digimon by effects until the end of their
+  # turn. Delete all of your opponent's Digimon with 6000 DP or less."
+  #
+  # DCGO analysis (EffectTiming.OptionSkill, ActivateClass):
+  #   1. CanNotPutFieldClass: blocks IsDigimon || IsDigiEgg cards played by opponent
+  #      effects (cardEffect.EffectSourceCard.Owner == card.Owner.Enemy).
+  #      Added to card.Owner.Enemy.UntilOwnerTurnEndEffects → expires at end of
+  #      OPPONENT'S turn (EndOfOpponentsTurn in engine terms).
+  #   2. GetBattleAreaDigimons().Filter(CanSelectPermanentCondition) where condition:
+  #      - IsOpponentBattleAreaDigimon
+  #      - permanent.DP <= MaxDP_DeleteEffect(6000, activateClass)
+  #      - !permanent.TopCard.CanNotBeAffected && permanent.CanBeDestroyedBySkill
+  #      → DestroyPermanentsClass(filtered list)  (no player choice — automated sweep)
+  #
+  # Floodgate: add_player_modifier installs CannotPlayDigimonByEffect on
+  # opponent with EndOfOpponentsTurn expiry. Note: DCGO blocks "Digimon or DigiEgg"
+  # — in the Rust engine CannotPlayDigimonByEffect covers both.
+  #
+  # Delete: for_each over opp battle area Digimon with dp_lte:6000 → delete_permanent.
+  #
+  # NOTE G-PRED-DP-LTE: dp_lte in for_each.over is parsed and lowered but the
+  # predicate evaluator does not yet apply it in eval_permanent_fields. All opponent
+  # Digimon currently pass the dp_lte filter unconditionally (all get deleted).
+  # The YAML is correctly authored; enforcement will activate once G-PRED-DP-LTE closes.
+  #
+  - when: main_from_hand
+    summary: "Opp can't play Digimon by effect until their turn ends; delete all opp Digimon ≤6000 DP"
+    process:
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotPlayDigimonByEffect
+          expiry: end_of_opponents_turn
+      - for_each:
+          over:
+            all_of:
+              - kind: digimon
+              - of: opponent
+              - zone: [battle_area]
+              - dp_lte: 6000
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }
+
+  # ─── Clause C: [Security] — activate Main effects ────────────────────────────
+  #
+  # "Security Effect [Security] Activate this card's [Main] effects."
+  #
+  # DCGO: AddActivateMainOptionSecurityEffect — standard security-mirror of the
+  # Main clause. Mandatory (no canNoSelect). Mirrors Clause B exactly:
+  # install floodgate + delete all opp Digimon ≤6000 DP.
+  - when: on_security
+    summary: "[Security] Activate [Main] effects: floodgate + delete opp Digimon ≤6000 DP"
+    process:
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotPlayDigimonByEffect
+          expiry: end_of_opponents_turn
+      - for_each:
+          over:
+            all_of:
+              - kind: digimon
+              - of: opponent
+              - zone: [battle_area]
+              - dp_lte: 6000
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }

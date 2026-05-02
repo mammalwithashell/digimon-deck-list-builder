@@ -8,7 +8,7 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 
 | Constant | Value | Notes |
 |---|---:|---|
-| `TENSOR_SIZE` | 1375 | Compact layout |
+| `TENSOR_SIZE` | 1375 | Compact compatibility constant for `standard_compact_v1`; not the default pilot observation size |
 | `SLOT_SIZE` | 40 | `1 + 6 + MAX_SOURCES * 3` |
 | `SOURCE_ENTRY_SIZE` | 3 | `card_id + opt_state + dp_contribution` |
 | `FIELD_SLOTS` | 14 | Battle area slots per player |
@@ -18,7 +18,114 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 | `MAX_SECURITY` | 10 | |
 | `MAX_REVEALED` | 10 | |
 
-## Top-Level Layout
+## Tensor Profiles
+
+The default pilot observation profile is `standard_lite_v2`: an `8320`-float, fair-information Standard-mode tensor. It is selected by the Rust observation API via `observation::default_observation_profile()` and is exposed to Python as `digimon_engine.DEFAULT_OBSERVATION_PROFILE`.
+
+`standard_compact_v1` remains the `1375`-float compact compatibility and baseline profile. The Rust `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE` constants still describe this compact profile for legacy imports and compact-profile checks; new pilot training and model metadata should use observation layout metadata instead of assuming that global constant is the active profile size.
+
+### `standard_lite_v2`
+
+| Field | Value |
+|---|---:|
+| `id` | `standard_lite_v2` |
+| `version` | 2 |
+| `tensor_version` | 2 |
+| `feature_schema_version` | `standard_lite_v2.1` |
+| `tensor_size` | 8320 |
+| `field_slots` | 15 |
+| `slot_size` | 96 |
+| `max_sources` | 11 |
+| `card_id_slot_count` | 542 |
+| `scalar_slot_count` | 7778 |
+
+Top-level sections:
+
+| Section id | Start offset | Shape | Size |
+|---|---:|---:|---:|
+| `global_features` | 0 | `[64]` | 64 |
+| `player_summary` | 64 | `[2][32]` | 64 |
+| `permanent_slots` | 128 | `[2][15][96]` | 2880 |
+| `own_hand` | 3008 | `[30][32]` | 960 |
+| `known_zone_cards` | 3968 | `[120][8]` | 960 |
+| `decision_context` | 4928 | `[64]` | 64 |
+| `pending_choice_features` | 4992 | `[32][96]` | 3072 |
+| `reserved` | 8064 | `[256]` | 256 |
+
+`standard_lite_v2` card ID positions total `542`; scalar positions total `7778`. These lists, the section table, layout hash, tensor version, and feature schema version are exported by `digimon_engine.get_observation_layout("standard_lite_v2")`.
+
+### `standard_compact_v1`
+
+`standard_compact_v1` is the compact compatibility and baseline profile:
+
+| Field | Value |
+|---|---:|
+| `id` | `standard_compact_v1` |
+| `version` | 1 |
+| `tensor_size` | 1375 |
+| `field_slots` | 14 |
+| `slot_size` | 40 |
+| `max_sources` | 11 |
+| `card_id_slot_count` | 520 |
+| `scalar_slot_count` | 855 |
+
+`standard_v1` and `compact_v1` are compatibility aliases for older code and design notes. New compact-profile code and model metadata should write `standard_compact_v1`.
+
+Canonical tensor profile definitions live under `code/digimon-engine/src/tensor_profiles/<game_mode>/<version>.rs`. `standard_lite_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_lite.rs`; `standard_compact_v1` is defined in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`. `code/digimon-engine/src/tensor.rs` is the Standard compact v1 tensor writer and compatibility surface; it re-exports compact layout constants but does not define the default pilot observation profile.
+
+`standard_compact_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets defined with the profile-owned layout constants instead of magic numeric indices.
+
+### `standard_compact_v1` Sections
+
+| Section id | Start offset | Length | Kind |
+|---|---:|---:|---|
+| `global` | `OFF_GLOBAL` = 0 | `GLOBAL_SIZE` = 10 | `Scalars` |
+| `my_battle` | `OFF_MY_BATTLE` = 10 | `BATTLE_SIZE` = 560 | `PermanentSlots` |
+| `opponent_battle` | `OFF_OPP_BATTLE` = 570 | `BATTLE_SIZE` = 560 | `PermanentSlots` |
+| `my_hand` | `OFF_MY_HAND` = 1130 | `HAND_SIZE` = 20 | `CardIds` |
+| `opponent_hand` | `OFF_OPP_HAND` = 1150 | `HAND_SIZE` = 20 | `CardIds` |
+| `my_trash` | `OFF_MY_TRASH` = 1170 | `TRASH_SIZE` = 45 | `CardIds` |
+| `opponent_trash` | `OFF_OPP_TRASH` = 1215 | `TRASH_SIZE` = 45 | `CardIds` |
+| `my_security` | `OFF_MY_SECURITY` = 1260 | `SECURITY_SIZE` = 10 | `CardIds` |
+| `opponent_security` | `OFF_OPP_SECURITY` = 1270 | `SECURITY_SIZE` = 10 | `CardIds` |
+| `my_breeding` | `OFF_MY_BREEDING` = 1280 | `BREEDING_SIZE` = 40 | `PermanentSlots` |
+| `opponent_breeding` | `OFF_OPP_BREEDING` = 1320 | `BREEDING_SIZE` = 40 | `PermanentSlots` |
+| `revealed` | `OFF_REVEALED` = 1360 | `REVEALED_SIZE` = 10 | `CardIds` |
+| `selection` | `OFF_SELECTION` = 1370 | `SELECTION_SIZE` = 5 | `Scalars` |
+
+### Permanent Slot Header Fields
+
+| Field id | Offset | Kind |
+|---|---:|---|
+| `top_card_id` | `SLOT_TOP_CARD_OFFSET` = 0 | `CardId` |
+| `dp` | `SLOT_DP_OFFSET` = 1 | `Scalar` |
+| `suspended` | `SLOT_SUSPENDED_OFFSET` = 2 | `Scalar` |
+| `opt_total` | `SLOT_OPT_TOTAL_OFFSET` = 3 | `Scalar` |
+| `opt_used` | `SLOT_OPT_USED_OFFSET` = 4 | `Scalar` |
+| `linked_count` | `SLOT_LINKED_COUNT_OFFSET` = 5 | `Scalar` |
+| `source_count` | `SLOT_SOURCE_COUNT_OFFSET` = 6 | `Scalar` |
+
+### Source Entry Fields
+
+| Field id | Per-source offset | Kind |
+|---|---:|---|
+| `card_id` | `SOURCE_CARD_ID_OFFSET` = 0 | `CardId` |
+| `opt_state` | `SOURCE_OPT_STATE_OFFSET` = 1 | `Scalar` |
+| `dp_contribution` | `SOURCE_DP_CONTRIBUTION_OFFSET` = 2 | `Scalar` |
+
+### Source Stride
+
+| Field | Value |
+|---|---:|
+| `source_start` | `SLOT_SOURCE_START_OFFSET` = 7 |
+| `source_entry_size` | `SOURCE_ENTRY_SIZE` = 3 |
+| `max_sources` | `MAX_SOURCES` = 11 |
+| `slot_header_size` | `SLOT_HEADER_SIZE` = 7 |
+| `slot_size` | `SLOT_SIZE` = `SLOT_HEADER_SIZE + MAX_SOURCES * SOURCE_ENTRY_SIZE` = 40 |
+
+Future tensor profiles must define their own profile id and version, and must include matching tests and documentation updates.
+
+## `standard_compact_v1` Top-Level Layout
 
 | Index Range | Size | Section |
 |---|---:|---|
@@ -99,7 +206,9 @@ Start at `+7`, bottom-to-top ordering.
 Card identities are encoded as integer registry indices (float-cast):
 
 - `0` means empty/padding
-- Each card gets a stable integer index from `CardRegistry` (1-based, sorted alphabetically)
+- Production card indices come from stable explicit `index` values in `data/cards.json`
+- Legacy/test card data without explicit indices uses a deterministic sorted fallback
+- `CardRegistry` rejects duplicate explicit indices
 - The `CardEmbeddingExtractor` contains a trainable `nn.Embedding(20000, 16)` that maps
   these integers to learned 16-float vectors on the GPU
 - The embedding table is part of the model checkpoint — no external files at inference
@@ -108,11 +217,19 @@ Card identities are encoded as integer registry indices (float-cast):
 
 ### Tensor Layout Metadata
 
-`digimon_gym/engine/data/tensor_layout.py` exports:
+Canonical tensor layout metadata lives in `code/digimon-engine/src/tensor_profiles/standard/`.
+Observation layouts are exposed to Python by `digimon_engine.get_observation_layout(profile_id)`
+and consumed through `digimon_gym.tensor_profiles.get_tensor_profile(profile_id)`.
+The compact registry metadata remains available through `digimon_engine.get_tensor_profile()`
+for `standard_compact_v1` compatibility.
 
-- `CARD_ID_POSITIONS`: list of 520 tensor indices that hold card IDs
-- `SCALAR_POSITIONS`: list of 855 tensor indices that hold scalar values
-- Used by `CardEmbeddingExtractor` to split observations for embedding lookup
+The profile provides:
+
+- `card_id_positions`: tensor indices that hold card IDs
+- `scalar_positions`: tensor indices that hold scalar values
+- Metadata used by `CardEmbeddingExtractor` to split observations for embedding lookup
+
+`code/engine_py_legacy/engine/data/tensor_layout.py` remains a legacy fallback only.
 
 ## Selection Context (`1370-1374`)
 
@@ -136,10 +253,12 @@ Interrupt phases like `BlockTiming`, `CounterTiming`, `EndOfTurnAction`, and `Al
 
 ## Features Extractor
 
-The `CardEmbeddingExtractor` processes the 1375-float tensor:
+The `CardEmbeddingExtractor` is layout-driven. Training code passes the active observation layout, or the extractor resolves the profile from the observation shape:
 
-1. Splits into 520 card-ID positions and 855 scalar positions
-2. Looks up card IDs in `nn.Embedding(20000, 16)` → 520 × 16 = 8320 floats
-3. Concatenates with 855 scalars → 9175 floats
-4. Projects through `Linear(9175, 512) + ReLU` → 512-dim feature vector
-5. Features feed into the policy/value heads (MLP or LSTM)
+1. Reads `card_id_positions`, `scalar_positions`, `tensor_size`, and layout metadata from the active profile.
+2. Verifies the observation shape matches the profile tensor size and that card/scalar positions cover the tensor exactly once.
+3. Looks up card IDs in `nn.Embedding(20000, 16)`.
+4. Concatenates embedded card IDs with scalar positions.
+5. Projects through `Linear(..., 512) + ReLU` to produce the 512-dim feature vector used by MLP or LSTM policy/value heads.
+
+For `standard_lite_v2`, this means `542` card-ID positions embedded to `542 × 16 = 8672` floats, concatenated with `7778` scalar positions before projection. For `standard_compact_v1`, the compatibility path remains `520` card-ID positions and `855` scalar positions.

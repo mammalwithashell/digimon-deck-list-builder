@@ -1,0 +1,15 @@
+# Local development override for docker-compose.prod.yml.
+# Usage:
+#   docker compose --env-file .env.local \
+#     -f docker-compose.prod.yml -f docker-compose.override.local.yml \
+#     up -d postgres api
+#
+# `.env.local` is gitignored — see ops/deploy/README.md for the template.
+services:
+  api:
+    ports:
+      - "8000:8000"
+  caddy:
+    profiles: ["noop"]  # disabled for local smoke (no real domain/cert)
+  backup:
+    profiles: ["noop"]  # disabled for local smoke (no Spaces creds)

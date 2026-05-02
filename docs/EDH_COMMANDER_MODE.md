@@ -194,18 +194,18 @@ This mode will be implemented as a **parallel pipeline** alongside the standard 
 
 ### New Files (planned)
 ```
-digimon_gym/engine/edh/              # EDH package
+code/engine_py_legacy/engine/edh/              # EDH package
 ├── __init__.py
 ├── edh_player.py                    # EDHPlayer(Player) subclass
 ├── edh_game.py                      # EDHGame(Game) subclass
 ├── edh_constants.py                 # Tensor/action space/selection constants
 └── edh_base_runner.py               # Shared deck setup + validation
 
-digimon_gym/engine/runners/
+code/engine_py_legacy/engine/runners/
 ├── edh_headless_game.py             # Agent-only 4P simulation
 └── edh_interactive_game.py          # Mixed human/agent play
 
-digimon_gym/engine/data/
+code/engine_py_legacy/engine/data/
 └── game_format.py                   # GameFormat dataclass
 
 tests/

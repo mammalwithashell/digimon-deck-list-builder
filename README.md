@@ -1,89 +1,91 @@
 # Digimon TCG Simulator
 
-A headless Digimon TCG rules engine (based on DCGO) with a Gymnasium RL environment, web-playable frontend, and admin AI pipeline — all in pure Python, no Unity.
+A Digimon TCG rules engine with a Gymnasium RL environment, React frontend, FastAPI hosted server, and Tauri v2 desktop app — built so RL agents can learn optimal play across the full card pool.
 
-**Status**: pre-alpha, active development.
+**Status**: pre-alpha, active development. Mid-pivot from a Python engine to a Rust engine as the source of truth.
 
 ## What This Project Does
 
-- **Headless rules engine** — 3000+ line game engine implementing DCGO rules, 60+ effect timings, keyword system, stack-based effect resolution
-- **Gymnasium RL environment** — 981-float observation tensor, 2120 discrete action space with phase-aware masking, dense reward shaping
-- **Web-playable UI** — React frontend with drag-and-drop gameplay, deck builder, admin dashboards
-- **Multiplayer PvP** — WebSocket-based real-time gameplay with lobby matchmaking, join codes, and spectating with hidden information filtering
-- **Desktop app** — Tauri v2 shell with bundled Python sidecar for offline play against AI agents (ONNX inference, no PyTorch required)
-- **Admin AI pipeline** — LLM-powered card script transpilation, automated fixes, batch orchestration with safe-apply checks
-- **Training infrastructure** — MetaGauntlet opponent sampling, 3-stage training pipeline, PFSP opponent weighting, deck variant generation
+- **Rules engine, two-track** — Rust engine (`code/digimon-engine/`) is the target source of truth, with PyO3 bindings (`code/digimon-engine-py/`) exposing it to Python as `RustHeadlessGame` (switchable via `DIGIMON_BACKEND=rust`). A sunset Python engine (`code/engine_py_legacy/engine/`) remains as reference-only during the card-script migration. Both are reference-checked against the **DCGO C# client** (`DCGO/` submodule), which is the behavioral source of truth for card effects.
+- **No-approximations policy** — every card effect faithfully implements all card text. No stubs, no auto-selections; every choice surfaces through `pending_selection` so the RL action space sees it and agents can learn to pick optimally. Gaps are marked BLOCKED and logged to [qa/archetype-qa/engine-gaps.md](qa/archetype-qa/engine-gaps.md) / [docs/RUST_ENGINE_GAPS.md](docs/RUST_ENGINE_GAPS.md).
+- **Gymnasium RL environment** — 1375-float observation tensor, 2168 discrete actions with phase-aware masking, dense reward shaping.
+- **Multiplayer PvP** — WebSocket real-time gameplay with lobby matchmaking, join codes, and spectating (with hidden-information filtering).
+- **Desktop app** — Tauri v2 shell with the embedded Rust engine (no Python at runtime); ONNX models downloaded at runtime from the hosted API's manifest.
+- **Admin AI pipeline** — LLM-powered card script transpilation, automated fixes, batch orchestration with safe-apply checks (hosted API only).
+- **Training infrastructure** — MetaGauntlet opponent sampling, staged training pipeline, PFSP opponent weighting, deck variant generation; Q-DeckRec architect agents for deck optimization.
 
 ## Architecture
 
 ```
-   ┌──────────────────────────────────────────────────────────┐
-   │              Tauri v2 Desktop Shell (Rust)                │
-   │   Manages Python sidecar lifecycle, bundles frontend      │
-   └──────────────────────┬───────────────────────────────────┘
-                          │ spawns
-   ┌──────────────────────▼───────────────────────────────────┐
-   │         React Frontend (TypeScript)                       │
-   │   GamePage (HTTP/WS dual-mode), LobbyPage, DeckBuilder   │
-   └─────────┬──────────────────────────┬─────────────────────┘
-             │ HTTP (local games)        │ WebSocket (PvP)
-   ┌─────────▼─────────┐     ┌──────────▼──────────────────┐
-   │  Desktop Sidecar   │     │   FastAPI Server (Python)    │
-   │  (PyInstaller)     │     │   api.py + routers/          │
-   │  Game engine only   │     │   + lobby + WebSocket PvP   │
-   │  No DB/auth         │     │   + auth + DB               │
-   └─────────┬──────────┘     └──────────┬──────────────────┘
-             │                           │
-             └─────────┬─────────────────┘
-                       │
-        ┌──────────────┼──────────────────────┐
-        │              │                      │
-   ┌────▼──────┐ ┌─────▼─────────┐ ┌─────────▼───────┐
-   │ Game       │ │ DigimonEnv    │ │ Admin AI        │
-   │ Engine     │ │ (Gymnasium)   │ │ ai/             │
-   │ + ONNX     │ │ 981-obs       │ │ LLM dispatch    │
-   │ inference  │ │ 2120-act      │ │ batch orch.     │
-   └────┬───────┘ └─────┬─────────┘ └─────────────────┘
-        │               │
-        │      ┌────────▼────────┐
-        │      │  RL Agents      │
-        │      │  MaskablePPO    │
-        │      │  LSTM + Mask    │
-        │      │  MetaGauntlet   │
-        │      └─────────────────┘
-   ┌────▼───────────┐
-   │  Card Scripts   │
-   │  ~24 sets       │
-   │  Python (C#)    │
-   └─────────────────┘
+   ┌───────────────────────────────────────────────────────────┐
+   │              Tauri v2 Desktop Shell (Rust)                 │
+   │   Links digimon-engine statically — no Python runtime      │
+   │   ONNX models downloaded from hosted API manifest          │
+   └──────────────────────┬────────────────────────────────────┘
+                          │ Tauri invoke()
+   ┌──────────────────────▼────────────────────────────────────┐
+   │         React Frontend (TypeScript)                        │
+   │   GamePage · DeckBuilder · ModelsPage (desktop only)      │
+   └─────────┬──────────────────────────┬──────────────────────┘
+   invoke()  │ (desktop)                 │ WebSocket / HTTPS (web)
+   ┌─────────▼────────────┐     ┌────────▼───────────────────┐
+   │  digimon-engine      │     │  FastAPI Server (Python)    │
+   │  (Rust, in-process)  │     │  server/api.py + routers/   │
+   │  game · ONNX · deck  │     │  PvP / lobby / auth / DB    │
+   │  tools; no DB        │     │  + /models/manifest.json    │
+   └──────────────────────┘     └────────┬───────────────────┘
+                                         │ PyO3 + sunset Python engine
+                     ┌───────────────────┼───────────────────┐
+                     │                   │                   │
+              ┌──────▼───────┐ ┌─────────▼──────────┐ ┌─────────▼───────┐
+              │ DigimonEnv   │ │ Python engine      │ │ Admin AI        │
+              │ (Gymnasium)  │ │ (sunset reference) │ │ server/ai/      │
+              │ via PyO3     │ │ engine_py_legacy/  │ │ LLM dispatch    │
+              │ 1375-obs     │ │ engine/            │ │ batch orch.     │
+              └──────┬───────┘ └────────────────────┘ └─────────────────┘
+                     │
+            ┌────────▼────────┐
+            │  RL Agents      │
+            │  MaskablePPO    │   ┌──────────────┐
+            │  LSTM + Mask    │   │  DCGO/       │
+            │  MetaGauntlet   │   │  C# submod   │ ← behavioral reference
+            └─────────────────┘   │  for cards   │   for card scripting
+                                  └──────────────┘
 ```
 
 ## Repository Map
 
+All source lives under `code/`. The repo root holds docs, infra, agent
+config, and runtime data.
+
 | Path | Purpose |
 |---|---|
-| `digimon_gym/engine/game.py` | Core rules engine, tensor writer, action mask, action decoder |
-| `digimon_gym/engine/data/enums.py` | GamePhase, PendingAction, CardColor, etc. |
-| `digimon_gym/engine/data/scripts/` | Transpiled Python card scripts (~24 sets) |
-| `digimon_gym/digimon_gym.py` | DigimonEnv (Gymnasium interface) |
-| `digimon_gym/agents/` | RL agents, training, wrappers |
-| `digimon_gym/agents/maskable_recurrent/` | Custom LSTM + action masking PPO |
-| `digimon_gym/agents/gauntlet.py` | MetaGauntlet opponent sampling |
-| `digimon_gym/api.py` | FastAPI app assembly |
-| `digimon_gym/routers/` | Gameplay API routes |
-| `digimon_gym/routers/lobby.py` | Multiplayer lobby (join codes, public browser) |
-| `digimon_gym/routers/ws_games.py` | WebSocket PvP + spectating endpoint |
-| `digimon_gym/routers/ws_manager.py` | WebSocket connection manager |
-| `digimon_gym/engine/state_filter.py` | Hidden information filtering (player/spectator perspectives) |
-| `digimon_gym/engine/onnx_policy.py` | ONNX inference wrapper (no PyTorch) |
-| `digimon_gym/desktop_main.py` | Desktop sidecar entry point (game engine only) |
-| `digimon_gym/db/routers/` | Auth, decks, admin routes |
-| `digimon_gym/ai/` | Admin AI task/batch pipeline |
-| `src-tauri/` | Tauri v2 desktop shell (Rust sidecar management) |
-| `tools/export_onnx.py` | SB3 → ONNX model conversion |
-| `tools/build-sidecar.sh` | Desktop sidecar build pipeline |
-| `frontend/src/` | React UI |
-| `tools/` | Meta loader, transpiler, promotion CLI |
+| `code/digimon-engine/` | Rust game engine (target source of truth) |
+| `code/digimon-engine/src/game.rs` | Turn state machine, phases |
+| `code/digimon-engine/src/effect.rs`, `effect_context.rs`, `effect_queue.rs` | Card-scripting API and triggered-effect queue |
+| `code/digimon-engine/src/combat.rs`, `selection.rs` | Attack state machine, pending-selection / interrupt handling |
+| `code/digimon-engine/src/tensor.rs`, `action/` | 1375-float observation + 2168-action mask/decoder |
+| `code/digimon-engine/src/cards/`, `debug_runner.rs` | Hand-written `CardEffect` impls + deterministic test harness |
+| `code/digimon-engine/src/inference/` | Rust ONNX inference (MLP + LSTM) used by the desktop app |
+| `code/digimon-engine-py/` | PyO3 bindings (`RustHeadlessGame`), built via `maturin` |
+| `code/digimon-dsl/` | Card-scripting DSL crate (lowering to Effect/CardEffect) |
+| `DCGO/` | Git submodule — C# client source, behavioral reference for card effects |
+| `code/engine_py_legacy/engine/` | Sunset Python engine (reference only; not importable from production) |
+| `code/engine_py_legacy/engine/data/scripts/` | Frozen Python card scripts (one-direction migration to Rust) |
+| `code/digimon_gym/digimon_gym.py` | `DigimonEnv` (Gymnasium interface) |
+| `code/digimon_gym/agents/` | RL training, wrappers, MetaGauntlet, Q-DeckRec |
+| `code/digimon_gym/agents/maskable_recurrent/` | Custom LSTM + action-masking PPO |
+| `code/digimon_gym/inference/onnx_policy.py` | ONNX inference wrapper (hosted API / training) |
+| `code/server/api.py`, `code/server/routers/` | Hosted FastAPI app + gameplay routes |
+| `code/server/routers/lobby.py`, `ws_games.py`, `ws_manager.py` | Lobby, WebSocket PvP, connection manager |
+| `code/engine_py_legacy/engine/state_filter.py` | Hidden-info filtering for network clients (until Rust port lands) |
+| `code/server/db/`, `code/server/ai/` | Hosted-API-only: auth, decks, admin AI |
+| `code/server/workers/training_worker.py`, `gauntlet_orchestrator.py` | DB-backed training queue + 3-stage orchestrator |
+| `code/src-tauri/` | Tauri v2 desktop shell — Python-free; gameplay, inference, deck tools, model cache |
+| `code/frontend/src/` | React UI (desktop build tree-shakes admin/training via `VITE_BUILD_TARGET=desktop`) |
+| `code/tools/export_onnx.py` | SB3 → ONNX model conversion |
+| `qa/archetype-qa/`, `qa/qa-reports/` | Per-archetype QA, engine-gap tracker, dated gameplay reports |
+| `requirements.txt`, `requirements-training.txt` | Full hosted API / training CLI dep sets |
 
 ## Quick Start
 
@@ -91,123 +93,149 @@ A headless Digimon TCG rules engine (based on DCGO) with a Gymnasium RL environm
 
 - Python 3.11+
 - Node.js 18+ (for frontend)
+- Rust toolchain (for the Rust engine, PyO3 bindings, and Tauri)
+- `maturin` (`pip install maturin`) if you plan to use the Rust backend from Python
 
 ### Install
 
+Pick the dep set that matches what you're running:
+
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt            # full hosted API (everything)
+pip install -r requirements-training.txt   # training CLI (engine + torch/SB3, no FastAPI/DB)
 ```
 
-### Run Backend
+Initialize the DCGO submodule if you need C# reference access:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Run the Hosted Backend
 
 ```bash
 # Development (auto-reload)
-python -m uvicorn digimon_gym.api:app --reload --reload-dir digimon_gym
+python -m uvicorn server.api:app --reload --reload-dir code/server
 
-# Production / long-running tasks (no --reload to avoid zombie processes)
-python -m uvicorn digimon_gym.api:app --host 0.0.0.0 --port 8000
+# Production / long-running tasks (avoid --reload to prevent zombie watcher processes)
+python -m uvicorn server.api:app --host 0.0.0.0 --port 8000
 ```
 
-### Run Frontend
+### Run the Frontend
 
 ```bash
-cd frontend
+cd code/frontend
 npm install
 npm run dev
+```
+
+### Rust Engine
+
+```bash
+# Run the Rust engine test suite
+cargo test --manifest-path code/digimon-engine/Cargo.toml
+
+# Build + install PyO3 bindings into the active Python env
+cd code/digimon-engine-py && maturin develop
+
+# Run Python-side parity tests against the Rust backend
+DIGIMON_BACKEND=rust python -m pytest code/tests/engine/test_rust_backend_parity.py -v
 ```
 
 ### Smoke-Check the RL Environment
 
 ```bash
 python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs,info=env.reset(); print(obs.shape, info['action_mask'].shape)"
+# expect: (1375,) (2168,)
 ```
 
 ### Run Tests
 
 ```bash
-python -m pytest tests -v
+python -m pytest -v                                # default suite (testpaths = code/tests)
+python -m pytest code/tests/engine -v              # engine unit tests
+python -m pytest code/tests/behavioral -v          # DebugRunner behavioral tests
+python -m pytest code/tests/rl -v                  # RL training tests
+python -m pytest -m scenario -v                    # YAML scenario tests
+python -m pytest code/tests/ai_pipeline -v         # AI pipeline tests (opt-in)
 ```
 
 ### Train an Agent
 
 ```bash
-# MLP baseline
 python -m digimon_gym.agents.pilot_training --timesteps 500000
-
-# LSTM with memory
 python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000
-
-# Self-play
 python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
-
-# MetaGauntlet opponent sampling
 python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
 ```
 
 ### Export Trained Models to ONNX
 
 ```bash
-# Export SB3 checkpoint to ONNX (requires PyTorch)
-python tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
-python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
+python code/tools/export_onnx.py --type mlp  --input models/mlp_agent.zip  --output models/mlp_agent.onnx
+python code/tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
 ```
 
-### Build Desktop App
+### Build the Desktop App
+
+The desktop build is Python-free — gameplay, ONNX inference, and deck
+tools all run inside the embedded `digimon-engine` crate via Tauri
+`invoke()` commands. Trained AI models are downloaded at runtime from
+the hosted API's `/models/manifest.json` into an OS-local cache.
 
 ```bash
-# Prerequisites: Rust toolchain, PyInstaller
-pip install pyinstaller
-
-# Build sidecar binary (greedy bots only)
-./tools/build-sidecar.sh gameplay
-
-# Build sidecar binary (auto-exports ONNX + bundles models)
-./tools/build-sidecar.sh full
-
-# Build Tauri desktop installer
-cd src-tauri && cargo tauri build
-```
-
-### Run Desktop Sidecar Standalone (for testing)
-
-```bash
-python -m digimon_gym.desktop_main --port 8321 --models-dir ./models
+# Prerequisites: Rust toolchain, Node.js
+cd code/frontend && npm ci && npm run build -- --mode desktop
+cd ../src-tauri && cargo tauri build
 ```
 
 ## Documentation Index
 
+Start at [docs/INDEX.md](docs/INDEX.md) for the full catalog.
+
 | Document | Purpose |
 |---|---|
-| `AGENTS.md` | RL agent architecture, wrapper chain, MetaGauntlet, GauntletOrchestrator |
-| `docs/TRAINING_RUNBOOK.md` | Training pipeline operations guide |
-| `docs/TENSOR_SPEC.md` | 981-float observation tensor layout |
-| `docs/ACTION_SPEC.md` | 2120 action space and phase-aware decoding |
-| `docs/RULES_CONTEXT.md` | Comprehensive Digimon TCG rules reference |
-| `CLAUDE.md` | AI assistant engineering guide |
-| `GEMINI.md` | AI assistant context (legacy) |
-| `docs/UI_PLAN.md` | Frontend and API surface design |
-| `docs/admin_ai_batch_runbook.md` | Admin AI pipeline operations |
-| `docs/EDH_COMMANDER_MODE.md` | 4-player commander format spec |
-| `docs/TITAN_MODE.md` | Asymmetric multiplayer format spec |
-| `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md` | Desktop distribution implementation plan (WebSocket PvP, ONNX, Tauri) |
+| [CLAUDE.md](CLAUDE.md) | Engineering guide for AI-assistant work in this repo |
+| [AGENTS.md](AGENTS.md) | RL agent architecture, wrapper chain, gauntlet orchestration |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | API surface, RL contracts, frontend components, desktop distribution |
+| [docs/TENSOR_SPEC.md](docs/TENSOR_SPEC.md) | 1375-float observation tensor layout |
+| [docs/ACTION_SPEC.md](docs/ACTION_SPEC.md) | 2168-action space and phase-aware decoding |
+| [docs/RULES_CONTEXT.md](docs/RULES_CONTEXT.md) | Comprehensive Digimon TCG rules reference |
+| [docs/RUST_ENGINE_API.md](docs/RUST_ENGINE_API.md) | Rust scripting API: `EffectContext`, `Effect`, `CardEffect`, TDD walkthrough |
+| [docs/RUST_PYTHON_PARITY.md](docs/RUST_PYTHON_PARITY.md) | Live cross-engine divergence tracker (transitional) |
+| [docs/RUST_ENGINE_GAPS.md](docs/RUST_ENGINE_GAPS.md) | Rust-engine gap log from archetype audits |
+| [docs/TRAINING_RUNBOOK.md](docs/TRAINING_RUNBOOK.md) | Training pipeline operations guide |
+| [docs/TOOLS.md](docs/TOOLS.md) | CLI tools: transpiler, Pinecone, model export, new-set workflow |
+| [docs/UI_PLAN.md](docs/UI_PLAN.md) | Frontend and API surface design |
+| [docs/admin_ai_batch_runbook.md](docs/admin_ai_batch_runbook.md) | Admin AI pipeline operations |
+| [docs/EDH_COMMANDER_MODE.md](docs/EDH_COMMANDER_MODE.md) | 4-player commander format spec |
+| [docs/TITAN_MODE.md](docs/TITAN_MODE.md) | Asymmetric multiplayer format spec |
+| [docs/plans/DESKTOP_DISTRIBUTION_PLAN.md](docs/plans/DESKTOP_DISTRIBUTION_PLAN.md) | Desktop distribution plan (WebSocket PvP, ONNX, Tauri) |
+| [qa/archetype-qa/engine-gaps.md](qa/archetype-qa/engine-gaps.md) | Python-engine gap tracker |
+| [qa/archetype-qa/engine-api-reference.md](qa/archetype-qa/engine-api-reference.md) | Engine scripting reference used by archetype sub-agents |
 
 ## Roadmap
 
-**Recently added:**
+**Recently added / in progress:**
 
-- WebSocket PvP with lobby matchmaking and spectating (hidden information filtering)
-- ONNX inference for trained agents (play against ML models without PyTorch)
-- Tauri v2 desktop shell with Python sidecar bundling
+- Rust engine (`code/digimon-engine/`) as target source of truth, with PyO3 bindings (`code/digimon-engine-py/`) and a `DIGIMON_BACKEND=rust` switch in `DigimonEnv`.
+- TDD card-script harness in Rust (`DebugRunner`, hand-written `CardEffect` impls in `code/digimon-engine/src/cards/`).
+- Three-service split: desktop, hosted API, training CLI — each with its own requirements file.
+- Python-free Tauri v2 desktop shell — `digimon-engine` embedded directly, ONNX models cached from the hosted API manifest.
+- Archetype-scoped AI workflows: `/implement-archetype`, `/batch-fix-cards`, `/batch-implement-cards-rust`, `/assess-archetype-rust`.
+- WebSocket PvP with lobby matchmaking + spectating (hidden-info filtering).
 
 **Planned but not yet implemented:**
 
-- **Q-DeckRec**: Architect agent for DQN-based deck optimization
-- **CPR (Contextual Preference Ranking)**: dense card embeddings from autoencoder on stats/keywords for unseen card recommendation
-- **Persistent meta-league**: cross-run league with ELO tracking
-- **Extended PendingAction phases**: beyond `TRASH_CARD` for more granular selection states
-- **4-player game modes**: Commander/EDH and Titan Mode (engine is currently 2-player hardcoded)
+- Complete the Rust card-script migration and retire the Python engine (tracked in [docs/RUST_PYTHON_PARITY.md](docs/RUST_PYTHON_PARITY.md)).
+- **Q-DeckRec**: DQN-based deck optimization architect agent.
+- **CPR (Contextual Preference Ranking)**: dense card embeddings for unseen-card recommendation.
+- **Persistent meta-league**: cross-run league with ELO tracking.
+- **4-player game modes**: Commander/EDH and Titan Mode (engine is currently 2-player hardcoded).
 
 ## Notes
 
 - Avoid relying on static count claims in docs; implementation shape is the source of truth.
-- When updating phases/actions/tensor layout, update code, specs, and tests in the same change.
+- When updating phases / actions / tensor layout, update code, specs, and tests in the same change.
+- The Rust engine is the target source of truth — before editing engine code in either language, check [docs/RUST_PYTHON_PARITY.md](docs/RUST_PYTHON_PARITY.md) for known divergences in the area.
+- Cards migrate one direction only (Python → Rust). Once a card is implemented in Rust, it is owned by Rust — do not author a new Python script for it.

@@ -1,0 +1,163 @@
+card: BT24-089
+name: "Unique Emblem: Blazing Conductor"
+kind: option
+color: [red]
+cost: 3
+traits: [LIBERATOR]
+
+# ─── Clause 1: [Main] ─────────────────────────────────────────────────────────
+#
+# "[Main] You may play 1 [Elizamon] or [Owen Dreadnought] from your hand or
+# trash without paying the cost. Then, place this card in the battle area."
+#
+# Printed text: "you may" → optional: true.
+# DCGO: the player is first asked "From hand" or "From trash" when both zones
+#   have eligible cards; otherwise the available zone is auto-resolved.
+#   canNoSelect = true for both hand and trash card selections.
+#
+# DSL modelling:
+#   - select_effect_choice: "From hand" / "From trash" (DCGO zone-choice prompt)
+#   - if/then branches into select_hand → play_from_hand_free or
+#     select_trash → play_from_trash_free
+#
+# "Then, place this card in the battle area" — option-as-permanent placement.
+#
+# G-PLACE-SELF-AS-OPTION-PERMANENT [DSL gap]:
+#   There is no DSL step verb for "place this Option card in the battle area as
+#   a Delay permanent". The engine infers this from the presence of the Delay
+#   clause (kind: delay) together with a main_from_hand trigger, but no
+#   explicit `place_option_in_battle_area: {}` step exists yet in the vocabulary.
+#   Tests asserting the card lands in battle area after the Main effect are
+#   #[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"].
+#
+# ─── Clause 2: [Your Turn] When any of your [Owen Dreadnought]s suspend ───────
+#
+# "＜Delay＞ (By trashing this card after the placing turn, activate the
+# effect below.)
+# ・1 of your [Reptile] or [Dragonkin] Digimon may digivolve into a Digimon
+# card with the [Reptile] or [Dragonkin] trait and the [LIBERATOR] trait in
+# the hand with the digivolution cost reduced by 3."
+#
+# G-DELAY-SUSPEND-CONDITION [DSL gap]:
+#   The standard `kind: delay` clause only supports `DelayTrigger::EndOfThisTurn`
+#   or `DelayTrigger::EndOfYourNextTurn` (wired via `end_of_your_turn` /
+#   end-of-next-turn timing). This Delay is non-standard: its activation window
+#   opens reactively when an [Owen Dreadnought] suspends on the owner's turn
+#   (DCGO timing: `OnTappedAnyone` with `CanTriggerWhenPermanentSuspends` filtered
+#   by name). There is no `DelayTrigger::OnSuspend { name_contains }` variant
+#   in the engine's `enums::DelayTrigger` enum, and `DelayBody` has no
+#   `condition:` field in the DSL spec.
+#
+#   The entire Delay clause is BLOCKED pending:
+#     1. A reactive Delay variant in `enums::DelayTrigger` (e.g.
+#        `DelayTrigger::OnSuspendNameFilter(String)`).
+#     2. A `condition:` field on `DelayBody` to gate the suspend-name filter.
+#     3. A `kind: delay` trigger mapping to the new variant in `lower_delay.rs`.
+#
+#   A `kind: raw_rust` escape hatch with a structural no-op function is included
+#   to preserve the clause index count for structural tests. The function is
+#   unregistered; behavioral tests are #[ignore]'d.
+#
+# G-EFFECT-DIGIVOLVE-FROM-HAND [DSL gap]:
+#   "Digivolve into a Digimon card with [Reptile] or [Dragonkin] AND [LIBERATOR]
+#   from hand with cost -3" — this is an effect-initiated digivolve from hand
+#   with a trait-gate and cost reduction. `effect_initiated_digivolve` exists
+#   but requires a specific `from_hand: <binding>` to an already-selected card.
+#   The Delay process would need: select_hand → filter by Reptile/Dragonkin +
+#   LIBERATOR → effect_initiated_digivolve with cost_delta: { reduce: 3 }.
+#   Blocked pending the Delay trigger fix above.
+#
+# ─── Security: Inherited [Security] ──────────────────────────────────────────
+#
+# "Security Effect [Security] Activate this card's [Main] effects."
+# → Duplicate the Main clause process in an on_security clause so the
+#   security trigger path runs the same play-Elizamon/Owen logic.
+# DCGO: `AddActivateMainOptionSecurityEffect` — standard security-mirror pattern.
+# Note: the Security clause is not optional from the printed text; DCGO
+# confirms mandatory activation for security triggers on option cards that
+# mirror Main effects.
+
+effects:
+  # ─── Clause 1: [Main] ─────────────────────────────────────────────────────
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may play 1 Elizamon or Owen Dreadnought from hand or trash free; place this in battle area"
+    process:
+      # DCGO: zone-choice prompt when both hand and trash have eligible cards.
+      # "From hand" = label index 0; "From trash" = label index 1.
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "Select from hand or trash?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  any_of:
+                    - name_contains: "Elizamon"
+                    - name_contains: "Owen Dreadnought"
+                prompt: "Play 1 Elizamon or Owen Dreadnought from your hand without paying the cost"
+            - play_from_hand_free: { of: you, hand_index: picked_hand }
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  any_of:
+                    - name_contains: "Elizamon"
+                    - name_contains: "Owen Dreadnought"
+                prompt: "Play 1 Elizamon or Owen Dreadnought from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: picked_trash }
+
+  # ─── Clause 2: [Your Turn] Delay — BLOCKED (G-DELAY-SUSPEND-CONDITION) ────
+  # Structural raw_rust stub preserving clause index for structural tests.
+  # Behavioral tests are all #[ignore]'d.
+  - kind: raw_rust
+    fn: bt24_089_delay_on_owen_suspend
+    triggers: [on_suspend]
+
+  # ─── Security clause ────────────────────────────────────────────────────────
+  # "Security Effect [Security] Activate this card's [Main] effects."
+  # Mirrors the Main clause process under on_security timing.
+  # DCGO: AddActivateMainOptionSecurityEffect — mandatory (no canNoSelect).
+  - when: on_security
+    optional: true
+    summary: "[Security] You may play 1 Elizamon or Owen Dreadnought from hand or trash free"
+    process:
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "Select from hand or trash?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  any_of:
+                    - name_contains: "Elizamon"
+                    - name_contains: "Owen Dreadnought"
+                prompt: "Play 1 Elizamon or Owen Dreadnought from your hand without paying the cost"
+            - play_from_hand_free: { of: you, hand_index: picked_hand }
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  any_of:
+                    - name_contains: "Elizamon"
+                    - name_contains: "Owen Dreadnought"
+                prompt: "Play 1 Elizamon or Owen Dreadnought from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: picked_trash }

@@ -1,0 +1,78 @@
+card: P-137
+name: Flamedramon
+kind: digimon
+level: 4
+color: [red, yellow]
+cost: 5
+dp: 5000
+traits: [Dragonkin]
+
+# Standard digivolution: Lv.3 Red / cost 3 (from card metadata).
+# Alt path: any Veemon-topped permanent / cost 2 (DCGO: AddSelfDigivolutionRequirementStaticEffect
+# with PermanentCondition = targetPermanent.TopCard.CardNames.Contains("Veemon"),
+# digivolutionCost: 2, ignoreDigivolutionRequirement: false).
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 3
+  - kind: digivolve
+    from: { name_contains: "Veemon" }
+    cost: 2
+    ignore_requirements: false
+
+effects:
+  # Clause (a) — <Armor Purge>
+  # Printed text: "When this Digimon would be deleted, you may trash the top
+  # card of this Digimon to prevent that deletion."
+  # DCGO: CardEffectFactory.ArmorPurgeEffect(card: card).
+  # Pattern: grant_keyword ArmorPurge (same as BT24-018 clause (d)).
+  - kind: grant_keyword
+    keyword: ArmorPurge
+
+  # Clause (b) — <Raid>
+  # Printed text: "When this Digimon attacks, you may switch the target of
+  # attack to 1 of your opponent's unsuspended Digimon with the highest DP."
+  # DCGO: CardEffectFactory.RaidSelfEffect(isInheritedEffect: false, card: card, condition: null).
+  # Pattern: grant_keyword Raid (same as BT24-011 clause (b) / BT24-011 clause (2)).
+  - kind: grant_keyword
+    keyword: Raid
+
+  # Clause (c) — [Your Turn][Once Per Turn] on_attack_target_change
+  # Printed text: "When this Digimon's attack target is switched, your opponent
+  # adds the top card of their security stack to the hand."
+  #
+  # DCGO analysis (EffectTiming.OnAttackTargetChanged):
+  #   - CanUseCondition: IsExistOnBattleAreaDigimon + CanTriggerOnAttackTargetSwitch + IsOwnerTurn
+  #   - CanActivateCondition: IsExistOnBattleAreaDigimon (re-checked at activation time)
+  #   - ActivateCoroutine:
+  #       1. Get SecurityCards[0] (top = index 0 in DCGO's 0-based array).
+  #       2. CardObjectController.AddHandCards — moves card to opponent's hand.
+  #       3. IReduceSecurity.ReduceSecurity — fires security-removed events,
+  #          removes the card from the security zone.
+  #   - SetUpActivateClass "once per turn" (SetHashString = "AddOpponentSecurityToHand_P_0137").
+  #   - No "you may" — effect fires automatically; opponent MUST add the card.
+  #
+  # DSL/Engine gap [G-ADD-TOP-SECURITY-TO-HAND] (hybrid):
+  #   - The DSL has no `add_top_security_to_hand` verb.
+  #   - EffectContext has no `add_top_security_to_hand` method.
+  #   - Only `trash_top_security` exists (moves security to trash, fires events).
+  #   - This clause requires moving top security to HAND (not trash) while still
+  #     firing the security-removed event chain (IReduceSecurity).
+  #   - Workaround: `raw_rust: p_137_opp_adds_top_security_to_hand` step.
+  #   - When closed: replace the raw_rust step with the native DSL verb.
+  #
+  # Note: active_when:your_turn gates on the controller's turn (IsOwnerTurn in DCGO).
+  # The condition below matches DCGO's CanUseCondition: the effect is registered on
+  # the permanent's battle-area observer, so it naturally only fires when Flamedramon
+  # IS on the battle area. The `CanTriggerOnAttackTargetSwitch` check gates on THIS
+  # Digimon being the attacker whose target switched — see BT21-025 for the analogous
+  # pattern (where the trigger is broader: any Reptile/Dragonkin ally).
+  # P-137 has no `attacker_trait_has` or `is_source_permanent` predicate needed:
+  # OnAttackTargetChange fires from PlayerBattleArea, and Flamedramon is the
+  # attacker (it has Raid); the trigger fires naturally for the Flamedramon permanent.
+  - when: on_attack_target_change
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][OPT] When this Digimon's attack target is switched, opponent adds their top security to hand"
+    process:
+      - raw_rust: { fn: p_137_opp_adds_top_security_to_hand }

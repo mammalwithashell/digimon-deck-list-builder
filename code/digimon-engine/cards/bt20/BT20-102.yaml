@@ -1,0 +1,136 @@
+card: BT20-102
+name: Omnimon (X Antibody)
+kind: digimon
+level: 7
+color: [red, blue]
+cost: 16
+dp: 16000
+traits: [Holy Warrior, X Antibody, Royal Knight, LIBERATOR]
+
+# ─── Alternate Digivolution Path ─────────────────────────────────────────────
+#
+# DCGO (BT20_102.cs, EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   permanentCondition: targetPermanent.TopCard.EqualsCardName("Omnimon")
+#   digivolutionCost: 2, ignoreDigivolutionRequirement: false
+#
+# Standard alt-path: when the digivolution source's top card name contains "Omnimon",
+# you may digivolve into BT20-102 for a cost of 2 (normal requirements still apply).
+alt_paths:
+  - kind: digivolve
+    from: { name_contains: "Omnimon" }
+    cost: 2
+
+effects:
+  # ─── Clause (a): <Raid> ────────────────────────────────────────────────────
+  # Declarative keyword grant.
+  # GAP G-DECLARATIVE-KEYWORD: `EffectTiming::Declarative` is compiled but never
+  # enqueued/fired. The grant_keyword modifier is not installed at runtime. Tests
+  # for keyword-grant modifier presence are #[ignore = "pending: G-DECLARATIVE-KEYWORD"].
+  - kind: grant_keyword
+    keyword: Raid
+
+  # ─── Clause (b): <Piercing> ───────────────────────────────────────────────
+  # Declarative keyword grant. Same G-DECLARATIVE-KEYWORD note as clause (a).
+  - kind: grant_keyword
+    keyword: Piercing
+
+  # ─── Clause (c): <Blocker> ────────────────────────────────────────────────
+  # Declarative keyword grant. Same G-DECLARATIVE-KEYWORD note as clause (a).
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── Clause (d): [On Play][When Digivolving] board-wipe + return ──────────
+  #
+  # Printed text:
+  #   "[On Play][When Digivolving] If [Omnimon] or [X Antibody] is in this
+  #   Digimon's digivolution cards, choose 1 of both players' Digimon and
+  #   delete all other Digimon. Then, return 1 of your opponent's Digimon to
+  #   the bottom of the deck."
+  #
+  # DCGO analysis (BT20_102.cs, EffectTiming.OnEnterFieldAnyone):
+  #   1. IsOmniOrXAntiSource(): DigivolutionCards.Count(name == "Omnimon" || "X Antibody") > 0
+  #   2. If opp has Digimon: select 1 to NOT destroy (owner picks, canNoSelect: false)
+  #   3. If own has Digimon: select 1 to NOT destroy (owner picks, canNoSelect: false)
+  #   4. Destroy all Digimon not in the saved list
+  #   5. (Unconditional, outside IsOmniOrXAntiSource check) If opp has Digimon:
+  #      select 1 to return to bottom of deck (canNoSelect: false, mode: PutLibraryBottom)
+  #
+  # Implemented via raw_rust because two DSL gaps block pure YAML expression:
+  #
+  # GAP G-SELF-DIGIVOLUTION-CONTAINS-NAME [new — hybrid]:
+  #   The digivolution-stack condition "If [Omnimon] or [X Antibody] is in this
+  #   Digimon's digivolution cards" requires checking THIS permanent's own
+  #   card_sources array for a card whose name contains "Omnimon" or "X Antibody".
+  #   DSL predicate `source_name_contains` applies to the SOURCE PERMANENT (the
+  #   Digimon this card is stacked under, in inherited contexts) — not to this
+  #   card's own digivolution stack at all. No DSL BoolPredicate leaf maps to
+  #   `Permanent::contains_card_name()` from the condition closure of a triggered
+  #   clause on the card itself.
+  #   - Engine API (exists): `Permanent::contains_card_name(name, data)` scans
+  #     `card_sources` including top card.
+  #   - Suggested DSL syntax: `self_digivolution_contains_name: "Omnimon"` as a
+  #     BoolPredicate leaf evaluating `rctx.source_permanent()?.contains_card_name(name, &rctx.game.card_data)`.
+  #   - Gap kind: hybrid — engine has the method; DSL needs the predicate leaf AND
+  #     `lower_triggered.rs` must pass a `PredicateSubject::Permanent(source_h)` to
+  #     the condition closure (currently passes `PredicateSubject::None`).
+  #
+  # GAP G-FOR-EACH-EXCLUDE-BINDING [new — dsl]:
+  #   "Delete all OTHER Digimon" (all except the two saved) requires a for_each
+  #   over both players' battle areas filtered to exclude handles in a named binding
+  #   (the "saved" list). No `not_in_binding` / `exclude_binding` predicate exists
+  #   in the DSL. The engine can express this in raw_rust.
+  #   - Engine API (exists): iterate battle_area snapshots, check handle not in Vec.
+  #   - Suggested DSL syntax: `not_in_binding: saved` CandidatePredicate leaf in
+  #     `for_each { over: { of: any, kind: digimon }, filter: { not_in_binding: saved }, ... }`.
+  #
+  # Note: DCGO fires step 5 (return to deck) OUTSIDE the IsOmniOrXAntiSource block,
+  # meaning it applies regardless of whether the condition was met. The raw_rust
+  # function implements this faithfully.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Omnimon/X Antibody in stack → choose 1 to protect per player, delete rest; return 1 opp Digimon to bottom of deck"
+    process:
+      - raw_rust: { fn: bt20_102_boardwipe_and_return }
+
+  # ─── Clause (e): [End of Your Turn][Once Per Turn] Rush + attack ──────────
+  #
+  # Printed text:
+  #   "[End of Your Turn][Once Per Turn] 1 of your Digimon may gain <Rush> for
+  #   the turn and attack without suspending."
+  #
+  # DCGO analysis (BT20_102.cs, EffectTiming.OnEndTurn):
+  #   - SetUpActivateClass(maxUsableCount: 1, isOptional: true)
+  #   - SelectPermanentEffect: pick 1 from own Digimon (canNoSelect: false)
+  #   - GainRush(UntilEachTurnEnd) on selected
+  #   - SelectAttackEffect.SetWithoutTap() — mandatory attack without suspending
+  #
+  # "You may" in printed text → optional: true (DCGO: isOptional=true).
+  # Rush keyword grant is expressible in DSL; "attack without suspending" is BLOCKED:
+  #
+  # GAP G-MAY-ATTACK-NOW [hybrid — already tracked in qa/dsl-vocab-gaps.md]:
+  #   No DSL verb or engine primitive for an immediate in-effect mandatory attack on
+  #   a specific Digimon without suspending. `ModifierType::MayAttack` and
+  #   `::ForceAttack` are not registered in `lookup_modifier_type`. Even if registered,
+  #   they target the EOT execute window — not the mid-effect-resolution attack flow
+  #   that DCGO fires via `SelectAttackEffect.SetCanNotSelectNotAttack + SetWithoutTap`.
+  #
+  # GAP G-OPT-TRIGGERED [already tracked]:
+  #   `once_per_turn: true` on triggered clauses compiles to `Effect::max_per_turn=1`
+  #   but `run_queued_effect_inner` does not enforce it for triggered effects. The clause
+  #   will over-fire until this gap closes.
+  - when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    summary: "[EOT][OPT] 1 of your Digimon gains Rush for the turn; attack without suspending (attack step pending G-MAY-ATTACK-NOW)"
+    process:
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            kind: digimon
+          prompt: "Choose 1 of your Digimon to gain Rush and attack without suspending"
+      - grant_keyword:
+          target: tgt
+          keyword: Rush
+          expiry: end_of_turn
+      # "and attack without suspending" — BLOCKED: G-MAY-ATTACK-NOW
+      # When this gap closes, add:
+      #   - force_attack_now: { target: tgt, without_suspending: true }

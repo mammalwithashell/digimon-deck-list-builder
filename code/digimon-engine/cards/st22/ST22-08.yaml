@@ -1,0 +1,114 @@
+card: ST22-08
+name: Offensive Plug-In V
+kind: option
+color: [red]
+cost: 4
+traits: [Plug-In]
+
+# BLOCKED verdict — all clauses require mechanics not yet expressible in the DSL.
+#
+# Clause 1: Color bypass (conditional IgnoreColorRequirement)
+#   DSL: flood_gate with modifier IgnoreColorRequirement can be authored,
+#   but code/digimon-engine/src/action/mask.rs comment at line 596 explicitly
+#   marks IgnoreColorRequirement enforcement as "residual §4.2b work; absent here."
+#   The action mask does not check this modifier, so a flood_gate clause would
+#   compile but have zero runtime effect.
+#   Gap: engine (G-IGNORE-COLOR-MASK)
+#
+# Clause 2: [Security] delete 1 opponent Digimon with lowest DP
+#   Requires dp_lte: { formula: { aggregate: { selector: lowest_dp, scope: opponent } } }
+#   to filter candidates. The dp_lte predicate compiles but is NOT evaluated in
+#   eval_permanent_fields — gap G-PRED-DP-LTE already documented in engine-gaps.md.
+#   Gap: engine (G-PRED-DP-LTE)
+#
+# Clause 3: [Security] add this card to the hand
+#   "Add this card to the hand" after security resolution requires raw_rust
+#   (pattern: ex6_072_add_self_to_hand). No DSL step exists for returning the
+#   played Option to the controller's hand post-security. However, this clause
+#   is secondary to Clause 2 — both must be solved together.
+#   Gap: dsl (G-ADD-OPTION-SELF-TO-HAND — sibling of G-ADD-TOP-SECURITY-TO-HAND)
+#
+# Clause 4: [Main] optionally link this card to 1 of your Digimon free of cost
+#   The engine has link infrastructure (Effect::link_cost, OptionSubtype::Link,
+#   attach_linked_card), but there is no DSL clause kind or step verb for
+#   registering a link cost + filter. EX11-027 Maquinamon (the only existing
+#   DSL link card) uses raw_rust for both link-requirements and the optional
+#   link action step. No declarative link path exists in the DSL vocabulary.
+#   Gap: dsl (G-DSL-LINK-VERB)
+#
+# Clause 5: [Main] delete 1 opponent Digimon with DP ≤ chosen own Digimon's DP
+#   Requires: (a) select_own_permanent to bind a comparator Digimon, then
+#   (b) select_opponent_permanent with filter dp_lte referencing the BOUND
+#   Digimon's DP. The formula system has no "binding_dp: pick" primitive — it
+#   can reference source_permanent's DP via { of: source_permanent, value: dp }
+#   but cannot reference an arbitrary named binding. Furthermore, dp_lte is
+#   not evaluated (G-PRED-DP-LTE). Both gaps apply.
+#   Gap: hybrid (G-BINDING-DP-FORMULA + G-PRED-DP-LTE)
+#
+# Clause 6: Inherited — Link Requirements [Link] Lv.3 or higher: Cost 2
+#   The inherited link-condition (level_gte: 3, cost: 2) is expressed in DCGO
+#   via CardEffectFactory.AddSelfLinkConditionStaticEffect. There is no DSL
+#   clause kind for declaring link requirements (no "kind: link_requirement"
+#   or equivalent in clause.rs TypedDeclarativeBody variants).
+#   Gap: dsl (G-DSL-LINK-VERB)
+#
+# Clause 7: Linked effect — [End of Your Turn] this Digimon may attack
+#   DCGO shows an OnEndTurn effect that fires only when this card is linked
+#   to a Digimon (activateClass.SetIsLinkedEffect(true)). The DSL has no
+#   "scope: linked" clause kind — linked effects are a deployment scope not
+#   represented in CompiledScope (FaceUp / Inherited / Linked is absent).
+#   Gap: dsl (G-DSL-LINKED-SCOPE)
+#
+# Summary: BLOCKED (hybrid)
+# Primary blocking gaps:
+#   - G-DSL-LINK-VERB: no DSL verb/clause-kind for link registration or link action
+#   - G-DSL-LINKED-SCOPE: no DSL scope for linked-card effects
+#   - G-PRED-DP-LTE: dp_lte predicate not evaluated in eval_permanent_fields
+#   - G-IGNORE-COLOR-MASK: IgnoreColorRequirement modifier not enforced in Rust action mask
+#   - G-BINDING-DP-FORMULA: no formula primitive to read a named binding's DP
+#
+# When these gaps are closed, the expected YAML structure would be:
+#
+# effects:
+#   - kind: flood_gate            # Clause 1 (needs G-IGNORE-COLOR-MASK fix)
+#     active_when:
+#       any_permanent: { of: you, kind: tamer }
+#     modifier: IgnoreColorRequirement
+#     target: { card_number_is: "ST22-08" }
+#
+#   - when: on_security           # Clauses 2+3 (needs G-PRED-DP-LTE + G-ADD-OPTION-SELF-TO-HAND)
+#     process:
+#       - select_opponent_permanent:
+#           bind_as: tgt
+#           filter:
+#             all_of:
+#               - kind: digimon
+#               - dp_lte:
+#                   formula:
+#                     aggregate:
+#                       selector: lowest_dp
+#                       scope: opponent
+#           prompt: "Delete opponent's lowest DP Digimon"
+#       - delete_permanent: { target: tgt }
+#       - raw_rust: { fn: st22_08_add_self_to_hand }   # Clause 3
+#
+#   - when: main_from_hand        # Clause 4+5 (needs G-DSL-LINK-VERB + G-BINDING-DP-FORMULA)
+#     optional: true
+#     process:
+#       # Clause 4: optional free link
+#       - raw_rust: { fn: st22_08_main_optional_free_link }
+#       # Clause 5: delete opponent Digimon with DP <= chosen own Digimon's DP
+#       - raw_rust: { fn: st22_08_main_delete_opp_by_ally_dp }
+#
+#   - kind: raw_rust              # Clause 6: Link Requirements (needs G-DSL-LINK-VERB)
+#     fn: st22_08_link_requirements
+#     triggers: [main_from_hand, main_on_field]
+#
+#   - scope: linked               # Clause 7: Linked EOT may attack (needs G-DSL-LINKED-SCOPE)
+#     when: end_of_your_turn
+#     optional: true
+#     once_per_turn: true
+#     process:
+#       - raw_rust: { fn: st22_08_linked_eot_may_attack }
+
+effects: []

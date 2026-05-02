@@ -1,0 +1,50 @@
+card: BT21-015
+name: Cyclonemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Dragonkin]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 0
+
+# Clause 1 — [Security] At the end of the battle, play this card without paying the cost.
+# DSL: when: on_security → play_from_security: {}
+# This fires when the card is revealed from security by an attack; play_from_security
+# plays the card for free at end of battle (same pattern as BT22-084, BT9-092, BT5-093).
+#
+# Clause 2 — [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less.
+# Mandatory selection (canNoSelect=false in DCGO): if the opponent has an eligible target
+# the player MUST select one. Modelled as optional: false (default) on select_opponent_permanent.
+#
+# Clause 3 — [Inherited] [Your Turn] This Digimon gets +2000 DP.
+# Declarative aura: scope: inherited, active_when: your_turn, target: {} (self-aura / carrier),
+# dp_modifier: 2000. Identical pattern to BT23-005.
+
+effects:
+  - when: on_security
+    summary: "[Security] Play this card for free at end of battle"
+    process:
+      - play_from_security: {}
+
+  - when: [on_play, when_digivolving]
+    summary: "Delete 1 opponent Digimon with 4000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete a Digimon (≤4000 DP)"
+      - delete_permanent: { target: tgt }
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

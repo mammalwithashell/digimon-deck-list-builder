@@ -1,10 +1,10 @@
 """add releases and known_issues tables for patch notes
 
 Revision ID: 20260415_0014
-Revises: 20260414_0013
+Revises: 20260414_0013a
 Create Date: 2026-04-14
 
-Serialized behind add_deck_alt_arts (20260414_0013) to avoid the dual-head
+Serialized behind add_deck_alt_arts (20260414_0013a) to avoid the dual-head
 state that shipped briefly when both 20260414_0013 migrations landed on
 main independently. Runs cleanly either fresh or on top of a DB that had
 patch_notes applied under the old revision string — the table-creation
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 
 
 revision = "20260415_0014"
-down_revision = "20260414_0013"
+down_revision = "20260414_0013a"
 branch_labels = None
 depends_on = None
 

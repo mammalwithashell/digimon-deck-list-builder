@@ -1,0 +1,88 @@
+card: BT18-087
+name: Owen Dreadnought
+kind: tamer
+color: [red]
+cost: 4
+traits: [LIBERATOR]
+
+# Clause 1 — [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#
+# Identical pattern to BT22-084 Nokia Shiramine clause 1.
+# DSL: when: start_of_your_turn, condition: memory_lte: 2, process: set_memory: 3.
+#
+# Clause 2 — [All Turns] When a card is removed from your opponent's security
+# stack, by suspending this Tamer, delete 1 of your opponent's Digimon with
+# 4000 DP or less.
+#
+# Timing: on_opponent_security_removed (already implies opponent's security —
+# no event_target_owner filter needed; timing name itself carries that semantic
+# per the BT21-008 pattern).
+#
+# active_when: { all_turns: true } — fires on both players' turns.
+#
+# Cost-as-suspend: "by suspending this Tamer" means suspending Owen IS the
+# activation cost. The process suspends via `target: source` (DSL keyword for
+# the source permanent, compiles to CompiledBindingRef::Source) first; then the
+# engine's condition check (any_permanent...is_unsuspended) prevents a
+# second activation while Owen is already suspended.
+#
+# G-OPT-TRIGGERED: card text has no explicit [Once Per Turn]. The suspend
+# cost naturally limits activation to once per memory cycle (Owen stays
+# suspended until unsuspend phase). The once_per_turn flag is NOT set.
+#
+# G-PRED-DP-LTE: dp_lte: 4000 filter is authored correctly but the engine's
+# eval_permanent_fields does not evaluate it yet; all opponent Digimon will be
+# selectable until the gap closes. Negative-eligibility test is #[ignore]'d.
+#
+# G-EVENT-TARGET-OWNER: verified NOT needed. on_opponent_security_removed
+# already implies the security removal belongs to the opponent (per BT21-008
+# design and DSL timing spec note: "Medusamon observer"). No condition needed.
+#
+# Clause 3 (Security) — [Security] Play this card without paying the cost.
+# DSL: when: on_security, process: play_from_security: {}
+# Same pattern as BT22-084, BT21-015, BT9-092.
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] Memory gate ────────────────────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory ≤ 2, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [All Turns] on_opponent_security_removed → suspend → delete ──
+  #
+  # Condition: source_permanent must be on the field and unsuspended.
+  # any_permanent targeting this tamer with is_unsuspended: true confirms
+  # both "Owen is in play" (zone: battle_area) and "Owen is unsuspended"
+  # (can pay the suspend cost). DCGO: CanActivateCondition checks
+  # IsExistOnBattleArea + CanActivateSuspendCostEffect.
+  - when: on_opponent_security_removed
+    active_when: { all_turns: true }
+    summary: "[All Turns] On opponent security removed: suspend self, delete ≤4000 DP Digimon"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "BT18-087"
+        is_unsuspended: true
+    process:
+      # Step 1: Suspend this Tamer (the activation cost).
+      - suspend: { target: source }
+      # Step 2: Select and delete 1 opponent Digimon with ≤4000 DP.
+      # G-PRED-DP-LTE: dp_lte filter compiled but not evaluated at runtime yet;
+      # all opponent Digimon will be offered until the gap closes.
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of opponent's Digimon (≤4000 DP)"
+      - delete_permanent: { target: tgt }
+
+  # ─── Clause 3: [Security] Play without paying the cost ─────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

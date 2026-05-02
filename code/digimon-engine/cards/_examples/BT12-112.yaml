@@ -1,0 +1,46 @@
+card: BT12-112
+name: "Shoutmon X7: Superior Mode"
+kind: digimon
+level: 7
+color: [white, red]
+cost: 15
+dp: 17000
+traits: [Composite, Xros Heart, Blue Flare]
+alt_paths:
+  - kind: digixros
+    materials:
+      - filter:
+          any_of:
+            - trait_has: "Xros Heart"
+            - trait_has: "Blue Flare"
+        repeat: unbounded
+        distinct_by: card_number
+        zones: [hand, battle_area, trash]
+    cost:
+      formula:
+        base: 15
+        per: material_count
+        delta: -1
+
+  # NOTE: The "place Shoutmon as source => cost -1, unlock trash zone" is a
+  # hybrid alt_path + cost_reduction pattern. cost_reduction is not a valid
+  # AltPathKind, so the "when would be played" cost hook is OMITTED for
+  # Phase 0 and flagged for Phase 3 when activated_digivolve / cost hook
+  # extensions land.
+
+effects:
+  - when: on_play
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Return to deck"
+      - return_to_deck: { target: tgt, position: bottom, include_sources: true }
+
+  - kind: flood_gate
+    scope: face_up
+    active_when: { your_turn: true }
+    modifier: CannotActivateSecurityEffects
+    target:
+      of: opponent
+      kind: option

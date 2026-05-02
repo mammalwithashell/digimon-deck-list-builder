@@ -1,0 +1,49 @@
+card: BT1-090
+name: "Gravity Crush"
+kind: option
+color: [black]
+cost: 0
+
+# ─── Clause 0: [Main] ────────────────────────────────────────────────────────
+#
+# "[Main] Gain 2 memory. At end of turn, lose 2 memory."
+#
+# DCGO (EffectTiming.OptionSkill):
+#   ActivateCoroutine:
+#     (1) card.Owner.AddMemory(2, activateClass)                    — immediate gain
+#     (2) AddEffectToPlayer(
+#           effectDuration: EffectDuration.UntilEachTurnEnd,
+#           timing: EffectTiming.OnEndTurn,
+#           activateCoroutine: card.Owner.AddMemory(-2, activateClass1))  — scheduled loss
+#
+# DSL modelling:
+#   - when: main_from_hand  (OptionSkill / MainFromHand timing)
+#   - gain_memory: 2                     → immediate (ctx.gain_memory(2))
+#   - schedule_delayed:                  → queues body for end_of_your_turn
+#       when: end_of_your_turn           → maps to EffectTiming::EndOfYourTurn (Phase 2f4)
+#       body: [lose_memory: 2]           → ctx.lose_memory(2) fires at EOT drain
+#
+# Faithfulness notes:
+# - "At end of turn" = the current turn (same turn played), not next turn.
+#   DCGO uses UntilEachTurnEnd + OnEndTurn, confirming end-of-THIS-turn.
+# - No optionality, no OPT, no condition. Both steps are mandatory.
+# - Cost is 0; no memory spent to play.
+# - schedule_delayed was landed in Phase 2f4 (2026-04-26). No engine gap.
+
+effects:
+  # ─── Clause 0: [Main] ─────────────────────────────────────────────────────
+  # Step 1: gain 2 memory immediately.
+  # Step 2: schedule lose_memory: 2 for end of this turn.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Gain 2 memory. At end of turn, lose 2 memory."
+    process:
+      # DCGO: card.Owner.AddMemory(2, activateClass)
+      - gain_memory: 2
+      # DCGO: AddEffectToPlayer(effectDuration: UntilEachTurnEnd, timing: OnEndTurn,
+      #         activateCoroutine: AddMemory(-2, ...))
+      # DSL schedule_delayed queues the body for EffectTiming::EndOfYourTurn.
+      - schedule_delayed:
+          when: end_of_your_turn
+          body:
+            - lose_memory: 2

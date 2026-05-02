@@ -1,7 +1,10 @@
 [workspace]
 members = [
-    "digimon-engine",
-    "digimon-engine-py",
-    "src-tauri",
+    "code/digimon-dsl",
+    "code/digimon-engine",
+    "code/digimon-engine-py",
+    "code/src-tauri",
+    "code/tools/dsl-schema-export",
+    "code/tools/dsl-lint",
 ]
 resolver = "2"

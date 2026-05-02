@@ -59,11 +59,11 @@ python -m digimon_gym.agents.pilot_training --lstm --lstm-hidden-size 256 \
 ### Building the Deck Library
 
 ```bash
-python tools/meta_loader.py --build
+python code/tools/meta_loader.py --build
 ```
 
 - Scrapes tournament data from DigiLab, DigimonMeta, Egman Events.
-- Outputs: `digimon_gym/engine/data/deck_library.json`.
+- Outputs: `data/deck_library.json`.
 - Format: archetypes → decklists + `digilab_stats`.
 
 ### Configuration Parameters
@@ -94,7 +94,7 @@ for row in g.get_archetype_summary()[:10]:
 
 ### Overview
 
-3-stage DB-backed training pipeline managed by `GauntletOrchestrator` (`digimon_gym/agents/gauntlet_orchestrator.py`). Requires running backend (FastAPI + TrainingJobWorker).
+3-stage DB-backed training pipeline managed by `GauntletOrchestrator` (`code/server/workers/gauntlet_orchestrator.py`). Requires running backend (FastAPI + TrainingJobWorker).
 
 ### Stage Flow
 

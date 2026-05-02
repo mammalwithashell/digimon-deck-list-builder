@@ -1,0 +1,131 @@
+card: EX9-013
+name: BlitzGreymon
+kind: digimon
+level: 6
+color: [red, white]
+cost: 7
+dp: 12000
+traits: [Cyborg, DM, Ver.1]
+ace_overflow: -4
+
+# Standard digivolution: Lv5 Red / Cost 4
+# Alt-digivolve (xros_req): Lv5 with [Greymon] in name or [DM] trait / Cost 3
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 4
+
+  - kind: digivolve
+    from:
+      any_of:
+        - { level_eq: 5, name_contains: "Greymon" }
+        - { level_eq: 5, trait_has: DM }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  # ─── Declarative keywords ────────────────────────────────────────────────────
+
+  # [Hand][Counter] <Blast Digivolve> — grants the BlastDigivolve keyword,
+  # which registers this card as a valid counter-timing digivolve candidate
+  # in the combat engine (effect.rs: blast_digivolve flag).
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+  # <Alliance> — grants Alliance keyword. DCGO: AllianceSelfEffect.
+  - kind: grant_keyword
+    keyword: Alliance
+
+  # <Blocker> — grants Blocker keyword. DCGO: BlockerSelfStaticEffect.
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── [On Play][When Digivolving] <De-Digivolve 3> ────────────────────────────
+  #
+  # DCGO: ActivateClass on OnEnterFieldAnyone with CanTriggerOnPlay /
+  # CanTriggerWhenDigivolving conditions. Mandatory (canNoSelect: false).
+  # Target: 1 of opponent's Digimon.
+  # IDegeneration(selectedPermanent, 3, ...) trashes up to 3 top digivolution cards.
+  #
+  # Note: stop_at_level: 3 follows the printed text ("can't trash past level 3 cards").
+  - when: [on_play, when_digivolving]
+    summary: "<De-Digivolve 3> 1 of your opponent's Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to De-Digivolve 3"
+      - de_digivolve:
+          target: tgt
+          amount: 3
+          stop_at_level: 3
+
+  # ─── [End of Your Turn] DNA into Omnimon Alter-S + may attack ────────────────
+  #
+  # Card text: "2 of your Digimon may DNA digivolve into [Omnimon Alter-S]
+  #            in the hand. Then, 1 of your Digimon may attack."
+  #
+  # "may" = optional: true.
+  # The DNA target must be an Omnimon Alter-S that exists in any player's hand
+  # AND that can be DNA-digivolved into (has dna_costs). DCGO selects it via
+  # DNADigivolvePermanentsIntoHandOrTrashCard(..., isHand: true, payCost: true).
+  #
+  # Condition: must be on field and owner's turn (DCGO CanUseCondition).
+  #
+  # "Then, 1 of your Digimon may attack." — BLOCKED: G-MAY-ATTACK-NOW.
+  # No DSL verb / engine primitive for an optional mid-effect attack on a specific
+  # Digimon. The DCGO fires SelectAttackEffect (canNoSelect: true) within the
+  # coroutine. See qa/dsl-vocab-gaps.md entry G-MAY-ATTACK-NOW.
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] 2 Digimon may DNA digivolve into Omnimon Alter-S in hand"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+    process:
+      # Step 1: select Omnimon Alter-S from hand
+      - select_hand:
+          of: you
+          bind_as: dna_card
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Omnimon Alter-S"
+          prompt: "Select Omnimon Alter-S from hand to DNA digivolve into"
+      # Step 2: select 2 own Digimon as DNA sources
+      - select_dna_pair:
+          left_filter:
+            all_of:
+              - kind: digimon
+              - of: you
+          right_filter:
+            all_of:
+              - kind: digimon
+              - of: you
+          bind_left_as: dna_src_a
+          bind_right_as: dna_src_b
+          prompt: "Select 2 Digimon to DNA digivolve"
+          optional: false
+      # Step 3: execute the DNA digivolve (cost paid normally per card)
+      - effect_initiated_dna_digivolve:
+          target_a: dna_src_a
+          target_b: dna_src_b
+          from_hand: dna_card
+          cost: 0
+          ignore_requirements: false
+      # "Then, 1 of your Digimon may attack."
+      # BLOCKED: G-MAY-ATTACK-NOW — no DSL verb for optional mid-effect
+      # attack on a specific Digimon. Omitted until gap closes.
+      # See qa/dsl-vocab-gaps.md.

@@ -1,0 +1,48 @@
+card: BT21-017
+name: Dimetromon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+traits: [Reptile, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3 }
+    cost: 0
+
+effects:
+  # [When Digivolving] If you have 1 or fewer Tamers, you may play 1
+  # [Owen Dreadnought] from your hand without paying the cost.
+  #
+  # optional: true — "you may" makes this player-optional.
+  # condition: count_lte with tamer kind in battle_area ≤ 1 gates activation.
+  # process: select_hand filtered to Owen Dreadnought tamers → play_from_hand_free.
+  - when: when_digivolving
+    optional: true
+    summary: "If ≤1 Tamer, you may play Owen Dreadnought from hand free"
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            name_contains: "Owen Dreadnought"
+          prompt: "Play Owen Dreadnought for free"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # Inherited: [Your Turn] [Once Per Turn] When your opponent's security
+  # stack is removed from, gain 1 memory.
+  #
+  # Identical shape to BT21-008 / BT24-008 inherited clause.
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "Your Turn / OPT: when opponent's security removed, gain 1 memory"
+    process:
+      - gain_memory: 1

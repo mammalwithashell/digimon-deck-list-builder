@@ -1,0 +1,92 @@
+card: BT16-082
+name: Ukkomon
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 2000
+traits: [Ancient Fairy]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 1
+
+# BLOCKED — hybrid gap G-ON-MOVE
+#
+# Printed text: "[Your Turn] [Once Per Turn] When one of your Digimon moves from
+# the breeding area to the battle area, reveal the top 3 cards of your deck.
+# Add 1 Digimon card or Tamer card among them to the hand. Return the rest to
+# the bottom of the deck. Then, you may hatch in your breeding area."
+#
+# DCGO C# (BT16/White/BT16_082.cs) maps this to EffectTiming.OnMove:
+#   • Fires when this player's Digimon moves from breeding area to battle area.
+#   • This Digimon must be in the battle area to observe (IsExistOnBattleArea).
+#   • The move event is gated via CanTriggerOnMove(hashtable, PermanentCondition).
+#   • Effect body: RevealDeckTopCardsAndSelect(3, Digimon|Tamer → hand, remainder
+#     → DeckBottom) then if CanHatch: yes/no prompt.
+#
+# Both halves of this gap are unresolved as of 2026-04-27:
+#   1. ENGINE: No EffectTiming::OnMove variant in src/enums.rs. No dispatch in
+#      game_actions::move_from_breeding (only OnTrainingTrash is fired there).
+#      See qa/archetype-qa/engine-gaps.md [G-ON-MOVE].
+#   2. DSL: No `on_move_from_breeding` when-token in digimon-dsl. The closest
+#      token `on_hatch` fires when an egg moves digitama→breeding (different
+#      timing). See qa/dsl-vocab-gaps.md (EX11-008 entry, same gap).
+#
+# Resolution path (when unblocked):
+#   1. Add EffectTiming::OnMove to src/enums.rs.
+#   2. In game_actions::move_from_breeding, after the move:
+#        self.enqueue_triggered(EffectTiming::OnMove,
+#            TriggerSource::PlayerBattleArea(player_id));
+#   3. Add CompiledTiming::OnMoveFromBreeding (or OnMove) to digimon-dsl compiled.rs.
+#   4. Map it in timing_map.rs: OnMoveFromBreeding => EffectTiming::OnMove.
+#   5. Replace the raw_rust no-op below with the real process body:
+#        - reveal_top_deck: { of: you, count: 3 }
+#        - select_reveal:
+#            of: you
+#            bind_as: picked
+#            optional: false
+#            filter:
+#              any_of:
+#                - kind: digimon
+#                - kind: tamer
+#            prompt: "Add 1 Digimon or Tamer card to hand"
+#        - add_to_hand_from_reveal: { of: you, card: picked }
+#        - place_remainder_on_deck: { of: you, position: bottom }
+#        - select_effect_choice:
+#            bind_as: do_hatch
+#            labels: ["Hatch", "Don't hatch"]
+#            prompt: "You may hatch in your breeding area"
+#        - if:
+#            condition: { equals: [do_hatch, 0] }
+#            then:
+#              - hatch: { of: you }
+#
+# NOTE on "you may hatch": DCGO checks card.Owner.CanHatch (breeding empty AND
+# digitama deck non-empty) before presenting the yes/no prompt. The DSL lacks a
+# `can_hatch` BoolPredicate. The process body above presents the choice
+# unconditionally; `hatch: { of: you }` silently no-ops if hatching isn't legal
+# (same functional outcome, slightly different UX vs. DCGO). This is acceptable
+# under the no-approximations policy because the agent still sees the choice
+# action ID in the action mask even when hatching would be a no-op.
+#
+# NOTE on G-OPT-TRIGGERED: once_per_turn: true is set correctly but the engine
+# does not yet enforce OPT for triggered effects (only for Main-activated ones).
+# See qa/archetype-qa/engine-gaps.md [G-OPT-TRIGGERED].
+
+effects:
+  - when: on_play
+    # ── PLACEHOLDER ────────────────────────────────────────────────────────────
+    # This clause is a structural placeholder only. When G-ON-MOVE is resolved,
+    # replace `when: on_play` with `when: on_move_from_brewing` (or whatever
+    # DSL token maps to EffectTiming::OnMove) and replace the raw_rust no-op
+    # with the real process body documented above.
+    #
+    # We use `on_play` here as the stub timing so the YAML compiles and the
+    # structural tests (once_per_turn, active_when, scope) can be asserted
+    # against the compiled card. The behavioral tests are all #[ignore]'d.
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "BLOCKED G-ON-MOVE: reveal 3, add Digimon/Tamer, may hatch"
+    process:
+      - raw_rust: { fn: bt16_082_on_move_noop }

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-utils/schema.json",
+  "productName": "Digimon TCG",
+  "version": "0.1.0",
+  "identifier": "com.digimon-tcg.desktop",
+  "build": {
+    "beforeDevCommand": "cd ../frontend && npm run dev:desktop",
+    "beforeBuildCommand": "cd ../frontend && npm run build:desktop",
+    "frontendDist": "../frontend/dist",
+    "devUrl": "http://localhost:5173"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Digimon TCG",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 768
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/updates/alpha/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU3QzNDNkZCRkM2QjNDNTcKUldSWFBHdjgrOGJENTNheHpRMHFGVDJDSkx1TVlOZmhBbXorMDlwdXNrYmpQK0M4dkZNVC9GV3IK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

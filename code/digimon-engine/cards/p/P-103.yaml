@@ -1,0 +1,156 @@
+card: P-103
+name: "Offense Training"
+kind: option
+color: [red]
+cost: 2
+
+# ─── Clause 0: [Main] ─────────────────────────────────────────────────────────
+#
+# "[Main] Reveal the top 2 cards of your deck. Add 1 red card among them to
+# your hand. Place the rest at the bottom of your deck in any order.
+# Then, place this card in the battle area."
+#
+# DCGO (EffectTiming.OptionSkill):
+#   SimplifiedRevealDeckTopCardsAndSelect(
+#     revealCount: 2,
+#     simplifiedSelectCardConditions: [ { canTargetCondition: HasCardColor(Red),
+#       message: "Select 1 red card.", mode: AddHand, maxCount: 1 } ],
+#     remainingCardsPlace: RemainingCardsPlace.DeckBottom)
+#   then PlaceDelayOptionCards(card, activateClass)
+#
+# DSL modelling:
+#   - when: main_from_hand  (OptionSkill / MainFromHand timing)
+#   - optional: false — printed text has no "you may" on the reveal step itself;
+#     the select is optional (canNoSelect implied by 0 results = skip).
+#   - reveal_top_deck: { of: you, count: 2 }
+#   - select_reveal: { filter: { color_is: red }, optional: true, bind_as: picked }
+#   - add_to_hand_from_reveal: { of: you, card: picked }
+#   - place_remainder_on_deck: { of: you, position: bottom }
+#   - "Then, place this card in the battle area" — G-PLACE-SELF-AS-OPTION-PERMANENT:
+#     No DSL step verb for placing the option card into the battle area as a
+#     Delay permanent. Tests for this sub-clause are #[ignore]'d.
+#
+# ─── Clause 1: [Main] <Delay> ────────────────────────────────────────────────
+#
+# "[Main] <Delay> (By trashing this card after the placing turn, activate the
+# effect below.) · 1 of your Digimon may digivolve into a red Digimon card in
+# your hand for its digivolution cost. When it would digivolve by this effect,
+# reduce the cost by 2."
+#
+# DCGO (EffectTiming.OnDeclaration):
+#   CanUseCondition: CanDeclareOptionDelayEffect(card)
+#   ActivateCoroutine:
+#     DeletePermanentAndProcessAccordingToResult → if success:
+#       SelectPermanentEffect over owner's battle area (canNoSelect: true — optional)
+#       if selectedPermanent != null:
+#         DigivolveIntoHandOrTrashCard(
+#           targetPermanent: selectedPermanent,
+#           cardCondition: IsDigimon && HasCardColor(Red),
+#           payCost: true,
+#           reduceCostTuple: (reduceCost: 2, reduceCostCardCondition: null),
+#           isHand: true)
+#
+# DSL modelling:
+#   - kind: delay  (maps to DelayTrigger::EndOfYourNextTurn — standard Delay)
+#     trigger: on_play  (any non-EndOfYourTurn timing → EndOfYourNextTurn in lower_delay.rs)
+#   - process:
+#       select_own_permanent (optional: true, filter: kind: digimon)
+#       select_hand (filter: kind:digimon + color_is:red)
+#       effect_initiated_digivolve (cost: { reduce: 2 }, ignore_requirements: false)
+#
+# DCGO: canNoSelect: true on SelectPermanentEffect → optional: true in DSL
+# DCGO: isHand: true (only from hand, not trash) → standard select_hand
+# DCGO: reduceCostTuple: (2, null) → cost: { reduce: 2 } (no per-card condition)
+#
+# ─── Clause 2: [Security] (inherited) ────────────────────────────────────────
+#
+# "Security Effect [Security] Place this card in the battle area."
+#   (cards.json: inherited_effect_description_eng)
+#
+# DCGO (EffectTiming.SecuritySkill):
+#   CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)
+#   → places the option card in battle area when it hits security (same
+#     persistent placement as Main's PlaceDelayOptionCards).
+#
+# DSL modelling:
+#   - scope: inherited (this is an inherited security effect per card layout)
+#   - when: on_security
+#   - The actual placement is G-PLACE-SELF-AS-OPTION-PERMANENT — no DSL step
+#     exists for placing an option card in battle area from security resolution.
+#   - Tests asserting the card lands in battle area after security are #[ignore]'d.
+#
+# G-PLACE-SELF-AS-OPTION-PERMANENT [DSL gap]:
+#   No `place_option_in_battle_area: {}` step verb exists. The engine infers
+#   option-as-permanent placement from the Delay clause presence together with a
+#   main_from_hand trigger, but there is no explicit step to trigger that placement.
+#   Blocking Clauses 0 (sub-step) and 2 (entire clause body).
+#   Same gap as BT24-089.yaml.
+
+effects:
+  # ─── Clause 0: [Main] ─────────────────────────────────────────────────────
+  # Reveal top 2, add 1 red card to hand, place rest at bottom.
+  # "Then, place this card in battle area" — G-PLACE-SELF-AS-OPTION-PERMANENT.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 2; add 1 red card to hand; place rest at bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      # DCGO: canTargetCondition: HasCardColor(Red), maxCount: 1, mode: AddHand
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            color_is: red
+          prompt: "Select 1 red card to add to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # "Then, place this card in the battle area" is G-PLACE-SELF-AS-OPTION-PERMANENT.
+      # No DSL verb available; the engine infers option placement from the Delay clause.
+
+  # ─── Clause 1: [Main] <Delay> ─────────────────────────────────────────────
+  # Standard Delay: player may trash this card on or after the next turn to
+  # activate the digivolve body.
+  # trigger: on_play → lower_delay.rs maps any non-EndOfYourTurn timing to
+  # DelayTrigger::EndOfYourNextTurn (= standard "after placing turn" Delay).
+  - kind: delay
+    trigger: on_play
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a red Digimon in hand, cost -2"
+    process:
+      # DCGO: SelectPermanentEffect canNoSelect: true → optional
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      # DCGO: cardCondition: IsDigimon && HasCardColor(Red)
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: red
+          prompt: "Choose a red Digimon card in your hand to digivolve into"
+      # DCGO: payCost: true, reduceCostTuple: (reduceCost: 2, null), isHand: true
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  # ─── Clause 2: [Security] (inherited) ─────────────────────────────────────
+  # "Security Effect [Security] Place this card in the battle area."
+  # DCGO: PlaceSelfDelayOptionSecurityEffect — places option as Delay permanent.
+  # G-PLACE-SELF-AS-OPTION-PERMANENT: no DSL step for this placement.
+  # The clause is structurally present so security_effects dispatch finds it;
+  # behavioral placement tests are #[ignore]'d.
+  - scope: inherited
+    when: on_security
+    summary: "[Security][Inherited] Place this card in the battle area"
+    process: []

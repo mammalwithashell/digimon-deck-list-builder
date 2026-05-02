@@ -277,14 +277,14 @@ This mode will be implemented as a **parallel pipeline** alongside the standard 
 ### New Files (planned)
 
 ```
-digimon_gym/engine/titan/             # Titan Mode package
+code/engine_py_legacy/engine/titan/             # Titan Mode package
 ├── __init__.py
 ├── titan_player.py                   # TitanPlayer(Player) subclass
 ├── titan_game.py                     # TitanGame(Game) subclass
 ├── titan_constants.py                # Titan-specific constants (security, hand, etc.)
 └── titan_turn_manager.py             # Alternating rotation logic
 
-digimon_gym/engine/runners/
+code/engine_py_legacy/engine/runners/
 ├── titan_headless_game.py            # Agent-vs-agents headless simulation
 └── titan_interactive_game.py         # Mixed human/agent Titan play
 

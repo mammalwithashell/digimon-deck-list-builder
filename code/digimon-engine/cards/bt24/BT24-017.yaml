@@ -1,0 +1,100 @@
+card: BT24-017
+name: Medusamon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+traits: [Dragonkin, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 3
+
+effects:
+  # ─── Declarative keywords ────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+
+  - kind: grant_keyword
+    keyword: Progress
+
+  - kind: grant_keyword
+    keyword: Piercing
+
+  # ─── [When Digivolving] ──────────────────────────────────────────────────────
+  #
+  # Mandatory (not optional) triggered clause.
+  #
+  # Sequence:
+  #   1. Delete 1 of your opponent's lowest-DP Digimon.
+  #      NOTE: dp_lte with aggregate formula is authored correctly but the
+  #      predicate evaluator does not yet check dp_lte on permanents — see
+  #      engine gap G-PRED-DP-LTE.  Until that gap closes, the select prompt
+  #      will show all opponent Digimon rather than only lowest-DP ones.
+  #      The YAML is correct against the spec; the engine gap is flagged below.
+  #
+  #   2. By returning 2 cards from their trash to the bottom of the deck,
+  #      the opponent plays 2 Petrification Tokens.
+  #      NOTE: The "return trash to deck bottom" mutation has no DSL verb and
+  #      no EffectContext API yet — see engine gap G-ZONE-TRASH-TO-DECK.
+  #      We author the selection (select_count_capped_multi) and the
+  #      return step as raw_rust:, then play the tokens.
+  #
+  #   3. After, this Digimon gets +2000 DP for each of your opponent's Digimon
+  #      until their turn ends.
+  - when: when_digivolving
+    process:
+      # Step 1 — delete opponent's lowest-DP Digimon.
+      # G-PRED-DP-LTE: dp_lte predicate on permanents is parsed but the
+      # engine predicate evaluator does not evaluate it yet.  All opponent
+      # Digimon will be valid targets until the gap closes.
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  aggregate:
+                    selector: lowest_dp
+                    scope: opponent
+          prompt: "Delete opponent's lowest-DP Digimon"
+      - delete_permanent: { target: victim }
+
+      # Step 2 — opponent returns 2 trash to deck bottom, then plays 2 tokens.
+      # The opponent selects which 2 trash cards to return.
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_count_capped_multi:
+                of: opponent
+                zone: trash
+                max: 2
+                filter: {}
+                bind_as: returned_cards
+                prompt: "Return 2 cards from your trash to the bottom of your deck"
+                optional_zero: false
+      # G-ZONE-TRASH-TO-DECK: no DSL verb for returning a trash card to deck
+      # bottom.  This step is delegated to a raw_rust helper until the gap closes.
+      - raw_rust: { fn: bt24_017_return_selected_trash_to_deck_bottom }
+
+      # Opponent plays 2 Petrification Tokens.
+      - play_token:
+          controller: opponent
+          token_name: Petrification
+      - play_token:
+          controller: opponent
+          token_name: Petrification
+
+      # Step 3 — BT24-017 gets +2000 DP per opponent Digimon until opp turn ends.
+      - add_dp_modifier:
+          target: source
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  of: opponent
+                  zone: battle_area
+              delta: 2000
+          expiry: end_of_opponents_turn

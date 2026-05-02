@@ -1,0 +1,113 @@
+.matching-main {
+  min-height: calc(100vh - 141px);
+  padding: 34px 36px;
+}
+
+.matching-header .matching-kicker,
+.matching-header p,
+.match-player-card .role,
+.match-player-card .ready,
+.matching-radar {
+  font-family: var(--ib-font-mono);
+}
+
+.matching-header .matching-kicker {
+  color: #ffb05a;
+  letter-spacing: 0.18em;
+}
+
+.matching-header h1 {
+  margin: 8px 0;
+  font-family: var(--ib-font-display);
+  font-size: clamp(42px, 8vw, 88px);
+  line-height: 0.88;
+}
+
+.matching-header em {
+  color: #ff7a18;
+  font-style: normal;
+}
+
+.matching-stage {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 260px minmax(240px, 1fr);
+  align-items: stretch;
+  gap: 18px;
+  margin-top: 34px;
+}
+
+.match-player-card {
+  min-height: 360px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.match-player-card.p1 {
+  border-color: rgba(255, 122, 24, 0.44);
+}
+
+.match-player-card.p2 {
+  border-color: rgba(58, 166, 255, 0.35);
+}
+
+.deck-art {
+  width: 96px;
+  height: 128px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ff7a18;
+  color: #ff7a18;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.deck-art.muted {
+  border-color: rgba(245, 241, 232, 0.22);
+  color: rgba(245, 241, 232, 0.32);
+}
+
+.matching-radar {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: radial-gradient(circle, rgba(255, 122, 24, 0.16), rgba(255, 255, 255, 0.035));
+}
+
+.matching-radar .pulse {
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 122, 24, 0.5);
+  color: #ff7a18;
+}
+
+.matching-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+}
+
+.matching-actions button {
+  border: 1px solid rgba(255, 82, 82, 0.55);
+  color: #ff7777;
+  background: rgba(255, 82, 82, 0.08);
+  padding: 12px 18px;
+}
+
+@media (max-width: 860px) {
+  .matching-main {
+    padding: 24px 18px;
+  }
+
+  .matching-stage {
+    grid-template-columns: 1fr;
+  }
+}
