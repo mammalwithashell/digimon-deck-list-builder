@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +27,11 @@ import torch
 import torch.nn as nn
 
 from digimon_engine import ACTION_SPACE_SIZE, EMBEDDING_DIM, REGISTRY_CAPACITY, TENSOR_SIZE
+
+CODE_ROOT = Path(__file__).resolve().parents[1]
+if str(CODE_ROOT) not in sys.path:
+    sys.path.insert(0, str(CODE_ROOT))
+
 from digimon_gym.tensor_profiles import get_tensor_profile
 
 HIDDEN_SIZE = 256

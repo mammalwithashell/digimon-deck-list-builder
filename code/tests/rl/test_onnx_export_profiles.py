@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -83,6 +85,23 @@ def test_export_random_onnx_parser_defaults_tensor_profile_to_none() -> None:
     )
 
     assert args.tensor_profile is None
+
+
+def test_export_random_onnx_direct_script_help_runs_from_repo_root() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "code" / "tools" / "export_random_onnx.py"),
+            "--help",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "--tensor-profile" in result.stdout
 
 
 def test_export_onnx_writes_profile_metadata(tmp_path) -> None:
