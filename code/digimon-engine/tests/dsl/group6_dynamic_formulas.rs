@@ -106,3 +106,57 @@ effects:
         "nonmatching formula aura must not suppress the default security check"
     );
 }
+
+#[test]
+fn multiple_security_attack_formula_auras_use_max_not_sum() {
+    let first = r#"
+card: TEST-SA-FORMULA-FIRST
+name: Security Formula First
+kind: digimon
+color: [red]
+level: 4
+cost: 4
+dp: 4000
+effects:
+  - kind: aura
+    target: { owner: you, trait: Boosted }
+    security_attack_fn: { base: 1, per: material_count, delta: 0 }
+"#;
+    let second = r#"
+card: TEST-SA-FORMULA-SECOND
+name: Security Formula Second
+kind: digimon
+color: [red]
+level: 4
+cost: 4
+dp: 4000
+effects:
+  - kind: aura
+    target: { owner: you, trait: Boosted }
+    security_attack_fn: { base: 1, per: material_count, delta: 0 }
+"#;
+    let mut attacker_card = make_test_card("BT5-008", "Boosted Attacker");
+    attacker_card.traits.push("Boosted".to_string());
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(first)
+        .expect("register first DSL card")
+        .from_dsl_yaml(second)
+        .expect("register second DSL card")
+        .add_card(attacker_card)
+        .add_card(make_test_card("BT1-010", "Security One"))
+        .add_card(make_test_card("BT1-011", "Security Two"))
+        .add_card(make_test_card("BT1-012", "Security Three"))
+        .security(1, &["BT1-010", "BT1-011", "BT1-012"])
+        .start();
+    r.place_on_field(0, "TEST-SA-FORMULA-FIRST", None);
+    r.place_on_field(0, "TEST-SA-FORMULA-SECOND", None);
+    let h = r.place_on_field(0, "BT5-008", None);
+
+    let result = r.attack_player(h, 1, true);
+    assert_eq!(result, AttackResult::SecurityCheckSurvived);
+    assert_eq!(
+        r.game.player(1).security.len(),
+        2,
+        "two base-inclusive formulas with the same value should perform one check, not two"
+    );
+}

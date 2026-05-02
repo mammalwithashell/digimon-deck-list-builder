@@ -1947,8 +1947,12 @@ impl Game {
                     }
                 }
                 if let Some(value) = formula_fn(&ctx, target) {
+                    if security_attack {
+                        total = if found { total.max(value) } else { value };
+                    } else {
+                        total += value;
+                    }
                     found = true;
-                    total += value;
                 }
             }
         }

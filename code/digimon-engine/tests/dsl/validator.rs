@@ -303,6 +303,60 @@ effects:
 }
 
 #[test]
+fn validate_dynamic_dp_aura_rejects_dp_dependent_target_predicate() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+effects:
+  - kind: aura
+    target:
+      dp_lte: 5000
+    dp_modifier_fn: { base: 0, per: material_count, delta: 1000 }
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| e.path.contains("dp_modifier_fn")
+            && e.message.contains("DP-dependent target")),
+        "expected dynamic DP aura DP-dependent target rejection, got: {errs:?}"
+    );
+}
+
+#[test]
+fn validate_dynamic_dp_aura_rejects_dp_aggregate_formula() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+effects:
+  - kind: aura
+    target: {}
+    dp_modifier_fn:
+      aggregate: highest_dp
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter()
+            .any(|e| e.path.contains("dp_modifier_fn") && e.message.contains("DP aggregate")),
+        "expected dynamic DP aura DP aggregate rejection, got: {errs:?}"
+    );
+}
+
+#[test]
 fn validate_unknown_aura_modifier_fails() {
     let spec = parse(
         r#"

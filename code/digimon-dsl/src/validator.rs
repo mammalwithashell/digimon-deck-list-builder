@@ -181,15 +181,54 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     });
                                 }
                                 if b.dp_modifier.is_none()
+                                    && b.dp_modifier_fn.is_none()
+                                    && b.security_attack_fn.is_none()
                                     && b.grant_keyword.is_none()
                                     && b.modifier.is_none()
                                 {
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: prefix.clone(),
-                                        message: "aura requires a payload: dp_modifier, grant_keyword, or modifier"
+                                        message: "aura requires a payload: dp_modifier, dp_modifier_fn, security_attack_fn, grant_keyword, or modifier"
                                             .to_string(),
                                     });
+                                }
+                                if let Some(formula) = &b.dp_modifier_fn {
+                                    validate_formula(
+                                        formula,
+                                        &format!("{prefix}.dp_modifier_fn"),
+                                        &spec.card,
+                                        ctx,
+                                        &mut errors,
+                                    );
+                                    if let Some(target) = &b.target {
+                                        if predicate_depends_on_dp(target) {
+                                            errors.push(ValidationError {
+                                                card_id: spec.card.clone(),
+                                                path: format!("{prefix}.dp_modifier_fn"),
+                                                message: "dynamic DP aura cannot use a DP-dependent target predicate"
+                                                    .to_string(),
+                                            });
+                                        }
+                                    }
+                                    if formula_uses_dp_aggregate(formula) {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.dp_modifier_fn"),
+                                            message:
+                                                "dynamic DP aura cannot use a DP aggregate formula"
+                                                    .to_string(),
+                                        });
+                                    }
+                                }
+                                if let Some(formula) = &b.security_attack_fn {
+                                    validate_formula(
+                                        formula,
+                                        &format!("{prefix}.security_attack_fn"),
+                                        &spec.card,
+                                        ctx,
+                                        &mut errors,
+                                    );
                                 }
                                 if let Some(modifier) = &b.modifier {
                                     if !is_known_modifier(modifier) {
@@ -260,6 +299,44 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
     } else {
         Err(errors)
     }
+}
+
+fn predicate_depends_on_dp(pred: &crate::predicate::PredicateSpec) -> bool {
+    pred.dp_eq.is_some()
+        || pred.dp_lte.is_some()
+        || pred.dp_gte.is_some()
+        || pred.all_of.iter().any(predicate_depends_on_dp)
+        || pred.any_of.iter().any(predicate_depends_on_dp)
+        || pred.none_of.iter().any(predicate_depends_on_dp)
+        || pred.not.as_deref().is_some_and(predicate_depends_on_dp)
+        || pred
+            .any_permanent
+            .as_deref()
+            .is_some_and(|ex| predicate_depends_on_dp(&ex.predicate))
+        || pred
+            .any_field_permanent
+            .as_deref()
+            .is_some_and(|ex| predicate_depends_on_dp(&ex.predicate))
+        || pred
+            .no_permanent
+            .as_deref()
+            .is_some_and(|ex| predicate_depends_on_dp(&ex.predicate))
+        || pred
+            .all_permanents
+            .as_deref()
+            .is_some_and(|ex| predicate_depends_on_dp(&ex.predicate))
+        || pred
+            .count_lte
+            .as_ref()
+            .is_some_and(|agg| predicate_depends_on_dp(&agg.filter))
+        || pred
+            .count_gte
+            .as_ref()
+            .is_some_and(|agg| predicate_depends_on_dp(&agg.filter))
+        || pred
+            .has_inherited
+            .as_deref()
+            .is_some_and(predicate_depends_on_dp)
 }
 
 fn validate_triggered(
@@ -616,6 +693,31 @@ fn validate_formula(
         | FormulaSpec::BasePerDelta { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_)) => {}
+    }
+}
+
+fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
+    use crate::formula::{AggregateSelector, CompoundFormula, FormulaSpec};
+
+    match formula {
+        FormulaSpec::Compound(CompoundFormula::Aggregate(
+            AggregateSelector::HighestDp | AggregateSelector::LowestDp,
+        )) => true,
+        FormulaSpec::Compound(CompoundFormula::AggregateScoped(spec)) => {
+            matches!(
+                spec.selector,
+                AggregateSelector::HighestDp | AggregateSelector::LowestDp
+            )
+        }
+        FormulaSpec::Compound(
+            CompoundFormula::FloorDiv(args)
+            | CompoundFormula::Max(args)
+            | CompoundFormula::Min(args),
+        ) => args.iter().any(formula_uses_dp_aggregate),
+        FormulaSpec::Literal(_)
+        | FormulaSpec::BasePerDelta { .. }
+        | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
+        | FormulaSpec::Compound(CompoundFormula::RawRust(_)) => false,
     }
 }
 
