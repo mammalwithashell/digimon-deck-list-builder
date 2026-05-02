@@ -303,6 +303,24 @@ impl ModifierRegistry {
         !self.get(target, modifier).is_empty()
     }
 
+    /// Whether `modifier` blocks an opponent-controlled effect from affecting
+    /// `target`. This is intentionally narrow: only passive replacement entries
+    /// with `cause_filter = Some(OpponentEffect)` participate, so own effects
+    /// and broader protection families keep their existing semantics.
+    pub fn blocks_opponent_effect(
+        &self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        effect_player: PlayerId,
+    ) -> bool {
+        self.get(target, modifier).into_iter().any(|entry| {
+            matches!(
+                entry.cause_filter,
+                Some(crate::replacement::ReplacementCause::OpponentEffect)
+            ) && effect_player != target.player
+        })
+    }
+
     /// Iterate over ALL `ModifierEntry` values attached to `target`
     /// (regardless of `ModifierType`). Used by the Phase 7 replacement
     /// dispatcher to scan for `CannotBe*` entries across all modifier types

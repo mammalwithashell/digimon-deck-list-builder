@@ -961,13 +961,14 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Related:** Existing "Dynamic cost reduction at `BeforePayCost`" (sibling entry — same `.pay_cost` builder, different dispatch timing); new "`<Digi-Burst N>` keyword" (consumer); new "`<Fragment (N)>` keyword" (consumer of a similar pay-to-replace hook on replacement timing).
 
 ### Source-scoped return-immunity modifiers (`CannotBeReturnedToHand` / `CannotBeReturnedToDeck` / `CannotBeDeDigivolved` by-opponent-effects-only)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED for covered Rust consumers
 - **Discovered in:** Rocks (2026-04-18)
 - **Card(s):** EX8-070 Zofr Kabus ("opponent's effects can't return it to hands or decks"), P-215 Icemon ("their effects can't return … to hands or decks or affect it with `<De-Digivolve>` effects"), BT18-064 Mercurymon ("this Digimon can't be returned to the hand or deck by your opponent's effects")
 - **Effect text:** As above.
-- **What's missing:** `ModifierType::CannotBeReturnedToHand` exists (as verified by batch 5 — per `enums.rs:283`), but sibling variants are missing: `CannotBeReturnedToDeck` and `CannotBeDeDigivolved`. Cards print the trio as a bundle. Additionally, all three must be **source-scoped** ("by your opponent's effects" only) — same source-attribution axis as the `WhenWouldBeDeleted` framework's `source_player` plumbing, but evaluated as a modifier-entry filter at the consuming call site (each return-to-hand / return-to-deck / de-digivolve helper).
-- **Suggested API shape:** Add `ModifierType::CannotBeReturnedToDeck` and `ModifierType::CannotBeDeDigivolved`. Each return/de-digivolve helper accepts a `source_player: PlayerId` argument and consults `modifiers.any_with_type(target, T) && source_player != permanent.controller`. Builder sugar: `ctx.grant_immunity_to_opponent_zone_effects(target, expiry)` that installs all three at once. Couples with the absent return-to-hand/deck/de-digivolve consuming paths (existing gaps).
-- **Workaround:** None faithful. `CannotBeAffected` is too broad (blocks own-controller returns). Omitting the modifier leaks Mercurymon and protected Digimon to opposing bounce / de-digivolve.
+- **Status:** Implemented for the explicit Rust consumers `Game::return_to_hand_from_effect`, `Game::return_to_deck_from_effect`, and `Game::de_digivolve_from_effect`. These wrappers preserve normal replacement dispatch while supplying `effect_source_player`, so default passive cause filters block opponent effects and allow own effects. `EffectContext::grant_zone_return_immunity_to_opponent_effects` installs the narrow three-modifier bundle without broad `CannotBeAffected` substitution.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- source_scoped_immunity --nocapture`
+- **Remaining scope:** Other future movement/de-digivolve entry points must route through these source-attributed helpers or explicitly supply equivalent effect-source context before this closure applies to them.
+- **Workaround:** No longer needed for the covered consumers. Continue avoiding `CannotBeAffected` for this printed protection because it is too broad and would block own-controller returns.
 - **Related:** "Zone-manipulation: return-to-hand / return-to-deck" (consuming paths); "De-Digivolve N primitive" (consumer); "Condition-gated modifier entries + new Expiry variants" (source-attribution axis); "`<Progress>` keyword + `ImmunityToOpponentEffects`" (closest existing — but scoped to effect-target-affect, not zone-return specifically).
 
 ### Conditional security-in-stack trigger (`[Security] [End of Opponent's Turn]` / `[Security] [Start of Your Turn]` etc.)

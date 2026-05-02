@@ -2684,6 +2684,31 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    /// Grant the common narrow protection bundle for text like "can't be
+    /// returned to hand or deck or de-digivolved by your opponent's effects."
+    ///
+    /// These are passive replacement modifiers with the default
+    /// `OpponentEffect` cause filter, not broad `CannotBeAffected` immunity.
+    pub fn grant_zone_return_immunity_to_opponent_effects(
+        &mut self,
+        target: PermanentHandle,
+        expiry: Expiry,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        for modifier in [
+            ModifierType::CannotBeReturnedToHand,
+            ModifierType::CannotBeReturnedToDeck,
+            ModifierType::CannotBeDeDigivolved,
+        ] {
+            self.game.modifiers.add(
+                target,
+                ModifierEntry::passive_replacement(modifier, expiry, self.player),
+            );
+        }
+    }
+
     pub fn ignore_option_color_requirement(&mut self, target_player: PlayerId, expiry: Expiry) {
         self.game.modifiers.add_player_modifier(
             target_player,

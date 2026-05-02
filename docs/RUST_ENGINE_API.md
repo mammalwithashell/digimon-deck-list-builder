@@ -1117,6 +1117,25 @@ ModifierEntry::passive_replacement(ModifierType::CannotBeDeDigivolved)
 
 Cause-filter semantics: `.opponent_only()` sets `cause_filter = Some(OpponentEffect)`. Absent filter = cause-agnostic (fires for any cause).
 
+Source-scoped movement helpers:
+
+```rust
+game.return_to_hand_from_effect(target, effect_player) -> bool
+game.return_to_deck_from_effect(target, effect_player) -> bool
+game.de_digivolve_from_effect(target, effect_player, amount) -> bool
+
+ctx.grant_zone_return_immunity_to_opponent_effects(target, expiry)
+```
+
+The `Game::*_from_effect` helpers temporarily supply `effect_source_player`
+before routing through the normal `return_to_hand`, `return_to_deck`, and
+`EffectContext::de_digivolve` fire-sites. Passive entries such as
+`CannotBeReturnedToHand`, `CannotBeReturnedToDeck`, and
+`CannotBeDeDigivolved` therefore cancel only when their default
+`cause_filter = Some(OpponentEffect)` matches. The `EffectContext` helper
+installs exactly that narrow three-modifier bundle; do not substitute broad
+`CannotBeAffected` for printed return/de-digivolve protection.
+
 ### Native-keyword auto-install (Task 6)
 
 `<Barrier>`, `<Evade>`, and `<Decode>` ship out-of-the-box via printed-keyword auto-install at `effects_for_card` time — no hand-authored `CardEffect` script required. Put the keyword in `CardData::keywords` and the engine installs the matching replacement.
@@ -2113,8 +2132,11 @@ Effect::on_play(card).process(|ctx| {
 | `trash_from_hand_by_index(player, hand_index)` → `Option<CardHandle>` | Trash a specific hand slot. |
 | `trash_from_reveal(player, CardHandle)` → `bool` | Trash a revealed card. |
 | `return_to_hand(PermanentHandle)` → `Option<CardHandle>` | Bounce a permanent: top → hand, sources under → trash. |
+| `return_to_hand_from_effect(PermanentHandle, effect_player)` → `bool` | Source-attributed bounce to hand; opponent-only passives can cancel, own effects can pass. |
 | `return_to_deck(PermanentHandle, StackPosition)` → `bool` | Bounce to deck at Top/Bottom/Random. |
+| `return_to_deck_from_effect(PermanentHandle, effect_player)` → `bool` | Source-attributed return to bottom of deck; uses normal replacement windows. |
 | `return_to_deck_from_reveal(player, CardHandle, StackPosition)` → `bool` | Reveal pool → deck. |
+| `de_digivolve_from_effect(PermanentHandle, effect_player, amount)` → `bool` | Source-attributed standard De-Digivolve floor (`stop_at_level = 3`); returns true if any source popped. |
 | `shuffle_deck(player)` | Pair with `add_to_hand_from_deck` for "search and shuffle" effects. |
 
 ### Reveal pool
