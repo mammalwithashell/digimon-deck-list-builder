@@ -168,6 +168,7 @@ pub enum GamePhase {
     SelectUnion,
     SelectPermutation,
     SelectBudgeted,
+    SelectBreedingPermanent,
 }
 
 impl From<RustGamePhase> for GamePhase {
@@ -195,6 +196,7 @@ impl From<RustGamePhase> for GamePhase {
             RustGamePhase::SelectUnion => GamePhase::SelectUnion,
             RustGamePhase::SelectPermutation => GamePhase::SelectPermutation,
             RustGamePhase::SelectBudgeted => GamePhase::SelectBudgeted,
+            RustGamePhase::SelectBreedingPermanent => GamePhase::SelectBreedingPermanent,
         }
     }
 }

@@ -300,26 +300,27 @@ class TestActionAndTensorConstants:
 
 
 class TestTensorProfiles:
-    def test_tensor_profile_id_constant(self):
+    def test_default_profile_id_matches_profile(self):
         from digimon_engine import TENSOR_PROFILE_ID, get_tensor_profile
 
-        assert TENSOR_PROFILE_ID == get_tensor_profile().id
-        assert TENSOR_PROFILE_ID == "standard_v1"
+        profile = get_tensor_profile()
+
+        assert TENSOR_PROFILE_ID == "standard_compact_v1"
+        assert profile.id == TENSOR_PROFILE_ID
+        assert profile.game_mode == "standard"
 
     def test_list_tensor_profiles(self):
         from digimon_engine import TENSOR_PROFILE_ID, list_tensor_profiles
 
         profiles = list_tensor_profiles()
-        assert "standard_v1" in profiles
+        assert "standard_compact_v1" in profiles
         assert TENSOR_PROFILE_ID in profiles
 
-    def test_get_default_tensor_profile(self):
+    def test_tensor_profile_positions(self):
         from digimon_engine import TENSOR_SIZE, get_tensor_profile
 
         profile = get_tensor_profile()
-        assert profile.id == "standard_v1"
-        assert profile.game_mode == "standard"
-        assert profile.version == 1
+        assert profile.id == "standard_compact_v1"
         assert profile.tensor_size == TENSOR_SIZE
         assert profile.card_id_slot_count == 520
         assert profile.scalar_slot_count == 855
@@ -327,6 +328,17 @@ class TestTensorProfiles:
         assert len(profile.scalar_positions) == 855
         assert profile.card_id_positions[0] == 10
         assert profile.scalar_positions[0] == 0
+
+    def test_legacy_tensor_profile_aliases_resolve_to_canonical_profile(self):
+        from digimon_engine import get_tensor_profile
+
+        canonical = get_tensor_profile("standard_compact_v1")
+        for alias in ("standard_v1", "compact_v1"):
+            profile = get_tensor_profile(alias)
+            assert profile.id == canonical.id == "standard_compact_v1"
+            assert profile.tensor_size == canonical.tensor_size
+            assert profile.card_id_positions == canonical.card_id_positions
+            assert profile.scalar_positions == canonical.scalar_positions
 
     def test_get_unknown_tensor_profile_raises(self):
         import pytest
