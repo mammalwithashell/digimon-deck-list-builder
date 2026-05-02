@@ -59,7 +59,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Zone-manipulation: security stack operations (trash top, place bottom, trash N)](#zone-manipulation-security-stack-operations-trash-top-place-bottom-trash-n) | 🔴 | 6 | `effect_context.rs`, `combat.rs` |
 | [Token creation + `CardKind::Token` + Petrification Token definition](#token-creation--cardkindtoken--petrification-token-definition) | 🟢 | 3 | `card_data.rs`, `cards.rs`, `effect_context.rs` |
 | [Place card at a specific stack position (bottom-source / under another permanent) + alt-digivolve](#place-card-at-a-specific-stack-position-bottom-source--under-another-permanent--alt-digivolve) | 🔴 | 2 | `effect_context.rs`, `permanent.rs`, `game.rs` |
-| [Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N)](#native-printed-keyword-parsing-rush-raid-piercing-blocker-reboot-jamming-blitz-vortex-alliance-security-a%C2%B1n) | 🟢 | 17+ | `card_data.rs`, `cards.rs`, `card_registry.rs` |
+| [Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N)](#native-printed-keyword-parsing-rush-raid-piercing-blocker-reboot-jamming-blitz-vortex-alliance-security-a%C2%B1n-fragment-save-collision-retaliation) | 🟢 | 17+ | `card_data.rs`, `cards.rs`, `card_registry.rs` |
 | [`<Progress>` keyword + `ImmunityToOpponentEffects` modifier](#progress-keyword--immunitytoopponenteffects-modifier) | 🔴 | 6 | `enums.rs`, `modifiers.rs`, `combat.rs`, `effect_context.rs` |
 | [`<Armor Purge>` keyword (leave-field replacement variant)](#armor-purge-keyword-leave-field-replacement-variant) | 🔴 | 2 | `enums.rs`, `effect.rs` (builds on replacement framework) |
 | [`<Training>` keyword](#training-keyword) | 🔴 | 1 | `enums.rs`, `card_source.rs`, `effect_context.rs`, `action/` |
@@ -550,7 +550,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Discovered in:** TS Olympos (2026-04-18)
 - **Card(s):** BT24-063 Locomon (face + inherited)
 - **Effect text:** "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)"
-- **Status:** Task 4 wires `Keyword::Collision` through native printed parsing and `Game::has_keyword` consumers. The block interrupt mask removes `SEL_REPLACEMENT_PASS` only while a legal blocker exists, and decode rejects block-decline while Collision makes blocking mandatory. Granted Collision shares the same keyword read path as printed Collision.
+- **Status:** Existing Collision behavior is regression-covered by Task 4: `Keyword::Collision` is available through native printed parsing and `Game::has_keyword` consumers. The block interrupt mask removes `SEL_REPLACEMENT_PASS` only while a legal blocker exists, and decode rejects block-decline while Collision makes blocking mandatory. Granted Collision shares the same keyword read path as printed Collision.
 - **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`
 - **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`
 - **Remaining scope:** Card-specific authoring for effects that grant Collision/Blocker in unusual attack-scoped ways should still be tracked by those card entries. Do not re-open this core mask/decode keyword behavior unless a failing regression demonstrates a mismatch.
@@ -654,7 +654,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
 - **Card(s):** BT24-058 Blimpmon (inherited `<Reboot>`) — Dark Masters adds: BT15-062 Gigadramon (inherited `<Reboot>`), EX10-010 BlackWarGreymon (printed `<Reboot>`), BT16-046 GranKuwagamon ("Cards this effect suspended can't unsuspend during your opponent's next unsuspend phase" — variant: per-target Reboot-suppression that overrides Reboot in the opp's unsuspend phase), BT21-051 Puppetmon (printed `<Reboot>`)
 - **Effect text:** "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
-- **Status:** Task 4 wires printed Reboot parsing and opponent-unsuspend-phase enforcement through `Game::has_keyword`. A suspended Reboot Digimon unsuspends during the opponent's unsuspend phase, once for that phase.
+- **Status:** Existing Reboot behavior is regression-covered by Task 4: printed Reboot parsing and opponent-unsuspend-phase enforcement route through `Game::has_keyword`. A suspended Reboot Digimon unsuspends during the opponent's unsuspend phase, once for that phase.
 - **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`
 - **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`
 - **Remaining scope:** Reboot-suppression variants such as "can't unsuspend during your opponent's next unsuspend phase" remain separate card/effect behavior and are not covered by the core Reboot regression.
@@ -746,7 +746,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Discovered in:** Dark Masters (2026-04-18)
 - **Card(s):** BT15-077 LadyDevimon (inherited), BT15-079 Piedmon (inherited)
 - **Effect text:** "<Retaliation> (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"
-- **Status:** Task 4 adds `Keyword::Retaliation`, native printed parsing, and combat enforcement. When a Retaliation carrier is deleted in battle, the battled opponent is deleted even after the carrier leaves the battle area.
+- **Status:** Existing Retaliation behavior is regression-covered by Task 4: `Keyword::Retaliation`, native printed parsing, and combat enforcement are present. When a Retaliation carrier is deleted in battle, the battled opponent is deleted even after the carrier leaves the battle area.
 - **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`
 - **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`
 - **Remaining scope:** Card-specific inherited Retaliation fixtures should be covered where those card scripts/fixtures are exercised; this entry no longer represents a missing core keyword or combat rider.
@@ -934,7 +934,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Discovered in:** Rocks (2026-04-18)
 - **Card(s):** EX10-032 Proganomon (grants `<Piercing>`), EX8-051 Proganomon (native `<Piercing>`), EX8-070 Zofr Kabus (grants `<Piercing>`)
 - **Effect text:** "`<Piercing>` (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
-- **Status:** Task 4 wires printed Piercing parsing and battle resolution through `Game::has_keyword`. After a Digimon-vs-Digimon battle where the Piercing attacker deletes the opposing Digimon and survives, combat performs the normal security check continuation once.
+- **Status:** Existing Piercing behavior is regression-covered by Task 4: printed Piercing parsing and battle resolution route through `Game::has_keyword`. After a Digimon-vs-Digimon battle where the Piercing attacker deletes the opposing Digimon and survives, combat performs the normal security check continuation once.
 - **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`
 - **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`
 - **Remaining scope:** Card-specific effects that grant Piercing are covered only when they lower to the canonical keyword grant path; unusual grant timing should remain tracked by the relevant card/effect entry.
