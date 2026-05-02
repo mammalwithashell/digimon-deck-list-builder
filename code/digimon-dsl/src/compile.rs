@@ -349,6 +349,9 @@ fn compile_predicate(
             .color_only
             .as_ref()
             .map(|v| v.iter().map(|c| compile_color(*c)).collect()),
+        color_matches_any_field_digimon: p
+            .color_matches_any_field_digimon
+            .map(|s| compile_player_ref(s.player())),
         trait_has: p.trait_has.clone(),
         form_is: p.form_is.clone(),
         attribute_is: p.attribute_is.clone(),

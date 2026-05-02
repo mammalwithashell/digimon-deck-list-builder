@@ -372,6 +372,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.level_gte.is_none()
         && pred.color_is.is_none()
         && pred.color_only.is_none()
+        && pred.color_matches_any_field_digimon.is_none()
         && pred.trait_has.is_none()
         && pred.form_is.is_none()
         && pred.attribute_is.is_none()
@@ -557,6 +558,11 @@ fn eval_card_fields(
             }
         }
     }
+    if let Some(of) = pred.color_matches_any_field_digimon {
+        if !card_shares_color_with_any_field_digimon(rctx, of, &data.colors) {
+            return false;
+        }
+    }
     if let Some(ref t) = pred.trait_has {
         if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(t)) {
             return false;
@@ -607,6 +613,37 @@ fn eval_card_fields(
         }
     }
     true
+}
+
+fn card_shares_color_with_any_field_digimon(
+    rctx: &EffectReadContext<'_>,
+    of: CompiledPlayerRef,
+    colors: &[CardColor],
+) -> bool {
+    if colors.is_empty() {
+        return false;
+    }
+    for player in existential_players(of, rctx) {
+        for permanent in &rctx.game.player(player).battle_area {
+            let Some(data) = rctx
+                .game
+                .card_data_for_handle(permanent.top_card().handle())
+            else {
+                continue;
+            };
+            if !kind_matches_field(CompiledCardKind::Digimon, data.card_kind) {
+                continue;
+            }
+            if data
+                .digimon_colors()
+                .iter()
+                .any(|field_color| colors.iter().any(|card_color| card_color == field_color))
+            {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 fn eval_permanent_fields(

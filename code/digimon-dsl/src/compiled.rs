@@ -173,6 +173,7 @@ pub struct CompiledPredicate {
     pub level_gte: Option<u8>,
     pub color_is: Option<CompiledColor>,
     pub color_only: Option<Vec<CompiledColor>>,
+    pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
     pub trait_has: Option<String>,
     pub form_is: Option<String>,
     pub attribute_is: Option<String>,

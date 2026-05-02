@@ -33,6 +33,8 @@ pub struct PredicateSpec {
     pub color_is: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_only: Option<Vec<ColorSpec>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_matches_any_field_digimon: Option<PlayerRefSelector>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         alias = "trait",
@@ -194,6 +196,22 @@ pub enum ReplacementCauseSpec {
     OpponentEffect,
     SecurityCheck,
     Cost,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(untagged)]
+pub enum PlayerRefSelector {
+    Player(PlayerRef),
+    Scoped { of: PlayerRef },
+}
+
+impl PlayerRefSelector {
+    pub fn player(self) -> PlayerRef {
+        match self {
+            Self::Player(player) => player,
+            Self::Scoped { of } => of,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
