@@ -312,6 +312,11 @@ fn install_delay_hand_digivolve_selection(
                 .map(|data| data.card_name.clone())
                 .unwrap_or_else(|| format!("Card {}", idx + 1)),
             action_id: HAND_EFFECT_START + idx as u16,
+            source_card: Some(*card),
+            source_kind: None,
+            timing: None,
+            is_optional: false,
+            observation_metadata: Default::default(),
         })
         .collect();
     let source_card = ctx.source_card;

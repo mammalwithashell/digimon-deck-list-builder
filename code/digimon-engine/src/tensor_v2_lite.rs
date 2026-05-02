@@ -1,7 +1,7 @@
 use crate::card_data::CardData;
 use crate::card_registry::CardRegistry;
 use crate::card_source::CardSource;
-use crate::enums::{CardKind, GamePhase, PlayerId};
+use crate::enums::{CardKind, EffectSourceKind, EffectTiming, GamePhase, PlayerId};
 use crate::game::Game;
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
@@ -282,10 +282,83 @@ fn write_pending_choice_features(
             t[base + 3] = row as f32 / layout::PENDING_CHOICE_ROWS as f32;
             t[base + 4] =
                 (sel.valid_action_ids.len() as f32 / layout::PENDING_CHOICE_ROWS as f32).min(1.0);
-            t[base + 18] = if sel.is_optional { 1.0 } else { 0.0 };
+            let choice = sel
+                .effect_choices
+                .as_ref()
+                .and_then(|choices| choices.iter().find(|choice| choice.action_id == *action_id));
+            t[base + 18] = if choice
+                .map(|choice| choice.is_optional)
+                .unwrap_or(sel.is_optional)
+            {
+                1.0
+            } else {
+                0.0
+            };
             t[base + layout::PENDING_SOURCE_CARD_ID_OFFSET] = source_index;
+            if let Some(choice) = choice {
+                if let Some(timing) = choice.timing {
+                    t[base + 22 + timing_bucket(timing)] = 1.0;
+                }
+                if let Some(source_kind) = choice.source_kind {
+                    t[base + 34 + source_kind_bucket(source_kind)] = 1.0;
+                }
+                if let Some(source_card) = choice.source_card {
+                    t[base + layout::PENDING_SOURCE_CARD_ID_OFFSET] = game
+                        .card_data_for_handle(source_card)
+                        .map(|card| registry.get_index(&card.card_id) as f32)
+                        .unwrap_or(source_index);
+                }
+                write_effect_category_flags(t, base + 45, choice.observation_metadata.categories);
+            }
         }
     }
+}
+
+fn timing_bucket(timing: EffectTiming) -> usize {
+    use EffectTiming::*;
+    match timing {
+        OnPlay => 0,
+        WhenDigivolving | OnDigivolve | OnDnaDigivolve => 1,
+        OnAttack | WhenAttacking => 2,
+        SecuritySkill | OnSecurityCheck | OnLoseSecurity => 3,
+        EndOfYourTurn | EndOfOpponentsTurn => 4,
+        StartOfYourTurn | StartOfOpponentsTurn | StartOfYourMainPhase => 5,
+        OnDeletion | OnAnyDeletion => 6,
+        CounterEffect => 7,
+        OptionMain | DelayEffect => 8,
+        _ => 11,
+    }
+}
+
+fn source_kind_bucket(source_kind: EffectSourceKind) -> usize {
+    match source_kind {
+        EffectSourceKind::Digimon => 0,
+        EffectSourceKind::Tamer => 1,
+        EffectSourceKind::Option => 2,
+        EffectSourceKind::Rule => 3,
+    }
+}
+
+fn write_effect_category_flags(
+    t: &mut [f32],
+    start: usize,
+    flags: crate::effect::EffectCategoryFlags,
+) {
+    t[start] = flags.delete as u8 as f32;
+    t[start + 1] = flags.suspend as u8 as f32;
+    t[start + 2] = flags.unsuspend as u8 as f32;
+    t[start + 3] = flags.bounce as u8 as f32;
+    t[start + 4] = flags.bottom_deck as u8 as f32;
+    t[start + 5] = flags.dp_change as u8 as f32;
+    t[start + 6] = flags.draw_search as u8 as f32;
+    t[start + 7] = flags.memory as u8 as f32;
+    t[start + 8] = flags.play as u8 as f32;
+    t[start + 9] = flags.digivolve as u8 as f32;
+    t[start + 10] = flags.recover as u8 as f32;
+    t[start + 11] = flags.trash_security as u8 as f32;
+    t[start + 12] = flags.grant_keyword as u8 as f32;
+    t[start + 13] = flags.grant_immunity as u8 as f32;
+    t[start + 14] = flags.protection as u8 as f32;
 }
 
 fn write_static_card_features(t: &mut [f32], base: usize, card: &CardData) {

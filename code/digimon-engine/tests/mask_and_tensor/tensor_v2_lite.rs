@@ -2,10 +2,10 @@ use digimon_engine::action::space::encode_attack;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{EffectSourceKind, GamePhase};
+use digimon_engine::effect::{CardEffect, Effect, EffectCategoryFlags, EffectObservationMetadata};
+use digimon_engine::enums::{EffectSourceKind, EffectTiming, GamePhase};
 use digimon_engine::observation::{build_observation_tensor, parse_observation_profile};
-use digimon_engine::selection::{PendingSelection, SelectionKind};
+use digimon_engine::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
 use digimon_engine::tensor_profiles::standard::v2_lite;
 use std::sync::Arc;
 
@@ -225,6 +225,146 @@ fn v2_lite_pending_choice_details_are_private_to_selecting_player() {
         observing_tensor[row_base + v2_lite::PENDING_SOURCE_CARD_ID_OFFSET],
         0.0
     );
+}
+
+#[test]
+fn v2_lite_pending_choice_rows_follow_valid_action_order() {
+    let (mut game, registry) = sample_game_with_known_cards();
+    let source_card = game.players[0].battle_area[0].top_card().handle();
+    game.current_phase = GamePhase::EffectChoice;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::EffectChoice,
+        selecting_player: 0,
+        previous_phase: GamePhase::Main,
+        valid_action_ids: vec![1003, 62, 1001],
+        is_optional: false,
+        prompt: "choose in authored order".to_string(),
+        effect_choices: None,
+        source_card,
+        source_permanent: None,
+        source_kind: EffectSourceKind::Digimon,
+        callback: Box::new(|_, _| {}),
+        on_decline: None,
+    });
+
+    let profile = parse_observation_profile("standard_lite_v2").unwrap();
+    let tensor = build_observation_tensor(&game, 0, &registry, profile);
+    let base = v2_lite::OFF_PENDING_CHOICE_FEATURES;
+
+    assert_eq!(tensor[base], 1.0);
+    assert_eq!(
+        tensor[base + 2],
+        1003.0 / digimon_engine::action::space::ACTION_SPACE_SIZE as f32
+    );
+    assert_eq!(
+        tensor[base + v2_lite::PENDING_CHOICE_ROW_SIZE + 2],
+        62.0 / digimon_engine::action::space::ACTION_SPACE_SIZE as f32
+    );
+    assert_eq!(
+        tensor[base + 2 * v2_lite::PENDING_CHOICE_ROW_SIZE + 2],
+        1001.0 / digimon_engine::action::space::ACTION_SPACE_SIZE as f32
+    );
+}
+
+#[test]
+fn v2_lite_pending_choice_rows_include_choice_source_kind_timing_and_source_card() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("SEL-SRC", "SelectionSource"))
+        .add_card(make_test_card("CHOICE-SRC", "ChoiceSource"))
+        .start();
+    let selection_source = r.place_on_field(0, "SEL-SRC", Some(0));
+    let choice_source = r.place_on_field(0, "CHOICE-SRC", Some(1));
+    let selection_source_card = r.game.players[0].battle_area[selection_source.index as usize]
+        .top_card()
+        .handle();
+    let choice_source_card = r.game.players[0].battle_area[choice_source.index as usize]
+        .top_card()
+        .handle();
+
+    r.game.current_phase = GamePhase::EffectChoice;
+    r.game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::TriggerOrder,
+        selecting_player: 0,
+        previous_phase: GamePhase::Main,
+        valid_action_ids: vec![1003],
+        is_optional: false,
+        prompt: "choose trigger".to_string(),
+        effect_choices: Some(vec![EffectChoiceEntry {
+            label: "choice trigger".to_string(),
+            action_id: 1003,
+            source_card: Some(choice_source_card),
+            source_kind: Some(EffectSourceKind::Tamer),
+            timing: Some(EffectTiming::OnDeletion),
+            is_optional: false,
+            observation_metadata: EffectObservationMetadata::default(),
+        }]),
+        source_card: selection_source_card,
+        source_permanent: Some(selection_source),
+        source_kind: EffectSourceKind::Digimon,
+        callback: Box::new(|_, _| {}),
+        on_decline: None,
+    });
+
+    let registry = registry_from_runner(&r);
+    let tensor = v2_lite_tensor(&r, 0, &registry);
+    let base = v2_lite::OFF_PENDING_CHOICE_FEATURES;
+
+    assert_eq!(tensor[base + 22 + 6], 1.0);
+    assert_eq!(tensor[base + 34 + 1], 1.0);
+    assert_eq!(
+        tensor[base + v2_lite::PENDING_SOURCE_CARD_ID_OFFSET],
+        registry.get_index("CHOICE-SRC") as f32
+    );
+}
+
+#[test]
+fn v2_lite_pending_choice_rows_encode_effect_category_metadata() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("CATEGORY-SRC", "CategorySource"))
+        .start();
+    let source = r.place_on_field(0, "CATEGORY-SRC", Some(0));
+    let source_card = r.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let effect = Effect::on_deletion(source_card)
+        .observation_metadata(EffectObservationMetadata {
+            categories: EffectCategoryFlags {
+                delete: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .build();
+
+    r.game.current_phase = GamePhase::EffectChoice;
+    r.game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::TriggerOrder,
+        selecting_player: 0,
+        previous_phase: GamePhase::Main,
+        valid_action_ids: vec![1003],
+        is_optional: false,
+        prompt: "choose trigger".to_string(),
+        effect_choices: Some(vec![EffectChoiceEntry {
+            label: "delete trigger".to_string(),
+            action_id: 1003,
+            source_card: Some(source_card),
+            source_kind: Some(EffectSourceKind::Digimon),
+            timing: Some(EffectTiming::OnDeletion),
+            is_optional: false,
+            observation_metadata: effect.observation_metadata,
+        }]),
+        source_card,
+        source_permanent: Some(source),
+        source_kind: EffectSourceKind::Digimon,
+        callback: Box::new(|_, _| {}),
+        on_decline: None,
+    });
+
+    let registry = registry_from_runner(&r);
+    let tensor = v2_lite_tensor(&r, 0, &registry);
+    let base = v2_lite::OFF_PENDING_CHOICE_FEATURES;
+
+    assert_eq!(tensor[base + 45], 1.0);
 }
 
 #[test]

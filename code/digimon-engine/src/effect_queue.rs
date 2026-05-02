@@ -973,6 +973,14 @@ impl Game {
             let qe_idx = bundle[pos];
             let qe = &self.effect_queue[qe_idx];
             let action_id = HAND_EFFECT_START + pos as u16;
+            let observation_metadata = self
+                .effects_for_card(&qe.card_id, qe.source_card)
+                .and_then(|effects| {
+                    effects
+                        .get(qe.effect_slot as usize)
+                        .map(|effect| effect.observation_metadata)
+                })
+                .unwrap_or_default();
             debug_assert!(action_id < HAND_EFFECT_END);
             valid_action_ids.push(action_id);
             choices.push(EffectChoiceEntry {
@@ -987,6 +995,11 @@ impl Game {
                     },
                 ),
                 action_id,
+                source_card: Some(qe.source_card),
+                source_kind: Some(qe.source_kind),
+                timing: Some(qe.timing),
+                is_optional: qe.is_optional,
+                observation_metadata,
             });
         }
 
