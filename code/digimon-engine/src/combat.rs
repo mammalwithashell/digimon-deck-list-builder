@@ -989,15 +989,13 @@ impl Game {
                     e.counter && !e.blast_digivolve && e.timing == EffectTiming::CounterEffect
                 });
                 if has_counter_option {
-                    // Color-match gate parity with Phase 8 Option play
-                    // (if the Option's color cannot be satisfied, the
-                    // play would fail anyway — don't offer the candidate).
-                    let player_ref = self.player(defender_player);
-                    let card = &player_ref.hand[h_idx];
-                    if crate::action::mask::option_color_match_available(
+                    // Legality parity with Phase 8 Option play: the
+                    // candidate surface must match `play_option_from_hand`.
+                    let card = &self.player(defender_player).hand[h_idx];
+                    if crate::action::mask::option_use_requirement_or_color_available(
                         card,
-                        player_ref,
-                        &self.card_data,
+                        self,
+                        defender_player,
                     ) {
                         candidates.push(CounterCandidate::HandOption {
                             hand_index: h_idx as u8,
