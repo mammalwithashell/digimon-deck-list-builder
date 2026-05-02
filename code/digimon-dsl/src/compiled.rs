@@ -213,6 +213,7 @@ pub struct CompiledPredicate {
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
+    pub event_card_name_contains: Option<String>,
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
     pub replacement_subject_is_mine: Option<bool>,

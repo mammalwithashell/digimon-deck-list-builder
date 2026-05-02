@@ -1207,6 +1207,7 @@ impl Game {
                     owner,
                     trash_on_turn: trash_turn,
                     trigger,
+                    placed_on_turn: turn,
                 };
                 self.player_mut(owner).battle_area.push(perm);
                 let permanent = PermanentHandle {
@@ -1483,6 +1484,7 @@ impl Game {
             DelayTrigger::EndOfYourNextTurn | DelayTrigger::StartOfYourNextTurn => {
                 self.next_owner_turn_count(owner)
             }
+            DelayTrigger::OnEvent(_) => u16::MAX,
         }
     }
 

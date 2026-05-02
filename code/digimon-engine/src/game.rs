@@ -58,6 +58,7 @@ impl std::error::Error for OverclockError {}
 pub(crate) enum DelayedOptionLifecycleResumeKind {
     StartTurn,
     EndTurn { ending_player: PlayerId },
+    Event { timing: crate::enums::EffectTiming },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1354,6 +1355,11 @@ impl Game {
     /// bypasses this path — `StartOfYourTurn` is the canonical timing for
     /// turn-start effects.
     pub fn suspend(&mut self, handle: PermanentHandle) {
+        let event_card = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.top_card().handle());
         let already = self
             .players
             .get(handle.player as usize)
@@ -1370,11 +1376,14 @@ impl Game {
         {
             perm.is_suspended = true;
         }
-        let n = self.players.len();
-        for pid in 0..n {
+        if let Some(card) = event_card {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnSuspend,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+                crate::selection::TriggerSource::EventObserved {
+                    player: handle.player,
+                    permanent: handle,
+                    card,
+                },
             );
         }
         self.drain_effect_queue();
@@ -1385,6 +1394,11 @@ impl Game {
     ///
     /// See `suspend` for the bulk-unsuspend caveat.
     pub fn unsuspend(&mut self, handle: PermanentHandle) {
+        let event_card = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.top_card().handle());
         let was_suspended = self
             .players
             .get(handle.player as usize)
@@ -1401,11 +1415,14 @@ impl Game {
         {
             perm.is_suspended = false;
         }
-        let n = self.players.len();
-        for pid in 0..n {
+        if let Some(card) = event_card {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnUnsuspend,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+                crate::selection::TriggerSource::EventObserved {
+                    player: handle.player,
+                    permanent: handle,
+                    card,
+                },
             );
         }
         self.drain_effect_queue();

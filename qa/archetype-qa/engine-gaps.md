@@ -106,9 +106,9 @@ Last updated: 2026-04-30
 - **Scope:** Rust engine delayed-option state, action mask, and DSL lowering.
 - **Card(s):** BT22-098 Unique Emblem: Fable Waltz, P-229 Unique Emblem: Narrative Ronde.
 - **Effect text:** BT22-098: "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> ... 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3." P-229: "[Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay> ... 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
-- **What's missing:** Delay lowering only supports end-of-turn style trigger variants, and non-end-of-turn delay triggers fall back to `EndOfYourNextTurn`. There is no faithful engine path for a placed option to become activatable on an arbitrary later event, such as Arisa suspending or Mirai being played, while still enforcing "Delay cannot activate the turn this card was placed."
-- **Suggested change:** Extend delayed-option state with an event trigger and predicate, enqueue/expose a Delay activation action when that event fires, and add DSL timing mappings for `on_suspend`/`on_ally_played` event-gated Delay clauses.
-- **Workaround:** None without approximating the activation timing.
+- **Status:** Partially resolved 2026-05-02 for the BT22-098/Arisa suspend timing slice. Delayed Option permanents now store `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` plus placement turn, observed suspend events carry event-card context, and Delay activation is gated until after the placement turn before trashing itself through the replacement-aware cost path. DSL `kind: delay` can lower `trigger: on_suspend` plus `active_when: { event_card_name_contains: "Arisa Kinosaki" }`.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- event_gated_delay_only_fires_after_placement_turn_and_matching_event`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay_event_trigger_lowers_to_on_event_delay`.
+- **Remaining related work:** P-229's Mirai-played trigger still needs the appropriate event timing/lowering if `on_ally_played` remains virtual. The BT22-098/P-229 process body still depends on faithful effect-initiated digivolution selection, hand-zone candidate filtering, Puppet/LIBERATOR trait filters, and reduced-cost digivolution plumbing.
 
 ### Cost and Replacement Framework
 

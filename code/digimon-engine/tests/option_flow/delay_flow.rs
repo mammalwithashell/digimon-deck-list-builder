@@ -597,12 +597,14 @@ fn simultaneous_end_delays_preserve_battle_area_scan_order_across_triggers() {
         owner: 0,
         trash_on_turn: r.game.turn_count,
         trigger: DelayTrigger::EndOfYourNextTurn,
+        placed_on_turn: r.game.turn_count,
     };
     let this = r.place_on_field(0, "THIS-SECOND", Some(0));
     r.game.player_mut(0).battle_area[this.index as usize].option_state = OptionState::Delayed {
         owner: 0,
         trash_on_turn: r.game.turn_count,
         trigger: DelayTrigger::EndOfThisTurn,
+        placed_on_turn: r.game.turn_count,
     };
 
     r.end_turn();
@@ -637,6 +639,7 @@ fn end_turn_pauses_when_delay_effect_installs_selection() {
         owner: 0,
         trash_on_turn: r.game.turn_count,
         trigger: DelayTrigger::EndOfThisTurn,
+        placed_on_turn: r.game.turn_count,
     };
 
     let start_turn = r.game.turn_count;

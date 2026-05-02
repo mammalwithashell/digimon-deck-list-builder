@@ -36,6 +36,7 @@ fn option_state_variants_exist() {
         owner: 0,
         trash_on_turn: 5,
         trigger: DelayTrigger::EndOfYourNextTurn,
+        placed_on_turn: 4,
     };
     let _ = OptionState::Linked { host: h };
     let _ = OptionState::Training { owner: 0 };

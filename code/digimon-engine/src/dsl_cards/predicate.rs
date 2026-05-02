@@ -450,6 +450,11 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
             return false;
         }
     }
+    if let Some(ref needle) = pred.event_card_name_contains {
+        if !rctx.event_card_name_contains(needle) {
+            return false;
+        }
+    }
     true
 }
 

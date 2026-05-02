@@ -362,6 +362,13 @@ pub enum TriggerSource {
         permanent: PermanentHandle,
         card: CardHandle,
     },
+    /// Generic observer timing carrying the permanent/card that caused the
+    /// event. Used by event-gated delayed Options such as suspend watchers.
+    EventObserved {
+        player: PlayerId,
+        permanent: PermanentHandle,
+        card: CardHandle,
+    },
     /// Observer timing fired after a card under a permanent's top card is
     /// trashed from that digivolution stack. Scans all players' battle areas
     /// while carrying the former host and trashed source card as event context.

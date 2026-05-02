@@ -7,8 +7,8 @@
 //! `CompiledScope::Inherited` sets `inherited == true`.
 
 use digimon_dsl::compiled::{
-    CompiledCard, CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledCard, CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledPredicate,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::dsl_cards::DslCardEffect;
@@ -148,5 +148,31 @@ fn delay_start_of_your_turn_maps_to_start_of_your_next_turn() {
     assert_eq!(
         effects[0].delay_trigger,
         Some(DelayTrigger::StartOfYourNextTurn)
+    );
+}
+
+#[test]
+fn delay_event_trigger_lowers_to_on_event_delay() {
+    let mut card = fixture_delay(CompiledScope::FaceUp, CompiledTiming::OnSuspend);
+    if let CompiledClause::Declarative(CompiledDeclarativeClause::Delay { active_when, .. }) =
+        &mut card.effects[0]
+    {
+        *active_when = Some(CompiledPredicate {
+            event_card_name_contains: Some("Arisa Kinosaki".into()),
+            ..Default::default()
+        });
+    }
+
+    let dsl = DslCardEffect::new(Arc::new(card));
+    let effects = dsl.effects(CardHandle(0));
+
+    assert_eq!(effects.len(), 1);
+    assert_eq!(
+        effects[0].delay_trigger,
+        Some(DelayTrigger::OnEvent(EffectTiming::OnSuspend))
+    );
+    assert!(
+        effects[0].condition.is_some(),
+        "Delay active_when should lower to a runtime condition"
     );
 }

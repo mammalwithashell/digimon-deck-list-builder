@@ -287,6 +287,18 @@ impl<'a> EffectReadContext<'a> {
             .and_then(|trigger| trigger.event_card)
     }
 
+    pub fn event_card_name_contains(&self, needle: &str) -> bool {
+        let Some(card) = self.event_card() else {
+            return false;
+        };
+        let Some(data) = self.game.card_data_for_handle(card) else {
+            return false;
+        };
+        data.card_name
+            .to_lowercase()
+            .contains(&needle.to_lowercase())
+    }
+
     pub fn event_source_card(&self) -> Option<CardHandle> {
         self.game
             .current_trigger_context
@@ -732,6 +744,10 @@ impl<'a> EffectContext<'a> {
         self.game
             .current_trigger_context
             .and_then(|trigger| trigger.event_card)
+    }
+
+    pub fn event_card_name_contains(&self, needle: &str) -> bool {
+        self.as_read().event_card_name_contains(needle)
     }
 
     pub fn event_source_card(&self) -> Option<CardHandle> {

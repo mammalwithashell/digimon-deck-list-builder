@@ -399,6 +399,8 @@ pub struct GrantKeywordBody {
 #[serde(deny_unknown_fields)]
 pub struct DelayBody {
     pub trigger: Timing,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_when: Option<PredicateSpec>,
     pub process: Vec<StepSpec>,
 }
 

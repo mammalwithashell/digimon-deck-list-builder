@@ -596,6 +596,7 @@ impl Game {
                             owner: _,
                             trash_on_turn: t,
                             trigger: delayed_trigger,
+                            placed_on_turn: _,
                         } = perm.option_state
                         {
                             if t == turn && triggers.contains(&delayed_trigger) {
@@ -679,10 +680,16 @@ impl Game {
         };
 
         if let Some(key) = resume.pending_delete_key.take() {
-            let triggers = Self::delay_lifecycle_triggers(resume.kind);
-            if let Some(current_handle) =
-                self.find_delayed_permanent_by_key(key, resume.turn, triggers)
-            {
+            let current_handle = match resume.kind {
+                DelayedOptionLifecycleResumeKind::Event { timing } => {
+                    self.find_event_delayed_permanent_by_key(key, timing)
+                }
+                _ => {
+                    let triggers = Self::delay_lifecycle_triggers(resume.kind);
+                    self.find_delayed_permanent_by_key(key, resume.turn, triggers)
+                }
+            };
+            if let Some(current_handle) = current_handle {
                 self.delete_permanent_with_cause(
                     current_handle,
                     crate::replacement::ReplacementCause::Cost,
@@ -695,11 +702,17 @@ impl Game {
                 return;
             }
 
-            if self
-                .find_delayed_permanent_by_key(key, resume.turn, triggers)
-                .is_some()
-            {
-                resume.skip_key = Some(key);
+            match resume.kind {
+                DelayedOptionLifecycleResumeKind::Event { .. } => return,
+                _ => {
+                    let triggers = Self::delay_lifecycle_triggers(resume.kind);
+                    if self
+                        .find_delayed_permanent_by_key(key, resume.turn, triggers)
+                        .is_some()
+                    {
+                        resume.skip_key = Some(key);
+                    }
+                }
             }
         }
 
@@ -728,6 +741,7 @@ impl Game {
                 }
                 self.continue_end_turn_after_delays(ending_player);
             }
+            DelayedOptionLifecycleResumeKind::Event { .. } => {}
         }
     }
 
@@ -737,7 +751,40 @@ impl Game {
             DelayedOptionLifecycleResumeKind::EndTurn { .. } => {
                 &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn]
             }
+            DelayedOptionLifecycleResumeKind::Event { .. } => &[],
         }
+    }
+
+    fn find_event_delayed_permanent_by_key(
+        &self,
+        key: (PlayerId, u16),
+        timing: EffectTiming,
+    ) -> Option<PermanentHandle> {
+        use crate::permanent::OptionState;
+
+        let (owner, card_index) = key;
+        let me = self.players.get(owner as usize)?;
+        for (i, perm) in me.battle_area.iter().enumerate() {
+            let Some(bottom) = perm.card_sources.first() else {
+                continue;
+            };
+            if bottom.card_index != card_index {
+                continue;
+            }
+            if let OptionState::Delayed {
+                trigger: DelayTrigger::OnEvent(event_timing),
+                ..
+            } = perm.option_state
+            {
+                if event_timing == timing {
+                    return Some(PermanentHandle {
+                        player: owner,
+                        index: i as u8,
+                    });
+                }
+            }
+        }
+        None
     }
 
     /// Scan all players' battle_areas for a Delayed permanent matching the
@@ -765,6 +812,7 @@ impl Game {
             if let OptionState::Delayed {
                 trash_on_turn: t,
                 trigger: delayed_trigger,
+                placed_on_turn: _,
                 ..
             } = perm.option_state
             {

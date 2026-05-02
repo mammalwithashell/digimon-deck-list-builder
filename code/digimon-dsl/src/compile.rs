@@ -394,6 +394,7 @@ fn compile_predicate(
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
         event_card_trait_has: p.event_card_trait_has.clone(),
+        event_card_name_contains: p.event_card_name_contains.clone(),
         replacement_cause: p.replacement_cause.map(compile_replacement_cause),
         replacement_source_is_opponent: p.replacement_source_is_opponent,
         replacement_subject_is_mine: p.replacement_subject_is_mine,
@@ -955,7 +956,18 @@ fn compile_declarative(
         },
         B::Delay(dl) => CompiledDeclarativeClause::Delay {
             scope,
-            active_when,
+            active_when: dl
+                .active_when
+                .as_ref()
+                .map(|p| {
+                    compile_predicate(
+                        p,
+                        &format!("{prefix}.delay.active_when"),
+                        card_id,
+                        errors,
+                    )
+                })
+                .or(active_when),
             trigger: compile_timing(dl.trigger),
             process: dl
                 .process

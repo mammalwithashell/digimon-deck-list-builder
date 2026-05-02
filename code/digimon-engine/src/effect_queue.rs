@@ -22,9 +22,12 @@
 use crate::action::space::{HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS};
 use crate::card_source::CardHandle;
 use crate::effect_context::EffectContext;
-use crate::enums::{CardKind, EffectSourceKind, EffectTiming, GamePhase, ModifierType, PlayerId};
-use crate::game::Game;
-use crate::permanent::PermanentHandle;
+use crate::enums::{
+    CardKind, DelayTrigger, EffectSourceKind, EffectTiming, GamePhase, ModifierType, PlayerId,
+};
+use crate::game::{DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, Game};
+use crate::permanent::{OptionState, PermanentHandle};
+use crate::replacement::ReplacementCause;
 use crate::selection::{
     EffectChoiceEntry, PendingEffectSecurityRemoval, PendingPayCostEffect, PendingSecurity,
     PendingSelection, QueuedEffect, SecurityRemovalDestination, SelectionKind, TriggerSource,
@@ -176,6 +179,21 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::EventObserved { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::SourceTrashedFromStack { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -191,6 +209,10 @@ impl Game {
                     }
                 }
             }
+        }
+        if matches!(source, TriggerSource::EventObserved { .. }) {
+            let trigger_context = self.trigger_context_for_source(&source, None);
+            self.enqueue_event_gated_delayed_options(timing, trigger_context);
         }
     }
 
@@ -384,6 +406,18 @@ impl Game {
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
+            TriggerSource::EventObserved {
+                player,
+                permanent,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(permanent),
+                event_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
             TriggerSource::SourceTrashedFromStack {
                 player,
                 host,
@@ -407,6 +441,94 @@ impl Game {
             .get(handle.player as usize)
             .and_then(|p| p.battle_area.get(handle.index as usize))
             .map(|perm| perm.top_card().handle())
+    }
+
+    fn enqueue_event_gated_delayed_options(
+        &mut self,
+        timing: EffectTiming,
+        trigger_context: TriggerContext,
+    ) {
+        let mut candidates = Vec::new();
+        for player in 0..self.players.len() {
+            let player = player as PlayerId;
+            for (index, perm) in self.player(player).battle_area.iter().enumerate() {
+                let OptionState::Delayed {
+                    trigger: DelayTrigger::OnEvent(event_timing),
+                    placed_on_turn,
+                    ..
+                } = perm.option_state
+                else {
+                    continue;
+                };
+                if event_timing != timing || placed_on_turn >= self.turn_count {
+                    continue;
+                }
+                candidates.push(PermanentHandle {
+                    player,
+                    index: index as u8,
+                });
+            }
+        }
+
+        for handle in candidates {
+            self.enqueue_delayed_option_for_event(handle, timing, trigger_context);
+        }
+    }
+
+    fn enqueue_delayed_option_for_event(
+        &mut self,
+        handle: PermanentHandle,
+        timing: EffectTiming,
+        trigger_context: TriggerContext,
+    ) {
+        let Some(perm) = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+        else {
+            return;
+        };
+        let OptionState::Delayed {
+            trigger: DelayTrigger::OnEvent(event_timing),
+            placed_on_turn,
+            ..
+        } = perm.option_state
+        else {
+            return;
+        };
+        if event_timing != timing || placed_on_turn >= self.turn_count {
+            return;
+        }
+
+        let top = perm.top_card();
+        let source_card = top.handle();
+        let card_id = top.card_id(&self.card_data).to_string();
+        let source_kind = source_kind_for_card_kind(top.card_kind(&self.card_data));
+        let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+            return;
+        };
+        let tp = self.turn_player();
+        let is_turn_player = handle.player == tp;
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.timing != EffectTiming::DelayEffect
+                || effect.delay_trigger != Some(DelayTrigger::OnEvent(timing))
+            {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card,
+                source_permanent: Some(handle),
+                source_kind,
+                controller: handle.player,
+                timing: EffectTiming::DelayEffect,
+                trigger_context: Some(trigger_context),
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.clone(),
+                allow_below_top_liveness: false,
+            });
+        }
     }
 
     /// Collect `SecuritySkill` effects off a revealed security card. The
@@ -851,7 +973,9 @@ impl Game {
             }
         }
 
+        let event_delay_source = self.event_gated_delay_source(&qe);
         self.run_queued_effect_process_tail(&qe);
+        self.trash_event_gated_delay_after_activation(event_delay_source);
     }
 
     fn run_queued_effect_process_tail(&mut self, qe: &QueuedEffect) {
@@ -899,6 +1023,83 @@ impl Game {
             );
             process(&mut ctx);
         }
+    }
+
+    fn event_gated_delay_source(&self, qe: &QueuedEffect) -> Option<(PlayerId, u16, EffectTiming)> {
+        if qe.timing != EffectTiming::DelayEffect
+            || !qe
+                .trigger_context
+                .is_some_and(|ctx| ctx.event_card.is_some())
+        {
+            return None;
+        }
+        let handle = qe.source_permanent?;
+        let perm = self
+            .players
+            .get(handle.player as usize)?
+            .battle_area
+            .get(handle.index as usize)?;
+        let OptionState::Delayed {
+            owner,
+            trigger: DelayTrigger::OnEvent(timing),
+            ..
+        } = perm.option_state
+        else {
+            return None;
+        };
+        if perm.top_card().handle() != qe.source_card {
+            return None;
+        }
+        Some((owner, qe.source_card.0, timing))
+    }
+
+    fn trash_event_gated_delay_after_activation(
+        &mut self,
+        source: Option<(PlayerId, u16, EffectTiming)>,
+    ) {
+        let Some((owner, card_index, timing)) = source else {
+            return;
+        };
+        if self.pending_selection.is_some() {
+            self.pending_delayed_option_lifecycle = Some(DelayedOptionLifecycleResume {
+                turn: u16::MAX,
+                kind: DelayedOptionLifecycleResumeKind::Event { timing },
+                pending_delete_key: Some((owner, card_index)),
+                skip_key: None,
+            });
+            return;
+        }
+        let Some(handle) = self.find_event_gated_delay_permanent(owner, card_index, timing) else {
+            return;
+        };
+        self.delete_permanent_with_cause(handle, ReplacementCause::Cost);
+    }
+
+    fn find_event_gated_delay_permanent(
+        &self,
+        owner: PlayerId,
+        card_index: u16,
+        timing: EffectTiming,
+    ) -> Option<PermanentHandle> {
+        for (index, perm) in self.player(owner).battle_area.iter().enumerate() {
+            if perm.top_card().card_index != card_index {
+                continue;
+            }
+            if matches!(
+                perm.option_state,
+                OptionState::Delayed {
+                    owner: delayed_owner,
+                    trigger: DelayTrigger::OnEvent(event_timing),
+                    ..
+                } if delayed_owner == owner && event_timing == timing
+            ) {
+                return Some(PermanentHandle {
+                    player: owner,
+                    index: index as u8,
+                });
+            }
+        }
+        None
     }
 
     fn queued_effect_source_is_live(
@@ -959,7 +1160,9 @@ impl Game {
         let prev_trigger_context = self.current_trigger_context;
         self.effect_source_player = Some(qe.controller);
         self.current_trigger_context = qe.trigger_context;
+        let event_delay_source = self.event_gated_delay_source(&qe);
         self.run_queued_effect_process_tail(&qe);
+        self.trash_event_gated_delay_after_activation(event_delay_source);
         self.current_trigger_context = prev_trigger_context;
         self.effect_source_player = prev_effect_source;
     }

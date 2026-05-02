@@ -26,6 +26,7 @@ pub enum OptionState {
         owner: PlayerId,
         trash_on_turn: u16,
         trigger: DelayTrigger,
+        placed_on_turn: u16,
     },
     Linked {
         host: PermanentHandle,

@@ -15,19 +15,20 @@ Format per entry:
 
 ## BT22-098 / P-229 — event-gated Delay activation windows
 - Effect text: BT22-098: "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> ... 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3." P-229: "[Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay> ... 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
-- Missing DSL verb / step kind / predicate: `kind: delay` can express an option becoming a delayed effect, but the lowerer only maps end-of-turn style delay triggers. Event-gated windows such as "when Arisa suspends" or "when Mirai is played" are not representable, and `on_ally_played` is currently skipped by the timing map.
-- Lowers to engine API: needs a Delay registration that records an event trigger plus event predicate while preserving the rule that Delay effects cannot activate the turn the option was placed.
+- Status: partially resolved 2026-05-02 for the BT22-098 "when Arisa suspends" slice. `kind: delay` now accepts body-level `active_when`, preserves `event_card_name_contains`, and lowers `trigger: on_suspend` to `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` with the condition evaluated when the event fires.
+- Remaining missing DSL verb / step kind / predicate: `on_ally_played` for P-229 is still virtual/skipped by the timing map, and the process body still depends on faithful `effect_initiated_digivolve` support for hand-zone targets, Puppet/LIBERATOR trait filters, and cost reduction.
+- Lowers to engine API: `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` plus an event predicate on the delayed Option's `DelayEffect`, preserving the rule that Delay effects cannot activate the turn the option was placed.
 - Suggested DSL syntax:
   ```yaml
   - kind: delay
     trigger: on_suspend
-    condition: { event_target_name_is: "Arisa Kinosaki" }
+    active_when:
+      event_card_name_contains: "Arisa Kinosaki"
     process:
-      - effect_digivolve:
-          from: hand
-          source_filter: { trait_has: Puppet }
-          target_filter: { traits_include: [Puppet, LIBERATOR] }
-          cost_reduction: 3
+      - effect_initiated_digivolve:
+          target: { trait: Puppet }
+          into: { trait_all: [Puppet, LIBERATOR], zone: hand }
+          cost_delta: -3
 
   - kind: delay
     trigger: on_ally_played
@@ -38,7 +39,7 @@ Format per entry:
           target_filter: { trait_has: LIBERATOR, level_lte: 6 }
           cost_reduction: 3
   ```
-- Gap kind: hybrid (this entry tracks the DSL vocabulary/lowering half; engine event-gated Delay state and action-mask support are tracked in `qa/archetype-qa/engine-gaps.md`).
+- Gap kind: hybrid (BT22-098 event trigger/predicate lowering is covered; remaining process vocabulary/lowering and P-229 timing support stay open).
 - First reported: 2026-04-28 (Puppets archetype assessment)
 
 ## EX9-032 / EX7-027 / BT22-036 — replacement cause predicate and `active_when` lowering

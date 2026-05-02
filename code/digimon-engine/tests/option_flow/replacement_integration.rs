@@ -241,6 +241,7 @@ fn place_delay_option(r: &mut DebugRunner, player: u8, card_id: &str) {
             owner: player,
             trash_on_turn: r.game.turn_count + 1,
             trigger: DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: r.game.turn_count,
         };
 }
 

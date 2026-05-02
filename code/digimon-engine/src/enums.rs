@@ -348,6 +348,7 @@ pub enum DelayTrigger {
     EndOfYourNextTurn,
     EndOfThisTurn,
     StartOfYourNextTurn,
+    OnEvent(EffectTiming),
 }
 
 /// Keywords that can be granted or checked on permanents.
