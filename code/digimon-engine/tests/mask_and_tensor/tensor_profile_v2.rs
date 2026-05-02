@@ -1,6 +1,6 @@
 use digimon_engine::tensor_profiles::{
-    all_profile_ids, profile_by_id, TensorSectionKind, STANDARD_COMPACT_V1_PROFILE_ID,
-    STANDARD_LITE_V2_PROFILE_ID,
+    all_profile_ids, profile_by_id, TensorSectionKind, TensorSlotHeaderField, TensorSourceField,
+    STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID,
 };
 
 #[test]
@@ -40,6 +40,28 @@ fn standard_lite_v2_layout_matches_spec() {
         profile.section("reserved").unwrap().kind,
         TensorSectionKind::Scalars
     );
+    assert_eq!(
+        profile.section("permanent_slots").unwrap().kind,
+        TensorSectionKind::StandardLiteV2Rows
+    );
+}
+
+#[test]
+fn standard_lite_v2_slot_layout_helpers_cover_all_published_fields() {
+    let profile = profile_by_id("standard_lite_v2").unwrap();
+    let layout = profile.slot_layout;
+
+    assert_eq!(layout.header_offset(TensorSlotHeaderField::TopCardId), 8);
+    assert_eq!(layout.header_offset(TensorSlotHeaderField::Dp), 21);
+    assert_eq!(layout.header_offset(TensorSlotHeaderField::Suspended), 22);
+    assert_eq!(layout.header_offset(TensorSlotHeaderField::OptTotal), 25);
+    assert_eq!(layout.header_offset(TensorSlotHeaderField::OptUsed), 26);
+    assert_eq!(layout.header_offset(TensorSlotHeaderField::LinkedCount), 24);
+    assert_eq!(layout.header_offset(TensorSlotHeaderField::SourceCount), 23);
+
+    assert_eq!(layout.source_offset(TensorSourceField::CardId), 0);
+    assert_eq!(layout.source_offset(TensorSourceField::OptState), 1);
+    assert_eq!(layout.source_offset(TensorSourceField::DpContribution), 2);
 }
 
 #[test]

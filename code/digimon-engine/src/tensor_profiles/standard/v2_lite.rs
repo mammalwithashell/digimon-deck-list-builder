@@ -9,7 +9,7 @@ pub const VERSION: u32 = 2;
 pub const TENSOR_VERSION: u16 = 2;
 pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.1";
 pub const LAYOUT_HASH: &str =
-    "sha256:f9249e6af39248d8f44074b5709ec5b30c665c0978c79a4328510dc2784541f0";
+    "sha256:66d471ee6a172f2eb309ec9b09e565c1faf262635730daabf96e1e3b47c16d05";
 
 pub const GLOBAL_FEATURES_SIZE: usize = 64;
 pub const PLAYER_SUMMARY_PLAYERS: usize = 2;
@@ -43,9 +43,18 @@ pub const OFF_RESERVED: usize = OFF_PENDING_CHOICE_FEATURES + PENDING_CHOICE_SIZ
 pub const TENSOR_SIZE: usize = OFF_RESERVED + RESERVED_SIZE;
 
 pub const PERM_TOP_CARD_ID_OFFSET: usize = 8;
+pub const PERM_DP_OFFSET: usize = 21;
+pub const PERM_SUSPENDED_OFFSET: usize = 22;
+pub const PERM_SOURCE_COUNT_OFFSET: usize = 23;
+pub const PERM_LINKED_COUNT_OFFSET: usize = 24;
+pub const PERM_OPT_TOTAL_OFFSET: usize = 25;
+pub const PERM_OPT_USED_OFFSET: usize = 26;
 pub const PERM_SOURCE_START_OFFSET: usize = 63;
 pub const PERM_SOURCE_ENTRY_SIZE: usize = 3;
 pub const PERM_MAX_SOURCES: usize = 11;
+pub const PERM_SOURCE_CARD_ID_OFFSET: usize = 0;
+pub const PERM_SOURCE_OPT_STATE_OFFSET: usize = 1;
+pub const PERM_SOURCE_DP_CONTRIBUTION_OFFSET: usize = 2;
 pub const OWN_HAND_CARD_ID_OFFSET: usize = 1;
 pub const KNOWN_ZONE_CARD_ID_OFFSET: usize = 1;
 pub const PENDING_SOURCE_CARD_ID_OFFSET: usize = 44;
@@ -83,21 +92,21 @@ pub const SECTIONS: &[TensorSection] = &[
         start: OFF_PERMANENT_SLOTS,
         len: PERMANENT_SLOTS_SIZE,
         shape: SHAPE_PERMANENT_SLOTS,
-        kind: TensorSectionKind::Custom,
+        kind: TensorSectionKind::StandardLiteV2Rows,
     },
     TensorSection {
         id: "own_hand",
         start: OFF_OWN_HAND,
         len: OWN_HAND_SIZE,
         shape: SHAPE_OWN_HAND,
-        kind: TensorSectionKind::Custom,
+        kind: TensorSectionKind::StandardLiteV2Rows,
     },
     TensorSection {
         id: "known_zone_cards",
         start: OFF_KNOWN_ZONE_CARDS,
         len: KNOWN_ZONE_SIZE,
         shape: SHAPE_KNOWN_ZONE_CARDS,
-        kind: TensorSectionKind::Custom,
+        kind: TensorSectionKind::StandardLiteV2Rows,
     },
     TensorSection {
         id: "decision_context",
@@ -111,7 +120,7 @@ pub const SECTIONS: &[TensorSection] = &[
         start: OFF_PENDING_CHOICE_FEATURES,
         len: PENDING_CHOICE_SIZE,
         shape: SHAPE_PENDING_CHOICE_FEATURES,
-        kind: TensorSectionKind::Custom,
+        kind: TensorSectionKind::StandardLiteV2Rows,
     },
     TensorSection {
         id: "reserved",
@@ -129,8 +138,33 @@ pub const SLOT_HEADER_FIELDS: &[TensorSlotField] = &[
         kind: TensorFieldKind::CardId,
     },
     TensorSlotField {
+        id: "dp",
+        offset: PERM_DP_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "suspended",
+        offset: PERM_SUSPENDED_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "opt_total",
+        offset: PERM_OPT_TOTAL_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "opt_used",
+        offset: PERM_OPT_USED_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
+        id: "linked_count",
+        offset: PERM_LINKED_COUNT_OFFSET,
+        kind: TensorFieldKind::Scalar,
+    },
+    TensorSlotField {
         id: "source_count",
-        offset: PERM_SOURCE_START_OFFSET - 1,
+        offset: PERM_SOURCE_COUNT_OFFSET,
         kind: TensorFieldKind::Scalar,
     },
 ];
@@ -138,17 +172,17 @@ pub const SLOT_HEADER_FIELDS: &[TensorSlotField] = &[
 pub const SOURCE_FIELDS: &[TensorSlotField] = &[
     TensorSlotField {
         id: "card_id",
-        offset: 0,
+        offset: PERM_SOURCE_CARD_ID_OFFSET,
         kind: TensorFieldKind::CardId,
     },
     TensorSlotField {
-        id: "flags",
-        offset: 1,
+        id: "opt_state",
+        offset: PERM_SOURCE_OPT_STATE_OFFSET,
         kind: TensorFieldKind::Scalar,
     },
     TensorSlotField {
-        id: "age_or_dp",
-        offset: 2,
+        id: "dp_contribution",
+        offset: PERM_SOURCE_DP_CONTRIBUTION_OFFSET,
         kind: TensorFieldKind::Scalar,
     },
 ];
@@ -184,3 +218,68 @@ pub const PROFILE: TensorProfile = TensorProfile {
     scalar_slot_count: SCALAR_SLOT_COUNT,
     sections: SECTIONS,
 };
+
+pub fn positions_for_section(
+    section: &TensorSection,
+    card_positions: &mut Vec<usize>,
+    scalar_positions: &mut Vec<usize>,
+) {
+    let mut card_markers = vec![false; section.len];
+    let mut mark_card = |position: usize| {
+        assert!(
+            (section.start..section.start + section.len).contains(&position),
+            "card position {position} is outside section {}",
+            section.id
+        );
+        let local = position - section.start;
+        assert!(
+            !card_markers[local],
+            "duplicate card position {position} in section {}",
+            section.id
+        );
+        card_markers[local] = true;
+        card_positions.push(position);
+    };
+
+    match section.id {
+        "permanent_slots" => {
+            for row in 0..PERMANENT_ROW_COUNT {
+                let row_base = section.start + row * PERMANENT_SLOT_SIZE;
+                mark_card(row_base + PERM_TOP_CARD_ID_OFFSET);
+                for source_index in 0..PERM_MAX_SOURCES {
+                    mark_card(
+                        row_base
+                            + PERM_SOURCE_START_OFFSET
+                            + source_index * PERM_SOURCE_ENTRY_SIZE
+                            + PERM_SOURCE_CARD_ID_OFFSET,
+                    );
+                }
+            }
+        }
+        "own_hand" => {
+            for row in 0..OWN_HAND_ROWS {
+                mark_card(section.start + row * OWN_HAND_ROW_SIZE + OWN_HAND_CARD_ID_OFFSET);
+            }
+        }
+        "known_zone_cards" => {
+            for row in 0..KNOWN_ZONE_ROWS {
+                mark_card(section.start + row * KNOWN_ZONE_ROW_SIZE + KNOWN_ZONE_CARD_ID_OFFSET);
+            }
+        }
+        "pending_choice_features" => {
+            for row in 0..PENDING_CHOICE_ROWS {
+                mark_card(
+                    section.start + row * PENDING_CHOICE_ROW_SIZE + PENDING_SOURCE_CARD_ID_OFFSET,
+                );
+            }
+        }
+        _ => panic!("unsupported standard_lite_v2 row section {}", section.id),
+    }
+
+    drop(mark_card);
+    for (offset, is_card) in card_markers.iter().enumerate() {
+        if !is_card {
+            scalar_positions.push(section.start + offset);
+        }
+    }
+}
