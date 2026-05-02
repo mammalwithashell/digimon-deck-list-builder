@@ -55,6 +55,22 @@ fn digixros_matching_accepts_scoped_alias_but_generic_name_checks_do_not() {
 }
 
 #[test]
+fn digixros_matching_accepts_scoped_alias_on_field_material() {
+    let mut omni = make_test_card_with_level("BT21-021", "OmniShoutmon", 5);
+    omni.digixros_aliases = vec!["Shoutmon".to_string()];
+
+    let mut runner = DebugRunner::builder().add_card(omni).build();
+    let material = runner.place_on_field(0, "BT21-021", None);
+
+    assert!(runner
+        .game
+        .permanent_can_satisfy_digixros_name(material, "Shoutmon"));
+    assert!(!runner
+        .game
+        .card_matches_generic_name("BT21-021", "Shoutmon"));
+}
+
+#[test]
 fn digixros_matching_helper_uses_production_name_match_semantics() {
     let runner = DebugRunner::builder()
         .add_card(make_test_card_with_level("BT10-009", "Shoutmon X4", 4))

@@ -1,6 +1,7 @@
 use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
+use digimon_engine::action::PLAY_HAND_START;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::ModifierType;
+use digimon_engine::enums::{GamePhase, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
 
 #[test]
@@ -55,6 +56,48 @@ effects:
         index: 1,
     };
     assert_eq!(runner.game.modifiers.sum(source, ModifierType::ChangeDp), 0);
+    assert_eq!(
+        runner.game.modifiers.sum(ally, ModifierType::ChangeDp),
+        3000
+    );
+}
+
+#[test]
+fn decode_action_refreshes_static_declarative_aura_after_play() {
+    let yaml = r#"
+card: TEST-AURA-DECODE
+name: Aura Decode Source
+kind: digimon
+color: [blue]
+level: 3
+cost: 0
+dp: 1000
+traits: []
+effects:
+  - kind: aura
+    target: { owner: you, trait: Gaossmon }
+    dp_modifier: 3000
+"#;
+
+    let mut ally = make_test_card("TEST-GAOSSMON-DECODE", "Gaossmon");
+    ally.traits.push("Gaossmon".to_string());
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card(ally)
+        .hand(0, &["TEST-AURA-DECODE"])
+        .memory(5)
+        .build();
+    runner.place_on_field(0, "TEST-GAOSSMON-DECODE", None);
+    runner.game.current_phase = GamePhase::Main;
+
+    runner.game.decode_action(PLAY_HAND_START, 0);
+
+    let ally = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     assert_eq!(
         runner.game.modifiers.sum(ally, ModifierType::ChangeDp),
         3000

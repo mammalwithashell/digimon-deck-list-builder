@@ -33,6 +33,7 @@ impl Game {
         if action_id as usize >= ACTION_SPACE_SIZE {
             return;
         }
+        self.tick_declarative_effects();
         match self.current_phase {
             GamePhase::Mulligan => self.decode_mulligan(action_id),
             GamePhase::Main => self.decode_main(action_id),
@@ -63,6 +64,7 @@ impl Game {
             | GamePhase::EndTurn
             | GamePhase::GameOver => { /* no-op */ }
         }
+        self.tick_declarative_effects();
     }
 
     fn decode_mulligan(&mut self, action_id: u16) {

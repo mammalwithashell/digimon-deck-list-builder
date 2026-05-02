@@ -54,6 +54,23 @@ impl std::fmt::Display for OverclockError {
 
 impl std::error::Error for OverclockError {}
 
+fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+    if card_data.effect_text.is_empty()
+        && card_data.inherited_text.is_empty()
+        && card_data.security_text.is_empty()
+    {
+        return card_data.keywords.clone();
+    }
+    crate::card_data::parse_printed_keywords(&card_data.effect_text, "", "")
+}
+
+fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+    if card_data.inherited_text.is_empty() {
+        return Vec::new();
+    }
+    crate::card_data::parse_printed_keywords("", &card_data.inherited_text, "")
+}
+
 /// The core game state. Drives the turn state machine.
 ///
 /// `impl Game` blocks for this struct are spread across three files for
@@ -1595,23 +1612,33 @@ impl Game {
         let top = perm.top_card();
         // `data_index` is a direct Vec index — O(1), no iteration needed.
         let card_data = &self.card_data[top.data_index];
-        if card_data.keywords.contains(&keyword) {
+        if face_keywords(card_data).contains(&keyword) {
             return true;
         }
         // Inherited keyword grants from digivolution sources. Only cards
         // under the top card contribute inherited text, and any active_when
         // condition must pass before the keyword is considered live.
         let stack_size = perm.card_sources.len();
-        let source_ids: Vec<(usize, String, crate::card_source::CardHandle)> = perm
+        let source_ids: Vec<(usize, usize, String, crate::card_source::CardHandle)> = perm
             .card_sources
             .iter()
             .enumerate()
-            .map(|(i, s)| (i, s.card_id(&self.card_data).to_string(), s.handle()))
+            .map(|(i, s)| {
+                (
+                    i,
+                    s.data_index,
+                    s.card_id(&self.card_data).to_string(),
+                    s.handle(),
+                )
+            })
             .collect();
-        for (source_index, src_id, src_handle) in source_ids {
+        for (source_index, data_index, src_id, src_handle) in source_ids {
             let is_under = source_index + 1 < stack_size;
             if !is_under {
                 continue;
+            }
+            if inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
+                return true;
             }
             let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
                 continue;
@@ -1852,11 +1879,18 @@ impl Game {
         let Some(perm) = player.battle_area.get(target.index as usize) else {
             return 0;
         };
-        // Sum across the entire digivolution stack — inherited keywords count.
+        // Top-card face keywords count; buried sources only contribute
+        // inherited text keywords.
         let mut total = 0i32;
-        for src in &perm.card_sources {
+        let stack_size = perm.card_sources.len();
+        for (source_index, src) in perm.card_sources.iter().enumerate() {
             let card_data = &self.card_data[src.data_index];
-            for kw in &card_data.keywords {
+            let keywords = if source_index + 1 == stack_size {
+                face_keywords(card_data)
+            } else {
+                inherited_keywords(card_data)
+            };
+            for kw in &keywords {
                 match kw {
                     Keyword::SecurityAttackPlus(n) => total += *n as i32,
                     Keyword::SecurityAttackMinus(n) => total -= *n as i32,
