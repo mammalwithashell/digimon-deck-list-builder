@@ -44,6 +44,7 @@ pub mod selection;
 pub mod tensor;
 pub mod tensor_profiles;
 pub use tensor_profiles as tensor_profile;
+pub mod tensor_v2_full;
 pub mod tensor_v2_lite;
 pub mod token_registry;
 pub mod trigger_context;

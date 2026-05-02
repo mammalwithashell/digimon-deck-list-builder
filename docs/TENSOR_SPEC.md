@@ -54,6 +54,57 @@ Top-level sections:
 
 `standard_lite_v2` card ID positions total `542`; scalar positions total `7778`. These lists, the section table, layout hash, tensor version, and feature schema version are exported by `digimon_engine.get_observation_layout("standard_lite_v2")`.
 
+### `standard_full_v2`
+
+`standard_full_v2` is an opt-in experimental profile. `standard_lite_v2`
+remains the default pilot observation profile. Full v2 extends
+`standard_lite_v2` with `action_id_features[2168][16]`.
+
+| Field | Value |
+|---|---:|
+| `id` | `standard_full_v2` |
+| `version` | 2 |
+| `tensor_version` | 2 |
+| `feature_schema_version` | `standard_full_v2.1` |
+| `tensor_size` | 43008 |
+| `card_id_slot_count` | 542 |
+| `scalar_slot_count` | 42466 |
+
+Top-level sections:
+
+| Section id | Start offset | Shape | Size |
+|---|---:|---:|---:|
+| `global_features` | 0 | `[64]` | 64 |
+| `player_summary` | 64 | `[2][32]` | 64 |
+| `permanent_slots` | 128 | `[2][15][96]` | 2880 |
+| `own_hand` | 3008 | `[30][32]` | 960 |
+| `known_zone_cards` | 3968 | `[120][8]` | 960 |
+| `decision_context` | 4928 | `[64]` | 64 |
+| `pending_choice_features` | 4992 | `[32][96]` | 3072 |
+| `action_id_features` | 8064 | `[2168][16]` | 34688 |
+| `reserved` | 42752 | `[256]` | 256 |
+
+`action_id_features[action_id]` fields:
+
+| Offset | Field |
+|---:|---|
+| 0 | legal flag, equal to `get_action_mask(player)[action_id]` |
+| 1 | raw action ID normalized by `ACTION_SPACE_SIZE` |
+| 2 | action family bucket |
+| 3 | phase bucket |
+| 4 | source zone bucket |
+| 5 | source index bucket |
+| 6 | target zone bucket |
+| 7 | target index bucket |
+| 8 | source permanent slot bucket |
+| 9 | target permanent slot bucket |
+| 10 | reserved cost/memory bucket, currently `0.0` |
+| 11 | reserved amount/count bucket, currently `0.0` |
+| 12 | uses hand card flag |
+| 13 | uses permanent flag |
+| 14 | prompt/selection action flag |
+| 15 | reserved, currently `0.0` |
+
 ### `standard_compact_v1`
 
 `standard_compact_v1` is the compact compatibility and baseline profile:
@@ -71,7 +122,7 @@ Top-level sections:
 
 `standard_v1` and `compact_v1` are compatibility aliases for older code and design notes. New compact-profile code and model metadata should write `standard_compact_v1`.
 
-Canonical tensor profile definitions live under `code/digimon-engine/src/tensor_profiles/<game_mode>/<version>.rs`. `standard_lite_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_lite.rs`; `standard_compact_v1` is defined in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`. `code/digimon-engine/src/tensor.rs` is the Standard compact v1 tensor writer and compatibility surface; it re-exports compact layout constants but does not define the default pilot observation profile.
+Canonical tensor profile definitions live under `code/digimon-engine/src/tensor_profiles/<game_mode>/<version>.rs`. `standard_lite_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_lite.rs`; `standard_full_v2` is defined in `code/digimon-engine/src/tensor_profiles/standard/v2_full.rs`; `standard_compact_v1` is defined in `code/digimon-engine/src/tensor_profiles/standard/v1.rs`. `code/digimon-engine/src/tensor.rs` is the Standard compact v1 tensor writer and compatibility surface; it re-exports compact layout constants but does not define the default pilot observation profile.
 
 `standard_compact_v1` owns its structured layout tables in the registry: top-level sections, slot header fields, source fields, and the source stride live together with the profile so the card-ID and scalar positions are easy to audit. These tables use named offsets defined with the profile-owned layout constants instead of magic numeric indices.
 

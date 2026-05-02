@@ -514,6 +514,15 @@ DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --gauntlet --ti
 
 Use `--tensor-profile standard_compact_v1` only for compact compatibility or baseline comparisons.
 
+Profile the opt-in experimental full v2 tensor against the default lite v2 profile before using it for long runs:
+
+```powershell
+$env:DIGIMON_BACKEND='rust'
+python -m digimon_gym.agents.pilot_training --tensor-profile standard_full_v2 --timesteps 10000
+```
+
+Compare `standard_full_v2` against `standard_lite_v2` by both wall-clock throughput and sample efficiency. Full v2 adds `action_id_features[2168][16]`, so fewer steps to learn may still lose overall if environment steps or policy updates slow down enough.
+
 ---
 
 ## 7. Engine Modules

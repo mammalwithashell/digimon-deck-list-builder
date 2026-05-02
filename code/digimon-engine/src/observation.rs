@@ -3,14 +3,15 @@ use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::tensor_profiles::{
     all_profile_ids, profile_by_id, TensorProfile, COMPACT_V1_LEGACY_PROFILE_ID,
-    STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID, STANDARD_V1_LEGACY_PROFILE_ID,
-    V2_LITE_TRANSITION_PROFILE_ID,
+    STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_FULL_V2_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID,
+    STANDARD_V1_LEGACY_PROFILE_ID, V2_LITE_TRANSITION_PROFILE_ID,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ObservationProfileId {
     StandardCompactV1,
     StandardLiteV2,
+    StandardFullV2,
 }
 
 impl ObservationProfileId {
@@ -18,6 +19,7 @@ impl ObservationProfileId {
         match self {
             Self::StandardCompactV1 => STANDARD_COMPACT_V1_PROFILE_ID,
             Self::StandardLiteV2 => STANDARD_LITE_V2_PROFILE_ID,
+            Self::StandardFullV2 => STANDARD_FULL_V2_PROFILE_ID,
         }
     }
 }
@@ -34,6 +36,7 @@ pub fn parse_observation_profile(raw: &str) -> Result<ObservationProfileId, Stri
         STANDARD_LITE_V2_PROFILE_ID | V2_LITE_TRANSITION_PROFILE_ID => {
             Ok(ObservationProfileId::StandardLiteV2)
         }
+        STANDARD_FULL_V2_PROFILE_ID => Ok(ObservationProfileId::StandardFullV2),
         other => Err(format!("unknown observation profile: {other}")),
     }
 }
@@ -58,6 +61,9 @@ pub fn build_observation_tensor(
         }
         ObservationProfileId::StandardLiteV2 => {
             crate::tensor_v2_lite::build_tensor_standard_lite_v2(game, player_id, registry)
+        }
+        ObservationProfileId::StandardFullV2 => {
+            crate::tensor_v2_full::build_tensor_standard_full_v2(game, player_id, registry)
         }
     }
 }
