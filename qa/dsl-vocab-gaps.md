@@ -348,8 +348,9 @@ Format per entry:
 ## BT5-008 — `other: true` predicate not evaluated in `eval_permanent_fields`  [G-OTHER-PREDICATE-UNEVALUATED]
 
 - Effect text: "[Your Turn] Your other [Gaossmon] all get +3000 DP."
-- Status: CLOSED as of 2026-05-02. `eval_permanent_fields` now rejects the source `PermanentHandle` when `other: true` is evaluated with `source_permanent` context, so filtered declarative auras can exclude their own source permanent.
-- Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_auras --nocapture`.
+- Status: RESOLVED by Group 6. `eval_permanent_fields` now rejects the source `PermanentHandle` when `other: true` is evaluated with `source_permanent` context, so filtered declarative auras can exclude their own source permanent.
+- Passing command(s): `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_auras --nocapture`.
+- Remaining related blocker: none for this predicate primitive.
 - Suggested DSL syntax: already in the DSL spec as `other: true`.
 - Gap kind: closed DSL/runtime predicate gap.
 - First reported: 2026-04-27 (BT5-008 batch-implement-cards-rust-dsl, Medusamon archetype). Closed: 2026-05-02 (Group 6 Task 3).
@@ -359,8 +360,10 @@ Format per entry:
 ## BT5-008 — Player-level flood-gate modifier not installable from DSL  [G-PLAYER-FLOOD-GATE-DSL]
 
 - Effect text: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
-- Status: CLOSED for DSL vocabulary and direct runtime primitives as of 2026-05-01. The DSL now supports `target_player` on `kind: flood_gate` and an explicit `add_player_modifier` step, and the engine has a `CannotReduceDigivolveCost` modifier with digivolve-only cost-reduction enforcement.
+- Status: RESOLVED by Group 6 for aura-delivered player modifiers, and previously closed for DSL vocabulary/direct runtime primitives. The DSL supports `target_player` on `kind: flood_gate` and an explicit `add_player_modifier` step, and the engine has a `CannotReduceDigivolveCost` modifier with digivolve-only cost-reduction enforcement.
 - Engine note 2026-05-02: player-scoped `IgnoreColorRequirement` is now consumed by Rust Option masks and decode/execution. No new DSL syntax landed in that engine-only pass; passive/static field dispatch remains governed by the related blocker below.
+- Passing command(s): `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_auras --nocapture`.
+- Remaining related blocker: flood-gate-specific tick coverage is still worth adding separately, but aura-delivered player modifiers no longer require a raw-rust placeholder.
 - Engine note 2026-05-02: `Game::tick_declarative_effects` now dispatches process-backed declarative effects from face-up field sources, and Group 6 aura coverage proves a `kind: aura` with `target_player: opponent` installs `CannotReduceDigivolveCost` on the referenced player. The same dispatcher executes flood-gate process closures, but this entry does not claim dedicated flood-gate installation coverage until a flood-gate-specific tick test lands.
 - Implemented DSL syntax:
   ```yaml
@@ -542,8 +545,9 @@ Format per entry:
 - Effect text: "[All Turns] This Digimon gets +1000 DP for each of its digivolution cards."
 - Missing DSL verb / step kind / predicate: `dp_modifier_fn` / `dp_modifier_formula` — a formula-based variant of `AuraBody.dp_modifier`. The DCGO implements this via `ChangeSelfDPStaticEffect(changeValue: 1000 * count(), ...)` at `EffectTiming.None`, where `count()` is a live lambda returning `PermanentOfThisCard().DigivolutionCards.Count()` (= material_count = stack_size - 1). This is a **continuously-recomputed** aura that updates dynamically each tick, including after `de_digivolve` operations that pop digivolution cards from the stack. The DSL `kind: aura` with self-target accepts only `dp_modifier: Option<i32>` — a static literal with no formula variant. The `FormulaSpec` type (with `per: material_count, delta: 1000`) exists for step-level `add_dp_modifier` verbs, but `add_dp_modifier` only snapshots the formula's value at event-fire time, not continuously. Storing a snapshot in `Effect.dp_modifier` cannot model the dynamic behaviour required.
 - Lowers to engine API: `source_dp_contribution(perm_handle, source_index)` reads `Effect.dp_modifier` continuously — the engine query mechanism already supports live reads. The gap is that `AuraBody` has no formula field to store a `FormulaSpec` that `lower_aura.rs` could evaluate at read-time rather than compile-time.
-- **Closed 2026-05-02:** `kind: aura` now accepts `dp_modifier_fn` and lowers it into a live runtime formula closure instead of snapshotting into `Effect.dp_modifier`. `Game::effective_dp` and `Game::source_dp_contribution` evaluate that closure at query/tensor time, so `per: material_count` changes when the stack changes. Sibling coverage: `security_attack_fn` is also accepted on aura clauses and is recomputed at security-check resolution, alongside printed Security Attack keywords and `ModifierType::SecurityAttackChange`.
-- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_dynamic_formulas phase2f2_formula_eval phase2f2_modifier_formula --nocapture`.
+- **Status:** RESOLVED by Group 6. `kind: aura` now accepts `dp_modifier_fn` and lowers it into a live runtime formula closure instead of snapshotting into `Effect.dp_modifier`. `Game::effective_dp` and `Game::source_dp_contribution` evaluate that closure at query/tensor time, so `per: material_count` changes when the stack changes. Sibling coverage: `security_attack_fn` is also accepted on aura clauses and is recomputed at security-check resolution, alongside printed Security Attack keywords and `ModifierType::SecurityAttackChange`.
+- **Passing command(s):** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_dynamic_formulas --nocapture`; broader formula regression coverage remains in `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- --nocapture`.
+- **Remaining related blocker:** none for formula-backed DP and Security Attack aura clauses.
 - Suggested DSL syntax:
   ```yaml
   - kind: aura

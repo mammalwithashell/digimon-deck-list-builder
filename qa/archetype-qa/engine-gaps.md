@@ -281,12 +281,15 @@ Resolved by Group 3:
 - **Workaround:** None — raw_rust event-log detection blocked until emission is wired.
 - **Updated 2026-04-29:** `Game::digivolve_from_hand` now emits `GameEvent::Digivolve { player, top_card_id, field_index, from_stack_top }` after stack mutation. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- game_event_digivolve_is_emitted_with_new_top_card_and_field_index`. Effect-initiated digivolve, DNA digivolve, and breeding-area digivolve event-log coverage remain open.
 
-### `EffectTiming::Declarative` Never Fired — Filtered Aura / Grant-Keyword Runtime Gap  [G-DECLARATIVE-KEYWORD]
+### ~~`EffectTiming::Declarative` Never Fired — Filtered Aura / Grant-Keyword Runtime Gap  [G-DECLARATIVE-KEYWORD]~~ — RESOLVED 2026-05-02
 - **Discovered in:** Medusamon archetype — BT21-029, EX11-012, EX11-054 (grant_keyword), BT5-008 (filtered aura), 2026-04-27
 - **Scope:** Rust engine.
 - **Card(s):** Any card using `kind: aura` with a non-empty target predicate (filtered aura), or `kind: grant_keyword` with a declarative scope. Specific cards: BT21-029 Medusamon, EX11-012 Medusamon (Progress keyword), BT5-008 Gaossmon (filtered aura +3000 DP to other Gaossmon).
 - **Effect text:** "[Your Turn] Your other [Gaossmon] all get +3000 DP." (BT5-008); "[When Digivolving / On Field] <Progress>" (EX11-012 inherited); "SecurityAttack+1" (BT21-029 clause a).
-- **What's missing:** `EffectTiming::Declarative` is defined in `enums.rs` (line 204) and used by `Effect::declarative(card)` in `effect.rs`, but it is **never enqueued or fired** anywhere in the engine. No call site in `game_phases.rs`, `game_actions.rs`, `game.rs`, or `effect_queue.rs` calls `enqueue_triggered(EffectTiming::Declarative, ...)`. As a result:
+- **Status:** RESOLVED by Group 6 for battle-area filtered aura/player-modifier runtime dispatch. `Game::tick_declarative_effects` runs process-backed declarative effects from face-up field sources, filtered `kind: aura` clauses materialize matching permanent modifiers, `other: true` excludes the source permanent, player-scoped aura clauses can install player modifiers, and tick refresh removes stale materialized modifiers without duplicating entries.
+- **Passing command(s):** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_auras --nocapture`; broad confirmation `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- --nocapture`.
+- **Remaining related blocker:** security-zone aura sources and the future query-time aura model remain separate work; no remaining blocker for battle-area tick-dispatched filtered auras covered by Group 6.
+- **What was missing:** `EffectTiming::Declarative` is defined in `enums.rs` (line 204) and used by `Effect::declarative(card)` in `effect.rs`, but it was not enqueued or fired by the runtime. As a result:
   - Filtered aura `process` closures (which call `ctx.add_dp_modifier`, `ctx.grant_keyword`) are never invoked.
   - Declarative `grant_keyword` modifiers are never installed in `ModifierRegistry` at runtime.
   - The `active_when` condition closure on declarative effects is also never evaluated.
