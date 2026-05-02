@@ -211,6 +211,16 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                             });
                                         }
                                     }
+                                    if let Some(active_when) = &d.active_when {
+                                        if predicate_depends_on_dp(active_when) {
+                                            errors.push(ValidationError {
+                                                card_id: spec.card.clone(),
+                                                path: format!("{prefix}.dp_modifier_fn"),
+                                                message: "dynamic DP aura cannot use a DP-dependent active_when predicate"
+                                                    .to_string(),
+                                            });
+                                        }
+                                    }
                                     if formula_uses_dp_aggregate(formula) {
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),

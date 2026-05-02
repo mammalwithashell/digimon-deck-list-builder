@@ -330,6 +330,36 @@ effects:
 }
 
 #[test]
+fn validate_dynamic_dp_aura_rejects_dp_dependent_active_when() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+effects:
+  - kind: aura
+    active_when:
+      any_permanent:
+        of: you
+        dp_lte: 5000
+    target: {}
+    dp_modifier_fn: { base: 0, per: material_count, delta: 1000 }
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| e.path.contains("dp_modifier_fn")
+            && e.message.contains("DP-dependent active_when")),
+        "expected dynamic DP aura DP-dependent active_when rejection, got: {errs:?}"
+    );
+}
+
+#[test]
 fn validate_dynamic_dp_aura_rejects_dp_aggregate_formula() {
     let spec = parse(
         r#"

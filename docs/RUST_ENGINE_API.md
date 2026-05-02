@@ -1870,7 +1870,7 @@ Static `dp_modifier`, `grant_keyword`, and named `modifier` aura fields are mate
 
 Formula-backed `dp_modifier_fn` and `security_attack_fn` auras are not materialized into permanent modifiers. They carry the compiled formula into the runtime effect and are continuously recomputed by the relevant query/resolution path: DP formulas are read by `effective_dp` and `source_dp_contribution`, while Security Attack formulas are read when the attack security-check count is resolved. This keeps `material_count` and other field-state selectors live after stack depth or board state changes.
 
-Dynamic DP aura formulas must not depend on effective DP. The validator rejects `dp_modifier_fn` auras whose target predicate uses DP comparisons (`dp_eq`, `dp_lte`, `dp_gte`, including nested predicates) or whose formula uses `highest_dp` / `lowest_dp` aggregates. This avoids re-entering `effective_dp` while effective DP is already being computed.
+Dynamic DP aura formulas must not depend on effective DP. The validator rejects `dp_modifier_fn` auras whose target or `active_when` predicate uses DP comparisons (`dp_eq`, `dp_lte`, `dp_gte`, including nested predicates) or whose formula uses `highest_dp` / `lowest_dp` aggregates. This avoids re-entering `effective_dp` while effective DP is already being computed.
 
 Multiple applicable `security_attack_fn` auras are treated as base-inclusive check-count overrides. The combat path uses the maximum applicable formula-derived check total, then adds printed Security Attack keyword deltas and `ModifierType::SecurityAttackChange`. Non-applicable formulas return `None` and preserve the normal base check; applicable formulas may still return `Some(0)` to produce zero base checks.
 
