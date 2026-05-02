@@ -29,7 +29,7 @@ No trained pilot models need to be preserved, so v2 can be a breaking observatio
 4. The default pilot observation is fair-information. Hidden opponent hand cards and face-down security cards are not encoded by identity.
 5. Card identity and mechanical semantics both matter. Card embeddings represent identity; typed features represent reusable mechanics.
 6. Breeding and battle-area objects share permanent-stack structure, but the tensor must preserve their different rules semantics.
-7. The v2 contract should remain a flat `Box(float32)` for SB3/ONNX simplicity, while being organized into table-shaped sections that a custom extractor can process structurally later.
+7. The v2 contract remains a flat `Box(float32)` for SB3/ONNX simplicity, while being organized into table-shaped sections that a custom extractor can process structurally later.
 
 ## Non-Goals
 
@@ -38,7 +38,7 @@ No trained pilot models need to be preserved, so v2 can be a breaking observatio
 - Do not implement an action-conditioned policy head in the first pass.
 - Do not make observation metadata authoritative for game rules.
 - Do not parse printed card text or human-readable prompts at tensor-write time.
-- Do not add an omniscient training tensor as the default pilot observation.
+- Do not make an omniscient training tensor the default pilot observation.
 
 ## High-Level Shape
 
@@ -217,7 +217,7 @@ pending_source_card_id = row_base + 44
 
 ### V2 Lite Card And Scalar Positions
 
-`CARD_ID_POSITIONS_V2_LITE` should contain exactly:
+`CARD_ID_POSITIONS_V2_LITE` contains exactly:
 
 - `30` permanent top-card IDs.
 - `330` permanent source-card IDs.
@@ -225,7 +225,7 @@ pending_source_card_id = row_base + 44
 - `120` known-zone card IDs.
 - `32` pending-choice source-card IDs.
 
-That is `542` card ID positions total. `SCALAR_POSITIONS_V2_LITE` should contain the remaining `7778` positions, and the two lists must cover `0..8320` exactly once.
+That is `542` card ID positions total. `SCALAR_POSITIONS_V2_LITE` contains the remaining `7778` positions, and the two lists cover `0..8320` exactly once.
 
 ## Perspective And Hidden Information
 
@@ -244,11 +244,11 @@ Default pilot observation must not leak hidden information:
 - Face-up security cards and revealed cards are visible by card ID.
 - Trash, battle area, breeding area, and public linked/source cards are visible by card ID.
 
-If future experiments need perfect-information training, add an explicit `build_tensor_v2_omniscient` helper and keep it out of the default `DigimonEnv`.
+If future experiments need perfect-information training, implement an explicit `build_tensor_v2_omniscient` helper and keep it out of the default `DigimonEnv`.
 
 ## Global Features
 
-`global_features[64]` should include:
+`global_features[64]` includes:
 
 - tensor version marker: `2.0`
 - turn count normalized
@@ -266,7 +266,7 @@ Use one-hot flags for low-cardinality categories where practical. Avoid ordinal 
 
 ## Player Summary
 
-Each `player_summary[player][32]` row should include public counts and coarse state:
+Each `player_summary[player][32]` row includes public counts and coarse state:
 
 - deck count
 - digitama deck count
@@ -359,7 +359,7 @@ If breeding lacks a stable `PermanentHandle` for some fields during initial impl
 - `63-92` DNA digivolve from hand
 - `400-999` digivolve from hand
 
-Each row should include:
+Each row includes:
 
 - active flag
 - card ID
@@ -376,7 +376,7 @@ Each row should include:
 - printed keyword summary where cheap
 - reserved tail
 
-Do not add opponent hand rows by identity. Opponent hand count lives in `player_summary`.
+Do not encode opponent hand rows by identity. Opponent hand count lives in `player_summary`.
 
 ## Known Zone Cards
 
@@ -512,7 +512,7 @@ This table does not replace the action mask. It gives the policy a small amount 
 | `14` | prompt/selection action flag |
 | `15` | reserved |
 
-For illegal actions, static decode fields may still be populated, but state-dependent fields should be zero unless meaningful. The legal flag must always agree with the mask exposed through `info["action_mask"]`.
+For illegal actions, static decode fields may still be populated, but state-dependent fields are zero unless meaningful. The legal flag must always agree with the mask exposed through `info["action_mask"]`.
 
 This table is intentionally shallow. Rich card/effect meaning belongs in the hand/permanent/pending-choice sections. If future profiling shows that `standard_full_v2` is too slow for the learning benefit it provides, keep the profile registry support and leave `standard_lite_v2` as the default.
 
@@ -520,7 +520,7 @@ This table is intentionally shallow. Rich card/effect meaning belongs in the han
 
 Pending-choice effect semantics require a structured effect summary model.
 
-Add an observation-only descriptor, likely attached to `Effect` or returned alongside `Effect`:
+Effect metadata uses an observation-only descriptor, attached to `Effect` or returned alongside `Effect`:
 
 ```rust
 pub struct EffectObservationMetadata {
@@ -535,16 +535,16 @@ The exact Rust shape can use bitflags, small enums, or fixed arrays, but it must
 
 Sources:
 
-- DSL-lowered effects should derive metadata from compiled steps where possible.
-- Raw Rust effects should set metadata through builder methods.
-- Keyword auto-effects should define metadata centrally.
-- Unknown metadata should be encoded as unknown/zero, not guessed from prompt text.
+- DSL-lowered effects derive metadata from compiled steps where possible.
+- Raw Rust effects set metadata through builder methods.
+- Keyword auto-effects define metadata centrally.
+- Unknown metadata is encoded as unknown/zero, not guessed from prompt text.
 
 Rules behavior must never depend on these observation tags. If a metadata tag is wrong, the agent may learn worse, but the engine must still resolve the card correctly.
 
 ## Card ID Positions
 
-The v2 feature extractor should still split card IDs from scalar values for embedding.
+The v2 feature extractor still splits card IDs from scalar values for embedding.
 
 Card ID positions include:
 
@@ -554,7 +554,7 @@ Card ID positions include:
 - known zone card IDs
 - pending choice source-card IDs
 
-If `standard_full_v2` is implemented later, `action_id_features` should not contain card IDs. It references source/target zones and indices instead.
+If `standard_full_v2` is implemented later, `action_id_features` does not contain card IDs. It references source/target zones and indices instead.
 
 The Rust engine exports v2 card/scalar positions through PyO3 layout metadata. `code/digimon_gym/agents/features_extractor.py` consumes layout-driven positions instead of importing tensor layout from `engine_py_legacy`.
 
@@ -621,14 +621,14 @@ Focused tests cover:
 
 This design intentionally stopped short of a task-by-task implementation plan. The implementation has since landed for `standard_lite_v2`; this historical sequence remains useful for audit context:
 
-1. Add `standard_lite_v2` layout constants and tests.
+1. `standard_lite_v2` layout constants and tests.
 2. Write the `standard_lite_v2` tensor builder.
 3. Export v2 constants and card/scalar positions through PyO3.
 4. Update Python feature extraction to read Rust-owned positions.
-5. Add pending-choice metadata plumbing, starting with `TriggerOrder`.
+5. Pending-choice metadata plumbing, starting with `TriggerOrder`.
 6. Switch `DigimonEnv` to `standard_lite_v2`.
 7. Profile training throughput and memory against `standard_compact_v1`.
-8. Add `standard_full_v2` action-id feature table generation only if profiling justifies the experiment.
+8. `standard_full_v2` action-id feature table generation only if profiling justifies the experiment.
 9. Update docs and remove v1-only assumptions.
 
 ## Open Risks
@@ -640,7 +640,7 @@ This design intentionally stopped short of a task-by-task implementation plan. T
 
 ## Acceptance Criteria
 
-The design is ready to implement when reviewers agree on:
+The implemented `standard_lite_v2` contract is accepted when:
 
 - `TENSOR_SIZE_V2_LITE = 8320` as the implemented default v2 target.
 - Unified `permanent_slots[2][15]` with breeding at slot `14`.

@@ -4,7 +4,7 @@
 
 ## Decision: One Spec, Not Two
 
-The profile registry and layout metadata plumbing should live in one design spec.
+The profile registry and layout metadata plumbing live in one design spec.
 
 They are one contract:
 
@@ -12,7 +12,7 @@ They are one contract:
 - Layout metadata without profile selection cannot support tensor ablation experiments.
 - Model artifacts need both the selected profile ID and the exact layout hash to prevent loading a checkpoint against the wrong observation shape.
 
-Implementation can still split into multiple phases. The design should stay unified so the invariants are visible in one place.
+Implementation can still split into multiple phases. The design stays unified so the invariants are visible in one place.
 
 ## Context
 
@@ -68,7 +68,7 @@ Expose stable string IDs:
 | `StandardFullV2` | `standard_full_v2` | Future experimental profile: Standard v2 including `action_id_features[2168][16]` |
 | `StandardOmniscientDebugV1` | `standard_omniscient_debug_v1` | Planned test-only Standard profile that may expose hidden identities |
 
-`standard_lite_v2` has since been implemented and switched to the default pilot observation profile. `standard_compact_v1` remains the compact compatibility and baseline profile. `standard_v1` and `compact_v1` are legacy aliases only; new metadata should write `standard_compact_v1` for compact runs and `standard_lite_v2` for v2 pilot runs.
+`standard_lite_v2` is implemented and is the default pilot observation profile. `standard_compact_v1` remains the compact compatibility and baseline profile. `standard_v1` and `compact_v1` are legacy aliases only; new metadata writes `standard_compact_v1` for compact runs and `standard_lite_v2` for v2 pilot runs.
 
 `standard_pending_ablation_v2` and `standard_lite_v2` have different jobs:
 
@@ -94,7 +94,7 @@ pub struct ObservationLayout {
 }
 ```
 
-`ObservationSchema` is a compact, serializable description for debugging and artifact manifests. It should not need to list every feature name in the first implementation, but it must include enough section metadata to audit shape:
+`ObservationSchema` is a compact, serializable description for debugging and artifact manifests. It does not need to list every feature name, but it includes enough section metadata to audit shape:
 
 ```rust
 pub struct ObservationSection {
@@ -128,15 +128,14 @@ pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.1";
 
 The constant lives next to that profile's section table and card/scalar position builder, for example in `tensor_profiles/standard/v2_lite.rs`. It is copied into layout metadata and returned through PyO3.
 
-The version is profile-specific, not global. Initial suggested values:
+The version is profile-specific, not global. Implemented values:
 
 | Profile | Initial feature schema version |
 |---|---|
 | `standard_compact_v1` | `standard_compact_v1.1` |
-| `standard_pending_ablation_v2` | `standard_pending_ablation_v2.1` |
 | `standard_lite_v2` | `standard_lite_v2.1` |
-| `standard_full_v2` | `standard_full_v2.1` |
-| `standard_omniscient_debug_v1` | `standard_omniscient_debug_v1.1` |
+
+Future profiles define their own feature-schema versions when implemented; do not publish artifact metadata for a profile before it exists in the registry.
 
 Bump the profile's feature-schema version in the same commit when:
 
@@ -146,7 +145,7 @@ Bump the profile's feature-schema version in the same commit when:
 - a row order or prompt-row alignment rule changes
 - hidden-information policy changes for that profile
 
-Shape and position changes already affect `layout_hash` through section metadata and position lists, but the schema version should still bump for human-readable artifact inspection. Do not bump it for pure refactors that leave tensor values, layout metadata, and feature meanings unchanged.
+Shape and position changes already affect `layout_hash` through section metadata and position lists, but the schema version still bumps for human-readable artifact inspection. Do not bump it for pure refactors that leave tensor values, layout metadata, and feature meanings unchanged.
 
 Mechanical enforcement:
 
@@ -154,11 +153,11 @@ Mechanical enforcement:
 - The layout hash builder serializes `feature_schema_version` into the canonical hash input.
 - Layout tests assert the version is non-empty for every profile.
 - Snapshot tests pin each implemented profile's `feature_schema_version` and `layout_hash`, so semantic edits require an intentional snapshot update.
-- A unit test should clone a layout with only `feature_schema_version` changed and verify the hash changes.
+- A unit test clones a layout with only `feature_schema_version` changed and verifies the hash changes.
 
 ## Layout Hash
 
-`layout_hash` should be deterministic and profile-specific.
+`layout_hash` is deterministic and profile-specific.
 
 Hash inputs:
 
@@ -177,7 +176,7 @@ If a feature's meaning changes while shape stays the same, bump the profile's `F
 
 ## Rust API
 
-Add an observation module, likely under `code/digimon-engine/src/observation/`:
+Observation profile modules live under `code/digimon-engine/src/observation/`. Current modules include the implemented compact compatibility and lite v2 profiles; planned experiment profiles are documented here but are not exported until implemented:
 
 ```text
 observation/
@@ -186,14 +185,12 @@ observation/
   layout.rs
   standard_compact_v1.rs
   standard_lite_v2.rs
-  standard_pending_ablation_v2.rs  # planned
-  standard_full_v2.rs              # planned
 ```
 
 Core API:
 
 ```rust
-pub fn default_profile_id() -> ObservationProfileId;
+pub fn default_observation_profile() -> ObservationProfileId;
 pub fn parse_profile_id(raw: &str) -> Result<ObservationProfileId, ObservationProfileError>;
 pub fn list_observation_profiles() -> Vec<&'static str>;
 pub fn observation_layout(profile: ObservationProfileId) -> ObservationLayout;
@@ -209,13 +206,13 @@ Keep `tensor.rs` as a compatibility layer:
 
 - `TENSOR_SIZE` remains the `standard_compact_v1` compatibility size.
 - `build_tensor(...)` delegates to `build_observation_tensor(..., StandardCompactV1)`.
-- New code should use the observation profile API.
+- New code uses the observation profile API.
 
-Now that `standard_lite_v2` is the default pilot observation, profile-specific code must avoid relying on a global size and should read the selected layout's `tensor_size`.
+Now that `standard_lite_v2` is the default pilot observation, profile-specific code avoids relying on a global size and reads the selected layout's `tensor_size`.
 
 ## Runner Contract
 
-`HeadlessRunner` should store an observation profile:
+`HeadlessRunner` stores an observation profile:
 
 ```rust
 pub struct HeadlessRunner {
@@ -237,7 +234,7 @@ runner.observation_layout() -> ObservationLayout
 runner.observation_profile_id() -> &'static str
 ```
 
-The method name `get_board_tensor` can remain for compatibility, but internally it should mean "observation tensor for this runner's profile."
+The method name `get_board_tensor` can remain for compatibility, but internally it means "observation tensor for this runner's profile."
 
 ## PyO3 Contract
 
@@ -269,7 +266,7 @@ digimon_engine.get_observation_layout(profile_id: str | None = None) -> dict
 }
 ```
 
-`RustHeadlessGame` constructor should accept a profile:
+`RustHeadlessGame` constructor accepts a profile:
 
 ```python
 RustHeadlessGame(
@@ -292,11 +289,11 @@ runner.observation_profile_id -> str
 runner.get_observation_layout() -> dict
 ```
 
-Keep module-level `TENSOR_SIZE` as the compact compatibility size for backward compatibility, but Python training code should use `get_observation_layout(profile_id)["tensor_size"]`.
+Keep module-level `TENSOR_SIZE` as the compact compatibility size for backward compatibility, but Python training code uses `get_observation_layout(profile_id)["tensor_size"]`.
 
 ## Gym Contract
 
-`DigimonEnv` should accept a tensor profile:
+`DigimonEnv` accepts a tensor profile:
 
 ```python
 env = DigimonEnv(tensor_profile="standard_lite_v2")
@@ -322,7 +319,7 @@ On runner creation:
 - for Python legacy backend, only allow the normalized `standard_compact_v1` unless a Python-side profile exists
 - fail fast if `DIGIMON_BACKEND != rust` and a normalized non-`standard_compact_v1` profile is requested
 
-`reset()` and `step()` should include profile metadata in `info`:
+`reset()` and `step()` include profile metadata in `info`:
 
 ```python
 info = {
@@ -335,7 +332,7 @@ info = {
 
 ## Feature Extractor Contract
 
-`CardEmbeddingExtractor` should no longer import layout positions from `engine_py_legacy`.
+`CardEmbeddingExtractor` no longer imports layout positions from `engine_py_legacy`.
 
 Preferred shape:
 
@@ -351,7 +348,7 @@ class CardEmbeddingExtractor(BaseFeaturesExtractor):
         ...
 ```
 
-SB3 policy kwargs should pass profile layout:
+SB3 policy kwargs pass profile layout:
 
 ```python
 policy_kwargs = {
@@ -369,17 +366,17 @@ The extractor reads:
 - `layout["tensor_size"]`
 - `layout["layout_hash"]`
 
-It should assert:
+It asserts:
 
 - observation space size equals layout tensor size
 - card/scalar positions cover the tensor
 - no position is out of range
 
-For loaded checkpoints, the model artifact manifest should provide the expected layout. If the current env layout hash differs, evaluation should fail before model inference.
+For loaded checkpoints, the model artifact manifest provides the expected layout. If the current env layout hash differs, evaluation fails before model inference.
 
 ## Model Artifact Metadata
 
-Every trained model artifact should record:
+Every trained model artifact records:
 
 ```json
 {
@@ -398,7 +395,7 @@ For SB3 `.zip` models, store this in a sidecar JSON next to the model and in any
 
 For ONNX export, include the same metadata in the ONNX sidecar manifest. If ONNX metadata fields are convenient, duplicate the profile ID and layout hash there too, but the sidecar remains the source of truth.
 
-Model loading/evaluation should check:
+Model loading/evaluation checks:
 
 - environment profile ID matches artifact profile ID
 - feature schema version matches
@@ -411,7 +408,7 @@ This prevents silent cross-profile evaluation bugs.
 
 ## Training CLI
 
-Add a training flag:
+The training CLI supports a tensor-profile flag:
 
 ```bash
 python -m digimon_gym.agents.pilot_training --tensor-profile standard_lite_v2
@@ -423,7 +420,7 @@ Also support:
 DIGIMON_TENSOR_PROFILE=standard_lite_v2 python -m digimon_gym.agents.pilot_training
 ```
 
-Training logs should print:
+Training logs print:
 
 - profile ID
 - feature schema version
@@ -454,7 +451,7 @@ Suggested shape:
 - `pending_choice_features`
 - no full `action_id_features`
 
-This profile should keep the non-pending board representation intentionally close to `standard_compact_v1`, except for fairness fixes needed by the Rust profile system. Its comparison target is:
+This planned profile keeps the non-pending board representation intentionally close to `standard_compact_v1`, except for fairness fixes needed by the Rust profile system. Its comparison target is:
 
 ```text
 standard_compact_v1 vs standard_pending_ablation_v2
@@ -502,7 +499,7 @@ This profile may include hidden identities, but it must never be the default for
 
 ## Comparison Metrics
 
-Profile experiments should compare both sample efficiency and wall-clock throughput:
+Profile experiments compare both sample efficiency and wall-clock throughput:
 
 - environment steps per second
 - games per hour
@@ -513,11 +510,11 @@ Profile experiments should compare both sample efficiency and wall-clock through
 - targeted trigger-order scenario accuracy
 - training stability with fixed seed families
 
-A profile that learns in fewer games can still be worse if steps/sec drops enough. The default profile should optimize "useful play strength per training hour," not just "best win rate per environment step."
+A profile that learns in fewer games can still be worse if steps/sec drops enough. The default profile optimizes "useful play strength per training hour," not just "best win rate per environment step."
 
 ## Tests
 
-Add tests for:
+Tests cover:
 
 - profile parser accepts known IDs and rejects unknown IDs
 - `list_observation_profiles()` includes every implemented profile
@@ -535,20 +532,20 @@ Add tests for:
 
 ## Migration Plan Sketch
 
-1. Add Rust profile/layout structs with `standard_compact_v1`.
+1. Rust profile/layout structs with `standard_compact_v1`.
 2. Make `tensor.rs` delegate to `standard_compact_v1` through the profile registry.
 3. Export profile list and layout metadata through PyO3.
-4. Add `observation_profile` to `RustHeadlessGame`.
-5. Add `tensor_profile` to `DigimonEnv`.
+4. `observation_profile` on `RustHeadlessGame`.
+5. `tensor_profile` on `DigimonEnv`.
 6. Update `CardEmbeddingExtractor` to consume layout metadata from policy kwargs.
-7. Add model artifact metadata writing and loading checks.
+7. Model artifact metadata writing and loading checks.
 8. Implement `standard_pending_ablation_v2` if the ablation is still useful.
 9. Implement `standard_lite_v2`. Completed; it is now the default pilot profile.
 10. Implement `standard_full_v2` only after profiling justifies it.
 
 ## Acceptance Criteria
 
-The design is ready to implement when reviewers agree that:
+The implemented profile registry contract is accepted when:
 
 - profile selection and layout metadata are one contract
 - `standard_compact_v1` remains available as a baseline
