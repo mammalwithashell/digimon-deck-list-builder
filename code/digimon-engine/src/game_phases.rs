@@ -30,7 +30,7 @@ impl Game {
         );
         self.drain_effect_queue();
         if self.pending_selection.is_some() {
-            self.pending_delayed_option_lifecycle = Some(DelayedOptionLifecycleResume {
+            self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
                 turn: self.turn_count,
                 kind: DelayedOptionLifecycleResumeKind::StartTurn,
                 pending_delete_key: None,
@@ -628,7 +628,7 @@ impl Game {
             );
             self.drain_effect_queue();
             if self.pending_selection.is_some() {
-                self.pending_delayed_option_lifecycle = Some(DelayedOptionLifecycleResume {
+                self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
                     turn,
                     kind: resume_kind,
                     pending_delete_key: Some(key),
@@ -647,7 +647,7 @@ impl Game {
                 );
             }
             if self.pending_selection.is_some() {
-                self.pending_delayed_option_lifecycle = Some(DelayedOptionLifecycleResume {
+                self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
                     turn,
                     kind: resume_kind,
                     pending_delete_key: None,
@@ -670,78 +670,94 @@ impl Game {
         }
     }
 
+    pub(crate) fn park_delayed_option_lifecycle(&mut self, resume: DelayedOptionLifecycleResume) {
+        if self.pending_delayed_option_lifecycle.is_some() {
+            self.pending_delayed_option_lifecycle_stack.push(resume);
+        } else {
+            self.pending_delayed_option_lifecycle = Some(resume);
+        }
+    }
+
     pub(crate) fn resume_pending_delayed_option_lifecycle(&mut self) {
         if self.pending_selection.is_some() {
             return;
         }
 
-        let Some(mut resume) = self.pending_delayed_option_lifecycle.take() else {
-            return;
-        };
-
-        if let Some(key) = resume.pending_delete_key.take() {
-            let current_handle = match resume.kind {
-                DelayedOptionLifecycleResumeKind::Event { timing } => {
-                    self.find_event_delayed_permanent_by_key(key, timing)
-                }
-                _ => {
-                    let triggers = Self::delay_lifecycle_triggers(resume.kind);
-                    self.find_delayed_permanent_by_key(key, resume.turn, triggers)
-                }
-            };
-            if let Some(current_handle) = current_handle {
-                self.delete_permanent_with_cause(
-                    current_handle,
-                    crate::replacement::ReplacementCause::Cost,
-                );
-            }
-
-            if self.pending_selection.is_some() {
-                resume.skip_key = Some(key);
-                self.pending_delayed_option_lifecycle = Some(resume);
+        loop {
+            let Some(mut resume) = self
+                .pending_delayed_option_lifecycle
+                .take()
+                .or_else(|| self.pending_delayed_option_lifecycle_stack.pop())
+            else {
                 return;
-            }
+            };
 
-            match resume.kind {
-                DelayedOptionLifecycleResumeKind::Event { .. } => return,
-                _ => {
-                    let triggers = Self::delay_lifecycle_triggers(resume.kind);
-                    if self
-                        .find_delayed_permanent_by_key(key, resume.turn, triggers)
-                        .is_some()
-                    {
-                        resume.skip_key = Some(key);
+            if let Some(key) = resume.pending_delete_key.take() {
+                let current_handle = match resume.kind {
+                    DelayedOptionLifecycleResumeKind::Event { timing } => {
+                        self.find_event_delayed_permanent_by_key(key, timing)
+                    }
+                    _ => {
+                        let triggers = Self::delay_lifecycle_triggers(resume.kind);
+                        self.find_delayed_permanent_by_key(key, resume.turn, triggers)
+                    }
+                };
+                if let Some(current_handle) = current_handle {
+                    self.delete_permanent_with_cause(
+                        current_handle,
+                        crate::replacement::ReplacementCause::Cost,
+                    );
+                }
+
+                if self.pending_selection.is_some() {
+                    resume.skip_key = Some(key);
+                    self.pending_delayed_option_lifecycle = Some(resume);
+                    return;
+                }
+
+                match resume.kind {
+                    DelayedOptionLifecycleResumeKind::Event { .. } => continue,
+                    _ => {
+                        let triggers = Self::delay_lifecycle_triggers(resume.kind);
+                        if self
+                            .find_delayed_permanent_by_key(key, resume.turn, triggers)
+                            .is_some()
+                        {
+                            resume.skip_key = Some(key);
+                        }
                     }
                 }
             }
-        }
 
-        match resume.kind {
-            DelayedOptionLifecycleResumeKind::StartTurn => {
-                self.resolve_delayed_options_matching(
-                    resume.turn,
-                    &[DelayTrigger::StartOfYourNextTurn],
-                    resume.kind,
-                    resume.skip_key,
-                );
-                if self.pending_selection.is_some() {
+            match resume.kind {
+                DelayedOptionLifecycleResumeKind::StartTurn => {
+                    self.resolve_delayed_options_matching(
+                        resume.turn,
+                        &[DelayTrigger::StartOfYourNextTurn],
+                        resume.kind,
+                        resume.skip_key,
+                    );
+                    if self.pending_selection.is_some() {
+                        return;
+                    }
+                    self.continue_begin_turn_after_start_delays();
                     return;
                 }
-                self.continue_begin_turn_after_start_delays();
-            }
-            DelayedOptionLifecycleResumeKind::EndTurn { ending_player } => {
-                self.resolve_delayed_options_matching(
-                    resume.turn,
-                    &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn],
-                    resume.kind,
-                    resume.skip_key,
-                );
-                if self.pending_selection.is_some() {
+                DelayedOptionLifecycleResumeKind::EndTurn { ending_player } => {
+                    self.resolve_delayed_options_matching(
+                        resume.turn,
+                        &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn],
+                        resume.kind,
+                        resume.skip_key,
+                    );
+                    if self.pending_selection.is_some() {
+                        return;
+                    }
+                    self.continue_end_turn_after_delays(ending_player);
                     return;
                 }
-                self.continue_end_turn_after_delays(ending_player);
+                DelayedOptionLifecycleResumeKind::Event { .. } => continue,
             }
-            DelayedOptionLifecycleResumeKind::Event { .. } => {}
         }
     }
 

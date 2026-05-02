@@ -1098,7 +1098,7 @@ impl Game {
             return;
         };
         if self.pending_selection.is_some() {
-            self.pending_delayed_option_lifecycle = Some(DelayedOptionLifecycleResume {
+            self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
                 turn: u16::MAX,
                 kind: DelayedOptionLifecycleResumeKind::Event { timing },
                 pending_delete_key: Some((owner, card_index)),

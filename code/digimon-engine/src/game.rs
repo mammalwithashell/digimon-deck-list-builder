@@ -402,6 +402,7 @@ pub struct Game {
     /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
+    pub(crate) pending_delayed_option_lifecycle_stack: Vec<DelayedOptionLifecycleResume>,
 }
 
 impl Game {
@@ -568,6 +569,7 @@ impl Game {
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
             pending_delayed_option_lifecycle: None,
+            pending_delayed_option_lifecycle_stack: Vec::new(),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it

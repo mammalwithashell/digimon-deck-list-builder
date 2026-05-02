@@ -954,30 +954,34 @@ fn compile_declarative(
             summary,
             summary_key,
         },
-        B::Delay(dl) => CompiledDeclarativeClause::Delay {
-            scope,
-            active_when: dl
-                .active_when
-                .as_ref()
-                .map(|p| {
-                    compile_predicate(
-                        p,
-                        &format!("{prefix}.delay.active_when"),
-                        card_id,
-                        errors,
-                    )
-                })
-                .or(active_when),
-            trigger: compile_timing(dl.trigger),
-            process: dl
-                .process
-                .iter()
-                .enumerate()
-                .map(|(i, s)| compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors))
-                .collect(),
-            summary,
-            summary_key,
-        },
+        B::Delay(dl) => {
+            if active_when.is_some() && dl.active_when.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.delay.active_when"),
+                    message: "delay.active_when cannot be combined with clause active_when yet"
+                        .into(),
+                });
+            }
+            let delay_active_when = dl.active_when.as_ref().map(|p| {
+                compile_predicate(p, &format!("{prefix}.delay.active_when"), card_id, errors)
+            });
+            CompiledDeclarativeClause::Delay {
+                scope,
+                active_when: delay_active_when.or(active_when),
+                trigger: compile_timing(dl.trigger),
+                process: dl
+                    .process
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| {
+                        compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors)
+                    })
+                    .collect(),
+                summary,
+                summary_key,
+            }
+        }
         B::FloodGate(fg) => CompiledDeclarativeClause::FloodGate {
             scope,
             active_when,
@@ -1752,6 +1756,43 @@ effects:
 
         assert!(
             errors.contains("unknown replacement timing"),
+            "unexpected errors:\n{errors}"
+        );
+    }
+
+    #[test]
+    fn delay_rejects_both_clause_and_nested_active_when() {
+        let mut spec = parse_spec(
+            r#"
+card: TEST-DELAY
+name: "Delay Test"
+kind: option
+color: [yellow]
+cost: 0
+traits: []
+effects:
+  - kind: delay
+    scope: face_up
+    trigger: on_suspend
+    process: []
+"#,
+        );
+        let clause_active_when: crate::predicate::PredicateSpec =
+            serde_yml::from_str("your_turn: true").unwrap();
+        let nested_active_when: crate::predicate::PredicateSpec =
+            serde_yml::from_str("event_card_name_contains: \"Arisa Kinosaki\"").unwrap();
+        let crate::clause::ClauseSpec::Declarative(delay) = &mut spec.effects[0] else {
+            panic!("expected delay declarative");
+        };
+        delay.active_when = Some(clause_active_when);
+        delay.body.insert(
+            "active_when".into(),
+            serde_yml::to_value(nested_active_when).unwrap(),
+        );
+        let errors = compile_error_text(&spec);
+
+        assert!(
+            errors.contains("delay.active_when cannot be combined with clause active_when yet"),
             "unexpected errors:\n{errors}"
         );
     }
