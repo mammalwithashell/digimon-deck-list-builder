@@ -129,6 +129,9 @@ pub struct Effect {
     pub security: bool,
     pub counter: bool,
     pub declarative: bool,
+    /// True only for process-backed declaratives that materialize static
+    /// modifier/keyword state during `Game::tick_declarative_effects`.
+    pub materializes_declarative_state: bool,
     pub optional: bool,
     /// Heuristic metadata for policies: this effect produces or preserves
     /// hand/resource flow, such as drawing, searching/add-to-hand, filtering
@@ -480,6 +483,7 @@ impl EffectBuilder {
                 security: false,
                 counter: false,
                 declarative: false,
+                materializes_declarative_state: false,
                 optional: false,
                 resource_flow: false,
                 blast_digivolve: false,
@@ -544,6 +548,11 @@ impl EffectBuilder {
     }
     fn declarative_flag(mut self) -> Self {
         self.inner.declarative = true;
+        self
+    }
+
+    pub fn materializes_declarative_state(mut self) -> Self {
+        self.inner.materializes_declarative_state = true;
         self
     }
 

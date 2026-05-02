@@ -23,11 +23,12 @@ pub fn lower(
     let mut builder: EffectBuilder = Effect::declarative(card)
         .name(&label)
         .granted_keyword(kw)
+        .materializes_declarative_state()
         .process(move |ctx| {
             let Some(handle) = ctx.source_permanent else {
                 return;
             };
-            ctx.grant_keyword(handle, kw, Expiry::Permanent);
+            ctx.grant_declarative_keyword(handle, kw, Expiry::Permanent);
         });
 
     if kw == Keyword::Overclock {

@@ -1,7 +1,7 @@
 use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
 use digimon_engine::action::PLAY_HAND_START;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{GamePhase, ModifierType};
+use digimon_engine::enums::{GamePhase, Keyword, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
 
 #[test]
@@ -101,6 +101,42 @@ effects:
     assert_eq!(
         runner.game.modifiers.sum(ally, ModifierType::ChangeDp),
         3000
+    );
+}
+
+#[test]
+fn declarative_grant_keyword_refresh_removes_stale_keyword_after_source_leaves() {
+    let yaml = r#"
+card: TEST-GRANT-BLOCKER
+name: Grant Blocker Source
+kind: digimon
+color: [black]
+level: 3
+cost: 3
+dp: 1000
+traits: []
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+"#;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .build();
+    let handle = runner.place_on_field(0, "TEST-GRANT-BLOCKER", None);
+
+    runner.game.tick_declarative_effects();
+    assert!(runner.game.has_keyword(handle, Keyword::Blocker));
+
+    runner.game.players[0]
+        .battle_area
+        .remove(handle.index as usize);
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        !runner.game.has_keyword(handle, Keyword::Blocker),
+        "process-backed declarative keyword grants must be cleared on refresh"
     );
 }
 

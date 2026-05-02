@@ -4,7 +4,7 @@ use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::card_data::{parse_printed_keywords, CardData};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::Keyword;
+use digimon_engine::enums::{CardKind, GamePhase, Keyword};
 
 fn cards_json_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -180,4 +180,30 @@ fn buried_inherited_security_attack_keyword_counts() {
     let handle = r.place_stack(0, &["TST-INHERITED-SA", "TST-TOP-INHERITS-SA"]);
 
     assert_eq!(r.game.security_attack_keyword_bonus(handle), 1);
+}
+
+#[test]
+fn decode_action_does_not_auto_fire_material_save() {
+    let mut carrier = make_test_card("TST-MATERIAL-SAVE", "Material Save Carrier");
+    carrier.keywords = vec![Keyword::MaterialSave(1)];
+
+    let source = make_test_card("TST-MATERIAL-SOURCE", "Material Source");
+    let mut tamer = make_test_card("TST-TAMER", "Helpful Tamer");
+    tamer.card_kind = CardKind::Tamer;
+
+    let mut r = DebugRunner::builder()
+        .add_card(source)
+        .add_card(carrier)
+        .add_card(tamer)
+        .build();
+    r.place_stack(0, &["TST-MATERIAL-SOURCE", "TST-MATERIAL-SAVE"]);
+    r.place_on_field(0, "TST-TAMER", Some(0));
+    r.game.current_phase = GamePhase::Main;
+
+    r.game.decode_action(PASS, 0);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "declarative refresh must not execute active keyword processes"
+    );
 }

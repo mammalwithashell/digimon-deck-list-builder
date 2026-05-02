@@ -105,45 +105,47 @@ pub fn lower(
         ));
     }
 
-    builder = builder.process(move |ctx| {
-        if let (Some(player_ref), Some(modifier)) = (target_player, modifier) {
-            for player in players_for_ref(player_ref, ctx) {
-                ctx.add_declarative_player_modifier(player, modifier, 0, Expiry::Permanent);
+    builder = builder
+        .materializes_declarative_state()
+        .process(move |ctx| {
+            if let (Some(player_ref), Some(modifier)) = (target_player, modifier) {
+                for player in players_for_ref(player_ref, ctx) {
+                    ctx.add_declarative_player_modifier(player, modifier, 0, Expiry::Permanent);
+                }
+                return;
             }
-            return;
-        }
 
-        // Collect matching targets under a read borrow.
-        let mut matched: Vec<PermanentHandle> = Vec::new();
-        {
-            let rctx = ctx.as_read();
-            let n_players = rctx.game.players.len() as PlayerId;
-            for p in 0..n_players {
-                let m = rctx.game.player(p).battle_area.len();
-                for i in 0..m {
-                    let handle = PermanentHandle {
-                        player: p,
-                        index: i as u8,
-                    };
-                    if eval_predicate(&target_arc, &rctx, PredicateSubject::Permanent(handle)) {
-                        matched.push(handle);
+            // Collect matching targets under a read borrow.
+            let mut matched: Vec<PermanentHandle> = Vec::new();
+            {
+                let rctx = ctx.as_read();
+                let n_players = rctx.game.players.len() as PlayerId;
+                for p in 0..n_players {
+                    let m = rctx.game.player(p).battle_area.len();
+                    for i in 0..m {
+                        let handle = PermanentHandle {
+                            player: p,
+                            index: i as u8,
+                        };
+                        if eval_predicate(&target_arc, &rctx, PredicateSubject::Permanent(handle)) {
+                            matched.push(handle);
+                        }
                     }
                 }
             }
-        }
-        // Apply outside the read borrow.
-        for h in matched {
-            if let Some(dp) = dp {
-                ctx.add_declarative_dp_modifier(h, dp, Expiry::Permanent);
+            // Apply outside the read borrow.
+            for h in matched {
+                if let Some(dp) = dp {
+                    ctx.add_declarative_dp_modifier(h, dp, Expiry::Permanent);
+                }
+                if let Some(kw) = gk {
+                    ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
+                }
+                if let Some(modifier) = modifier {
+                    ctx.add_declarative_modifier(h, modifier, 0, Expiry::Permanent);
+                }
             }
-            if let Some(kw) = gk {
-                ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
-            }
-            if let Some(modifier) = modifier {
-                ctx.add_declarative_modifier(h, modifier, 0, Expiry::Permanent);
-            }
-        }
-    });
+        });
 
     Some(builder.build())
 }

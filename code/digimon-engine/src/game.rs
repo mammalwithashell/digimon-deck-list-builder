@@ -1730,7 +1730,7 @@ impl Game {
                 if !effect.declarative || effect.inherited != inherited_source {
                     continue;
                 }
-                if effect.process.is_none() {
+                if !effect.materializes_declarative_state || effect.process.is_none() {
                     continue;
                 }
                 if let Some(condition) = &effect.condition {

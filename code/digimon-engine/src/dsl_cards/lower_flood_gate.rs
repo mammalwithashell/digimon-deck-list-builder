@@ -36,49 +36,51 @@ pub fn lower(
         builder = builder.inherited();
     }
 
-    builder = builder.process(move |ctx| {
-        // active_when gate — evaluated under a read borrow.
-        {
-            let rctx = ctx.as_read();
-            if let Some(aw) = &active_when {
-                if !eval_predicate(aw, &rctx, PredicateSubject::None) {
-                    return;
-                }
-            }
-        }
-        if let Some(target_player) = target_player {
-            for player in players_for_ref(target_player, ctx) {
-                ctx.add_declarative_player_modifier(player, modifier, 0, player_expiry);
-            }
-        }
-
-        let Some(target_arc) = &target_arc else {
-            return;
-        };
-
-        // Collect target handles under a read borrow.
-        let mut targets: Vec<PermanentHandle> = Vec::new();
-        {
-            let rctx = ctx.as_read();
-            let n_players = rctx.game.players.len() as PlayerId;
-            for p in 0..n_players {
-                let m = rctx.game.player(p).battle_area.len();
-                for i in 0..m {
-                    let handle = PermanentHandle {
-                        player: p,
-                        index: i as u8,
-                    };
-                    if eval_predicate(&target_arc, &rctx, PredicateSubject::Permanent(handle)) {
-                        targets.push(handle);
+    builder = builder
+        .materializes_declarative_state()
+        .process(move |ctx| {
+            // active_when gate — evaluated under a read borrow.
+            {
+                let rctx = ctx.as_read();
+                if let Some(aw) = &active_when {
+                    if !eval_predicate(aw, &rctx, PredicateSubject::None) {
+                        return;
                     }
                 }
             }
-        }
-        // Install the modifier on each match via the curated EffectContext API.
-        for h in targets {
-            ctx.add_declarative_modifier(h, modifier, 0, Expiry::Permanent);
-        }
-    });
+            if let Some(target_player) = target_player {
+                for player in players_for_ref(target_player, ctx) {
+                    ctx.add_declarative_player_modifier(player, modifier, 0, player_expiry);
+                }
+            }
+
+            let Some(target_arc) = &target_arc else {
+                return;
+            };
+
+            // Collect target handles under a read borrow.
+            let mut targets: Vec<PermanentHandle> = Vec::new();
+            {
+                let rctx = ctx.as_read();
+                let n_players = rctx.game.players.len() as PlayerId;
+                for p in 0..n_players {
+                    let m = rctx.game.player(p).battle_area.len();
+                    for i in 0..m {
+                        let handle = PermanentHandle {
+                            player: p,
+                            index: i as u8,
+                        };
+                        if eval_predicate(&target_arc, &rctx, PredicateSubject::Permanent(handle)) {
+                            targets.push(handle);
+                        }
+                    }
+                }
+            }
+            // Install the modifier on each match via the curated EffectContext API.
+            for h in targets {
+                ctx.add_declarative_modifier(h, modifier, 0, Expiry::Permanent);
+            }
+        });
 
     Some(builder.build())
 }
