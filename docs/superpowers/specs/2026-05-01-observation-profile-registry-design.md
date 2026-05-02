@@ -245,8 +245,13 @@ Module-level functions:
 
 ```python
 digimon_engine.list_observation_profiles() -> list[str]
-digimon_engine.default_observation_profile() -> str
 digimon_engine.get_observation_layout(profile_id: str | None = None) -> dict
+```
+
+Module-level constants:
+
+```python
+digimon_engine.DEFAULT_OBSERVATION_PROFILE: str
 ```
 
 `get_observation_layout` returns:
@@ -304,7 +309,7 @@ Resolution order:
 
 1. Explicit `tensor_profile` constructor argument.
 2. `DIGIMON_TENSOR_PROFILE` environment variable.
-3. `digimon_engine.default_observation_profile()`.
+3. `digimon_engine.DEFAULT_OBSERVATION_PROFILE`.
 
 On initialization:
 
