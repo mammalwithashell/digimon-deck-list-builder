@@ -106,6 +106,7 @@ pub enum Timing {
     OnLoseSecurity,
     OnSecurity,
     OnOptionPlaced,
+    Main,
     StartOfYourTurn,
     StartOfOpponentsTurn,
     StartOfYourMainPhase,
@@ -132,6 +133,7 @@ pub enum ClauseScope {
     FaceUp,
     Inherited,
     Both,
+    Linked,
 }
 
 impl ClauseScope {
@@ -178,6 +180,7 @@ pub enum DeclarativeKind {
     AceOverflow,
     GrantKeyword,
     Delay,
+    LinkRequirement,
     FloodGate,
     AltPathRegistration,
     RawRust,
@@ -198,6 +201,7 @@ pub enum TypedDeclarativeBody {
     AceOverflow(AceOverflowBody),
     GrantKeyword(GrantKeywordBody),
     Delay(DelayBody),
+    LinkRequirement(LinkRequirementBody),
     FloodGate(FloodGateBody),
     AltPathRegistration(AltPathRegistrationBody),
     RawRust(RawRustClauseBody),
@@ -234,6 +238,9 @@ impl DeclarativeClause {
                 TypedDeclarativeBody::GrantKeyword(serde_yml::from_value(value)?)
             }
             DeclarativeKind::Delay => TypedDeclarativeBody::Delay(serde_yml::from_value(value)?),
+            DeclarativeKind::LinkRequirement => {
+                TypedDeclarativeBody::LinkRequirement(serde_yml::from_value(value)?)
+            }
             DeclarativeKind::FloodGate => {
                 TypedDeclarativeBody::FloodGate(serde_yml::from_value(value)?)
             }
@@ -399,7 +406,17 @@ pub struct GrantKeywordBody {
 #[serde(deny_unknown_fields)]
 pub struct DelayBody {
     pub trigger: Timing,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_when: Option<PredicateSpec>,
     pub process: Vec<StepSpec>,
+}
+
+/// Body for `kind: link_requirement` on Link Options.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LinkRequirementBody {
+    pub cost: u16,
+    pub filter: PredicateSpec,
 }
 
 /// Body for `kind: flood_gate` — applies a blanket modifier to matching

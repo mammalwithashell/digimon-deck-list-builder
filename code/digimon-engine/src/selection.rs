@@ -354,10 +354,19 @@ pub enum TriggerSource {
         permanent: PermanentHandle,
         card: CardHandle,
     },
-    /// Observer timing fired after a persistent Option enters the battle area.
-    /// Scans all players' battle areas while carrying the placed Option
-    /// permanent/card as event context.
+    /// Observer timing fired after a persistent Option is placed. Delay and
+    /// Training Options have a standalone permanent; Link Options instead
+    /// identify their host and linked card without pretending the linked card
+    /// is a permanent.
     OptionPlaced {
+        player: PlayerId,
+        permanent: Option<PermanentHandle>,
+        linked_host: Option<PermanentHandle>,
+        card: CardHandle,
+    },
+    /// Generic observer timing carrying the permanent/card that caused the
+    /// event. Used by event-gated delayed Options such as suspend watchers.
+    EventObserved {
         player: PlayerId,
         permanent: PermanentHandle,
         card: CardHandle,

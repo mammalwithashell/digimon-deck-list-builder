@@ -76,12 +76,21 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let card = &me.hand[i];
                 let is_option_use = card.card_kind(&game.card_data) == CardKind::Option
                     || card.card_kind(&game.card_data) == CardKind::Dual;
-                let cost = if is_option_use {
+                let mut cost = if is_option_use {
                     card.option_use_cost(&game.card_data)
                         .unwrap_or_else(|| card.play_cost(&game.card_data))
                 } else {
                     card.play_cost(&game.card_data)
                 } as i16;
+                if is_option_use {
+                    let link_cost = game
+                        .effects_for_card(&card.card_id(&game.card_data), card.handle())
+                        .unwrap_or_default()
+                        .iter()
+                        .find_map(|effect| effect.link_cost)
+                        .unwrap_or(0);
+                    cost += link_cost as i16;
+                }
                 // Memory check: card is affordable if memory - cost >= memory_min
                 if (game.memory - cost) < game.rules.memory_range.0 {
                     continue;

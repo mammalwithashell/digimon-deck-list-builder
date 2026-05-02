@@ -796,7 +796,7 @@ When `scope == CompiledScope::Linked`, lower triggered clauses with:
 builder = builder.linked();
 ```
 
-- [ ] **Step 4: Add the free link process step and action-mask test**
+- [ ] **Step 4: Add the free link process step, action-mask test, and decoder test**
 
 Append to `code/digimon-engine/tests/option_flow/link_flow.rs`:
 
@@ -833,9 +833,45 @@ effects:
     r.game.resolve_selection(0, action);
     assert_eq!(r.game.player(0).battle_area[host.index as usize].linked_cards.len(), 1);
 }
+
+#[test]
+fn dsl_free_link_step_decoder_resolves_host_selection() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("ST22-08", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["ST22-08"])
+        .memory(0)
+        .start();
+    r.register_dsl_yaml("ST22-08", r#"
+card: ST22-08
+name: Offensive Plug-In V
+kind: option
+effects:
+  - scope: face_up
+    when: main
+    optional: true
+    process:
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { kind: digimon }
+"#);
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    r.game.decode_action(action, 0);
+
+    assert!(r.game.pending_selection.is_none(), "decoder clears the host-selection prompt");
+    assert!(r.game.pending_option.is_none(), "decoder completes the parked Link option");
+    assert_eq!(r.game.player(0).battle_area[host.index as usize].linked_cards.len(), 1);
+}
 ```
 
 Add `StepSpec::LinkToOwnDigimon { optional, free, filter }` and lower to the same host-selection installer used by `dispose_option` Link flow. Do not attach automatically when exactly one host exists; the selection must remain visible.
+
+The decoder test must exercise `Game::decode_action(action, player)` rather than `resolve_selection` directly. If it fails after the mask test passes, fix the selection-phase branch in `code/digimon-engine/src/action/decode.rs` so the new Link host-selection phase routes through `resolve_selection`.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
@@ -843,7 +879,7 @@ Run:
 
 ```bash
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- link_requirement_clause_lowers_to_link_option_effect linked_scope_lowers_to_linked_effect_flag
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- dsl_free_link_step_surfaces_host_selection_mask
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- dsl_free_link_step_surfaces_host_selection_mask dsl_free_link_step_decoder_resolves_host_selection
 ```
 
 Expected: PASS.
@@ -853,7 +889,7 @@ Expected: PASS.
 Update `qa/dsl-vocab-gaps.md` entries `G-DSL-LINK-VERB` and `G-DSL-LINKED-SCOPE`. Keep `G-BINDING-DP-FORMULA` open for ST22-08's DP comparison unless that separate formula work has landed.
 
 ```bash
-git add code/digimon-engine/../digimon-dsl/src/compiled.rs code/digimon-engine/../digimon-dsl/src/clause.rs code/digimon-engine/../digimon-dsl/src/compiler/clause.rs code/digimon-engine/../digimon-dsl/src/step.rs code/digimon-engine/src/dsl_cards code/digimon-engine/tests/dsl/link.rs code/digimon-engine/tests/option_flow/link_flow.rs qa/dsl-vocab-gaps.md
+git add code/digimon-engine/../digimon-dsl/src/compiled.rs code/digimon-engine/../digimon-dsl/src/clause.rs code/digimon-engine/../digimon-dsl/src/compiler/clause.rs code/digimon-engine/../digimon-dsl/src/step.rs code/digimon-engine/src/dsl_cards code/digimon-engine/src/action/decode.rs code/digimon-engine/tests/dsl/link.rs code/digimon-engine/tests/option_flow/link_flow.rs qa/dsl-vocab-gaps.md
 git commit -m "feat: add dsl link option vocabulary"
 ```
 
@@ -1139,7 +1175,7 @@ git commit -m "docs: close option delay link trackers"
 
 - [ ] Scope coverage: The plan covers start-of-turn Delay (`LM-027`), event-gated Delay (`BT22-098`), replacement Delay handoff (`BT17-097`), Plug-In/Link (`ST22-08`), Training scope, option-placement observers (`BT13-110`), inherited-security placement, and scheduled option effects.
 - [ ] No hidden choices: Link host choice and any Training carrier choice are surfaced through `PendingSelection`; no single-target auto-selection is allowed.
-- [ ] Action masks: New player-visible Link/Training choices include mask assertions; if a new action id is introduced, action/tensor/PyO3/frontend docs must be updated in the same task.
+- [ ] Action masks and decoder: New player-visible Link/Training choices include mask assertions and decoder regressions; if a new action id is introduced, action/tensor/PyO3/frontend docs must be updated in the same task.
 - [ ] Tracker discipline: No gap is marked closed without a passing test command and exact tracker edit.
 - [ ] Type consistency: `DelayTrigger`, `OptionState::Delayed`, `OptionState::Training`, `TriggerSource::OptionPlaced`, and DSL `CompiledScope::Linked` names are used consistently across tasks.
 - [ ] Placeholder scan: There is no task that says to add tests or implementation without a concrete file, command, and expected result.

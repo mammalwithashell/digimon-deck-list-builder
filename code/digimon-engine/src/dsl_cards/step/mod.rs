@@ -18,18 +18,19 @@ pub mod schedule_delayed;
 pub mod selections;
 pub mod zone_moves;
 
-use digimon_dsl::compiled::CompiledPlayerRef;
-use digimon_dsl::compiled::CompiledStackPosition;
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledPlayerRef, CompiledStackPosition, CompiledStep};
 use std::sync::Arc;
 
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect_context::EffectContext;
+use crate::effect_context::EffectReadContext;
 use crate::enums::PlayerId;
 use crate::enums::StackPosition;
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
+use crate::selection::{OptionResolutionPhase, PendingOption};
 
 /// Map a `CompiledStackPosition` to the engine's `StackPosition`.
 /// Shared by `zone_moves` and `permanent_mutations` — lives here to avoid
@@ -344,6 +345,13 @@ pub fn run_step_with_runtime(
     if schedule_delayed::try_run(step, ctx, bindings, runtime) {
         return;
     }
+    if matches!(step, CompiledStep::PlaceSelfAsDelayOption) {
+        ctx.place_self_as_delay_option_permanent();
+        return;
+    }
+    if try_run_link_step(step, ctx) {
+        return;
+    }
     if combat::try_run(step, ctx) {
         return;
     }
@@ -351,4 +359,56 @@ pub fn run_step_with_runtime(
         return;
     }
     // Phase 2d+: other families.
+}
+
+fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
+    let CompiledStep::LinkToOwnDigimon {
+        optional,
+        free: _,
+        filter,
+    } = step
+    else {
+        return false;
+    };
+
+    let Some(pending_snapshot) = ctx.game.pending_option.as_ref().cloned() else {
+        return true;
+    };
+    let owner = pending_snapshot.owner;
+    let source_card = pending_snapshot.card.handle();
+    let read_ctx = EffectReadContext::new(ctx.game, source_card, None, owner);
+    let candidates: Vec<PermanentHandle> = ctx
+        .game
+        .player(owner)
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter_map(|(i, perm)| {
+            if !perm.is_digimon(&ctx.game.card_data) {
+                return None;
+            }
+            if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
+                return None;
+            }
+            let handle = PermanentHandle {
+                player: owner,
+                index: i as u8,
+            };
+            eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle)).then_some(handle)
+        })
+        .collect();
+
+    if candidates.is_empty() {
+        return true;
+    }
+
+    ctx.game.pending_option = Some(PendingOption {
+        owner,
+        card: pending_snapshot.card,
+        source_kind: pending_snapshot.source_kind,
+        resolution_phase: OptionResolutionPhase::LinkSelectHost,
+    });
+    ctx.game
+        .install_link_host_selection(owner, source_card, candidates, *optional);
+    true
 }

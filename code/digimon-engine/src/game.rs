@@ -54,6 +54,21 @@ impl std::fmt::Display for OverclockError {
 
 impl std::error::Error for OverclockError {}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DelayedOptionLifecycleResumeKind {
+    StartTurn,
+    EndTurn { ending_player: PlayerId },
+    Event { timing: crate::enums::EffectTiming },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DelayedOptionLifecycleResume {
+    pub(crate) turn: u16,
+    pub(crate) kind: DelayedOptionLifecycleResumeKind,
+    pub(crate) pending_delete_key: Option<(PlayerId, u16)>,
+    pub(crate) skip_key: Option<(PlayerId, u16)>,
+}
+
 /// The core game state. Drives the turn state machine.
 ///
 /// `impl Game` blocks for this struct are spread across three files for
@@ -154,6 +169,11 @@ pub struct Game {
     /// turn-end check after the observer queue settles.
     #[doc(hidden)]
     pub(crate) pending_option_placed_turn_check: bool,
+    /// Link Option continuation parked when `OnOptionPlaced` observers install
+    /// a selection after the linked card has attached but before `OnLink` has
+    /// fired.
+    #[doc(hidden)]
+    pub(crate) pending_option_placed_link_resume: Option<PermanentHandle>,
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
@@ -384,6 +404,10 @@ pub struct Game {
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
     /// Continuation for a scheduled-effect drain paused by a DSL selection.
     pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
+    /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
+    /// delete/replacement selection. Re-entered from `resolve_selection`.
+    pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
+    pub(crate) pending_delayed_option_lifecycle_stack: Vec<DelayedOptionLifecycleResume>,
 }
 
 impl Game {
@@ -528,6 +552,7 @@ impl Game {
             pending_effect_security_removal: Vec::new(),
             pending_option: None,
             pending_option_placed_turn_check: false,
+            pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
             logger: Box::new(SilentLogger),
@@ -549,6 +574,8 @@ impl Game {
             dsl_outer_tail: None,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
+            pending_delayed_option_lifecycle: None,
+            pending_delayed_option_lifecycle_stack: Vec::new(),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -1336,6 +1363,11 @@ impl Game {
     /// bypasses this path — `StartOfYourTurn` is the canonical timing for
     /// turn-start effects.
     pub fn suspend(&mut self, handle: PermanentHandle) {
+        let event_card = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.top_card().handle());
         let already = self
             .players
             .get(handle.player as usize)
@@ -1352,11 +1384,14 @@ impl Game {
         {
             perm.is_suspended = true;
         }
-        let n = self.players.len();
-        for pid in 0..n {
+        if let Some(card) = event_card {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnSuspend,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+                crate::selection::TriggerSource::EventObserved {
+                    player: handle.player,
+                    permanent: handle,
+                    card,
+                },
             );
         }
         self.drain_effect_queue();
@@ -1367,6 +1402,11 @@ impl Game {
     ///
     /// See `suspend` for the bulk-unsuspend caveat.
     pub fn unsuspend(&mut self, handle: PermanentHandle) {
+        let event_card = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.top_card().handle());
         let was_suspended = self
             .players
             .get(handle.player as usize)
@@ -1383,11 +1423,14 @@ impl Game {
         {
             perm.is_suspended = false;
         }
-        let n = self.players.len();
-        for pid in 0..n {
+        if let Some(card) = event_card {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnUnsuspend,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::enums::PlayerId),
+                crate::selection::TriggerSource::EventObserved {
+                    player: handle.player,
+                    permanent: handle,
+                    card,
+                },
             );
         }
         self.drain_effect_queue();

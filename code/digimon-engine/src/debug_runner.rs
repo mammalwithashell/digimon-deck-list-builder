@@ -21,10 +21,12 @@ use std::sync::{Arc, OnceLock};
 use crate::card_data::{
     CardData, DnaCost, DnaRequirement, DualCardData, DualDigimonFace, DualOptionFace,
 };
-use crate::card_source::CardSource;
+use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
-use crate::enums::{CardColor, CardKind, GamePhase, Keyword, ModifierType, PlayerId};
+use crate::enums::{
+    CardColor, CardKind, EffectSourceKind, GamePhase, Keyword, ModifierType, PlayerId,
+};
 use crate::events::GameEvent;
 use crate::game::Game;
 use crate::modifiers::ModifierRegistry;
@@ -182,6 +184,64 @@ impl DebugRunner {
         perm.card_sources.extend(source_cards);
         perm.card_sources.push(top);
         handle
+    }
+
+    pub fn push_source(&mut self, host: PermanentHandle, card_id: &str) -> CardHandle {
+        let data_idx = self
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .unwrap_or_else(|| panic!("push_source: unknown card_id {}", card_id));
+        let next_idx = self.game.next_card_index();
+        let card = CardSource::new(data_idx, host.player, next_idx);
+        let handle = card.handle();
+        let permanent = self
+            .game
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+            .expect("push_source: host permanent not found");
+        let top = permanent.card_sources.pop().expect("host top card exists");
+        permanent.card_sources.push(card);
+        permanent.card_sources.push(top);
+        handle
+    }
+
+    pub fn run_inherited_security_effect<F>(
+        &mut self,
+        host: PermanentHandle,
+        source_card_id: &str,
+        f: F,
+    ) where
+        F: FnOnce(&mut crate::effect_context::EffectContext<'_>),
+    {
+        let source_card = self
+            .game
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+            .and_then(|permanent| {
+                permanent
+                    .card_sources
+                    .iter()
+                    .find(|source| source.card_id(&self.game.card_data) == source_card_id)
+            })
+            .map(|source| source.handle())
+            .unwrap_or_else(|| {
+                panic!(
+                    "run_inherited_security_effect: source card {} not found",
+                    source_card_id
+                )
+            });
+        let mut ctx = crate::effect_context::EffectContext::new_with_source_kind(
+            &mut self.game,
+            source_card,
+            Some(host),
+            EffectSourceKind::Option,
+            host.player,
+        );
+        f(&mut ctx);
     }
 
     pub fn place_in_breeding(&mut self, player: PlayerId, card_id: &str) -> DebugBreedingPermanent {

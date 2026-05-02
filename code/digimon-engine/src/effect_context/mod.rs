@@ -23,8 +23,8 @@ use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::enums::{
-    CardKind, EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType, PlaySource, PlayerId,
-    StackPosition,
+    CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType,
+    PlaySource, PlayerId, StackPosition,
 };
 use crate::game::Game;
 use crate::game_actions::PlayFromHandCostResult;
@@ -285,6 +285,18 @@ impl<'a> EffectReadContext<'a> {
         self.game
             .current_trigger_context
             .and_then(|trigger| trigger.event_card)
+    }
+
+    pub fn event_card_name_contains(&self, needle: &str) -> bool {
+        let Some(card) = self.event_card() else {
+            return false;
+        };
+        let Some(data) = self.game.card_data_for_handle(card) else {
+            return false;
+        };
+        data.card_name
+            .to_lowercase()
+            .contains(&needle.to_lowercase())
     }
 
     pub fn event_source_card(&self) -> Option<CardHandle> {
@@ -625,6 +637,91 @@ impl<'a> EffectContext<'a> {
         self.game.scheduled_effects.push(entry);
     }
 
+    pub fn place_self_as_delay_option_permanent(&mut self) {
+        let source_card = if let Some(source_perm) = self.source_permanent {
+            if !matches!(
+                self.game.card_kind_for_handle(self.source_card),
+                Some(CardKind::Option)
+            ) {
+                return;
+            }
+            let Some(source_card) =
+                self.remove_source_card_from_permanent(source_perm, self.source_card)
+            else {
+                return;
+            };
+            source_card
+        } else {
+            let Some(pending) = self.game.pending_security.take() else {
+                return;
+            };
+            if pending.played
+                || pending.card.handle() != self.source_card
+                || pending.card.card_kind(&self.game.card_data) != CardKind::Option
+            {
+                self.game.pending_security = Some(pending);
+                return;
+            }
+            pending.card
+        };
+
+        // The physical Option moves to its card owner/controller's battle area,
+        // matching normal Delay placement from hand/trash.
+        let owner = source_card.owner;
+        let placed_card = source_card.handle();
+        let card_id = source_card.card_id(&self.game.card_data).to_string();
+        let trigger = self
+            .game
+            .effects_for_card(&card_id, placed_card)
+            .unwrap_or_default()
+            .iter()
+            .find_map(|effect| effect.delay_trigger)
+            .unwrap_or(DelayTrigger::EndOfYourNextTurn);
+        let mut permanent = Permanent::new(source_card, self.game.turn_count);
+        permanent.option_state = crate::permanent::OptionState::Delayed {
+            owner,
+            trash_on_turn: self.game.compute_delay_trash_turn(owner, trigger),
+            trigger,
+            placed_on_turn: self.game.turn_count,
+        };
+        self.game.player_mut(owner).battle_area.push(permanent);
+
+        let handle = PermanentHandle {
+            player: owner,
+            index: (self.game.player(owner).battle_area.len() - 1) as u8,
+        };
+        self.game.enqueue_triggered(
+            EffectTiming::OnOptionPlaced,
+            crate::selection::TriggerSource::OptionPlaced {
+                player: owner,
+                permanent: Some(handle),
+                linked_host: None,
+                card: placed_card,
+            },
+        );
+        self.game.drain_effect_queue();
+    }
+
+    fn remove_source_card_from_permanent(
+        &mut self,
+        source_perm: PermanentHandle,
+        source_card: CardHandle,
+    ) -> Option<crate::card_source::CardSource> {
+        let permanent = self
+            .game
+            .player_mut(source_perm.player)
+            .battle_area
+            .get_mut(source_perm.index as usize)?;
+        let pos = permanent
+            .card_sources
+            .iter()
+            .position(|card| card.handle() == source_card)?;
+        if pos + 1 == permanent.card_sources.len() {
+            return None;
+        }
+        Some(permanent.card_sources.remove(pos))
+    }
+
     /// Decline the pay cost for a queued triggered effect that parked during
     /// `pay_cost_fn`. The effect queue will discard the parked process tail
     /// after the current selection callback unwinds.
@@ -732,6 +829,10 @@ impl<'a> EffectContext<'a> {
         self.game
             .current_trigger_context
             .and_then(|trigger| trigger.event_card)
+    }
+
+    pub fn event_card_name_contains(&self, needle: &str) -> bool {
+        self.as_read().event_card_name_contains(needle)
     }
 
     pub fn event_source_card(&self) -> Option<CardHandle> {

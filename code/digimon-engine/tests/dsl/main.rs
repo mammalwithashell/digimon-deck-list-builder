@@ -9,6 +9,7 @@ mod embedded_registry;
 mod group4_zone_movement;
 mod group7_predicate_batch;
 mod i18n_scaffolding;
+mod link;
 mod loader;
 mod option_use_req;
 mod pack_file_loader;

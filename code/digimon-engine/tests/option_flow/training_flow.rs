@@ -2,9 +2,9 @@
 //!
 //! A Training Option plays like a Standard Option (cost + body drain) but
 //! instead of trashing on dispose it **parks on the owner's battle_area** as
-//! a Permanent in `OptionState::Training { owner }`. It provides sideways
-//! inheritance to the owner's other permanents via `.inherited()` effects
-//! on the Training card, scoped by the Training permanent being the source.
+//! a Permanent in `OptionState::Training { owner, trained }`. It provides
+//! sideways inheritance via `.inherited()` effects on the Training card,
+//! scoped to the bound trained permanent when one has been recorded.
 //! When the owner's breeding egg hatches (via `move_from_breeding`), every
 //! Training permanent the owner controls is trashed and `OnTrainingTrash`
 //! fires from each of them. Training permanents are not legal attack
@@ -16,7 +16,7 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
-use digimon_engine::permanent::OptionState;
+use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::selection::OptionPlayResult;
 
 // ─── Inline test-effect helpers ──────────────────────────────────────
@@ -117,7 +117,7 @@ fn advance_to_main(r: &mut DebugRunner) {
 // ─── Tests ─────────────────────────────────────────────────────────────
 
 /// Test 1: playing a Training Option pushes it onto the owner's battle_area
-/// with `OptionState::Training { owner }`. It does NOT trash on dispose.
+/// with `OptionState::Training { owner, trained: None }`. It does NOT trash on dispose.
 #[test]
 fn training_parks_alongside_breeding() {
     let mut r = DebugRunner::builder()
@@ -151,8 +151,9 @@ fn training_parks_alongside_breeding() {
     let idx = r.battle_area_size(0) - 1;
     let perm = &r.game.player(0).battle_area[idx];
     match perm.option_state {
-        OptionState::Training { owner } => {
+        OptionState::Training { owner, trained } => {
             assert_eq!(owner, 0, "training state records the controller");
+            assert_eq!(trained, None, "training starts unbound");
         }
         other => panic!("expected Training option_state, got {:?}", other),
     }
@@ -302,6 +303,230 @@ fn training_inherited_effect_applies_to_breeding_permanent() {
         *witness.lock().unwrap(),
         1,
         "sideways-inherited OnHatch effect fired from the Training permanent"
+    );
+}
+
+#[test]
+fn training_sideways_effect_applies_only_to_its_intended_trained_permanent() {
+    let witness = Arc::new(Mutex::new(0u32));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("TRAIN-SCOPE", 0, CardColor::Red))
+        .add_card(digimon_card("TRAINED", CardColor::Red))
+        .add_card(digimon_card("UNTRAINED", CardColor::Red))
+        .hand(0, &["TRAIN-SCOPE"])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "TRAIN-SCOPE",
+        Arc::new(TrainingWithInheritedHatch(witness.clone())),
+    );
+    let trained = r.place_on_field(0, "TRAINED", Some(0));
+    let untrained = r.place_on_field(0, "UNTRAINED", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Trashed
+    );
+    let training = r.perm_handle(0, r.battle_area_size(0) - 1);
+    assert!(r
+        .game
+        .bind_training_permanent_to_permanent(training, trained));
+    r.game.enqueue_triggered(
+        EffectTiming::OnHatch,
+        digimon_engine::selection::TriggerSource::Permanent(untrained),
+    );
+    r.game.drain_effect_queue();
+    assert_eq!(
+        *witness.lock().unwrap(),
+        0,
+        "untrained permanent does not receive Training effect"
+    );
+    r.game.enqueue_triggered(
+        EffectTiming::OnHatch,
+        digimon_engine::selection::TriggerSource::Permanent(trained),
+    );
+    r.game.drain_effect_queue();
+    assert_eq!(
+        *witness.lock().unwrap(),
+        1,
+        "trained permanent receives Training effect"
+    );
+}
+
+#[test]
+fn training_bound_to_removed_permanent_does_not_apply_to_reused_index() {
+    let witness = Arc::new(Mutex::new(0u32));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("TRAIN-STALE", 0, CardColor::Red))
+        .add_card(digimon_card("TRAINED-OLD", CardColor::Red))
+        .add_card(digimon_card("SHIFTED-IN", CardColor::Red))
+        .hand(0, &["TRAIN-STALE"])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "TRAIN-STALE",
+        Arc::new(TrainingWithInheritedHatch(witness.clone())),
+    );
+    let trained = r.place_on_field(0, "TRAINED-OLD", Some(0));
+    let shifted = r.place_on_field(0, "SHIFTED-IN", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Trashed
+    );
+    let training = r.perm_handle(0, r.battle_area_size(0) - 1);
+    assert!(r
+        .game
+        .bind_training_permanent_to_permanent(training, trained));
+
+    r.game.delete_permanent_with_cause(
+        trained,
+        digimon_engine::replacement::ReplacementCause::OwnEffect,
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[shifted.index as usize - 1]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "SHIFTED-IN",
+        "the old trained index is now occupied by another permanent"
+    );
+
+    let reused_index = PermanentHandle {
+        player: 0,
+        index: trained.index,
+    };
+    r.game.enqueue_triggered(
+        EffectTiming::OnHatch,
+        digimon_engine::selection::TriggerSource::Permanent(reused_index),
+    );
+    r.game.drain_effect_queue();
+    assert_eq!(
+        *witness.lock().unwrap(),
+        0,
+        "stale Training binding must not apply to a different permanent at the old index"
+    );
+}
+
+#[test]
+fn duplicate_training_copies_bind_to_distinct_carriers_by_permanent_handle() {
+    let witness = Arc::new(Mutex::new(0u32));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("TRAIN-DUP", 0, CardColor::Red))
+        .add_card(digimon_card("CARRIER-A", CardColor::Red))
+        .add_card(digimon_card("CARRIER-B", CardColor::Red))
+        .hand(0, &["TRAIN-DUP", "TRAIN-DUP"])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "TRAIN-DUP",
+        Arc::new(TrainingWithInheritedHatch(witness.clone())),
+    );
+    let carrier_a = r.place_on_field(0, "CARRIER-A", Some(0));
+    let carrier_b = r.place_on_field(0, "CARRIER-B", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Trashed
+    );
+    let training_a = r.perm_handle(0, r.battle_area_size(0) - 1);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Trashed
+    );
+    let training_b = r.perm_handle(0, r.battle_area_size(0) - 1);
+    assert_ne!(
+        r.game.player(0).battle_area[training_a.index as usize]
+            .top_card()
+            .handle(),
+        r.game.player(0).battle_area[training_b.index as usize]
+            .top_card()
+            .handle(),
+        "same-card Training copies are distinct physical card sources"
+    );
+
+    assert!(r
+        .game
+        .bind_training_permanent_to_permanent(training_a, carrier_a));
+    assert!(r
+        .game
+        .bind_training_permanent_to_permanent(training_b, carrier_b));
+
+    r.game.enqueue_triggered(
+        EffectTiming::OnHatch,
+        digimon_engine::selection::TriggerSource::Permanent(carrier_a),
+    );
+    r.game.drain_effect_queue();
+    assert_eq!(
+        *witness.lock().unwrap(),
+        1,
+        "only the Training copy bound to carrier A fires"
+    );
+
+    r.game.enqueue_triggered(
+        EffectTiming::OnHatch,
+        digimon_engine::selection::TriggerSource::Permanent(carrier_b),
+    );
+    r.game.drain_effect_queue();
+    assert_eq!(
+        *witness.lock().unwrap(),
+        2,
+        "the distinct Training copy bound to carrier B also fires"
+    );
+}
+
+#[test]
+fn queued_training_effect_revalidates_bound_carrier_before_resolution() {
+    let witness = Arc::new(Mutex::new(0u32));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("TRAIN-QUEUE", 0, CardColor::Red))
+        .add_card(digimon_card("QUEUED-CARRIER", CardColor::Red))
+        .add_card(digimon_card("INDEX-REUSE", CardColor::Red))
+        .hand(0, &["TRAIN-QUEUE"])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "TRAIN-QUEUE",
+        Arc::new(TrainingWithInheritedHatch(witness.clone())),
+    );
+    let carrier = r.place_on_field(0, "QUEUED-CARRIER", Some(0));
+    let shifted = r.place_on_field(0, "INDEX-REUSE", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Trashed
+    );
+    let training = r.perm_handle(0, r.battle_area_size(0) - 1);
+    assert!(r
+        .game
+        .bind_training_permanent_to_permanent(training, carrier));
+
+    r.game.enqueue_triggered(
+        EffectTiming::OnHatch,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    let removed = r
+        .game
+        .player_mut(0)
+        .battle_area
+        .remove(carrier.index as usize);
+    r.game.player_mut(0).trash.extend(removed.card_sources);
+    assert_eq!(
+        r.game.player(0).battle_area[shifted.index as usize - 1]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "INDEX-REUSE",
+        "queued source_permanent now aliases a different permanent"
+    );
+
+    r.game.drain_effect_queue();
+    assert_eq!(
+        *witness.lock().unwrap(),
+        0,
+        "queued Training effect must revalidate its bound carrier before resolving"
     );
 }
 

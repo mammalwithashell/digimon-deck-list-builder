@@ -144,6 +144,8 @@ pub enum StepSpec {
     ForEach(ForEachStep),
     PerSelected(PerSelectedStep),
     ScheduleDelayed(ScheduleDelayedStep),
+    PlaceSelfAsDelayOption(EmptyArgs),
+    LinkToOwnDigimon(LinkToOwnDigimonArgs),
     Optional(OptionalStep),
 
     // Combat / replacement process outcomes
@@ -251,6 +253,8 @@ impl Serialize for StepSpec {
             StepSpec::ForEach(v) => kv!(s, "for_each", v),
             StepSpec::PerSelected(v) => kv!(s, "per_selected", v),
             StepSpec::ScheduleDelayed(v) => kv!(s, "schedule_delayed", v),
+            StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
+            StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
@@ -384,6 +388,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "for_each" => StepSpec::ForEach(map.next_value()?),
             "per_selected" => StepSpec::PerSelected(map.next_value()?),
             "schedule_delayed" => StepSpec::ScheduleDelayed(map.next_value()?),
+            "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
+            "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
 
             // Combat / replacement process outcomes
@@ -465,6 +471,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "for_each",
                         "per_selected",
                         "schedule_delayed",
+                        "place_self_as_delay_option",
+                        "link_to_own_digimon",
                         "optional",
                         "end_attack",
                         "cancel_replacement",
@@ -1058,6 +1066,16 @@ pub struct PerSelectedStep {
 pub struct ScheduleDelayedStep {
     pub when: super::clause::Timing,
     pub body: Vec<StepSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LinkToOwnDigimonArgs {
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub free: bool,
+    pub filter: PredicateSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

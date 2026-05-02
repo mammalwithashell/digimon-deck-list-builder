@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, DelayTrigger};
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, GamePhase};
 use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::ReplacementSubject;
 use digimon_engine::selection::OptionPlayResult;
@@ -44,6 +44,57 @@ impl CardEffect for DelayThisTurnWitness {
             .delay(DelayTrigger::EndOfThisTurn)
             .process(move |_ctx| {
                 *slot.lock().unwrap() += 1;
+            })
+            .build()]
+    }
+}
+
+struct DelayOrderWitness {
+    trigger: DelayTrigger,
+    label: &'static str,
+    order: Arc<Mutex<Vec<&'static str>>>,
+}
+
+struct DelayThisSelection(Arc<Mutex<u32>>);
+
+impl CardEffect for DelayThisSelection {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = self.0.clone();
+        vec![Effect::on_play(card)
+            .name("Delay this selection")
+            .delay(DelayTrigger::EndOfThisTurn)
+            .process(move |ctx| {
+                *seen.lock().unwrap() += 1;
+                ctx.select_own_permanent("pick one", false, |_game, _h| true, |_, _| {});
+            })
+            .build()]
+    }
+}
+
+struct EndTurnWitness(Arc<Mutex<u32>>);
+
+impl CardEffect for EndTurnWitness {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = self.0.clone();
+        vec![Effect::end_of_your_turn(card)
+            .name("End turn witness")
+            .process(move |_ctx| {
+                *seen.lock().unwrap() += 1;
+            })
+            .build()]
+    }
+}
+
+impl CardEffect for DelayOrderWitness {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let trigger = self.trigger;
+        let label = self.label;
+        let order = self.order.clone();
+        vec![Effect::on_play(card)
+            .name("Delay order witness")
+            .delay(trigger)
+            .process(move |_ctx| {
+                order.lock().unwrap().push(label);
             })
             .build()]
     }
@@ -188,6 +239,7 @@ fn delay_parks_on_field_with_delayed_state() {
         OptionState::Delayed {
             owner,
             trash_on_turn,
+            ..
         } => {
             assert_eq!(owner, 0, "delayed state records the controller");
             assert_eq!(
@@ -514,4 +566,170 @@ fn two_simultaneous_delays_one_cancelled_other_still_fires() {
         "exactly one delayed permanent remains (the cancelled one)"
     );
     assert_eq!(r.trash_size(0), 1, "the non-cancelled delay was trashed");
+}
+
+#[test]
+fn simultaneous_end_delays_preserve_battle_area_scan_order_across_triggers() {
+    let order = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("NEXT-FIRST", 0, CardColor::Red))
+        .add_card(option_card("THIS-SECOND", 0, CardColor::Red))
+        .start();
+    r.register_effect(
+        "NEXT-FIRST",
+        Arc::new(DelayOrderWitness {
+            trigger: DelayTrigger::EndOfYourNextTurn,
+            label: "next-first",
+            order: order.clone(),
+        }),
+    );
+    r.register_effect(
+        "THIS-SECOND",
+        Arc::new(DelayOrderWitness {
+            trigger: DelayTrigger::EndOfThisTurn,
+            label: "this-second",
+            order: order.clone(),
+        }),
+    );
+
+    let next = r.place_on_field(0, "NEXT-FIRST", Some(0));
+    r.game.player_mut(0).battle_area[next.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: r.game.turn_count,
+        trigger: DelayTrigger::EndOfYourNextTurn,
+        placed_on_turn: r.game.turn_count,
+    };
+    let this = r.place_on_field(0, "THIS-SECOND", Some(0));
+    r.game.player_mut(0).battle_area[this.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: r.game.turn_count,
+        trigger: DelayTrigger::EndOfThisTurn,
+        placed_on_turn: r.game.turn_count,
+    };
+
+    r.end_turn();
+
+    assert_eq!(
+        *order.lock().unwrap(),
+        vec!["next-first", "this-second"],
+        "simultaneous end-turn delays should resolve in battle-area scan order, not trigger buckets"
+    );
+}
+
+#[test]
+fn end_turn_pauses_when_delay_effect_installs_selection() {
+    let delay_seen = Arc::new(Mutex::new(0));
+    let end_seen = Arc::new(Mutex::new(0));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("DELAY-SELECT", 0, CardColor::Red))
+        .add_card(digimon_card("RED-MATCH", CardColor::Red))
+        .add_card(digimon_card("FILLER", CardColor::Red))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .start();
+    r.register_effect(
+        "DELAY-SELECT",
+        Arc::new(DelayThisSelection(delay_seen.clone())),
+    );
+    r.register_effect("RED-MATCH", Arc::new(EndTurnWitness(end_seen.clone())));
+
+    r.place_on_field(0, "RED-MATCH", Some(0));
+    let delayed = r.place_on_field(0, "DELAY-SELECT", Some(0));
+    r.game.player_mut(0).battle_area[delayed.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: r.game.turn_count,
+        trigger: DelayTrigger::EndOfThisTurn,
+        placed_on_turn: r.game.turn_count,
+    };
+
+    let start_turn = r.game.turn_count;
+    r.end_turn();
+
+    assert_eq!(*delay_seen.lock().unwrap(), 1);
+    assert_eq!(
+        *end_seen.lock().unwrap(),
+        0,
+        "later EndOfYourTurn observers wait behind the DelayEffect selection"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "DelayEffect selection remains parked"
+    );
+    assert_eq!(
+        r.game.current_phase,
+        GamePhase::SelectTarget,
+        "end_turn pauses at the DelayEffect selection"
+    );
+    assert_eq!(
+        r.game.turn_count, start_turn,
+        "turn count does not advance while end-turn Delay selection is pending"
+    );
+    assert_eq!(
+        r.game.turn_player(),
+        0,
+        "turn player does not rotate while end-turn Delay selection is pending"
+    );
+    assert_eq!(
+        r.game.player(1).hand.len(),
+        0,
+        "opponent has not drawn for the next turn"
+    );
+    assert_eq!(
+        r.game.player(1).deck.len(),
+        6,
+        "opponent deck is unchanged because turn rotation/draw has not happened"
+    );
+
+    let (selecting_player, action_id) = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("DelayEffect selection should be pending");
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    r.game
+        .resolve_selection(selecting_player, action_id)
+        .expect("DelayEffect selection resolves");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "resolving the DelayEffect selection must not leave end_turn stuck"
+    );
+    assert_eq!(
+        *delay_seen.lock().unwrap(),
+        1,
+        "the selecting Delay must not re-fire when end_turn resumes"
+    );
+    assert_eq!(
+        *end_seen.lock().unwrap(),
+        1,
+        "later EndOfYourTurn observers run after delayed lifecycle resumes"
+    );
+    assert_eq!(
+        r.game.turn_count,
+        start_turn + 1,
+        "end_turn resumes through turn rotation"
+    );
+    assert_eq!(r.game.turn_player(), 1);
+    assert_eq!(
+        r.game.current_phase,
+        GamePhase::Main,
+        "next player's turn reaches main after delayed selection resolves"
+    );
+    assert_eq!(
+        r.game.player(1).hand.len(),
+        1,
+        "next player draws after end_turn resumes"
+    );
+    assert_eq!(r.game.player(1).deck.len(), 5);
+    assert!(
+        !r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
+        "delayed option is disposed after end_turn resumes"
+    );
+    assert_eq!(r.trash_size(0), 1);
 }

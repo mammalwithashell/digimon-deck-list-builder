@@ -17,6 +17,7 @@ fn option_timings_exist() {
 fn delay_trigger_variants_exist() {
     let _ = DelayTrigger::EndOfYourNextTurn;
     let _ = DelayTrigger::EndOfThisTurn;
+    let _ = DelayTrigger::StartOfYourNextTurn;
 }
 
 #[test]
@@ -34,9 +35,14 @@ fn option_state_variants_exist() {
     let _ = OptionState::Delayed {
         owner: 0,
         trash_on_turn: 5,
+        trigger: DelayTrigger::EndOfYourNextTurn,
+        placed_on_turn: 4,
     };
     let _ = OptionState::Linked { host: h };
-    let _ = OptionState::Training { owner: 0 };
+    let _ = OptionState::Training {
+        owner: 0,
+        trained: None,
+    };
 }
 
 #[test]

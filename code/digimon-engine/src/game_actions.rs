@@ -201,7 +201,8 @@ impl Game {
                 .iter()
                 .enumerate()
                 .filter_map(|(i, perm)| {
-                    if let crate::permanent::OptionState::Training { owner } = perm.option_state {
+                    if let crate::permanent::OptionState::Training { owner, .. } = perm.option_state
+                    {
                         if owner == player_id {
                             return Some(PermanentHandle {
                                 player: player_id,
@@ -722,7 +723,13 @@ impl Game {
         let total_reduction =
             self.scan_before_pay_cost_reduction(player_id, CostReductionKind::OptionUse);
         let base_cost = printed_cost as i32;
-        let effective_cost = (base_cost - total_reduction).max(0) as u16;
+        let link_cost = self
+            .effects_for_card(&card_id, card_handle)
+            .unwrap_or_default()
+            .iter()
+            .find_map(|effect| effect.link_cost)
+            .unwrap_or(0);
+        let effective_cost = (base_cost - total_reduction).max(0) as u16 + link_cost;
         if !self.pay_memory(effective_cost) {
             return OptionPlayResult::Invalid;
         }
@@ -1206,6 +1213,8 @@ impl Game {
                 perm.option_state = crate::permanent::OptionState::Delayed {
                     owner,
                     trash_on_turn: trash_turn,
+                    trigger,
+                    placed_on_turn: turn,
                 };
                 self.player_mut(owner).battle_area.push(perm);
                 let permanent = PermanentHandle {
@@ -1216,7 +1225,8 @@ impl Game {
                     EffectTiming::OnOptionPlaced,
                     TriggerSource::OptionPlaced {
                         player: owner,
-                        permanent,
+                        permanent: Some(permanent),
+                        linked_host: None,
                         card: placed_card,
                     },
                 );
@@ -1282,7 +1292,7 @@ impl Game {
                     source_kind: pending.source_kind,
                     resolution_phase: OptionResolutionPhase::LinkSelectHost,
                 });
-                self.install_link_host_selection(owner, source_card, candidates);
+                self.install_link_host_selection(owner, source_card, candidates, false);
             }
             OptionSubtype::Training => {
                 // Phase 8 Task 5: park as an `OptionState::Training` permanent on
@@ -1291,14 +1301,71 @@ impl Game {
                 // permanent the owner controls fires `OnTrainingTrash` and is
                 // trashed (see `Game::move_from_breeding`). Training sideways-
                 // inheritance is dispatched in `enqueue_from_permanent`.
+                let owner = pending.owner;
+                let placed_card = pending.card.handle();
                 let turn = self.turn_count;
                 let mut perm = crate::permanent::Permanent::new(pending.card, turn);
                 perm.option_state = crate::permanent::OptionState::Training {
-                    owner: pending.owner,
+                    owner,
+                    trained: None,
                 };
-                self.player_mut(pending.owner).battle_area.push(perm);
+                self.player_mut(owner).battle_area.push(perm);
+                let permanent = PermanentHandle {
+                    player: owner,
+                    index: (self.player(owner).battle_area.len() - 1) as u8,
+                };
+                self.enqueue_triggered(
+                    EffectTiming::OnOptionPlaced,
+                    TriggerSource::OptionPlaced {
+                        player: owner,
+                        permanent: Some(permanent),
+                        linked_host: None,
+                        card: placed_card,
+                    },
+                );
+                self.drain_effect_queue();
+                if self.pending_selection.is_some() {
+                    self.pending_option_placed_turn_check = true;
+                }
             }
         }
+    }
+
+    pub fn bind_training_permanent_to_permanent(
+        &mut self,
+        training: PermanentHandle,
+        trained: PermanentHandle,
+    ) -> bool {
+        let Some(trained_top_card) = self
+            .player(trained.player)
+            .battle_area
+            .get(trained.index as usize)
+            .map(|perm| perm.top_card().handle())
+        else {
+            return false;
+        };
+
+        let Some(training_perm) = self
+            .player_mut(training.player)
+            .battle_area
+            .get_mut(training.index as usize)
+        else {
+            return false;
+        };
+        if let crate::permanent::OptionState::Training {
+            owner,
+            trained: trained_slot,
+        } = &mut training_perm.option_state
+        {
+            if *owner == trained.player {
+                *trained_slot = Some(crate::permanent::TrainingBinding {
+                    handle: trained,
+                    top_card: trained_top_card,
+                });
+                return true;
+            }
+        }
+        false
     }
 
     /// Commit a Standard Option's dispose-trash given the
@@ -1356,11 +1423,12 @@ impl Game {
     /// Install a field-selection prompt listing `candidates` as legal host
     /// Digimon for a Link Option. On resolve, the callback invokes
     /// `attach_linked_card(host)` which attaches the card + fires OnLink.
-    fn install_link_host_selection(
+    pub(crate) fn install_link_host_selection(
         &mut self,
         owner: PlayerId,
         source_card: crate::card_source::CardHandle,
         candidates: Vec<PermanentHandle>,
+        optional: bool,
     ) {
         use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
         use crate::selection::SelectionKind;
@@ -1386,7 +1454,7 @@ impl Game {
             selecting_player: owner,
             previous_phase,
             valid_action_ids,
-            is_optional: false,
+            is_optional: optional,
             prompt: "Choose a Digimon to link this Option to".to_string(),
             effect_choices: None,
             source_card,
@@ -1405,7 +1473,14 @@ impl Game {
                     });
                 game.attach_linked_card(picked);
             }),
-            on_decline: None,
+            on_decline: optional.then(|| {
+                Box::new(move |game: &mut Game| {
+                    if let Some(pending) = game.pending_option.take() {
+                        game.player_mut(pending.owner).trash.push(pending.card);
+                        game.check_turn_end();
+                    }
+                }) as Box<dyn FnOnce(&mut Game) + Send + Sync>
+            }),
         });
     }
 
@@ -1438,11 +1513,31 @@ impl Game {
         }
 
         // Attach.
+        let linked_card = pending.card.handle();
         self.player_mut(host.player).battle_area[host.index as usize]
             .linked_cards
             .push(pending.card);
 
-        // Fire OnLink globally — every player's battle area scans for
+        self.enqueue_triggered(
+            EffectTiming::OnOptionPlaced,
+            TriggerSource::OptionPlaced {
+                player: pending.owner,
+                permanent: None,
+                linked_host: Some(host),
+                card: linked_card,
+            },
+        );
+        self.drain_effect_queue();
+        if self.pending_selection.is_some() {
+            self.pending_option_placed_link_resume = Some(host);
+            return;
+        }
+
+        self.fire_on_link_after_option_placed();
+    }
+
+    fn fire_on_link_after_option_placed(&mut self) {
+        // Fire OnLink globally - every player's battle area scans for
         // OnLink-timed effects. Load-bearing for Appmon-trait cards.
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
@@ -1451,6 +1546,10 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+        if self.pending_selection.is_some() {
+            self.pending_option_placed_turn_check = true;
+            return;
+        }
 
         // Link lifecycle complete — check if memory state demands turn transition.
         // The Standard Option path hits this via `advance_pending_option`; the
@@ -1459,9 +1558,20 @@ impl Game {
         self.check_turn_end();
     }
 
+    pub(crate) fn resume_pending_option_placed_link(&mut self) {
+        if self.pending_option_placed_link_resume.is_none() {
+            return;
+        }
+        if self.pending_selection.is_some() || !self.effect_queue.is_empty() {
+            return;
+        }
+        self.pending_option_placed_link_resume = None;
+        self.fire_on_link_after_option_placed();
+    }
+
     /// Compute the absolute `turn_count` at which a delayed Option should
-    /// self-trash. The rule is "end of the **owner**'s next turn" for
-    /// `EndOfYourNextTurn`, and the current turn for `EndOfThisTurn`.
+    /// self-trash. The rule is "end/start of the **owner**'s next turn" for
+    /// next-turn triggers, and the current turn for `EndOfThisTurn`.
     ///
     /// In a 2-player round-robin:
     /// - If `owner == turn_player` (the common case — played on own turn),
@@ -1471,23 +1581,31 @@ impl Game {
     ///
     /// Multi-player extension is deferred — the plan locks 2-player
     /// semantics for v1.
-    fn compute_delay_trash_turn(
+    pub(crate) fn compute_delay_trash_turn(
         &self,
         owner: PlayerId,
         trigger: crate::enums::DelayTrigger,
     ) -> u16 {
         use crate::enums::DelayTrigger;
-        // TODO(multi-player): generalize turn-rotation to >2 players.
         match trigger {
             DelayTrigger::EndOfThisTurn => self.turn_count,
-            DelayTrigger::EndOfYourNextTurn => {
-                if self.turn_player() == owner {
-                    self.turn_count + 2
-                } else {
-                    self.turn_count + 1
-                }
+            DelayTrigger::EndOfYourNextTurn | DelayTrigger::StartOfYourNextTurn => {
+                self.next_owner_turn_count(owner)
             }
+            DelayTrigger::OnEvent(_) => u16::MAX,
         }
+    }
+
+    fn next_owner_turn_count(&self, owner: PlayerId) -> u16 {
+        let Some(owner_idx) = self.turn_order.iter().position(|&p| p == owner) else {
+            return self.turn_count;
+        };
+        let turn_delta = if owner_idx > self.turn_player_idx {
+            owner_idx - self.turn_player_idx
+        } else {
+            owner_idx + self.turn_order.len() - self.turn_player_idx
+        };
+        self.turn_count + turn_delta as u16
     }
 
     pub(crate) fn finish_pending_option_placed_turn_check(&mut self) {
