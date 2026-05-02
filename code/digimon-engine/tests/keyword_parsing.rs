@@ -84,6 +84,49 @@ fn parses_multiple_digixros_aliases_from_single_printed_phrase() {
 }
 
 #[test]
+fn parses_prefix_scoped_digixros_alias_from_printed_text() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "BT11-015": {
+                "card_id": "BT11-015",
+                "card_name_eng": "Star Sword Carrier",
+                "card_kind": 0,
+                "play_cost": 6,
+                "dp": 5000,
+                "level": 4,
+                "card_colors": [0],
+                "effect_description_eng": "When you would DigiXros, this card/Digimon is also treated as [Shoutmon].",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("BT11-015").expect("fixture card exists");
+
+    assert_eq!(data.digixros_aliases, vec!["Shoutmon"]);
+    assert!(
+        !digimon_engine::digixros::matches_generic_name_requirement_for_test(data, "Shoutmon"),
+        "DigiXros aliases must not leak into generic name matching"
+    );
+}
+
+#[test]
+fn real_bt11_015_populates_prefix_scoped_digixros_alias() {
+    let cards_json = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("code dir")
+        .parent()
+        .expect("repo root")
+        .join("data/cards.json");
+    let cards = CardData::load_from_file(&cards_json).expect("real cards.json loads");
+    let data = cards.get("BT11-015").expect("BT11-015 exists");
+
+    assert_eq!(data.digixros_aliases, vec!["Shoutmon"]);
+}
+
+#[test]
 fn ignores_unscoped_generic_alias_text_for_digixros_aliases() {
     let cards = CardData::load_from_str(
         r#"{

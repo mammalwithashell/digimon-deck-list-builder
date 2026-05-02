@@ -390,12 +390,14 @@ impl CardData {
 fn parse_digixros_aliases(effect_text: &str) -> Vec<String> {
     let marker = "also treated as ";
     let mut aliases = Vec::new();
-    for tail in effect_text.split(marker).skip(1) {
-        let Some(scope_start) = digixros_scope_start(tail) else {
-            continue;
-        };
-        let alias_phrase = &tail[..scope_start];
-        aliases.extend(parse_bracketed_names(alias_phrase));
+    for (start, _) in effect_text.match_indices(marker) {
+        let before = &effect_text[..start];
+        let tail = &effect_text[start + marker.len()..];
+        if let Some(scope_start) = digixros_scope_start(tail) {
+            aliases.extend(parse_bracketed_names(&tail[..scope_start]));
+        } else if current_sentence_has_digixros(before) {
+            aliases.extend(parse_bracketed_names(current_sentence_tail(tail)));
+        }
     }
     aliases
 }
@@ -405,6 +407,23 @@ fn digixros_scope_start(text: &str) -> Option<usize> {
         .iter()
         .filter_map(|marker| text.find(marker))
         .min()
+}
+
+fn current_sentence_has_digixros(text: &str) -> bool {
+    current_sentence_prefix(text).contains("DigiXros")
+}
+
+fn current_sentence_prefix(text: &str) -> &str {
+    text.rsplit(['.', '\r', '\n']).next().unwrap_or(text)
+}
+
+fn current_sentence_tail(text: &str) -> &str {
+    let end = ['.', '\r', '\n']
+        .iter()
+        .filter_map(|marker| text.find(*marker))
+        .min()
+        .unwrap_or(text.len());
+    &text[..end]
 }
 
 fn parse_bracketed_names(text: &str) -> Vec<String> {
