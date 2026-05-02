@@ -11,8 +11,7 @@ use digimon_engine::tensor::{
 use digimon_engine::tensor_profiles::standard;
 use digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorFieldKind, TensorSectionKind,
-    COMPACT_V1_LEGACY_PROFILE_ID, STANDARD_COMPACT_V1_PROFILE_ID,
-    STANDARD_V1_LEGACY_PROFILE_ID,
+    COMPACT_V1_LEGACY_PROFILE_ID, STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_V1_LEGACY_PROFILE_ID,
 };
 
 #[test]
@@ -23,6 +22,8 @@ fn default_profile_is_standard_compact_v1() {
     assert_eq!(profile.id, "standard_compact_v1");
     assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.version, 1);
+    assert_eq!(profile.tensor_version, 1);
+    assert_eq!(profile.feature_schema_version, "standard_compact_v1.1");
     assert_eq!(profile.tensor_size, TENSOR_SIZE);
     assert_eq!(profile.field_slots, FIELD_SLOTS);
     assert_eq!(profile.slot_size, SLOT_SIZE);
@@ -31,6 +32,39 @@ fn default_profile_is_standard_compact_v1() {
     assert_eq!(profile.slot_layout.source_entry_size, SOURCE_ENTRY_SIZE);
     assert_eq!(profile.card_id_slot_count, 520);
     assert_eq!(profile.scalar_slot_count, 855);
+}
+
+#[test]
+fn every_profile_has_schema_version_and_layout_hash() {
+    for id in all_profile_ids() {
+        let profile = profile_by_id(id).unwrap();
+        assert!(!profile.feature_schema_version.is_empty());
+        assert!(profile.layout_hash.starts_with("sha256:"));
+        assert_eq!(profile.layout_hash.len(), "sha256:".len() + 64);
+        assert!(profile.layout_hash["sha256:".len()..]
+            .chars()
+            .all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase()));
+    }
+}
+
+#[test]
+fn layout_hash_changes_when_feature_schema_version_changes() {
+    let profile = default_profile();
+    let baseline = profile.layout_hash;
+    let changed = profile.layout_hash_with_schema_version_for_test("schema-version-test-only");
+
+    assert_ne!(changed, baseline);
+    assert!(changed.starts_with("sha256:"));
+}
+
+#[test]
+fn sections_expose_debug_shapes() {
+    let profile = default_profile();
+    let global = profile.section("global").unwrap();
+    assert_eq!(global.shape, &[10]);
+
+    let my_battle = profile.section("my_battle").unwrap();
+    assert_eq!(my_battle.shape, &[14, 40]);
 }
 
 #[test]

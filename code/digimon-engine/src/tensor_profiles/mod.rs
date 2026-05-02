@@ -18,6 +18,7 @@ pub struct TensorSection {
     pub id: &'static str,
     pub start: usize,
     pub len: usize,
+    pub shape: &'static [usize],
     pub kind: TensorSectionKind,
 }
 
@@ -77,6 +78,9 @@ pub struct TensorProfile {
     pub id: &'static str,
     pub game_mode: &'static str,
     pub version: u32,
+    pub tensor_version: u16,
+    pub feature_schema_version: &'static str,
+    pub layout_hash: &'static str,
     pub tensor_size: usize,
     pub field_slots: usize,
     pub slot_size: usize,
@@ -123,6 +127,59 @@ impl TensorProfile {
         scalar_positions.sort();
         (card_positions, scalar_positions)
     }
+
+    pub fn layout_hash_with_schema_version_for_test(&self, schema_version: &str) -> String {
+        let (card_id_positions, scalar_positions) = self.positions();
+        compute_layout_hash(
+            self.id,
+            self.tensor_version,
+            schema_version,
+            self.tensor_size,
+            self.sections,
+            &card_id_positions,
+            &scalar_positions,
+        )
+    }
+}
+
+pub fn compute_layout_hash(
+    profile_id: &str,
+    tensor_version: u16,
+    feature_schema_version: &str,
+    tensor_size: usize,
+    sections: &[TensorSection],
+    card_id_positions: &[usize],
+    scalar_positions: &[usize],
+) -> String {
+    use sha2::{Digest, Sha256};
+
+    let mut canonical = String::new();
+    canonical.push_str(profile_id);
+    canonical.push('|');
+    canonical.push_str(&tensor_version.to_string());
+    canonical.push('|');
+    canonical.push_str(feature_schema_version);
+    canonical.push('|');
+    canonical.push_str(&tensor_size.to_string());
+    for section in sections {
+        canonical.push('|');
+        canonical.push_str(section.id);
+        canonical.push(':');
+        canonical.push_str(&section.start.to_string());
+        canonical.push(':');
+        canonical.push_str(&section.len.to_string());
+        canonical.push(':');
+        canonical.push_str(&format!("{:?}", section.shape));
+        canonical.push(':');
+        canonical.push_str(&format!("{:?}", section.kind));
+    }
+    canonical.push('|');
+    canonical.push_str(&format!("{:?}", card_id_positions));
+    canonical.push('|');
+    canonical.push_str(&format!("{:?}", scalar_positions));
+
+    let digest = Sha256::digest(canonical.as_bytes());
+    format!("sha256:{digest:x}")
 }
 
 pub fn default_profile() -> TensorProfile {
@@ -135,9 +192,9 @@ pub fn all_profile_ids() -> Vec<&'static str> {
 
 pub fn profile_by_id(id: &str) -> Option<TensorProfile> {
     match id {
-        standard::v1::PROFILE_ID
-        | STANDARD_V1_LEGACY_PROFILE_ID
-        | COMPACT_V1_LEGACY_PROFILE_ID => Some(standard::v1::PROFILE),
+        standard::v1::PROFILE_ID | STANDARD_V1_LEGACY_PROFILE_ID | COMPACT_V1_LEGACY_PROFILE_ID => {
+            Some(standard::v1::PROFILE)
+        }
         _ => None,
     }
 }
