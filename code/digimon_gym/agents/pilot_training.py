@@ -906,7 +906,10 @@ def train(total_timesteps: int = 100_000,
     if cfg.eval_suite:
         from digimon_gym.agents.eval_suite import HeldOutEvalSuite
 
-        eval_suite = HeldOutEvalSuite.from_yaml(Path(cfg.eval_suite))
+        eval_suite = HeldOutEvalSuite.from_yaml(
+            Path(cfg.eval_suite),
+            tensor_profile=cfg.tensor_profile,
+        )
     win_rate_cb = WinRateCallback(
         eval_env_fn=eval_env_fn,
         eval_freq=eval_freq,

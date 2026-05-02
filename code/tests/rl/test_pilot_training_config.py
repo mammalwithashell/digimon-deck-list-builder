@@ -150,6 +150,134 @@ def test_make_vec_env_passes_config_tensor_profile(monkeypatch):
         env.close()
 
 
+def test_held_out_eval_suite_run_passes_tensor_profile(monkeypatch):
+    from digimon_gym.agents import eval_suite
+
+    class FakeEvalEnv:
+        created: list[FakeEvalEnv] = []
+
+        def __init__(self, *_, tensor_profile="standard_compact_v1", **__):
+            self.tensor_profile = tensor_profile
+            self.current_player_id = 1
+            self.is_game_over = False
+            self.winner_id = None
+            self._step_count = 0
+            self.__class__.created.append(self)
+
+        def reset(self, *, seed=None):
+            return np.zeros(1, dtype=np.float32), {}
+
+        def step(self, action):
+            self._step_count += 1
+            self.is_game_over = True
+            self.winner_id = 1
+            return np.zeros(1, dtype=np.float32), 0.0, True, False, {}
+
+        def action_mask(self):
+            return np.ones(3, dtype=np.int8)
+
+    FakeEvalEnv.created = []
+    monkeypatch.setattr(eval_suite, "DigimonEnv", FakeEvalEnv)
+    suite = eval_suite.HeldOutEvalSuite(
+        version=1,
+        opponent_policy="greedy",
+        games_per_cell=1,
+        matchups=[
+            eval_suite.Matchup(
+                name="smoke",
+                deck1=["BT1-001"],
+                deck2=["BT1-002"],
+                seeds=[7],
+            )
+        ],
+    )
+
+    result = suite.run(
+        agent_fn=lambda _env: 0,
+        max_games_per_cell=1,
+        tensor_profile="standard_lite_v2",
+    )
+
+    assert result.overall_win_rate == 1.0
+    assert [env.tensor_profile for env in FakeEvalEnv.created] == [
+        "standard_lite_v2"
+    ]
+
+
+def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
+    monkeypatch, tmp_path
+):
+    from digimon_gym.agents import pilot_training
+
+    layout = SimpleNamespace(
+        id="standard_lite_v2",
+        tensor_version=2,
+        feature_schema_version="standard_lite_v2.1",
+        tensor_size=8320,
+        layout_hash="sha256:test",
+    )
+    captured = {}
+
+    class FakeSuite:
+        @classmethod
+        def from_yaml(cls, path, tensor_profile="standard_compact_v1"):
+            captured["path"] = Path(path)
+            captured["tensor_profile"] = tensor_profile
+            return cls()
+
+    class FakePPO:
+        def __init__(self, *_args, **_kwargs):
+            self.num_timesteps = 0
+
+        def learn(self, *_, **__):
+            return self
+
+        def save(self, path):
+            Path(path).write_text("model")
+
+    class FakeWinRateCallback:
+        def __init__(self, *_, eval_suite=None, **__):
+            captured["eval_suite"] = eval_suite
+            self.last_win_rate = 0.0
+            self.last_mean_reward = 0.0
+            self.games_played = 0
+
+        def close(self):
+            pass
+
+        def get_archetype_results(self):
+            return []
+
+    eval_suite_path = tmp_path / "eval.yaml"
+    eval_suite_path.write_text("version: 1\nopponent_policy: greedy\ngames_per_cell: 1\n")
+
+    monkeypatch.setattr(pilot_training, "get_tensor_profile", lambda _profile: layout)
+    monkeypatch.setattr(pilot_training, "make_env", lambda **_kwargs: object())
+    monkeypatch.setattr(pilot_training, "MaskablePPO", FakePPO)
+    monkeypatch.setattr(pilot_training, "WinRateCallback", FakeWinRateCallback)
+    monkeypatch.setattr(
+        "digimon_gym.agents.eval_suite.HeldOutEvalSuite",
+        FakeSuite,
+    )
+
+    cfg = TrainingConfig(
+        timesteps=1,
+        eval_freq=0,
+        eval_episodes=1,
+        checkpoint_every=0,
+        models_dir=str(tmp_path),
+        run_name="eval-suite-profile-test",
+        tensor_profile="standard_lite_v2",
+        eval_suite=str(eval_suite_path),
+    )
+
+    pilot_training.train(cfg=cfg, verbose=0)
+
+    assert captured["path"] == eval_suite_path
+    assert captured["tensor_profile"] == "standard_lite_v2"
+    assert isinstance(captured["eval_suite"], FakeSuite)
+
+
 def test_training_run_metadata_round_trips_tensor_profile_fields(tmp_path):
     from digimon_gym.agents.training_metrics import TrainingRunMetadata
 
