@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from digimon_engine import ACTION_SPACE_SIZE, TENSOR_SIZE
+from digimon_engine import ACTION_SPACE_SIZE, EMBEDDING_DIM, REGISTRY_CAPACITY, TENSOR_SIZE
 
 
 CODE_ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +30,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+from digimon_gym.tensor_profiles import get_tensor_profile
 
 
 # ---------------------------------------------------------------------------
@@ -89,10 +92,29 @@ class LstmActorWrapper(nn.Module):
 # Export functions
 # ---------------------------------------------------------------------------
 
-def export_mlp(sb3_zip_path: str, output_path: str) -> None:
+def write_export_metadata(output_path: str | Path, observation_layout) -> None:
+    """Write ONNX profile metadata next to the exported model."""
+    metadata = {
+        "observation_profile": observation_layout.id,
+        "tensor_version": observation_layout.tensor_version,
+        "feature_schema_version": observation_layout.feature_schema_version,
+        "tensor_size": observation_layout.tensor_size,
+        "tensor_layout_hash": observation_layout.layout_hash,
+        "action_space_size": ACTION_SPACE_SIZE,
+        "card_registry_capacity": REGISTRY_CAPACITY,
+        "embedding_dim": EMBEDDING_DIM,
+    }
+    meta_path = Path(f"{output_path}.meta.json")
+    meta_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
+    print(f"Wrote ONNX metadata to {meta_path}")
+
+
+def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> None:
     """Export MaskablePPO MLP model to ONNX."""
     from sb3_contrib import MaskablePPO
 
+    observation_layout = observation_layout or get_tensor_profile()
+    tensor_size = observation_layout.tensor_size
     model = MaskablePPO.load(sb3_zip_path, device="cpu")
     policy = model.policy
     policy.eval()
@@ -100,7 +122,7 @@ def export_mlp(sb3_zip_path: str, output_path: str) -> None:
     wrapper = MlpActorWrapper(policy)
     wrapper.eval()
 
-    dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
+    dummy_obs = torch.randn(1, tensor_size, dtype=torch.float32)
 
     with torch.no_grad():
         logits_shape = tuple(wrapper(dummy_obs).shape)
@@ -124,13 +146,16 @@ def export_mlp(sb3_zip_path: str, output_path: str) -> None:
     print(f"Exported MLP model to {output_path}")
 
     # Verify round-trip
-    _verify_mlp(policy, wrapper, output_path)
+    _verify_mlp(policy, wrapper, output_path, tensor_size)
+    write_export_metadata(output_path, observation_layout)
 
 
-def export_lstm(sb3_zip_path: str, output_path: str) -> None:
+def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) -> None:
     """Export MaskableRecurrentPPO LSTM model to ONNX."""
     from digimon_gym.agents.maskable_recurrent import MaskableRecurrentPPO
 
+    observation_layout = observation_layout or get_tensor_profile()
+    tensor_size = observation_layout.tensor_size
     model = MaskableRecurrentPPO.load(sb3_zip_path, device="cpu")
     policy = model.policy
     policy.eval()
@@ -138,7 +163,7 @@ def export_lstm(sb3_zip_path: str, output_path: str) -> None:
     wrapper = LstmActorWrapper(policy)
     wrapper.eval()
 
-    dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
+    dummy_obs = torch.randn(1, tensor_size, dtype=torch.float32)
     hidden_size = policy.lstm_actor.hidden_size
     dummy_h = torch.zeros(1, 1, hidden_size, dtype=torch.float32)
     dummy_c = torch.zeros(1, 1, hidden_size, dtype=torch.float32)
@@ -168,18 +193,19 @@ def export_lstm(sb3_zip_path: str, output_path: str) -> None:
     print(f"Exported LSTM model to {output_path}")
 
     # Verify round-trip
-    _verify_lstm(policy, wrapper, output_path)
+    _verify_lstm(policy, wrapper, output_path, tensor_size)
+    write_export_metadata(output_path, observation_layout)
 
 
 # ---------------------------------------------------------------------------
 # Verification helpers
 # ---------------------------------------------------------------------------
 
-def _verify_mlp(policy, wrapper, onnx_path: str) -> None:
+def _verify_mlp(policy, wrapper, onnx_path: str, tensor_size: int = TENSOR_SIZE) -> None:
     """Verify ONNX output matches PyTorch output."""
     import onnxruntime as ort
 
-    dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
+    dummy_obs = torch.randn(1, tensor_size, dtype=torch.float32)
 
     with torch.no_grad():
         pt_logits = wrapper(dummy_obs).numpy()
@@ -198,11 +224,11 @@ def _verify_mlp(policy, wrapper, onnx_path: str) -> None:
     assert max_diff < 1e-4, f"MLP output mismatch: max diff {max_diff}"
 
 
-def _verify_lstm(policy, wrapper, onnx_path: str) -> None:
+def _verify_lstm(policy, wrapper, onnx_path: str, tensor_size: int = TENSOR_SIZE) -> None:
     """Verify ONNX output matches PyTorch output."""
     import onnxruntime as ort
 
-    dummy_obs = torch.randn(1, TENSOR_SIZE, dtype=torch.float32)
+    dummy_obs = torch.randn(1, tensor_size, dtype=torch.float32)
     hidden_size = policy.lstm_actor.hidden_size
     dummy_h = torch.zeros(1, 1, hidden_size, dtype=torch.float32)
     dummy_c = torch.zeros(1, 1, hidden_size, dtype=torch.float32)
@@ -236,19 +262,30 @@ def _verify_lstm(policy, wrapper, onnx_path: str) -> None:
 # CLI
 # ---------------------------------------------------------------------------
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Export SB3 models to ONNX")
     parser.add_argument("--type", choices=["mlp", "lstm"], required=True)
     parser.add_argument("--input", required=True, help="Path to SB3 .zip checkpoint")
     parser.add_argument("--output", required=True, help="Output .onnx path")
+    parser.add_argument(
+        "--tensor-profile",
+        default=None,
+        help="Observation profile for dummy input shape and metadata.",
+    )
+    return parser
+
+
+def main():
+    parser = build_parser()
     args = parser.parse_args()
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    observation_layout = get_tensor_profile(args.tensor_profile)
 
     if args.type == "mlp":
-        export_mlp(args.input, args.output)
+        export_mlp(args.input, args.output, observation_layout)
     else:
-        export_lstm(args.input, args.output)
+        export_lstm(args.input, args.output, observation_layout)
 
 
 if __name__ == "__main__":
