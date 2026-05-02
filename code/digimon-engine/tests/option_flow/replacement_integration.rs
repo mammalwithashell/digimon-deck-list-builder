@@ -14,7 +14,7 @@ use digimon_engine::action::space::{HAND_EFFECT_START, PASS, REPLACEMENT_ACCEPT}
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, Zone};
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, Zone};
 use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::{ReplacementCause, ReplacementSubject};
 use digimon_engine::selection::{OptionPlayResult, SelectionKind};
@@ -240,6 +240,7 @@ fn place_delay_option(r: &mut DebugRunner, player: u8, card_id: &str) {
         OptionState::Delayed {
             owner: player,
             trash_on_turn: r.game.turn_count + 1,
+            trigger: DelayTrigger::EndOfYourNextTurn,
         };
 }
 

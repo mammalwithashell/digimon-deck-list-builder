@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
-use crate::enums::{CardKind, PlayerId};
+use crate::enums::{CardKind, DelayTrigger, PlayerId};
 
 /// Lightweight handle to a Permanent on a player's field. Copy-able, used in closures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -25,6 +25,7 @@ pub enum OptionState {
     Delayed {
         owner: PlayerId,
         trash_on_turn: u16,
+        trigger: DelayTrigger,
     },
     Linked {
         host: PermanentHandle,

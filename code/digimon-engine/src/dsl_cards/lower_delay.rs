@@ -2,7 +2,8 @@
 //! `timing == DelayEffect`.
 //!
 //! Phase 1 scope: map `CompiledTiming::EndOfYourTurn` →
-//! `DelayTrigger::EndOfThisTurn`; all other timings default to
+//! `DelayTrigger::EndOfThisTurn`; `CompiledTiming::StartOfYourTurn` maps to
+//! `DelayTrigger::StartOfYourNextTurn`; all other timings default to
 //! `DelayTrigger::EndOfYourNextTurn`. `active_when` gating is deferred.
 //! Body steps run through `run_step` (Phase 2a dispatcher).
 
@@ -51,6 +52,7 @@ pub fn lower_with_raw(
 ) -> Effect {
     let delay_trigger = match trigger {
         CompiledTiming::EndOfYourTurn => DelayTrigger::EndOfThisTurn,
+        CompiledTiming::StartOfYourTurn => DelayTrigger::StartOfYourNextTurn,
         _ => DelayTrigger::EndOfYourNextTurn,
     };
     let process_arc: Arc<[CompiledStep]> = Arc::from(process_steps);

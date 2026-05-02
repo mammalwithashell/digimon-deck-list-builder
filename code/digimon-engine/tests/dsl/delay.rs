@@ -137,3 +137,16 @@ fn delay_inherited_scope_sets_inherited_flag() {
         "scope: FaceUp must NOT set the inherited flag"
     );
 }
+
+#[test]
+fn delay_start_of_your_turn_maps_to_start_of_your_next_turn() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_delay(
+        CompiledScope::FaceUp,
+        CompiledTiming::StartOfYourTurn,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(
+        effects[0].delay_trigger,
+        Some(DelayTrigger::StartOfYourNextTurn)
+    );
+}

@@ -1206,6 +1206,7 @@ impl Game {
                 perm.option_state = crate::permanent::OptionState::Delayed {
                     owner,
                     trash_on_turn: trash_turn,
+                    trigger,
                 };
                 self.player_mut(owner).battle_area.push(perm);
                 let permanent = PermanentHandle {
@@ -1460,8 +1461,8 @@ impl Game {
     }
 
     /// Compute the absolute `turn_count` at which a delayed Option should
-    /// self-trash. The rule is "end of the **owner**'s next turn" for
-    /// `EndOfYourNextTurn`, and the current turn for `EndOfThisTurn`.
+    /// self-trash. The rule is "end/start of the **owner**'s next turn" for
+    /// next-turn triggers, and the current turn for `EndOfThisTurn`.
     ///
     /// In a 2-player round-robin:
     /// - If `owner == turn_player` (the common case — played on own turn),
@@ -1477,17 +1478,24 @@ impl Game {
         trigger: crate::enums::DelayTrigger,
     ) -> u16 {
         use crate::enums::DelayTrigger;
-        // TODO(multi-player): generalize turn-rotation to >2 players.
         match trigger {
             DelayTrigger::EndOfThisTurn => self.turn_count,
-            DelayTrigger::EndOfYourNextTurn => {
-                if self.turn_player() == owner {
-                    self.turn_count + 2
-                } else {
-                    self.turn_count + 1
-                }
+            DelayTrigger::EndOfYourNextTurn | DelayTrigger::StartOfYourNextTurn => {
+                self.next_owner_turn_count(owner)
             }
         }
+    }
+
+    fn next_owner_turn_count(&self, owner: PlayerId) -> u16 {
+        let Some(owner_idx) = self.turn_order.iter().position(|&p| p == owner) else {
+            return self.turn_count;
+        };
+        let turn_delta = if owner_idx > self.turn_player_idx {
+            owner_idx - self.turn_player_idx
+        } else {
+            owner_idx + self.turn_order.len() - self.turn_player_idx
+        };
+        self.turn_count + turn_delta as u16
     }
 
     pub(crate) fn finish_pending_option_placed_turn_check(&mut self) {

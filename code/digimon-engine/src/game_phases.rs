@@ -7,7 +7,9 @@
 //! `StartOfYourMainPhase`, and `OnLoseSecurity` fan-out all live at phase
 //! boundaries.
 
-use crate::enums::{EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw};
+use crate::enums::{
+    DelayTrigger, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw,
+};
 use crate::game::{Game, OverclockError};
 use crate::permanent::PermanentHandle;
 use crate::selection::{AttackTarget, PendingSelection, SelectionKind};
@@ -25,6 +27,14 @@ impl Game {
             crate::selection::TriggerSource::PlayerBattleArea(tp),
         );
         self.drain_effect_queue();
+        if self.pending_selection.is_some() {
+            return;
+        }
+
+        self.resolve_start_delayed_options(self.turn_count);
+        if self.pending_selection.is_some() {
+            return;
+        }
 
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::UntilNextUnsuspend);
 
@@ -175,6 +185,9 @@ impl Game {
         // battle_area with `trash_on_turn == P1's current turn`, and must fire
         // regardless of who's ending their turn.
         self.resolve_delayed_options(self.turn_count);
+        if self.pending_selection.is_some() {
+            return;
+        }
 
         // Memory swing-back: capture memory before firing OnEndTurn effects,
         // fire them, then see if an effect restored memory from negative.
@@ -513,6 +526,17 @@ impl Game {
     /// unsupported; file a gap in `docs/RUST_ENGINE_GAPS.md` if a printed
     /// card needs this shape.
     pub(crate) fn resolve_delayed_options(&mut self, ending_turn: u16) {
+        self.resolve_delayed_options_matching(
+            ending_turn,
+            &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn],
+        );
+    }
+
+    pub(crate) fn resolve_start_delayed_options(&mut self, starting_turn: u16) {
+        self.resolve_delayed_options_matching(starting_turn, &[DelayTrigger::StartOfYourNextTurn]);
+    }
+
+    fn resolve_delayed_options_matching(&mut self, turn: u16, triggers: &[DelayTrigger]) {
         use crate::permanent::OptionState;
         use std::collections::HashSet;
 
@@ -537,9 +561,10 @@ impl Game {
                         if let OptionState::Delayed {
                             owner: _,
                             trash_on_turn: t,
+                            trigger: delayed_trigger,
                         } = perm.option_state
                         {
-                            if t == ending_turn {
+                            if t == turn && triggers.contains(&delayed_trigger) {
                                 let bottom = perm.card_sources.first()?;
                                 let key = (pid, bottom.card_index);
                                 if !cancelled_keys.contains(&key) {
@@ -567,15 +592,21 @@ impl Game {
                 crate::selection::TriggerSource::Permanent(handle),
             );
             self.drain_effect_queue();
+            if self.pending_selection.is_some() {
+                return;
+            }
 
             // Re-find the permanent by stable key — the DelayEffect body
             // may have deleted it, shifted indices via other mutations, or
             // (rarely) moved it. If it's gone, nothing to trash.
-            if let Some(current_handle) = self.find_delayed_permanent_by_key(key, ending_turn) {
+            if let Some(current_handle) = self.find_delayed_permanent_by_key(key, turn, triggers) {
                 self.delete_permanent_with_cause(
                     current_handle,
                     crate::replacement::ReplacementCause::Cost,
                 );
+            }
+            if self.pending_selection.is_some() {
+                return;
             }
 
             // If a replacement window cancelled the delete, the permanent
@@ -584,7 +615,7 @@ impl Game {
             // forever. A cancel-always replacement naturally re-fires at
             // subsequent turn ends when this scan runs again.
             if self
-                .find_delayed_permanent_by_key(key, ending_turn)
+                .find_delayed_permanent_by_key(key, turn, triggers)
                 .is_some()
             {
                 cancelled_keys.insert(key);
@@ -600,7 +631,8 @@ impl Game {
     fn find_delayed_permanent_by_key(
         &self,
         key: (PlayerId, u16),
-        ending_turn: u16,
+        turn: u16,
+        triggers: &[DelayTrigger],
     ) -> Option<PermanentHandle> {
         use crate::permanent::OptionState;
 
@@ -614,10 +646,12 @@ impl Game {
                 continue;
             }
             if let OptionState::Delayed {
-                trash_on_turn: t, ..
+                trash_on_turn: t,
+                trigger: delayed_trigger,
+                ..
             } = perm.option_state
             {
-                if t == ending_turn {
+                if t == turn && triggers.contains(&delayed_trigger) {
                     return Some(PermanentHandle {
                         player: owner,
                         index: i as u8,
