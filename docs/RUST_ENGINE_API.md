@@ -2266,6 +2266,12 @@ modifier-granted keywords). Closes parity §2.1b (native Rush) and §2.5f
 Parametric keywords (`Security A. ±N`, `De-Digivolve N`, `Draw N`) are
 parsed into their typed variants.
 
+`CardData::digixros_aliases: Vec<String>` — populated from printed text of
+the form `This card is also treated as [Name] for DigiXros.` and from authored
+DSL `digixros_aliases`. These names are intentionally scoped: DigiXros material
+matching may consult them, but generic name predicates must keep using the
+printed card name and ordinary generic-alias surfaces only.
+
 ### Unified query
 
 `Game::has_keyword(handle, Keyword) -> bool` — the canonical keyword

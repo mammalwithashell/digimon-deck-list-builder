@@ -13,7 +13,31 @@
 //! `CardData` with `dna_costs` populated.
 
 use crate::card_data::{CardData, DnaCost, DnaRequirement};
+use crate::game::Game;
 use crate::permanent::Permanent;
+
+impl Game {
+    pub fn card_data_by_id(&self, card_id: &str) -> Option<&CardData> {
+        self.card_data.iter().find(|card| card.card_id == card_id)
+    }
+
+    pub fn card_can_satisfy_digixros_name(&self, card_id: &str, required_name: &str) -> bool {
+        let Some(data) = self.card_data_by_id(card_id) else {
+            return false;
+        };
+        data.card_name.eq_ignore_ascii_case(required_name)
+            || data
+                .digixros_aliases
+                .iter()
+                .any(|alias| alias.eq_ignore_ascii_case(required_name))
+    }
+
+    pub fn card_matches_generic_name(&self, card_id: &str, required_name: &str) -> bool {
+        self.card_data_by_id(card_id)
+            .map(|data| data.card_name.eq_ignore_ascii_case(required_name))
+            .unwrap_or(false)
+    }
+}
 
 fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -> bool {
     let top = perm.top_card();

@@ -36,6 +36,25 @@ fn colored_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
 }
 
 #[test]
+fn digixros_matching_accepts_scoped_alias_but_generic_name_checks_do_not() {
+    let mut omni = make_test_card_with_level("BT21-021", "OmniShoutmon", 5);
+    omni.digixros_aliases = vec!["Shoutmon".to_string()];
+
+    let runner = DebugRunner::builder()
+        .add_card(omni)
+        .add_card(make_test_card_with_level("BT10-009", "Shoutmon X4", 4))
+        .hand(0, &["BT21-021", "BT10-009"])
+        .build();
+
+    assert!(runner
+        .game
+        .card_can_satisfy_digixros_name("BT21-021", "Shoutmon"));
+    assert!(!runner
+        .game
+        .card_matches_generic_name("BT21-021", "Shoutmon"));
+}
+
+#[test]
 fn user_action_dna_digivolve_two_stage_resolution_merges_permanents() {
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))

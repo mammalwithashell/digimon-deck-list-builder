@@ -334,6 +334,13 @@ impl CardData {
                 &raw_card.security_effect_description_eng,
             );
 
+            let mut digixros_aliases = raw_card.digixros_aliases;
+            for alias in parse_digixros_aliases(&raw_card.effect_description_eng) {
+                if !digixros_aliases.contains(&alias) {
+                    digixros_aliases.push(alias);
+                }
+            }
+
             let card = CardData {
                 card_id: raw_card.card_id.clone(),
                 card_name: raw_card.card_name_eng,
@@ -372,12 +379,26 @@ impl CardData {
                 norm_id: raw_card.norm_id,
                 ace_overflow: raw_card.ace_overflow,
                 dual: raw_card.dual,
-                digixros_aliases: raw_card.digixros_aliases,
+                digixros_aliases,
             };
             cards.insert(id, card);
         }
         Ok(cards)
     }
+}
+
+fn parse_digixros_aliases(effect_text: &str) -> Vec<String> {
+    let marker = "also treated as [";
+    let mut aliases = Vec::new();
+    for tail in effect_text.split(marker).skip(1) {
+        let Some((name, after_name)) = tail.split_once(']') else {
+            continue;
+        };
+        if after_name.contains("for DigiXros") {
+            aliases.push(name.trim().to_string());
+        }
+    }
+    aliases
 }
 
 /// Extract printed keywords from a card's text fields.

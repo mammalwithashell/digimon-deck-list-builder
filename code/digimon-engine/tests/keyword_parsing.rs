@@ -4,6 +4,32 @@ use digimon_engine::card_data::parse_printed_keywords;
 use digimon_engine::enums::Keyword;
 
 #[test]
+fn parses_digixros_scoped_alias_without_global_name_alias() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "BT21-021": {
+                "card_id": "BT21-021",
+                "card_name_eng": "OmniShoutmon",
+                "card_kind": 0,
+                "play_cost": 8,
+                "dp": 8000,
+                "level": 5,
+                "card_colors": [0, 2],
+                "effect_description_eng": "This card is also treated as [Shoutmon] for DigiXros.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("BT21-021").expect("fixture card exists");
+
+    assert_eq!(data.digixros_aliases, vec!["Shoutmon"]);
+    assert_eq!(data.card_name, "OmniShoutmon");
+}
+
+#[test]
 fn parses_rush() {
     let kw = parse_printed_keywords(
         "\u{ff1c}Rush\u{ff1e} (This Digimon can attack the turn it comes into play.)",
