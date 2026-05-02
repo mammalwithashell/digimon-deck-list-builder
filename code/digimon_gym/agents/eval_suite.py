@@ -55,14 +55,14 @@ class HeldOutEvalSuite:
     version: int
     opponent_policy: str
     games_per_cell: int
-    tensor_profile: str = "standard_compact_v1"
+    tensor_profile: str = "standard_lite_v2"
     matchups: List[Matchup] = field(default_factory=list)
 
     @classmethod
     def from_yaml(
         cls,
         path: Path,
-        tensor_profile: str = "standard_compact_v1",
+        tensor_profile: str = "standard_lite_v2",
     ) -> "HeldOutEvalSuite":
         data = yaml.safe_load(Path(path).read_text()) or {}
         matchups = [
@@ -130,7 +130,7 @@ class HeldOutEvalSuite:
         seed,
         agent_fn,
         opponent_fn,
-        tensor_profile: str = "standard_compact_v1",
+        tensor_profile: str = "standard_lite_v2",
     ) -> str:
         env = DigimonEnv(deck1=deck1, deck2=deck2, tensor_profile=tensor_profile)
         _obs, _info = env.reset(seed=seed)

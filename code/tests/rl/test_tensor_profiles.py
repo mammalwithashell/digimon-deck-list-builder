@@ -99,6 +99,22 @@ def test_feature_extractor_uses_profile_positions():
     assert tuple(out.shape) == (2, 512)
 
 
+def test_digimon_env_defaults_to_standard_lite_v2_with_unset_backend(monkeypatch):
+    pytest.importorskip("digimon_engine")
+    monkeypatch.delenv("DIGIMON_BACKEND", raising=False)
+    monkeypatch.delenv("DIGIMON_TENSOR_PROFILE", raising=False)
+
+    from digimon_gym.digimon_gym import DigimonEnv
+
+    env = DigimonEnv(deck1=DECK, deck2=DECK)
+    obs, info = env.reset(seed=7)
+
+    assert env.tensor_profile == "standard_lite_v2"
+    assert env.observation_space.shape == (8320,)
+    assert obs.shape == (8320,)
+    assert info["tensor_profile"] == "standard_lite_v2"
+
+
 def test_digimon_env_defaults_to_standard_lite_v2_under_rust_backend(monkeypatch):
     pytest.importorskip("digimon_engine")
     monkeypatch.setenv("DIGIMON_BACKEND", "rust")
@@ -113,6 +129,25 @@ def test_digimon_env_defaults_to_standard_lite_v2_under_rust_backend(monkeypatch
     assert env.observation_space.shape == (8320,)
     assert obs.shape == (8320,)
     assert info["tensor_profile"] == "standard_lite_v2"
+
+
+def test_digimon_env_preserves_explicit_compact_profile_with_unset_backend(monkeypatch):
+    monkeypatch.delenv("DIGIMON_BACKEND", raising=False)
+    monkeypatch.delenv("DIGIMON_TENSOR_PROFILE", raising=False)
+
+    from digimon_gym.digimon_gym import DigimonEnv
+
+    env = DigimonEnv(
+        deck1=DECK,
+        deck2=DECK,
+        tensor_profile="standard_compact_v1",
+    )
+    obs, info = env.reset(seed=7)
+
+    assert env.tensor_profile == "standard_compact_v1"
+    assert env.observation_space.shape == (1375,)
+    assert obs.shape == (1375,)
+    assert info["tensor_profile"] == "standard_compact_v1"
 
 
 def test_digimon_env_preserves_explicit_compact_profile_under_rust_backend(monkeypatch):

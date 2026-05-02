@@ -44,7 +44,7 @@ class TrainingConfig:
     models_dir: str = "models"
     tensorboard_log: str = "runs/pilot_ppo"
     run_name: Optional[str] = None
-    tensor_profile: str = "standard_compact_v1"
+    tensor_profile: str = "standard_lite_v2"
 
     def __post_init__(self) -> None:
         self._validate()

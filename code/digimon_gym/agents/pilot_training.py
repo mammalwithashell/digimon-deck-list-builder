@@ -532,7 +532,7 @@ def make_env(opponent: str = "greedy",
              deck_pool_generate_kwargs: Optional[Dict] = None,
              deck_pool_seed: Optional[int] = None,
              deck_pool_hybrid_max: int = 10,
-             tensor_profile: str = "standard_compact_v1") -> gymnasium.Env:
+             tensor_profile: str = "standard_lite_v2") -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:

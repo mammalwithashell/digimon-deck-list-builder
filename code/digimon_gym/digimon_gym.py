@@ -33,17 +33,30 @@ def _make_runner(
 
     - `DIGIMON_BACKEND=rust` → `RustHeadlessGame` (requires the `digimon_engine`
       PyO3 wheel to be installed, e.g. via `maturin develop`).
-    - anything else (including unset) → Python `HeadlessGame`.
+    - unset + non-compact tensor profile → `RustHeadlessGame` when available.
+    - unset + compact tensor profile → Python `HeadlessGame` for compatibility.
+    - any other explicit value → Python `HeadlessGame`.
 
     Both runners expose the same duck-typed surface: `step`, `get_action_mask`,
     `get_board_tensor`, and `is_game_over`. Rust runners also expose
     `get_rl_state()` for backend-neutral RL metadata.
     """
-    backend = os.environ.get("DIGIMON_BACKEND", "py").lower()
-    if backend == "rust":
+    backend = os.environ.get("DIGIMON_BACKEND")
+    backend_normalized = backend.lower() if backend is not None else None
+    use_rust = (
+        backend_normalized == "rust"
+        or (backend is None and tensor_profile != "standard_compact_v1")
+    )
+    if use_rust:
         if RustHeadlessGame is None:
+            if backend_normalized == "rust":
+                raise RuntimeError(
+                    "DIGIMON_BACKEND=rust but digimon_engine wheel is not installed. "
+                    "Run `cd digimon-engine-py && maturin develop --release`."
+                )
             raise RuntimeError(
-                "DIGIMON_BACKEND=rust but digimon_engine wheel is not installed. "
+                f"tensor_profile={tensor_profile!r} requires the Rust runner, "
+                "but digimon_engine wheel is not installed. "
                 "Run `cd digimon-engine-py && maturin develop --release`."
             )
         return RustHeadlessGame(
@@ -54,7 +67,8 @@ def _make_runner(
         )
     if tensor_profile != "standard_compact_v1":
         raise RuntimeError(
-            f"tensor_profile={tensor_profile!r} requires DIGIMON_BACKEND=rust"
+            f"tensor_profile={tensor_profile!r} requires DIGIMON_BACKEND=rust "
+            "or an unset DIGIMON_BACKEND with Rust bindings available"
         )
     if seed is None:
         return HeadlessGame(deck1, deck2)

@@ -16,7 +16,7 @@ from digimon_gym.agents.training_config import TrainingConfig
 
 def test_training_config_defaults_and_overrides_tensor_profile(tmp_path):
     cfg = TrainingConfig()
-    assert cfg.tensor_profile == "standard_compact_v1"
+    assert cfg.tensor_profile == "standard_lite_v2"
 
     path = tmp_path / "training.yaml"
     path.write_text("tensor_profile: standard_lite_v2\n")
@@ -123,6 +123,19 @@ def test_make_env_passes_tensor_profile(monkeypatch):
     assert _FakeDigimonEnv.created[0].tensor_profile == "standard_lite_v2"
 
 
+def test_make_env_defaults_to_standard_lite_v2(monkeypatch):
+    from digimon_gym.agents import pilot_training
+
+    _FakeDigimonEnv.created = []
+    monkeypatch.setattr(pilot_training, "DigimonEnv", _FakeDigimonEnv)
+
+    env = pilot_training.make_env(opponent="self-play")
+
+    base_env = pilot_training._unwrap_to_digimon_env(env)
+    assert base_env.tensor_profile == "standard_lite_v2"
+    assert _FakeDigimonEnv.created[0].tensor_profile == "standard_lite_v2"
+
+
 def test_make_vec_env_passes_config_tensor_profile(monkeypatch):
     from digimon_gym.agents import pilot_training
 
@@ -202,6 +215,29 @@ def test_held_out_eval_suite_run_passes_tensor_profile(monkeypatch):
     assert [env.tensor_profile for env in FakeEvalEnv.created] == [
         "standard_lite_v2"
     ]
+
+
+def test_held_out_eval_suite_defaults_to_standard_lite_v2():
+    from digimon_gym.agents import eval_suite
+
+    suite = eval_suite.HeldOutEvalSuite(
+        version=1,
+        opponent_policy="greedy",
+        games_per_cell=1,
+    )
+
+    assert suite.tensor_profile == "standard_lite_v2"
+
+
+def test_held_out_eval_suite_from_yaml_defaults_to_standard_lite_v2(tmp_path):
+    from digimon_gym.agents import eval_suite
+
+    path = tmp_path / "eval.yaml"
+    path.write_text("version: 1\nopponent_policy: greedy\ngames_per_cell: 1\n")
+
+    suite = eval_suite.HeldOutEvalSuite.from_yaml(path)
+
+    assert suite.tensor_profile == "standard_lite_v2"
 
 
 def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
