@@ -1,12 +1,14 @@
 //! Predicate evaluator. Phase 1c Task 3: leaf fields + combinators + existentials.
 
 use digimon_dsl::compiled::{
-    CompiledBindingCompare, CompiledCardKind, CompiledColor, CompiledExistential,
-    CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause, CompiledZone,
+    CompiledBindingCompare, CompiledCardKind, CompiledColor, CompiledDpConstraint,
+    CompiledExistential, CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause,
+    CompiledZone,
 };
 
 use crate::card_source::CardHandle;
-use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::bindings::{BindingValue, Bindings};
+use crate::dsl_cards::formula_eval;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, PlayerId};
 use crate::permanent::PermanentHandle;
@@ -143,6 +145,11 @@ pub fn eval_predicate_with_bindings(
     }
     if let Some(values) = &pred.not_equals {
         if !compare_binding_values(values, bindings, |a, b| a != b) {
+            return false;
+        }
+    }
+    if let Some(binding_name) = &pred.not_in_binding {
+        if !subject_not_in_binding(subject, binding_name, bindings) {
             return false;
         }
     }
@@ -370,6 +377,29 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_contains.is_none()
         && pred.name_in.is_none()
         && pred.card_number_is.is_none()
+        && pred.play_cost_lte.is_none()
+        && pred.dp_eq.is_none()
+        && pred.dp_lte.is_none()
+        && pred.dp_gte.is_none()
+        && pred.not_in_binding.is_none()
+}
+
+fn subject_not_in_binding(
+    subject: PredicateSubject,
+    binding_name: &str,
+    bindings: Option<&Bindings>,
+) -> bool {
+    let PredicateSubject::Permanent(handle) = subject else {
+        return false;
+    };
+    let Some(value) = bindings.and_then(|b| b.get_ref(binding_name)) else {
+        return false;
+    };
+    match value {
+        BindingValue::Permanent(bound) => *bound != handle,
+        BindingValue::PermanentList(list) => !list.contains(&handle),
+        _ => false,
+    }
 }
 
 fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> bool {
@@ -539,6 +569,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(cap) = pred.play_cost_lte {
+        if i32::from(data.play_cost) > cap {
+            return false;
+        }
+    }
     true
 }
 
@@ -577,6 +612,9 @@ fn eval_permanent_fields(
         if !kind_matches_field(want, data.card_kind) {
             return false;
         }
+    }
+    if !eval_dp_constraints(pred, rctx, handle) {
+        return false;
     }
     if let Some(want) = pred.is_suspended {
         if perm.is_suspended != want {
@@ -621,6 +659,46 @@ fn eval_permanent_fields(
     true
 }
 
+fn eval_dp_constraints(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+) -> bool {
+    if pred.dp_eq.is_none() && pred.dp_lte.is_none() && pred.dp_gte.is_none() {
+        return true;
+    }
+    let Some(dp) = rctx.game.effective_dp(handle) else {
+        return false;
+    };
+    if let Some(want) = &pred.dp_eq {
+        if dp != eval_dp_constraint(want, rctx, handle) {
+            return false;
+        }
+    }
+    if let Some(cap) = &pred.dp_lte {
+        if dp > eval_dp_constraint(cap, rctx, handle) {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.dp_gte {
+        if dp < eval_dp_constraint(floor, rctx, handle) {
+            return false;
+        }
+    }
+    true
+}
+
+fn eval_dp_constraint(
+    constraint: &CompiledDpConstraint,
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+) -> i32 {
+    match constraint {
+        CompiledDpConstraint::Literal(n) => *n,
+        CompiledDpConstraint::Formula(f) => formula_eval::evaluate_read(f, rctx, handle),
+    }
+}
+
 fn eval_breeding_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -649,6 +727,13 @@ fn eval_breeding_permanent_fields(
         if !matches_kind {
             return false;
         }
+    }
+    let handle = PermanentHandle {
+        player,
+        index: crate::action::space::BREEDING_TARGET as u8,
+    };
+    if !eval_dp_constraints(pred, rctx, handle) {
+        return false;
     }
     if let Some(want) = pred.in_breeding {
         if !want {

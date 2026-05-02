@@ -51,6 +51,8 @@ pub struct PredicateSpec {
     pub name_in: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card_number_is: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_cost_lte: Option<i32>,
 
     // Leaf — permanent-only
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -85,6 +87,8 @@ pub struct PredicateSpec {
     pub other: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_in_binding: Option<String>,
 
     // Leaf — source-relative
     #[serde(skip_serializing_if = "Option::is_none")]

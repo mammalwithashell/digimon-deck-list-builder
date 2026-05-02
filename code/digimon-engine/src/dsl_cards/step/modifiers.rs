@@ -157,7 +157,8 @@ pub fn try_run(
                     // Phase 2f2 Task 3: formula evaluation is INSIDE the loop with
                     // `h` as the target, so per-selectors (StackSize etc.) resolve
                     // against each matched permanent — NOT hoisted outside.
-                    let matches = crate::dsl_cards::step::permanent_scan::scan(ctx, pred);
+                    let matches =
+                        crate::dsl_cards::step::permanent_scan::scan(ctx, pred, Some(bindings));
                     for h in matches {
                         let n = resolve_modifier_value(value, ctx, h, runtime);
                         ctx.add_modifier(h, modifier_ty, n, expiry);

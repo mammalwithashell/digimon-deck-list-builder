@@ -10,11 +10,16 @@
 
 use digimon_dsl::compiled::CompiledPredicate;
 
-use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
 use crate::effect_context::EffectContext;
 use crate::permanent::PermanentHandle;
 
-pub fn scan(ctx: &EffectContext<'_>, pred: &CompiledPredicate) -> Vec<PermanentHandle> {
+pub fn scan(
+    ctx: &EffectContext<'_>,
+    pred: &CompiledPredicate,
+    bindings: Option<&Bindings>,
+) -> Vec<PermanentHandle> {
     let player_count = ctx.game.players.len();
     let mut out = Vec::new();
     for player_idx in 0..player_count {
@@ -33,7 +38,7 @@ pub fn scan(ctx: &EffectContext<'_>, pred: &CompiledPredicate) -> Vec<PermanentH
                 index: i as u8,
             };
             let rctx = ctx.as_read();
-            if eval_predicate(pred, &rctx, PredicateSubject::Permanent(h)) {
+            if eval_predicate_with_bindings(pred, &rctx, PredicateSubject::Permanent(h), bindings) {
                 out.push(h);
             }
         }

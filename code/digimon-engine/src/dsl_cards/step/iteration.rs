@@ -28,7 +28,7 @@ pub fn try_run(
             bind_as,
             body,
         } => {
-            let matches = scan(ctx, over);
+            let matches = scan(ctx, over, Some(bindings));
             for handle in matches {
                 let mut iter_bindings = bindings.clone();
                 iter_bindings.insert_permanent(bind_as, handle);

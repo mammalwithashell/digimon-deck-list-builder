@@ -1,0 +1,299 @@
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledDpConstraint, CompiledModifierTarget,
+    CompiledModifierValue, CompiledPredicate, CompiledStep,
+};
+use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::card_source::CardHandle;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::dsl_cards::bindings::Bindings;
+use digimon_engine::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
+use digimon_engine::dsl_cards::step::run_steps;
+use digimon_engine::effect_context::{EffectContext, EffectReadContext};
+use digimon_engine::enums::ModifierType;
+
+fn runner_with_dp_cards() -> DebugRunner {
+    let mut src = make_test_card("SRC", "Source");
+    src.play_cost = 9;
+    let mut low = make_test_card("LOW-DP", "Low DP");
+    low.dp = Some(3000);
+    low.play_cost = 3;
+    let mut high = make_test_card("HIGH-DP", "High DP");
+    high.dp = Some(7000);
+    high.play_cost = 7;
+    DebugRunner::builder()
+        .add_card(src)
+        .add_card(low)
+        .add_card(high)
+        .hand(0, &["SRC", "LOW-DP", "HIGH-DP"])
+        .build()
+}
+
+fn src_card(runner: &DebugRunner) -> CardHandle {
+    runner.game.players[0].hand[0].handle()
+}
+
+#[test]
+fn compile_lowers_group7_predicate_leaves() {
+    let yaml = r#"
+card: T-G7
+name: Group 7
+kind: option
+color: [white]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          prompt: Pick a cheap Digimon
+          filter: { kind: digimon, play_cost_lte: 3 }
+      - for_each:
+          over: { kind: digimon, not_in_binding: saved, dp_lte: 6000 }
+          bind_as: target
+          body:
+            - suspend: { target: target }
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::SelectHand { filter, .. } = &triggered.process[0] else {
+        panic!("expected select_hand");
+    };
+    assert_eq!(filter.play_cost_lte, Some(3));
+    let CompiledStep::ForEach { over, .. } = &triggered.process[1] else {
+        panic!("expected for_each");
+    };
+    assert_eq!(over.not_in_binding.as_deref(), Some("saved"));
+    assert!(matches!(
+        over.dp_lte,
+        Some(CompiledDpConstraint::Literal(6000))
+    ));
+}
+
+#[test]
+fn permanent_dp_lte_and_dp_gte_filter_by_effective_dp() {
+    let mut runner = runner_with_dp_cards();
+    let low = runner.place_on_field(0, "LOW-DP", None);
+    let high = runner.place_on_field(0, "HIGH-DP", None);
+    let rctx = EffectReadContext::new(&runner.game, src_card(&runner), None, 0);
+
+    let dp_lte = CompiledPredicate {
+        kind: Some(CompiledCardKind::Digimon),
+        dp_lte: Some(CompiledDpConstraint::Literal(3000)),
+        ..Default::default()
+    };
+    assert!(eval_predicate_with_bindings(
+        &dp_lte,
+        &rctx,
+        PredicateSubject::Permanent(low),
+        None
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &dp_lte,
+        &rctx,
+        PredicateSubject::Permanent(high),
+        None
+    ));
+
+    let dp_gte = CompiledPredicate {
+        kind: Some(CompiledCardKind::Digimon),
+        dp_gte: Some(CompiledDpConstraint::Literal(7000)),
+        ..Default::default()
+    };
+    assert!(!eval_predicate_with_bindings(
+        &dp_gte,
+        &rctx,
+        PredicateSubject::Permanent(low),
+        None
+    ));
+    assert!(eval_predicate_with_bindings(
+        &dp_gte,
+        &rctx,
+        PredicateSubject::Permanent(high),
+        None
+    ));
+}
+
+#[test]
+fn play_cost_lte_filters_cards_and_permanents() {
+    let mut runner = runner_with_dp_cards();
+    let cheap = runner.game.players[0].hand[1].handle();
+    let expensive = runner.game.players[0].hand[2].handle();
+    let high = runner.place_on_field(0, "HIGH-DP", None);
+    let rctx = EffectReadContext::new(&runner.game, src_card(&runner), None, 0);
+    let pred = CompiledPredicate {
+        play_cost_lte: Some(3),
+        ..Default::default()
+    };
+
+    assert!(eval_predicate_with_bindings(
+        &pred,
+        &rctx,
+        PredicateSubject::Card(cheap),
+        None
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &pred,
+        &rctx,
+        PredicateSubject::Card(expensive),
+        None
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &pred,
+        &rctx,
+        PredicateSubject::Permanent(high),
+        None
+    ));
+}
+
+#[test]
+fn not_in_binding_excludes_permanent_list_members_in_for_each() {
+    let mut runner = runner_with_dp_cards();
+    let saved = runner.place_on_field(0, "LOW-DP", None);
+    let deleted = runner.place_on_field(0, "HIGH-DP", None);
+    let source = src_card(&runner);
+    let memory_before = runner.game.memory;
+    let steps = vec![CompiledStep::ForEach {
+        over: CompiledPredicate {
+            kind: Some(CompiledCardKind::Digimon),
+            not_in_binding: Some("saved".to_string()),
+            ..Default::default()
+        },
+        bind_as: "candidate".to_string(),
+        body: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent_list("saved", vec![saved]);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(runner.game.memory, memory_before + 1);
+    assert_eq!(
+        runner.game.players[deleted.player as usize].battle_area[deleted.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "HIGH-DP"
+    );
+}
+
+#[test]
+fn not_in_binding_requires_existing_binding() {
+    let mut runner = runner_with_dp_cards();
+    let low = runner.place_on_field(0, "LOW-DP", None);
+    let rctx = EffectReadContext::new(&runner.game, src_card(&runner), None, 0);
+    let pred = CompiledPredicate {
+        not_in_binding: Some("missing".to_string()),
+        ..Default::default()
+    };
+    assert!(!eval_predicate_with_bindings(
+        &pred,
+        &rctx,
+        PredicateSubject::Permanent(low),
+        Some(&Bindings::new()),
+    ));
+}
+
+#[test]
+fn add_modifier_filter_threads_bindings_for_not_in_binding() {
+    let mut runner = runner_with_dp_cards();
+    let saved = runner.place_on_field(0, "LOW-DP", None);
+    let target = runner.place_on_field(0, "HIGH-DP", None);
+    let source = src_card(&runner);
+    let steps = vec![CompiledStep::AddModifier {
+        target: CompiledModifierTarget::Filter(CompiledPredicate {
+            kind: Some(CompiledCardKind::Digimon),
+            not_in_binding: Some("saved".to_string()),
+            ..Default::default()
+        }),
+        modifier: "CannotBeAffected".to_string(),
+        value: CompiledModifierValue::Literal(0),
+        expiry: "end_of_turn".to_string(),
+    }];
+
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent_list("saved", vec![saved]);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert!(
+        !runner
+            .game
+            .modifiers
+            .has(saved, ModifierType::CannotBeAffected),
+        "bound permanent should be excluded from the modifier filter"
+    );
+    assert!(
+        runner
+            .game
+            .modifiers
+            .has(target, ModifierType::CannotBeAffected),
+        "unbound permanent should receive the modifier"
+    );
+}
+
+#[test]
+fn select_hand_uses_play_cost_lte_for_valid_actions() {
+    let mut runner = runner_with_dp_cards();
+    let source = src_card(&runner);
+    let steps = vec![CompiledStep::SelectHand {
+        of: digimon_dsl::compiled::CompiledPlayerRef::You,
+        filter: CompiledPredicate {
+            kind: Some(CompiledCardKind::Digimon),
+            play_cost_lte: Some(3),
+            ..Default::default()
+        },
+        bind_as: Some("pick".to_string()),
+        prompt: "Pick cheap".to_string(),
+        prompt_key: None,
+        optional: false,
+    }];
+
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("select_hand should install a pending selection");
+    assert_eq!(pending.valid_action_ids, vec![PLAY_HAND_START + 1]);
+}
+
+#[test]
+fn select_trash_uses_play_cost_lte_for_valid_actions() {
+    let mut runner = runner_with_dp_cards();
+    let source = src_card(&runner);
+    let low = runner.game.players[0].hand.remove(1);
+    let high = runner.game.players[0].hand.remove(1);
+    runner.game.players[0].trash.push(low);
+    runner.game.players[0].trash.push(high);
+    let steps = vec![CompiledStep::SelectTrash {
+        of: digimon_dsl::compiled::CompiledPlayerRef::You,
+        filter: CompiledPredicate {
+            kind: Some(CompiledCardKind::Digimon),
+            play_cost_lte: Some(3),
+            ..Default::default()
+        },
+        bind_as: Some("pick".to_string()),
+        prompt: "Pick cheap trash".to_string(),
+        prompt_key: None,
+        optional: false,
+    }];
+
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("select_trash should install a pending selection");
+    assert_eq!(pending.valid_action_ids, vec![TRASH_EFFECT_START]);
+}
