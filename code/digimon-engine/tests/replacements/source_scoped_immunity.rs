@@ -2,9 +2,24 @@
 
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{Expiry, ModifierType};
+use digimon_engine::enums::{CardKind, Expiry, ModifierType};
 use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::{SecurityPhase, SecurityResolutionState};
+
+fn active_security_resolution(defender: u8) -> SecurityResolutionState {
+    SecurityResolutionState {
+        attacker: None,
+        defender,
+        turn_player: 1 - defender,
+        revealed_card: digimon_engine::card_source::CardHandle(999),
+        card_kind: CardKind::Option,
+        was_face_up: false,
+        phase: SecurityPhase::SecuritySkillDrain,
+        checks_remaining: 0,
+        outcome_so_far: digimon_engine::combat::AttackResult::SecurityCheckSurvived,
+    }
+}
 
 fn card(id: &str) -> digimon_engine::CardData {
     make_test_card(id, id)
@@ -125,5 +140,65 @@ fn effect_context_grants_zone_return_immunity_to_opponent_effects() {
     assert!(!r.game.return_to_deck_from_effect(target, 1));
     assert!(!r.game.de_digivolve_from_effect(target, 1, 1));
     assert!(r.game.return_to_hand_from_effect(target, 0));
+    assert_eq!(r.game.player(0).hand.len(), 1);
+}
+
+#[test]
+fn opponent_security_effect_cannot_return_or_de_digivolve_protected_digimon() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("P-215"))
+        .add_card(card("BT17-064"))
+        .start();
+    let target = r.place_stack(0, &["BT17-064", "P-215"]);
+    r.game.modifiers.add(
+        target,
+        ModifierEntry::passive_replacement(
+            ModifierType::CannotBeReturnedToHand,
+            Expiry::Permanent,
+            0,
+        ),
+    );
+    r.game.modifiers.add(
+        target,
+        ModifierEntry::passive_replacement(
+            ModifierType::CannotBeDeDigivolved,
+            Expiry::Permanent,
+            0,
+        ),
+    );
+    r.game.security_resolution = Some(active_security_resolution(1));
+
+    assert!(
+        !r.game.return_to_hand_from_effect(target, 1),
+        "opponent-controlled security effect should still be OpponentEffect"
+    );
+    assert!(
+        !r.game.de_digivolve_from_effect(target, 1, 1),
+        "opponent-controlled security effect should not become SecurityCheck"
+    );
+    assert_eq!(r.game.player(0).battle_area.len(), 1);
+    assert_eq!(r.game.player(0).battle_area[0].card_sources.len(), 2);
+    assert!(r.game.player(0).hand.is_empty());
+}
+
+#[test]
+fn security_resolution_without_effect_source_does_not_trigger_opponent_only_immunity() {
+    let mut r = DebugRunner::builder().add_card(card("BT18-064")).start();
+    let target = r.place_on_field(0, "BT18-064", Some(0));
+    r.game.modifiers.add(
+        target,
+        ModifierEntry::passive_replacement(
+            ModifierType::CannotBeReturnedToHand,
+            Expiry::Permanent,
+            0,
+        ),
+    );
+    r.game.security_resolution = Some(active_security_resolution(1));
+
+    assert!(
+        r.game.return_to_hand(target).is_some(),
+        "rule-level security resolution should remain SecurityCheck, not OpponentEffect"
+    );
+    assert!(r.game.player(0).battle_area.is_empty());
     assert_eq!(r.game.player(0).hand.len(), 1);
 }

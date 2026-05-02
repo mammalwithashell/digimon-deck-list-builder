@@ -2134,12 +2134,15 @@ impl Game {
         Some(top_handle)
     }
 
-    /// Bounce a permanent to hand as an effect controlled by `effect_player`.
+    /// Low-level source-attribution helper for tests and engine internals.
     ///
     /// The underlying movement still routes through `return_to_hand`, including
     /// replacement windows and source-disposition triggers; this wrapper only
     /// supplies effect source attribution so opponent-only protection can
-    /// distinguish own effects from opponent effects.
+    /// distinguish own effects from opponent effects. Production card effects
+    /// should prefer `EffectContext::return_to_hand`, which also enforces
+    /// `can_affect_permanent` gates and uses real source metadata.
+    #[doc(hidden)]
     pub fn return_to_hand_from_effect(
         &mut self,
         handle: PermanentHandle,
@@ -2169,12 +2172,13 @@ impl Game {
         self.return_to_deck_inner(handle, position, false)
     }
 
-    /// Return a permanent's top card to the bottom of its owner's deck as an
-    /// effect controlled by `effect_player`.
+    /// Low-level source-attribution helper for tests and engine internals.
     ///
     /// This is the source-attributed companion to `return_to_deck`; callers
-    /// that need top/random placement should keep using the lower-level route
-    /// while explicitly managing effect source context.
+    /// that need production effect semantics should prefer
+    /// `EffectContext::return_to_deck`, which also enforces
+    /// `can_affect_permanent` gates and uses real source metadata.
+    #[doc(hidden)]
     pub fn return_to_deck_from_effect(
         &mut self,
         handle: PermanentHandle,
@@ -2187,12 +2191,15 @@ impl Game {
         moved
     }
 
-    /// De-Digivolve a permanent as an effect controlled by `effect_player`.
+    /// Low-level source-attribution helper for tests and engine internals.
     ///
     /// Uses the standard De-Digivolve floor (`stop_at_level = Some(3)`) and
     /// returns whether at least one card was popped. Replacement windows are
     /// resolved by `EffectContext::de_digivolve` under the supplied source
-    /// attribution.
+    /// attribution. Production card effects should prefer an existing
+    /// `EffectContext` so `can_affect_permanent` and source-kind metadata come
+    /// from the real resolving card.
+    #[doc(hidden)]
     pub fn de_digivolve_from_effect(
         &mut self,
         handle: PermanentHandle,

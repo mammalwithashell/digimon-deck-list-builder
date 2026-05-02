@@ -1117,24 +1117,31 @@ ModifierEntry::passive_replacement(ModifierType::CannotBeDeDigivolved)
 
 Cause-filter semantics: `.opponent_only()` sets `cause_filter = Some(OpponentEffect)`. Absent filter = cause-agnostic (fires for any cause).
 
-Source-scoped movement helpers:
+Production source-scoped movement helpers:
 
 ```rust
-game.return_to_hand_from_effect(target, effect_player) -> bool
-game.return_to_deck_from_effect(target, effect_player) -> bool
-game.de_digivolve_from_effect(target, effect_player, amount) -> bool
+ctx.return_to_hand(target) -> Option<CardHandle>
+ctx.return_to_deck(target, position) -> bool
+ctx.de_digivolve(target, stop_at_level, amount) -> u8
 
 ctx.grant_zone_return_immunity_to_opponent_effects(target, expiry)
 ```
 
-The `Game::*_from_effect` helpers temporarily supply `effect_source_player`
-before routing through the normal `return_to_hand`, `return_to_deck`, and
-`EffectContext::de_digivolve` fire-sites. Passive entries such as
-`CannotBeReturnedToHand`, `CannotBeReturnedToDeck`, and
+Card scripts should use the `EffectContext` movement helpers above: they
+enforce `can_affect_permanent`, carry the real source kind/controller, and
+route through normal replacement windows. During queued effects, including
+security-card effects, the engine supplies `effect_source_player`; passive
+entries such as `CannotBeReturnedToHand`, `CannotBeReturnedToDeck`, and
 `CannotBeDeDigivolved` therefore cancel only when their default
-`cause_filter = Some(OpponentEffect)` matches. The `EffectContext` helper
-installs exactly that narrow three-modifier bundle; do not substitute broad
-`CannotBeAffected` for printed return/de-digivolve protection.
+`cause_filter = Some(OpponentEffect)` matches. Security battle/rule cleanup
+with no resolving card effect remains `ReplacementCause::SecurityCheck`.
+
+The doc-hidden `Game::*_from_effect` methods are low-level attribution
+helpers for tests and engine internals. They do not replace `EffectContext`
+for production card scripts because they do not perform source-kind immunity
+checks themselves. The `EffectContext` grant helper installs exactly the
+narrow three-modifier bundle; do not substitute broad `CannotBeAffected` for
+printed return/de-digivolve protection.
 
 ### Native-keyword auto-install (Task 6)
 
@@ -2132,11 +2139,8 @@ Effect::on_play(card).process(|ctx| {
 | `trash_from_hand_by_index(player, hand_index)` → `Option<CardHandle>` | Trash a specific hand slot. |
 | `trash_from_reveal(player, CardHandle)` → `bool` | Trash a revealed card. |
 | `return_to_hand(PermanentHandle)` → `Option<CardHandle>` | Bounce a permanent: top → hand, sources under → trash. |
-| `return_to_hand_from_effect(PermanentHandle, effect_player)` → `bool` | Source-attributed bounce to hand; opponent-only passives can cancel, own effects can pass. |
 | `return_to_deck(PermanentHandle, StackPosition)` → `bool` | Bounce to deck at Top/Bottom/Random. |
-| `return_to_deck_from_effect(PermanentHandle, effect_player)` → `bool` | Source-attributed return to bottom of deck; uses normal replacement windows. |
 | `return_to_deck_from_reveal(player, CardHandle, StackPosition)` → `bool` | Reveal pool → deck. |
-| `de_digivolve_from_effect(PermanentHandle, effect_player, amount)` → `bool` | Source-attributed standard De-Digivolve floor (`stop_at_level = 3`); returns true if any source popped. |
 | `shuffle_deck(player)` | Pair with `add_to_hand_from_deck` for "search and shuffle" effects. |
 
 ### Reveal pool

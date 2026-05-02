@@ -1034,10 +1034,16 @@ impl Game {
     /// live signals are security-resolution and the effect-source player.
     ///
     /// Priority:
-    ///   1. `security_resolution.is_some()` → `SecurityCheck`
-    ///   2. `effect_source_player.is_some()` — compare against `target_player`;
+    ///   1. `effect_source_player.is_some()` — compare against `target_player`;
     ///      equal → `OwnEffect`, else `OpponentEffect`.
+    ///   2. `security_resolution.is_some()` → `SecurityCheck`
     ///   3. Fallback → `OwnEffect`.
+    ///
+    /// Security card effects still run as card effects: `run_queued_effect`
+    /// sets `effect_source_player` before the effect body mutates state. The
+    /// ambient `security_resolution` state is only a `SecurityCheck` cause when
+    /// no card effect is currently resolving (for example, rule cleanup or
+    /// security battle resolution).
     ///
     /// Consumed by Task 4 fire-sites in `game_actions` / `effect_context`.
     pub(crate) fn infer_effect_cause(
@@ -1045,14 +1051,14 @@ impl Game {
         target_player: PlayerId,
     ) -> crate::replacement::ReplacementCause {
         use crate::replacement::ReplacementCause;
-        if self.security_resolution.is_some() {
-            return ReplacementCause::SecurityCheck;
-        }
         if let Some(acting) = self.effect_source_player {
             if acting == target_player {
                 return ReplacementCause::OwnEffect;
             }
             return ReplacementCause::OpponentEffect;
+        }
+        if self.security_resolution.is_some() {
+            return ReplacementCause::SecurityCheck;
         }
         ReplacementCause::OwnEffect
     }
