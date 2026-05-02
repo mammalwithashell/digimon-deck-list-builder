@@ -723,7 +723,13 @@ impl Game {
         let total_reduction =
             self.scan_before_pay_cost_reduction(player_id, CostReductionKind::OptionUse);
         let base_cost = printed_cost as i32;
-        let effective_cost = (base_cost - total_reduction).max(0) as u16;
+        let link_cost = self
+            .effects_for_card(&card_id, card_handle)
+            .unwrap_or_default()
+            .iter()
+            .find_map(|effect| effect.link_cost)
+            .unwrap_or(0);
+        let effective_cost = (base_cost - total_reduction).max(0) as u16 + link_cost;
         if !self.pay_memory(effective_cost) {
             return OptionPlayResult::Invalid;
         }

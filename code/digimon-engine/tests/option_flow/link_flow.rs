@@ -648,3 +648,100 @@ effects:
         1
     );
 }
+
+#[test]
+fn dsl_link_requirement_pays_nonzero_link_cost_before_host_selection() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-COST", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["LINK-COST"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(
+        &mut r,
+        r#"
+card: LINK-COST
+name: Costed Link
+kind: option
+effects:
+  - kind: link_requirement
+    scope: inherited
+    cost: 2
+    filter: { kind: digimon }
+"#,
+    );
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    assert_eq!(r.memory(), 1, "Link requirement cost is paid");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "host selection remains player-visible after cost payment"
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn dsl_link_requirement_blocks_host_selection_when_link_cost_unaffordable() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-COST", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["LINK-COST"])
+        .memory(0)
+        .start();
+    register_dsl_yaml(
+        &mut r,
+        r#"
+card: LINK-COST
+name: Costed Link
+kind: option
+effects:
+  - kind: link_requirement
+    scope: inherited
+    cost: 1
+    filter: { kind: digimon }
+"#,
+    );
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+    r.game.set_memory(-10);
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[digimon_engine::action::space::PLAY_HAND_START as usize],
+        0.0,
+        "unaffordable Link cost must be masked before hand play"
+    );
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Invalid
+    );
+    assert_eq!(r.memory(), -10, "failed Link cost leaves memory unchanged");
+    assert_eq!(r.hand_size(0), 1, "unaffordable Link option stays in hand");
+    assert_eq!(
+        r.trash_size(0),
+        0,
+        "unaffordable Link option is not disposed"
+    );
+    assert!(
+        r.game.pending_selection.is_none(),
+        "unpaid Link cost must not expose a host-selection prompt"
+    );
+    assert!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .is_empty(),
+        "unpaid Link cost must not attach for free"
+    );
+}

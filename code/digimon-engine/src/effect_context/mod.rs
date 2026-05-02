@@ -638,26 +638,45 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn place_self_as_delay_option_permanent(&mut self) {
-        let Some(source_perm) = self.source_permanent else {
-            return;
-        };
-        if !matches!(
-            self.game.card_kind_for_handle(self.source_card),
-            Some(CardKind::Option)
-        ) {
-            return;
-        }
-        let Some(source_card) =
-            self.remove_source_card_from_permanent(source_perm, self.source_card)
-        else {
-            return;
+        let source_card = if let Some(source_perm) = self.source_permanent {
+            if !matches!(
+                self.game.card_kind_for_handle(self.source_card),
+                Some(CardKind::Option)
+            ) {
+                return;
+            }
+            let Some(source_card) =
+                self.remove_source_card_from_permanent(source_perm, self.source_card)
+            else {
+                return;
+            };
+            source_card
+        } else {
+            let Some(pending) = self.game.pending_security.take() else {
+                return;
+            };
+            if pending.played
+                || pending.card.handle() != self.source_card
+                || pending.card.card_kind(&self.game.card_data) != CardKind::Option
+            {
+                self.game.pending_security = Some(pending);
+                return;
+            }
+            pending.card
         };
 
         // The physical Option moves to its card owner/controller's battle area,
         // matching normal Delay placement from hand/trash.
         let owner = source_card.owner;
         let placed_card = source_card.handle();
-        let trigger = DelayTrigger::EndOfYourNextTurn;
+        let card_id = source_card.card_id(&self.game.card_data).to_string();
+        let trigger = self
+            .game
+            .effects_for_card(&card_id, placed_card)
+            .unwrap_or_default()
+            .iter()
+            .find_map(|effect| effect.delay_trigger)
+            .unwrap_or(DelayTrigger::EndOfYourNextTurn);
         let mut permanent = Permanent::new(source_card, self.game.turn_count);
         permanent.option_state = crate::permanent::OptionState::Delayed {
             owner,
