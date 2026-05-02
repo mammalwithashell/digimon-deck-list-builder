@@ -53,6 +53,23 @@ def test_resolve_profiles_canonicalizes_compact_alias(monkeypatch):
     assert all(item.available for item in resolved)
 
 
+def test_real_profile_resolution_includes_compact_lite_and_full():
+    pytest.importorskip("digimon_engine")
+    from digimon_gym.agents.tensor_profile_gauntlet import resolve_profile_requests
+
+    resolved = resolve_profile_requests(
+        ("compact_v1", "standard_lite_v2", "standard_full_v2"),
+        require_profiles=True,
+    )
+
+    assert [item.profile.id for item in resolved] == [
+        "standard_compact_v1",
+        "standard_lite_v2",
+        "standard_full_v2",
+    ]
+    assert [item.profile.tensor_size for item in resolved] == [1375, 8320, 43008]
+
+
 def test_resolve_profiles_records_skip_when_profile_missing(monkeypatch):
     from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
 
