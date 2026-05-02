@@ -1,10 +1,5 @@
-"""Shared async DB fixtures for API-layer tests.
+"""Shared async DB fixtures for API-layer tests."""
 
-Per-test ephemeral in-memory SQLite instances — each test gets a clean
-schema. Do not use for tests that also need the full FastAPI app wired
-up (those files still set up their own `client` fixture with router
-resets, e.g. test_matchmaking.py / test_admin_models.py).
-"""
 from __future__ import annotations
 
 import pytest
@@ -15,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from server.db.models import Base
+from server.limiter import limiter
 
 
 @pytest.fixture
@@ -38,12 +34,15 @@ async def db_session(db_engine):
 
 
 @pytest.fixture(autouse=True)
-def _reset_rate_limit():
-    """Wipe /auth/guest rate-limit state before and after every API test so
-    earlier tests that mint several guests don't trip the limit in later tests.
-    """
+def _reset_api_limits():
+    """Keep in-process auth limits isolated between tests."""
     from server.db.routers.auth import _reset_guest_rate_limit
 
+    prev = limiter.enabled
+    limiter.enabled = False
     _reset_guest_rate_limit()
-    yield
-    _reset_guest_rate_limit()
+    try:
+        yield
+    finally:
+        _reset_guest_rate_limit()
+        limiter.enabled = prev

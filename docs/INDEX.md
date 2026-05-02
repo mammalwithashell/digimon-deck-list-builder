@@ -8,6 +8,8 @@
 | [ACTION_SPEC.md](ACTION_SPEC.md) | Action space (2168 actions) — ranges and conventions |
 | [TRAINING_RUNBOOK.md](TRAINING_RUNBOOK.md) | RL training operations guide |
 | [TOOLS.md](TOOLS.md) | CLI tools reference — card pipeline, transpiler, Pinecone, model export |
+| [MODEL_CATALOG.md](MODEL_CATALOG.md) | ONNX model catalog — admin upload, desktop cache, storage backends, integrity |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Hosted API deployment — DigitalOcean topology, env vars, bootstrap |
 | [RUST_ENGINE_API.md](RUST_ENGINE_API.md) | Rust engine scripting reference — `CardEffect`, `EffectContext`, `Expiry`, `ModifierType`, common patterns, DebugRunner |
 | [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) | Rust ↔ Python engine parity tracker — every known behavioral divergence with severity and fix order |
 | [RUST_ENGINE_GAPS.md](RUST_ENGINE_GAPS.md) | Rust engine capability gaps surfaced by archetype audits (`assess-rust-engine-archetype`) — primitives still needed before each archetype can ship under the no-approximations policy |

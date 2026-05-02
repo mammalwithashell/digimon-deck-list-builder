@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
+from server.config import settings
 from server.db.auth import decode_access_token
 from engine_py_legacy.engine.runners.interactive_game import InteractiveGame
 from engine_py_legacy.engine.state_filter import filter_state_for_player
@@ -28,6 +29,14 @@ def _authenticate_ws(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _major_version(semver: str) -> Optional[int]:
+    """Return the major component of a semver string, or None if malformed."""
+    try:
+        return int(semver.split(".", 1)[0])
+    except (AttributeError, ValueError):
+        return None
+
+
 @router.websocket("/ws/games/{game_id}")
 async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     """WebSocket endpoint for live game participation or spectating.
@@ -38,11 +47,21 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     """
     token = websocket.query_params.get("token", "")
     role = websocket.query_params.get("role", "player")
+    client_engine_version = websocket.query_params.get("engine_version", "")
 
     # Authenticate
     payload = _authenticate_ws(token)
     if payload is None:
         await websocket.close(code=4001, reason="Invalid or missing auth token")
+        return
+
+    server_major = _major_version(settings.engine_version)
+    client_major = _major_version(client_engine_version)
+    if server_major is None or client_major != server_major:
+        await websocket.close(
+            code=4002,
+            reason=f"Engine version mismatch; server={settings.engine_version}",
+        )
         return
 
     user_id: str = payload["sub"]
@@ -65,17 +84,17 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
 
     if role == "player":
         # Assign player_id based on lobby metadata stored in manager settings
-        settings = manager.get_settings(game_id)
+        game_settings = manager.get_settings(game_id)
 
         # Check if this user is reconnecting to a previously assigned slot
         existing_pid = manager.player_id_for_user(game_id, user_id)
         if existing_pid is not None:
             player_id = existing_pid
-        elif settings.host_user_id == user_id:
+        elif game_settings.host_user_id == user_id:
             player_id = 1
-        elif settings.joiner_user_id == user_id:
+        elif game_settings.joiner_user_id == user_id:
             player_id = 2
-        elif settings.joiner_user_id is None and manager.player_count(game_id) < 2:
+        elif game_settings.joiner_user_id is None and manager.player_count(game_id) < 2:
             # No lobby join tracking (e.g. direct game creation) — allow if slot open
             player_id = manager.next_available_slot(game_id)
         # else: player_id stays None → downgraded to spectator
@@ -98,6 +117,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
             "state": spec_state,
             "current_player_id": runner.game.current_player_id,
             "is_game_over": runner.is_game_over,
+            "engine_version": settings.engine_version,
         })
         await _spectator_loop(websocket, game_id)
         return
@@ -127,6 +147,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
         "current_player_id": current_pid,
         "is_game_over": runner.is_game_over,
         "your_player_id": player_id,
+        "engine_version": settings.engine_version,
     })
 
     # Send spectator count

@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import secrets
-import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence, Set
 
@@ -16,24 +14,13 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.config import settings
 from server.db.database import get_db
 from server.db.models import RefreshToken, Role, User, UserRole
 
-# ── Configuration ───────────────────────────────────────────────────────
+# - Configuration ---------------------------------------------------------
 
-_DEFAULT_SECRET_KEY = "CHANGE-ME-IN-PRODUCTION"
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or _DEFAULT_SECRET_KEY
-if SECRET_KEY == _DEFAULT_SECRET_KEY and os.environ.get("DIGIMON_ENV") == "production":
-    raise RuntimeError(
-        "JWT_SECRET_KEY must be set in production. Refusing to start with "
-        "the default development key."
-    )
-if SECRET_KEY == _DEFAULT_SECRET_KEY:
-    warnings.warn(
-        "Using default JWT_SECRET_KEY. Set JWT_SECRET_KEY environment "
-        "variable for non-development deployments.",
-        stacklevel=2,
-    )
+SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 30

@@ -1,18 +1,12 @@
 """add app_releases and app_release_artifacts tables
 
 Revision ID: 20260421_0015
-Revises: 20260417_0014
+Revises: 20260417_0014, 20260417_0014_deck_meta
 Create Date: 2026-04-21
 
-NOTE: The repo currently has two migration files that both declare
-`revision = "20260417_0014"` (`20260417_0014_ai_models.py` and
-`20260417_0014_add_deck_meta_tier.py`). Alembic's revision map silently
-resolves the duplicate ID to the `ai_models` file, while still reporting
-two heads. Setting `down_revision = "20260417_0014"` chains this migration
-off the resolved revision, collapsing the ambiguous head set back to a
-single head. The duplicate-revision-ID issue is pre-existing and out of
-scope for this change; see `20260417_0014_add_deck_meta_tier.py`'s header
-for context.
+NOTE: This migration joins the AI model and deck-meta branches before app
+release tables are added. The deck-meta revision was made unique during the
+PR 316 conflict resolution so Alembic no longer has duplicate revision ids.
 """
 from __future__ import annotations
 
@@ -21,7 +15,7 @@ import sqlalchemy as sa
 
 
 revision = "20260421_0015"
-down_revision = "20260417_0014"
+down_revision = ("20260417_0014", "20260417_0014_deck_meta")
 branch_labels = None
 depends_on = None
 

@@ -6,9 +6,10 @@ import os
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from server.config import settings
 from server.db.models import Base
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/app.db")
+DATABASE_URL = settings.database_url or os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/app.db")
 
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):

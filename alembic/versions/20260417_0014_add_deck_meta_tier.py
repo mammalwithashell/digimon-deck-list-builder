@@ -1,15 +1,12 @@
 """add matchmaking fields: decks.meta_tier/meta_archetype + users.rating
 
-Revision ID: 20260417_0014
-Revises: 20260414_0013
+Revision ID: 20260417_0014_deck_meta
+Revises: 27fb7ae4b4a4
 Create Date: 2026-04-17
 
-NOTE: The repo currently has two migrations sharing revision ID
-`20260414_0013` (`add_deck_alt_arts` and `patch_notes`). Alembic reports
-both as heads and warns on `alembic heads`. This migration chains off that
-ambiguous revision — the duplicate-head issue is pre-existing and out of
-scope for this change. Whichever `_0013` runs last, this migration runs
-after it.
+NOTE: This migration used to share revision id `20260417_0014` with the
+AI model migration. It now has a unique id and chains after the
+patch-notes/alt-arts merge placeholder so Alembic can build one revision map.
 """
 
 from __future__ import annotations
@@ -18,8 +15,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "20260417_0014"
-down_revision = "20260414_0013"
+revision = "20260417_0014_deck_meta"
+down_revision = "27fb7ae4b4a4"
 branch_labels = None
 depends_on = None
 
