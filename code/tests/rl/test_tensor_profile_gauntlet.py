@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -227,6 +228,82 @@ def test_run_profile_games_raises_when_games_exceed_available_seeds(monkeypatch)
         )
 
 
+def test_run_profile_games_forces_rust_backend_and_restores_env(monkeypatch):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    observed_backends = []
+
+    class BackendCapturingEnv(FakeEnv):
+        def __init__(self, deck1=None, deck2=None, tensor_profile=None):
+            observed_backends.append(os.environ.get("DIGIMON_BACKEND"))
+            super().__init__(deck1=deck1, deck2=deck2, tensor_profile=tensor_profile)
+
+        def reset(self, seed=None):
+            observed_backends.append(os.environ.get("DIGIMON_BACKEND"))
+            return super().reset(seed=seed)
+
+        def step(self, action):
+            observed_backends.append(os.environ.get("DIGIMON_BACKEND"))
+            return super().step(action)
+
+    monkeypatch.delenv("DIGIMON_BACKEND", raising=False)
+    monkeypatch.setattr(gauntlet, "DigimonEnv", BackendCapturingEnv)
+    monkeypatch.setattr(gauntlet, "greedy_policy", lambda env: 62)
+
+    gauntlet.run_profile_games(
+        requested_profile="standard_lite_v2",
+        profile=fake_profile("standard_lite_v2", 8320),
+        config=gauntlet.TensorProfileRunConfig(
+            profiles=("standard_lite_v2",),
+            games_per_profile=1,
+            seeds=(11,),
+            max_steps_per_game=10,
+            policy="greedy",
+        ),
+        clock=clock_from((40.0, 41.0)),
+    )
+
+    assert observed_backends
+    assert set(observed_backends) == {"rust"}
+    assert "DIGIMON_BACKEND" not in os.environ
+
+
+def test_run_profile_games_uses_configured_policy_only_for_player_one(monkeypatch):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    actions = []
+
+    class AlternatingPlayerEnv(FakeEnv):
+        def step(self, action):
+            actions.append(action)
+            self._steps += 1
+            if self._steps == 1:
+                self.current_player_id = 2
+                return [0.0], 0.0, False, False, {}
+            self.is_game_over = True
+            self.winner_id = 1
+            return [0.0], 0.0, True, False, {}
+
+    monkeypatch.setattr(gauntlet, "DigimonEnv", AlternatingPlayerEnv)
+    monkeypatch.setattr(gauntlet, "random_policy", lambda env: 101)
+    monkeypatch.setattr(gauntlet, "greedy_policy", lambda env: 202)
+
+    gauntlet.run_profile_games(
+        requested_profile="standard_lite_v2",
+        profile=fake_profile("standard_lite_v2", 8320),
+        config=gauntlet.TensorProfileRunConfig(
+            profiles=("standard_lite_v2",),
+            games_per_profile=1,
+            seeds=(11,),
+            max_steps_per_game=10,
+            policy="random",
+        ),
+        clock=clock_from((50.0, 51.0)),
+    )
+
+    assert actions == [101, 202]
+
+
 def profile_with_sections(profile_id: str, tensor_size: int, sections):
     profile = fake_profile(profile_id, tensor_size)
     profile.sections = tuple(sections)
@@ -291,6 +368,42 @@ def test_trigger_order_accuracy_rejects_full_profile_without_action_rows():
     )
 
     correct, total = score_trigger_order_accuracy(profile)
+
+    assert correct == 1
+    assert total == 2
+
+
+def test_trigger_order_accuracy_lite_requires_nonzero_pending_probe():
+    from digimon_gym.agents.tensor_profile_gauntlet import score_trigger_order_accuracy_from_probe
+
+    profile = profile_with_sections(
+        "standard_lite_v2",
+        8320,
+        [section("pending_choice_features", 4992, 3072, (32, 96))],
+    )
+    tensor = [0.0] * profile.tensor_size
+
+    correct, total = score_trigger_order_accuracy_from_probe(profile, tensor)
+
+    assert correct == 0
+    assert total == 1
+
+
+def test_trigger_order_accuracy_full_requires_prompt_action_probe():
+    from digimon_gym.agents.tensor_profile_gauntlet import score_trigger_order_accuracy_from_probe
+
+    profile = profile_with_sections(
+        "standard_full_v2",
+        43008,
+        [
+            section("pending_choice_features", 4992, 3072, (32, 96)),
+            section("action_id_features", 8064, 34688, (2168, 16)),
+        ],
+    )
+    tensor = [0.0] * profile.tensor_size
+    tensor[4992] = 1.0
+
+    correct, total = score_trigger_order_accuracy_from_probe(profile, tensor)
 
     assert correct == 1
     assert total == 2

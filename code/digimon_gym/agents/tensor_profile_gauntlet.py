@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 import time
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Iterator, Sequence
 
 from digimon_gym.agents.pilot_training import random_policy
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy
@@ -197,20 +199,30 @@ def estimate_memory_footprint(
 
 
 def score_trigger_order_accuracy(profile: TensorProfile | Any) -> tuple[int, int]:
+    return score_trigger_order_accuracy_from_probe(profile, tensor=None)
+
+
+def score_trigger_order_accuracy_from_probe(
+    profile: TensorProfile | Any,
+    tensor: Any | None,
+) -> tuple[int, int]:
     profile_id = str(profile.id)
-    section_names = {_section_name(section) for section in getattr(profile, "sections", ())}
+    sections = {_section_name(section): section for section in getattr(profile, "sections", ())}
+    probe = _synthetic_trigger_probe(profile, sections) if tensor is None else tensor
 
     if profile_id == "standard_compact_v1":
         return (0, 1)
 
     correct = 0
     total = 1
-    if "pending_choice_features" in section_names:
+    pending_section = sections.get("pending_choice_features")
+    if pending_section is not None and _section_has_nonzero_probe_value(probe, pending_section):
         correct += 1
 
     if profile_id == "standard_full_v2":
         total += 1
-        if "action_id_features" in section_names:
+        action_section = sections.get("action_id_features")
+        if action_section is not None and _section_has_prompt_action_probe(probe, action_section):
             correct += 1
 
     return (correct, total)
@@ -218,6 +230,86 @@ def score_trigger_order_accuracy(profile: TensorProfile | Any) -> tuple[int, int
 
 def _section_name(section: Any) -> str:
     return str(getattr(section, "name", getattr(section, "id", "")))
+
+
+def _section_has_nonzero_probe_value(tensor: Any, section: Any) -> bool:
+    values = _section_values(tensor, section)
+    return any(float(value) != 0.0 for value in values)
+
+
+def _section_has_prompt_action_probe(tensor: Any, section: Any) -> bool:
+    row_width = _section_row_width(section, default=16)
+    if row_width <= 14:
+        return False
+    values = _section_values(tensor, section)
+    row_count = len(values) // row_width
+    for row_index in range(row_count):
+        row_offset = row_index * row_width
+        if float(values[row_offset]) == 1.0 and float(values[row_offset + 14]) == 1.0:
+            return True
+    return False
+
+
+def _section_values(tensor: Any, section: Any) -> Sequence[Any]:
+    values = tensor.ravel() if hasattr(tensor, "ravel") else tensor
+    offset, size = _section_offset_size(section)
+    return values[offset : offset + size]
+
+
+def _synthetic_trigger_probe(profile: TensorProfile | Any, sections: dict[str, Any]) -> list[float]:
+    probe = [0.0] * int(getattr(profile, "tensor_size", 0))
+    pending_section = sections.get("pending_choice_features")
+    if pending_section is not None:
+        offset, size = _section_offset_size(pending_section)
+        if 0 <= offset < len(probe) and size > 0:
+            probe[offset] = 1.0
+
+    action_section = sections.get("action_id_features")
+    if action_section is not None:
+        offset, size = _section_offset_size(action_section)
+        row_width = _section_row_width(action_section, default=16)
+        prompt_flag_index = offset + 14
+        if (
+            row_width > 14
+            and size > 14
+            and 0 <= offset < len(probe)
+            and 0 <= prompt_flag_index < len(probe)
+        ):
+            probe[offset] = 1.0
+            probe[prompt_flag_index] = 1.0
+    return probe
+
+
+def _section_offset_size(section: Any) -> tuple[int, int]:
+    offset = int(getattr(section, "offset", 0))
+    size = int(getattr(section, "size", 0))
+    if size <= 0:
+        shape = getattr(section, "shape", ())
+        size = 1
+        for dimension in shape:
+            size *= int(dimension)
+    return offset, size
+
+
+def _section_row_width(section: Any, default: int) -> int:
+    shape = getattr(section, "shape", ())
+    if len(shape) >= 2:
+        return int(shape[1])
+    return default
+
+
+@contextmanager
+def _forced_backend(backend: str) -> Iterator[None]:
+    previous = os.environ.get("DIGIMON_BACKEND")
+    had_previous = "DIGIMON_BACKEND" in os.environ
+    os.environ["DIGIMON_BACKEND"] = backend
+    try:
+        yield
+    finally:
+        if had_previous:
+            os.environ["DIGIMON_BACKEND"] = previous if previous is not None else ""
+        else:
+            os.environ.pop("DIGIMON_BACKEND", None)
 
 
 def run_profile_games(
@@ -242,34 +334,36 @@ def run_profile_games(
     losses = 0
     draws = 0
 
-    for seed in seeds:
-        env = DigimonEnv(
-            deck1=list(DEFAULT_DECK),
-            deck2=list(DEFAULT_DECK),
-            tensor_profile=profile.id,
-        )
-        env.reset(seed=seed)
-        terminated = False
-        truncated = False
-        game_steps = 0
+    with _forced_backend("rust"):
+        for seed in seeds:
+            env = DigimonEnv(
+                deck1=list(DEFAULT_DECK),
+                deck2=list(DEFAULT_DECK),
+                tensor_profile=profile.id,
+            )
+            env.reset(seed=seed)
+            terminated = False
+            truncated = False
+            game_steps = 0
 
-        while not (terminated or truncated) and game_steps < config.max_steps_per_game:
-            action = int(policy_fn(env))
-            _obs, _reward, terminated, truncated, _info = env.step(action)
-            steps += 1
-            game_steps += 1
+            while not (terminated or truncated) and game_steps < config.max_steps_per_game:
+                acting_policy = policy_fn if getattr(env, "current_player_id", 1) == 1 else greedy_policy
+                action = int(acting_policy(env))
+                _obs, _reward, terminated, truncated, _info = env.step(action)
+                steps += 1
+                game_steps += 1
 
-        games_played += 1
-        if game_steps >= config.max_steps_per_game and not getattr(env, "is_game_over", False):
-            draws += 1
-            continue
-        winner_id = getattr(env, "winner_id", None)
-        if winner_id == 1:
-            wins += 1
-        elif winner_id == 2:
-            losses += 1
-        else:
-            draws += 1
+            games_played += 1
+            if game_steps >= config.max_steps_per_game and not getattr(env, "is_game_over", False):
+                draws += 1
+                continue
+            winner_id = getattr(env, "winner_id", None)
+            if winner_id == 1:
+                wins += 1
+            elif winner_id == 2:
+                losses += 1
+            else:
+                draws += 1
 
     elapsed = max(now() - start, 1e-9)
     trigger_order_correct, trigger_order_total = score_trigger_order_accuracy(profile)
