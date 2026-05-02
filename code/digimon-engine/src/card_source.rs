@@ -6,6 +6,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CardHandle(pub u16);
 
+/// Per-instance metadata visible only while a card is in the reveal pool.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RevealOverlay {
+    pub name: Option<String>,
+    pub kind: Option<CardKind>,
+}
+
 /// A card instance in the game — one per physical card in a deck/hand/field/trash.
 /// Links to static CardData for metadata.
 #[derive(Debug, Clone)]
@@ -20,6 +27,8 @@ pub struct CardSource {
     pub is_token: bool,
     /// "Also treated as" names granted by effects.
     pub also_treated_as: Vec<String>,
+    /// Temporary identity visible only to reveal-zone predicates.
+    pub reveal_overlay: Option<RevealOverlay>,
     /// `true` when this source was placed face-down (DCGO `IsFlipped` analog
     /// for digivolution-stack sources). Set only by `<Training>` (Phase F
     /// Task 6); `false` for all other sources. Consulted by `<Mind Link>`'s
@@ -37,6 +46,7 @@ impl CardSource {
             card_index,
             is_token: false,
             also_treated_as: Vec::new(),
+            reveal_overlay: None,
             face_down: false,
         }
     }
@@ -49,6 +59,7 @@ impl CardSource {
             card_index,
             is_token: true,
             also_treated_as: Vec::new(),
+            reveal_overlay: None,
             face_down: false,
         }
     }
@@ -56,6 +67,10 @@ impl CardSource {
     /// Get this card's handle.
     pub fn handle(&self) -> CardHandle {
         CardHandle(self.card_index)
+    }
+
+    pub fn clear_reveal_overlay(&mut self) {
+        self.reveal_overlay = None;
     }
 
     // --- Accessors that require CardData lookup ---

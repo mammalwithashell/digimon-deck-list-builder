@@ -33,6 +33,8 @@ fn attacker() -> CardData {
         effect_class_name: "ATK".to_string(),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -56,6 +58,8 @@ fn option(id: &str) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -229,6 +233,8 @@ fn digimon_security(id: &str, dp: i32) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

@@ -22,17 +22,20 @@ use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 
+const LOW_DP_TARGET: &str = "BT23-014-LOW-DP-TARGET";
+
 /// Standard fixture: Gallantmon registered, no cards in hand yet.
 fn gallantmon_runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT23-014")
         .expect("BT23-014 found in embedded DSL pack")
+        .add_card(low_dp_opponent())
         .memory(12)
         .start()
 }
 
 fn low_dp_opponent() -> CardData {
-    let mut card = make_test_card("OPP-9K", "OppLow9K");
+    let mut card = make_test_card(LOW_DP_TARGET, "LowDpTarget");
     card.dp = Some(9000);
     card
 }
@@ -357,11 +360,11 @@ fn bt23_014_on_play_with_no_opp_digimon_does_not_delete() {
 
 #[test]
 fn bt23_014_on_play_with_opp_digimon_present_deletes_it() {
-    // Place an opponent Digimon first, then play Gallantmon.
+    // Place an eligible opponent Digimon first, then play Gallantmon.
     let mut runner = gallantmon_in_hand();
 
     // With one opponent permanent, the dynamic cap is 8000 + 2000 = 10000.
-    runner.place_on_field(1, "OPP-9K", None);
+    runner.place_on_field(1, LOW_DP_TARGET, None);
     let opp_count_before = runner.game.players[1].battle_area.len();
 
     let _idx = runner.play(0, 0);
@@ -400,18 +403,16 @@ fn bt23_014_when_attacking_with_target_reduces_opp_field() {
     let mut runner = gallantmon_runner();
 
     let gallantmon = runner.place_on_field(0, "BT23-014", Some(0));
-    let _target = runner.place_on_field(1, "BT23-014", None);
+    let _target = runner.place_on_field(1, LOW_DP_TARGET, None);
     let opp_count_before = runner.game.players[1].battle_area.len();
 
     runner.attack_player(gallantmon, 1, false);
     runner.auto_resolve();
 
-    // After combat + auto-resolve, expect opp count to have decreased due to deletion
-    // OR combat resolution. Either way, the test validates the WA path fires.
     let opp_count_after = runner.game.players[1].battle_area.len();
     assert!(
-        opp_count_after <= opp_count_before,
-        "After [When Attacking] with eligible target, opp count should not increase; \
+        opp_count_after < opp_count_before,
+        "After [When Attacking] delete fires and auto-resolves, opp battle area should shrink; \
          before={}, after={}",
         opp_count_before,
         opp_count_after
@@ -444,10 +445,8 @@ fn bt23_014_compiled_card_has_when_attacking_clause() {
 }
 
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte predicate on permanents not evaluated yet"]
 fn bt23_014_dp_cap_with_3_opp_perms_is_14000() {
     // Formula: 8000 + 2000 × 3 = 14000.
-    // Blocked by G-PRED-DP-LTE: dp_lte predicate evaluator doesn't filter permanents.
     let mut runner = gallantmon_runner();
 
     let gallantmon = runner.place_on_field(0, "BT23-014", Some(0));

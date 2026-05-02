@@ -781,8 +781,15 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         index: 0,
         norm_id: 0.0,
         keywords,
+        ace_overflow: card.ace_overflow,
         dual: card.dual.as_ref().map(compiled_dual_to_engine),
+        digixros_aliases: card.digixros_aliases.clone(),
     }
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+pub fn card_data_for_test_from_compiled(card: &CompiledCard) -> CardData {
+    card_data_from_compiled(card)
 }
 
 #[cfg(feature = "dsl-yaml-loader")]
@@ -821,7 +828,9 @@ pub fn make_test_card(card_id: &str, card_name: &str) -> CardData {
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
         dual: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -890,7 +899,9 @@ pub fn make_test_egg(card_id: &str, card_name: &str) -> CardData {
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
         dual: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

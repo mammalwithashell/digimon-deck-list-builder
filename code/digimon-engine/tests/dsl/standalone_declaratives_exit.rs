@@ -34,6 +34,7 @@ fn base_card(id: &str, clauses: Vec<CompiledClause>) -> CompiledCard {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        digixros_aliases: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],

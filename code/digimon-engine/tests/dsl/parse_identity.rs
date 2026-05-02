@@ -28,3 +28,28 @@ identity:
     let inh = alias.when.has_inherited.as_ref().unwrap();
     assert_eq!(inh.card_number_is.as_deref(), Some("BT9-109"));
 }
+
+#[test]
+fn digixros_aliases_parse_without_generic_identity_leakage() {
+    let yaml = r#"
+card: XROS-ALIAS
+name: Alias Carrier
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 4000
+digixros_aliases: ["Shoutmon"]
+alt_paths:
+  - kind: digixros
+    materials:
+      - filter: { name_contains: "Shoutmon" }
+        repeat: { min: 1, max: 1 }
+    cost: 3
+"#;
+
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("parse");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile");
+    assert_eq!(compiled.digixros_aliases, vec!["Shoutmon"]);
+    assert!(compiled.identity.is_none());
+}

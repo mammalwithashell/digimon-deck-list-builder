@@ -70,6 +70,8 @@ fn reptile_digimon(card_id: &str, dp: i32) -> CardData {
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -93,6 +95,8 @@ fn plain_digimon(card_id: &str) -> CardData {
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

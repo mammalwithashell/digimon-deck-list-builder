@@ -67,6 +67,8 @@ fn plain_digimon(card_id: &str, play_cost: u16) -> CardData {
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -121,13 +123,7 @@ fn cost_reduction_amount_fn_uses_formula_value() {
     );
 
     let runner = DebugRunner::builder().build();
-    let ctx = EffectReadContext {
-        game: &runner.game,
-        source_card: CardHandle(0),
-        source_permanent: None,
-        player: 0,
-        cost_target_card: None,
-    };
+    let ctx = EffectReadContext::new(&runner.game, CardHandle(0), None, 0);
 
     assert_eq!(
         (effect.cost_reduction_fn.as_ref().expect("cost fn"))(&ctx),
@@ -158,13 +154,7 @@ fn cost_reduction_amount_fn_uses_raw_formula_registry() {
         .build();
     let permanent = runner.place_on_field(0, "REDUCER-RAW", None);
     let source = runner.game.player(0).battle_area[0].top_card().handle();
-    let ctx = EffectReadContext {
-        game: &runner.game,
-        source_card: source,
-        source_permanent: Some(permanent),
-        player: 0,
-        cost_target_card: None,
-    };
+    let ctx = EffectReadContext::new(&runner.game, source, Some(permanent), 0);
 
     assert_eq!(
         (effect.cost_reduction_fn.as_ref().expect("cost fn"))(&ctx),
@@ -216,11 +206,10 @@ effects:
     let reducer_compiled = digimon_dsl::compile::compile(&reducer_spec).expect("compile reducer");
 
     let mut runner = DebugRunner::builder()
-        .add_card(plain_digimon("TARGET-DSL", 6))
         .add_card(plain_digimon("REDUCER-DSL", 3))
         .add_card(plain_digimon("FILLER-DSL", 3))
         .deck(0, &["FILLER-DSL", "FILLER-DSL", "FILLER-DSL"])
-        .hand(0, &["TARGET-DSL"])
+        .hand(0, &["REDUCER-DSL"])
         .memory(10)
         .start();
     runner.register_effect(
@@ -232,8 +221,9 @@ effects:
     let deck_before = runner.game.players[0].deck.len();
     let trash_before = runner.game.players[0].trash.len();
     runner.play(0, 0);
+    runner.auto_resolve().expect("accept paid cost reducer");
 
-    assert_eq!(runner.memory(), 6, "printed cost 6 reduced by 2");
+    assert_eq!(runner.memory(), 9, "printed cost 3 reduced by 2");
     assert_eq!(runner.game.players[0].deck.len(), deck_before - 2);
     assert_eq!(runner.game.players[0].trash.len(), trash_before + 2);
 }

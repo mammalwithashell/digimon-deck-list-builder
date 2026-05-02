@@ -3,10 +3,37 @@
 //! `tests/effect_context/effect_initiated_dna_digivolve.rs` which covers
 //! the engine-effect path.
 
+use digimon_engine::action::{build_action_mask, DNA_DIGIVOLVE_START};
+use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{
     make_test_card, make_test_card_with_level, make_test_dna_card, DebugRunner,
 };
-use digimon_engine::enums::GamePhase;
+use digimon_engine::enums::{CardColor, CardKind, GamePhase};
+
+fn colored_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
+    CardData {
+        card_id: id.to_string(),
+        card_name: id.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(level),
+        dp: Some(4000),
+        play_cost: 4,
+        colors: vec![color],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        effect_class_name: id.replace('-', "_"),
+        index: 0,
+        norm_id: 0.0,
+        dual: None,
+        digixros_aliases: Vec::new(),
+        ace_overflow: None,
+    }
+}
 
 #[test]
 fn user_action_dna_digivolve_two_stage_resolution_merges_permanents() {
@@ -116,4 +143,43 @@ fn user_action_dna_digivolve_rejects_when_phase_is_not_main() {
     let ok = runner.game.initiate_dna_digivolve(0, 0);
     assert!(!ok, "non-Main phase must reject");
     assert!(runner.game.pending_selection.is_none());
+}
+
+#[test]
+fn authored_dna_alt_path_makes_dna_action_legal_for_bt20_016() {
+    let yaml = r#"
+card: BT20-016
+name: Paildramon
+kind: digimon
+level: 5
+color: [red, purple]
+cost: 8
+dp: 8000
+traits: [Dragonkin]
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color: red }
+      - { level_eq: 4, color: purple }
+    cost: 0
+effects: []
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("inline DNA alt-path DSL compiles")
+        .add_card(colored_digimon_level("RED-LV4", CardColor::Red, 4))
+        .add_card(colored_digimon_level("PURPLE-LV4", CardColor::Purple, 4))
+        .hand(0, &["BT20-016"])
+        .memory(3)
+        .start();
+
+    runner.game.current_phase = GamePhase::Main;
+    runner.place_on_field(0, "RED-LV4", Some(0));
+    runner.place_on_field(0, "PURPLE-LV4", Some(0));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[DNA_DIGIVOLVE_START as usize], 1.0,
+        "BT20-016's authored DNA alt_path must populate CardData.dna_costs for the user action mask",
+    );
 }

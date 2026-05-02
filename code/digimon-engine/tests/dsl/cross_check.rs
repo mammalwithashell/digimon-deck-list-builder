@@ -15,6 +15,7 @@ fn spec_with_overrides(card: &str, name: &str, kind: CardKind, cost: Option<i32>
         attribute: None,
         ace_overflow: None,
         identity: None,
+        digixros_aliases: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],

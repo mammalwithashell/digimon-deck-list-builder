@@ -34,6 +34,8 @@ fn plain_digimon(card_id: &str, play_cost: u16) -> CardData {
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

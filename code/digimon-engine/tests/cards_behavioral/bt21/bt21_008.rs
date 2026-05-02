@@ -452,11 +452,10 @@ fn bt21_008_on_play_picked_cards_are_in_hand_not_deck() {
     assert_eq!(runner.deck_size(0), 3);
 }
 
-/// All-filler case: Phase 2b accept-all filter means player is still offered
-/// all 3 cards even when none have Reptile/Dragonkin/LIBERATOR traits.
-/// The effect completes without panic and picks land in hand.
+/// All-filler case: the reveal filters find no legal Reptile/Dragonkin or
+/// LIBERATOR cards, so the effect returns all revealed cards and completes.
 #[test]
-fn bt21_008_on_play_all_filler_deck_phase2b_accept_all_completes() {
+fn bt21_008_on_play_all_filler_deck_returns_revealed_cards() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(ELIZAMON_YAML)
         .expect("BT21-008 YAML parses")
@@ -472,16 +471,14 @@ fn bt21_008_on_play_all_filler_deck_phase2b_accept_all_completes() {
     let deck_before = runner.deck_size(0);
     runner.play(0, 0);
 
-    // Phase 2b: all 3 revealed cards are offered. auto_resolve picks first action each time.
     let _ = runner.auto_resolve();
 
-    // 4 deck - 3 revealed + 1 returned = 2.
     assert_eq!(
         runner.deck_size(0),
-        deck_before - 2,
-        "deck should shrink by 2 (3 revealed, 1 returned)"
+        deck_before,
+        "deck should be restored when no revealed card matches either filter"
     );
-    assert_eq!(runner.hand_size(0), 2, "two picks should be in hand");
+    assert_eq!(runner.hand_size(0), 0, "no filler cards should be added");
 }
 
 // ── Section 4: Cost firing ───────────────────────────────────────────────────

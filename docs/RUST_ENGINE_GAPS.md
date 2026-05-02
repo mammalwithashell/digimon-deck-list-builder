@@ -66,7 +66,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [`<Delay>` keyword + placement-turn gating for Option cards](#delay-keyword--placement-turn-gating-for-option-cards) | 🔴 | 6 | `enums.rs`, `effect.rs`, `action/` (builds on Option flow) |
 | [Raid target-switch interrupt (scripting-surface, not mask-only)](#raid-target-switch-interrupt-scripting-surface-not-mask-only) | 🔴 | 5+ | `combat.rs`, `enums.rs` |
 | [De-Digivolve N primitive (single + mass)](#de-digivolve-n-primitive-single--mass) | 🟢 | 2 | `effect_context.rs`, `permanent.rs` |
-| [Ace Overflow: inherited memory penalty on zone-change from field / under-card](#ace-overflow-inherited-memory-penalty-on-zone-change-from-field--under-card) | 🔴 | 4 | `card_data.rs`, `game.rs`, `effect.rs` |
+| [Ace Overflow: inherited memory penalty on zone-change from field / under-card](#ace-overflow-inherited-memory-penalty-on-zone-change-from-field--under-card) | 🟢 | 4 | `card_data.rs`, `game.rs`, `effect.rs` |
 | [Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated)](#dynamic-cost-reduction-at-beforepaycost-closure-valued--selection-gated) | 🟢 | 4 | `effect.rs`, `game.rs` |
 | [Dynamic DP scaling modifier (per-stack-depth / per-opponent-board)](#dynamic-dp-scaling-modifier-per-stack-depth--per-opponent-board) | 🔴 | 2 | `effect.rs`, `tensor.rs` |
 | [Condition-gated modifier entries](#condition-gated-modifier-entries) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
@@ -360,14 +360,14 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Closed in:** Phase 10 (2026-04-21, same plan). Generalized signature: `ctx.de_digivolve(target, stop_at_level: Option<u8>, amount: Option<u8>) -> u8`. TS Olympos Ikkakumon-style unbounded pop expressible as `(None, None)`.
 
 ### Ace Overflow: inherited memory penalty on zone-change from field / under-card
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED (Group 8, 2026-05-02)
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
 - **Card(s):** EX10-010 BlackWarGreymon, EX9-013 BlitzGreymon, BT17-018 Gallantmon: Crimson Mode, LM-021 Agumon – Bond of Bravery — DNA Omnimon adds: BT17-078 Omnimon (Ace Overflow -5), BT17-095 Miraculous Mega Knight (Ace Option), ST20-11 WarGreymon (Ace) — Dark Masters adds: LM-043 Darkdramon, BT16-026 Vikemon, EX8-026 MetalSeadramon, EX10-074 Beelzemon, BT16-046 GranKuwagamon, BT21-051 Puppetmon, BT19-064 Justimon: Blitz Arm (all inherited "Ace Overflow `<-4>`")
 - **Effect text:** "Ace Overflow `<-N>` (As this card moves from the field or under a card to an area other than those, lose N memory.)"
-- **What's missing:** No Ace-card identification, no Overflow metadata, no zone-transition firing of a penalty effect. `EffectTiming::OnLeaveField` is declared but I couldn't locate a dispatch site. "Under a card" (digivolution stack) zone distinction needs modeling separately from `BattleArea`.
-- **Suggested API shape:** `CardData::ace_overflow: Option<i8>` + firing of `OnLeaveField` with `LeaveFieldContext { destination: Zone }` from every zone-change path (permanent trash, return-to-hand/deck/security, digivolution-source → out-of-stack). `Effect::ace_overflow(n)` builder sugar.
-- **Workaround:** None — BLOCKED.
-- **Related:** None.
+- **Status:** Implemented with `CardData::ace_overflow: Option<i32>` populated from raw card data and compiled DSL card data. The runtime applies the memory penalty when an ACE top card leaves a battle-area stack and when an ACE source leaves from under a stack through source-trash, return-to-hand, or return-to-deck paths covered by tests.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test ace_overflow`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dsl_ace_overflow_populates_runtime_card_data`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_018_ace_overflow_is_minus_5`, and full `cargo test --manifest-path code/digimon-engine/Cargo.toml`.
+- **Remaining limits:** This closes metadata and covered stack-leave paths. Future card work should add targeted tests before relying on untested exotic movements such as de-digivolve, security placement, or new zone-disposition helpers.
+- **Related:** Token/card-data Group 8 closure.
 
 ### Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated + suspend/self-return as cost)
 - **Severity:** ✅ RESOLVED (Group 3)
@@ -999,14 +999,14 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Related:** Existing "Player-scoped modifier registry" (delivery-shape extension); existing "Named-target declarative aura" (aura-query evaluation pattern — sibling); existing "Condition-gated modifier entries" (evaluate-at-query-time principle).
 
 ### DigiXros name alias (`treated as [X] for DigiXros`)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED (Group 8, 2026-05-02)
 - **Discovered in:** Rocks (2026-04-18)
 - **Card(s):** BT21-021 OmniShoutmon ("This card is also treated as [Shoutmon] for DigiXros.")
 - **Effect text:** As above.
-- **What's missing:** DigiXros recipe matching reads a card's printed name against a DigiXros recipe's required-material names. This card injects a second synthetic name **scoped to DigiXros matching only** — not to any other name-match path (auras, inherited name checks, trait-from-name derivations). Distinct from existing "Digivolution-stack name overlay" which synthesizes overlay names onto the top card from its materials; this injects a parallel name onto the card's own printed identity for a specific subsystem.
-- **Suggested API shape:** `CardData::digixros_aliases: Vec<String>` populated from card text OR via `Effect::declarative(card).digixros_alias("Shoutmon")`. DigiXros recipe matching unions the card's printed name with its aliases. Strictly scoped to the DigiXros matching pass — do NOT leak into `contains_card_name` / aura filters / generic name queries.
-- **Workaround:** None — BLOCKED. A global name alias (reusing the stack-name-overlay mechanism) would make the card count as [Shoutmon] for every name-sensitive effect, which is not the card's intent.
-- **Related:** Existing "Digivolution-stack name overlay"; DigiXros play-flow (not yet filed as a standalone gap; may need one when DigiXros is ported).
+- **Status:** Implemented as `CardData::digixros_aliases` and compiled DSL `digixros_aliases`. DigiXros material matching unions printed names with these aliases, while generic name predicates remain overlay-blind so the alias does not leak into unrelated name-sensitive effects.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digixros` and full `cargo test --manifest-path code/digimon-engine/Cargo.toml`.
+- **Remaining limits:** This resolves scoped material-name identity only. Full DigiXros play flow and future recipe-cost UX remain separate work.
+- **Related:** Existing "Digivolution-stack name overlay"; future DigiXros play-flow work.
 
 ### Global `OnOptionCardTrashed` observer timing
 - **Severity:** 🔴 BLOCKING
@@ -1061,6 +1061,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 
 ## Resolved gaps
 
+- **Group 8 token/card-data gap closure (2026-05-02):** Status: implemented for the planned slices. Familiar Tokens now have their printed mandatory `OnDeletion` target selection and -3000 DP modifier; all registered tokens synthesize complete `CardData`; top-level authored DNA `alt_paths` populate runtime `CardData.dna_costs`; `digixros_aliases` are scoped to DigiXros material matching and do not leak into generic name predicates; `ace_overflow` card data is enforced when ACE cards leave battle-area stacks or leave from under a stack; and reveal-zone overlays let reveal predicates see temporary name/kind identities until the card moves to its destination. Regression coverage includes `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- token`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digixros`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- reveal`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test ace_overflow`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor`, full `cargo test --manifest-path code/digimon-engine/Cargo.toml`, `DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v`, and `python -m pytest code/tests/rl -v`. Remaining limits: inherited/end-of-turn DNA alt-path registration, full DigiXros play flow, reveal overlays outside explicit reveal-zone predicates, and unrelated token/keyword mechanics remain tracked by their own entries.
 - **Group 4 zone/source/security movement (2026-05-02):** implemented source-parametric effect digivolve, exact material-source movement/trash with source-trash event context, selected security-to-hand and security shuffle DSL steps, effect-driven security removal cleanup that resumes after `OnLoseSecurity` selections without duplicating cards, full-stack return-to-deck with owner routing, and real breeding-slot effect movement/placement helpers.
 - **Cost and Replacement Framework (Group 3, 2026-04-30):** Status: implemented. Regression coverage: `code/digimon-engine/tests/cost_hooks/stacked_would_play_reducers.rs`; `code/digimon-engine/tests/cost_hooks/pay_cost_selection.rs`; `code/digimon-engine/tests/replacements/context_predicates.rs`; `code/digimon-engine/tests/replacements/partition.rs`; `code/digimon-engine/tests/option_flow/replacement_integration.rs::bt17_097_delay_prevents_deletion_and_digivolves_from_hand`; `code/digimon-engine/tests/replacements/attack_cancel.rs`. The engine supports stacked optional would-play cost reducers, triggered pay costs that park pending selections before process execution, optional pay-cost decline, replacement cause/controller predicates, Partition source selection, Delay-as-replacement prevention, and effect-driven pending attack cancellation.
 - **G-ROCKS-SOURCE-SELECTION-DSL / cross-permanent count-capped source selection (2026-04-29):** resolved by `EffectContext::select_own_sources`, `SelectionKind::SourceMulti`, stable `SourceSelectionRef` bindings, and DSL `select_own_sources` / `trash_selected_sources`.

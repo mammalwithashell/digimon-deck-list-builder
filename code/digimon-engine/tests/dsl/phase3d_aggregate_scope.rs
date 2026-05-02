@@ -27,6 +27,8 @@ fn test_card(id: &str, level: u8, dp: i32) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

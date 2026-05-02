@@ -10,6 +10,7 @@ pub mod cards;
 pub mod combat;
 pub mod debug_runner;
 pub mod deck_tools;
+pub mod digixros;
 pub mod dna_digivolve;
 #[cfg(feature = "dsl-yaml-loader")]
 pub mod dsl_bridge;

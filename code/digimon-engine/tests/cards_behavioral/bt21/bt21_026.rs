@@ -65,6 +65,8 @@ fn make_digimon_filler(id: &str) -> digimon_engine::card_data::CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -352,6 +354,8 @@ fn bt21_026_cost_reduction_does_not_leak_to_other_cards() {
         effect_class_name: "OTHER_DIGI".to_string(),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     };
 
     let mut runner = DebugRunner::builder()
