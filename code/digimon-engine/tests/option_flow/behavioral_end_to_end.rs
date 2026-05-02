@@ -271,6 +271,7 @@ fn multi_turn_standard_then_delay_then_link_flow_end_to_end() {
         OptionState::Delayed {
             owner,
             trash_on_turn,
+            ..
         } => {
             assert_eq!(owner, 1);
             assert_eq!(

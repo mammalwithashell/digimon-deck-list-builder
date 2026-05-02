@@ -213,6 +213,7 @@ pub struct CompiledPredicate {
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
+    pub event_card_name_contains: Option<String>,
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
     pub replacement_subject_is_mine: Option<bool>,
@@ -416,6 +417,13 @@ pub enum CompiledDeclarativeClause {
         summary: Option<String>,
         summary_key: Option<String>,
     },
+    LinkRequirement {
+        scope: CompiledScope,
+        cost: u16,
+        filter: CompiledPredicate,
+        summary: Option<String>,
+        summary_key: Option<String>,
+    },
     FloodGate {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
@@ -450,6 +458,7 @@ pub enum CompiledScope {
     FaceUp,
     Inherited,
     Both,
+    Linked,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -478,6 +487,7 @@ pub enum CompiledTiming {
     OnLoseSecurity,
     OnSecurity,
     OnOptionPlaced,
+    Main,
     StartOfYourTurn,
     StartOfOpponentsTurn,
     StartOfYourMainPhase,
@@ -849,6 +859,12 @@ pub enum CompiledStep {
     ScheduleDelayed {
         when: CompiledTiming,
         body: Vec<CompiledStep>,
+    },
+    PlaceSelfAsDelayOption,
+    LinkToOwnDigimon {
+        optional: bool,
+        free: bool,
+        filter: CompiledPredicate,
     },
     Optional(Vec<CompiledStep>),
     EndAttack {

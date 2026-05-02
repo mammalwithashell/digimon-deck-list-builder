@@ -45,6 +45,7 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::Counter => EffectTiming::CounterEffect,
         CompiledTiming::BeforePayCost => EffectTiming::BeforePayCost,
         CompiledTiming::OnOptionPlaced => EffectTiming::OnOptionPlaced,
+        CompiledTiming::Main => EffectTiming::OptionMain,
         // Phase 2a non-targets — skip emission.
         CompiledTiming::OnAllyPlayed => return None,
         CompiledTiming::Delayed => return None,

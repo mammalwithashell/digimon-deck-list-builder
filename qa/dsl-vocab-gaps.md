@@ -15,19 +15,20 @@ Format per entry:
 
 ## BT22-098 / P-229 — event-gated Delay activation windows
 - Effect text: BT22-098: "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> ... 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3." P-229: "[Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay> ... 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
-- Missing DSL verb / step kind / predicate: `kind: delay` can express an option becoming a delayed effect, but the lowerer only maps end-of-turn style delay triggers. Event-gated windows such as "when Arisa suspends" or "when Mirai is played" are not representable, and `on_ally_played` is currently skipped by the timing map.
-- Lowers to engine API: needs a Delay registration that records an event trigger plus event predicate while preserving the rule that Delay effects cannot activate the turn the option was placed.
+- Status: partially resolved 2026-05-02 for the BT22-098 "when Arisa suspends" slice. `kind: delay` now accepts body-level `active_when`, preserves `event_card_name_contains`, and lowers `trigger: on_suspend` to `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` with the condition evaluated when the event fires.
+- Remaining missing DSL verb / step kind / predicate: `on_ally_played` for P-229 is still virtual/skipped by the timing map, and the process body still depends on faithful `effect_initiated_digivolve` support for hand-zone targets, Puppet/LIBERATOR trait filters, and cost reduction.
+- Lowers to engine API: `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` plus an event predicate on the delayed Option's `DelayEffect`, preserving the rule that Delay effects cannot activate the turn the option was placed.
 - Suggested DSL syntax:
   ```yaml
   - kind: delay
     trigger: on_suspend
-    condition: { event_target_name_is: "Arisa Kinosaki" }
+    active_when:
+      event_card_name_contains: "Arisa Kinosaki"
     process:
-      - effect_digivolve:
-          from: hand
-          source_filter: { trait_has: Puppet }
-          target_filter: { traits_include: [Puppet, LIBERATOR] }
-          cost_reduction: 3
+      - effect_initiated_digivolve:
+          target: { trait: Puppet }
+          into: { trait_all: [Puppet, LIBERATOR], zone: hand }
+          cost_delta: -3
 
   - kind: delay
     trigger: on_ally_played
@@ -38,7 +39,7 @@ Format per entry:
           target_filter: { trait_has: LIBERATOR, level_lte: 6 }
           cost_reduction: 3
   ```
-- Gap kind: hybrid (this entry tracks the DSL vocabulary/lowering half; engine event-gated Delay state and action-mask support are tracked in `qa/archetype-qa/engine-gaps.md`).
+- Gap kind: hybrid (BT22-098 event trigger/predicate lowering is covered; remaining process vocabulary/lowering and P-229 timing support stay open).
 - First reported: 2026-04-28 (Puppets archetype assessment)
 
 ## EX9-032 / EX7-027 / BT22-036 — replacement cause predicate and `active_when` lowering
@@ -465,6 +466,8 @@ Format per entry:
 ---
 
 ## ST22-08 — Link Registration Clause (Plug-In / Link Card Mechanic)  [G-DSL-LINK-VERB]
+- Status: closed 2026-05-02. DSL now supports `kind: link_requirement` lowering to `Effect::link(cost, filter)` and `link_to_own_digimon` process steps that surface the existing Link host-selection `PendingSelection` without adding action IDs.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay link`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`.
 - Effect text: "Inherited: Link Requirements [Link] Lv.3 or higher: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
 - Also: "[Main] You may link this card to 1 of your Digimon without paying the cost."
 - Missing DSL verb / step kind / predicate: Two missing DSL constructs:
@@ -487,11 +490,14 @@ Format per entry:
       bind_as: linked_host
   ```
 - Gap kind: dsl (engine has the primitive; DSL lacks both the clause kind and the step verb).
+- Remaining card-level blockers: ST22-08 behavioral tests that still name `G-DSL-LINK-VERB` are stale card migration placeholders unless they also depend on separate process-body blockers such as `G-BINDING-DP-FORMULA`, DP/play-cost predicates, or card-specific YAML rewrites.
 - First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
 
 ---
 
 ## ST22-08 — Linked-Card Effect Scope  [G-DSL-LINKED-SCOPE]
+- Status: closed 2026-05-02. DSL now accepts `scope: linked`; triggered lowering marks the emitted effect with `.linked()` so the existing linked-card dispatch path can fire it from the host.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay link`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`.
 - Effect text: DCGO shows EndOfTurnLinkedEffect with `activateClass.SetIsLinkedEffect(true)` — an effect that fires only when the card is linked to a Digimon in the battle area, and the linked Digimon may attack at the controller's end of turn.
 - Missing DSL verb / step kind / predicate: `scope: linked` — a clause scope for effects that fire as if they were part of the Digimon the card is linked to. `CompiledScope` in `digimon-dsl/src/compiled.rs` has `FaceUp` and `Inherited` variants; there is no `Linked` variant. The effect-queue (`effect_queue.rs`) already handles linked cards in `enqueue_from_permanent` (the Phase 8 Task 4 linked_cards branch), but the scope is expressed as a raw `linked_cards` list on `Permanent`, not as a DSL-compiled clause with `scope: linked`.
 - Lowers to engine API: the engine already fires effects for linked cards via the `linked_cards` loop in `enqueue_from_permanent`. The DSL lowering layer would need to detect `scope: linked` on a clause and install the resulting `Effect` via `Effect::declarative(card)` with a flag indicating it should be enqueued from the linked-card path rather than the top-card path.
@@ -505,6 +511,7 @@ Format per entry:
       - raw_rust: { fn: st22_08_linked_eot_may_attack }
   ```
 - Gap kind: dsl (engine fires linked-card effects; DSL has no `scope: linked` clause kind that lowers into the linked-card effect list).
+- Remaining card-level blockers: ST22-08 ignored tests that still name `G-DSL-LINKED-SCOPE` should be migrated or retagged during card implementation; the reusable DSL scope is closed. Leave unrelated blockers such as `G-BINDING-DP-FORMULA` open.
 - First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
 
 ---
@@ -608,17 +615,19 @@ Format per entry:
 ## P-035 / P-103 / BT24-089 — Option-as-permanent placement (inherited security)  [G-PLACE-SELF-AS-OPTION-PERMANENT]
 
 - Effect text (P-035): "[Main] … Then, place this card in your battle area." and "[Security] Place this card in the battle area." (inherited)
-- Missing DSL verb / step kind: `place_self_as_delay_option: {}` — a step that places the currently-resolving Option card into the battle area as an `OptionState::Delayed` permanent from within an inherited security context. Two contexts exist:
+- Status: IMPLEMENTED for inherited-security source Options as of 2026-05-02. The DSL verb / step kind is `place_self_as_delay_option: {}` — a step that places the currently-resolving Option card into the battle area as an `OptionState::Delayed` permanent from within an inherited security context. Two contexts exist:
   1. **Main clause** ("Then, place this card in your battle area."): DCGO calls `PlaceDelayOptionCards(card, activateClass)`. In the Rust engine, `dispose_option` + `classify_option_subtype` detect the `kind: delay` clause and auto-place the card at the `MainEffectDrain` phase — no explicit DSL step is needed. The engine handles placement implicitly.
-  2. **Inherited security clause** ("[Security] Place this card in the battle area."): DCGO calls `CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)`. In the Rust engine, no `EffectContext` method exists to place the digivolution-source Option card from an inherited-security context into the battle area as a Delay permanent. The security-resolution flow does not call `dispose_option` in this path.
-- Lowers to engine API: A new `pub fn place_self_as_delay_option_permanent(&mut self)` on `EffectContext`. In the inherited-security context, this method must: (1) identify the source Option card (the digivolution source that triggered this effect), (2) remove it from its current location (digivolution stack), and (3) place it in `self.game.players[owner].battle_area` as a `Permanent` with `OptionState::Delayed`.
+  2. **Inherited security clause** ("[Security] Place this card in the battle area."): DCGO calls `CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)`. Rust now exposes `EffectContext::place_self_as_delay_option_permanent`, which removes the matching non-top source Option from its host stack, places it in the owner's battle area as `OptionState::Delayed`, and dispatches `OnOptionPlaced`.
+- Lowers to engine API: `EffectContext::place_self_as_delay_option_permanent(&mut self)`. In the inherited-security context, this method: (1) identifies the source Option card (the digivolution source that triggered this effect), (2) removes it from its current location (digivolution stack), and (3) places it in `self.game.players[owner].battle_area` as a `Permanent` with `OptionState::Delayed`.
 - Suggested DSL syntax:
   ```yaml
   - place_self_as_delay_option: {}
   ```
   Used in the `process:` of the inherited security clause. Not needed in the Main clause (engine auto-placement via `dispose_option` suffices).
-- Gap kind: dsl (for inherited security context). Engine already handles the Main clause auto-placement; the gap is the inherited-security-context placement where `dispose_option` is not called.
-- Workaround: `process: []` (empty process) — clause is structurally present for dispatch routing; behavioral placement tests are `#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"]`. Affects P-035, P-103, BT24-089 (all use the same pattern).
+- Gap kind: resolved dsl vocabulary/engine API gap for inherited security context. Engine already handled the Main clause auto-placement; inherited-security-context placement now uses the explicit DSL step because `dispose_option` is not called in that path.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- inherited_security_places_source_option_as_delay_permanent`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- place_self_as_delay_option`.
+- Group 5 handoff verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay link`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed`.
+- Workaround: no longer needed for new YAML/tests. Existing `process: []` placeholders for P-035, P-103, and BT24-089 can migrate to `place_self_as_delay_option: {}` when those card YAMLs/tests are revisited. Existing ignored card-level tests that still name `G-PLACE-SELF-AS-OPTION-PERMANENT` remain migration/process-body follow-ups, not an open reusable placement primitive; keep distinct blockers such as `G-COLOR-MATCH-AGAINST-BOARD` open.
 - First reported: 2026-04-28 (P-035 Red Memory Boost! batch-implement-cards-rust-dsl, Medusamon Batch 12). Same gap pre-existed in P-103.yaml and BT24-089.yaml without a tracker entry.
 
 ---
@@ -662,7 +671,8 @@ Format per entry:
 - Gap kind: hybrid (DSL has the token but no lowering target; engine lacks the timing dispatch).
 - Workaround: None faithful. The memory-gain trigger is omitted at runtime.
 - First reported: 2026-04-28 (Royal Knights archetype assessment)
-- Updated 2026-04-29: `when: on_option_placed` now lowers to `EffectTiming::OnOptionPlaced`, and Delay-style Option placement through `Game::play_option_from_hand` supplies the placed Option through `event_card` / `event_permanent`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed_fires_after_delay_option_enters_battle_area` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_option_placed_event_card_trait_predicate_matches_placed_option`. Transient Standard options, security-effect placement, Link, Training, breeding-area observer fan-out, and the full BT13-007 inherited once-per-turn loop remain open follow-ups.
+- Updated 2026-04-29: `when: on_option_placed` now lowers to `EffectTiming::OnOptionPlaced`, and Delay-style Option placement through `Game::play_option_from_hand` supplies the placed Option through `event_card` / `event_permanent`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed_fires_after_delay_option_enters_battle_area` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_option_placed_event_card_trait_predicate_matches_placed_option`.
+- Updated 2026-05-02: Group 5 Task 4 covers Link, Training, inherited/security self-placement, and top-card plus inherited breeding-area observer fan-out for `OnOptionPlaced`, with placed Option context available via `event_card` and Link host context via `event_host_permanent` / `event_host_card`. Link placement resumes `OnLink` after placed-option selections settle, and breeding-source `max_per_turn` accounting is covered for this queued observer path. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- on_option_placed_fires_for_training_link_and_security_placement_with_event_card link_on_option_placed_selection_resumes_on_link_after_choice_resolves on_option_placed_scans_inherited_sources_under_breeding_top_card once_per_turn_breeding_on_option_placed_observer_fires_once_not_zero`. Transient Standard options remain open because they are not battle-area placements.
 
 ---
 

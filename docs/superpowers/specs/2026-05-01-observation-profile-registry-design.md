@@ -52,6 +52,7 @@ The design sketched an engine-owned profile identifier family:
 pub enum ObservationProfileId {
     StandardCompactV1,
     StandardLiteV2,
+    StandardFullV2,
 }
 ```
 
@@ -61,10 +62,11 @@ Expose stable string IDs for implemented/exported profiles:
 |---|---|---|
 | `StandardCompactV1` | `standard_compact_v1` | Implemented 1375-float Standard compact baseline |
 | `StandardLiteV2` | `standard_lite_v2` | Implemented fair-information Standard v2 profile with structured board, hand, known-zone, and pending-choice tables |
+| `StandardFullV2` | `standard_full_v2` | Implemented opt-in Standard v2 experiment extending lite with `action_id_features[2168][16]` |
 
-`standard_lite_v2` is implemented and is the default pilot observation profile. `standard_compact_v1` remains the compact compatibility and baseline profile. `standard_v1` and `compact_v1` are legacy aliases only; new metadata writes `standard_compact_v1` for compact runs and `standard_lite_v2` for v2 pilot runs.
+`standard_lite_v2` is implemented and is the default pilot observation profile. `standard_full_v2` is implemented as an opt-in experimental profile. `standard_compact_v1` remains the compact compatibility and baseline profile. `standard_v1` and `compact_v1` are legacy aliases only; new metadata writes `standard_compact_v1` for compact runs, `standard_lite_v2` for default v2 pilot runs, and `standard_full_v2` only for explicit full-profile experiments.
 
-Future profile ideas are not implemented or exported in HEAD. Examples include `standard_pending_ablation_v2` for isolating pending-choice metadata value, `standard_full_v2` for a possible action-id feature table, and `standard_omniscient_debug_v1` for test-only hidden-information debugging.
+Additional profile ideas are intentionally opt-in or planned rather than defaults. `standard_full_v2` is implemented and exported as an opt-in action-id feature table experiment. Other examples remain planned, including `standard_pending_ablation_v2` for isolating pending-choice metadata value and `standard_omniscient_debug_v1` for test-only hidden-information debugging.
 
 `standard_pending_ablation_v2` and `standard_lite_v2` would have different jobs if the ablation profile is added later:
 
@@ -133,6 +135,7 @@ The version is profile-specific, not global. Implemented values:
 |---|---|
 | `standard_compact_v1` | `standard_compact_v1.1` |
 | `standard_lite_v2` | `standard_lite_v2.1` |
+| `standard_full_v2` | `standard_full_v2.1` |
 
 Future profiles define their own feature-schema versions when implemented; do not publish artifact metadata for a profile before it exists in the registry.
 
@@ -175,7 +178,7 @@ If a feature's meaning changes while shape stays the same, bump the profile's `F
 
 ## Rust API
 
-Observation profile dispatch lives in `code/digimon-engine/src/observation.rs`. Profile layout metadata lives under `code/digimon-engine/src/tensor_profiles/`. Current modules include the implemented compact compatibility and lite v2 profiles; planned experiment profiles are documented here but are not exported until implemented:
+Observation profile dispatch lives in `code/digimon-engine/src/observation.rs`. Profile layout metadata lives under `code/digimon-engine/src/tensor_profiles/`. Current modules include the implemented compact compatibility, lite v2, and full v2 profiles. Other planned experiment profiles are documented here but are not exported until implemented:
 
 ```text
 src/
@@ -186,6 +189,7 @@ src/
       mod.rs
       v1.rs
       v2_lite.rs
+      v2_full.rs
 ```
 
 Core API:
@@ -489,9 +493,9 @@ This comparison measures practical end-to-end value. If `standard_pending_ablati
 
 ### `standard_full_v2`
 
-Purpose: future experiment to test whether full action-id metadata improves wall-clock learning enough to justify the speed cost.
+Purpose: implemented opt-in experiment to test whether full action-id metadata improves wall-clock learning enough to justify the speed cost.
 
-Would include `standard_lite_v2` plus shallow `action_id_features[2168][16]`.
+Includes `standard_lite_v2` plus shallow `action_id_features[2168][16]`.
 
 ### `standard_omniscient_debug_v1`
 
@@ -544,7 +548,7 @@ Tests cover:
 7. Model artifact metadata writing and loading checks.
 8. Implement `standard_pending_ablation_v2` if the ablation is still useful.
 9. Implement `standard_lite_v2`. Completed; it is now the default pilot profile.
-10. Implement `standard_full_v2` only after profiling justifies it.
+10. Implement `standard_full_v2`. Completed as an opt-in experiment; keep `standard_lite_v2` as the default until profiling justifies changing it.
 
 ## Acceptance Criteria
 

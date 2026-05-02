@@ -63,6 +63,36 @@ def test_get_standard_lite_v2_tensor_profile_from_rust():
     assert profile.sections[0].shape == (64,)
 
 
+def test_get_standard_full_v2_tensor_profile_from_rust():
+    digimon_engine = pytest.importorskip("digimon_engine")
+    from digimon_gym.tensor_profiles import get_tensor_profile, list_tensor_profiles
+
+    profile = get_tensor_profile("standard_full_v2")
+
+    assert profile.id == "standard_full_v2"
+    assert profile.tensor_size == 43008
+    assert profile.tensor_version == 2
+    assert profile.feature_schema_version == "standard_full_v2.1"
+    assert profile.card_id_slot_count == 542
+    assert profile.scalar_slot_count == 42466
+
+    action_section = next(
+        (
+            section
+            for section in profile.sections
+            if section.name == "action_id_features"
+        ),
+        None,
+    )
+    assert action_section is not None
+    assert action_section.offset == 8064
+    assert action_section.shape == (2168, 16)
+    assert "standard_full_v2" in list_tensor_profiles()
+
+    if hasattr(digimon_engine, "list_observation_profiles"):
+        assert "standard_full_v2" in digimon_engine.list_observation_profiles()
+
+
 def test_tensor_profile_positions_cover_tensor():
     from digimon_gym.tensor_profiles import get_tensor_profile
 
@@ -170,6 +200,26 @@ def test_digimon_env_preserves_explicit_compact_profile_under_rust_backend(monke
     assert info["tensor_profile"] == "standard_compact_v1"
 
 
+def test_digimon_env_accepts_standard_full_v2_under_rust_backend(monkeypatch):
+    pytest.importorskip("digimon_engine")
+    monkeypatch.setenv("DIGIMON_BACKEND", "rust")
+    monkeypatch.delenv("DIGIMON_TENSOR_PROFILE", raising=False)
+
+    from digimon_gym.digimon_gym import DigimonEnv
+
+    env = DigimonEnv(
+        deck1=DECK,
+        deck2=DECK,
+        tensor_profile="standard_full_v2",
+    )
+    obs, info = env.reset(seed=7)
+
+    assert env.tensor_profile == "standard_full_v2"
+    assert env.observation_space.shape == (43008,)
+    assert obs.shape == (43008,)
+    assert info["tensor_profile"] == "standard_full_v2"
+
+
 def test_feature_extractor_accepts_observation_layout():
     import torch
     from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
@@ -187,6 +237,29 @@ def test_feature_extractor_accepts_observation_layout():
 
     assert extractor.card_id_indices.numel() == 542
     assert extractor.scalar_indices.numel() == 7778
+    assert tuple(out.shape) == (2, 512)
+
+
+def test_feature_extractor_accepts_standard_full_v2():
+    pytest.importorskip("digimon_engine")
+    import torch
+    from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    profile = get_tensor_profile("standard_full_v2")
+    assert profile.tensor_size == 43008
+    space = spaces.Box(
+        low=-10.0,
+        high=20001.0,
+        shape=(profile.tensor_size,),
+        dtype=np.float32,
+    )
+    extractor = CardEmbeddingExtractor(space, observation_layout=profile)
+    with torch.no_grad():
+        out = extractor(torch.zeros((2, profile.tensor_size), dtype=torch.float32))
+
+    assert extractor.card_id_indices.numel() == 542
+    assert extractor.scalar_indices.numel() == 42466
     assert tuple(out.shape) == (2, 512)
 
 

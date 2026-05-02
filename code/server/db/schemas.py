@@ -15,6 +15,25 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
     display_name: Optional[str] = None
+    invite_code: Optional[str] = Field(
+        default=None,
+        description="Required when INVITE_CODES_REQUIRED=true. Case-sensitive single-use code.",
+    )
+
+
+class InviteCodeInfo(BaseModel):
+    code: str
+    created_at: datetime
+    redeemed_at: Optional[datetime] = None
+    redeemed_by_username: Optional[str] = None
+    note: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class MintInviteCodesRequest(BaseModel):
+    count: int = Field(default=1, ge=1, le=100)
+    note: Optional[str] = None
 
 
 class LoginRequest(BaseModel):

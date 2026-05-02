@@ -2,13 +2,19 @@ use std::collections::HashMap;
 
 use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
-use crate::enums::{CardKind, PlayerId};
+use crate::enums::{CardKind, DelayTrigger, PlayerId};
 
 /// Lightweight handle to a Permanent on a player's field. Copy-able, used in closures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct PermanentHandle {
     pub player: PlayerId,
     pub index: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TrainingBinding {
+    pub handle: PermanentHandle,
+    pub top_card: CardHandle,
 }
 
 /// Additional state a Permanent carries when its top card is an Option.
@@ -25,12 +31,15 @@ pub enum OptionState {
     Delayed {
         owner: PlayerId,
         trash_on_turn: u16,
+        trigger: DelayTrigger,
+        placed_on_turn: u16,
     },
     Linked {
         host: PermanentHandle,
     },
     Training {
         owner: PlayerId,
+        trained: Option<TrainingBinding>,
     },
 }
 

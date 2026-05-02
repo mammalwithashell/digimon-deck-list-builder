@@ -218,6 +218,9 @@ fn collect_declarative_raw_rust_fns(
                 collect_step_raw_rust_fns(step, names);
             }
         }
+        CompiledDeclarativeClause::LinkRequirement { filter, .. } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
         CompiledDeclarativeClause::FloodGate {
             active_when,
             target,
@@ -265,7 +268,8 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         | CompiledStep::SelectReveal { filter, .. }
         | CompiledStep::SelectSecurity { filter, .. }
         | CompiledStep::SelectUnionZone { filter, .. }
-        | CompiledStep::SelectCountCappedMulti { filter, .. } => {
+        | CompiledStep::SelectCountCappedMulti { filter, .. }
+        | CompiledStep::LinkToOwnDigimon { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
         CompiledStep::If {

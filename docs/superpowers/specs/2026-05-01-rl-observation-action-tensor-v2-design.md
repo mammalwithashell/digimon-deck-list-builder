@@ -63,7 +63,7 @@ The lite size is:
 TENSOR_SIZE_V2_LITE = 8320
 ```
 
-The design leaves `standard_full_v2` as a future experimental profile. It would append a shallow action-id table:
+`standard_full_v2` is now implemented as an opt-in experimental profile. It appends a shallow action-id table:
 
 ```text
 action_id_features[2168][16]
@@ -75,7 +75,7 @@ The full profile size is:
 TENSOR_SIZE_V2_FULL = 43008
 ```
 
-This split makes `standard_lite_v2` the default serious training profile and keeps `standard_full_v2` as a future profiling option if full action-local metadata appears worth its speed and memory cost.
+This split keeps `standard_lite_v2` as the default serious training profile and makes `standard_full_v2` available for profiling when full action-local metadata appears worth its speed and memory cost.
 
 ## Top-Level Layout
 
@@ -106,7 +106,7 @@ OFF_RESERVED = 8064
 TENSOR_SIZE_V2_LITE = 8320
 ```
 
-If implemented later, `standard_full_v2` would insert `action_id_features[2168][16]` at `8064` and shift `reserved` to `42752`:
+The implemented opt-in `standard_full_v2` inserts `action_id_features[2168][16]` at `8064` and shifts `reserved` to `42752`:
 
 ```text
 OFF_ACTION_ID_FEATURES_V2_FULL = 8064
@@ -483,7 +483,7 @@ The current `EffectChoiceEntry.label` is useful for debugging but must not be pa
 
 ## Action ID Features
 
-`action_id_features[2168][16]` is a shallow action-aligned table reserved for a future `standard_full_v2` experiment. It is intentionally excluded from the implemented `standard_lite_v2`.
+`action_id_features[2168][16]` is a shallow action-aligned table used by the implemented opt-in `standard_full_v2` experiment. It is intentionally excluded from the default `standard_lite_v2`.
 
 Rows are aligned directly to raw action IDs:
 
@@ -505,8 +505,8 @@ This table does not replace the action mask. It gives the policy a small amount 
 | `7` | target index normalized |
 | `8` | source permanent slot normalized, if any |
 | `9` | target permanent slot normalized, if any |
-| `10` | memory/cost delta bucket when known |
-| `11` | DP/security/count bucket when known |
+| `10` | reserved cost/memory bucket, currently `0.0` |
+| `11` | reserved amount/count bucket, currently `0.0` |
 | `12` | uses hand card flag |
 | `13` | uses permanent flag |
 | `14` | prompt/selection action flag |
@@ -514,7 +514,7 @@ This table does not replace the action mask. It gives the policy a small amount 
 
 For illegal actions, static decode fields may still be populated, but state-dependent fields are zero unless meaningful. The legal flag must always agree with the mask exposed through `info["action_mask"]`.
 
-This table is intentionally shallow. Rich card/effect meaning belongs in the hand/permanent/pending-choice sections. If future profiling shows that `standard_full_v2` is too slow for the learning benefit it provides, keep the profile registry support and leave `standard_lite_v2` as the default.
+This table is intentionally shallow. Rich card/effect meaning belongs in the hand/permanent/pending-choice sections. If profiling shows that `standard_full_v2` is too slow for the learning benefit it provides, keep the profile registry support and leave `standard_lite_v2` as the default.
 
 ## Effect Metadata Contract
 
@@ -554,7 +554,7 @@ Card ID positions include:
 - known zone card IDs
 - pending choice source-card IDs
 
-If `standard_full_v2` is implemented later, `action_id_features` does not contain card IDs. It references source/target zones and indices instead.
+In `standard_full_v2`, `action_id_features` does not contain card IDs. It references source/target zones and indices instead.
 
 The Rust engine exports v2 card/scalar positions through PyO3 layout metadata. `code/digimon_gym/agents/features_extractor.py` consumes layout-driven positions instead of importing tensor layout from `engine_py_legacy`.
 
@@ -582,7 +582,7 @@ Implemented shape:
 
 ## Invariants
 
-1. For any future `standard_full_v2`, `action_id_features[action_id][0] == get_action_mask(player)[action_id]`.
+1. For `standard_full_v2`, `action_id_features[action_id][0] == get_action_mask(player)[action_id]`.
 2. Every nonzero card ID field is listed in the active profile's card ID positions.
 3. No scalar field is listed in the active profile's card ID positions.
 4. The active profile's card ID positions and scalar positions cover every tensor index exactly once.
@@ -613,7 +613,7 @@ Focused tests cover:
 - `TriggerOrder` rows include source card, source kind, timing, optionality, and effect category metadata.
 - DUAL Option use encodes `source_kind = Option`.
 - DUAL after Arts Digivolve encodes `source_kind = Digimon` for stack effects.
-- For any future `standard_full_v2`, action legal bits match the engine action mask.
+- For `standard_full_v2`, action legal bits match the engine action mask.
 - Python `DigimonEnv.observation_space.shape` matches the selected Rust observation layout tensor size.
 - `CardEmbeddingExtractor` consumes Rust-owned v2 positions, not legacy Python layout.
 
@@ -628,12 +628,12 @@ This design intentionally stopped short of a task-by-task implementation plan. T
 5. Pending-choice metadata plumbing, starting with `TriggerOrder`.
 6. Switch `DigimonEnv` to `standard_lite_v2`.
 7. Profile training throughput and memory against `standard_compact_v1`.
-8. `standard_full_v2` action-id feature table generation only if profiling justifies the experiment.
+8. Implement `standard_full_v2` action-id feature table generation. Completed as an opt-in experiment; profile it against `standard_lite_v2`.
 9. Update docs and remove v1-only assumptions.
 
 ## Open Risks
 
-- `standard_full_v2` action-id features would increase input size substantially. This is why `standard_lite_v2` shipped first and remains the default.
+- `standard_full_v2` action-id features increase input size substantially. This is why `standard_lite_v2` shipped first and remains the default.
 - Some effect metadata will be unknown until raw Rust effects are annotated or DSL lowering can infer categories.
 - Breeding handle-dependent fields may be incomplete until the engine has a stable location handle for breeding permanents.
 - Full legal-action metadata is useful, but the existing SB3 policy head still emits raw action logits. The table prepares for a better extractor/head without requiring one immediately.
@@ -646,5 +646,5 @@ The implemented `standard_lite_v2` contract is accepted when:
 - Unified `permanent_slots[2][15]` with breeding at slot `14`.
 - Default fair-information observation.
 - Rich `pending_choice_features[32][96]` row-aligned to prompt order.
-- `standard_full_v2` keeps shallow `action_id_features[2168][16]` as a future experimental profile, not the default implementation target.
+- `standard_full_v2` keeps shallow `action_id_features[2168][16]` as an implemented opt-in experimental profile, not the default pilot profile.
 - Structured effect observation metadata as the source for effect-category features.

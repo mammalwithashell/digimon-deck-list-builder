@@ -84,7 +84,8 @@ export function useWebSocketGame(options: UseWebSocketGameOptions | null) {
     } else {
       wsBase = `${protocol}//${window.location.host}${apiBase}`;
     }
-    const url = `${wsBase}/ws/games/${gameId}?token=${encodeURIComponent(token)}&role=${role}`;
+    const engineVersion = (import.meta.env.VITE_ENGINE_VERSION as string | undefined) ?? '0.1.0';
+    const url = `${wsBase}/ws/games/${gameId}?token=${encodeURIComponent(token)}&role=${role}&engine_version=${encodeURIComponent(engineVersion)}`;
 
     setStatus('connecting');
     const ws = new WebSocket(url);

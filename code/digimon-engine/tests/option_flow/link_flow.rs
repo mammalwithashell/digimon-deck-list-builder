@@ -10,8 +10,10 @@
 
 use std::sync::{Arc, Mutex};
 
+use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::dsl_cards::DslCardEffect;
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::selection::OptionPlayResult;
@@ -124,6 +126,13 @@ fn digimon_card(card_id: &str, color: CardColor) -> digimon_engine::CardData {
 
 fn advance_to_main(r: &mut DebugRunner) {
     r.game.enter_main_phase();
+}
+
+fn register_dsl_yaml(r: &mut DebugRunner, yaml: &str) {
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse card yaml");
+    let card_id = spec.card.clone();
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile card yaml");
+    r.register_effect(&card_id, Arc::new(DslCardEffect::new(Arc::new(compiled))));
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────
@@ -542,5 +551,197 @@ fn on_link_observer_sees_option_main_already_resolved() {
             .linked_cards
             .len(),
         1
+    );
+}
+
+#[test]
+fn dsl_free_link_step_surfaces_host_selection_mask() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("ST22-08", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["ST22-08"])
+        .memory(0)
+        .start();
+    register_dsl_yaml(
+        &mut r,
+        r#"
+card: ST22-08
+name: Offensive Plug-In V
+kind: option
+effects:
+  - scope: face_up
+    when: main
+    optional: true
+    process:
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { kind: digimon }
+"#,
+    );
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    let mask = build_action_mask(&r.game, 0);
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    assert_eq!(mask[action as usize], 1.0);
+    let _ = r.game.resolve_selection(0, action);
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn dsl_free_link_step_decoder_resolves_host_selection() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("ST22-08", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["ST22-08"])
+        .memory(0)
+        .start();
+    register_dsl_yaml(
+        &mut r,
+        r#"
+card: ST22-08
+name: Offensive Plug-In V
+kind: option
+effects:
+  - scope: face_up
+    when: main
+    optional: true
+    process:
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter: { kind: digimon }
+"#,
+    );
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    r.game.decode_action(action, 0);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "decoder clears the host-selection prompt"
+    );
+    assert!(
+        r.game.pending_option.is_none(),
+        "decoder completes the parked Link option"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn dsl_link_requirement_pays_nonzero_link_cost_before_host_selection() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-COST", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["LINK-COST"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(
+        &mut r,
+        r#"
+card: LINK-COST
+name: Costed Link
+kind: option
+effects:
+  - kind: link_requirement
+    scope: inherited
+    cost: 2
+    filter: { kind: digimon }
+"#,
+    );
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    assert_eq!(r.memory(), 1, "Link requirement cost is paid");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "host selection remains player-visible after cost payment"
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action);
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn dsl_link_requirement_blocks_host_selection_when_link_cost_unaffordable() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-COST", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["LINK-COST"])
+        .memory(0)
+        .start();
+    register_dsl_yaml(
+        &mut r,
+        r#"
+card: LINK-COST
+name: Costed Link
+kind: option
+effects:
+  - kind: link_requirement
+    scope: inherited
+    cost: 1
+    filter: { kind: digimon }
+"#,
+    );
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+    r.game.set_memory(-10);
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[digimon_engine::action::space::PLAY_HAND_START as usize],
+        0.0,
+        "unaffordable Link cost must be masked before hand play"
+    );
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Invalid
+    );
+    assert_eq!(r.memory(), -10, "failed Link cost leaves memory unchanged");
+    assert_eq!(r.hand_size(0), 1, "unaffordable Link option stays in hand");
+    assert_eq!(
+        r.trash_size(0),
+        0,
+        "unaffordable Link option is not disposed"
+    );
+    assert!(
+        r.game.pending_selection.is_none(),
+        "unpaid Link cost must not expose a host-selection prompt"
+    );
+    assert!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .is_empty(),
+        "unpaid Link cost must not attach for free"
     );
 }

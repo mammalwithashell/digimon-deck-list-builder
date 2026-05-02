@@ -31,6 +31,7 @@ use digimon_dsl::CardRegistry as DslCardRegistry;
 
 use crate::card_source::CardHandle;
 use crate::cards::CardEffectRegistry;
+use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect::{CardEffect, Effect};
 
@@ -235,6 +236,21 @@ impl CardEffect for DslCardEffect {
                             process,
                             self.raw.clone(),
                         ));
+                    }
+                    CompiledDeclarativeClause::LinkRequirement {
+                        cost,
+                        filter,
+                        summary,
+                        ..
+                    } => {
+                        let filter = filter.clone();
+                        let mut builder = Effect::on_play(card).link(*cost, move |ctx, host| {
+                            eval_predicate(&filter, ctx, PredicateSubject::Permanent(host))
+                        });
+                        if let Some(summary) = summary {
+                            builder = builder.name(summary);
+                        }
+                        out.push(builder.build());
                     }
                     CompiledDeclarativeClause::RawRust { fn_name, .. } => {
                         if let Some(f) = self.raw.declarative_fn(fn_name) {

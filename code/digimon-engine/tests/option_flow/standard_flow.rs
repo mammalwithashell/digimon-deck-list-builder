@@ -7,10 +7,14 @@
 
 use std::sync::{Arc, Mutex};
 
+use digimon_dsl::compiled::CompiledStep;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::dsl_cards::bindings::Bindings;
+use digimon_engine::dsl_cards::raw_rust::EngineRawRustRegistry;
+use digimon_engine::dsl_cards::step::StepRuntime;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::selection::OptionPlayResult;
 
 // ─── Inline test-effect helpers ──────────────────────────────────────
@@ -67,6 +71,38 @@ impl CardEffect for OptionSelectOppPermanent {
                     move |_ctx, _h| {
                         *witness.lock().unwrap() = true;
                     },
+                );
+            })
+            .build()]
+    }
+}
+
+struct StandardSchedulesEndOfTurn(Arc<Mutex<u32>>);
+impl CardEffect for StandardSchedulesEndOfTurn {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = self.0.clone();
+        vec![Effect::on_play(card)
+            .name("Schedule end turn")
+            .option_main()
+            .process(move |ctx| {
+                let seen = seen.clone();
+                let mut raw = EngineRawRustRegistry::new();
+                raw.register_step("increment_witness", move |ctx, _bindings| {
+                    assert!(
+                        ctx.source_is_option(),
+                        "scheduled replay must preserve Option source kind"
+                    );
+                    *seen.lock().unwrap() += 1;
+                });
+                ctx.schedule_delayed_with_runtime(
+                    EffectTiming::EndOfYourTurn,
+                    vec![CompiledStep::RawRust {
+                        fn_name: "increment_witness".to_string(),
+                        consumes: vec![],
+                        binds: vec![],
+                    }],
+                    Bindings::new(),
+                    StepRuntime::new(Arc::new(raw)),
                 );
             })
             .build()]
@@ -351,4 +387,30 @@ fn standard_option_with_target_selection_returns_pending() {
     // target still on field — the test effect records the pick but doesn't mutate.
     let _ = target;
     assert_eq!(r.battle_area_size(1), 1);
+}
+
+#[test]
+fn transient_option_scheduled_end_of_turn_effect_replays_with_option_source() {
+    let witness = Arc::new(Mutex::new(0u32));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("SCHEDULED-OPT", 0, CardColor::Red))
+        .add_card(digimon_card("RED-MATCH", CardColor::Red))
+        .hand(0, &["SCHEDULED-OPT"])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "SCHEDULED-OPT",
+        Arc::new(StandardSchedulesEndOfTurn(witness.clone())),
+    );
+    r.place_on_field(0, "RED-MATCH", Some(0));
+    advance_to_main(&mut r);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Trashed
+    );
+    assert_eq!(r.trash_size(0), 1, "scheduled option is in trash before replay");
+    assert_eq!(*witness.lock().unwrap(), 0);
+    r.end_turn();
+    assert_eq!(*witness.lock().unwrap(), 1);
 }

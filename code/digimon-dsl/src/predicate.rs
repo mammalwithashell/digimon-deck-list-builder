@@ -126,6 +126,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_name_contains: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub replacement_cause: Option<ReplacementCauseSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replacement_source_is_opponent: Option<bool>,

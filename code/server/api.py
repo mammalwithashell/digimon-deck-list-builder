@@ -8,17 +8,24 @@ load_project_env()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
+from server.config import settings
 from server.workers.training_worker import training_job_worker
 from server.ai.worker import ai_task_worker
 from server.db.database import init_db
 from digimon_engine import CardDatabase, CardRegistry
+from server.limiter import limiter
+from server.logging_setup import RequestIdMiddleware, configure_logging, configure_sentry
 from server.db.routers import admin_ai as admin_ai_router
 from server.db.routers import training as training_router
 from server.db.routers import assets as assets_router
 from server.db.routers import auth as auth_router
 from server.db.routers import decks as decks_router
 from server.db.routers import friends as friends_router
+from server.db.routers import invites as invites_router
 from server.db.routers import issues as issues_router
 from server.db.routers import patch_notes as patch_notes_router
 from server.db.routers import users as users_router
@@ -40,6 +47,9 @@ from server.routers import deck_optimizer
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    settings.assert_production_ready()
+    configure_logging()
+    configure_sentry()
     await init_db()
     CardDatabase()
     CardRegistry()  # Rust binding: constructor performs lazy init
@@ -66,9 +76,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RequestIdMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,6 +97,7 @@ app.include_router(friends_router.router)
 app.include_router(assets_router.router)
 app.include_router(issues_router.router)
 app.include_router(patch_notes_router.router)
+app.include_router(invites_router.router)
 app.include_router(admin_models_router.admin_router)
 app.include_router(admin_models_router.public_router)
 app.include_router(admin_releases_router.admin_router)
