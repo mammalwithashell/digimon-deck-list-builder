@@ -153,18 +153,22 @@ fn dynamic_formula_fn(
     target: CompiledPredicate,
     self_only: bool,
     raw: Arc<EngineRawRustRegistry>,
-) -> impl Fn(&crate::effect_context::EffectReadContext<'_>, PermanentHandle) -> i32 + Send + Sync + 'static
-{
+) -> impl Fn(&crate::effect_context::EffectReadContext<'_>, PermanentHandle) -> Option<i32>
+       + Send
+       + Sync
+       + 'static {
     let target = Arc::new(target);
     move |ctx, handle| {
         if self_only {
             if ctx.source_permanent != Some(handle) {
-                return 0;
+                return None;
             }
         } else if !eval_predicate(&target, ctx, PredicateSubject::Permanent(handle)) {
-            return 0;
+            return None;
         }
-        formula_eval::evaluate_read_with_raw(&formula, ctx, handle, &raw)
+        Some(formula_eval::evaluate_read_with_raw(
+            &formula, ctx, handle, &raw,
+        ))
     }
 }
 

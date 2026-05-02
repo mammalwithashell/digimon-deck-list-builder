@@ -1946,8 +1946,10 @@ impl Game {
                         continue;
                     }
                 }
-                found = true;
-                total += formula_fn(&ctx, target);
+                if let Some(value) = formula_fn(&ctx, target) {
+                    found = true;
+                    total += value;
+                }
             }
         }
         (total, found)
@@ -2253,7 +2255,9 @@ impl Game {
             }
             total += effect.dp_modifier;
             if let Some(formula_fn) = effect.dp_modifier_fn.as_ref() {
-                total += formula_fn(&ctx, perm);
+                if let Some(value) = formula_fn(&ctx, perm) {
+                    total += value;
+                }
             }
         }
         total

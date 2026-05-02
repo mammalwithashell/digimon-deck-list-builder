@@ -1,3 +1,4 @@
+use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::permanent::PermanentHandle;
 
@@ -68,5 +69,40 @@ effects:
         r.game.player(1).security.len(),
         1,
         "base 1 plus one material performs two checks"
+    );
+}
+
+#[test]
+fn nonmatching_security_attack_formula_aura_preserves_default_check() {
+    let yaml = r#"
+card: TEST-SA-FORMULA-AURA
+name: Security Formula Aura
+kind: digimon
+color: [red]
+level: 4
+cost: 4
+dp: 4000
+effects:
+  - kind: aura
+    target: { owner: you, trait: Boosted }
+    security_attack_fn: { base: 2, per: material_count, delta: 0 }
+"#;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card(make_test_card("BT5-008", "Normal Attacker"))
+        .add_card(make_test_card("BT1-010", "Security One"))
+        .add_card(make_test_card("BT1-011", "Security Two"))
+        .security(1, &["BT1-010", "BT1-011"])
+        .start();
+    r.place_on_field(0, "TEST-SA-FORMULA-AURA", None);
+    let attacker = r.place_on_field(0, "BT5-008", None);
+
+    let result = r.attack_player(attacker, 1, true);
+    assert_eq!(result, AttackResult::SecurityCheckSurvived);
+    assert_eq!(
+        r.game.player(1).security.len(),
+        1,
+        "nonmatching formula aura must not suppress the default security check"
     );
 }

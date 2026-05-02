@@ -104,8 +104,8 @@ Key rules:
 - `.once_per_turn()` — `max_per_turn = 1`.
 - `.timing(EffectTiming::...)` — override the timing enum (rare).
 - `.dp_modifier(n)` — static DP buff (for declarative effects).
-- `.dp_modifier_fn(|ctx, target| n)` — live DP formula/query contribution for declarative aura effects.
-- `.security_attack_fn(|ctx, target| n)` — live Security Attack check count formula for declarative aura effects.
+- `.dp_modifier_fn(|ctx, target| Some(n))` — live DP formula/query contribution for declarative aura effects; `None` means the aura does not apply to that target.
+- `.security_attack_fn(|ctx, target| Some(n))` — live Security Attack check count formula for declarative aura effects; `None` preserves the normal base check when no formula applies.
 - `.cost_reduction(n)` — static cost reduction.
 - `.build()` — finalize into `Effect`.
 
