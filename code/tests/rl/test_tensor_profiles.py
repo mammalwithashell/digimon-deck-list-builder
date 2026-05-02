@@ -68,7 +68,7 @@ def test_tensor_profile_falls_back_when_engine_function_missing(monkeypatch):
 
     profile = get_tensor_profile()
 
-    assert profile.id == "standard_v1"
+    assert profile.id == "standard_compact_v1"
     assert profile.game_mode == "standard"
     assert profile.card_id_slot_count == 520
     assert profile.scalar_slot_count == 855
@@ -82,9 +82,62 @@ def test_tensor_profile_falls_back_when_engine_module_absent(monkeypatch):
 
     profile = get_tensor_profile()
 
-    assert profile.id == "standard_v1"
+    assert profile.id == "standard_compact_v1"
     assert profile.game_mode == "standard"
-    assert list_tensor_profiles() == ["standard_v1"]
+    assert list_tensor_profiles() == ["standard_compact_v1"]
+
+
+@pytest.mark.parametrize(
+    "profile_id",
+    [None, "standard_compact_v1", "standard_v1", "compact_v1"],
+)
+def test_tensor_profile_fallback_accepts_legacy_aliases(monkeypatch, profile_id):
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    monkeypatch.setitem(sys.modules, "digimon_engine", SimpleNamespace())
+
+    profile = get_tensor_profile(profile_id)
+
+    assert profile.id == "standard_compact_v1"
+    assert profile.game_mode == "standard"
+    assert profile.card_id_slot_count == 520
+    assert profile.scalar_slot_count == 855
+
+
+def test_tensor_profile_fallback_rejects_unknown_profile(monkeypatch):
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    monkeypatch.setitem(sys.modules, "digimon_engine", SimpleNamespace())
+
+    with pytest.raises(ValueError, match="unknown tensor profile: unknown_v1"):
+        get_tensor_profile("unknown_v1")
+
+
+def test_tensor_profile_canonicalizes_engine_alias(monkeypatch):
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    raw_profile = SimpleNamespace(
+        id="standard_v1",
+        game_mode="standard",
+        version=1,
+        tensor_size=1375,
+        field_slots=27,
+        slot_size=45,
+        max_sources=6,
+        card_id_slot_count=520,
+        scalar_slot_count=855,
+        card_id_positions=range(520),
+        scalar_positions=range(520, 1375),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "digimon_engine",
+        SimpleNamespace(get_tensor_profile=lambda _profile_id=None: raw_profile),
+    )
+
+    profile = get_tensor_profile("standard_v1")
+
+    assert profile.id == "standard_compact_v1"
 
 
 def test_tensor_profile_does_not_hide_engine_import_error(monkeypatch):

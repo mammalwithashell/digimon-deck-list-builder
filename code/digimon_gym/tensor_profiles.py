@@ -1,7 +1,8 @@
 """Board tensor profile metadata used by RL feature extraction.
 
 Rust owns the canonical profile registry. The fallback keeps imports working
-before a local PyO3 wheel has been rebuilt, and it must match standard_v1.
+before a local PyO3 wheel has been rebuilt, and it must match
+standard_compact_v1.
 """
 
 from __future__ import annotations
@@ -28,22 +29,28 @@ class TensorProfile:
     scalar_positions: tuple[int, ...]
 
 
+_CANONICAL_STANDARD_COMPACT_V1 = "standard_compact_v1"
+_STANDARD_COMPACT_V1_ALIASES = {
+    _CANONICAL_STANDARD_COMPACT_V1,
+    "standard_v1",
+    "compact_v1",
+}
+
+
 def get_tensor_profile(profile_id: str | None = None) -> TensorProfile:
     digimon_engine = _load_digimon_engine()
     if digimon_engine is None:
-        if profile_id not in (None, "standard_v1"):
-            raise ValueError(f"unknown tensor profile: {profile_id}") from None
-        return _legacy_standard_v1()
+        _validate_fallback_profile_id(profile_id)
+        return _legacy_standard_compact_v1()
 
     get_profile = getattr(digimon_engine, "get_tensor_profile", None)
     if get_profile is None:
-        if profile_id not in (None, "standard_v1"):
-            raise ValueError(f"unknown tensor profile: {profile_id}") from None
-        return _legacy_standard_v1()
+        _validate_fallback_profile_id(profile_id)
+        return _legacy_standard_compact_v1()
 
     raw = get_profile(profile_id)
     return TensorProfile(
-        id=raw.id,
+        id=_canonicalize_tensor_profile_id(raw.id),
         game_mode=raw.game_mode,
         version=raw.version,
         tensor_size=raw.tensor_size,
@@ -60,13 +67,13 @@ def get_tensor_profile(profile_id: str | None = None) -> TensorProfile:
 def list_tensor_profiles() -> list[str]:
     digimon_engine = _load_digimon_engine()
     if digimon_engine is None:
-        return ["standard_v1"]
+        return [_CANONICAL_STANDARD_COMPACT_V1]
 
     list_profiles = getattr(digimon_engine, "list_tensor_profiles", None)
     if list_profiles is None:
-        return ["standard_v1"]
+        return [_CANONICAL_STANDARD_COMPACT_V1]
 
-    return list(list_profiles())
+    return [_canonicalize_tensor_profile_id(profile_id) for profile_id in list_profiles()]
 
 
 def _load_digimon_engine():
@@ -80,7 +87,19 @@ def _load_digimon_engine():
     return importlib.import_module("digimon_engine")
 
 
-def _legacy_standard_v1() -> TensorProfile:
+def _validate_fallback_profile_id(profile_id: str | None) -> None:
+    if profile_id is None or profile_id in _STANDARD_COMPACT_V1_ALIASES:
+        return
+    raise ValueError(f"unknown tensor profile: {profile_id}") from None
+
+
+def _canonicalize_tensor_profile_id(profile_id: str) -> str:
+    if profile_id in _STANDARD_COMPACT_V1_ALIASES:
+        return _CANONICAL_STANDARD_COMPACT_V1
+    return profile_id
+
+
+def _legacy_standard_compact_v1() -> TensorProfile:
     from engine_py_legacy.engine.data.tensor_layout import (
         CARD_ID_POSITIONS,
         NUM_CARD_SLOTS,
@@ -90,7 +109,7 @@ def _legacy_standard_v1() -> TensorProfile:
     from engine_py_legacy.engine.game import FIELD_SLOTS, MAX_SOURCES, SLOT_SIZE, TENSOR_SIZE
 
     return TensorProfile(
-        id="standard_v1",
+        id=_CANONICAL_STANDARD_COMPACT_V1,
         game_mode="standard",
         version=1,
         tensor_size=TENSOR_SIZE,
