@@ -63,6 +63,7 @@ fn fixture_grant_keyword(keyword: &str, value: Option<i32>) -> CompiledCard {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        digixros_aliases: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],
@@ -112,6 +113,7 @@ fn fixture_aura_self_dp(amount: i32) -> CompiledCard {
         attribute: None,
         ace_overflow: None,
         identity: None,
+        digixros_aliases: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],
@@ -160,6 +162,7 @@ fn fixture_aura_filtered(
         attribute: None,
         ace_overflow: None,
         identity: None,
+        digixros_aliases: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],
@@ -211,6 +214,7 @@ fn fixture_cost_reduction(amount: i32, condition: Option<CompiledPredicate>) -> 
         attribute: None,
         ace_overflow: None,
         identity: None,
+        digixros_aliases: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],
@@ -274,6 +278,7 @@ fn fixture_flood_gate(modifier: &str, target: CompiledPredicate) -> CompiledCard
         attribute: None,
         ace_overflow: None,
         identity: None,
+        digixros_aliases: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],
@@ -326,6 +331,7 @@ fn fixture_player_flood_gate(modifier: &str, target_player: CompiledPlayerRef) -
         attribute: None,
         ace_overflow: None,
         identity: None,
+        digixros_aliases: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],
@@ -379,6 +385,24 @@ fn ace_overflow_reads_from_compiled_card() {
 fn ace_overflow_is_none_when_unset() {
     let dsl = DslCardEffect::new(Arc::new(fixture_grant_keyword("Blocker", None)));
     assert_eq!(dsl.ace_overflow(), None);
+}
+
+#[test]
+fn dsl_ace_overflow_populates_runtime_card_data() {
+    let yaml = r#"
+card: ACE-RUNTIME
+name: Ace Runtime
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+ace_overflow: -4
+"#;
+    let spec: digimon_dsl::spec::CardSpec = serde_yml::from_str(yaml).expect("parse");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile");
+    let card_data = digimon_engine::debug_runner::card_data_for_test_from_compiled(&compiled);
+    assert_eq!(card_data.ace_overflow, Some(-4));
 }
 
 // ── Task 10: register_dsl_cards + build_registry ─────────────────────────────

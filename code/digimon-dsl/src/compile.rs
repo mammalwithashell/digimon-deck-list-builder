@@ -51,6 +51,7 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
         attribute: spec.attribute.clone(),
         ace_overflow: spec.ace_overflow,
         identity,
+        digixros_aliases: spec.digixros_aliases.clone(),
         dual,
         use_requirement,
         alt_paths,

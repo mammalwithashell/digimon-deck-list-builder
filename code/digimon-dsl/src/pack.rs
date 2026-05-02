@@ -415,6 +415,7 @@ mod tests {
             attribute: None,
             ace_overflow: None,
             identity: None,
+            digixros_aliases: vec![],
             dual: None,
             use_requirement: None,
             alt_paths: vec![],
@@ -441,6 +442,7 @@ mod tests {
             attribute: None,
             ace_overflow: None,
             identity: None,
+            digixros_aliases: vec![],
             dual: Some(CompiledDual {
                 digimon: CompiledDualDigimon {
                     level: 3,

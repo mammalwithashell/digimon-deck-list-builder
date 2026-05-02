@@ -43,6 +43,8 @@ fn make_digimon(id: &str) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -82,6 +84,8 @@ fn make_tamer(id: &str) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -105,6 +109,8 @@ fn make_filler() -> CardData {
         effect_class_name: "FILL".to_string(),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -480,6 +486,8 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
             effect_class_name: "REDUCER".to_string(),
             index: 0,
             norm_id: 0.0,
+            ace_overflow: None,
+            digixros_aliases: Vec::new(),
         })
         .add_card(make_filler())
         .hand(0, &["DIG-A"])
@@ -563,6 +571,8 @@ fn cannot_reduce_cost_suppresses_play_cost_reducers() {
             effect_class_name: "REDUCER".to_string(),
             index: 0,
             norm_id: 0.0,
+            ace_overflow: None,
+            digixros_aliases: Vec::new(),
         })
         .add_card(make_filler())
         .hand(0, &["DIG-A"])
@@ -651,6 +661,8 @@ fn cannot_reduce_play_cost_suppresses_when_playing_this_hand_reducer() {
             effect_class_name: "SELF_REDUCER".to_string(),
             index: 0,
             norm_id: 0.0,
+            ace_overflow: None,
+            digixros_aliases: Vec::new(),
         })
         .add_card(make_filler())
         .hand(0, &["SELF-REDUCER"])
@@ -770,6 +782,8 @@ fn make_attacker() -> CardData {
         effect_class_name: "ATK".to_string(),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

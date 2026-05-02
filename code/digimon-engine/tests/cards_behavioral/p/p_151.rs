@@ -59,6 +59,22 @@ fn make_non_liberator_digimon(id: &str) -> CardData {
     c
 }
 
+fn pick_first_pending_action(runner: &mut DebugRunner) {
+    let action = runner
+        .pending_selection_view()
+        .and_then(|view| view.valid_action_ids.first().copied())
+        .expect("pending selection should have at least one valid action");
+    runner
+        .execute_action(0, action)
+        .expect("resolve pending action");
+}
+
+fn resolve_required_prompts_until_optional_or_done(runner: &mut DebugRunner) {
+    while runner.pending_selection().is_some() && !runner.pending_is_optional() {
+        pick_first_pending_action(runner);
+    }
+}
+
 fn make_tamer(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Tamer;
@@ -329,9 +345,6 @@ fn p_151_main_reveal_with_no_liberator_in_top_3_resolves_cleanly() {
 /// by activate_hand_main). Auto-resolving: picks first revealed LIBERATOR → hand
 /// grows by 1. Then the optional free-play prompt may park; we pass on it.
 ///
-/// Phase 2b note: `select_reveal` accept-all filter means any revealed card can
-/// be picked regardless of trait. Tests that only LIBERATOR cards can be picked
-/// are #[ignore]'d pending Phase 2b closure.
 #[test]
 fn p_151_main_selected_card_added_to_hand() {
     let mut runner = DebugRunner::builder()
@@ -346,23 +359,16 @@ fn p_151_main_selected_card_added_to_hand() {
     let hand_before = runner.game.players[0].hand.len(); // 1 (P-151 in hand)
     runner.game.activate_hand_main(0, 0);
 
-    // Explicitly pick the first valid action from the reveal-select prompt.
-    // auto_resolve() may PASS on optional prompts; we need to actually pick here.
-    if runner.game.pending_selection.is_some() {
-        if let Some(view) = runner.pending_selection_view() {
-            if !view.valid_action_ids.is_empty() {
-                let _ = runner.execute_action(0, view.valid_action_ids[0]);
-            }
-        }
-    }
+    // Explicitly pick the revealed LIBERATOR card. `auto_resolve()` may PASS
+    // on optional prompts; we need this selection to happen.
+    pick_first_pending_action(&mut runner);
+    resolve_required_prompts_until_optional_or_done(&mut runner);
 
     // Pass on the optional free-play prompt (decline it to keep hand count clean).
     if runner.pending_selection().is_some() && runner.pending_is_optional() {
         let _ = runner.execute_action(0, digimon_engine::action::space::PASS);
     }
-
-    // Drain any remaining steps (place_remainder_on_deck permutation, etc.)
-    let _ = runner.auto_resolve();
+    resolve_required_prompts_until_optional_or_done(&mut runner);
 
     // P-151 stays in hand (activate_hand_main doesn't consume it).
     // One LIBERATOR card was added from reveal → hand grows by net +1.
@@ -415,14 +421,8 @@ fn p_151_main_free_play_prompt_is_optional() {
 
     runner.game.activate_hand_main(0, 0);
 
-    // Explicitly resolve the reveal-pick (pick first valid action)
-    if runner.game.pending_selection.is_some() {
-        if let Some(view) = runner.pending_selection_view() {
-            if !view.valid_action_ids.is_empty() {
-                let _ = runner.execute_action(0, view.valid_action_ids[0]);
-            }
-        }
-    }
+    pick_first_pending_action(&mut runner);
+    resolve_required_prompts_until_optional_or_done(&mut runner);
 
     // Now check if the free-play prompt is pending and optional
     if runner.pending_selection().is_some() {
@@ -453,22 +453,15 @@ fn p_151_main_declining_free_play_does_not_add_to_field() {
     let fired = runner.game.activate_hand_main(0, 0);
     assert!(fired, "activate_hand_main must return true");
 
-    // Resolve the reveal-pick (pick first revealed LIBERATOR card)
-    if runner.game.pending_selection.is_some() {
-        if let Some(view) = runner.pending_selection_view() {
-            if !view.valid_action_ids.is_empty() {
-                let _ = runner.execute_action(0, view.valid_action_ids[0]);
-            }
-        }
-    }
+    pick_first_pending_action(&mut runner);
+    resolve_required_prompts_until_optional_or_done(&mut runner);
 
     // Now the optional free-play prompt should be pending; decline it with PASS.
     if runner.pending_selection().is_some() && runner.pending_is_optional() {
         let _ = runner.execute_action(0, digimon_engine::action::space::PASS);
     }
 
-    // Drain any remaining steps (place_remainder_on_deck ordered permutation, etc.)
-    let _ = runner.auto_resolve();
+    resolve_required_prompts_until_optional_or_done(&mut runner);
 
     let field_after = runner.battle_area_size(0);
     assert_eq!(

@@ -184,10 +184,20 @@ Format per entry:
 
 ## BG Imperial DNA cards — YAML `dna_costs` authoring / production data population
 - Effect text: "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0" and equivalent BG Imperial DNA requirements.
-- Missing DSL verb / step kind / predicate: `CardSpec` has no field that authors `dna_costs`, and production `cards.json` ingest does not populate `CardData.dna_costs`, so a YAML card can describe effects but cannot make the normal DNA action legal in the Rust action mask.
+- Missing DSL verb / step kind / predicate: RESOLVED 2026-05-02 for top-level `alt_paths: [{ kind: dna_digivolve, ... }]` authoring into runtime `CardData.dna_costs`.
 - Lowers to engine API: `CardData.dna_costs`, consumed by the DNA digivolve action-mask branch and `Game::initiate_dna_digivolve`.
-- Suggested DSL syntax: either add a top-level `dna_costs:` field to `CardSpec`, or make `alt_paths: [{ kind: dna_digivolve, ... }]` populate the runtime `CardData.dna_costs` used by action-mask evaluation.
+- Covered by: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dsl_dna_alt_path_enriches_card_data_dna_costs`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- authored_dna_alt_path_makes_dna_action_legal_for_bt20_016`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_016_has_dna_digivolve_alt_path`.
+- Full verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml`, `DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v`, and `python -m pytest code/tests/rl -v`.
+- Remaining limits: inherited/end-of-turn `alt_path_registration` DNA clauses are still tracked by the preceding entry; this closure covers top-level printed DNA digivolve card data.
 - First reported: 2026-04-28 (BG Imperial assess-rust-engine-archetype)
+
+## Group 8 — scoped DigiXros aliases, ACE Overflow metadata, and reveal overlays
+- Effect text: "also treated as [X] for DigiXros", `<ACE> Overflow -N`, and reveal effects whose revealed cards should be evaluated with temporary name/kind identity only while in the reveal zone.
+- Status: RESOLVED 2026-05-02 for the planned vocabulary/data slices.
+- Lowered runtime surfaces: `CardData.digixros_aliases` / compiled `digixros_aliases` for DigiXros-only material matching; `CardData.ace_overflow` for memory loss when ACE cards leave battle-area stacks or are removed from under a stack; and `RevealOverlay` on `CardSource` for reveal-zone predicate evaluation until destination movement clears the overlay.
+- Covered by: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digixros`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test ace_overflow`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- reveal`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor`, and full `cargo test --manifest-path code/digimon-engine/Cargo.toml`.
+- Remaining limits: full DigiXros play flow, reveal overlays outside explicit reveal-zone predicates, and unrelated immediate-attack/declarative-keyword gaps remain separate entries.
+- First reported: consolidated from Group 8 token/card-data gap planning.
 
 ## BT22-015 — grant "this Digimon may attack" after When Digivolving
 - Effect text: "[When Digivolving] ... Then, this Digimon may attack."

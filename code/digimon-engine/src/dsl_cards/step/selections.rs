@@ -324,14 +324,17 @@ pub fn try_install(
             true
         }
         CompiledStep::SelectReveal {
-            of: _,
+            of,
+            filter,
             bind_as,
             prompt,
             optional,
             ..
         } => {
-            install_select_reveal(
+            return install_select_reveal(
                 ctx,
+                *of,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -339,7 +342,6 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
         }
         CompiledStep::SelectSecurity {
             of,
@@ -1016,19 +1018,46 @@ fn install_select_effect_choice(
 
 fn install_select_reveal(
     ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
-) {
+) -> bool {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_reveal(
         &prompt,
         optional,
-        |_game, _idx| true, // Phase 2b precedent: accept-all filter.
+        move |game, idx| {
+            let Some(card) = game.revealed_cards.get(idx) else {
+                return false;
+            };
+            if !revealed_owner_matches(of, card.owner, player, game) {
+                return false;
+            }
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::RevealedCard(card.handle()),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -1043,7 +1072,21 @@ fn install_select_reveal(
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
-    );
+    )
+}
+
+fn revealed_owner_matches(
+    of: CompiledPlayerRef,
+    owner: u8,
+    player: u8,
+    game: &crate::game::Game,
+) -> bool {
+    match of {
+        CompiledPlayerRef::You => owner == player,
+        CompiledPlayerRef::Opponent => owner == game.next_clockwise(player),
+        CompiledPlayerRef::Active => owner == game.turn_player(),
+        CompiledPlayerRef::Any => true,
+    }
 }
 
 fn install_select_security(

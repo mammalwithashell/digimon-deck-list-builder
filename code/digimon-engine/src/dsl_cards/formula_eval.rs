@@ -159,7 +159,8 @@ pub fn evaluate_read(
     ctx: &EffectReadContext<'_>,
     target: PermanentHandle,
 ) -> i32 {
-    evaluate_read_with_raw(f, ctx, target, &EngineRawRustRegistry::new())
+    let raw = crate::cards::raw_rust::build_registry();
+    evaluate_read_with_raw(f, ctx, target, &raw)
 }
 
 pub fn evaluate_read_with_raw(

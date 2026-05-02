@@ -27,6 +27,8 @@ fn digimon_card(id: &str, name: &str, traits: &[&str], dp: i32) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -50,6 +52,8 @@ fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
         effect_class_name: card_id.to_string(),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -327,14 +331,14 @@ effects:
       - gain_memory: 2
 "#;
 
-    let mut moved_card = digimon_card("BABY-ROCK", "Rock Baby", &["Rock"], 1000);
-    moved_card.level = Some(2);
+    let mut moved_card = digimon_card("ROOKIE-ROCK", "Rock Rookie", &["Rock"], 1000);
+    moved_card.level = Some(3);
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(yaml)
         .unwrap()
         .add_card(moved_card)
-        .digitama(0, &["BABY-ROCK"])
+        .digitama(0, &["ROOKIE-ROCK"])
         .memory(10)
         .build();
 

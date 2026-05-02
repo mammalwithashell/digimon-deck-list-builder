@@ -2519,7 +2519,7 @@ hand / deck / play-cost. Looks up `token_name` in
 | `token_name`   | `card_id`              | Colors  | DP   | Printed effects                                               |
 |----------------|------------------------|---------|------|---------------------------------------------------------------|
 | `petrification`| `TOKEN_PETRIFICATION`  | White   | 3000 | [On Deletion] Trash the top card of this Digimon's owner's security stack. <br>(Printed [Your Turn] CannotSuspend rider deferred — depends on condition-gated modifier entries, tracked in `RUST_ENGINE_GAPS.md` §"Condition-gated modifier entries") |
-| `familiar`     | `TOKEN_FAMILIAR`       | Yellow  | 3000 | Stats only — [On Deletion] -3000 DP opponent Digimon is deferred behind the "Selection: opponent-as-selecting-player" gap |
+| `familiar`     | `TOKEN_FAMILIAR`       | Yellow  | 3000 | [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn. |
 
 **Worked example** (TEST-023):
 

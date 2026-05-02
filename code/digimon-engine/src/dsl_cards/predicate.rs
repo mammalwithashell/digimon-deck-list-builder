@@ -19,6 +19,7 @@ pub enum PredicateSubject {
     Permanent(PermanentHandle),
     BreedingPermanent(PlayerId),
     Card(CardHandle),
+    RevealedCard(CardHandle),
     None,
 }
 
@@ -177,7 +178,8 @@ pub fn eval_predicate_with_bindings(
     }
 
     match subject {
-        PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card),
+        PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false),
+        PredicateSubject::RevealedCard(card) => eval_card_fields(pred, rctx, card, true),
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h),
         PredicateSubject::BreedingPermanent(player) => {
             eval_breeding_permanent_fields(pred, rctx, player)
@@ -497,14 +499,29 @@ fn eval_card_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
     card: CardHandle,
+    reveal_overlay_visible: bool,
 ) -> bool {
     let data = match rctx.game.card_data_for_handle(card) {
         Some(d) => d,
         None => return false,
     };
+    if reveal_overlay_visible && !pred.zone.is_empty() && !pred.zone.contains(&CompiledZone::Reveal)
+    {
+        return false;
+    }
+    let overlay = reveal_overlay_visible
+        .then(|| {
+            rctx.game
+                .card_source_for_handle(card)
+                .and_then(|source| source.reveal_overlay.as_ref())
+        })
+        .flatten();
 
     if let Some(want) = pred.kind {
-        if !kind_matches_card_search(want, data) {
+        let overlay_match = overlay
+            .and_then(|o| o.kind)
+            .is_some_and(|kind| kind_matches(want, kind));
+        if !kind_matches_card_search(want, data) && !overlay_match {
             return false;
         }
     }
@@ -550,17 +567,27 @@ fn eval_card_fields(
         return false;
     }
     if let Some(ref n) = pred.name_is {
-        if data.card_name != *n {
+        let overlay_match = overlay
+            .and_then(|o| o.name.as_ref())
+            .is_some_and(|name| name == n);
+        if data.card_name != *n && !overlay_match {
             return false;
         }
     }
     if let Some(ref n) = pred.name_contains {
-        if !data.card_name.to_lowercase().contains(&n.to_lowercase()) {
+        let needle = n.to_lowercase();
+        let overlay_match = overlay
+            .and_then(|o| o.name.as_ref())
+            .is_some_and(|name| name.to_lowercase().contains(&needle));
+        if !data.card_name.to_lowercase().contains(&needle) && !overlay_match {
             return false;
         }
     }
     if let Some(ref names) = pred.name_in {
-        if !names.iter().any(|n| n == &data.card_name) {
+        let overlay_match = overlay
+            .and_then(|o| o.name.as_ref())
+            .is_some_and(|name| names.iter().any(|n| n == name));
+        if !names.iter().any(|n| n == &data.card_name) && !overlay_match {
             return false;
         }
     }
@@ -601,7 +628,7 @@ fn eval_permanent_fields(
     };
     // Delegate the shared card fields to the card-handle path using the top card.
     let top_handle = perm.top_card().handle();
-    if !eval_card_fields(pred, rctx, top_handle) {
+    if !eval_card_fields(pred, rctx, top_handle, false) {
         return false;
     }
     if let Some(want) = pred.kind {
@@ -711,7 +738,7 @@ fn eval_breeding_permanent_fields(
 
     let mut card_pred = pred.clone();
     card_pred.kind = None;
-    if !eval_card_fields(&card_pred, rctx, top_handle) {
+    if !eval_card_fields(&card_pred, rctx, top_handle, false) {
         return false;
     }
 

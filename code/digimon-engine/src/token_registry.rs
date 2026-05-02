@@ -59,7 +59,9 @@ impl TokenDef {
             keywords: Vec::new(),
             index: 0,
             norm_id: 0.0,
+            ace_overflow: None,
             dual: None,
+            digixros_aliases: Vec::new(),
         }
     }
 }
@@ -95,6 +97,10 @@ impl TokenRegistry {
     /// seed `card_data` with synthetic rows.
     pub fn iter(&self) -> impl Iterator<Item = &TokenDef> {
         self.defs.values()
+    }
+
+    pub fn names(&self) -> impl Iterator<Item = &str> {
+        self.defs.keys().map(String::as_str)
     }
 }
 
@@ -144,6 +150,20 @@ mod tests {
         let cd = def.to_card_data();
         assert_eq!(cd.card_kind, CardKind::Token);
         assert_eq!(cd.play_cost, 0);
+    }
+
+    #[test]
+    fn all_registered_tokens_synthesize_token_card_data() {
+        let registry = build_registry();
+        for name in registry.names() {
+            let token = registry.get(name).expect("registered token exists");
+            let data = token.to_card_data();
+            assert_eq!(data.card_kind, CardKind::Token, "{name}");
+            assert_eq!(data.play_cost, 0, "{name}");
+            assert!(data.evo_costs.is_empty(), "{name}");
+            assert!(data.dna_costs.is_empty(), "{name}");
+            assert_eq!(data.effect_class_name, data.card_id, "{name}");
+        }
     }
 
     #[test]

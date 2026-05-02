@@ -2506,6 +2506,12 @@ impl Game {
             .get(handle.index as usize)
             .is_some()
         {
+            let sources = self.player(handle.player).battle_area[handle.index as usize]
+                .card_sources
+                .clone();
+            if !sources.first().is_some_and(|source| source.is_token) {
+                self.apply_ace_overflow_for_sources(&sources);
+            }
             self.player_mut(handle.player)
                 .delete_permanent(handle.index as usize);
         }

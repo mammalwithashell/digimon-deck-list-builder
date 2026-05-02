@@ -29,6 +29,8 @@ fn colored_card(id: &str, color: CardColor, level: u8) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

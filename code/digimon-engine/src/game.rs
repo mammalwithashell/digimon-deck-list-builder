@@ -724,10 +724,26 @@ impl Game {
             return false;
         };
         let removed = permanent.card_sources.remove(pos);
+        self.apply_ace_overflow_for_sources(std::slice::from_ref(&removed));
         self.player_mut(source_ref.permanent.player)
             .trash
             .push(removed);
         true
+    }
+
+    pub(crate) fn apply_ace_overflow_for_sources(
+        &mut self,
+        sources: &[crate::card_source::CardSource],
+    ) {
+        let penalty: i16 = sources
+            .iter()
+            .filter(|source| !source.is_token)
+            .filter_map(|source| self.card_data.get(source.data_index)?.ace_overflow)
+            .map(|value| value as i16)
+            .sum();
+        if penalty != 0 {
+            self.memory += penalty;
+        }
     }
 
     pub fn remove_source_ref(
@@ -1951,6 +1967,60 @@ impl Game {
         None
     }
 
+    /// Resolve a `CardHandle` to its live `CardSource` instance.
+    pub fn card_source_for_handle(
+        &self,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<&crate::card_source::CardSource> {
+        let target_index = handle.0;
+        for player in &self.players {
+            if let Some(cs) = player.hand.iter().find(|c| c.card_index == target_index) {
+                return Some(cs);
+            }
+            if let Some(cs) = player.trash.iter().find(|c| c.card_index == target_index) {
+                return Some(cs);
+            }
+            for perm in &player.battle_area {
+                if let Some(cs) = perm
+                    .card_sources
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
+                    return Some(cs);
+                }
+                if let Some(cs) = perm
+                    .linked_cards
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
+                    return Some(cs);
+                }
+            }
+            if let Some(breeding) = &player.breeding_area {
+                if let Some(cs) = breeding
+                    .card_sources
+                    .iter()
+                    .find(|c| c.card_index == target_index)
+                {
+                    return Some(cs);
+                }
+            }
+            if let Some(cs) = player
+                .security
+                .iter()
+                .find(|c| c.card_index == target_index)
+            {
+                return Some(cs);
+            }
+            if let Some(cs) = player.deck.iter().find(|c| c.card_index == target_index) {
+                return Some(cs);
+            }
+        }
+        self.revealed_cards
+            .iter()
+            .find(|c| c.card_index == target_index)
+    }
+
     // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───
 
     /// Sum of static `dp_modifier` values from a single source's effects
@@ -2125,6 +2195,8 @@ mod current_attacker_tests {
             index: 0,
             norm_id: 0.0,
             dual: None,
+            ace_overflow: None,
+            digixros_aliases: Vec::new(),
         }
     }
 

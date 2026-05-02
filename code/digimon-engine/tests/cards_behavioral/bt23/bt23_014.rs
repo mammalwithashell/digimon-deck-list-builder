@@ -19,13 +19,16 @@
 //! - Shared [On Play]/[When Digivolving] + standalone [When Attacking] triggering
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+
+const LOW_DP_TARGET: &str = "BT23-014-LOW-DP-TARGET";
 
 /// Standard fixture: Gallantmon registered, no cards in hand yet.
 fn gallantmon_runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT23-014")
         .expect("BT23-014 found in embedded DSL pack")
+        .add_card(make_test_card(LOW_DP_TARGET, "LowDpTarget"))
         .memory(12)
         .start()
 }
@@ -37,6 +40,7 @@ fn gallantmon_in_hand() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT23-014")
         .expect("BT23-014 found in embedded DSL pack")
+        .add_card(make_test_card(LOW_DP_TARGET, "LowDpTarget"))
         .hand(0, &["BT23-014"])
         // 3-card decks for each player prevent deck-out during multi-turn tests.
         .deck(0, &["BT23-014", "BT23-014", "BT23-014"])
@@ -349,15 +353,10 @@ fn bt23_014_on_play_with_no_opp_digimon_does_not_delete() {
 
 #[test]
 fn bt23_014_on_play_with_opp_digimon_present_deletes_it() {
-    // Place an opponent Digimon first, then play Gallantmon.
-    // NOTE G-PRED-DP-LTE: dp_lte predicate on permanents is not evaluated yet.
-    // All opponent Digimon are valid targets regardless of DP. After the gap
-    // closes, only Digimon with DP ≤ (8000 + 2000 × opp_count) will be targeted.
+    // Place an eligible opponent Digimon first, then play Gallantmon.
     let mut runner = gallantmon_in_hand();
 
-    // Place a target on opponent's side (also Gallantmon for simplicity — high DP
-    // but still targetable while G-PRED-DP-LTE is open).
-    runner.place_on_field(1, "BT23-014", None);
+    runner.place_on_field(1, LOW_DP_TARGET, None);
     let opp_count_before = runner.game.players[1].battle_area.len();
 
     let _idx = runner.play(0, 0);
@@ -396,7 +395,7 @@ fn bt23_014_when_attacking_with_target_reduces_opp_field() {
     let mut runner = gallantmon_runner();
 
     let gallantmon = runner.place_on_field(0, "BT23-014", Some(0));
-    let _target = runner.place_on_field(1, "BT23-014", None);
+    let _target = runner.place_on_field(1, LOW_DP_TARGET, None);
     let opp_count_before = runner.game.players[1].battle_area.len();
 
     runner.attack_player(gallantmon, 1, false);
@@ -440,10 +439,8 @@ fn bt23_014_compiled_card_has_when_attacking_clause() {
 }
 
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte predicate on permanents not evaluated yet"]
 fn bt23_014_dp_cap_with_3_opp_perms_is_14000() {
     // Formula: 8000 + 2000 × 3 = 14000.
-    // Blocked by G-PRED-DP-LTE: dp_lte predicate evaluator doesn't filter permanents.
     let mut runner = gallantmon_runner();
 
     let gallantmon = runner.place_on_field(0, "BT23-014", Some(0));

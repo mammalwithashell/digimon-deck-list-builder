@@ -1852,7 +1852,8 @@ impl Game {
         let Some(pos) = self.revealed_cards.iter().position(|c| c.handle() == card) else {
             return false;
         };
-        let taken = self.revealed_cards.remove(pos);
+        let mut taken = self.revealed_cards.remove(pos);
+        taken.clear_reveal_overlay();
         self.player_mut(player_id).hand.push(taken);
         true
     }
@@ -1866,7 +1867,8 @@ impl Game {
         let Some(pos) = self.revealed_cards.iter().position(|c| c.handle() == card) else {
             return false;
         };
-        let taken = self.revealed_cards.remove(pos);
+        let mut taken = self.revealed_cards.remove(pos);
+        taken.clear_reveal_overlay();
         self.player_mut(player_id).trash.push(taken);
         true
     }
@@ -1882,7 +1884,8 @@ impl Game {
         let Some(pos_idx) = self.revealed_cards.iter().position(|c| c.handle() == card) else {
             return false;
         };
-        let taken = self.revealed_cards.remove(pos_idx);
+        let mut taken = self.revealed_cards.remove(pos_idx);
+        taken.clear_reveal_overlay();
         match position {
             crate::enums::StackPosition::Top => {
                 self.player_mut(player_id).deck.push(taken);
@@ -2013,6 +2016,9 @@ impl Game {
             return None;
         };
         let top_handle = top.handle();
+        let mut leaving_sources = sources.clone();
+        leaving_sources.push(top.clone());
+        self.apply_ace_overflow_for_sources(&leaving_sources);
         self.player_mut(handle.player).hand.push(top);
 
         // Sources below the top go to trash and fire OnDigivolutionCardTrashed
@@ -2142,6 +2148,9 @@ impl Game {
         let Some(top) = perm.card_sources.pop() else {
             return false;
         };
+        let mut leaving_sources = perm.card_sources.clone();
+        leaving_sources.push(top.clone());
+        self.apply_ace_overflow_for_sources(&leaving_sources);
 
         match position {
             crate::enums::StackPosition::Top => {
@@ -2458,7 +2467,9 @@ impl Game {
                 let Some(idx) = self.revealed_cards.iter().position(|c| c.handle() == h) else {
                     return false;
                 };
-                self.revealed_cards.remove(idx)
+                let mut taken = self.revealed_cards.remove(idx);
+                taken.clear_reveal_overlay();
+                taken
             }
         };
 
@@ -2564,7 +2575,9 @@ impl Game {
             .iter()
             .position(|c| c.handle() == handle)
         {
-            return Some(self.revealed_cards.remove(pos));
+            let mut taken = self.revealed_cards.remove(pos);
+            taken.clear_reveal_overlay();
+            return Some(taken);
         }
 
         None
@@ -3332,7 +3345,9 @@ impl Game {
                         else {
                             return false;
                         };
-                        self.revealed_cards.remove(idx)
+                        let mut taken = self.revealed_cards.remove(idx);
+                        taken.clear_reveal_overlay();
+                        taken
                     }
                 };
                 self.player_mut(player_id).trash.push(taken);
@@ -3382,7 +3397,9 @@ impl Game {
                 let Some(idx) = self.revealed_cards.iter().position(|c| c.handle() == h) else {
                     return false;
                 };
-                self.revealed_cards.remove(idx)
+                let mut taken = self.revealed_cards.remove(idx);
+                taken.clear_reveal_overlay();
+                taken
             }
         };
 

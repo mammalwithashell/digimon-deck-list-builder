@@ -39,6 +39,9 @@ pub struct CardSpec {
     /// Identity section (§3.4) — name aliases, mostly X-Antibody.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub identity: Option<crate::identity::IdentitySpec>,
+    /// Names this card may satisfy as DigiXros material only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub digixros_aliases: Vec<String>,
     /// DUAL card face metadata.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dual: Option<DualSpec>,

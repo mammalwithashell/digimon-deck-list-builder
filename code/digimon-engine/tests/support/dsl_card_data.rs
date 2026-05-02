@@ -65,9 +65,11 @@ pub fn card_data_from_compiled(card_id: &str) -> CardData {
                 keywords: Vec::new(),
             },
         }),
+        ace_overflow: card.ace_overflow,
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        digixros_aliases: card.digixros_aliases,
     }
 }
 

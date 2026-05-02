@@ -136,6 +136,8 @@ fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
         effect_class_name: card_id.to_string(),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -159,6 +161,8 @@ fn option_card_with_cost(card_id: &str, name: &str, play_cost: u16, traits: &[&s
         effect_class_name: card_id.to_string(),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -884,16 +888,16 @@ impl CardEffect for OnMoveObserver {
 
 #[test]
 fn on_move_fires_after_breeding_permanent_moves_to_battle() {
-    let mut baby = plain_digimon("BABY", "Baby", 0);
-    baby.level = Some(2);
+    let mut rookie = plain_digimon("ROOKIE", "Rookie", 0);
+    rookie.level = Some(3);
 
     let filler: Vec<&str> = vec!["FILLER"; 5];
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("OBS", "Move Observer", 3))
-        .add_card(baby)
+        .add_card(rookie)
         .add_card(plain_digimon("FILLER", "Filler", 1))
         .hand(0, &["OBS"])
-        .digitama(0, &["BABY"])
+        .digitama(0, &["ROOKIE"])
         .deck(0, &filler)
         .deck(1, &filler)
         .memory(10)
@@ -901,7 +905,7 @@ fn on_move_fires_after_breeding_permanent_moves_to_battle() {
     r.register_effect("OBS", Arc::new(OnMoveObserver));
 
     assert_eq!(r.play(0, 0), Some(0));
-    assert!(r.game.hatch(0), "hatch BABY into breeding");
+    assert!(r.game.hatch(0), "hatch ROOKIE into breeding");
 
     let before = r.memory();
     assert!(
@@ -1832,6 +1836,8 @@ fn lv4_digimon(card_id: &str, name: &str) -> CardData {
         effect_class_name: card_id.to_string(),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

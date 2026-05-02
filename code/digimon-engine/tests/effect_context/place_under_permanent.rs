@@ -34,6 +34,8 @@ fn make_digimon(id: &str) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -57,6 +59,8 @@ fn make_tamer(id: &str) -> CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

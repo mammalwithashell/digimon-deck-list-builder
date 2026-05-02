@@ -141,7 +141,12 @@ pub struct CardData {
     #[serde(default)]
     pub keywords: Vec<crate::enums::Keyword>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ace_overflow: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dual: Option<DualCardData>,
+    /// Alternate names visible only to DigiXros material matching.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub digixros_aliases: Vec<String>,
 }
 
 /// Raw JSON shape from cards.json — matches the actual file format.
@@ -189,7 +194,11 @@ struct RawCard {
     #[serde(default)]
     norm_id: f32,
     #[serde(default)]
+    ace_overflow: Option<i32>,
+    #[serde(default)]
     dual: Option<DualCardData>,
+    #[serde(default)]
+    digixros_aliases: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -361,7 +370,9 @@ impl CardData {
                 effect_class_name: raw_card.card_effect_class_name,
                 index: raw_card.index,
                 norm_id: raw_card.norm_id,
+                ace_overflow: raw_card.ace_overflow,
                 dual: raw_card.dual,
+                digixros_aliases: raw_card.digixros_aliases,
             };
             cards.insert(id, card);
         }

@@ -27,6 +27,8 @@ fn big_digimon(id: &str, name: &str, dp: i32) -> digimon_engine::card_data::Card
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -50,6 +52,8 @@ fn option_card(id: &str, name: &str) -> digimon_engine::card_data::CardData {
         effect_class_name: id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
     }
 }
 

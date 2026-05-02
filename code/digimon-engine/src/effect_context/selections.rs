@@ -658,7 +658,13 @@ impl<'a> EffectContext<'a> {
     /// Uses the `SelectReveal` sub-range (30-39) of the shared HAND_EFFECT
     /// action space — disambiguated by `GamePhase::SelectReveal`. Mirrors
     /// Python's `SEL_REVEALED_START`.
-    pub fn select_reveal<F, C>(&mut self, prompt: &str, is_optional: bool, filter: F, callback: C)
+    pub fn select_reveal<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) -> bool
     where
         F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
@@ -674,7 +680,7 @@ impl<'a> EffectContext<'a> {
             }
         }
         if valid_action_ids.is_empty() {
-            return;
+            return false;
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
@@ -713,6 +719,7 @@ impl<'a> EffectContext<'a> {
             }),
             on_decline: None,
         });
+        true
     }
 
     /// Prompt `self.player` to pick a card from a security stack. Set
