@@ -25,6 +25,23 @@ def test_default_tensor_profile_shape():
     assert len(profile.scalar_positions) == 855
 
 
+def test_get_standard_lite_v2_tensor_profile_from_rust():
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    profile = get_tensor_profile("standard_lite_v2")
+
+    assert profile.id == "standard_lite_v2"
+    assert profile.tensor_size == 8320
+    assert profile.tensor_version == 2
+    assert profile.feature_schema_version == "standard_lite_v2.1"
+    assert profile.card_id_slot_count == 542
+    assert profile.scalar_slot_count == 7778
+    assert profile.layout_hash.startswith("sha256:")
+    assert profile.sections[0].name == "global_features"
+    assert profile.sections[0].offset == 0
+    assert profile.sections[0].shape == (64,)
+
+
 def test_tensor_profile_positions_cover_tensor():
     from digimon_gym.tensor_profiles import get_tensor_profile
 
@@ -58,6 +75,26 @@ def test_feature_extractor_uses_profile_positions():
 
     obs = torch.zeros((2, TENSOR_SIZE), dtype=torch.float32)
     out = extractor(obs)
+    assert tuple(out.shape) == (2, 512)
+
+
+def test_feature_extractor_accepts_observation_layout():
+    import torch
+    from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    profile = get_tensor_profile("standard_lite_v2")
+    space = spaces.Box(
+        low=-10.0,
+        high=20001.0,
+        shape=(profile.tensor_size,),
+        dtype=np.float32,
+    )
+    extractor = CardEmbeddingExtractor(space, observation_layout=profile)
+    out = extractor(torch.zeros((2, profile.tensor_size), dtype=torch.float32))
+
+    assert extractor.card_id_indices.numel() == 542
+    assert extractor.scalar_indices.numel() == 7778
     assert tuple(out.shape) == (2, 512)
 
 
@@ -111,6 +148,18 @@ def test_tensor_profile_fallback_rejects_unknown_profile(monkeypatch):
 
     with pytest.raises(ValueError, match="unknown tensor profile: unknown_v1"):
         get_tensor_profile("unknown_v1")
+
+
+def test_tensor_profile_fallback_rejects_standard_lite_v2_without_layout(monkeypatch):
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    monkeypatch.setitem(sys.modules, "digimon_engine", SimpleNamespace())
+
+    with pytest.raises(
+        ValueError,
+        match="standard_lite_v2 requires digimon_engine observation layout support",
+    ):
+        get_tensor_profile("standard_lite_v2")
 
 
 def test_tensor_profile_canonicalizes_engine_alias(monkeypatch):
