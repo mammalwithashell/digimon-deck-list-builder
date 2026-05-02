@@ -186,3 +186,25 @@ def test_run_profile_games_marks_step_cap_as_draw(monkeypatch):
     assert result.wins == 0
     assert result.losses == 0
     assert result.draws == 1
+
+
+def test_run_profile_games_raises_when_games_exceed_available_seeds(monkeypatch):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    monkeypatch.setattr(gauntlet, "DigimonEnv", FakeEnv)
+    monkeypatch.setattr(gauntlet, "greedy_policy", lambda env: 62)
+
+    profile = fake_profile("standard_lite_v2", 8320)
+    with pytest.raises(ValueError, match="games_per_profile.*seeds"):
+        gauntlet.run_profile_games(
+            requested_profile="standard_lite_v2",
+            profile=profile,
+            config=gauntlet.TensorProfileRunConfig(
+                profiles=("standard_lite_v2",),
+                games_per_profile=3,
+                seeds=(11, 12),
+                max_steps_per_game=10,
+                policy="greedy",
+            ),
+            clock=clock_from((30.0, 31.0)),
+        )

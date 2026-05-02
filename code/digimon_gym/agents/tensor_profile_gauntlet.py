@@ -175,6 +175,11 @@ def run_profile_games(
 ) -> TensorProfileRunResult:
     now = clock or time.perf_counter
     policy_fn = _policy_fn(config.policy)
+    if len(config.seeds) < config.games_per_profile:
+        raise ValueError(
+            "games_per_profile exceeds available seeds: "
+            f"games_per_profile={config.games_per_profile}, seeds={len(config.seeds)}"
+        )
     seeds = tuple(config.seeds[: config.games_per_profile])
     start = now()
 
