@@ -413,6 +413,13 @@ pub enum CompiledDeclarativeClause {
         summary: Option<String>,
         summary_key: Option<String>,
     },
+    LinkRequirement {
+        scope: CompiledScope,
+        cost: u16,
+        filter: CompiledPredicate,
+        summary: Option<String>,
+        summary_key: Option<String>,
+    },
     FloodGate {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
@@ -447,6 +454,7 @@ pub enum CompiledScope {
     FaceUp,
     Inherited,
     Both,
+    Linked,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -475,6 +483,7 @@ pub enum CompiledTiming {
     OnLoseSecurity,
     OnSecurity,
     OnOptionPlaced,
+    Main,
     StartOfYourTurn,
     StartOfOpponentsTurn,
     StartOfYourMainPhase,
@@ -848,6 +857,11 @@ pub enum CompiledStep {
         body: Vec<CompiledStep>,
     },
     PlaceSelfAsDelayOption,
+    LinkToOwnDigimon {
+        optional: bool,
+        free: bool,
+        filter: CompiledPredicate,
+    },
     Optional(Vec<CompiledStep>),
     EndAttack {
         enabled: bool,

@@ -1285,7 +1285,7 @@ impl Game {
                     source_kind: pending.source_kind,
                     resolution_phase: OptionResolutionPhase::LinkSelectHost,
                 });
-                self.install_link_host_selection(owner, source_card, candidates);
+                self.install_link_host_selection(owner, source_card, candidates, false);
             }
             OptionSubtype::Training => {
                 // Phase 8 Task 5: park as an `OptionState::Training` permanent on
@@ -1376,11 +1376,12 @@ impl Game {
     /// Install a field-selection prompt listing `candidates` as legal host
     /// Digimon for a Link Option. On resolve, the callback invokes
     /// `attach_linked_card(host)` which attaches the card + fires OnLink.
-    fn install_link_host_selection(
+    pub(crate) fn install_link_host_selection(
         &mut self,
         owner: PlayerId,
         source_card: crate::card_source::CardHandle,
         candidates: Vec<PermanentHandle>,
+        optional: bool,
     ) {
         use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
         use crate::selection::SelectionKind;
@@ -1406,7 +1407,7 @@ impl Game {
             selecting_player: owner,
             previous_phase,
             valid_action_ids,
-            is_optional: false,
+            is_optional: optional,
             prompt: "Choose a Digimon to link this Option to".to_string(),
             effect_choices: None,
             source_card,
@@ -1425,7 +1426,14 @@ impl Game {
                     });
                 game.attach_linked_card(picked);
             }),
-            on_decline: None,
+            on_decline: optional.then(|| {
+                Box::new(move |game: &mut Game| {
+                    if let Some(pending) = game.pending_option.take() {
+                        game.player_mut(pending.owner).trash.push(pending.card);
+                        game.check_turn_end();
+                    }
+                }) as Box<dyn FnOnce(&mut Game) + Send + Sync>
+            }),
         });
     }
 

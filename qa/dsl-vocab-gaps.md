@@ -463,6 +463,7 @@ Format per entry:
 ---
 
 ## ST22-08 — Link Registration Clause (Plug-In / Link Card Mechanic)  [G-DSL-LINK-VERB]
+- Status: closed 2026-05-02. DSL now supports `kind: link_requirement` lowering to `Effect::link(cost, filter)` and `link_to_own_digimon` process steps that surface the existing Link host-selection `PendingSelection` without adding action IDs.
 - Effect text: "Inherited: Link Requirements [Link] Lv.3 or higher: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
 - Also: "[Main] You may link this card to 1 of your Digimon without paying the cost."
 - Missing DSL verb / step kind / predicate: Two missing DSL constructs:
@@ -490,6 +491,7 @@ Format per entry:
 ---
 
 ## ST22-08 — Linked-Card Effect Scope  [G-DSL-LINKED-SCOPE]
+- Status: closed 2026-05-02. DSL now accepts `scope: linked`; triggered lowering marks the emitted effect with `.linked()` so the existing linked-card dispatch path can fire it from the host.
 - Effect text: DCGO shows EndOfTurnLinkedEffect with `activateClass.SetIsLinkedEffect(true)` — an effect that fires only when the card is linked to a Digimon in the battle area, and the linked Digimon may attack at the controller's end of turn.
 - Missing DSL verb / step kind / predicate: `scope: linked` — a clause scope for effects that fire as if they were part of the Digimon the card is linked to. `CompiledScope` in `digimon-dsl/src/compiled.rs` has `FaceUp` and `Inherited` variants; there is no `Linked` variant. The effect-queue (`effect_queue.rs`) already handles linked cards in `enqueue_from_permanent` (the Phase 8 Task 4 linked_cards branch), but the scope is expressed as a raw `linked_cards` list on `Permanent`, not as a DSL-compiled clause with `scope: linked`.
 - Lowers to engine API: the engine already fires effects for linked cards via the `linked_cards` loop in `enqueue_from_permanent`. The DSL lowering layer would need to detect `scope: linked` on a clause and install the resulting `Effect` via `Effect::declarative(card)` with a flag indicating it should be enqueued from the linked-card path rather than the top-card path.

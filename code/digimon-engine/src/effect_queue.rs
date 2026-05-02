@@ -705,6 +705,9 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
+                if effect.linked {
+                    continue;
+                }
                 if skip_inherited && effect.inherited {
                     continue;
                 }

@@ -166,6 +166,7 @@ fn compile_scope(s: crate::clause::ClauseScope) -> CompiledScope {
         S::FaceUp => CompiledScope::FaceUp,
         S::Inherited => CompiledScope::Inherited,
         S::Both => CompiledScope::Both,
+        S::Linked => CompiledScope::Linked,
     }
 }
 
@@ -196,6 +197,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnLoseSecurity => CompiledTiming::OnLoseSecurity,
         S::OnSecurity => CompiledTiming::OnSecurity,
         S::OnOptionPlaced => CompiledTiming::OnOptionPlaced,
+        S::Main => CompiledTiming::Main,
         S::StartOfYourTurn => CompiledTiming::StartOfYourTurn,
         S::StartOfOpponentsTurn => CompiledTiming::StartOfOpponentsTurn,
         S::StartOfYourMainPhase => CompiledTiming::StartOfYourMainPhase,
@@ -982,6 +984,13 @@ fn compile_declarative(
                 summary_key,
             }
         }
+        B::LinkRequirement(link) => CompiledDeclarativeClause::LinkRequirement {
+            scope,
+            cost: link.cost,
+            filter: compile_predicate(&link.filter, &format!("{prefix}.filter"), card_id, errors),
+            summary,
+            summary_key,
+        },
         B::FloodGate(fg) => CompiledDeclarativeClause::FloodGate {
             scope,
             active_when,
@@ -1571,6 +1580,20 @@ fn compile_step(
                 .collect(),
         },
         S::PlaceSelfAsDelayOption(_) => CompiledStep::PlaceSelfAsDelayOption,
+        S::LinkToOwnDigimon(a) => {
+            if !a.free {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.link_to_own_digimon.free"),
+                    message: "link_to_own_digimon currently supports only free: true".to_string(),
+                });
+            }
+            CompiledStep::LinkToOwnDigimon {
+                optional: a.optional,
+                free: a.free,
+                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            }
+        }
         // OptionalStep is a newtype wrapping Vec<StepSpec> — access via .0
         S::Optional(o) => CompiledStep::Optional(
             o.0.iter()
