@@ -13,6 +13,7 @@
 //! `CardData` with `dna_costs` populated.
 
 use crate::card_data::{CardData, DnaCost, DnaRequirement};
+use crate::digixros::matches_digixros_name_requirement;
 use crate::game::Game;
 use crate::permanent::Permanent;
 
@@ -25,11 +26,7 @@ impl Game {
         let Some(data) = self.card_data_by_id(card_id) else {
             return false;
         };
-        data.card_name.eq_ignore_ascii_case(required_name)
-            || data
-                .digixros_aliases
-                .iter()
-                .any(|alias| alias.eq_ignore_ascii_case(required_name))
+        matches_digixros_name_requirement(data, required_name)
     }
 
     pub fn card_matches_generic_name(&self, card_id: &str, required_name: &str) -> bool {

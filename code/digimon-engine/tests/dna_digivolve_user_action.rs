@@ -55,6 +55,18 @@ fn digixros_matching_accepts_scoped_alias_but_generic_name_checks_do_not() {
 }
 
 #[test]
+fn digixros_matching_helper_uses_production_name_match_semantics() {
+    let runner = DebugRunner::builder()
+        .add_card(make_test_card_with_level("BT10-009", "Shoutmon X4", 4))
+        .hand(0, &["BT10-009"])
+        .build();
+
+    assert!(runner
+        .game
+        .card_can_satisfy_digixros_name("BT10-009", "Shoutmon"));
+}
+
+#[test]
 fn user_action_dna_digivolve_two_stage_resolution_merges_permanents() {
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card_with_level("TST-LV5", "FiveDigi", 5))

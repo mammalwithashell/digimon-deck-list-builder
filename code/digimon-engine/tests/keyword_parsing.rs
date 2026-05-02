@@ -152,6 +152,56 @@ fn ignores_unscoped_generic_alias_text_for_digixros_aliases() {
 }
 
 #[test]
+fn ignores_generic_alias_before_separate_digixros_sentence() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "ALIAS-002": {
+                "card_id": "ALIAS-002",
+                "card_name_eng": "Alias Carrier",
+                "card_kind": 0,
+                "play_cost": 3,
+                "dp": 3000,
+                "level": 3,
+                "card_colors": [0],
+                "effect_description_eng": "This card is also treated as [Shoutmon]. When you would DigiXros, draw 1.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("ALIAS-002").expect("fixture card exists");
+
+    assert!(data.digixros_aliases.is_empty());
+}
+
+#[test]
+fn ignores_generic_alias_before_separate_for_a_digixros_sentence() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "ALIAS-003": {
+                "card_id": "ALIAS-003",
+                "card_name_eng": "Alias Carrier",
+                "card_kind": 0,
+                "play_cost": 3,
+                "dp": 3000,
+                "level": 3,
+                "card_colors": [0],
+                "effect_description_eng": "This card is also treated as [Shoutmon]. You may place cards for a DigiXros.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("ALIAS-003").expect("fixture card exists");
+
+    assert!(data.digixros_aliases.is_empty());
+}
+
+#[test]
 fn parses_rush() {
     let kw = parse_printed_keywords(
         "\u{ff1c}Rush\u{ff1e} (This Digimon can attack the turn it comes into play.)",

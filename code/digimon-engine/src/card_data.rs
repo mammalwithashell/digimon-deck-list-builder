@@ -393,10 +393,11 @@ fn parse_digixros_aliases(effect_text: &str) -> Vec<String> {
     for (start, _) in effect_text.match_indices(marker) {
         let before = &effect_text[..start];
         let tail = &effect_text[start + marker.len()..];
-        if let Some(scope_start) = digixros_scope_start(tail) {
-            aliases.extend(parse_bracketed_names(&tail[..scope_start]));
+        let current_sentence = current_sentence_tail(tail);
+        if let Some(scope_start) = digixros_scope_start(current_sentence) {
+            aliases.extend(parse_bracketed_names(&current_sentence[..scope_start]));
         } else if current_sentence_has_digixros(before) {
-            aliases.extend(parse_bracketed_names(current_sentence_tail(tail)));
+            aliases.extend(parse_bracketed_names(current_sentence));
         }
     }
     aliases
