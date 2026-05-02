@@ -24,10 +24,10 @@ use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::expiry_map::lookup_expiry;
 use crate::dsl_cards::formula_eval;
-use crate::dsl_cards::step::StepRuntime;
+use crate::dsl_cards::step::{resolve_player, StepRuntime};
 use crate::effect_context::EffectContext;
 use crate::enums::EffectSourceKind;
-use crate::modifiers::EffectControllerFilter;
+use crate::modifiers::{EffectControllerFilter, PlayerModifierEntry};
 use crate::permanent::PermanentHandle;
 
 /// Resolve a `CompiledModifierValue` to the `i32` the engine modifier APIs
@@ -164,6 +164,31 @@ pub fn try_run(
                     }
                 }
             }
+            true
+        }
+        CompiledStep::AddPlayerModifier {
+            target_player,
+            modifier,
+            expiry,
+        } => {
+            let Some(expiry) = resolve_expiry("add_player_modifier", expiry) else {
+                return true;
+            };
+            let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier)
+            else {
+                return true;
+            };
+            let player = resolve_player(ctx, *target_player);
+            ctx.game.modifiers.add_player_modifier(
+                player,
+                PlayerModifierEntry::simple(
+                    modifier_ty,
+                    0,
+                    expiry,
+                    ctx.source_permanent,
+                    ctx.player,
+                ),
+            );
             true
         }
         CompiledStep::GrantKeyword {

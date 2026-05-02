@@ -93,6 +93,34 @@ effects:
 }
 
 #[test]
+fn parse_player_scoped_flood_gate() {
+    let yaml = r#"
+card: BT14-009
+name: Gotsumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 3000
+effects:
+  - kind: flood_gate
+    scope: face_up
+    modifier: CannotPlayDigimonByEffect
+    target_player: any
+    summary: "Players can't play Digimon by effects"
+"#;
+    let spec = parse(yaml);
+    match typed_body(&spec, 0) {
+        TypedDeclarativeBody::FloodGate(f) => {
+            assert_eq!(f.modifier, "CannotPlayDigimonByEffect");
+            assert_eq!(f.target_player, Some(digimon_dsl::common::PlayerRef::Any));
+            assert!(f.target.is_none());
+        }
+        _ => panic!("expected FloodGate"),
+    }
+}
+
+#[test]
 fn parse_grant_keyword() {
     let yaml = r#"
 card: AD1-025

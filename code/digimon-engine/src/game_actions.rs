@@ -28,6 +28,13 @@ enum OptionSource {
     Trash(usize),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CostReductionKind {
+    Play,
+    Digivolve,
+    OptionUse,
+}
+
 impl OptionSource {
     fn use_source(self) -> OptionUseSource {
         match self {
@@ -338,8 +345,12 @@ impl Game {
         mut processed: Vec<CostReductionKey>,
     ) -> PlayFromHandCostResult {
         loop {
-            let candidates =
-                self.collect_before_pay_cost_reducers(player_id, Some(target), &processed);
+            let candidates = self.collect_before_pay_cost_reducers(
+                player_id,
+                Some(target),
+                &processed,
+                CostReductionKind::Play,
+            );
             let Some(candidate) = candidates.into_iter().next() else {
                 return self.finish_play_from_hand_after_reductions(
                     player_id,
@@ -665,7 +676,8 @@ impl Game {
         };
 
         // 3. Compute + pay cost (Phase 5 BeforePayCost hooks).
-        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
+        let total_reduction =
+            self.scan_before_pay_cost_reduction(player_id, CostReductionKind::OptionUse);
         let base_cost = printed_cost as i32;
         let effective_cost = (base_cost - total_reduction).max(0) as u16;
         if !self.pay_memory(effective_cost) {
@@ -2268,7 +2280,8 @@ impl Game {
             .min()
             .expect("can_digivolve guarantees at least one matching evo_cost");
 
-        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
+        let total_reduction =
+            self.scan_before_pay_cost_reduction(player_id, CostReductionKind::Digivolve);
         let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
 
         if !self.pay_memory(effective_cost) {
@@ -2381,7 +2394,8 @@ impl Game {
             .min()
             .expect("can_digivolve guarantees at least one matching evo_cost");
 
-        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
+        let total_reduction =
+            self.scan_before_pay_cost_reduction(player_id, CostReductionKind::Digivolve);
         let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
 
         if !self.pay_memory(effective_cost) {
@@ -2588,8 +2602,12 @@ impl Game {
     /// **Signature change (Phase 6 Task 4):** takes `acting_player` so that
     /// the `CannotReducePlayCost` flood-gate can suppress all reductions for
     /// the acting player. Callers pass their `player_id` argument.
-    fn scan_before_pay_cost_reduction(&mut self, acting_player: crate::enums::PlayerId) -> i32 {
-        let candidates = self.collect_before_pay_cost_reducers(acting_player, None, &[]);
+    fn scan_before_pay_cost_reduction(
+        &mut self,
+        acting_player: crate::enums::PlayerId,
+        cost_kind: CostReductionKind,
+    ) -> i32 {
+        let candidates = self.collect_before_pay_cost_reducers(acting_player, None, &[], cost_kind);
         let mut total = 0;
         for candidate in candidates {
             if candidate.optional || candidate.has_pay_cost {
@@ -2616,10 +2634,19 @@ impl Game {
         acting_player: PlayerId,
         cost_target: Option<CostTargetContext>,
         processed: &[CostReductionKey],
+        cost_kind: CostReductionKind,
     ) -> Vec<CostReductionCandidate> {
         if self
             .modifiers
-            .player_has(acting_player, ModifierType::CannotReducePlayCost)
+            .player_has(acting_player, ModifierType::CannotReduceCost)
+            || (cost_kind == CostReductionKind::Play
+                && self
+                    .modifiers
+                    .player_has(acting_player, ModifierType::CannotReducePlayCost))
+            || (cost_kind == CostReductionKind::Digivolve
+                && self
+                    .modifiers
+                    .player_has(acting_player, ModifierType::CannotReduceDigivolveCost))
         {
             return Vec::new();
         }
@@ -3180,7 +3207,8 @@ impl Game {
             )
         };
 
-        let total_reduction = self.scan_before_pay_cost_reduction(first_player);
+        let total_reduction =
+            self.scan_before_pay_cost_reduction(first_player, CostReductionKind::Digivolve);
         let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
 
         let _ = self.dna_digivolve_inner(
@@ -3408,8 +3436,19 @@ impl Game {
         target: PermanentHandle,
         cost_delta: crate::enums::CostDelta,
         ignore_color: bool,
-        _source: PlaySource,
+        source: PlaySource,
     ) -> bool {
+        if source == PlaySource::ByEffect
+            && self
+                .modifiers
+                .player_has(player_id, ModifierType::CannotDigivolveDigimonByEffect)
+        {
+            self.logger.log(
+                "[Rejected] effect_initiated_digivolve: blocked by CannotDigivolveDigimonByEffect",
+            );
+            return false;
+        }
+
         // 1. Validate hand index and target index.
         {
             let player = self.player(player_id);
@@ -3465,7 +3504,8 @@ impl Game {
             return false;
         };
         let base_cost = cost_delta.resolve(matching.memory_cost);
-        let total_reduction = self.scan_before_pay_cost_reduction(player_id);
+        let total_reduction =
+            self.scan_before_pay_cost_reduction(player_id, CostReductionKind::Digivolve);
         let effective_cost = (base_cost as i32 - total_reduction).max(0) as u16;
 
         // 3. Pay memory.

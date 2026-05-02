@@ -2471,6 +2471,13 @@ impl<'a> EffectContext<'a> {
             }
         }
         let (hand_owner, hand_index) = (hand_owner?, hand_index?);
+        if self
+            .game
+            .modifiers
+            .player_has(hand_owner, ModifierType::CannotDigivolveDigimonByEffect)
+        {
+            return None;
+        }
 
         let effective_cost: u16 = cost.max(0) as u16;
 

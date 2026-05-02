@@ -113,6 +113,7 @@ pub enum StepSpec {
     // Modifiers
     AddDpModifier(AddDpModifierArgs),
     AddModifier(AddModifierArgs),
+    AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
     GrantEffectImmunity(GrantEffectImmunityArgs),
 
@@ -216,6 +217,7 @@ impl Serialize for StepSpec {
             // Modifiers
             StepSpec::AddDpModifier(v) => kv!(s, "add_dp_modifier", v),
             StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
+            StepSpec::AddPlayerModifier(v) => kv!(s, "add_player_modifier", v),
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
             StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
             // Selection
@@ -343,6 +345,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Modifiers
             "add_dp_modifier" => StepSpec::AddDpModifier(map.next_value()?),
             "add_modifier" => StepSpec::AddModifier(map.next_value()?),
+            "add_player_modifier" => StepSpec::AddPlayerModifier(map.next_value()?),
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
 
@@ -740,6 +743,14 @@ pub struct AddModifierArgs {
     pub target: ModifierTarget,
     pub modifier: String,
     pub value: ModifierValueSpec,
+    pub expiry: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AddPlayerModifierArgs {
+    pub target_player: PlayerRef,
+    pub modifier: String,
     pub expiry: String,
 }
 

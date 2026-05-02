@@ -7,15 +7,17 @@
 use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
+use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect, EffectBuilder};
 use digimon_engine::enums::{
-    CardColor, CardKind, CostDelta, DelayTrigger, EffectTiming, PlaySource,
+    CardColor, CardKind, CostDelta, DelayTrigger, EffectTiming, Expiry, ModifierType, PlaySource,
 };
 use digimon_engine::events::GameEvent;
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::{Permanent, PermanentHandle};
 use digimon_engine::replacement::ReplacementSubject;
-use digimon_engine::selection::AttackTarget;
+use digimon_engine::selection::{AttackTarget, TriggerSource};
 use std::sync::{Arc, Mutex};
 
 fn dummy() -> CardHandle {
@@ -399,6 +401,111 @@ fn when_attacking_fires_for_attackers_battle_area() {
         "WhenAttacking should have fired, granting +1 from OBS (before={}, after={})",
         before,
         r.memory()
+    );
+}
+
+#[test]
+fn cannot_activate_when_attacking_effects_suppresses_when_attacking_queue() {
+    let mut attacker_data = plain_digimon("ATK", "Attacker", 5);
+    attacker_data.level = Some(5);
+    attacker_data.dp = Some(8000);
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(attacker_data)
+        .add_card(plain_digimon("OBS", "Observer", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .hand(0, &["ATK", "OBS"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(10)
+        .start();
+    r.register_effect("OBS", Arc::new(AttackingMemoryGain));
+
+    r.play(0, 0);
+    r.play(0, 0);
+    let observer_handle = PermanentHandle {
+        player: 0,
+        index: 1,
+    };
+    r.game.modifiers.add(
+        observer_handle,
+        ModifierEntry::simple(
+            ModifierType::CannotActivateWhenAttackingEffects,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+
+    let attacker_handle = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
+    let before = r.memory();
+    let result = r.attack_player(attacker_handle, 1, /* vortex */ true);
+
+    assert_ne!(
+        result,
+        AttackResult::Invalid,
+        "test setup must perform a legal attack before checking trigger suppression"
+    );
+
+    assert_eq!(
+        r.memory(),
+        before,
+        "WhenAttacking effects on the gated Digimon must not queue"
+    );
+}
+
+#[test]
+fn cannot_activate_when_digivolving_effects_suppresses_only_gated_permanent() {
+    fn setup() -> DebugRunner {
+        DebugRunner::builder()
+            .add_card(zero_cost_evo_card("TEST-013", "Evolution", &[]))
+            .add_card(plain_digimon("F", "F", 1))
+            .deck(0, &["F", "F", "F"])
+            .deck(1, &["F", "F", "F"])
+            .memory(10)
+            .start()
+    }
+
+    let mut control = setup();
+    let control_handle = control.place_on_field(0, "TEST-013", Some(0));
+    control.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(control_handle),
+    );
+    assert_eq!(
+        control.game.effect_queue.len(),
+        1,
+        "control dispatch should queue TEST-013's WhenDigivolving memory effect"
+    );
+
+    let mut blocked = setup();
+    let blocked_handle = blocked.place_on_field(0, "TEST-013", Some(0));
+    blocked.game.modifiers.add(
+        blocked_handle,
+        ModifierEntry::simple(
+            ModifierType::CannotActivateWhenDigivolvingEffects,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+    let blocked_before = blocked.memory();
+    blocked.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(blocked_handle),
+    );
+    assert!(
+        blocked.game.effect_queue.is_empty(),
+        "gated permanent must not enqueue its WhenDigivolving effect"
+    );
+    assert_eq!(
+        blocked.memory(),
+        blocked_before,
+        "WhenDigivolving effects on the gated Digimon must not queue"
     );
 }
 

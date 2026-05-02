@@ -41,21 +41,12 @@ traits: [Reptile]
 #   - isPermanent: true (permanent player-level modifier)
 #   - IsOpponentTurn condition
 #
-# BLOCKED — G-PLAYER-FLOOD-GATE-DSL:
-#   The DSL `kind: flood_gate` lowers to `lower_flood_gate.rs` which calls
-#   `ctx.add_modifier(h, ...)` — permanent-level only. There is no `add_player_modifier`
-#   pathway in the DSL or EffectContext API. The engine enforcement for digivolve cost
-#   reduction uses `modifiers.player_has(acting_player, ModifierType::CannotReducePlayCost)`
-#   (which covers ALL cost types — play AND digivolve — in `scan_before_pay_cost_reduction`).
-#   A separate `CannotReduceDigivolveCost` variant is needed if the card should block
-#   only digivolve reductions, but the current engine conflates both under
-#   `CannotReducePlayCost`. Until either:
-#     (a) a `player_targeted_flood_gate` DSL step with `add_player_modifier` support is added, OR
-#     (b) `EffectContext::add_player_modifier` is exposed for raw_rust usage,
-#   this clause cannot be expressed in DSL.
+# DSL shape: kind: flood_gate, active_when: { opponents_turn: true },
+#   target_player: opponent, modifier: CannotReduceDigivolveCost.
 #
-# Placeholder: raw_rust no-op `bt5_008_opp_cannot_reduce_digivolve_cost` (declarative, returns vec![]).
-# Tracked in qa/dsl-vocab-gaps.md under G-PLAYER-FLOOD-GATE-DSL and qa/archetype-qa/engine-gaps.md.
+# Remaining runtime blocker: declarative process effects are still not dispatched
+# globally, so passive field auras/floodgates compile but do not yet install at
+# runtime. Tracked as G-DECLARATIVE-KEYWORD.
 
 effects:
   # ─── Clause 1: [Your Turn] other Gaossmon +3000 DP ─────────────────────────
@@ -69,12 +60,9 @@ effects:
       other: true
     dp_modifier: 3000
 
-  # ─── Clause 2: [Opponent's Turn] Opponent can't reduce digivolve costs — BLOCKED ─
-  #
-  # No-op placeholder. See gap commentary above.
-  # Real effect: while BT5-008 is face-up on field during opponent's turn, install
-  # a player-level CannotReduceDigivolveCost modifier on the opponent player.
-  # Requires: DSL add_player_modifier step + CannotReduceDigivolveCost enforcement.
-  - kind: raw_rust
-    fn: bt5_008_opp_cannot_reduce_digivolve_cost
-    summary: "[Opponent's Turn] Opponent can't reduce digivolution costs (BLOCKED — G-PLAYER-FLOOD-GATE-DSL)"
+  # ─── Clause 2: [Opponent's Turn] Opponent can't reduce digivolve costs ─────
+  - kind: flood_gate
+    summary: "[Opponent's Turn] Opponent can't reduce digivolution costs"
+    active_when: { opponents_turn: true }
+    target_player: opponent
+    modifier: CannotReduceDigivolveCost

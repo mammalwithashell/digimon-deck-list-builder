@@ -20,7 +20,7 @@
 //! | # | Clause              | Timing/Kind     | Scope  | DSL shape                                       |
 //! |---|---------------------|-----------------|--------|-------------------------------------------------|
 //! | 1 | [Your Turn] +3000   | aura            | FaceUp | kind: aura, active_when: your_turn, name_contains: "Gaossmon", other: true, dp_modifier: 3000 |
-//! | 2 | [Opp Turn] no cost reduction | flood_gate / declarative | FaceUp | raw_rust: bt5_008_opp_cannot_reduce_digivolve_cost |
+//! | 2 | [Opp Turn] no cost reduction | flood_gate / declarative | FaceUp | kind: flood_gate, target_player: opponent, modifier: CannotReduceDigivolveCost |
 //!
 //! # Known gaps
 //!
@@ -28,9 +28,11 @@
 //! |--------|-----|--------|
 //! | Clause 1 filtered aura runtime | G-DECLARATIVE-KEYWORD — `EffectTiming::Declarative` is never enqueued or fired by the engine; the filtered aura's process closure (ctx.add_dp_modifier) is compiled but never called; ChangeDp modifier is never installed at runtime | BLOCKED — all behavioral aura tests are #[ignore]'d; structural tests pass |
 //! | Clause 1 self-exclusion | G-OTHER-PREDICATE-UNEVALUATED — `other: true` in CompiledPredicate is compiled but `eval_permanent_fields` does not check it; aura would fire on self too (over-fires) if G-DECLARATIVE-KEYWORD were closed | BLOCKED — #[ignore]'d; secondary to G-DECLARATIVE-KEYWORD |
-//! | Clause 2 digivolve-cost gate | G-PLAYER-FLOOD-GATE-DSL — DSL flood_gate lowers to permanent-level modifiers only; no `add_player_modifier` step exists in DSL or EffectContext API. Engine also lacks a per-cost-type enforcement split (only `CannotReducePlayCost` covers ALL costs in scan_before_pay_cost_reduction). Full implementation requires: (a) DSL `add_player_modifier` step or player-targeted flood_gate, (b) `CannotReduceDigivolveCost` variant + enforcement in scan_before_pay_cost_reduction | BLOCKED — raw_rust no-op placeholder |
+//! | Clause 2 digivolve-cost gate | Player-targeted DSL and `CannotReduceDigivolveCost` enforcement are available. Remaining passive runtime blocker is G-DECLARATIVE-KEYWORD: declarative field effects are compiled but not globally dispatched, so this static floodgate is not installed from field state yet. | PARTIAL — structural DSL-native tests pass; behavioral passive test remains ignored |
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledPlayerRef, CompiledScope,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 
@@ -72,7 +74,7 @@ fn gaossmon_runner() -> DebugRunner {
 
 // ─── Section 1: Structural assertions ────────────────────────────────────────
 
-/// BT5-008 must compile to at least 2 declarative clauses (aura + flood_gate/raw_rust).
+/// BT5-008 must compile to at least 2 declarative clauses (aura + player-targeted flood_gate).
 #[test]
 fn bt5_008_compiles_to_at_least_two_declarative_clauses() {
     let runner = DebugRunner::builder()
@@ -87,7 +89,7 @@ fn bt5_008_compiles_to_at_least_two_declarative_clauses() {
 
     assert!(
         compiled.effects.len() >= 2,
-        "BT5-008 must have at least 2 clauses (aura + flood_gate/raw_rust); got {}",
+        "BT5-008 must have at least 2 clauses (aura + player-targeted flood_gate); got {}",
         compiled.effects.len()
     );
 
@@ -99,6 +101,24 @@ fn bt5_008_compiles_to_at_least_two_declarative_clauses() {
             clause
         );
     }
+
+    let flood_gate_clause = compiled.effects.iter().find_map(|c| match c {
+        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
+            modifier,
+            target_player,
+            ..
+        }) => Some((modifier.as_str(), *target_player)),
+        _ => None,
+    });
+
+    assert_eq!(
+        flood_gate_clause,
+        Some((
+            "CannotReduceDigivolveCost",
+            Some(CompiledPlayerRef::Opponent),
+        )),
+        "BT5-008 clause 2 must be a player-targeted CannotReduceDigivolveCost flood_gate"
+    );
 }
 
 /// Clause 0 must be a Declarative::Aura with FaceUp scope and dp_modifier = +3000.
@@ -260,22 +280,13 @@ fn bt5_008_aura_does_not_buff_self() {
 
 // ─── Section 3: Clause 2 behavioral — [Opponent's Turn] no digivolution cost reduction ──
 
-/// Clause 2 is BLOCKED due to DSL and engine gaps:
-/// - DSL lacks a way to install player-level modifiers (no add_player_modifier step or
-///   player-targeted flood_gate variant).
-/// - Engine lacks a per-cost-type enforcement split in scan_before_pay_cost_reduction
-///   (only CannotReducePlayCost covers all costs; no CannotReduceDigivolveCost exists).
-///
-/// The raw_rust placeholder (bt5_008_opp_cannot_reduce_digivolve_cost) is a no-op.
-/// This test documents the EXPECTED behavior once the gaps are closed: while BT5-008
-/// is in play on P0's battle area during P1's turn, P1's digivolution cost reductions
-/// must be suppressed.
-///
-/// Tracked under:
-/// - G-PLAYER-FLOOD-GATE-DSL (qa/dsl-vocab-gaps.md)
-/// - CannotReduceDigivolveCost missing enforcement (engine)
+/// Clause 2 is DSL-native now, but runtime behavior is still blocked by
+/// G-DECLARATIVE-KEYWORD: passive declarative field effects are not dispatched globally.
+/// Once the declarative pass exists, BT5-008 on P0's field during P1's turn should
+/// install `CannotReduceDigivolveCost` on P1 and suppress P1's digivolution cost
+/// reductions without affecting play-cost reducers.
 #[test]
-#[ignore = "BLOCKED: G-PLAYER-FLOOD-GATE-DSL — DSL has no add_player_modifier verb and flood_gate lowers to permanent-level only; engine also lacks CannotReduceDigivolveCost enforcement in scan_before_pay_cost_reduction"]
+#[ignore = "BLOCKED: G-DECLARATIVE-KEYWORD — passive declarative flood_gate compiles, but field-state declarative effects are not globally dispatched yet"]
 fn bt5_008_opponent_cannot_reduce_digivolution_costs_while_in_play() {
     // This test would need:
     // 1. A cost-reduction effect on P1's side (e.g., a BeforePayCost script).
@@ -283,13 +294,11 @@ fn bt5_008_opponent_cannot_reduce_digivolution_costs_while_in_play() {
     // 3. End P0's turn (P1's turn starts).
     // 4. P1 attempts to digivolve → cost reduction should be suppressed.
     //
-    // Since neither the DSL verb nor the engine enforcement exist yet,
-    // this test is a placeholder documenting the required behavior.
-    //
-    // When both gaps are closed, the implementation should:
-    // - Use kind: flood_gate (player-targeted) with modifier: CannotReduceDigivolveCost
-    //   and active_when: opponents_turn
-    // - Enforce CannotReduceDigivolveCost in scan_before_pay_cost_reduction specifically
-    //   for the digivolve code path (not the play cost path).
-    assert!(false, "placeholder — remove when both gaps are closed");
+    // The player-scoped DSL shape and per-cost-type enforcement now exist; the
+    // remaining missing piece is the passive declarative dispatcher that installs
+    // this static field floodgate while BT5-008 is face-up and active.
+    assert!(
+        false,
+        "placeholder — remove when G-DECLARATIVE-KEYWORD is closed"
+    );
 }

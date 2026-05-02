@@ -413,7 +413,9 @@ pub enum CompiledDeclarativeClause {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
         modifier: String,
-        target: CompiledPredicate,
+        target: Option<CompiledPredicate>,
+        target_player: Option<CompiledPlayerRef>,
+        expiry: Option<String>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -664,6 +666,11 @@ pub enum CompiledStep {
         target: CompiledModifierTarget,
         modifier: String,
         value: CompiledModifierValue,
+        expiry: String,
+    },
+    AddPlayerModifier {
+        target_player: CompiledPlayerRef,
+        modifier: String,
         expiry: String,
     },
     GrantKeyword {
