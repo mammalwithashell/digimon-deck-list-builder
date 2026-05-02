@@ -158,13 +158,27 @@ def estimate_memory_footprint(
 
 
 def score_trigger_order_accuracy(profile: TensorProfile | Any) -> tuple[int, int]:
-    if str(profile.id) == "standard_compact_v1":
+    profile_id = str(profile.id)
+    section_names = {_section_name(section) for section in getattr(profile, "sections", ())}
+
+    if profile_id == "standard_compact_v1":
         return (0, 1)
-    if str(profile.id) == "standard_lite_v2":
-        return (1, 1)
-    if str(profile.id) == "standard_full_v2":
-        return (1, 1)
-    return (0, 0)
+
+    correct = 0
+    total = 1
+    if "pending_choice_features" in section_names:
+        correct += 1
+
+    if profile_id == "standard_full_v2":
+        total += 1
+        if "action_id_features" in section_names:
+            correct += 1
+
+    return (correct, total)
+
+
+def _section_name(section: Any) -> str:
+    return str(getattr(section, "name", getattr(section, "id", "")))
 
 
 def run_profile_games(

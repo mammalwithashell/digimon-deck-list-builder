@@ -208,3 +208,72 @@ def test_run_profile_games_raises_when_games_exceed_available_seeds(monkeypatch)
             ),
             clock=clock_from((30.0, 31.0)),
         )
+
+
+def profile_with_sections(profile_id: str, tensor_size: int, sections):
+    profile = fake_profile(profile_id, tensor_size)
+    profile.sections = tuple(sections)
+    return profile
+
+
+def section(name: str, offset: int, size: int, shape):
+    return SimpleNamespace(name=name, offset=offset, size=size, shape=tuple(shape))
+
+
+def test_trigger_order_accuracy_compact_profile_has_no_signal():
+    from digimon_gym.agents.tensor_profile_gauntlet import score_trigger_order_accuracy
+
+    profile = fake_profile("standard_compact_v1", 1375)
+
+    correct, total = score_trigger_order_accuracy(profile)
+
+    assert correct == 0
+    assert total == 1
+
+
+def test_trigger_order_accuracy_lite_profile_scores_pending_choice_section():
+    from digimon_gym.agents.tensor_profile_gauntlet import score_trigger_order_accuracy
+
+    profile = profile_with_sections(
+        "standard_lite_v2",
+        8320,
+        [section("pending_choice_features", 4992, 3072, (32, 96))],
+    )
+
+    correct, total = score_trigger_order_accuracy(profile)
+
+    assert correct == 1
+    assert total == 1
+
+
+def test_trigger_order_accuracy_full_profile_scores_pending_and_action_rows():
+    from digimon_gym.agents.tensor_profile_gauntlet import score_trigger_order_accuracy
+
+    profile = profile_with_sections(
+        "standard_full_v2",
+        43008,
+        [
+            section("pending_choice_features", 4992, 3072, (32, 96)),
+            section("action_id_features", 8064, 34688, (2168, 16)),
+        ],
+    )
+
+    correct, total = score_trigger_order_accuracy(profile)
+
+    assert correct == 2
+    assert total == 2
+
+
+def test_trigger_order_accuracy_rejects_full_profile_without_action_rows():
+    from digimon_gym.agents.tensor_profile_gauntlet import score_trigger_order_accuracy
+
+    profile = profile_with_sections(
+        "standard_full_v2",
+        43008,
+        [section("pending_choice_features", 4992, 3072, (32, 96))],
+    )
+
+    correct, total = score_trigger_order_accuracy(profile)
+
+    assert correct == 1
+    assert total == 2
