@@ -21,7 +21,10 @@ code/digimon-engine/
 │   ├── effect_context.rs       # EffectContext — THE card-scripting API
 │   ├── modifiers.rs            # ModifierRegistry (typed modifiers + expiry)
 │   ├── combat.rs               # Attack / battle / security
-│   ├── tensor.rs               # Observation tensor (1375 floats, matches Python)
+│   ├── observation.rs          # Observation profile selection and tensor dispatch
+│   ├── tensor.rs               # Compact compatibility tensor (standard_compact_v1, 1375 floats)
+│   ├── tensor_v2_lite.rs       # Default pilot observation writer (standard_lite_v2, 8320 floats)
+│   ├── tensor_profiles/        # Profile layout metadata and card/scalar positions
 │   ├── action/                 # Action space + mask (2168 actions, matches Python)
 │   ├── cards.rs                # CardEffectRegistry + registration glue
 │   ├── cards/test_cards.rs     # TEST-001..005 — hand-written examples
@@ -1826,36 +1829,51 @@ Each one iterates effects via `CardEffectRegistry::get(card_id).effects(handle)`
 
 ### Tensor profile metadata
 
-The Rust engine exposes the canonical tensor profile registry from `tensor_profiles/`. Use it when code needs layout metadata such as card-ID positions, scalar positions, section boundaries, or slot/source fields.
+The Rust engine exposes tensor profile metadata from `tensor_profiles/` and observation-profile selection from `observation.rs`. Use these APIs when code needs layout metadata such as card-ID positions, scalar positions, section boundaries, or slot/source fields.
+
+`standard_lite_v2` is the default pilot observation profile selected by `observation::default_observation_profile()`. It is an `8320`-float fair-information tensor with structured board, own-hand, known-zone, decision-context, and pending-choice sections. `standard_compact_v1` remains the compact `1375`-float compatibility and baseline profile.
+
+Be precise about the two defaults:
+
+- `digimon_engine::observation::default_observation_profile()` returns the observation default, currently `standard_lite_v2`.
+- `digimon_engine::tensor_profiles::default_profile()` returns the compact registry default, currently `standard_compact_v1`, for compatibility with `tensor.rs` and `TENSOR_SIZE`.
 
 ```rust
-use digimon_engine::tensor_profiles::{
-    all_profile_ids,
-    default_profile,
-    profile_by_id,
-    STANDARD_COMPACT_V1_PROFILE_ID,
-};
+use digimon_engine::observation::{default_observation_profile, observation_layout};
+use digimon_engine::tensor_profiles::{default_profile, STANDARD_COMPACT_V1_PROFILE_ID};
 
-let profile = default_profile();
-assert_eq!(profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
-assert_eq!(profile.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
-let (card_id_positions, scalar_positions) = profile.positions();
+let observation_profile = default_observation_profile();
+assert_eq!(observation_profile.as_str(), "standard_lite_v2");
+
+let layout = observation_layout(observation_profile);
+assert_eq!(layout.tensor_size, 8320);
+assert_eq!(layout.card_id_slot_count, 542);
+assert_eq!(layout.scalar_slot_count, 7778);
+
+let compact_profile = default_profile();
+assert_eq!(compact_profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
+assert_eq!(compact_profile.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
 ```
 
 `digimon_engine::tensor_profile` remains as a temporary compatibility alias, but new code should use `digimon_engine::tensor_profiles`.
 
-The PyO3 bindings expose the same default profile metadata:
+The PyO3 bindings expose both observation-layout metadata and compact compatibility metadata:
 
 ```python
-from digimon_engine import TENSOR_PROFILE_ID, get_tensor_profile
+import digimon_engine
 
-profile = get_tensor_profile()
-assert profile.id == TENSOR_PROFILE_ID == "standard_compact_v1"
-assert profile.tensor_size == 1375
-assert len(profile.card_id_positions) == 520
+assert digimon_engine.DEFAULT_OBSERVATION_PROFILE == "standard_lite_v2"
+
+layout = digimon_engine.get_observation_layout("standard_lite_v2")
+assert layout["tensor_size"] == 8320
+assert len(layout["card_id_positions"]) == 542
+assert len(layout["scalar_positions"]) == 7778
+
+compact = digimon_engine.get_observation_layout("standard_compact_v1")
+assert compact["tensor_size"] == digimon_engine.TENSOR_SIZE == 1375
 ```
 
-RL feature extractors should use `digimon_gym.tensor_profiles.get_tensor_profile()` instead of importing the legacy Python tensor layout directly.
+`digimon_engine.TENSOR_SIZE` and `digimon_engine.TENSOR_PROFILE_ID` remain compact compatibility exports. RL feature extractors should use `digimon_gym.tensor_profiles.get_tensor_profile(profile_id)` or `digimon_engine.get_observation_layout(profile_id)` instead of importing the legacy Python tensor layout directly.
 
 ---
 

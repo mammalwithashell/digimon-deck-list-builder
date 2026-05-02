@@ -16,13 +16,13 @@ Implementation can still split into multiple phases. The design should stay unif
 
 ## Context
 
-The current training stack assumes one global tensor:
+Before the profile registry work, the training stack assumed one global tensor:
 
 - Rust exports `TENSOR_SIZE` from `code/digimon-engine/src/tensor.rs`.
 - PyO3 exposes `TENSOR_SIZE` in `code/digimon-engine-py/src/lib.rs`.
-- `DigimonEnv` imports `TENSOR_SIZE` and builds a fixed `spaces.Box`.
-- `RustHeadlessGame.get_board_tensor(player_id)` has no profile argument.
-- `CardEmbeddingExtractor` imports card/scalar positions from `engine_py_legacy.engine.data.tensor_layout`.
+- `DigimonEnv` imported `TENSOR_SIZE` and built a fixed `spaces.Box`.
+- `RustHeadlessGame.get_board_tensor(player_id)` had no profile argument.
+- `CardEmbeddingExtractor` imported card/scalar positions from `engine_py_legacy.engine.data.tensor_layout`.
 
 That makes tensor experimentation risky:
 
@@ -31,7 +31,7 @@ That makes tensor experimentation risky:
 - Profiling alternate tensors requires changing globals rather than selecting a profile.
 - Ablation experiments are hard to reproduce from model artifacts alone.
 
-The v2 tensor design in `docs/superpowers/specs/2026-05-01-rl-observation-action-tensor-v2-design.md` should be implemented on top of this profile system instead of replacing one hardcoded tensor with another.
+The v2 tensor design in `docs/superpowers/specs/2026-05-01-rl-observation-action-tensor-v2-design.md` was implemented on top of this profile system instead of replacing one hardcoded tensor with another.
 
 ## Design Principles
 
@@ -46,7 +46,7 @@ The v2 tensor design in `docs/superpowers/specs/2026-05-01-rl-observation-action
 
 ## Profile Model
 
-Add an engine-owned profile identifier:
+The design sketched an engine-owned profile identifier family:
 
 ```rust
 pub enum ObservationProfileId {
@@ -62,13 +62,13 @@ Expose stable string IDs:
 
 | Profile | String ID | Purpose |
 |---|---|---|
-| `StandardCompactV1` | `standard_compact_v1` | Current 1375-float Standard baseline |
-| `StandardPendingAblationV2` | `standard_pending_ablation_v2` | Standard compact/fair board plus rich pending-choice metadata, used to isolate pending metadata value |
-| `StandardLiteV2` | `standard_lite_v2` | First serious fair-information Standard v2 profile with structured board, hand, known-zone, and pending-choice tables |
-| `StandardFullV2` | `standard_full_v2` | Standard v2 including `action_id_features[2168][16]` |
-| `StandardOmniscientDebugV1` | `standard_omniscient_debug_v1` | Test-only Standard profile that may expose hidden identities |
+| `StandardCompactV1` | `standard_compact_v1` | Implemented 1375-float Standard compact baseline |
+| `StandardPendingAblationV2` | `standard_pending_ablation_v2` | Planned ablation profile: Standard compact/fair board plus rich pending-choice metadata, used to isolate pending metadata value |
+| `StandardLiteV2` | `standard_lite_v2` | Implemented fair-information Standard v2 profile with structured board, hand, known-zone, and pending-choice tables |
+| `StandardFullV2` | `standard_full_v2` | Future experimental profile: Standard v2 including `action_id_features[2168][16]` |
+| `StandardOmniscientDebugV1` | `standard_omniscient_debug_v1` | Planned test-only Standard profile that may expose hidden identities |
 
-`standard_compact_v1` should remain the initial default until at least one v2 profile is implemented and verified. `standard_v1` and `compact_v1` are legacy aliases only; new metadata should write `standard_compact_v1`.
+`standard_lite_v2` has since been implemented and switched to the default pilot observation profile. `standard_compact_v1` remains the compact compatibility and baseline profile. `standard_v1` and `compact_v1` are legacy aliases only; new metadata should write `standard_compact_v1` for compact runs and `standard_lite_v2` for v2 pilot runs.
 
 `standard_pending_ablation_v2` and `standard_lite_v2` have different jobs:
 
@@ -126,7 +126,7 @@ Each profile module owns a required feature-schema version constant:
 pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.1";
 ```
 
-The constant lives next to that profile's section table and card/scalar position builder, for example in `observation/standard_lite_v2.rs`. It is copied into `ObservationLayout.feature_schema_version` and returned through PyO3.
+The constant lives next to that profile's section table and card/scalar position builder, for example in `tensor_profiles/standard/v2_lite.rs`. It is copied into layout metadata and returned through PyO3.
 
 The version is profile-specific, not global. Initial suggested values:
 
@@ -185,9 +185,9 @@ observation/
   profile.rs
   layout.rs
   standard_compact_v1.rs
-  standard_pending_ablation_v2.rs
   standard_lite_v2.rs
-  standard_full_v2.rs
+  standard_pending_ablation_v2.rs  # planned
+  standard_full_v2.rs              # planned
 ```
 
 Core API:
@@ -205,13 +205,13 @@ pub fn build_observation_tensor(
 ) -> Vec<f32>;
 ```
 
-Keep `tensor.rs` as a compatibility layer if needed:
+Keep `tensor.rs` as a compatibility layer:
 
-- `TENSOR_SIZE` remains `standard_compact_v1` while the default is `standard_compact_v1`.
+- `TENSOR_SIZE` remains the `standard_compact_v1` compatibility size.
 - `build_tensor(...)` delegates to `build_observation_tensor(..., StandardCompactV1)`.
 - New code should use the observation profile API.
 
-Once a v2 profile becomes the default, `TENSOR_SIZE` can point to the selected default profile, but profile-specific code should avoid relying on a global size.
+Now that `standard_lite_v2` is the default pilot observation, profile-specific code must avoid relying on a global size and should read the selected layout's `tensor_size`.
 
 ## Runner Contract
 
@@ -227,7 +227,7 @@ pub struct HeadlessRunner {
 Constructor options:
 
 - Existing constructors keep default profile behavior.
-- Add a constructor variant or config struct that accepts `observation_profile`.
+- The Rust/PyO3 runner constructor accepts `observation_profile`.
 
 Tensor calls use the stored profile:
 
@@ -292,7 +292,7 @@ runner.observation_profile_id -> str
 runner.get_observation_layout() -> dict
 ```
 
-Keep module-level `TENSOR_SIZE` temporarily as the default profile size for backward compatibility, but new Python training code should use `get_observation_layout(profile_id)["tensor_size"]`.
+Keep module-level `TENSOR_SIZE` as the compact compatibility size for backward compatibility, but Python training code should use `get_observation_layout(profile_id)["tensor_size"]`.
 
 ## Gym Contract
 
@@ -437,11 +437,11 @@ This makes speed/sample-efficiency comparisons easier to interpret.
 
 ## Experiment Profiles
 
-Initial profile set:
+Implemented and planned profile set:
 
 ### `standard_compact_v1`
 
-Current `1375`-float tensor. Used as the baseline and fallback.
+Compact `1375`-float tensor. Used as the baseline, fallback, and compatibility profile.
 
 ### `standard_pending_ablation_v2`
 
@@ -464,7 +464,7 @@ Use it when you want a narrow answer about pending-choice metadata, such as whet
 
 ### `standard_lite_v2`
 
-Purpose: first serious v2 training profile.
+Purpose: implemented default v2 pilot training profile.
 
 Includes:
 
@@ -490,9 +490,9 @@ The first comparison measures practical end-to-end value. The second separates "
 
 ### `standard_full_v2`
 
-Purpose: test whether full action-id metadata improves wall-clock learning enough to justify the speed cost.
+Purpose: future experiment to test whether full action-id metadata improves wall-clock learning enough to justify the speed cost.
 
-Includes `standard_lite_v2` plus shallow `action_id_features[2168][16]`.
+Would include `standard_lite_v2` plus shallow `action_id_features[2168][16]`.
 
 ### `standard_omniscient_debug_v1`
 
@@ -542,8 +542,8 @@ Add tests for:
 5. Add `tensor_profile` to `DigimonEnv`.
 6. Update `CardEmbeddingExtractor` to consume layout metadata from policy kwargs.
 7. Add model artifact metadata writing and loading checks.
-8. Implement `standard_pending_ablation_v2`.
-9. Implement `standard_lite_v2`.
+8. Implement `standard_pending_ablation_v2` if the ablation is still useful.
+9. Implement `standard_lite_v2`. Completed; it is now the default pilot profile.
 10. Implement `standard_full_v2` only after profiling justifies it.
 
 ## Acceptance Criteria
@@ -555,5 +555,5 @@ The design is ready to implement when reviewers agree that:
 - Rust owns layout metadata for Rust-built tensors
 - Python feature extraction stops depending on legacy tensor layout for Rust profiles
 - model artifacts record profile ID, tensor size, and layout hash
-- non-default profiles can be selected through `DigimonEnv` and training CLI
+- default and non-default profiles can be selected through `DigimonEnv` and training CLI
 - mismatched model/profile/layout combinations fail fast

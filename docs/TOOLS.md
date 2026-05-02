@@ -456,16 +456,22 @@ Pure psycopg2 queries against the DigiLab PostgreSQL database. Standalone — no
 Converts SB3 MaskablePPO / MaskableRecurrentPPO `.zip` checkpoints to ONNX format. Requires PyTorch and SB3 — intended for dev machines, not end-user desktops. The resulting `.onnx` files can be loaded with `onnxruntime` (no PyTorch needed).
 
 ```bash
-python code/tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
-python code/tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
+python code/tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx --tensor-profile standard_lite_v2
+python code/tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx --tensor-profile standard_lite_v2
 ```
+
+Export writes a profile metadata sidecar next to the ONNX file, for example
+`models/mlp_agent.onnx.meta.json`. The sidecar records the observation profile,
+tensor size, feature schema version, layout hash, action-space size, registry
+capacity, and embedding dimension so loaders can reject mismatched model/profile
+combinations.
 
 Exported files are consumed by:
 
 - **Hosted API / training**: `OnnxMlpPolicy` / `OnnxLstmPolicy` in `code/digimon_gym/inference/onnx_policy.py`; served via the `/games/models` API route.
 - **Desktop app**: `code/digimon-engine/src/inference/` loads the same `.onnx` at runtime after it's downloaded from the hosted manifest and cached under `dirs::data_dir()/digimon-tcg/models/<id>/policy.onnx`.
 
-Newly-exported models reach desktop users by being published to the admin model manifest (`/models/manifest.json`) with the correct `tensor_size` / `action_space_size`; the desktop app rejects downloads that mismatch the Rust engine's contract.
+Newly-exported models reach desktop users by being published to the admin model manifest (`/models/manifest.json`) with the correct `observation_profile`, `tensor_size`, `tensor_layout_hash`, and `action_space_size`; the desktop app rejects downloads that mismatch the Rust engine's contract.
 
 ---
 
@@ -493,6 +499,20 @@ python code/tools/train_smoke_test.py
 ```
 
 Requires `stable-baselines3` and `sb3-contrib`.
+
+---
+
+### 6.4 Pilot Training
+
+Pilot training defaults to the Rust-backed `standard_lite_v2` observation profile, an `8320`-float fair-information tensor. Pass the profile explicitly in reproducible runs:
+
+```bash
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --timesteps 500000 --tensor-profile standard_lite_v2
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000 --tensor-profile standard_lite_v2
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000 --tensor-profile standard_lite_v2
+```
+
+Use `--tensor-profile standard_compact_v1` only for compact compatibility or baseline comparisons.
 
 ---
 
@@ -553,39 +573,37 @@ Runtime lookup from card ID strings (e.g. `"BT1-001"`) to integer indices used i
 
 ### 7.3 Tensor Profile Metadata
 
-**Canonical current profile:** `code/digimon-engine/src/tensor_profiles/standard/v1.rs`
+**Default pilot profile:** `code/digimon-engine/src/tensor_profiles/standard/v2_lite.rs`
 
-The Rust tensor profile registry describes which positions in the 1375-float observation tensor hold card IDs vs scalar values. The current canonical profile ID is `standard_compact_v1`; `standard_v1` and `compact_v1` are accepted only as legacy aliases. It is exposed to Python by `digimon_engine.get_tensor_profile()` and consumed through `digimon_gym.tensor_profiles.get_tensor_profile()`. `CardEmbeddingExtractor` uses the RL wrapper to split the tensor for GPU-side embedding lookup.
+The Rust tensor profile registry describes which positions in each observation tensor hold card IDs vs scalar values. The default pilot observation profile is `standard_lite_v2`, an `8320`-float fair-information tensor exposed to Python by `digimon_engine.get_observation_layout("standard_lite_v2")` and consumed through `digimon_gym.tensor_profiles.get_tensor_profile("standard_lite_v2")`. `standard_compact_v1` remains the `1375`-float compact compatibility and baseline profile; `standard_v1` and `compact_v1` are accepted only as legacy aliases.
 
 | Name | Value | Description |
 |---|---|---|
-| `card_id_positions` | list of 520 ints | Tensor indices holding card IDs |
-| `scalar_positions` | list of 855 ints | Tensor indices holding scalar values |
-| `card_id_slot_count` | 520 | Length of `card_id_positions` |
-| `scalar_slot_count` | 855 | Length of `scalar_positions` |
+| `card_id_positions` | list of 542 ints for `standard_lite_v2` | Tensor indices holding card IDs |
+| `scalar_positions` | list of 7778 ints for `standard_lite_v2` | Tensor indices holding scalar values |
+| `card_id_slot_count` | 542 for `standard_lite_v2` | Length of `card_id_positions` |
+| `scalar_slot_count` | 7778 for `standard_lite_v2` | Length of `scalar_positions` |
 
-All positions are computed deterministically from profile-owned sections, slot header fields, source fields, and source stride metadata using named Rust tensor offsets (`FIELD_SLOTS`, `SLOT_SIZE`, `MAX_SOURCES`, etc.). The profile asserts that card + scalar positions sum to `TENSOR_SIZE` (1375).
+All positions are computed deterministically from profile-owned sections, slot header fields, source fields, and source stride metadata using named Rust tensor offsets. Each profile asserts that card + scalar positions sum to that profile's `tensor_size`. The module-level `TENSOR_SIZE` remains the compact `1375` compatibility constant, not the default pilot observation size.
 
-Card ID positions include:
-- Top card ID in each battle area slot (28 slots × 1)
-- Source card IDs in each digivolution stack (28 slots × 11 sources)
-- Hand card IDs (2 × 20)
-- Trash card IDs (2 × 45)
-- Security card IDs (2 × 10)
-- Breeding area card IDs (2 slots × 12 per slot)
-- Revealed card IDs (10)
+`standard_lite_v2` card ID positions include:
+- Permanent top-card IDs.
+- Permanent source-card IDs.
+- Own hand card IDs.
+- Known public zone card IDs.
+- Pending-choice source-card IDs.
 
 ```python
 from digimon_gym.tensor_profiles import get_tensor_profile
 
-profile = get_tensor_profile()
+profile = get_tensor_profile("standard_lite_v2")
 
 # Used internally by CardEmbeddingExtractor
-card_ids = observations[:, profile.card_id_positions].long()   # (batch, 520)
-scalars = observations[:, profile.scalar_positions]             # (batch, 855)
+card_ids = observations[:, profile.card_id_positions].long()   # (batch, 542)
+scalars = observations[:, profile.scalar_positions]             # (batch, 7778)
 ```
 
-`code/engine_py_legacy/engine/data/tensor_layout.py` remains a legacy fallback only while migration/parity support remains.
+`digimon_engine.get_tensor_profile()` remains available for compact `standard_compact_v1` compatibility. `code/engine_py_legacy/engine/data/tensor_layout.py` remains a legacy fallback only while migration/parity support remains.
 
 ---
 
@@ -651,8 +669,10 @@ Makes the new scripts and card metadata searchable by sub-agents.
 ### Step 7: Train New Pilot
 
 ```bash
-python -m digimon_gym.agents.pilot_training --timesteps 500000
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --timesteps 500000 --tensor-profile standard_lite_v2
 ```
+
+`standard_lite_v2` is the default pilot profile, but passing it explicitly keeps run logs and copy/pasted commands unambiguous. Use `DIGIMON_BACKEND=rust` for v2 pilot training; `standard_compact_v1` remains available for compact compatibility and baseline runs.
 
 The `CardEmbeddingExtractor` automatically loads `card_embeddings.npy` if present and uses it to initialize the `nn.Embedding` table. New card indices start with warm-start embeddings instead of random noise.
 
