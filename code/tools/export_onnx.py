@@ -109,6 +109,58 @@ def write_export_metadata(output_path: str | Path, observation_layout) -> None:
     print(f"Wrote ONNX metadata to {meta_path}")
 
 
+def validate_checkpoint_observation_profile(model, observation_layout) -> None:
+    """Ensure an SB3 checkpoint's observation shape matches the export profile."""
+    observation_space = getattr(model, "observation_space", None)
+    shape = getattr(observation_space, "shape", None)
+    profile_id = observation_layout.id
+    expected_size = observation_layout.tensor_size
+
+    if shape is None:
+        raise ValueError(
+            "SB3 checkpoint is missing observation_space.shape; cannot validate "
+            f"requested tensor profile {profile_id!r} with expected tensor size "
+            f"{expected_size}. Pass the correct --tensor-profile or retrain the "
+            "checkpoint."
+        )
+
+    try:
+        shape_tuple = tuple(shape)
+    except TypeError as exc:
+        raise ValueError(
+            "SB3 checkpoint observation_space.shape is malformed; cannot validate "
+            f"requested tensor profile {profile_id!r} with expected tensor size "
+            f"{expected_size}. Pass the correct --tensor-profile or retrain the "
+            "checkpoint."
+        ) from exc
+
+    if len(shape_tuple) != 1:
+        raise ValueError(
+            f"SB3 checkpoint observation_space.shape is {shape_tuple}, expected a "
+            f"single unbatched dimension for requested tensor profile {profile_id!r} "
+            f"with tensor size {expected_size}. Pass the correct --tensor-profile "
+            "or retrain the checkpoint."
+        )
+
+    try:
+        checkpoint_size = int(shape_tuple[0])
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"SB3 checkpoint observation_space.shape is {shape_tuple}, which does "
+            f"not contain a valid observation size for requested tensor profile "
+            f"{profile_id!r} with expected tensor size {expected_size}. Pass the "
+            "correct --tensor-profile or retrain the checkpoint."
+        ) from exc
+
+    if checkpoint_size != expected_size:
+        raise ValueError(
+            f"SB3 checkpoint observation size {checkpoint_size} does not match "
+            f"requested tensor profile {profile_id!r}: expected tensor size "
+            f"{expected_size}. Pass the correct --tensor-profile or retrain the "
+            "checkpoint."
+        )
+
+
 def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> None:
     """Export MaskablePPO MLP model to ONNX."""
     from sb3_contrib import MaskablePPO
@@ -116,6 +168,7 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
     observation_layout = observation_layout or get_tensor_profile()
     tensor_size = observation_layout.tensor_size
     model = MaskablePPO.load(sb3_zip_path, device="cpu")
+    validate_checkpoint_observation_profile(model, observation_layout)
     policy = model.policy
     policy.eval()
 
@@ -157,6 +210,7 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
     observation_layout = observation_layout or get_tensor_profile()
     tensor_size = observation_layout.tensor_size
     model = MaskableRecurrentPPO.load(sb3_zip_path, device="cpu")
+    validate_checkpoint_observation_profile(model, observation_layout)
     policy = model.policy
     policy.eval()
 

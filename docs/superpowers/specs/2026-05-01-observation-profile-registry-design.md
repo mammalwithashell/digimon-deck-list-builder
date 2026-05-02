@@ -378,7 +378,7 @@ It asserts:
 - card/scalar positions cover the tensor
 - no position is out of range
 
-For loaded checkpoints, the model artifact manifest provides the expected layout. If the current env layout hash differs, evaluation fails before model inference.
+For loaded checkpoints, current shipped validation records the selected profile metadata and checks tensor/profile shapes where those contracts are constructed or exported. Loader/evaluation rejection on layout-hash mismatch is future work for model-loading paths; until that exists, manifests are audit metadata rather than a universal pre-inference gate.
 
 ## Model Artifact Metadata
 
@@ -401,16 +401,13 @@ For SB3 `.zip` models, store this in a sidecar JSON next to the model and in any
 
 For ONNX export, include the same metadata in the ONNX sidecar manifest. If ONNX metadata fields are convenient, duplicate the profile ID and layout hash there too, but the sidecar remains the source of truth.
 
-Model loading/evaluation checks:
+Current shipped model artifact checks:
 
-- environment profile ID matches artifact profile ID
-- feature schema version matches
-- tensor size matches
-- layout hash matches
-- action space size matches
-- registry capacity and embedding dim match
+- ONNX export metadata records profile ID, tensor size, layout hash, action space size, registry capacity, and embedding dim
+- ONNX export validates the loaded SB3 checkpoint observation shape against the requested profile tensor size before tracing
+- feature extractors and env construction validate tensor/profile shape contracts
 
-This prevents silent cross-profile evaluation bugs.
+Future loader/evaluation work should reject mismatched artifact metadata before inference, including profile ID, feature schema version, tensor size, layout hash, action space size, registry capacity, and embedding dim.
 
 ## Training CLI
 
@@ -533,7 +530,8 @@ Tests cover:
 - `DigimonEnv(tensor_profile=...)` creates the matching observation space
 - Python legacy backend rejects non-`standard_compact_v1` profiles
 - `CardEmbeddingExtractor` uses layout-provided positions
-- model metadata validation rejects mismatched layout hashes
+- ONNX export rejects SB3 checkpoints whose observation shape does not match the requested tensor profile size
+- layout-hash mismatch rejection remains future loader/evaluation work
 
 ## Migration Plan Sketch
 
@@ -558,4 +556,5 @@ The implemented profile registry contract is accepted when:
 - Python feature extraction stops depending on legacy tensor layout for Rust profiles
 - model artifacts record profile ID, tensor size, and layout hash
 - default and non-default profiles can be selected through `DigimonEnv` and training CLI
-- mismatched model/profile/layout combinations fail fast
+- ONNX export fails fast when a checkpoint observation shape does not match the requested tensor profile
+- layout-hash mismatch rejection is implemented in future model-loading/evaluation paths

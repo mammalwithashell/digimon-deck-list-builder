@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -121,6 +123,27 @@ def test_export_onnx_writes_profile_metadata(tmp_path) -> None:
         "card_registry_capacity": export_onnx.REGISTRY_CAPACITY,
         "embedding_dim": export_onnx.EMBEDDING_DIM,
     }
+
+
+def test_export_onnx_checkpoint_observation_profile_match_passes() -> None:
+    export_onnx = _load_tool("export_onnx")
+    model = SimpleNamespace(observation_space=SimpleNamespace(shape=(8320,)))
+
+    export_onnx.validate_checkpoint_observation_profile(model, _profile())
+
+
+def test_export_onnx_checkpoint_observation_profile_mismatch_fails() -> None:
+    export_onnx = _load_tool("export_onnx")
+    model = SimpleNamespace(observation_space=SimpleNamespace(shape=(1375,)))
+
+    with pytest.raises(ValueError) as exc_info:
+        export_onnx.validate_checkpoint_observation_profile(model, _profile())
+
+    message = str(exc_info.value)
+    assert "SB3 checkpoint observation size 1375" in message
+    assert "requested tensor profile 'standard_lite_v2'" in message
+    assert "expected tensor size 8320" in message
+    assert "Pass the correct --tensor-profile or retrain" in message
 
 
 def test_export_random_onnx_writes_profile_metadata(tmp_path) -> None:
