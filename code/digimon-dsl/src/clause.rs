@@ -395,6 +395,8 @@ pub struct GrantKeywordBody {
     pub keyword: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overclock_cost_filter: Option<PredicateSpec>,
 }
 
 /// Body for `kind: delay`.

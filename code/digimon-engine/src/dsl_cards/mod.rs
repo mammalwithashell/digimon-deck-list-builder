@@ -81,9 +81,16 @@ impl CardEffect for DslCardEffect {
                         keyword,
                         value,
                         scope,
+                        overclock_cost_filter,
                         ..
                     } => {
-                        if let Some(e) = lower_grant_keyword::lower(card, keyword, *value, *scope) {
+                        if let Some(e) = lower_grant_keyword::lower(
+                            card,
+                            keyword,
+                            *value,
+                            *scope,
+                            overclock_cost_filter.clone(),
+                        ) {
                             out.push(e);
                         }
                     }

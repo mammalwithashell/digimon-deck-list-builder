@@ -72,6 +72,7 @@ fn fixture_grant_keyword(keyword: &str, value: Option<i32>) -> CompiledCard {
                 keyword: keyword.into(),
                 value,
                 scope: CompiledScope::FaceUp,
+                overclock_cost_filter: None,
                 active_when: None,
                 summary: None,
                 summary_key: None,

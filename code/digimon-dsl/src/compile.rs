@@ -956,6 +956,14 @@ fn compile_declarative(
             keyword: gk.keyword,
             value: gk.value,
             scope,
+            overclock_cost_filter: gk.overclock_cost_filter.as_ref().map(|p| {
+                compile_predicate(
+                    p,
+                    &format!("{prefix}.overclock_cost_filter"),
+                    card_id,
+                    errors,
+                )
+            }),
             active_when,
             summary,
             summary_key,

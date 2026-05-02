@@ -48,6 +48,10 @@ pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'sta
 /// Phase 8: consumed by Link dispatch to mask host-selection prompts.
 pub type LinkFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
+/// Predicate used by parameterized `<Overclock (...)>` to decide which own
+/// battle-area permanents can be deleted as the cost.
+pub type OverclockCostFilterFn =
+    Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct EffectObservationMetadata {
@@ -164,6 +168,7 @@ pub struct Effect {
     pub dp_modifier: i32,
     pub cost_reduction: i32,
     pub granted_keyword: Option<Keyword>,
+    pub overclock_cost_filter: Option<OverclockCostFilterFn>,
 
     /// When `true`, this effect's `dp_modifier` is applied to the opposing
     /// security Digimon's DP during the §2.5 security DP battle. Used for
@@ -483,6 +488,7 @@ impl EffectBuilder {
                 dp_modifier: 0,
                 cost_reduction: 0,
                 granted_keyword: None,
+                overclock_cost_filter: None,
                 applies_to_opponent_security_dp: false,
                 replacement_process: None,
                 option_main: false,
@@ -670,6 +676,14 @@ impl EffectBuilder {
 
     pub fn granted_keyword(mut self, keyword: Keyword) -> Self {
         self.inner.granted_keyword = Some(keyword);
+        self
+    }
+
+    pub fn overclock_with_cost_filter<F>(mut self, filter: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,
+    {
+        self.inner.overclock_cost_filter = Some(Box::new(filter));
         self
     }
 

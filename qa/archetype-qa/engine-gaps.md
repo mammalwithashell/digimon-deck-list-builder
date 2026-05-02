@@ -83,14 +83,14 @@ Last updated: 2026-04-30
 - **Suggested change:** Add a helper that enumerates [When Digivolving] effects on a specified source card/permanent, exposes a legal branch choice if multiple effects are available, and executes the selected effect using the correct source permanent/card attribution. The choice must flow through pending selection/action-mask machinery.
 - **Workaround:** BT10-112 and BT10-110 manually iterate `card.effect_list()` and present branch selection. BT22-042 has no authored Rust implementation yet.
 
-### Puppet-Scoped Overclock Sacrifice Filter [G-OVERCLOCK-TRAIT-FILTER]
+### ~~Puppet-Scoped Overclock Sacrifice Filter [G-OVERCLOCK-TRAIT-FILTER]~~ — RESOLVED 2026-05-02
 - **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)
 - **Scope:** Rust engine action mask and Overclock activation.
 - **Card(s):** BT22-042 Nyabootmon, EX7-027 Chaperomon, EX7-030 Cendrillmon, EX11-024 Cendrillmon, BT22-036 Kazuchimon, plus other cards with `<Overclock ([Puppet] Trait)>`.
 - **Effect text:** "<Overclock ([Puppet] Trait)> (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)"
-- **What's missing:** Current Overclock eligibility treats any other Digimon as a valid sacrifice. Puppets require the sacrifice to be either a token or another [Puppet] trait Digimon, so the action mask can expose illegal non-Puppet sacrifices when mixed allies are present.
-- **Suggested change:** Parameterize Overclock with a sacrifice predicate, or let the card effect provide one. Use the same predicate in `has_overclock_sacrifice`, end-of-turn action masking, and `activate_overclock` pending choices.
-- **Workaround:** None. The current mask/activation path is too broad for Puppet Overclock.
+- **Resolution:** Overclock cost candidates are now parameterized. The end-of-turn activation bit only appears when at least one legal token or predicate-matching Digimon can pay the cost, and the pending selection stores only those legal action IDs. The generic mask exposes only stored candidates plus `PASS`, and decode rejects non-candidate targets without deleting a permanent or starting an attack.
+- **Covered by:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_overclock overclock --nocapture`
+- **DSL coverage:** `grant_keyword` accepts `overclock_cost_filter`, compiled as a predicate and lowered onto the same runtime Overclock cost filter path.
 
 ### ~~Familiar Token On Deletion Effect Missing [G-FAMILIAR-TOKEN-ON-DELETION]~~ — RESOLVED 2026-05-02
 - **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)

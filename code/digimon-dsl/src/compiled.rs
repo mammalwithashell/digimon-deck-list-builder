@@ -401,6 +401,7 @@ pub enum CompiledDeclarativeClause {
         keyword: String,
         value: Option<i32>,
         scope: CompiledScope,
+        overclock_cost_filter: Option<CompiledPredicate>,
         active_when: Option<CompiledPredicate>,
         summary: Option<String>,
         summary_key: Option<String>,

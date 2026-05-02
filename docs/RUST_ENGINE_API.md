@@ -2284,6 +2284,27 @@ Unrecognized keyword names are ignored silently. Cards that need
 behavior not covered by the `Keyword` enum must use the modifier-based
 API via `Effect` builders.
 
+### Overclock Cost Selection
+
+`<Overclock (...)>` is optional and always surfaces its cost as a
+`PendingSelection` during `GamePhase::EndOfTurnAction`; it never auto-deletes a
+cost permanent. The selection stores the exact legal cost action IDs in
+`valid_action_ids`, uses the selecting Overclock controller as
+`selecting_player`, sets `is_optional = true`, and restores
+`EndOfTurnAction` after either a cost pick or `PASS`.
+
+Candidate action IDs reuse the field-target half of the attack range:
+`encode_attack(0, field_index)`. The action mask must emit only those stored
+candidate bits plus `PASS`. The decoder/resolver must reject any non-candidate
+target before deleting the cost or starting the Overclock attack.
+
+Legal cost candidates are Tokens plus other Digimon accepted by the Overclock
+parameter. Printed text like `＜Overclock ([Puppet] Trait)＞` derives a trait
+filter from the bracketed trait. DSL `grant_keyword` clauses may provide an
+`overclock_cost_filter` predicate; lowering attaches it with
+`EffectBuilder::overclock_with_cost_filter`, and runtime candidate collection
+uses the same predicate path.
+
 ---
 
 ## Phase 4 — Selection Kinds
