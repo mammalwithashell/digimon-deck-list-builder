@@ -104,6 +104,8 @@ Key rules:
 - `.once_per_turn()` — `max_per_turn = 1`.
 - `.timing(EffectTiming::...)` — override the timing enum (rare).
 - `.dp_modifier(n)` — static DP buff (for declarative effects).
+- `.dp_modifier_fn(|ctx, target| Some(n))` — live DP formula/query contribution for declarative aura effects; `None` means the aura does not apply to that target.
+- `.security_attack_fn(|ctx, target| Some(n))` — live Security Attack check count formula for declarative aura effects; `None` preserves the normal base check when no formula applies.
 - `.cost_reduction(n)` — static cost reduction.
 - `.build()` — finalize into `Effect`.
 
@@ -973,13 +975,13 @@ All 13 new `ModifierType` variants added in Phase 6:
 | `CannotAddSecurityByEffect` | Opponent cannot add cards to their security via effects | Resolver (place_on_security with ByEffect) | "Your opponent can't add to their security by effect" |
 | `CannotTrashOpponentSecurity` | Prevents opponent from trashing your security via effects | DORMANT (resolver hook) | Dark Masters lock piece |
 | `CannotReduceOpponentSecurity` | Prevents opponent from reducing your security count | DORMANT (resolver hook) | Dark Masters lock piece |
-| `IgnoreColorRequirement` | Player may digivolve ignoring color requirements | DORMANT (mask hook) | "You may digivolve ignoring color requirements" |
+| `IgnoreColorRequirement` | Player may use Options ignoring color requirements | Mask and resolver (`option_use_requirement_or_color_available`) | "You may use this card without meeting its color requirements" |
 
 **DORMANT variants:** The API surface is wired (enum variants, storage, install/query helpers) but the enforcement site has not yet been connected. As real cards arrive and need those variants, each enforcement site is a one-liner addition. Do not ship stubs that auto-apply — connect the enforcement gate at the real call site when the first card needs it.
 
 **Enforcement sites (active):**
-- **Mask:** `CannotPlayFromHand` upgraded to player-scoped query; `CannotAttack` enforced in both `Main` and `EndOfTurnAction` phases; `CannotActivateMainEffects` zeroes `MainOnField` bits in the main-phase mask.
-- **Resolver:** `CannotDrawByEffect` gates `ctx.draw`; `CannotGainMemoryByEffect` and `CannotGainMemoryExceptFromTamers` gate `ctx.gain_memory`; `CannotAddSecurityByEffect` gates `ctx.place_on_security`; `CannotReducePlayCost` nullifies `scan_before_pay_cost_reduction` for the restricted player; `CannotPlayDigimonByEffect` gates the three effect-play helpers (`play_from_hand_with_cost` + `play_from_trash_with_cost` + `play_from_security`) when `PlaySource::ByEffect`.
+- **Mask:** `CannotPlayFromHand` upgraded to player-scoped query; `CannotAttack` enforced in both `Main` and `EndOfTurnAction` phases; `CannotActivateMainEffects` zeroes `MainOnField` bits in the main-phase mask; `IgnoreColorRequirement` permits Option use when no matching-color Digimon/Tamer is present.
+- **Resolver:** `CannotDrawByEffect` gates `ctx.draw`; `CannotGainMemoryByEffect` and `CannotGainMemoryExceptFromTamers` gate `ctx.gain_memory`; `CannotAddSecurityByEffect` gates `ctx.place_on_security`; `CannotReducePlayCost` nullifies `scan_before_pay_cost_reduction` for the restricted player; `CannotPlayDigimonByEffect` gates the three effect-play helpers (`play_from_hand_with_cost` + `play_from_trash_with_cost` + `play_from_security`) when `PlaySource::ByEffect`; `IgnoreColorRequirement` is rechecked by Option decode/execution before paying cost.
 
 ---
 
@@ -1116,6 +1118,32 @@ ModifierEntry::passive_replacement(ModifierType::CannotBeDeDigivolved)
 ```
 
 Cause-filter semantics: `.opponent_only()` sets `cause_filter = Some(OpponentEffect)`. Absent filter = cause-agnostic (fires for any cause).
+
+Production source-scoped movement helpers:
+
+```rust
+ctx.return_to_hand(target) -> Option<CardHandle>
+ctx.return_to_deck(target, position) -> bool
+ctx.de_digivolve(target, stop_at_level, amount) -> u8
+
+ctx.grant_zone_return_immunity_to_opponent_effects(target, expiry)
+```
+
+Card scripts should use the `EffectContext` movement helpers above: they
+enforce `can_affect_permanent`, carry the real source kind/controller, and
+route through normal replacement windows. During queued effects, including
+security-card effects, the engine supplies `effect_source_player`; passive
+entries such as `CannotBeReturnedToHand`, `CannotBeReturnedToDeck`, and
+`CannotBeDeDigivolved` therefore cancel only when their default
+`cause_filter = Some(OpponentEffect)` matches. Security battle/rule cleanup
+with no resolving card effect remains `ReplacementCause::SecurityCheck`.
+
+The doc-hidden `Game::*_from_effect` methods are low-level attribution
+helpers for tests and engine internals. They do not replace `EffectContext`
+for production card scripts because they do not perform source-kind immunity
+checks themselves. The `EffectContext` grant helper installs exactly the
+narrow three-modifier bundle; do not substitute broad `CannotBeAffected` for
+printed return/de-digivolve protection.
 
 ### Native-keyword auto-install (Task 6)
 
@@ -1814,6 +1842,38 @@ Use `Effect::declarative(card).dp_modifier(n)` for a non-inherited static buff (
 
 Avoid encoding DP-change effects via `ctx.add_dp_modifier(...)` for *static* buffs — that writes to `ModifierRegistry`, which the tensor's per-source contributions don't currently sum (permanent-level, yes; per-source, no). Stick with `dp_modifier` on `Effect` for anything you want the tensor to see per source.
 
+### Declarative aura DSL materialization
+
+`kind: aura` supports process-backed materialization shapes through `Game::tick_declarative_effects` and formula-backed query-time shapes for values that must not snapshot field state:
+
+```yaml
+- kind: aura
+  target: { owner: you, trait: Gaossmon, other: true }
+  dp_modifier: 3000
+
+- kind: aura
+  target_player: opponent
+  modifier: CannotReduceDigivolveCost
+
+- kind: aura
+  target: {}
+  dp_modifier_fn: { base: 0, per: material_count, delta: 1000 }
+
+- kind: aura
+  target: {}
+  security_attack_fn: { base: 1, per: material_count, delta: 1 }
+```
+
+With `target`, the aura scans battle-area permanents and installs `dp_modifier`, `grant_keyword`, and named permanent `modifier` entries on matches. `other: true` excludes the source permanent when source context is available. With `target_player`, the aura resolves the player reference using the same `you` / `opponent` / `active` / `any` semantics as player-scoped flood gates and installs the named player modifier.
+
+Static `dp_modifier`, `grant_keyword`, and named `modifier` aura fields are materialized on tick. Each `tick_declarative_effects` call first clears modifiers and granted keywords previously materialized by process-backed declaratives, then reapplies only effects marked as declarative materializers, such as DSL auras, flood gates, partition keyword grants, and top-level `grant_keyword` clauses. The action decoder refreshes these materializers before and after decoded actions so normal play keeps masks and resolver state current without executing active keyword effects like Material Save, Mind Link, or Training. That refresh prevents repeated ticks from stacking and removes stale materializations when an aura source leaves play, `active_when` becomes false, `target_player: active` changes, or a permanent stops matching the target predicate. Call `tick_declarative_effects` after manual test setup that mutates field state without using decoded actions.
+
+Formula-backed `dp_modifier_fn` and `security_attack_fn` auras are not materialized into permanent modifiers. They carry the compiled formula into the runtime effect and are continuously recomputed by the relevant query/resolution path: DP formulas are read by `effective_dp` and `source_dp_contribution`, while Security Attack formulas are read when the attack security-check count is resolved. This keeps `material_count` and other field-state selectors live after stack depth or board state changes.
+
+Dynamic DP aura formulas must not depend on effective DP. The validator rejects `dp_modifier_fn` auras whose target or `active_when` predicate uses DP comparisons (`dp_eq`, `dp_lte`, `dp_gte`, including nested predicates) or whose formula uses `highest_dp` / `lowest_dp` aggregates. This avoids re-entering `effective_dp` while effective DP is already being computed.
+
+Multiple applicable `security_attack_fn` auras are treated as base-inclusive check-count overrides. The combat path uses the maximum applicable formula-derived check total, then adds printed Security Attack keyword deltas and `ModifierType::SecurityAttackChange`. Non-applicable formulas return `None` and preserve the normal base check; applicable formulas may still return `Some(0)` to produce zero base checks.
+
 ### How the tensor reads these
 
 `build_tensor` calls four `Game` helpers per permanent slot:
@@ -2206,6 +2266,15 @@ modifier-granted keywords). Closes parity §2.1b (native Rush) and §2.5f
 Parametric keywords (`Security A. ±N`, `De-Digivolve N`, `Draw N`) are
 parsed into their typed variants.
 
+`CardData::digixros_aliases: Vec<String>` — populated from printed text of
+the form `This card is also treated as [Name] for DigiXros.`, the `for a
+DigiXros` wording, prefix-scoped clauses such as `When you would DigiXros,
+this card/Digimon is also treated as [Shoutmon].`, and multi-name phrases such
+as `[Shoutmon] or [ZeigGreymon] for DigiXros`; it is also populated from
+authored DSL `digixros_aliases`. These names are intentionally scoped:
+DigiXros material matching may consult them, but generic name predicates must
+keep using the printed card name and ordinary generic-alias surfaces only.
+
 ### Unified query
 
 `Game::has_keyword(handle, Keyword) -> bool` — the canonical keyword
@@ -2218,11 +2287,19 @@ keywords and would miss native printed keywords. Always use
 `game.has_keyword(...)`. All 14 pre-existing keyword check sites
 (combat.rs, action/mask.rs, game_phases.rs) migrated in Phase 3.
 
+Mask-affecting keywords must be enforced in both RL-visible masks and decode /
+resolver validation. Consumers such as Collision, Piercing, Reboot, and
+Retaliation use `Game::has_keyword(handle, keyword)` so printed,
+modifier-granted, and inherited keyword sources remain unified. Collision is
+the canonical mask/decode example: the block-decline PASS bit is removed only
+when a legal blocker exists, and `decode_action`/selection resolution must
+reject PASS while the block is mandatory.
+
 ### Keyword extraction patterns
 
 Keywords appear in card text as `＜Keyword＞` (full-width angle brackets).
-The parser recognizes the 19 non-parametric keywords in the `Keyword`
-enum plus three parametric patterns:
+The parser recognizes non-parametric combat keywords including `Collision`,
+`Piercing`, `Reboot`, and `Retaliation` plus parametric patterns:
 
 - `＜Security A. +N＞` / `＜Security A. -N＞` → `SecurityAttackPlus(N)` / `SecurityAttackMinus(N)`
 - `＜De-Digivolve N＞` → `DeDigivolve(N)`
@@ -2231,6 +2308,27 @@ enum plus three parametric patterns:
 Unrecognized keyword names are ignored silently. Cards that need
 behavior not covered by the `Keyword` enum must use the modifier-based
 API via `Effect` builders.
+
+### Overclock Cost Selection
+
+`<Overclock (...)>` is optional and always surfaces its cost as a
+`PendingSelection` during `GamePhase::EndOfTurnAction`; it never auto-deletes a
+cost permanent. The selection stores the exact legal cost action IDs in
+`valid_action_ids`, uses the selecting Overclock controller as
+`selecting_player`, sets `is_optional = true`, and restores
+`EndOfTurnAction` after either a cost pick or `PASS`.
+
+Candidate action IDs reuse the field-target half of the attack range:
+`encode_attack(0, field_index)`. The action mask must emit only those stored
+candidate bits plus `PASS`. The decoder/resolver must reject any non-candidate
+target before deleting the cost or starting the Overclock attack.
+
+Legal cost candidates are Tokens plus other Digimon accepted by the Overclock
+parameter. Printed text like `＜Overclock ([Puppet] Trait)＞` derives a trait
+filter from the bracketed trait. DSL `grant_keyword` clauses may provide an
+`overclock_cost_filter` predicate; lowering attaches it with
+`EffectBuilder::overclock_with_cost_filter`, and runtime candidate collection
+uses the same predicate path.
 
 ---
 

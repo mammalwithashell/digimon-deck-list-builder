@@ -54,6 +54,23 @@ impl std::fmt::Display for OverclockError {
 
 impl std::error::Error for OverclockError {}
 
+fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+    if card_data.effect_text.is_empty()
+        && card_data.inherited_text.is_empty()
+        && card_data.security_text.is_empty()
+    {
+        return card_data.keywords.clone();
+    }
+    crate::card_data::parse_printed_keywords(&card_data.effect_text, "", "")
+}
+
+fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+    if card_data.inherited_text.is_empty() {
+        return Vec::new();
+    }
+    crate::card_data::parse_printed_keywords("", &card_data.inherited_text, "")
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DelayedOptionLifecycleResumeKind {
     StartTurn,
@@ -1061,10 +1078,16 @@ impl Game {
     /// live signals are security-resolution and the effect-source player.
     ///
     /// Priority:
-    ///   1. `security_resolution.is_some()` → `SecurityCheck`
-    ///   2. `effect_source_player.is_some()` — compare against `target_player`;
+    ///   1. `effect_source_player.is_some()` — compare against `target_player`;
     ///      equal → `OwnEffect`, else `OpponentEffect`.
+    ///   2. `security_resolution.is_some()` → `SecurityCheck`
     ///   3. Fallback → `OwnEffect`.
+    ///
+    /// Security card effects still run as card effects: `run_queued_effect`
+    /// sets `effect_source_player` before the effect body mutates state. The
+    /// ambient `security_resolution` state is only a `SecurityCheck` cause when
+    /// no card effect is currently resolving (for example, rule cleanup or
+    /// security battle resolution).
     ///
     /// Consumed by Task 4 fire-sites in `game_actions` / `effect_context`.
     pub(crate) fn infer_effect_cause(
@@ -1072,14 +1095,14 @@ impl Game {
         target_player: PlayerId,
     ) -> crate::replacement::ReplacementCause {
         use crate::replacement::ReplacementCause;
-        if self.security_resolution.is_some() {
-            return ReplacementCause::SecurityCheck;
-        }
         if let Some(acting) = self.effect_source_player {
             if acting == target_player {
                 return ReplacementCause::OwnEffect;
             }
             return ReplacementCause::OpponentEffect;
+        }
+        if self.security_resolution.is_some() {
+            return ReplacementCause::SecurityCheck;
         }
         ReplacementCause::OwnEffect
     }
@@ -1632,23 +1655,33 @@ impl Game {
         let top = perm.top_card();
         // `data_index` is a direct Vec index — O(1), no iteration needed.
         let card_data = &self.card_data[top.data_index];
-        if card_data.keywords.contains(&keyword) {
+        if face_keywords(card_data).contains(&keyword) {
             return true;
         }
         // Inherited keyword grants from digivolution sources. Only cards
         // under the top card contribute inherited text, and any active_when
         // condition must pass before the keyword is considered live.
         let stack_size = perm.card_sources.len();
-        let source_ids: Vec<(usize, String, crate::card_source::CardHandle)> = perm
+        let source_ids: Vec<(usize, usize, String, crate::card_source::CardHandle)> = perm
             .card_sources
             .iter()
             .enumerate()
-            .map(|(i, s)| (i, s.card_id(&self.card_data).to_string(), s.handle()))
+            .map(|(i, s)| {
+                (
+                    i,
+                    s.data_index,
+                    s.card_id(&self.card_data).to_string(),
+                    s.handle(),
+                )
+            })
             .collect();
-        for (source_index, src_id, src_handle) in source_ids {
+        for (source_index, data_index, src_id, src_handle) in source_ids {
             let is_under = source_index + 1 < stack_size;
             if !is_under {
                 continue;
+            }
+            if inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
+                return true;
             }
             let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
                 continue;
@@ -1675,6 +1708,96 @@ impl Game {
             }
         }
         false
+    }
+
+    /// Re-install declarative process-backed effects from permanents currently
+    /// on the field. Static effect builders still expose pure fields directly;
+    /// this dispatcher is for declarative clauses lowered to process closures,
+    /// such as filtered auras and player-scoped flood gates.
+    pub fn tick_declarative_effects(&mut self) {
+        self.modifiers.clear_materialized_declaratives();
+
+        let mut sources = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                let handle = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                };
+                let top = perm.top_card();
+                sources.push((
+                    top.card_id(&self.card_data).to_string(),
+                    top.handle(),
+                    Some(handle),
+                    player_id,
+                    false,
+                ));
+
+                let stack_size = perm.card_sources.len();
+                for (source_index, source) in perm.card_sources.iter().enumerate() {
+                    if source_index + 1 >= stack_size {
+                        continue;
+                    }
+                    sources.push((
+                        source.card_id(&self.card_data).to_string(),
+                        source.handle(),
+                        Some(handle),
+                        player_id,
+                        true,
+                    ));
+                }
+            }
+
+            if let Some(perm) = player.breeding_area.as_ref() {
+                let handle = PermanentHandle {
+                    player: player_id,
+                    index: crate::action::space::BREEDING_TARGET as u8,
+                };
+                let top = perm.top_card();
+                sources.push((
+                    top.card_id(&self.card_data).to_string(),
+                    top.handle(),
+                    Some(handle),
+                    player_id,
+                    false,
+                ));
+            }
+        }
+
+        for (card_id, source_card, source_permanent, controller, inherited_source) in sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if !effect.materializes_declarative_state || effect.process.is_none() {
+                    continue;
+                }
+                if let Some(condition) = &effect.condition {
+                    let rctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        source_card,
+                        source_permanent,
+                        controller,
+                    );
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                if let Some(process) = effect.process.as_ref() {
+                    let mut ctx = crate::effect_context::EffectContext::new(
+                        self,
+                        source_card,
+                        source_permanent,
+                        controller,
+                    );
+                    process(&mut ctx);
+                }
+            }
+        }
     }
 
     /// Returns the `PermanentHandle` of the currently-attacking permanent,
@@ -1799,11 +1922,18 @@ impl Game {
         let Some(perm) = player.battle_area.get(target.index as usize) else {
             return 0;
         };
-        // Sum across the entire digivolution stack — inherited keywords count.
+        // Top-card face keywords count; buried sources only contribute
+        // inherited text keywords.
         let mut total = 0i32;
-        for src in &perm.card_sources {
+        let stack_size = perm.card_sources.len();
+        for (source_index, src) in perm.card_sources.iter().enumerate() {
             let card_data = &self.card_data[src.data_index];
-            for kw in &card_data.keywords {
+            let keywords = if source_index + 1 == stack_size {
+                face_keywords(card_data)
+            } else {
+                inherited_keywords(card_data)
+            };
+            for kw in &keywords {
                 match kw {
                     Keyword::SecurityAttackPlus(n) => total += *n as i32,
                     Keyword::SecurityAttackMinus(n) => total -= *n as i32,
@@ -1812,6 +1942,98 @@ impl Game {
             }
         }
         total
+    }
+
+    pub fn dynamic_dp_aura_bonus(&self, target: crate::permanent::PermanentHandle) -> i32 {
+        self.live_declarative_formula_sum(target, false).0
+    }
+
+    pub fn dynamic_security_attack_aura_bonus(
+        &self,
+        target: crate::permanent::PermanentHandle,
+    ) -> Option<i32> {
+        let (value, found) = self.live_declarative_formula_sum(target, true);
+        found.then_some(value)
+    }
+
+    fn live_declarative_formula_sum(
+        &self,
+        target: crate::permanent::PermanentHandle,
+        security_attack: bool,
+    ) -> (i32, bool) {
+        use crate::effect_context::EffectReadContext;
+
+        let mut sources = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                };
+                let stack_size = perm.card_sources.len();
+                for (source_index, source) in perm.card_sources.iter().enumerate() {
+                    let inherited_source = source_index + 1 < stack_size;
+                    sources.push((
+                        source.card_id(&self.card_data).to_string(),
+                        source.handle(),
+                        Some(host),
+                        player_id,
+                        inherited_source,
+                    ));
+                }
+            }
+
+            if let Some(perm) = player.breeding_area.as_ref() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: crate::action::space::BREEDING_TARGET as u8,
+                };
+                let top = perm.top_card();
+                sources.push((
+                    top.card_id(&self.card_data).to_string(),
+                    top.handle(),
+                    Some(host),
+                    player_id,
+                    false,
+                ));
+            }
+        }
+
+        let mut total = 0;
+        let mut found = false;
+        for (card_id, source_card, source_permanent, controller, inherited_source) in sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                let Some(formula_fn) = (if security_attack {
+                    effect.security_attack_fn.as_ref()
+                } else {
+                    effect.dp_modifier_fn.as_ref()
+                }) else {
+                    continue;
+                };
+                let ctx = EffectReadContext::new(self, source_card, source_permanent, controller);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&ctx) {
+                        continue;
+                    }
+                }
+                if let Some(value) = formula_fn(&ctx, target) {
+                    if security_attack {
+                        total = if found { total.max(value) } else { value };
+                    } else {
+                        total += value;
+                    }
+                    found = true;
+                }
+            }
+        }
+        (total, found)
     }
 
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
@@ -2100,19 +2322,24 @@ impl Game {
 
         let mut total = 0i32;
         for effect in &effects {
-            if effect.dp_modifier == 0 {
+            if effect.dp_modifier == 0 && effect.dp_modifier_fn.is_none() {
                 continue;
             }
             if is_under != effect.inherited {
                 continue;
             }
+            let ctx = EffectReadContext::new(self, source.handle(), Some(perm), perm.player);
             if let Some(cond) = &effect.condition {
-                let ctx = EffectReadContext::new(self, source.handle(), Some(perm), perm.player);
                 if !cond(&ctx) {
                     continue;
                 }
             }
             total += effect.dp_modifier;
+            if let Some(formula_fn) = effect.dp_modifier_fn.as_ref() {
+                if let Some(value) = formula_fn(&ctx, perm) {
+                    total += value;
+                }
+            }
         }
         total
     }

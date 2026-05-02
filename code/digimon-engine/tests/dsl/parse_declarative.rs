@@ -145,6 +145,37 @@ effects:
 }
 
 #[test]
+fn parse_grant_keyword_overclock_cost_filter() {
+    let yaml = r#"
+card: PUPPET-OVERCLOCK
+name: Puppet Overclock
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      all_of:
+        - kind: digimon
+        - trait_has: Puppet
+"#;
+    let spec = parse(yaml);
+    match typed_body(&spec, 0) {
+        TypedDeclarativeBody::GrantKeyword(k) => {
+            let filter = k
+                .overclock_cost_filter
+                .expect("Overclock grant should accept a cost filter");
+            assert_eq!(filter.all_of.len(), 2);
+            assert_eq!(filter.all_of[1].trait_has.as_deref(), Some("Puppet"));
+        }
+        _ => panic!("expected GrantKeyword"),
+    }
+}
+
+#[test]
 fn parse_partition_sources() {
     let yaml = r#"
 card: AD1-025

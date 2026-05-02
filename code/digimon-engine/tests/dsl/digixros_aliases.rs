@@ -70,17 +70,11 @@ alt_paths:
 
     assert_eq!(material.digixros_aliases, vec!["Shoutmon"]);
     assert!(
-        digimon_engine::digixros::matches_digixros_name_requirement_for_test(
-            material,
-            "Shoutmon",
-        ),
+        digimon_engine::digixros::matches_digixros_name_requirement_for_test(material, "Shoutmon",),
         "DigiXros recipe matching must see aliases copied by the DSL bridge"
     );
     assert!(
-        !digimon_engine::digixros::matches_generic_name_requirement_for_test(
-            material,
-            "Shoutmon",
-        ),
+        !digimon_engine::digixros::matches_generic_name_requirement_for_test(material, "Shoutmon",),
         "generic name predicates must still ignore scoped DigiXros aliases"
     );
 }

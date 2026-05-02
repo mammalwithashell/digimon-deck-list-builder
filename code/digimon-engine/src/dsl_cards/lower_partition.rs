@@ -54,11 +54,12 @@ pub fn lower_with_raw(
 ) -> Vec<Effect> {
     let mut builder = Effect::declarative(card)
         .name("Partition")
+        .materializes_declarative_state()
         .process(move |ctx| {
             let Some(handle) = ctx.source_permanent else {
                 return;
             };
-            ctx.grant_keyword(handle, Keyword::Partition, Expiry::Permanent);
+            ctx.grant_declarative_keyword(handle, Keyword::Partition, Expiry::Permanent);
         });
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();

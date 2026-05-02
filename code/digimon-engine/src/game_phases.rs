@@ -7,8 +7,9 @@
 //! `StartOfYourMainPhase`, and `OnLoseSecurity` fan-out all live at phase
 //! boundaries.
 
+use crate::effect_context::EffectReadContext;
 use crate::enums::{
-    DelayTrigger, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw,
+    CardKind, DelayTrigger, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw,
 };
 use crate::game::{
     DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, Game, OverclockError,
@@ -343,22 +344,149 @@ impl Game {
         false
     }
 
-    /// True iff `player`'s battle area contains at least one Digimon other
-    /// than the Overclock Digimon at `overclock_index` — i.e. a valid
-    /// Overclock sacrifice is available.
-    ///
-    /// Python checks `p.is_token or p.is_digimon`; Rust's `CardKind` has no
-    /// `Token` variant (tokens are registered as Digimon via
-    /// `token_registry`), so the check collapses to `is_digimon`. See plan
-    /// note on Token detection.
+    /// True iff `player` has at least one legal `<Overclock>` cost candidate:
+    /// one of their Tokens, or another Digimon accepted by the Overclock
+    /// trait/predicate parameter.
     pub fn has_overclock_sacrifice(&self, player: PlayerId, overclock_index: usize) -> bool {
+        !self
+            .overclock_cost_action_ids(player, overclock_index)
+            .is_empty()
+    }
+
+    fn overclock_cost_action_ids(&self, player: PlayerId, overclock_index: usize) -> Vec<u16> {
+        use crate::action::space::encode_attack;
+
         let Some(me) = self.players.get(player as usize) else {
-            return false;
+            return Vec::new();
         };
         me.battle_area
             .iter()
             .enumerate()
-            .any(|(i, p)| i != overclock_index && p.top_card().is_digimon(&self.card_data))
+            .filter_map(|(i, _)| {
+                if i == overclock_index {
+                    return None;
+                }
+                let candidate = PermanentHandle {
+                    player,
+                    index: i as u8,
+                };
+                self.is_legal_overclock_cost(player, overclock_index, candidate)
+                    .then_some(encode_attack(0, i as u16))
+            })
+            .collect()
+    }
+
+    fn is_legal_overclock_cost(
+        &self,
+        player: PlayerId,
+        overclock_index: usize,
+        candidate: PermanentHandle,
+    ) -> bool {
+        let Some(candidate_perm) = self
+            .players
+            .get(candidate.player as usize)
+            .and_then(|p| p.battle_area.get(candidate.index as usize))
+        else {
+            return false;
+        };
+        if candidate.player != player || candidate.index as usize == overclock_index {
+            return false;
+        }
+
+        let candidate_card = candidate_perm.top_card();
+        let candidate_kind = candidate_card.card_kind(&self.card_data);
+        let is_token = candidate_card.is_token || candidate_kind == CardKind::Token;
+        if is_token {
+            return true;
+        }
+        if !candidate_perm.is_digimon(&self.card_data) {
+            return false;
+        }
+
+        let source = PermanentHandle {
+            player,
+            index: overclock_index as u8,
+        };
+
+        if let Some(matches_filter) = self.dsl_overclock_cost_filter_allows(source, candidate) {
+            return matches_filter;
+        }
+
+        if let Some(required_trait) = self.printed_overclock_trait(source) {
+            return candidate_card
+                .traits(&self.card_data)
+                .iter()
+                .any(|trait_name| trait_name.eq_ignore_ascii_case(&required_trait));
+        }
+
+        true
+    }
+
+    fn dsl_overclock_cost_filter_allows(
+        &self,
+        source: PermanentHandle,
+        candidate: PermanentHandle,
+    ) -> Option<bool> {
+        let source_card = self
+            .players
+            .get(source.player as usize)?
+            .battle_area
+            .get(source.index as usize)?
+            .top_card();
+        let card_id = source_card.card_id(&self.card_data).to_string();
+        let effects = self.effects_for_card(&card_id, source_card.handle())?;
+        let mut saw_filter = false;
+
+        for effect in effects {
+            if !effect.declarative || effect.granted_keyword != Some(Keyword::Overclock) {
+                continue;
+            }
+            let rctx =
+                EffectReadContext::new(self, effect.source_card, Some(source), source.player);
+            if let Some(condition) = &effect.condition {
+                if !condition(&rctx) {
+                    continue;
+                }
+            }
+            if let Some(filter) = effect.overclock_cost_filter {
+                saw_filter = true;
+                if filter(&rctx, candidate) {
+                    return Some(true);
+                }
+            }
+        }
+
+        saw_filter.then_some(false)
+    }
+
+    fn printed_overclock_trait(&self, source: PermanentHandle) -> Option<String> {
+        let source_card = self
+            .players
+            .get(source.player as usize)?
+            .battle_area
+            .get(source.index as usize)?
+            .top_card();
+        let card = self.card_data.get(source_card.data_index)?;
+
+        for text in [&card.effect_text, &card.inherited_text, &card.security_text] {
+            let Some(overclock_pos) = text.find("Overclock") else {
+                continue;
+            };
+            let after = &text[overclock_pos..];
+            let Some(open) = after.find('[') else {
+                continue;
+            };
+            let after_open = &after[open + 1..];
+            let Some(close) = after_open.find(']') else {
+                continue;
+            };
+            let trait_name = after_open[..close].trim();
+            if !trait_name.is_empty() {
+                return Some(trait_name.to_string());
+            }
+        }
+
+        None
     }
 
     /// Activate `<Overclock>` on the turn player's battle-area permanent at
@@ -375,7 +503,7 @@ impl Game {
     ///
     /// § Parity: §4.6c-residual.
     pub fn activate_overclock(&mut self, overclock_index: usize) -> Result<(), OverclockError> {
-        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
 
         if self.current_phase != GamePhase::EndOfTurnAction {
             return Err(OverclockError::WrongPhase);
@@ -412,15 +540,7 @@ impl Game {
         // Build the OwnField selection over sacrificeable Digimon. Encoding
         // uses the ATTACK target-half range — same convention the existing
         // `install_field_selection` helper uses for OwnField/OppField selects.
-        let mut valid_action_ids: Vec<u16> = Vec::new();
-        for (i, perm) in me.battle_area.iter().enumerate() {
-            if i == overclock_index {
-                continue;
-            }
-            if perm.top_card().is_digimon(&self.card_data) {
-                valid_action_ids.push(encode_attack(0, i as u16));
-            }
-        }
+        let valid_action_ids = self.overclock_cost_action_ids(player, overclock_index);
         debug_assert!(
             !valid_action_ids.is_empty(),
             "has_overclock_sacrifice promised ≥1"
@@ -454,20 +574,31 @@ impl Game {
                 game.delete_permanent_with_effects(sacrifice_handle);
 
                 // OnDeletion may have removed the Overclock Digimon, shifted
-                // indices, or killed the game. Bail if the Overclock Digimon
-                // is no longer present at its original index.
-                let attacker_alive = game
-                    .players
-                    .get(player as usize)
-                    .and_then(|p| p.battle_area.get(overclock_index as usize))
-                    .map(|p| p.top_card().card_index == source_card.0)
-                    .unwrap_or(false);
-                if !attacker_alive || game.game_over {
+                // indices, or killed the game. Re-find the captured top card
+                // before attacking so lower-slot costs don't stale the handle.
+                let Some(current_overclock_handle) =
+                    game.players.get(player as usize).and_then(|p| {
+                        p.battle_area.iter().enumerate().find_map(|(i, perm)| {
+                            (perm.top_card().card_index == source_card.0).then_some(
+                                PermanentHandle {
+                                    player,
+                                    index: i as u8,
+                                },
+                            )
+                        })
+                    })
+                else {
+                    return;
+                };
+                if game.game_over {
                     return;
                 }
 
                 // Fire the attack on the opponent player without suspending.
-                game.begin_attack_overclock(overclock_handle, AttackTarget::Player(opponent));
+                game.begin_attack_overclock(
+                    current_overclock_handle,
+                    AttackTarget::Player(opponent),
+                );
             }),
             on_decline: None,
         });

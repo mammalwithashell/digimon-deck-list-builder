@@ -4,6 +4,204 @@ use digimon_engine::card_data::parse_printed_keywords;
 use digimon_engine::enums::Keyword;
 
 #[test]
+fn parses_digixros_scoped_alias_without_global_name_alias() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "BT21-021": {
+                "card_id": "BT21-021",
+                "card_name_eng": "OmniShoutmon",
+                "card_kind": 0,
+                "play_cost": 8,
+                "dp": 8000,
+                "level": 5,
+                "card_colors": [0, 2],
+                "effect_description_eng": "This card is also treated as [Shoutmon] for DigiXros.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("BT21-021").expect("fixture card exists");
+
+    assert_eq!(data.digixros_aliases, vec!["Shoutmon"]);
+    assert_eq!(data.card_name, "OmniShoutmon");
+}
+
+#[test]
+fn parses_digixros_alias_with_article_from_printed_text() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "BT19-012": {
+                "card_id": "BT19-012",
+                "card_name_eng": "OmniShoutmon",
+                "card_kind": 0,
+                "play_cost": 7,
+                "dp": 7000,
+                "level": 5,
+                "card_colors": [0, 2],
+                "effect_description_eng": "This card is also treated as [Shoutmon] for a DigiXros.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("BT19-012").expect("fixture card exists");
+
+    assert_eq!(data.digixros_aliases, vec!["Shoutmon"]);
+}
+
+#[test]
+fn parses_multiple_digixros_aliases_from_single_printed_phrase() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "BT21-027": {
+                "card_id": "BT21-027",
+                "card_name_eng": "Shoutmon DX",
+                "card_kind": 0,
+                "play_cost": 12,
+                "dp": 12000,
+                "level": 6,
+                "card_colors": [0, 2],
+                "effect_description_eng": "This card is also treated as [Shoutmon] or [ZeigGreymon] for DigiXros.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("BT21-027").expect("fixture card exists");
+
+    assert_eq!(data.digixros_aliases, vec!["Shoutmon", "ZeigGreymon"]);
+    assert!(
+        !digimon_engine::digixros::matches_generic_name_requirement_for_test(data, "ZeigGreymon"),
+        "DigiXros aliases must not leak into generic name matching"
+    );
+}
+
+#[test]
+fn parses_prefix_scoped_digixros_alias_from_printed_text() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "BT11-015": {
+                "card_id": "BT11-015",
+                "card_name_eng": "Star Sword Carrier",
+                "card_kind": 0,
+                "play_cost": 6,
+                "dp": 5000,
+                "level": 4,
+                "card_colors": [0],
+                "effect_description_eng": "When you would DigiXros, this card/Digimon is also treated as [Shoutmon].",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("BT11-015").expect("fixture card exists");
+
+    assert_eq!(data.digixros_aliases, vec!["Shoutmon"]);
+    assert!(
+        !digimon_engine::digixros::matches_generic_name_requirement_for_test(data, "Shoutmon"),
+        "DigiXros aliases must not leak into generic name matching"
+    );
+}
+
+#[test]
+fn real_bt11_015_populates_prefix_scoped_digixros_alias() {
+    let cards_json = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("code dir")
+        .parent()
+        .expect("repo root")
+        .join("data/cards.json");
+    let cards = CardData::load_from_file(&cards_json).expect("real cards.json loads");
+    let data = cards.get("BT11-015").expect("BT11-015 exists");
+
+    assert_eq!(data.digixros_aliases, vec!["Shoutmon"]);
+}
+
+#[test]
+fn ignores_unscoped_generic_alias_text_for_digixros_aliases() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "ALIAS-001": {
+                "card_id": "ALIAS-001",
+                "card_name_eng": "Alias Carrier",
+                "card_kind": 0,
+                "play_cost": 3,
+                "dp": 3000,
+                "level": 3,
+                "card_colors": [0],
+                "effect_description_eng": "This card is also treated as [SomeName].",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("ALIAS-001").expect("fixture card exists");
+
+    assert!(data.digixros_aliases.is_empty());
+}
+
+#[test]
+fn ignores_generic_alias_before_separate_digixros_sentence() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "ALIAS-002": {
+                "card_id": "ALIAS-002",
+                "card_name_eng": "Alias Carrier",
+                "card_kind": 0,
+                "play_cost": 3,
+                "dp": 3000,
+                "level": 3,
+                "card_colors": [0],
+                "effect_description_eng": "This card is also treated as [Shoutmon]. When you would DigiXros, draw 1.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("ALIAS-002").expect("fixture card exists");
+
+    assert!(data.digixros_aliases.is_empty());
+}
+
+#[test]
+fn ignores_generic_alias_before_separate_for_a_digixros_sentence() {
+    let cards = CardData::load_from_str(
+        r#"{
+            "ALIAS-003": {
+                "card_id": "ALIAS-003",
+                "card_name_eng": "Alias Carrier",
+                "card_kind": 0,
+                "play_cost": 3,
+                "dp": 3000,
+                "level": 3,
+                "card_colors": [0],
+                "effect_description_eng": "This card is also treated as [Shoutmon]. You may place cards for a DigiXros.",
+                "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": []
+            }
+        }"#,
+    )
+    .expect("fixture must parse");
+    let data = cards.get("ALIAS-003").expect("fixture card exists");
+
+    assert!(data.digixros_aliases.is_empty());
+}
+
+#[test]
 fn parses_rush() {
     let kw = parse_printed_keywords(
         "\u{ff1c}Rush\u{ff1e} (This Digimon can attack the turn it comes into play.)",
@@ -29,6 +227,19 @@ fn parses_multiple_keywords_in_same_field() {
     assert!(kw.contains(&Keyword::Raid));
     assert!(kw.contains(&Keyword::Piercing));
     assert_eq!(kw.len(), 2);
+}
+
+#[test]
+fn parses_group6_core_combat_keywords() {
+    let keywords = parse_printed_keywords(
+        "\u{ff1c}Collision\u{ff1e} \u{ff1c}Piercing\u{ff1e} \u{ff1c}Reboot\u{ff1e} \u{ff1c}Retaliation\u{ff1e}",
+        "",
+        "",
+    );
+    assert!(keywords.contains(&Keyword::Collision));
+    assert!(keywords.contains(&Keyword::Piercing));
+    assert!(keywords.contains(&Keyword::Reboot));
+    assert!(keywords.contains(&Keyword::Retaliation));
 }
 
 #[test]

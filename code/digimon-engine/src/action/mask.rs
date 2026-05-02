@@ -615,9 +615,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 /// color matching any of the Option card's colors, either on the battle
 /// area or in the breeding area.
 ///
-/// Mirror of Python's `action_mask.py` lines 77-99. Script-level
-/// `match_color_requirement=False` and the `IGNORE_COLOR_REQUIREMENT` aura
-/// modifier are residual §4.2b work; both are absent here.
+/// Mirror of Python's `action_mask.py` lines 77-99 for ordinary color
+/// matching. Player-scoped `IgnoreColorRequirement` is consumed by
+/// `option_use_requirement_or_color_available` before this helper runs.
 pub(crate) fn option_color_match_available(
     card: &crate::card_source::CardSource,
     me: &crate::player::Player,
@@ -654,13 +654,20 @@ pub(crate) fn option_color_match_available(
 }
 
 /// Option-use legality for the color requirement. A true printed Use Req.
-/// predicate satisfies the requirement; otherwise normal color matching still
-/// applies.
+/// predicate or player-scoped `IgnoreColorRequirement` satisfies the
+/// requirement; otherwise normal color matching still applies.
 pub(crate) fn option_use_requirement_or_color_available(
     card: &crate::card_source::CardSource,
     game: &Game,
     player_id: PlayerId,
 ) -> bool {
+    if game
+        .modifiers
+        .player_has(player_id, ModifierType::IgnoreColorRequirement)
+    {
+        return true;
+    }
+
     if option_color_match_available(card, game.player(player_id), &game.card_data) {
         return true;
     }

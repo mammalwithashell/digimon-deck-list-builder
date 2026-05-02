@@ -865,8 +865,17 @@ fn compile_declarative(
         B::Aura(a) => CompiledDeclarativeClause::Aura {
             scope,
             active_when,
-            target: compile_predicate(&a.target, &format!("{prefix}.target"), card_id, errors),
+            target: a
+                .target
+                .as_ref()
+                .map(|target| {
+                    compile_predicate(target, &format!("{prefix}.target"), card_id, errors)
+                })
+                .unwrap_or_default(),
+            target_player: a.target_player.map(compile_player_ref),
             dp_modifier: a.dp_modifier,
+            dp_modifier_fn: a.dp_modifier_fn.as_ref().map(compile_formula),
+            security_attack_fn: a.security_attack_fn.as_ref().map(compile_formula),
             grant_keyword: a.grant_keyword.map(|gk| CompiledGrantKeywordValue {
                 keyword: gk.keyword,
                 value: gk.value,
@@ -952,6 +961,14 @@ fn compile_declarative(
             keyword: gk.keyword,
             value: gk.value,
             scope,
+            overclock_cost_filter: gk.overclock_cost_filter.as_ref().map(|p| {
+                compile_predicate(
+                    p,
+                    &format!("{prefix}.overclock_cost_filter"),
+                    card_id,
+                    errors,
+                )
+            }),
             active_when,
             summary,
             summary_key,

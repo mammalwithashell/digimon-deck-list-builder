@@ -21,7 +21,8 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, ModifierType};
+use digimon_engine::modifiers::PlayerModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 
 // ─── Fixture helpers ──────────────────────────────────────────────────
@@ -234,6 +235,65 @@ fn counter_window_emits_hand_option_candidates() {
         sel.valid_action_ids.contains(&(PLAY_HAND_START + 0)),
         "expected PLAY_HAND_START+0 in {:?}",
         sel.valid_action_ids
+    );
+}
+
+#[test]
+fn counter_window_honors_ignore_color_requirement_for_hand_options() {
+    fn counter_option_actions(with_bypass: bool) -> Vec<u16> {
+        let counter_w = Arc::new(Mutex::new(0u32));
+        let main_w = Arc::new(Mutex::new(0u32));
+
+        let mut r = DebugRunner::builder()
+            .add_card(option_card("OPT-WHITE-CTR", 0, CardColor::White))
+            .add_card(dgmn("ATK", 4, 5000))
+            .add_card(dgmn("BASE", 3, 3000))
+            .hand(1, &["OPT-WHITE-CTR"])
+            .memory(0)
+            .start();
+        r.register_effect(
+            "OPT-WHITE-CTR",
+            Arc::new(CounterOptionGainMemory {
+                counter_witness: counter_w,
+                main_witness: main_w,
+            }),
+        );
+        if with_bypass {
+            r.game.modifiers.add_player_modifier(
+                1,
+                PlayerModifierEntry::simple(
+                    ModifierType::IgnoreColorRequirement,
+                    0,
+                    Expiry::EndOfTurn,
+                    None,
+                    1,
+                ),
+            );
+        }
+
+        let atk = r.place_on_field(0, "ATK", Some(0));
+        let target = r.place_on_field(1, "BASE", Some(0));
+        let _ = r.attack_digimon(atk, target, false);
+
+        r.game
+            .pending_selection
+            .as_ref()
+            .map(|sel| sel.valid_action_ids.clone())
+            .unwrap_or_default()
+    }
+
+    let without_bypass = counter_option_actions(false);
+    assert!(
+        !without_bypass.contains(&(PLAY_HAND_START + 0)),
+        "white Counter Option should not be surfaced without matching color or bypass: {:?}",
+        without_bypass
+    );
+
+    let with_bypass = counter_option_actions(true);
+    assert!(
+        with_bypass.contains(&(PLAY_HAND_START + 0)),
+        "IgnoreColorRequirement should surface the white Counter Option action: {:?}",
+        with_bypass
     );
 }
 

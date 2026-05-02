@@ -13,7 +13,45 @@
 //! `CardData` with `dna_costs` populated.
 
 use crate::card_data::{CardData, DnaCost, DnaRequirement};
+use crate::digixros::matches_digixros_name_requirement;
+use crate::game::Game;
 use crate::permanent::Permanent;
+use crate::permanent::PermanentHandle;
+
+impl Game {
+    pub fn card_data_by_id(&self, card_id: &str) -> Option<&CardData> {
+        self.card_data.iter().find(|card| card.card_id == card_id)
+    }
+
+    pub fn card_can_satisfy_digixros_name(&self, card_id: &str, required_name: &str) -> bool {
+        let Some(data) = self.card_data_by_id(card_id) else {
+            return false;
+        };
+        matches_digixros_name_requirement(data, required_name)
+    }
+
+    pub fn permanent_can_satisfy_digixros_name(
+        &self,
+        handle: PermanentHandle,
+        required_name: &str,
+    ) -> bool {
+        let Some(player) = self.players.get(handle.player as usize) else {
+            return false;
+        };
+        let Some(perm) = player.battle_area.get(handle.index as usize) else {
+            return false;
+        };
+        let top = perm.top_card();
+        let data = &self.card_data[top.data_index];
+        matches_digixros_name_requirement(data, required_name)
+    }
+
+    pub fn card_matches_generic_name(&self, card_id: &str, required_name: &str) -> bool {
+        self.card_data_by_id(card_id)
+            .map(|data| data.card_name.eq_ignore_ascii_case(required_name))
+            .unwrap_or(false)
+    }
+}
 
 fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -> bool {
     let top = perm.top_card();

@@ -44,7 +44,7 @@ Last updated: 2026-05-02
 
 19. ~~**Face-Down Card Tracking**~~ — RESOLVED 2026-03-14 (matches DCGO). DCGO `IsFlipped` is Security-only. Approximation counting all non-top sources is acceptable.
 
-20. ~~**Ignore Color Requirement**~~ — RESOLVED 2026-03-14. Added `ModifierType.IGNORE_COLOR_REQUIREMENT` for aura-style bypass in `action_mask.py`. 7 Hudiemon Option scripts use `card._match_color_requirement = False` for self-bypass. BT23-094 also updated.
+20. ~~**Ignore Color Requirement**~~ — RESOLVED 2026-03-14. Added `ModifierType.IGNORE_COLOR_REQUIREMENT` for aura-style bypass in `action_mask.py`. 7 Hudiemon Option scripts use `card._match_color_requirement = False` for self-bypass. BT23-094 also updated. Rust note 2026-05-02: `ModifierType::IgnoreColorRequirement` is now honored by Option masks and decode/execution in `digimon-engine`, covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test flood_gates -- group6_option_color --nocapture`.
 
 21. ~~**Security Play API**~~ — RESOLVED 2026-03-17. Added `game.effect_play_from_security(player, card)` helper. `security_attack()` now checks `card._security_played` flag before trashing. EX1-066 updated.
 
@@ -83,14 +83,14 @@ Last updated: 2026-05-02
 - **Suggested change:** Add a helper that enumerates [When Digivolving] effects on a specified source card/permanent, exposes a legal branch choice if multiple effects are available, and executes the selected effect using the correct source permanent/card attribution. The choice must flow through pending selection/action-mask machinery.
 - **Workaround:** BT10-112 and BT10-110 manually iterate `card.effect_list()` and present branch selection. BT22-042 has no authored Rust implementation yet.
 
-### Puppet-Scoped Overclock Sacrifice Filter [G-OVERCLOCK-TRAIT-FILTER]
+### ~~Puppet-Scoped Overclock Sacrifice Filter [G-OVERCLOCK-TRAIT-FILTER]~~ — RESOLVED 2026-05-02
 - **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)
 - **Scope:** Rust engine action mask and Overclock activation.
 - **Card(s):** BT22-042 Nyabootmon, EX7-027 Chaperomon, EX7-030 Cendrillmon, EX11-024 Cendrillmon, BT22-036 Kazuchimon, plus other cards with `<Overclock ([Puppet] Trait)>`.
 - **Effect text:** "<Overclock ([Puppet] Trait)> (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)"
-- **What's missing:** Current Overclock eligibility treats any other Digimon as a valid sacrifice. Puppets require the sacrifice to be either a token or another [Puppet] trait Digimon, so the action mask can expose illegal non-Puppet sacrifices when mixed allies are present.
-- **Suggested change:** Parameterize Overclock with a sacrifice predicate, or let the card effect provide one. Use the same predicate in `has_overclock_sacrifice`, end-of-turn action masking, and `activate_overclock` pending choices.
-- **Workaround:** None. The current mask/activation path is too broad for Puppet Overclock.
+- **Resolution:** Overclock cost candidates are now parameterized. The end-of-turn activation bit only appears when at least one legal token or predicate-matching Digimon can pay the cost, and the pending selection stores only those legal action IDs. The generic mask exposes only stored candidates plus `PASS`, and decode rejects non-candidate targets without deleting a permanent or starting an attack.
+- **Covered by:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_overclock overclock --nocapture`
+- **DSL coverage:** `grant_keyword` accepts `overclock_cost_filter`, compiled as a predicate and lowered onto the same runtime Overclock cost filter path.
 
 ### ~~Familiar Token On Deletion Effect Missing [G-FAMILIAR-TOKEN-ON-DELETION]~~ — RESOLVED 2026-05-02
 - **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)
@@ -99,7 +99,7 @@ Last updated: 2026-05-02
 - **Effect text:** "Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn."
 - **Resolution:** `src/cards/tokens/familiar.rs` now implements the mandatory `OnDeletion` effect using the opponent-permanent selection path and applies -3000 DP until end of turn. Token card-data construction is also covered by an all-registered-token invariant so future token definitions must synthesize complete `CardData`.
 - **Covered by:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- token`, `cargo test --manifest-path code/digimon-engine/Cargo.toml token_registry`, and the full `cargo test --manifest-path code/digimon-engine/Cargo.toml`.
-- **Remaining limits:** This closes the Familiar token deletion text only. Overclock sacrifice filtering and event-gated Delay windows remain separate Puppet blockers.
+- **Remaining limits:** This closes the Familiar token deletion text only. Event-gated Delay windows remain a separate Puppet blocker.
 
 ### Event-Gated Delay Activation Windows [G-DELAY-EVENT-GATED]
 - **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)
@@ -239,6 +239,7 @@ Resolved by Group 3:
 - **Replacement clause subject-guard missing (would-leave fires for any permanent)** — RESOLVED 2026-04-27 in EX11-012 implementation. `src/dsl_cards/lower_replacement.rs` now checks `subject_matches` so `WhenWouldLeaveBattleArea` only fires when the carrier itself is the leaving permanent.
 - **`CompiledCardKind::Token` missing from predicate match** — RESOLVED 2026-04-27 in EX11-012 implementation. `src/dsl_cards/predicate.rs` now handles `CompiledCardKind::Token`, enabling `kind: token` filters (e.g. "delete 1 Token" cost).
 - **Petrification token name case-sensitivity bug** — RESOLVED 2026-04-27 in BT21-029 implementation. `TokenRegistry` is keyed lowercase; YAML `token_name:` values must use lowercase (`petrification` not `Petrification`). EX11-012's example version had the same bug; production version corrected.
+- **Source-scoped return/de-digivolve immunity** — RESOLVED 2026-05-02 for covered Rust consumers. EX8-070, P-215, and BT18-064 can now use narrow `CannotBeReturnedToHand`, `CannotBeReturnedToDeck`, and `CannotBeDeDigivolved` passive replacements scoped to opponent effects through the production `EffectContext` movement helpers and `EffectContext::grant_zone_return_immunity_to_opponent_effects`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- source_scoped_immunity --nocapture`.
 
 ### `on_digivolve` Trigger Context Missing Newly-Digivolved Permanent Reference  [G-ON-DIGIVOLVE-TRAIT-FILTER]
 - **Discovered in:** Medusamon archetype, BT24-082 Owen Dreadnought DSL implementation (2026-04-27)
@@ -281,12 +282,15 @@ Resolved by Group 3:
 - **Workaround:** None — raw_rust event-log detection blocked until emission is wired.
 - **Updated 2026-04-29:** `Game::digivolve_from_hand` now emits `GameEvent::Digivolve { player, top_card_id, field_index, from_stack_top }` after stack mutation. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- game_event_digivolve_is_emitted_with_new_top_card_and_field_index`. Effect-initiated digivolve, DNA digivolve, and breeding-area digivolve event-log coverage remain open.
 
-### `EffectTiming::Declarative` Never Fired — Filtered Aura / Grant-Keyword Runtime Gap  [G-DECLARATIVE-KEYWORD]
+### ~~`EffectTiming::Declarative` Never Fired — Filtered Aura / Grant-Keyword Runtime Gap  [G-DECLARATIVE-KEYWORD]~~ — RESOLVED 2026-05-02
 - **Discovered in:** Medusamon archetype — BT21-029, EX11-012, EX11-054 (grant_keyword), BT5-008 (filtered aura), 2026-04-27
 - **Scope:** Rust engine.
 - **Card(s):** Any card using `kind: aura` with a non-empty target predicate (filtered aura), or `kind: grant_keyword` with a declarative scope. Specific cards: BT21-029 Medusamon, EX11-012 Medusamon (Progress keyword), BT5-008 Gaossmon (filtered aura +3000 DP to other Gaossmon).
 - **Effect text:** "[Your Turn] Your other [Gaossmon] all get +3000 DP." (BT5-008); "[When Digivolving / On Field] <Progress>" (EX11-012 inherited); "SecurityAttack+1" (BT21-029 clause a).
-- **What's missing:** `EffectTiming::Declarative` is defined in `enums.rs` (line 204) and used by `Effect::declarative(card)` in `effect.rs`, but it is **never enqueued or fired** anywhere in the engine. No call site in `game_phases.rs`, `game_actions.rs`, `game.rs`, or `effect_queue.rs` calls `enqueue_triggered(EffectTiming::Declarative, ...)`. As a result:
+- **Status:** RESOLVED by Group 6 for battle-area filtered aura/player-modifier runtime dispatch. `Game::tick_declarative_effects` runs process-backed declarative effects from face-up field sources, filtered `kind: aura` clauses materialize matching permanent modifiers, `other: true` excludes the source permanent, player-scoped aura clauses can install player modifiers, and tick refresh removes stale materialized modifiers without duplicating entries.
+- **Passing command(s):** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_auras --nocapture`; broad confirmation `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- --nocapture`.
+- **Remaining related blocker:** security-zone aura sources and the future query-time aura model remain separate work; no remaining blocker for battle-area tick-dispatched filtered auras covered by Group 6.
+- **What was missing:** `EffectTiming::Declarative` is defined in `enums.rs` (line 204) and used by `Effect::declarative(card)` in `effect.rs`, but it was not enqueued or fired by the runtime. As a result:
   - Filtered aura `process` closures (which call `ctx.add_dp_modifier`, `ctx.grant_keyword`) are never invoked.
   - Declarative `grant_keyword` modifiers are never installed in `ModifierRegistry` at runtime.
   - The `active_when` condition closure on declarative effects is also never evaluated.
@@ -334,14 +338,14 @@ Resolved by Group 3:
 - **Regression coverage:** `source_multi::exact_two_sources_can_be_selected_across_own_battle_area`, `source_multi::up_to_sources_enables_pass_only_after_minimum_is_met`, `source_multi_mask_only_exposes_selecting_players_pending_actions`, `select_own_sources_binds_source_refs_for_trashing`, and `empty_select_own_sources_runs_outer_tail_synchronously`.
 - **Remaining limits:** Triggered-body cost ordering, Fragment / Digi-Burst / replacement integration, and card-specific Rocks bodies remain separate gaps.
 
-### `IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask  [G-IGNORE-COLOR-MASK]
+### ~~`IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask~~ — RESOLVED 2026-05-02 [G-IGNORE-COLOR-MASK]
 - **Discovered in:** Medusamon Batch 11, ST22-08 Offensive Plug-In V DSL implementation (2026-04-27)
 - **Scope:** Rust engine.
 - **Card(s):** ST22-08 Offensive Plug-In V — "While you have a Tamer, you can ignore this card's color requirements." Also any card that would use the `IgnoreColorRequirement` modifier via a flood_gate clause.
 - **Effect text:** "While you have a Tamer, you can ignore this card's color requirements."
-- **What's missing:** `code/digimon-engine/src/action/mask.rs`'s `option_color_match_available` function (line 598) has the following comment: "Script-level `match_color_requirement=False` and the `IGNORE_COLOR_REQUIREMENT` aura modifier are residual §4.2b work; both are absent here." The `ModifierType::IgnoreColorRequirement` variant exists in `enums.rs` (line 488) and the DSL validator accepts it, but no enforcement hook reads this modifier in the Rust action mask. The Python engine resolved this gap on 2026-03-14, but the Rust engine's action mask never received the equivalent fix.
-- **Suggested change:** In `option_color_match_available`, before returning `false`, check whether the card itself carries an `IgnoreColorRequirement` modifier (self-modifier on the card source) or whether any ally permanent has a permanent-level `IgnoreColorRequirement` modifier that applies to this card. If so, return `true`. This matches the Python engine's `_match_color_requirement_fn` pattern and the `ModifierType.IGNORE_COLOR_REQUIREMENT` aura check in `action_mask.py`.
-- **Workaround:** None — the `flood_gate` YAML clause with `modifier: IgnoreColorRequirement` compiles correctly but has zero runtime effect because the enforcement is absent.
+- **Resolution:** `code/digimon-engine/src/action/mask.rs` now treats player-scoped `ModifierType::IgnoreColorRequirement` as satisfying Option use legality before board color checks. The same helper is used by `play_option_from_hand`, so decode/execution rejects or accepts the same actions as the mask.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test flood_gates -- group6_option_color --nocapture`.
+- **Remaining limits:** This closes the Rust engine mask/decode hook only. DSL-specific conditional aura expression, live condition refresh, and card-specific flood_gate authoring remain separate DSL/card implementation work where applicable.
 
 ### `DelayTrigger::StartOfYourNextTurn` Missing — Delay Fires at Start of Turn  [G-DELAY-START-OF-TURN]
 - **Discovered in:** Medusamon Batch 12, LM-027 Red Scramble DSL implementation (2026-04-28)

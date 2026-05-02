@@ -7,6 +7,8 @@ mod digixros_aliases;
 mod effect_immunity_step;
 mod embedded_registry;
 mod group4_zone_movement;
+mod group6_auras;
+mod group6_dynamic_formulas;
 mod group7_predicate_batch;
 mod i18n_scaffolding;
 mod link;

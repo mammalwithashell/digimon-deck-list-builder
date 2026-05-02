@@ -2252,6 +2252,27 @@ impl Game {
         Some(top_handle)
     }
 
+    /// Low-level source-attribution helper for tests and engine internals.
+    ///
+    /// The underlying movement still routes through `return_to_hand`, including
+    /// replacement windows and source-disposition triggers; this wrapper only
+    /// supplies effect source attribution so opponent-only protection can
+    /// distinguish own effects from opponent effects. Production card effects
+    /// should prefer `EffectContext::return_to_hand`, which also enforces
+    /// `can_affect_permanent` gates and uses real source metadata.
+    #[doc(hidden)]
+    pub fn return_to_hand_from_effect(
+        &mut self,
+        handle: PermanentHandle,
+        effect_player: PlayerId,
+    ) -> bool {
+        let previous = self.effect_source_player;
+        self.effect_source_player = Some(effect_player);
+        let moved = self.return_to_hand(handle).is_some();
+        self.effect_source_player = previous;
+        moved
+    }
+
     /// Return a permanent's top card to its owner's deck at `position`.
     /// Sources under the top go to trash; linked_cards go to trash.
     /// Modifiers targeting the permanent are cleared. Returns true on
@@ -2267,6 +2288,51 @@ impl Game {
         position: crate::enums::StackPosition,
     ) -> bool {
         self.return_to_deck_inner(handle, position, false)
+    }
+
+    /// Low-level source-attribution helper for tests and engine internals.
+    ///
+    /// This is the source-attributed companion to `return_to_deck`; callers
+    /// that need production effect semantics should prefer
+    /// `EffectContext::return_to_deck`, which also enforces
+    /// `can_affect_permanent` gates and uses real source metadata.
+    #[doc(hidden)]
+    pub fn return_to_deck_from_effect(
+        &mut self,
+        handle: PermanentHandle,
+        effect_player: PlayerId,
+    ) -> bool {
+        let previous = self.effect_source_player;
+        self.effect_source_player = Some(effect_player);
+        let moved = self.return_to_deck(handle, crate::enums::StackPosition::Bottom);
+        self.effect_source_player = previous;
+        moved
+    }
+
+    /// Low-level source-attribution helper for tests and engine internals.
+    ///
+    /// Uses the standard De-Digivolve floor (`stop_at_level = Some(3)`) and
+    /// returns whether at least one card was popped. Replacement windows are
+    /// resolved by `EffectContext::de_digivolve` under the supplied source
+    /// attribution. Production card effects should prefer an existing
+    /// `EffectContext` so `can_affect_permanent` and source-kind metadata come
+    /// from the real resolving card.
+    #[doc(hidden)]
+    pub fn de_digivolve_from_effect(
+        &mut self,
+        handle: PermanentHandle,
+        effect_player: PlayerId,
+        amount: u8,
+    ) -> bool {
+        let previous = self.effect_source_player;
+        self.effect_source_player = Some(effect_player);
+        let popped = {
+            let mut ctx =
+                EffectContext::new(self, crate::card_source::CardHandle(0), None, effect_player);
+            ctx.de_digivolve(handle, Some(3), Some(amount))
+        };
+        self.effect_source_player = previous;
+        popped > 0
     }
 
     /// Return a permanent's full stack to its owner's deck at `position`.

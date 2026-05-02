@@ -8,6 +8,8 @@ mod counter_hand_play;
 mod counter_interrupt;
 mod deletion_cause_observer;
 mod force_attack_mask;
+mod group6_keywords;
+mod group6_overclock;
 mod on_ally_opponent_attack;
 mod on_block_observer;
 mod overclock;

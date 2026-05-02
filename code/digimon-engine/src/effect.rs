@@ -43,10 +43,16 @@ pub type EffectReplacementConditionFn = Box<
 pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync + 'static>;
 pub type CostReductionFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
 pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
+pub type DynamicModifierFn =
+    Box<dyn Fn(&EffectReadContext, PermanentHandle) -> Option<i32> + Send + Sync + 'static>;
 /// Closure that accepts a read-only context and a candidate host handle,
 /// returning `true` iff the host is a legal target for a Link Option.
 /// Phase 8: consumed by Link dispatch to mask host-selection prompts.
 pub type LinkFilterFn =
+    Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
+/// Predicate used by parameterized `<Overclock (...)>` to decide which own
+/// battle-area permanents can be deleted as the cost.
+pub type OverclockCostFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -123,6 +129,9 @@ pub struct Effect {
     pub security: bool,
     pub counter: bool,
     pub declarative: bool,
+    /// True only for process-backed declaratives that materialize static
+    /// modifier/keyword state during `Game::tick_declarative_effects`.
+    pub materializes_declarative_state: bool,
     pub optional: bool,
     /// Heuristic metadata for policies: this effect produces or preserves
     /// hand/resource flow, such as drawing, searching/add-to-hand, filtering
@@ -162,8 +171,11 @@ pub struct Effect {
 
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
+    pub dp_modifier_fn: Option<DynamicModifierFn>,
+    pub security_attack_fn: Option<DynamicModifierFn>,
     pub cost_reduction: i32,
     pub granted_keyword: Option<Keyword>,
+    pub overclock_cost_filter: Option<OverclockCostFilterFn>,
 
     /// When `true`, this effect's `dp_modifier` is applied to the opposing
     /// security Digimon's DP during the §2.5 security DP battle. Used for
@@ -471,6 +483,7 @@ impl EffectBuilder {
                 security: false,
                 counter: false,
                 declarative: false,
+                materializes_declarative_state: false,
                 optional: false,
                 resource_flow: false,
                 blast_digivolve: false,
@@ -481,8 +494,11 @@ impl EffectBuilder {
                 cost_reduction_fn: None,
                 pay_cost_fn: None,
                 dp_modifier: 0,
+                dp_modifier_fn: None,
+                security_attack_fn: None,
                 cost_reduction: 0,
                 granted_keyword: None,
+                overclock_cost_filter: None,
                 applies_to_opponent_security_dp: false,
                 replacement_process: None,
                 option_main: false,
@@ -532,6 +548,11 @@ impl EffectBuilder {
     }
     fn declarative_flag(mut self) -> Self {
         self.inner.declarative = true;
+        self
+    }
+
+    pub fn materializes_declarative_state(mut self) -> Self {
+        self.inner.materializes_declarative_state = true;
         self
     }
 
@@ -638,6 +659,22 @@ impl EffectBuilder {
         self
     }
 
+    pub fn dp_modifier_fn<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> Option<i32> + Send + Sync + 'static,
+    {
+        self.inner.dp_modifier_fn = Some(Box::new(f));
+        self
+    }
+
+    pub fn security_attack_fn<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> Option<i32> + Send + Sync + 'static,
+    {
+        self.inner.security_attack_fn = Some(Box::new(f));
+        self
+    }
+
     /// Flag this effect as a DP adjustment applied to the opposing security
     /// Digimon during the security DP battle (§2.5e). Intended for inherited
     /// effects like "This Digimon gains +3000 DP when attacking security" —
@@ -670,6 +707,14 @@ impl EffectBuilder {
 
     pub fn granted_keyword(mut self, keyword: Keyword) -> Self {
         self.inner.granted_keyword = Some(keyword);
+        self
+    }
+
+    pub fn overclock_with_cost_filter<F>(mut self, filter: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,
+    {
+        self.inner.overclock_cost_filter = Some(Box::new(filter));
         self
     }
 

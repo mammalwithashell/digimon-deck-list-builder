@@ -263,9 +263,16 @@ impl DeclarativeClause {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AuraBody {
-    pub target: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_player: Option<crate::common::PlayerRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dp_modifier: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dp_modifier_fn: Option<crate::formula::FormulaSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security_attack_fn: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grant_keyword: Option<GrantKeywordValue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -399,6 +406,8 @@ pub struct GrantKeywordBody {
     pub keyword: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overclock_cost_filter: Option<PredicateSpec>,
 }
 
 /// Body for `kind: delay`.

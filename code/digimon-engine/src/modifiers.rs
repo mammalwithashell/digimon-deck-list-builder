@@ -17,8 +17,12 @@ pub struct ModifierEntry {
     pub modifier: ModifierType,
     pub value: i32,
     pub expiry: Expiry,
+    /// Permanent that materialized this entry, when source-scoped cleanup matters.
+    pub source_permanent: Option<PermanentHandle>,
     /// Which player owned the source effect (for cleanup at end of their turn).
     pub source_player: u8,
+    /// True for process-backed declaratives refreshed by `tick_declarative_effects`.
+    pub materialized_declarative: bool,
     /// Cause filter for replacement-backed modifiers. None = cause-agnostic.
     pub cause_filter: Option<crate::replacement::ReplacementCause>,
     /// Optional runtime condition for passive replacements. None = always applies.
@@ -46,7 +50,9 @@ impl std::fmt::Debug for ModifierEntry {
             .field("modifier", &self.modifier)
             .field("value", &self.value)
             .field("expiry", &self.expiry)
+            .field("source_permanent", &self.source_permanent)
             .field("source_player", &self.source_player)
+            .field("materialized_declarative", &self.materialized_declarative)
             .field("cause_filter", &self.cause_filter)
             .field("effect_immunity_filter", &self.effect_immunity_filter)
             .finish_non_exhaustive()
@@ -60,7 +66,29 @@ impl ModifierEntry {
             modifier,
             value,
             expiry,
+            source_permanent: None,
             source_player,
+            materialized_declarative: false,
+            cause_filter: None,
+            replacement_condition: None,
+            effect_immunity_filter: None,
+        }
+    }
+
+    pub fn materialized_declarative(
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        source_permanent: Option<PermanentHandle>,
+        source_player: u8,
+    ) -> Self {
+        Self {
+            modifier,
+            value,
+            expiry,
+            source_permanent,
+            source_player,
+            materialized_declarative: true,
             cause_filter: None,
             replacement_condition: None,
             effect_immunity_filter: None,
@@ -79,7 +107,9 @@ impl ModifierEntry {
             modifier,
             value: 0,
             expiry,
+            source_permanent: None,
             source_player,
+            materialized_declarative: false,
             cause_filter: default_passive_cause_filter(modifier),
             replacement_condition: None,
             effect_immunity_filter: None,
@@ -147,6 +177,8 @@ pub struct PlayerModifierEntry {
     pub source_permanent: Option<PermanentHandle>,
     /// Who installed it (used for `EndOfOpponentsTurn` expiry).
     pub source_player: PlayerId,
+    /// True for process-backed declaratives refreshed by `tick_declarative_effects`.
+    pub materialized_declarative: bool,
     /// Cause filter for replacement-backed modifiers. None = cause-agnostic.
     pub cause_filter: Option<crate::replacement::ReplacementCause>,
     /// Optional runtime condition for passive replacements. None = always applies.
@@ -162,6 +194,7 @@ impl std::fmt::Debug for PlayerModifierEntry {
             .field("expiry", &self.expiry)
             .field("source_permanent", &self.source_permanent)
             .field("source_player", &self.source_player)
+            .field("materialized_declarative", &self.materialized_declarative)
             .field("cause_filter", &self.cause_filter)
             .field("effect_immunity_filter", &self.effect_immunity_filter)
             .finish_non_exhaustive()
@@ -183,6 +216,27 @@ impl PlayerModifierEntry {
             expiry,
             source_permanent,
             source_player,
+            materialized_declarative: false,
+            cause_filter: None,
+            replacement_condition: None,
+            effect_immunity_filter: None,
+        }
+    }
+
+    pub fn materialized_declarative(
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        source_permanent: Option<PermanentHandle>,
+        source_player: PlayerId,
+    ) -> Self {
+        Self {
+            modifier,
+            value,
+            expiry,
+            source_permanent,
+            source_player,
+            materialized_declarative: true,
             cause_filter: None,
             replacement_condition: None,
             effect_immunity_filter: None,
@@ -204,6 +258,7 @@ impl PlayerModifierEntry {
             expiry,
             source_permanent,
             source_player,
+            materialized_declarative: false,
             cause_filter: default_passive_cause_filter(modifier),
             replacement_condition: None,
             effect_immunity_filter: None,
@@ -247,13 +302,49 @@ pub(crate) fn default_passive_cause_filter(
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct KeywordEntry {
+    keyword: Keyword,
+    expiry: Expiry,
+    source_player: u8,
+    source_permanent: Option<PermanentHandle>,
+    materialized_declarative: bool,
+}
+
+impl KeywordEntry {
+    fn simple(keyword: Keyword, expiry: Expiry, source_player: u8) -> Self {
+        Self {
+            keyword,
+            expiry,
+            source_player,
+            source_permanent: None,
+            materialized_declarative: false,
+        }
+    }
+
+    fn materialized_declarative(
+        keyword: Keyword,
+        expiry: Expiry,
+        source_permanent: Option<PermanentHandle>,
+        source_player: u8,
+    ) -> Self {
+        Self {
+            keyword,
+            expiry,
+            source_player,
+            source_permanent,
+            materialized_declarative: true,
+        }
+    }
+}
+
 /// Tracks all active modifiers in the game.
 #[derive(Debug, Default)]
 pub struct ModifierRegistry {
     /// Modifiers attached to specific permanents.
     permanent_modifiers: HashMap<PermanentHandle, Vec<ModifierEntry>>,
-    /// Granted keywords on permanents (separate so duplicates are deduplicated).
-    permanent_keywords: HashMap<PermanentHandle, Vec<(Keyword, Expiry, u8)>>,
+    /// Granted keywords on permanents.
+    permanent_keywords: HashMap<PermanentHandle, Vec<KeywordEntry>>,
     /// Player-scoped modifiers (Phase 6 flood gates).
     player_modifiers: HashMap<PlayerId, Vec<PlayerModifierEntry>>,
 }
@@ -282,7 +373,25 @@ impl ModifierRegistry {
         self.permanent_keywords
             .entry(target)
             .or_default()
-            .push((keyword, expiry, source_player));
+            .push(KeywordEntry::simple(keyword, expiry, source_player));
+    }
+
+    pub fn grant_declarative_keyword(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        expiry: Expiry,
+        source_permanent: Option<PermanentHandle>,
+        source_player: u8,
+    ) {
+        self.permanent_keywords.entry(target).or_default().push(
+            KeywordEntry::materialized_declarative(
+                keyword,
+                expiry,
+                source_permanent,
+                source_player,
+            ),
+        );
     }
 
     /// Get all modifiers of a given type on a permanent.
@@ -301,6 +410,24 @@ impl ModifierRegistry {
     /// Whether the permanent has any modifier of the given type.
     pub fn has(&self, target: PermanentHandle, modifier: ModifierType) -> bool {
         !self.get(target, modifier).is_empty()
+    }
+
+    /// Whether `modifier` blocks an opponent-controlled effect from affecting
+    /// `target`. This is intentionally narrow: only passive replacement entries
+    /// with `cause_filter = Some(OpponentEffect)` participate, so own effects
+    /// and broader protection families keep their existing semantics.
+    pub fn blocks_opponent_effect(
+        &self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        effect_player: PlayerId,
+    ) -> bool {
+        self.get(target, modifier).into_iter().any(|entry| {
+            matches!(
+                entry.cause_filter,
+                Some(crate::replacement::ReplacementCause::OpponentEffect)
+            ) && effect_player != target.player
+        })
     }
 
     /// Iterate over ALL `ModifierEntry` values attached to `target`
@@ -332,8 +459,24 @@ impl ModifierRegistry {
     pub fn has_keyword(&self, target: PermanentHandle, keyword: Keyword) -> bool {
         self.permanent_keywords
             .get(&target)
-            .map(|kws| kws.iter().any(|(k, _, _)| *k == keyword))
+            .map(|kws| kws.iter().any(|entry| entry.keyword == keyword))
             .unwrap_or(false)
+    }
+
+    /// Remove process-backed declarative materializations before a fresh tick.
+    pub fn clear_materialized_declaratives(&mut self) {
+        self.permanent_modifiers.retain(|_, entries| {
+            entries.retain(|entry| !entry.materialized_declarative);
+            !entries.is_empty()
+        });
+        self.permanent_keywords.retain(|_, entries| {
+            entries.retain(|entry| !entry.materialized_declarative);
+            !entries.is_empty()
+        });
+        self.player_modifiers.retain(|_, entries| {
+            entries.retain(|entry| !entry.materialized_declarative);
+            !entries.is_empty()
+        });
     }
 
     /// Remove all modifiers attached to a permanent (e.g. when it leaves the field).
@@ -348,7 +491,7 @@ impl ModifierRegistry {
             entries.retain(|e| !matches!(e.expiry, Expiry::EndOfTurn));
         }
         for kws in self.permanent_keywords.values_mut() {
-            kws.retain(|(_, expiry, _)| !matches!(expiry, Expiry::EndOfTurn));
+            kws.retain(|entry| !matches!(entry.expiry, Expiry::EndOfTurn));
         }
         // EndOfOpponentsTurn: remove modifiers whose source_player != ending_player
         for entries in self.permanent_modifiers.values_mut() {
@@ -358,8 +501,9 @@ impl ModifierRegistry {
             });
         }
         for kws in self.permanent_keywords.values_mut() {
-            kws.retain(|(_, expiry, src)| {
-                !(matches!(expiry, Expiry::EndOfOpponentsTurn) && *src != ending_player)
+            kws.retain(|entry| {
+                !(matches!(entry.expiry, Expiry::EndOfOpponentsTurn)
+                    && entry.source_player != ending_player)
             });
         }
     }
@@ -370,9 +514,7 @@ impl ModifierRegistry {
             entries.retain(|e| !matches!(e.expiry, Expiry::EndOfAttack | Expiry::EndOfBattle));
         }
         for kws in self.permanent_keywords.values_mut() {
-            kws.retain(|(_, expiry, _)| {
-                !matches!(expiry, Expiry::EndOfAttack | Expiry::EndOfBattle)
-            });
+            kws.retain(|entry| !matches!(entry.expiry, Expiry::EndOfAttack | Expiry::EndOfBattle));
         }
     }
 

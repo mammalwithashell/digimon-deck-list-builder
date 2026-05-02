@@ -14,3 +14,4 @@ mod nested_select_substrate;
 mod partition;
 mod passive_modifier_migration;
 mod route_replacements;
+mod source_scoped_immunity;

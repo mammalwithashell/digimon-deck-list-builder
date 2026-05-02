@@ -82,9 +82,16 @@ impl CardEffect for DslCardEffect {
                         keyword,
                         value,
                         scope,
+                        overclock_cost_filter,
                         ..
                     } => {
-                        if let Some(e) = lower_grant_keyword::lower(card, keyword, *value, *scope) {
+                        if let Some(e) = lower_grant_keyword::lower(
+                            card,
+                            keyword,
+                            *value,
+                            *scope,
+                            overclock_cost_filter.clone(),
+                        ) {
                             out.push(e);
                         }
                     }
@@ -92,8 +99,12 @@ impl CardEffect for DslCardEffect {
                         scope,
                         active_when,
                         target,
+                        target_player,
                         dp_modifier,
+                        dp_modifier_fn,
+                        security_attack_fn,
                         grant_keyword,
+                        modifier,
                         ..
                     } => {
                         if let Some(e) = lower_aura::lower(
@@ -101,8 +112,13 @@ impl CardEffect for DslCardEffect {
                             *scope,
                             active_when.clone(),
                             target.clone(),
+                            *target_player,
                             *dp_modifier,
+                            dp_modifier_fn.clone(),
+                            security_attack_fn.clone(),
                             grant_keyword.clone(),
+                            modifier.clone(),
+                            self.raw.clone(),
                         ) {
                             out.push(e);
                         }

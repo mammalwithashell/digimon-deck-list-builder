@@ -614,6 +614,10 @@ fn eval_permanent_fields(
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
 ) -> bool {
+    if pred.other == Some(true) && rctx.source_permanent == Some(handle) {
+        return false;
+    }
+
     let in_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
     let perm = if in_breeding {
         match rctx.game.player(handle.player).breeding_area.as_ref() {

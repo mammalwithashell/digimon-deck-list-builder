@@ -334,6 +334,13 @@ impl CardData {
                 &raw_card.security_effect_description_eng,
             );
 
+            let mut digixros_aliases = raw_card.digixros_aliases;
+            for alias in parse_digixros_aliases(&raw_card.effect_description_eng) {
+                if !digixros_aliases.contains(&alias) {
+                    digixros_aliases.push(alias);
+                }
+            }
+
             let card = CardData {
                 card_id: raw_card.card_id.clone(),
                 card_name: raw_card.card_name_eng,
@@ -372,12 +379,65 @@ impl CardData {
                 norm_id: raw_card.norm_id,
                 ace_overflow: raw_card.ace_overflow,
                 dual: raw_card.dual,
-                digixros_aliases: raw_card.digixros_aliases,
+                digixros_aliases,
             };
             cards.insert(id, card);
         }
         Ok(cards)
     }
+}
+
+fn parse_digixros_aliases(effect_text: &str) -> Vec<String> {
+    let marker = "also treated as ";
+    let mut aliases = Vec::new();
+    for (start, _) in effect_text.match_indices(marker) {
+        let before = &effect_text[..start];
+        let tail = &effect_text[start + marker.len()..];
+        let current_sentence = current_sentence_tail(tail);
+        if let Some(scope_start) = digixros_scope_start(current_sentence) {
+            aliases.extend(parse_bracketed_names(&current_sentence[..scope_start]));
+        } else if current_sentence_has_digixros(before) {
+            aliases.extend(parse_bracketed_names(current_sentence));
+        }
+    }
+    aliases
+}
+
+fn digixros_scope_start(text: &str) -> Option<usize> {
+    ["for DigiXros", "for a DigiXros"]
+        .iter()
+        .filter_map(|marker| text.find(marker))
+        .min()
+}
+
+fn current_sentence_has_digixros(text: &str) -> bool {
+    current_sentence_prefix(text).contains("DigiXros")
+}
+
+fn current_sentence_prefix(text: &str) -> &str {
+    text.rsplit(['.', '\r', '\n']).next().unwrap_or(text)
+}
+
+fn current_sentence_tail(text: &str) -> &str {
+    let end = ['.', '\r', '\n']
+        .iter()
+        .filter_map(|marker| text.find(*marker))
+        .min()
+        .unwrap_or(text.len());
+    &text[..end]
+}
+
+fn parse_bracketed_names(text: &str) -> Vec<String> {
+    let mut aliases = Vec::new();
+    let mut remaining = text;
+    while let Some((_, after_open)) = remaining.split_once('[') {
+        let Some((name, after_close)) = after_open.split_once(']') else {
+            break;
+        };
+        aliases.push(name.trim().to_string());
+        remaining = after_close;
+    }
+    aliases
 }
 
 /// Extract printed keywords from a card's text fields.

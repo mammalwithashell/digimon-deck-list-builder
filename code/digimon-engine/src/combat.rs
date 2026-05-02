@@ -152,7 +152,8 @@ impl Game {
             .battle_area
             .get(handle.index as usize)?;
         let base = perm.base_dp(&self.card_data)?;
-        let bonus = self.modifiers.sum(handle, ModifierType::ChangeDp);
+        let bonus =
+            self.modifiers.sum(handle, ModifierType::ChangeDp) + self.dynamic_dp_aura_bonus(handle);
         Some(base + bonus)
     }
 
@@ -989,15 +990,13 @@ impl Game {
                     e.counter && !e.blast_digivolve && e.timing == EffectTiming::CounterEffect
                 });
                 if has_counter_option {
-                    // Color-match gate parity with Phase 8 Option play
-                    // (if the Option's color cannot be satisfied, the
-                    // play would fail anyway — don't offer the candidate).
-                    let player_ref = self.player(defender_player);
-                    let card = &player_ref.hand[h_idx];
-                    if crate::action::mask::option_color_match_available(
+                    // Legality parity with Phase 8 Option play: the
+                    // candidate surface must match `play_option_from_hand`.
+                    let card = &self.player(defender_player).hand[h_idx];
+                    if crate::action::mask::option_use_requirement_or_color_available(
                         card,
-                        player_ref,
-                        &self.card_data,
+                        self,
+                        defender_player,
                     ) {
                         candidates.push(CounterCandidate::HandOption {
                             hand_index: h_idx as u8,
@@ -1627,7 +1626,10 @@ impl Game {
             .modifiers
             .sum(attacker, ModifierType::SecurityAttackChange);
         let sa_keyword = self.security_attack_keyword_bonus(attacker);
-        let checks = (1 + sa_modifier + sa_keyword).max(0) as u8;
+        let base_checks = self
+            .dynamic_security_attack_aura_bonus(attacker)
+            .unwrap_or(1);
+        let checks = (base_checks + sa_modifier + sa_keyword).max(0) as u8;
         if checks == 0 {
             return AttackResult::SecurityCheckSurvived;
         }
