@@ -17,7 +17,7 @@ use digimon_dsl::compiled::{
 };
 
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::step::{
     drain_dsl_outer_tail, resolve_player, run_steps_with_runtime, StepRuntime,
 };
@@ -154,6 +154,7 @@ pub fn try_install(
     match step {
         CompiledStep::SelectHand {
             of,
+            filter,
             bind_as,
             prompt,
             optional,
@@ -162,6 +163,7 @@ pub fn try_install(
             install_select_hand(
                 ctx,
                 *of,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -173,6 +175,7 @@ pub fn try_install(
         }
         CompiledStep::SelectTrash {
             of,
+            filter,
             bind_as,
             prompt,
             optional,
@@ -181,6 +184,7 @@ pub fn try_install(
             install_select_trash(
                 ctx,
                 *of,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -556,6 +560,7 @@ fn has_own_breeding_candidate(ctx: &EffectContext<'_>) -> bool {
 fn install_select_hand(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -566,11 +571,33 @@ fn install_select_hand(
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_hand(
         target_player,
         &prompt,
         optional,
-        |_game, _idx| true, // Phase 2b: accept-all filter (see module header).
+        move |game, idx| {
+            let Some(card) = game.player(target_player).hand.get(idx).map(|c| c.handle()) else {
+                return false;
+            };
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(card),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -584,6 +611,7 @@ fn install_select_hand(
 fn install_select_trash(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -594,11 +622,38 @@ fn install_select_trash(
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_trash(
         target_player,
         &prompt,
         optional,
-        |_game, _idx| true,
+        move |game, idx| {
+            let Some(card) = game
+                .player(target_player)
+                .trash
+                .get(idx)
+                .map(|c| c.handle())
+            else {
+                return false;
+            };
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(card),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
