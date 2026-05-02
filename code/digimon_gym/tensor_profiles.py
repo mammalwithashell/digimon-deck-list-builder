@@ -87,6 +87,48 @@ def get_tensor_profile(profile_id: str | None = None) -> TensorProfile:
     )
 
 
+def get_tensor_profile_for_observation_shape(shape: tuple[int, ...]) -> TensorProfile:
+    """Resolve a unique tensor profile from a one-dimensional observation shape."""
+    if len(shape) != 1:
+        raise ValueError(
+            f"observation space shape {shape} is not one-dimensional; "
+            "pass tensor_profile_id or observation_layout explicitly"
+        )
+    return get_tensor_profile_for_tensor_size(int(shape[0]))
+
+
+def get_tensor_profile_for_tensor_size(tensor_size: int) -> TensorProfile:
+    """Resolve a unique registered tensor profile by tensor size."""
+    digimon_engine = _load_digimon_engine()
+    if digimon_engine is None:
+        return _fallback_profile_for_tensor_size(tensor_size)
+
+    list_profiles = getattr(digimon_engine, "list_observation_profiles", None)
+    if list_profiles is None:
+        list_profiles = getattr(digimon_engine, "list_tensor_profiles", None)
+    if list_profiles is None:
+        return _fallback_profile_for_tensor_size(tensor_size)
+
+    matches: dict[str, TensorProfile] = {}
+    for profile_id in list_profiles():
+        profile = get_tensor_profile(str(profile_id))
+        if profile.tensor_size == tensor_size:
+            matches[profile.id] = profile
+
+    if len(matches) == 1:
+        return next(iter(matches.values()))
+    if len(matches) > 1:
+        profile_ids = ", ".join(sorted(matches))
+        raise ValueError(
+            f"multiple tensor profiles match observation tensor size {tensor_size}: "
+            f"{profile_ids}; pass tensor_profile_id or observation_layout explicitly"
+        )
+    raise ValueError(
+        f"no registered tensor profile matches observation tensor size {tensor_size}; "
+        "pass tensor_profile_id or observation_layout explicitly"
+    )
+
+
 def list_tensor_profiles() -> list[str]:
     digimon_engine = _load_digimon_engine()
     if digimon_engine is None:
@@ -164,6 +206,17 @@ def _validate_fallback_profile_id(profile_id: str | None) -> None:
             "standard_lite_v2 requires digimon_engine observation layout support"
         ) from None
     raise ValueError(f"unknown tensor profile: {profile_id}") from None
+
+
+def _fallback_profile_for_tensor_size(tensor_size: int) -> TensorProfile:
+    profile = _legacy_standard_compact_v1()
+    if profile.tensor_size == tensor_size:
+        return profile
+    raise ValueError(
+        f"no registered tensor profile matches observation tensor size {tensor_size}; "
+        f"digimon_engine profile registry is unavailable and only "
+        f"{profile.id} size {profile.tensor_size} can be inferred"
+    )
 
 
 def _canonicalize_tensor_profile_id(profile_id: str) -> str:

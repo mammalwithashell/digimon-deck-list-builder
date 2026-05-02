@@ -19,7 +19,10 @@ import torch.nn as nn
 from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
-from digimon_gym.tensor_profiles import get_tensor_profile
+from digimon_gym.tensor_profiles import (
+    get_tensor_profile,
+    get_tensor_profile_for_observation_shape,
+)
 from digimon_engine import REGISTRY_CAPACITY, EMBEDDING_DIM
 
 
@@ -38,7 +41,12 @@ class CardEmbeddingExtractor(BaseFeaturesExtractor):
     ):
         super().__init__(observation_space, features_dim)
 
-        profile = observation_layout or get_tensor_profile(tensor_profile_id)
+        if observation_layout is not None:
+            profile = observation_layout
+        elif tensor_profile_id is not None:
+            profile = get_tensor_profile(tensor_profile_id)
+        else:
+            profile = get_tensor_profile_for_observation_shape(observation_space.shape)
         profile_id = _layout_get(profile, "id", _layout_get(profile, "profile_id", "unknown"))
         tensor_size = int(_layout_get(profile, "tensor_size"))
         card_id_positions = tuple(int(v) for v in _layout_get(profile, "card_id_positions"))

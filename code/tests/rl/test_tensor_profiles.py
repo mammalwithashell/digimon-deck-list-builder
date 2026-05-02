@@ -98,6 +98,24 @@ def test_feature_extractor_accepts_observation_layout():
     assert tuple(out.shape) == (2, 512)
 
 
+def test_feature_extractor_infers_unique_profile_from_observation_space_shape():
+    from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
+    from digimon_gym.tensor_profiles import get_tensor_profile
+
+    profile = get_tensor_profile("standard_lite_v2")
+    space = spaces.Box(
+        low=-10.0,
+        high=20001.0,
+        shape=(profile.tensor_size,),
+        dtype=np.float32,
+    )
+
+    extractor = CardEmbeddingExtractor(space)
+
+    assert extractor.card_id_indices.numel() == profile.card_id_slot_count
+    assert extractor.scalar_indices.numel() == profile.scalar_slot_count
+
+
 def test_tensor_profile_falls_back_when_engine_function_missing(monkeypatch):
     from digimon_gym.tensor_profiles import get_tensor_profile
 
@@ -160,6 +178,87 @@ def test_tensor_profile_fallback_rejects_standard_lite_v2_without_layout(monkeyp
         match="standard_lite_v2 requires digimon_engine observation layout support",
     ):
         get_tensor_profile("standard_lite_v2")
+
+
+def test_tensor_profile_for_tensor_size_requires_unique_registry_match(monkeypatch):
+    from digimon_gym.tensor_profiles import get_tensor_profile_for_tensor_size
+
+    def raw_profile(profile_id, tensor_size):
+        return {
+            "profile_id": profile_id,
+            "game_mode": "standard",
+            "version": 1,
+            "tensor_version": 1,
+            "feature_schema_version": f"{profile_id}.1",
+            "layout_hash": "sha256:test",
+            "tensor_size": tensor_size,
+            "field_slots": 1,
+            "slot_size": 1,
+            "max_sources": 1,
+            "card_id_slot_count": 1,
+            "scalar_slot_count": tensor_size - 1,
+            "card_id_positions": (0,),
+            "scalar_positions": tuple(range(1, tensor_size)),
+            "sections": (),
+        }
+
+    layouts = {
+        "profile_a": raw_profile("profile_a", 4),
+        "profile_b": raw_profile("profile_b", 4),
+        "profile_c": raw_profile("profile_c", 7),
+    }
+    monkeypatch.setitem(
+        sys.modules,
+        "digimon_engine",
+        SimpleNamespace(
+            list_observation_profiles=lambda: list(layouts),
+            get_observation_layout=lambda profile_id=None: layouts[profile_id],
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "multiple tensor profiles match observation tensor size 4: "
+            "profile_a, profile_b"
+        ),
+    ):
+        get_tensor_profile_for_tensor_size(4)
+
+
+def test_tensor_profile_for_tensor_size_rejects_unknown_shape(monkeypatch):
+    from digimon_gym.tensor_profiles import get_tensor_profile_for_tensor_size
+
+    monkeypatch.setitem(
+        sys.modules,
+        "digimon_engine",
+        SimpleNamespace(
+            list_observation_profiles=lambda: ["profile_a"],
+            get_observation_layout=lambda profile_id=None: {
+                "profile_id": "profile_a",
+                "game_mode": "standard",
+                "version": 1,
+                "tensor_version": 1,
+                "feature_schema_version": "profile_a.1",
+                "layout_hash": "sha256:test",
+                "tensor_size": 4,
+                "field_slots": 1,
+                "slot_size": 1,
+                "max_sources": 1,
+                "card_id_slot_count": 1,
+                "scalar_slot_count": 3,
+                "card_id_positions": (0,),
+                "scalar_positions": (1, 2, 3),
+                "sections": (),
+            },
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="no registered tensor profile matches observation tensor size 9",
+    ):
+        get_tensor_profile_for_tensor_size(9)
 
 
 def test_tensor_profile_canonicalizes_engine_alias(monkeypatch):
