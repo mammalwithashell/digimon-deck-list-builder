@@ -3,7 +3,7 @@ use crate::tensor_profiles::{
     TensorSlotLayout,
 };
 
-pub const PROFILE_ID: &str = "standard_v1";
+pub const PROFILE_ID: &str = "standard_compact_v1";
 pub const GAME_MODE: &str = "standard";
 pub const VERSION: u32 = 1;
 

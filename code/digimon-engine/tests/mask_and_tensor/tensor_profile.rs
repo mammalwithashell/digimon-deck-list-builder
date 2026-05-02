@@ -11,14 +11,16 @@ use digimon_engine::tensor::{
 use digimon_engine::tensor_profiles::standard;
 use digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorFieldKind, TensorSectionKind,
-    STANDARD_V1_PROFILE_ID,
+    COMPACT_V1_LEGACY_PROFILE_ID, STANDARD_COMPACT_V1_PROFILE_ID,
+    STANDARD_V1_LEGACY_PROFILE_ID,
 };
 
 #[test]
-fn default_profile_is_standard_v1() {
+fn default_profile_is_standard_compact_v1() {
     let profile = default_profile();
 
-    assert_eq!(profile.id, STANDARD_V1_PROFILE_ID);
+    assert_eq!(profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
+    assert_eq!(profile.id, "standard_compact_v1");
     assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.version, 1);
     assert_eq!(profile.tensor_size, TENSOR_SIZE);
@@ -32,13 +34,23 @@ fn default_profile_is_standard_v1() {
 }
 
 #[test]
-fn registry_resolves_standard_profile_by_id() {
-    let ids = all_profile_ids();
-    assert_eq!(ids, vec![STANDARD_V1_PROFILE_ID]);
+fn registry_lists_only_canonical_profile_ids() {
+    assert_eq!(all_profile_ids(), vec![STANDARD_COMPACT_V1_PROFILE_ID]);
+}
 
-    let profile = profile_by_id(STANDARD_V1_PROFILE_ID).unwrap();
-    assert_eq!(profile.id, "standard_v1");
-    assert_eq!(profile.game_mode, "standard");
+#[test]
+fn registry_resolves_standard_compact_profile_and_legacy_aliases() {
+    for id in [
+        STANDARD_COMPACT_V1_PROFILE_ID,
+        STANDARD_V1_LEGACY_PROFILE_ID,
+        COMPACT_V1_LEGACY_PROFILE_ID,
+    ] {
+        let profile = profile_by_id(id).unwrap();
+        assert_eq!(profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
+        assert_eq!(profile.game_mode, "standard");
+        assert_eq!(profile.tensor_size, TENSOR_SIZE);
+    }
+
     assert!(profile_by_id("missing_profile").is_none());
 }
 
@@ -323,7 +335,15 @@ fn singular_tensor_profile_alias_still_works() {
 
     assert_eq!(singular, plural);
     assert_eq!(
-        digimon_engine::tensor_profile::STANDARD_V1_PROFILE_ID,
+        digimon_engine::tensor_profile::STANDARD_COMPACT_V1_PROFILE_ID,
+        "standard_compact_v1"
+    );
+    assert_eq!(
+        digimon_engine::tensor_profile::STANDARD_V1_LEGACY_PROFILE_ID,
         "standard_v1"
+    );
+    assert_eq!(
+        digimon_engine::tensor_profile::COMPACT_V1_LEGACY_PROFILE_ID,
+        "compact_v1"
     );
 }

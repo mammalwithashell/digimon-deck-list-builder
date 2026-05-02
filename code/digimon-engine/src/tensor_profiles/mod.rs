@@ -2,7 +2,9 @@
 
 pub mod standard;
 
-pub const STANDARD_V1_PROFILE_ID: &str = standard::v1::PROFILE_ID;
+pub const STANDARD_COMPACT_V1_PROFILE_ID: &str = standard::v1::PROFILE_ID;
+pub const STANDARD_V1_LEGACY_PROFILE_ID: &str = "standard_v1";
+pub const COMPACT_V1_LEGACY_PROFILE_ID: &str = "compact_v1";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TensorSectionKind {
@@ -133,7 +135,9 @@ pub fn all_profile_ids() -> Vec<&'static str> {
 
 pub fn profile_by_id(id: &str) -> Option<TensorProfile> {
     match id {
-        standard::v1::PROFILE_ID => Some(standard::v1::PROFILE),
+        standard::v1::PROFILE_ID
+        | STANDARD_V1_LEGACY_PROFILE_ID
+        | COMPACT_V1_LEGACY_PROFILE_ID => Some(standard::v1::PROFILE),
         _ => None,
     }
 }
