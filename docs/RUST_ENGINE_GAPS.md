@@ -546,13 +546,15 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "WhenWouldBeDeleted / leave-field replacement-effect framework"; "`<Armor Purge>` keyword (leave-field replacement variant)"; "Native printed keyword parsing"; "Zone-manipulation: security stack operations".
 
 ### `<Collision>` keyword (attack-scoped opposing Blocker aura + must-block enforcement)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED for core printed/granted Collision mask + decode enforcement
 - **Discovered in:** TS Olympos (2026-04-18)
 - **Card(s):** BT24-063 Locomon (face + inherited)
 - **Effect text:** "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)"
-- **What's missing:** Three sub-parts: (a) `Keyword::Collision` variant + native-printed parsing; (b) an attack-scoped aura that grants `Keyword::Blocker` to every opposing battle-area permanent for the duration of the current attack (aura scope = "all opponents of attacker's controller", expiry = `EndOfAttack`); (c) a **must-block-if-possible** compulsion that, during the Block interrupt window, forces an unsuspended opposing Blocker to block rather than making it optional. (c) inverts the Block interrupt's "may block" default into a "must block unless no legal blocker" rule.
-- **Suggested API shape:** `Keyword::Collision` + auto-emit a declarative attack-aura at native-keyword parse time. `AuraScope::OpposingBattleAreaDuringSelfAttack` + a `MustBlockIfPossible` flag consumed by the Block interrupt resolver — the defender's mask exposes block-only (skipping "decline block") whenever a legal blocker exists and the attacker has Collision.
-- **Workaround:** "None — BLOCKED." Per-attack grant of `GrantBlocker` to every opponent permanent is expressible once Block interrupts land, but the must-block compulsion has no representation in the mask/interrupt surface.
+- **Status:** Task 4 wires `Keyword::Collision` through native printed parsing and `Game::has_keyword` consumers. The block interrupt mask removes `SEL_REPLACEMENT_PASS` only while a legal blocker exists, and decode rejects block-decline while Collision makes blocking mandatory. Granted Collision shares the same keyword read path as printed Collision.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`
+- **Remaining scope:** Card-specific authoring for effects that grant Collision/Blocker in unusual attack-scoped ways should still be tracked by those card entries. Do not re-open this core mask/decode keyword behavior unless a failing regression demonstrates a mismatch.
+- **Workaround:** No longer needed for core Collision mask/decode behavior.
 - **Related:** "Native printed keyword parsing"; "Phase-granular turn timings"; RUST_PYTHON_PARITY §2.3 (combat interrupts); RUST_ENGINE_API.md §9 (Block / Counter / Alliance interrupt phases not yet wired).
 
 ### `Keyword::Decoy` color-filter parameter + replacement-framework wiring
@@ -648,13 +650,15 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "Zone-manipulation: security stack operations"; "Option card play flow"; RUST_PYTHON_PARITY §2.5b (OnSecurityCheck).
 
 ### `<Reboot>` keyword enforcement in opponent's unsuspend phase
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED for core Reboot unsuspend enforcement
 - **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
 - **Card(s):** BT24-058 Blimpmon (inherited `<Reboot>`) — Dark Masters adds: BT15-062 Gigadramon (inherited `<Reboot>`), EX10-010 BlackWarGreymon (printed `<Reboot>`), BT16-046 GranKuwagamon ("Cards this effect suspended can't unsuspend during your opponent's next unsuspend phase" — variant: per-target Reboot-suppression that overrides Reboot in the opp's unsuspend phase), BT21-051 Puppetmon (printed `<Reboot>`)
 - **Effect text:** "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
-- **What's missing:** `Keyword::Reboot` and `ModifierType::GrantReboot` exist, but `game_phases.rs::begin_turn` calls only `player_mut(tp).unsuspend_all()` — no cross-player Reboot pass over the opposing battle area. Distinct from the native-keyword-parsing gap: even with Reboot correctly granted, there is no enforcement pass.
-- **Suggested API shape:** In `begin_turn`, after `unsuspend_all()` on the active player, iterate `player(opponent_id).battle_area`/breeding for permanents with `Keyword::Reboot` and unsuspend each. Also fire `EffectTiming::OnUnsuspend` once that timing is wired.
-- **Workaround:** "None — BLOCKED." Manual modifier grant doesn't help; the enforcement pass is absent.
+- **Status:** Task 4 wires printed Reboot parsing and opponent-unsuspend-phase enforcement through `Game::has_keyword`. A suspended Reboot Digimon unsuspends during the opponent's unsuspend phase, once for that phase.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`
+- **Remaining scope:** Reboot-suppression variants such as "can't unsuspend during your opponent's next unsuspend phase" remain separate card/effect behavior and are not covered by the core Reboot regression.
+- **Workaround:** No longer needed for core Reboot enforcement.
 - **Related:** "Native printed keyword parsing" (prerequisite for automatic grant); "Observer timings tied to specific events" (OnUnsuspend).
 
 ### Digivolution-stack source extraction (`pop_top_source` from named permanent)
@@ -738,13 +742,15 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "Effect re-firing / cross-timing self-trigger"; "In-effect branch-choice selector (`select_effect_choice` / \"choose one of N effects\")".
 
 ### `<Retaliation>` keyword + combat enforcement
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED for core Retaliation battle-deletion rider
 - **Discovered in:** Dark Masters (2026-04-18)
 - **Card(s):** BT15-077 LadyDevimon (inherited), BT15-079 Piedmon (inherited)
 - **Effect text:** "<Retaliation> (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"
-- **What's missing:** `Keyword::Retaliation` is **not** a variant of the `Keyword` enum; there is no `ModifierType::GrantRetaliation`. `combat.rs` has no enforcement pass that, after resolving a battle in which a side is deleted by losing, walks the loser's effective-keyword set for Retaliation and deletes the surviving battle partner. Distinct from `<Decoy>` (pre-deletion intercept) and `<Barrier>` (post-cost cancellation): Retaliation is a post-deletion mutual-kill rider. `OnDeletion` alone cannot model this — `EffectContext` during OnDeletion has no reference to the winning permanent handle.
-- **Suggested API shape:** Add `Keyword::Retaliation` + `ModifierType::GrantRetaliation`. After `combat::resolve_battle` determines the winner and loser, check `modifiers.has_keyword(loser_handle, Keyword::Retaliation)` (or inherited-stack query once native-keyword-parsing lands). If true and the winner still lives, call `delete_permanent_with_effects(winner_handle)` before cleanup. Auto-emit from native-keyword parsing.
-- **Workaround:** "None — BLOCKED." OnDeletion fires on the losing permanent; the winning-permanent handle is not available in `EffectContext`.
+- **Status:** Task 4 adds `Keyword::Retaliation`, native printed parsing, and combat enforcement. When a Retaliation carrier is deleted in battle, the battled opponent is deleted even after the carrier leaves the battle area.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`
+- **Remaining scope:** Card-specific inherited Retaliation fixtures should be covered where those card scripts/fixtures are exercised; this entry no longer represents a missing core keyword or combat rider.
+- **Workaround:** No longer needed for core Retaliation battle enforcement.
 - **Related:** "Native printed keyword parsing"; "WhenWouldBeDeleted / leave-field replacement-effect framework"; RUST_PYTHON_PARITY.md §2.3.
 
 ### Reveal-zone overlay (declarative type/level synthesized while card is in deck or being revealed)
@@ -924,13 +930,15 @@ Items where the existing primitive **likely works** but no behavioral test cover
 **RESOLVED 2026-04-25 (Phase D):** `Keyword::Fragment(N)` auto-install wired in `keyword_to_auto_effect` (commit d4fd09a0 + fixup db47ca35). Uses `CountCappedZone::Material(perm)` (Task 0, commit 41b6eac2) and `ctx.trash_card_source` (extracted Task 4 review fixup db47ca35). Gate: `card_sources.len() >= N+1`. Implementation reality: Fragment(N) is mandatory (no `.optional()` call), faithfully matching DCGO `Fragment.cs:38` `canNoSelect: () => false`. Phase C's parked-replacement substrate supports both mandatory and optional candidate dispatching nested selections; the candidate-walk in `replacement::try_replace_inner` yields on `pending_selection.is_some()` after a mandatory candidate (`replacement.rs:325-329`), and `run_candidate_inner`'s post-process `pending_selection.is_some()` check (`replacement.rs:689-715`) handles both branches uniformly. Save (5c072623), Fortitude (e57ae55e), Partition (5b18d355), and MaterialSave(N) (d353013a) also resolved in Phase D. See [`docs/superpowers/plans/2026-04-25-keyword-parity-phase-d.md`](../superpowers/plans/2026-04-25-keyword-parity-phase-d.md).
 
 ### `<Piercing>` combat-time security continuation after a winning battle
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED for core Piercing security continuation
 - **Discovered in:** Rocks (2026-04-18)
 - **Card(s):** EX10-032 Proganomon (grants `<Piercing>`), EX8-051 Proganomon (native `<Piercing>`), EX8-070 Zofr Kabus (grants `<Piercing>`)
 - **Effect text:** "`<Piercing>` (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
-- **What's missing:** `Keyword::Piercing` is declared in `enums.rs` and grantable via `ModifierType::GrantPiercing`, but `combat.rs::resolve_pending_battle` never consults it. After a successful Digimon-vs-Digimon battle (attacker deletes defender and survives), the state machine transitions `Battle → Cleanup` without looping back through `resolve_player_security_loop`. Must not re-fire Counter/Alliance/Block interrupts — the continuation is a **security-check-only** loop, not a fresh attack.
-- **Suggested API shape:** In `combat::resolve_pending_battle`, after the branch where the attacker survives and the defender is deleted, if (a) the original `AttackTarget` was `Digimon(..)` (not `Player`) and not a Block redirect into a blocker, and (b) `modifiers.has_keyword(attacker, Keyword::Piercing)` OR attacker native-keyword includes Piercing, re-dispatch to a security-check sub-loop (analogous to the one inside `resolve_player_security_loop` but without re-running the combat interrupts). After security resolution completes, proceed to `Cleanup`. Blocks on the Native-keyword-parsing gap for the printed-Piercing half.
-- **Workaround:** None — BLOCKED. Synthesizing a second `begin_attack` on the player skips the "continues from previous attack" semantics and would re-fire OnAttack observers.
+- **Status:** Task 4 wires printed Piercing parsing and battle resolution through `Game::has_keyword`. After a Digimon-vs-Digimon battle where the Piercing attacker deletes the opposing Digimon and survives, combat performs the normal security check continuation once.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`
+- **Remaining scope:** Card-specific effects that grant Piercing are covered only when they lower to the canonical keyword grant path; unusual grant timing should remain tracked by the relevant card/effect entry.
+- **Workaround:** No longer needed for core Piercing continuation.
 - **Related:** "Native printed keyword parsing"; RUST_PYTHON_PARITY.md §2.3 (combat state machine), §2.5 (security resolution).
 
 ### `ModifierType::GrantCollision` + `combat::try_enter_block` honoring granted Collision
