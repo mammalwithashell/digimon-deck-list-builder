@@ -777,25 +777,12 @@ impl Game {
             }
         }
 
-        // Phase 8 Task 5 — Training sideways inheritance.
-        //
-        // Scope note (v1): this scan fires on every same-owner permanent's timing
-        // dispatch. The spec-intended scope is narrower — Training effects should
-        // inherit ONLY to the breeding-area permanent, firing on breeding's own
-        // timings. But the engine currently has no TriggerSource::BreedingArea
-        // (breeding permanents don't dispatch timings), so the broad scope is a
-        // pragmatic interim.
-        //
-        // TODO(phase-8-refinement): once breeding-area timing dispatch exists,
-        // tighten this scan to gate on the source permanent being in the breeding
-        // area (or use a new TriggerSource::BreedingArea). Current broad scope
-        // will cause Training .inherited() effects to apply to all of owner's
-        // field, which is incorrect for printed Training cards. File as engine
-        // gap if a Training card ships before the refinement.
+        // Phase 8 Task 5/6 — Training sideways inheritance.
         //
         // When any permanent the owner controls fires a timing, also scan
         // the owner's battle_area for `OptionState::Training` permanents
-        // and include their `inherited` effects at the same timing. The
+        // and include their `inherited` effects at the same timing if the
+        // Training is unbound or bound to this source permanent. The
         // training-card's permanent is never the source_permanent here —
         // source_permanent stays as the scanning perm (e.g. the hatched
         // digimon) so effect scripts can read the target via the normal
@@ -822,22 +809,28 @@ impl Game {
                     Some(p) => p,
                     None => return,
                 };
+                let source_top_card = p
+                    .battle_area
+                    .get(handle.index as usize)
+                    .map(|perm| perm.top_card().handle());
                 p.battle_area
                     .iter()
                     .filter_map(|perm| {
-                        if matches!(
-                            perm.option_state,
-                            crate::permanent::OptionState::Training { .. }
-                        ) {
-                            let top = perm.top_card();
-                            Some((
-                                top.card_id(&self.card_data).to_string(),
-                                top.handle(),
-                                source_kind_for_card_kind(top.card_kind(&self.card_data)),
-                            ))
-                        } else {
-                            None
+                        if let crate::permanent::OptionState::Training { trained, .. } =
+                            perm.option_state
+                        {
+                            let training_applies = trained
+                                .map_or(true, |binding| source_top_card == Some(binding.top_card));
+                            if training_applies {
+                                let top = perm.top_card();
+                                return Some((
+                                    top.card_id(&self.card_data).to_string(),
+                                    top.handle(),
+                                    source_kind_for_card_kind(top.card_kind(&self.card_data)),
+                                ));
+                            }
                         }
+                        None
                     })
                     .collect()
             };
@@ -1309,10 +1302,17 @@ impl Game {
             .get(perm_handle.player as usize)
             .map(|p| {
                 p.battle_area.iter().any(|pp| {
-                    matches!(
-                        pp.option_state,
-                        crate::permanent::OptionState::Training { .. }
-                    ) && pp.top_card().card_index == qe.source_card.0
+                    if pp.top_card().card_index != qe.source_card.0 {
+                        return false;
+                    }
+                    let crate::permanent::OptionState::Training { trained, .. } = pp.option_state
+                    else {
+                        return false;
+                    };
+                    trained.map_or(true, |binding| {
+                        binding.handle == perm_handle
+                            && perm.top_card().handle() == binding.top_card
+                    })
                 })
             })
             .unwrap_or(false);

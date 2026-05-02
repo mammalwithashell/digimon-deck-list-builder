@@ -328,6 +328,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Workaround:** None — BLOCKED.
 - **Related:** None.
 
+**Updated 2026-05-02 (Group 5 Task 6):** Training Option permanents now carry explicit `trained: Option<TrainingBinding>` scope. Binding is by the specific Training permanent handle and records the intended carrier's top `CardHandle`, so duplicate Training copies can bind distinct carriers and stale `PermanentHandle` indices are ignored if they no longer point at the same physical top card. The sideways `.inherited()` scan and queued-effect liveness check only contribute a bound Training effect to its validated carrier (`None` remains the existing unbound compatibility path). This resolves the over-broad owner-wide Training fan-out slice for bound Training effects. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- training_sideways_effect_applies_only_to_its_intended_trained_permanent training_bound_to_removed_permanent_does_not_apply_to_reused_index duplicate_training_copies_bind_to_distinct_carriers_by_permanent_handle queued_training_effect_revalidates_bound_carrier_before_resolution`, plus the existing `training_parks_alongside_breeding training_trashes_on_breeding_promotion` flow checks.
+
 ### `<Delay>` keyword + placement-turn gating for Option cards
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)

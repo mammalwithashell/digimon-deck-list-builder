@@ -39,7 +39,10 @@ fn option_state_variants_exist() {
         placed_on_turn: 4,
     };
     let _ = OptionState::Linked { host: h };
-    let _ = OptionState::Training { owner: 0 };
+    let _ = OptionState::Training {
+        owner: 0,
+        trained: None,
+    };
 }
 
 #[test]

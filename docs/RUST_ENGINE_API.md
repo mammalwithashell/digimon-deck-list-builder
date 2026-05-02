@@ -1223,7 +1223,7 @@ pub enum OptionState {
     Standard,
     Delayed { owner: PlayerId, trash_on_turn: u16 },  // absolute turn_count
     Linked { host: PermanentHandle },
-    Training { owner: PlayerId },
+    Training { owner: PlayerId, trained: Option<TrainingBinding> },
 }
 
 pub struct Permanent {
@@ -1406,7 +1406,7 @@ vec![
 4. **Linked-card host-deletion cascade does NOT fire `WhenWouldBeTrashed`.** Too recursive during host deletion; v1 unconditionally trashes each linked card. Marked `TODO(phase-8-followup)` in `combat.rs`. Follow-up if a printed card requires it (none audited today).
 5. **Counter-timed Options** (Blast Digivolve Options played during opponent's attack) are deferred to **Phase 9 (Combat Interrupt Completion)**. Phase 2's `.blast_digivolve()` builder plumbing is already in place; Phase 9 wires the activation window.
 6. **Nested `PendingSelection::Source` in `OptionMain`** is not supported — shared limitation with Phase 7 Partition/ArmorPurge auto-install. A Standard/Delay/Training Option whose body selects a source off a stacked Digimon needs a `PendingSelection::Source` during `OptionMain` execution; the infrastructure gap is the same one Phase 7 flagged.
-7. **Training sideways-inheritance scope is broader than printed rules.** v1 scans any same-owner permanent's timing dispatch for `.linked()` + `.inherited()`-flagged effects on Training cards, rather than restricting to the breeding permanent. Pragmatic interim until `TriggerSource::BreedingArea` exists. Tracked in parity §13.
+7. **Training sideways-inheritance scope is bound when a carrier is recorded.** `OptionState::Training` carries `trained: Option<TrainingBinding>`. A bound Training effect is enqueued and resolved only while the source permanent still matches the recorded carrier handle and physical top card, avoiding stale field-index aliasing and duplicate-copy ambiguity. Unbound Training (`trained: None`) remains the interim compatibility path and can still scan same-owner battle-area timing dispatches until first-class breeding-area timing dispatch exists. Tracked in parity §13.
 8. **`ACTION_SPACE_SIZE` unchanged at 2168.** Option plays reuse the existing `PLAY_HAND` action range via a `CardKind`-forked decoder: the action bit is the same as playing a Digimon from hand; the decoder inspects `CardData::card_type` and routes to the Option play pipeline. No tensor or mask regression.
 
 ### Testing an Option effect

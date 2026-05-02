@@ -201,7 +201,8 @@ impl Game {
                 .iter()
                 .enumerate()
                 .filter_map(|(i, perm)| {
-                    if let crate::permanent::OptionState::Training { owner } = perm.option_state {
+                    if let crate::permanent::OptionState::Training { owner, .. } = perm.option_state
+                    {
                         if owner == player_id {
                             return Some(PermanentHandle {
                                 player: player_id,
@@ -1298,7 +1299,10 @@ impl Game {
                 let placed_card = pending.card.handle();
                 let turn = self.turn_count;
                 let mut perm = crate::permanent::Permanent::new(pending.card, turn);
-                perm.option_state = crate::permanent::OptionState::Training { owner };
+                perm.option_state = crate::permanent::OptionState::Training {
+                    owner,
+                    trained: None,
+                };
                 self.player_mut(owner).battle_area.push(perm);
                 let permanent = PermanentHandle {
                     player: owner,
@@ -1319,6 +1323,43 @@ impl Game {
                 }
             }
         }
+    }
+
+    pub fn bind_training_permanent_to_permanent(
+        &mut self,
+        training: PermanentHandle,
+        trained: PermanentHandle,
+    ) -> bool {
+        let Some(trained_top_card) = self
+            .player(trained.player)
+            .battle_area
+            .get(trained.index as usize)
+            .map(|perm| perm.top_card().handle())
+        else {
+            return false;
+        };
+
+        let Some(training_perm) = self
+            .player_mut(training.player)
+            .battle_area
+            .get_mut(training.index as usize)
+        else {
+            return false;
+        };
+        if let crate::permanent::OptionState::Training {
+            owner,
+            trained: trained_slot,
+        } = &mut training_perm.option_state
+        {
+            if *owner == trained.player {
+                *trained_slot = Some(crate::permanent::TrainingBinding {
+                    handle: trained,
+                    top_card: trained_top_card,
+                });
+                return true;
+            }
+        }
+        false
     }
 
     /// Commit a Standard Option's dispose-trash given the

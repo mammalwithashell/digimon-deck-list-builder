@@ -11,6 +11,12 @@ pub struct PermanentHandle {
     pub index: u8,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TrainingBinding {
+    pub handle: PermanentHandle,
+    pub top_card: CardHandle,
+}
+
 /// Additional state a Permanent carries when its top card is an Option.
 /// For Digimon/Tamer/DigiEgg permanents this is always `Standard`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,6 +39,7 @@ pub enum OptionState {
     },
     Training {
         owner: PlayerId,
+        trained: Option<TrainingBinding>,
     },
 }
 

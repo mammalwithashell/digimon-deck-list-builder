@@ -877,20 +877,25 @@ parity to maintain.
 
 ---
 
-## 13. Phase 8 Training sideways inheritance — scope looseness
+## 13. Phase 8 Training sideways inheritance — bound-carrier refinement
 
-### 13.1 🟡 Training `.inherited()` sideways scan — broader scope than spec
+### 13.1 🟡 Training `.inherited()` sideways scan — bound effects are carrier-scoped
 
-Rust Task 5 (2026-04-21) implemented Training `.inherited()` sideways scan
-with broader scope than spec: fires on any same-owner permanent's timing
-dispatch, not just breeding permanent's. This is due to the engine
-currently not exposing a `TriggerSource::BreedingArea`. No printed Training
-card ships in the v1 card pool today, so the deviation is latent.
+Rust Task 6 (2026-05-02) refined Training `.inherited()` sideways scan for
+bound Training Options. `OptionState::Training` stores an optional
+`TrainingBinding` with the intended carrier handle plus the carrier's physical
+top `CardHandle`; enqueue and queued-effect liveness both revalidate that the
+current source permanent still matches the recorded carrier before resolving
+the Training effect. This prevents owner-wide fan-out for bound Training,
+duplicate-copy ambiguity, and stale field-index aliasing.
 
-Refinement required: once breeding-area timing dispatch is added, tighten
-the scan at `code/digimon-engine/src/effect_queue.rs` (Phase 8 Task 5 sideways
-scan) to gate on source-is-breeding-perm. Python side: Python implements
-Training with targeted inheritance (breeding-specific); Rust is wider.
+Remaining limitation: unbound Training (`trained: None`) keeps the earlier
+compatibility behavior and can still scan same-owner battle-area timing
+dispatches. The engine still lacks a first-class `TriggerSource::BreedingArea`
+for generic breeding-area timing dispatch. Python side: Python implements
+Training with targeted inheritance (breeding-specific); Rust now matches that
+shape for explicitly bound Training but remains wider for unbound interim
+state.
 
 ---
 
