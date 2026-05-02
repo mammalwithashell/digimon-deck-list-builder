@@ -28,6 +28,11 @@ enum OptionSource {
     Trash(usize),
 }
 
+struct TakenCardSource {
+    card: CardSource,
+    restore_face_up_security_for: Option<PlayerId>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CostReductionKind {
     Play,
@@ -224,6 +229,39 @@ impl Game {
         } else {
             false
         }
+    }
+
+    /// Effect-initiated breeding promotion.
+    ///
+    /// This deliberately reuses the same real-zone move path as the normal
+    /// breeding action so the permanent leaves `breeding_area`, enters the
+    /// battle area with its stack intact, and dispatches the same move
+    /// observers.
+    pub fn move_from_breeding_by_effect(&mut self, player_id: PlayerId) -> bool {
+        self.move_from_breeding(player_id)
+    }
+
+    /// Play/place a Digimon from hand into the real breeding area.
+    ///
+    /// Returns false if the hand index is invalid, the card is not a Digimon
+    /// card, or the breeding area is already occupied.
+    pub fn play_to_breeding_from_hand(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
+        {
+            let player = self.player(player_id);
+            if player.breeding_area.is_some() || hand_index >= player.hand.len() {
+                return false;
+            }
+            let card = &player.hand[hand_index];
+            let kind = self.card_data[card.data_index].card_kind;
+            if !matches!(kind, CardKind::Digimon | CardKind::Dual) {
+                return false;
+            }
+        }
+
+        let card = self.player_mut(player_id).hand.remove(hand_index);
+        let permanent = crate::permanent::Permanent::new(card, self.turn_count);
+        self.player_mut(player_id).breeding_area = Some(permanent);
+        true
     }
 
     /// Play a card from hand to field for a player, paying the printed cost.
@@ -1486,6 +1524,30 @@ impl Game {
         true
     }
 
+    /// Move a specific card from `player_id`'s security stack to their hand.
+    /// Returns false if the handle is not in that player's security stack.
+    pub fn add_to_hand_from_security(
+        &mut self,
+        player_id: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(idx) = self
+            .player(player_id)
+            .security
+            .iter()
+            .position(|c| c.handle() == card)
+        else {
+            return false;
+        };
+        let removed = self.player_mut(player_id).security.remove(idx);
+        let owner = removed.owner;
+        self.player_mut(player_id)
+            .face_up_security
+            .remove(&removed.card_index);
+        self.player_mut(owner).add_to_hand(removed);
+        true
+    }
+
     /// Reveal up to `n` cards from the top of `player`'s deck. Cards move
     /// into `self.revealed_cards` (transient reveal pool, cleared on turn
     /// rotation). Returns the list of revealed card handles in top-first
@@ -1515,6 +1577,13 @@ impl Game {
         let mut deck = std::mem::take(&mut self.player_mut(player_id).deck);
         deck.shuffle(&mut self.rng);
         self.player_mut(player_id).deck = deck;
+    }
+
+    /// Shuffle `player_id`'s security stack without changing its contents.
+    pub fn shuffle_security(&mut self, player_id: PlayerId) {
+        let mut security = std::mem::take(&mut self.player_mut(player_id).security);
+        security.shuffle(&mut self.rng);
+        self.player_mut(player_id).security = security;
     }
 
     /// Fire OnPlay effects for the permanent at `(player, field_index)`.
@@ -2068,6 +2137,26 @@ impl Game {
         handle: PermanentHandle,
         position: crate::enums::StackPosition,
     ) -> bool {
+        self.return_to_deck_inner(handle, position, false)
+    }
+
+    /// Return a permanent's full stack to its owner's deck at `position`.
+    /// Preserves bottom-to-top source order in the deck instead of trashing
+    /// lower digivolution sources.
+    pub fn return_stack_to_deck(
+        &mut self,
+        handle: PermanentHandle,
+        position: crate::enums::StackPosition,
+    ) -> bool {
+        self.return_to_deck_inner(handle, position, true)
+    }
+
+    fn return_to_deck_inner(
+        &mut self,
+        handle: PermanentHandle,
+        position: crate::enums::StackPosition,
+        include_sources: bool,
+    ) -> bool {
         use crate::enums::{EffectTiming, Zone};
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
 
@@ -2124,7 +2213,7 @@ impl Game {
                 );
             }
             ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => {
-                return self.return_to_deck(other, position);
+                return self.return_to_deck_inner(other, position, include_sources);
             }
             ReplacementOutcome::Substituted(_) => {
                 debug_assert!(
@@ -2143,38 +2232,27 @@ impl Game {
             return false;
         };
 
-        match position {
-            crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).deck.push(top);
-            }
-            crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).deck.insert(0, top);
-            }
-            crate::enums::StackPosition::Random => {
-                use rand::Rng;
-                let deck_len = self.player(player_id).deck.len();
-                let idx = if deck_len == 0 {
-                    0
-                } else {
-                    self.rng.gen_range(0..=deck_len)
-                };
-                self.player_mut(player_id).deck.insert(idx, top);
+        if include_sources {
+            perm.card_sources.push(top);
+            self.insert_stack_into_owners_decks(perm.card_sources, position);
+        } else {
+            self.insert_card_into_deck(player_id, top, position);
+
+            // Sources below the top go to trash and fire OnDigivolutionCardTrashed
+            // (digivolution stack sources only — not linked_cards which are Tamer
+            // equipment and separate semantic category).
+            for card in perm.card_sources {
+                self.player_mut(player_id).trash.push(card);
+                for pid in 0..self.players.len() {
+                    self.enqueue_triggered(
+                        crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                    );
+                }
+                self.drain_effect_queue();
             }
         }
 
-        // Sources below the top go to trash and fire OnDigivolutionCardTrashed
-        // (digivolution stack sources only — not linked_cards which are Tamer
-        // equipment and separate semantic category).
-        for card in perm.card_sources {
-            self.player_mut(player_id).trash.push(card);
-            for pid in 0..self.players.len() {
-                self.enqueue_triggered(
-                    crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                );
-            }
-            self.drain_effect_queue();
-        }
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
             self.player_mut(player_id).trash.push(card);
@@ -2195,6 +2273,77 @@ impl Game {
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
         true
+    }
+
+    fn insert_card_into_deck(
+        &mut self,
+        player_id: PlayerId,
+        card: CardSource,
+        position: crate::enums::StackPosition,
+    ) {
+        match position {
+            crate::enums::StackPosition::Top => {
+                self.player_mut(player_id).deck.push(card);
+            }
+            crate::enums::StackPosition::Bottom => {
+                self.player_mut(player_id).deck.insert(0, card);
+            }
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                let deck_len = self.player(player_id).deck.len();
+                let idx = if deck_len == 0 {
+                    0
+                } else {
+                    self.rng.gen_range(0..=deck_len)
+                };
+                self.player_mut(player_id).deck.insert(idx, card);
+            }
+        }
+    }
+
+    fn insert_stack_into_deck(
+        &mut self,
+        player_id: PlayerId,
+        stack: Vec<CardSource>,
+        position: crate::enums::StackPosition,
+    ) {
+        match position {
+            crate::enums::StackPosition::Top => {
+                self.player_mut(player_id).deck.extend(stack);
+            }
+            crate::enums::StackPosition::Bottom => {
+                self.player_mut(player_id).deck.splice(0..0, stack);
+            }
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                let deck_len = self.player(player_id).deck.len();
+                let idx = if deck_len == 0 {
+                    0
+                } else {
+                    self.rng.gen_range(0..=deck_len)
+                };
+                self.player_mut(player_id).deck.splice(idx..idx, stack);
+            }
+        }
+    }
+
+    fn insert_stack_into_owners_decks(
+        &mut self,
+        stack: Vec<CardSource>,
+        position: crate::enums::StackPosition,
+    ) {
+        let player_count = self.players.len();
+        for player_id in 0..player_count {
+            let owner = player_id as PlayerId;
+            let owned_stack: Vec<CardSource> = stack
+                .iter()
+                .filter(|card| card.owner == owner)
+                .cloned()
+                .collect();
+            if !owned_stack.is_empty() {
+                self.insert_stack_into_deck(owner, owned_stack, position);
+            }
+        }
     }
 
     /// Full "digivolve from hand" action — Python parity for
@@ -2419,57 +2568,221 @@ impl Game {
         true
     }
 
+    fn card_source_ref_snapshot(
+        &self,
+        source: crate::enums::CardSourceRef,
+    ) -> Option<(crate::card_source::CardHandle, usize, crate::enums::Zone)> {
+        use crate::enums::{CardSourceRef, Zone};
+        match source {
+            CardSourceRef::Hand(p, i) => self
+                .player(p)
+                .hand
+                .get(i)
+                .map(|c| (c.handle(), c.data_index, Zone::Hand)),
+            CardSourceRef::Trash(p, i) => self
+                .player(p)
+                .trash
+                .get(i)
+                .map(|c| (c.handle(), c.data_index, Zone::Trash)),
+            CardSourceRef::DeckTop(p) => self
+                .player(p)
+                .deck
+                .last()
+                .map(|c| (c.handle(), c.data_index, Zone::Deck)),
+            CardSourceRef::Security(p, i) => self
+                .player(p)
+                .security
+                .get(i)
+                .map(|c| (c.handle(), c.data_index, Zone::Security)),
+            CardSourceRef::Material(h, i) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|perm| perm.card_sources.get(i))
+                .map(|c| (c.handle(), c.data_index, Zone::BattleArea)),
+            CardSourceRef::Reveal(h) => self
+                .revealed_cards
+                .iter()
+                .find(|c| c.handle() == h)
+                .map(|c| (c.handle(), c.data_index, Zone::Reveal)),
+        }
+    }
+
+    fn take_card_source_ref(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+    ) -> Option<TakenCardSource> {
+        use crate::enums::CardSourceRef;
+        let mut face_up_security = None;
+        let card = match source {
+            CardSourceRef::Hand(p, i) => {
+                let player = self.player_mut(p);
+                if i >= player.hand.len() {
+                    return None;
+                }
+                player.hand.remove(i)
+            }
+            CardSourceRef::Trash(p, i) => {
+                let player = self.player_mut(p);
+                if i >= player.trash.len() {
+                    return None;
+                }
+                player.trash.remove(i)
+            }
+            CardSourceRef::DeckTop(p) => self.player_mut(p).deck.pop()?,
+            CardSourceRef::Security(p, i) => {
+                let player = self.player_mut(p);
+                if i >= player.security.len() {
+                    return None;
+                }
+                let card = player.security.remove(i);
+                if player.face_up_security.remove(&card.card_index) {
+                    face_up_security = Some(p);
+                }
+                card
+            }
+            CardSourceRef::Material(h, i) => {
+                let perm = self
+                    .player_mut(h.player)
+                    .battle_area
+                    .get_mut(h.index as usize)?;
+                if i >= perm.card_sources.len() {
+                    return None;
+                }
+                perm.card_sources.remove(i)
+            }
+            CardSourceRef::Reveal(h) => {
+                let idx = self.revealed_cards.iter().position(|c| c.handle() == h)?;
+                self.revealed_cards.remove(idx)
+            }
+        };
+        Some(TakenCardSource {
+            card,
+            restore_face_up_security_for: face_up_security,
+        })
+    }
+
+    fn restore_card_source_ref(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        taken: TakenCardSource,
+    ) -> bool {
+        use crate::enums::CardSourceRef;
+        let card_index = taken.card.card_index;
+        let restored = match source {
+            CardSourceRef::Hand(p, i) => {
+                let player = self.player_mut(p);
+                let idx = i.min(player.hand.len());
+                player.hand.insert(idx, taken.card);
+                true
+            }
+            CardSourceRef::Trash(p, i) => {
+                let player = self.player_mut(p);
+                let idx = i.min(player.trash.len());
+                player.trash.insert(idx, taken.card);
+                true
+            }
+            CardSourceRef::DeckTop(p) => {
+                self.player_mut(p).deck.push(taken.card);
+                true
+            }
+            CardSourceRef::Security(p, i) => {
+                let player = self.player_mut(p);
+                let idx = i.min(player.security.len());
+                player.security.insert(idx, taken.card);
+                true
+            }
+            CardSourceRef::Material(h, i) => {
+                let Some(perm) = self
+                    .player_mut(h.player)
+                    .battle_area
+                    .get_mut(h.index as usize)
+                else {
+                    return false;
+                };
+                let idx = i.min(perm.card_sources.len());
+                perm.card_sources.insert(idx, taken.card);
+                true
+            }
+            CardSourceRef::Reveal(_) => {
+                self.revealed_cards.push(taken.card);
+                true
+            }
+        };
+        if restored {
+            if let Some(player) = taken.restore_face_up_security_for {
+                self.player_mut(player).face_up_security.insert(card_index);
+            }
+        }
+        restored
+    }
+
     /// Insert a card at the bottom of `target`'s digivolution stack. The
     /// source card is taken from the zone specified by `source` (hand slot,
-    /// trash slot, deck top, or reveal pool). Returns false if the source
-    /// or target is invalid.
-    ///
-    /// On target-invalid after source-taken: the taken card is routed to
-    /// the target player's trash as a safe-failure mode (source already
-    /// mutated; no way to roll back).
+    /// trash slot, deck top, security slot, material stack slot, or reveal
+    /// pool). Returns false if the source or target is invalid.
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
     ) -> bool {
-        // Take the card out of its source zone.
-        let taken = match source {
-            crate::enums::CardSourceRef::Hand(p, i) => {
-                let player = self.player_mut(p);
-                if i >= player.hand.len() {
+        self.place_as_bottom_source_observed(source, target, target.player)
+    }
+
+    pub(crate) fn place_as_bottom_source_observed(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+    ) -> bool {
+        if let crate::enums::CardSourceRef::Security(defender, index) = source {
+            if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                if self.player(target.player).breeding_area.is_none() {
                     return false;
                 }
-                player.hand.remove(i)
+            } else if self
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+                .is_none()
+            {
+                return false;
             }
-            crate::enums::CardSourceRef::Trash(p, i) => {
-                let player = self.player_mut(p);
-                if i >= player.trash.len() {
-                    return false;
-                }
-                player.trash.remove(i)
+
+            let player = self.player_mut(defender);
+            if index >= player.security.len() {
+                return false;
             }
-            crate::enums::CardSourceRef::DeckTop(p) => {
-                let Some(c) = self.player_mut(p).deck.pop() else {
-                    return false;
-                };
-                c
-            }
-            crate::enums::CardSourceRef::Reveal(h) => {
-                let Some(idx) = self.revealed_cards.iter().position(|c| c.handle() == h) else {
-                    return false;
-                };
-                self.revealed_cards.remove(idx)
-            }
+            let card = player.security.remove(index);
+            player.face_up_security.remove(&card.card_index);
+            self.fire_effect_security_removal(
+                defender,
+                observer_player,
+                card,
+                crate::selection::SecurityRemovalDestination::BottomSource(target),
+            );
+            return true;
+        }
+
+        let Some(taken) = self.take_card_source_ref(source) else {
+            return false;
         };
 
-        // Push under the target permanent.
+        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            let Some(breeding) = self.player_mut(target.player).breeding_area.as_mut() else {
+                let _ = self.restore_card_source_ref(source, taken);
+                return false;
+            };
+            breeding.push_under(taken.card);
+            return true;
+        }
+
         let target_player = self.player_mut(target.player);
         if (target.index as usize) >= target_player.battle_area.len() {
-            // Source already mutated — safe-fail by routing to trash.
-            target_player.trash.push(taken);
+            let _ = self.restore_card_source_ref(source, taken);
             return false;
         }
-        target_player.battle_area[target.index as usize].push_under(taken);
+        target_player.battle_area[target.index as usize].push_under(taken.card);
         true
     }
 
@@ -3242,46 +3555,25 @@ impl Game {
         position: crate::enums::StackPosition,
         face_up: bool,
     ) -> bool {
+        self.place_on_security_observed(player_id, source, position, face_up, player_id)
+    }
+
+    pub(crate) fn place_on_security_observed(
+        &mut self,
+        player_id: PlayerId,
+        source: crate::enums::CardSourceRef,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer_player: PlayerId,
+    ) -> bool {
         use crate::enums::{EffectTiming, Zone};
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
 
         // Snapshot the source card's handle before the take so we can build
         // a meaningful ReplacementSubject. Return false early if the source
         // is invalid (matches the existing pre-flight behavior of the take).
-        let source_card: crate::card_source::CardHandle = match source {
-            crate::enums::CardSourceRef::Hand(p, i) => {
-                let player = self.player(p);
-                if i >= player.hand.len() {
-                    return false;
-                }
-                player.hand[i].handle()
-            }
-            crate::enums::CardSourceRef::Trash(p, i) => {
-                let player = self.player(p);
-                if i >= player.trash.len() {
-                    return false;
-                }
-                player.trash[i].handle()
-            }
-            crate::enums::CardSourceRef::DeckTop(p) => {
-                let player = self.player(p);
-                let Some(top) = player.deck.last() else {
-                    return false;
-                };
-                top.handle()
-            }
-            crate::enums::CardSourceRef::Reveal(h) => {
-                if !self.revealed_cards.iter().any(|c| c.handle() == h) {
-                    return false;
-                }
-                h
-            }
-        };
-        let source_zone = match source {
-            crate::enums::CardSourceRef::Hand(_, _) => Zone::Hand,
-            crate::enums::CardSourceRef::Trash(_, _) => Zone::Trash,
-            crate::enums::CardSourceRef::DeckTop(_) => Zone::Deck,
-            crate::enums::CardSourceRef::Reveal(_) => Zone::Reveal,
+        let Some((source_card, _, source_zone)) = self.card_source_ref_snapshot(source) else {
+            return false;
         };
 
         let cause = self.infer_effect_cause(player_id);
@@ -3305,7 +3597,21 @@ impl Game {
                 // Redirect: card goes to its owner's trash instead of
                 // security. Take the source and route it.
                 let taken = match source {
-                    crate::enums::CardSourceRef::Hand(p, i) => self.player_mut(p).hand.remove(i),
+                    crate::enums::CardSourceRef::Security(defender, index) => {
+                        let player = self.player_mut(defender);
+                        if index >= player.security.len() {
+                            return false;
+                        }
+                        let card = player.security.remove(index);
+                        player.face_up_security.remove(&card.card_index);
+                        self.fire_effect_security_removal(
+                            defender,
+                            observer_player,
+                            card,
+                            crate::selection::SecurityRemovalDestination::Trash,
+                        );
+                        return false;
+                    }
                     crate::enums::CardSourceRef::Trash(source_p, source_i) => {
                         // Task 4 v1: cross-player trash-to-trash redirects are rare
                         // in printed cards (a trash-to-security play being redirected
@@ -3321,21 +3627,15 @@ impl Game {
                         );
                         return false;
                     }
-                    crate::enums::CardSourceRef::DeckTop(p) => {
-                        let Some(c) = self.player_mut(p).deck.pop() else {
+                    other => {
+                        let Some(taken) = self.take_card_source_ref(other) else {
                             return false;
                         };
-                        c
-                    }
-                    crate::enums::CardSourceRef::Reveal(h) => {
-                        let Some(idx) = self.revealed_cards.iter().position(|c| c.handle() == h)
-                        else {
-                            return false;
-                        };
-                        self.revealed_cards.remove(idx)
+                        taken.card
                     }
                 };
-                self.player_mut(player_id).trash.push(taken);
+                let owner = taken.owner;
+                self.player_mut(owner).trash.push(taken);
                 return false;
             }
             ReplacementOutcome::Redirected(other) => {
@@ -3357,34 +3657,29 @@ impl Game {
 
         // Take the card out of its source zone. Mirror the pattern from
         // place_as_bottom_source.
-        let taken = match source {
-            crate::enums::CardSourceRef::Hand(p, i) => {
-                let player = self.player_mut(p);
-                if i >= player.hand.len() {
-                    return false;
-                }
-                player.hand.remove(i)
+        if let crate::enums::CardSourceRef::Security(defender, index) = source {
+            let player = self.player_mut(defender);
+            if index >= player.security.len() {
+                return false;
             }
-            crate::enums::CardSourceRef::Trash(p, i) => {
-                let player = self.player_mut(p);
-                if i >= player.trash.len() {
-                    return false;
-                }
-                player.trash.remove(i)
-            }
-            crate::enums::CardSourceRef::DeckTop(p) => {
-                let Some(c) = self.player_mut(p).deck.pop() else {
-                    return false;
-                };
-                c
-            }
-            crate::enums::CardSourceRef::Reveal(h) => {
-                let Some(idx) = self.revealed_cards.iter().position(|c| c.handle() == h) else {
-                    return false;
-                };
-                self.revealed_cards.remove(idx)
-            }
+            let card = player.security.remove(index);
+            player.face_up_security.remove(&card.card_index);
+            self.fire_effect_security_removal(
+                defender,
+                observer_player,
+                card,
+                crate::selection::SecurityRemovalDestination::Security {
+                    player: player_id,
+                    position,
+                    face_up,
+                },
+            );
+            return true;
+        }
+        let Some(taken) = self.take_card_source_ref(source) else {
+            return false;
         };
+        let taken = taken.card;
 
         // face_up_security is HashSet<u16> keyed by card_index.
         let face_up_key = taken.card_index;
@@ -3438,6 +3733,28 @@ impl Game {
         ignore_color: bool,
         source: PlaySource,
     ) -> bool {
+        self.effect_initiated_digivolve_from_source(
+            player_id,
+            crate::enums::CardSourceRef::Hand(player_id, hand_index),
+            target,
+            cost_delta,
+            ignore_color,
+            source,
+        )
+    }
+
+    /// Source-general script-initiated digivolve. The result card is taken
+    /// from any `CardSourceRef`, placed on top of `target`, and restored to
+    /// its source zone if a post-take failure occurs.
+    pub fn effect_initiated_digivolve_from_source(
+        &mut self,
+        player_id: PlayerId,
+        source_ref: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        ignore_color: bool,
+        source: PlaySource,
+    ) -> bool {
         if source == PlaySource::ByEffect
             && self
                 .modifiers
@@ -3449,18 +3766,12 @@ impl Game {
             return false;
         }
 
-        // 1. Validate hand index and target index.
-        {
-            let player = self.player(player_id);
-            if hand_index >= player.hand.len() {
-                self.logger.log(&format!(
-                    "[Rejected] effect_initiated_digivolve: hand index {} out of range (hand size={})",
-                    hand_index,
-                    player.hand.len()
-                ));
-                return false;
-            }
-        }
+        let Some((_, evo_card_data_index, _)) = self.card_source_ref_snapshot(source_ref) else {
+            self.logger
+                .log("[Rejected] effect_initiated_digivolve: source ref out of range");
+            return false;
+        };
+
         {
             let target_player = self.player(target.player);
             if (target.index as usize) >= target_player.battle_area.len() {
@@ -3474,9 +3785,7 @@ impl Game {
         }
 
         // 2. Find a matching evo cost.
-        let (evo_card_data_index, base_level, base_colors) = {
-            let player = self.player(player_id);
-            let card = &player.hand[hand_index];
+        let (base_level, base_colors) = {
             let target_player = self.player(target.player);
             let perm = &target_player.battle_area[target.index as usize];
             let Some(base_level) = perm.top_card().level(&self.card_data) else {
@@ -3485,7 +3794,7 @@ impl Game {
                 return false;
             };
             let base_colors = perm.top_card().colors(&self.card_data);
-            (card.data_index, base_level, base_colors)
+            (base_level, base_colors)
         };
 
         let evo_costs = &self.card_data[evo_card_data_index].evo_costs;
@@ -3508,19 +3817,56 @@ impl Game {
             self.scan_before_pay_cost_reduction(player_id, CostReductionKind::Digivolve);
         let effective_cost = (base_cost as i32 - total_reduction).max(0) as u16;
 
-        // 3. Pay memory.
+        // 3. Remove the card from its source and pay memory. If payment fails,
+        // restore the source exactly where it came from.
+        if let crate::enums::CardSourceRef::Security(defender, index) = source_ref {
+            if !self.pay_memory(effective_cost) {
+                self.logger.log(&format!(
+                    "[Rejected] effect_initiated_digivolve: cannot pay memory cost {} (current memory={})",
+                    effective_cost, self.memory
+                ));
+                return false;
+            }
+
+            let player = self.player_mut(defender);
+            if index >= player.security.len() {
+                self.logger
+                    .log("[Rejected] effect_initiated_digivolve: source ref changed before take");
+                return false;
+            }
+            let card = player.security.remove(index);
+            player.face_up_security.remove(&card.card_index);
+            self.fire_effect_security_removal(
+                defender,
+                player_id,
+                card,
+                crate::selection::SecurityRemovalDestination::Digivolve {
+                    player: player_id,
+                    target,
+                    turn: self.turn_count,
+                },
+            );
+            return true;
+        }
+
+        let Some(taken) = self.take_card_source_ref(source_ref) else {
+            self.logger
+                .log("[Rejected] effect_initiated_digivolve: source ref changed before take");
+            return false;
+        };
         if !self.pay_memory(effective_cost) {
             self.logger.log(&format!(
                 "[Rejected] effect_initiated_digivolve: cannot pay memory cost {} (current memory={})",
                 effective_cost, self.memory
             ));
+            let _ = self.restore_card_source_ref(source_ref, taken);
             return false;
         }
 
-        // 4. Move the card from hand onto the target permanent's stack.
+        // 4. Move the card onto the target permanent's stack.
         let turn = self.turn_count;
-        let card = self.player_mut(player_id).hand.remove(hand_index);
-        self.player_mut(target.player).battle_area[target.index as usize].digivolve(card, turn);
+        self.player_mut(target.player).battle_area[target.index as usize]
+            .digivolve(taken.card, turn);
 
         // 5. Fire WhenDigivolving triggers.
         self.enqueue_triggered(

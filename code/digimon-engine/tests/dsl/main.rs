@@ -5,6 +5,7 @@ mod cross_check;
 mod delay;
 mod effect_immunity_step;
 mod embedded_registry;
+mod group4_zone_movement;
 mod group7_predicate_batch;
 mod i18n_scaffolding;
 mod loader;

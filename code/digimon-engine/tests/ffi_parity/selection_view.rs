@@ -33,7 +33,7 @@ fn pending_selection_view_mirrors_serializable_fields() {
 
     assert_eq!(view.kind, SelectionKind::OppField);
     assert_eq!(view.selecting_player, 0);
-    assert_eq!(view.previous_phase, GamePhase::Breeding);
+    assert_eq!(view.previous_phase, GamePhase::Main);
     assert_eq!(
         view.valid_action_ids,
         vec![encode_attack(0, 0), encode_attack(0, 1)],
@@ -52,5 +52,5 @@ fn pending_selection_view_kind_as_str_round_trips() {
     // Stable string form used by the PyO3 layer and by the Python-side
     // state filter for UI rendering. Variants use their `Debug` spelling.
     assert_eq!(view.kind_str(), "OppField");
-    assert_eq!(view.previous_phase_str(), "Breeding");
+    assert_eq!(view.previous_phase_str(), "Main");
 }

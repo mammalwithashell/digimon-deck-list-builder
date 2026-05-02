@@ -13,8 +13,8 @@ use crate::permanent::PermanentHandle;
 use crate::player::Player;
 use crate::rules::Rules;
 use crate::selection::{
-    EffectQueue, PendingAttack, PendingOption, PendingPayCostEffect, PendingSecurity,
-    PendingSelection, SecurityResolutionState, SelectionError,
+    EffectQueue, PendingAttack, PendingEffectSecurityRemoval, PendingOption, PendingPayCostEffect,
+    PendingSecurity, PendingSelection, SecurityResolutionState, SelectionError,
 };
 use crate::token_registry::TokenRegistry;
 use crate::trigger_context::TriggerContext;
@@ -140,6 +140,10 @@ pub struct Game {
     /// cleared afterward. `EffectContext::play_pending_security` inspects and
     /// mutates this slot to keep the revealed card from being trashed.
     pub pending_security: Option<PendingSecurity>,
+    /// Continuations for effect-driven security removal helpers that park
+    /// inside an `OnLoseSecurity` observer. Combat security checks use
+    /// `security_resolution`; direct helpers use this smaller stack.
+    pub pending_effect_security_removal: Vec<PendingEffectSecurityRemoval>,
     /// Phase 8: in-flight Option card resolution. Set when an Option is
     /// played and cleared after dispose. Dispatch lands in Tasks 2-6.
     pub pending_option: Option<PendingOption>,
@@ -521,6 +525,7 @@ impl Game {
             pending_pay_cost_stack: Vec::new(),
             pending_attack: None,
             pending_security: None,
+            pending_effect_security_removal: Vec::new(),
             pending_option: None,
             pending_option_placed_turn_check: false,
             security_resolution: None,

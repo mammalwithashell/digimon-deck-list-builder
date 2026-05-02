@@ -67,8 +67,8 @@ Format per entry:
 
 ## Chaos Control — effect-initiated digivolve from trash
 - Effect text: EX11-005 Yaamon / EX11-069 Yuuki / BT21-100 The Digimon I Designed / BT24-080 Megidramon all digivolve a battle-area Digimon into a card in trash, sometimes for free and sometimes with a reduced cost.
-- Missing DSL verb / step kind / predicate: `effect_initiated_digivolve` only accepts `from_hand`; there is no source-zone-parametric form for `from_trash` or `from_security`.
-- Lowers to engine API: currently blocked by `docs/RUST_ENGINE_GAPS.md` "Effect-initiated digivolve from non-hand source zones"; once the engine primitive accepts a source zone, lower to that shared helper.
+- Status: resolved for selected live card bindings in Group 4 (2026-05-02). `effect_initiated_digivolve` now accepts `source:` as a source-zone-parametric binding while preserving legacy `from_hand:`.
+- Lowers to engine API: `EffectContext::effect_initiated_digivolve_from_source` / `Game::effect_initiated_digivolve_from_source`, with card-handle bindings resolved from hand, trash, security, material stack, or reveal pool.
 - Suggested DSL syntax:
   ```yaml
   - effect_initiated_digivolve:
@@ -81,6 +81,7 @@ Format per entry:
       ignore_requirements: false
   ```
 - First reported: 2026-04-28
+- Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_digivolve_from_zones`, plus `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group4_zone_movement`.
 
 ## BT24-080 — delete all opponent Digimon with the lowest level
 - Effect text: "[On Play] [When Digivolving] [On Deletion] Delete all of your opponent's lowest level Digimon."
@@ -652,9 +653,9 @@ Format per entry:
 ## Royal Knights — selecting permanents in the breeding area  [G-BREEDING-PERMANENT-SELECTION]
 
 - Effect text: `BT20-083` Omekamon: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area." Similar Royal Knights effects target or play from the breeding-area King Drasil stack (`BT13-093`, `BT13-110`, `BT13-112`, `EX11-053`, `BT23-072`).
-- Missing DSL verb / step kind / predicate: `select_own_permanent` / `select_any_permanent` only scan `battle_area`, even when the YAML filter includes `zone: [breeding]`. There is no `select_own_breeding_permanent` step and no selection kind/action encoding for a breeding-area permanent.
-- Companion engine gap: `PendingSelection` currently represents field, hand, trash, reveal, security, material, and similar prompts, but not a breeding-area permanent handle. `PermanentHandle` also encodes battle-area indices; the breeding slot needs either a new handle variant or a dedicated selection path.
-- Lowers to engine API: after the engine exposes breeding-area selection, the existing `place_as_bottom_source`, `play_from_materials`, and `effect_initiated_digivolve` steps can consume the selected breeding permanent.
+- Status: selection is resolved; effect movement support is partially resolved. `select_own_breeding_permanent` now installs a breeding-specific pending selection and binding without fake battle-area handles. Group 4 also lets `place_as_bottom_source` target the real breeding slot via `BREEDING_TARGET`.
+- Companion engine state: `SelectionKind::BreedingPermanent`, `BreedingPermanentSelectionRef`, and phase-scoped breeding select actions cover the player-visible choice. `EffectContext::move_from_breeding_by_effect` and `play_to_breeding_from_hand` cover direct effect movement to/from the real breeding slot.
+- Lowers to engine API: `select_own_breeding_permanent` for the choice, `place_as_bottom_source` for tucking under the selected breeding stack, and source-parametric `effect_initiated_digivolve` for non-hand result cards once a source binding is available.
 - Suggested DSL syntax:
   ```yaml
   - select_own_permanent:
@@ -674,6 +675,7 @@ Format per entry:
 - Gap kind: hybrid (the YAML shape exists, but lowering/runtime selection ignore breeding).
 - Workaround: None faithful. Auto-targeting the only breeding permanent would hide a player-visible selection and violates the no-approximations policy.
 - First reported: 2026-04-28 (Royal Knights archetype assessment)
+- Updated 2026-05-02: remaining open follow-ups are breeding-area trigger fan-out (`G-BREEDING-TRIGGER-DISPATCH`) and card-specific optional/filter wrappers, not the basic breeding selection or real-zone movement primitives.
 
 ---
 

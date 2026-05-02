@@ -22,6 +22,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             ctx.shuffle_deck(p);
             true
         }
+        CompiledStep::ShuffleSecurity { of } => {
+            let p = resolve_player(ctx, *of);
+            ctx.shuffle_security(p);
+            true
+        }
         CompiledStep::Hatch { of } => {
             let p = resolve_player(ctx, *of);
             ctx.hatch(p);

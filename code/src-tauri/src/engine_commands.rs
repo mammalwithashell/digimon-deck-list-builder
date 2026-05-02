@@ -167,6 +167,7 @@ fn phase_str(p: GamePhase) -> &'static str {
         GamePhase::SelectUnion => "SelectUnion",
         GamePhase::SelectPermutation => "SelectPermutation",
         GamePhase::SelectBudgeted => "SelectBudgeted",
+        GamePhase::SelectBreedingPermanent => "SelectBreedingPermanent",
     }
 }
 

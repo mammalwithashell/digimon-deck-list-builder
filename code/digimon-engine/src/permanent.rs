@@ -5,7 +5,7 @@ use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{CardKind, PlayerId};
 
 /// Lightweight handle to a Permanent on a player's field. Copy-able, used in closures.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct PermanentHandle {
     pub player: PlayerId,
     pub index: u8,
