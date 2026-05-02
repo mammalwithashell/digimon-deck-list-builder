@@ -1840,6 +1840,24 @@ Use `Effect::declarative(card).dp_modifier(n)` for a non-inherited static buff (
 
 Avoid encoding DP-change effects via `ctx.add_dp_modifier(...)` for *static* buffs — that writes to `ModifierRegistry`, which the tensor's per-source contributions don't currently sum (permanent-level, yes; per-source, no). Stick with `dp_modifier` on `Effect` for anything you want the tensor to see per source.
 
+### Declarative aura DSL materialization
+
+`kind: aura` supports two process-backed materialization shapes through `Game::tick_declarative_effects`:
+
+```yaml
+- kind: aura
+  target: { owner: you, trait: Gaossmon, other: true }
+  dp_modifier: 3000
+
+- kind: aura
+  target_player: opponent
+  modifier: CannotReduceDigivolveCost
+```
+
+With `target`, the aura scans battle-area permanents and installs `dp_modifier`, `grant_keyword`, and named permanent `modifier` entries on matches. `other: true` excludes the source permanent when source context is available. With `target_player`, the aura resolves the player reference using the same `you` / `opponent` / `active` / `any` semantics as player-scoped flood gates and installs the named player modifier.
+
+This is a materialized tick path, not query-time aura recomputation. Call `tick_declarative_effects` after setting up or mutating field state in tests that need these process-backed declaratives to be present.
+
 ### How the tensor reads these
 
 `build_tensor` calls four `Game` helpers per permanent slot:

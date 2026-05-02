@@ -12,13 +12,16 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledGrantKeywordValue, CompiledPredicate, CompiledScope};
+use digimon_dsl::compiled::{
+    CompiledGrantKeywordValue, CompiledPlayerRef, CompiledPredicate, CompiledScope,
+};
 
 use crate::card_source::CardHandle;
-use crate::dsl_cards::modifier_map::lookup_keyword;
+use crate::dsl_cards::modifier_map::{lookup_keyword, lookup_modifier_type};
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::{Expiry, PlayerId};
+use crate::modifiers::PlayerModifierEntry;
 use crate::permanent::PermanentHandle;
 
 pub fn lower(
@@ -26,8 +29,10 @@ pub fn lower(
     scope: CompiledScope,
     active_when: Option<CompiledPredicate>,
     target: CompiledPredicate,
+    target_player: Option<CompiledPlayerRef>,
     dp_modifier: Option<i32>,
     grant_keyword: Option<CompiledGrantKeywordValue>,
+    modifier: Option<String>,
 ) -> Option<Effect> {
     let is_self_aura = target == CompiledPredicate::default();
     let active_when = active_when.map(Arc::new);
@@ -40,7 +45,7 @@ pub fn lower(
         builder = builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
     }
 
-    if is_self_aura {
+    if is_self_aura && target_player.is_none() && modifier.is_none() {
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
         }
@@ -55,8 +60,27 @@ pub fn lower(
     let target_arc = Arc::new(target);
     let dp = dp_modifier;
     let gk = grant_keyword.and_then(|g| lookup_keyword(&g.keyword, g.value));
+    let modifier = modifier.as_deref().and_then(lookup_modifier_type);
 
     builder = builder.process(move |ctx| {
+        if let (Some(player_ref), Some(modifier)) = (target_player, modifier) {
+            let source_permanent = ctx.source_permanent;
+            let source_player = ctx.player;
+            for player in players_for_ref(player_ref, ctx) {
+                ctx.game.modifiers.add_player_modifier(
+                    player,
+                    PlayerModifierEntry::simple(
+                        modifier,
+                        0,
+                        Expiry::Permanent,
+                        source_permanent,
+                        source_player,
+                    ),
+                );
+            }
+            return;
+        }
+
         // Collect matching targets under a read borrow.
         let mut matched: Vec<PermanentHandle> = Vec::new();
         {
@@ -83,8 +107,23 @@ pub fn lower(
             if let Some(kw) = gk {
                 ctx.grant_keyword(h, kw, Expiry::Permanent);
             }
+            if let Some(modifier) = modifier {
+                ctx.add_modifier(h, modifier, 0, Expiry::Permanent);
+            }
         }
     });
 
     Some(builder.build())
+}
+
+fn players_for_ref(
+    of: CompiledPlayerRef,
+    ctx: &crate::effect_context::EffectContext<'_>,
+) -> Vec<PlayerId> {
+    match of {
+        CompiledPlayerRef::You => vec![ctx.player],
+        CompiledPlayerRef::Opponent => vec![ctx.opponent_id()],
+        CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
+        CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
+    }
 }

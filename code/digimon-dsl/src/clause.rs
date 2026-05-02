@@ -256,7 +256,10 @@ impl DeclarativeClause {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AuraBody {
-    pub target: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_player: Option<crate::common::PlayerRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dp_modifier: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -348,12 +348,11 @@ Format per entry:
 ## BT5-008 — `other: true` predicate not evaluated in `eval_permanent_fields`  [G-OTHER-PREDICATE-UNEVALUATED]
 
 - Effect text: "[Your Turn] Your other [Gaossmon] all get +3000 DP."
-- Missing DSL verb / step kind / predicate: `other: true` is present in `PredicateSpec` (field `pub other: Option<bool>` at line 81) and compiles to `CompiledPredicate.other`, but `eval_permanent_fields` in `code/digimon-engine/src/dsl_cards/predicate.rs` (lines 381–436) does NOT check `pred.other`. The field is silently ignored at evaluation time, so a filtered aura with `other: true` would also buffer the source card itself (over-fires).
-- Lowers to engine API: no new engine method needed. Fix requires: add a check in `eval_permanent_fields` after the zone/owner checks: `if pred.other == Some(true) { if let Some(src) = rctx.source_permanent { if handle == src { return false; } } }`.
-- Suggested DSL syntax: already in the DSL spec as `other: true`; the evaluator just needs the additional guard.
-- Gap kind: dsl (the predicate field compiles correctly; the runtime evaluator doesn't act on it).
-- Workaround: Aura will over-fire (also buffs the source card). The self-exclusion behavioral test is `#[ignore = "BLOCKED: G-OTHER-PREDICATE-UNEVALUATED"]`. Secondary to G-DECLARATIVE-KEYWORD (declarative tick gap blocks ALL filtered aura runtime; self-exclusion only matters once that is fixed).
-- First reported: 2026-04-27 (BT5-008 batch-implement-cards-rust-dsl, Medusamon archetype)
+- Status: CLOSED as of 2026-05-02. `eval_permanent_fields` now rejects the source `PermanentHandle` when `other: true` is evaluated with `source_permanent` context, so filtered declarative auras can exclude their own source permanent.
+- Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_auras --nocapture`.
+- Suggested DSL syntax: already in the DSL spec as `other: true`.
+- Gap kind: closed DSL/runtime predicate gap.
+- First reported: 2026-04-27 (BT5-008 batch-implement-cards-rust-dsl, Medusamon archetype). Closed: 2026-05-02 (Group 6 Task 3).
 
 ---
 
@@ -362,7 +361,7 @@ Format per entry:
 - Effect text: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
 - Status: CLOSED for DSL vocabulary and direct runtime primitives as of 2026-05-01. The DSL now supports `target_player` on `kind: flood_gate` and an explicit `add_player_modifier` step, and the engine has a `CannotReduceDigivolveCost` modifier with digivolve-only cost-reduction enforcement.
 - Engine note 2026-05-02: player-scoped `IgnoreColorRequirement` is now consumed by Rust Option masks and decode/execution. No new DSL syntax landed in that engine-only pass; passive/static field dispatch remains governed by the related blocker below.
-- Remaining related blocker: passive/static field effects still depend on G-DECLARATIVE-KEYWORD. BT5-008 compiles to the native player-targeted flood_gate below, but the engine still needs the global declarative field-effect dispatcher before face-up static rookies install their modifiers from board state.
+- Engine note 2026-05-02: `Game::tick_declarative_effects` now dispatches process-backed declarative effects from face-up field sources, and Group 6 aura coverage proves a `kind: aura` with `target_player: opponent` installs `CannotReduceDigivolveCost` on the referenced player. The same dispatcher executes flood-gate process closures, but this entry does not claim dedicated flood-gate installation coverage until a flood-gate-specific tick test lands.
 - Implemented DSL syntax:
   ```yaml
   - kind: flood_gate
@@ -370,7 +369,7 @@ Format per entry:
     target_player: opponent
     modifier: CannotReduceDigivolveCost
   ```
-- Gap kind: closed vocabulary/runtime primitive gap; remaining passive dispatch gap is tracked separately by G-DECLARATIVE-KEYWORD.
+- Gap kind: closed vocabulary/runtime primitive gap; aura-based passive dispatch is covered by Group 6 Task 3, with flood-gate-specific dispatcher coverage still worth adding separately.
 - Former workaround removed for BT5-008: raw_rust no-op placeholder (`bt5_008_opp_cannot_reduce_digivolve_cost`).
 - First reported: 2026-04-27 (BT5-008 batch-implement-cards-rust-dsl, Medusamon archetype). Closed: 2026-05-01 (floodgate DSL flexibility pass).
 

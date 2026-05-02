@@ -172,6 +172,14 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                         }
                         DeclarativeKind::Aura => {
                             if let crate::clause::TypedDeclarativeBody::Aura(b) = &body {
+                                if b.target.is_none() && b.target_player.is_none() {
+                                    errors.push(ValidationError {
+                                        card_id: spec.card.clone(),
+                                        path: format!("{prefix}.target"),
+                                        message: "aura requires target or target_player"
+                                            .to_string(),
+                                    });
+                                }
                                 if let Some(gk) = &b.grant_keyword {
                                     if !is_known_keyword(&gk.keyword) {
                                         errors.push(ValidationError {
@@ -181,13 +189,15 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         });
                                     }
                                 }
-                                validate_predicate(
-                                    &b.target,
-                                    &format!("{prefix}.target"),
-                                    &spec.card,
-                                    ctx,
-                                    &mut errors,
-                                );
+                                if let Some(target) = &b.target {
+                                    validate_predicate(
+                                        target,
+                                        &format!("{prefix}.target"),
+                                        &spec.card,
+                                        ctx,
+                                        &mut errors,
+                                    );
+                                }
                             }
                         }
                         DeclarativeKind::GrantKeyword => {

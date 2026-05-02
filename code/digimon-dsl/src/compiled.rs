@@ -353,6 +353,7 @@ pub enum CompiledDeclarativeClause {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
         target: CompiledPredicate,
+        target_player: Option<CompiledPlayerRef>,
         dp_modifier: Option<i32>,
         grant_keyword: Option<CompiledGrantKeywordValue>,
         modifier: Option<String>,

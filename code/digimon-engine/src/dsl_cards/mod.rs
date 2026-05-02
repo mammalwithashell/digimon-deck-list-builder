@@ -91,8 +91,10 @@ impl CardEffect for DslCardEffect {
                         scope,
                         active_when,
                         target,
+                        target_player,
                         dp_modifier,
                         grant_keyword,
+                        modifier,
                         ..
                     } => {
                         if let Some(e) = lower_aura::lower(
@@ -100,8 +102,10 @@ impl CardEffect for DslCardEffect {
                             *scope,
                             active_when.clone(),
                             target.clone(),
+                            *target_player,
                             *dp_modifier,
                             grant_keyword.clone(),
+                            modifier.clone(),
                         ) {
                             out.push(e);
                         }

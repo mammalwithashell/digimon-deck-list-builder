@@ -862,7 +862,14 @@ fn compile_declarative(
         B::Aura(a) => CompiledDeclarativeClause::Aura {
             scope,
             active_when,
-            target: compile_predicate(&a.target, &format!("{prefix}.target"), card_id, errors),
+            target: a
+                .target
+                .as_ref()
+                .map(|target| {
+                    compile_predicate(target, &format!("{prefix}.target"), card_id, errors)
+                })
+                .unwrap_or_default(),
+            target_player: a.target_player.map(compile_player_ref),
             dp_modifier: a.dp_modifier,
             grant_keyword: a.grant_keyword.map(|gk| CompiledGrantKeywordValue {
                 keyword: gk.keyword,

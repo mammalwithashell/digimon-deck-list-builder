@@ -1640,6 +1640,94 @@ impl Game {
         false
     }
 
+    /// Re-install declarative process-backed effects from permanents currently
+    /// on the field. Static effect builders still expose pure fields directly;
+    /// this dispatcher is for declarative clauses lowered to process closures,
+    /// such as filtered auras and player-scoped flood gates.
+    pub fn tick_declarative_effects(&mut self) {
+        let mut sources = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                let handle = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                };
+                let top = perm.top_card();
+                sources.push((
+                    top.card_id(&self.card_data).to_string(),
+                    top.handle(),
+                    Some(handle),
+                    player_id,
+                    false,
+                ));
+
+                let stack_size = perm.card_sources.len();
+                for (source_index, source) in perm.card_sources.iter().enumerate() {
+                    if source_index + 1 >= stack_size {
+                        continue;
+                    }
+                    sources.push((
+                        source.card_id(&self.card_data).to_string(),
+                        source.handle(),
+                        Some(handle),
+                        player_id,
+                        true,
+                    ));
+                }
+            }
+
+            if let Some(perm) = player.breeding_area.as_ref() {
+                let handle = PermanentHandle {
+                    player: player_id,
+                    index: crate::action::space::BREEDING_TARGET as u8,
+                };
+                let top = perm.top_card();
+                sources.push((
+                    top.card_id(&self.card_data).to_string(),
+                    top.handle(),
+                    Some(handle),
+                    player_id,
+                    false,
+                ));
+            }
+        }
+
+        for (card_id, source_card, source_permanent, controller, inherited_source) in sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if effect.process.is_none() {
+                    continue;
+                }
+                if let Some(condition) = &effect.condition {
+                    let rctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        source_card,
+                        source_permanent,
+                        controller,
+                    );
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                if let Some(process) = effect.process.as_ref() {
+                    let mut ctx = crate::effect_context::EffectContext::new(
+                        self,
+                        source_card,
+                        source_permanent,
+                        controller,
+                    );
+                    process(&mut ctx);
+                }
+            }
+        }
+    }
+
     /// Returns the `PermanentHandle` of the currently-attacking permanent,
     /// or `None` when no attack is in flight. Reads `pending_attack.attacker`
     /// — the same source the mask and combat-resolution code use.
