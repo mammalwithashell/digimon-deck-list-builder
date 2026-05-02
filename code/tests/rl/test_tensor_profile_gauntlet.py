@@ -364,3 +364,41 @@ def test_gauntlet_result_writes_json_and_markdown(tmp_path):
     markdown = md_path.read_text(encoding="utf-8")
     assert "| Profile | Tensor Size | Steps/sec | Games/hour | Win Rate vs Greedy | Trigger Accuracy | Tensor KiB |" in markdown
     assert "| standard_lite_v2 | 8320 | 2.00 | 2400.00 | 50.00% | 100.00% | 32.50 |" in markdown
+
+
+def test_cli_parses_profiles_and_output_directory():
+    from tools.profile_tensor_profiles import parse_args
+
+    args = parse_args(
+        [
+            "--profiles",
+            "compact_v1,standard_lite_v2,standard_full_v2",
+            "--games",
+            "7",
+            "--seeds",
+            "200:207",
+            "--max-steps-per-game",
+            "500",
+            "--policy",
+            "greedy",
+            "--n-steps",
+            "64",
+            "--n-envs",
+            "2",
+            "--out",
+            "profile_runs/tensor_profiles/test",
+            "--require-profiles",
+        ]
+    )
+
+    assert args.profiles == "compact_v1,standard_lite_v2,standard_full_v2"
+    assert args.games == 7
+    assert args.seeds == "200:207"
+    assert args.max_steps_per_game == 500
+    assert args.policy == "greedy"
+    assert args.n_steps == 64
+    assert args.n_envs == 2
+    assert str(args.out).endswith("profile_runs\\tensor_profiles\\test") or str(args.out).endswith(
+        "profile_runs/tensor_profiles/test"
+    )
+    assert args.require_profiles is True
