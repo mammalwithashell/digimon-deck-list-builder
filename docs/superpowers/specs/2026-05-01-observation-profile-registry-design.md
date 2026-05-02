@@ -51,26 +51,22 @@ The design sketched an engine-owned profile identifier family:
 ```rust
 pub enum ObservationProfileId {
     StandardCompactV1,
-    StandardPendingAblationV2,
     StandardLiteV2,
-    StandardFullV2,
-    StandardOmniscientDebugV1,
 }
 ```
 
-Expose stable string IDs:
+Expose stable string IDs for implemented/exported profiles:
 
 | Profile | String ID | Purpose |
 |---|---|---|
 | `StandardCompactV1` | `standard_compact_v1` | Implemented 1375-float Standard compact baseline |
-| `StandardPendingAblationV2` | `standard_pending_ablation_v2` | Planned ablation profile: Standard compact/fair board plus rich pending-choice metadata, used to isolate pending metadata value |
 | `StandardLiteV2` | `standard_lite_v2` | Implemented fair-information Standard v2 profile with structured board, hand, known-zone, and pending-choice tables |
-| `StandardFullV2` | `standard_full_v2` | Future experimental profile: Standard v2 including `action_id_features[2168][16]` |
-| `StandardOmniscientDebugV1` | `standard_omniscient_debug_v1` | Planned test-only Standard profile that may expose hidden identities |
 
 `standard_lite_v2` is implemented and is the default pilot observation profile. `standard_compact_v1` remains the compact compatibility and baseline profile. `standard_v1` and `compact_v1` are legacy aliases only; new metadata writes `standard_compact_v1` for compact runs and `standard_lite_v2` for v2 pilot runs.
 
-`standard_pending_ablation_v2` and `standard_lite_v2` have different jobs:
+Future profile ideas are not implemented or exported in HEAD. Examples include `standard_pending_ablation_v2` for isolating pending-choice metadata value, `standard_full_v2` for a possible action-id feature table, and `standard_omniscient_debug_v1` for test-only hidden-information debugging.
+
+`standard_pending_ablation_v2` and `standard_lite_v2` would have different jobs if the ablation profile is added later:
 
 - `standard_pending_ablation_v2` answers "do rich pending-choice rows help?" while keeping the rest of the observation close to the compact baseline.
 - `standard_lite_v2` answers "does the practical v2 observation improve training?" and is the first profile intended for serious pilot runs.
@@ -82,30 +78,33 @@ Use `standard_pending_ablation_v2` for controlled comparison runs against `stand
 Each profile exposes a complete layout description:
 
 ```rust
-pub struct ObservationLayout {
-    pub profile_id: &'static str,
+pub struct TensorProfile {
+    pub id: &'static str,
+    pub game_mode: &'static str,
+    pub version: u32,
     pub tensor_version: u16,
     pub feature_schema_version: &'static str,
+    pub layout_hash: &'static str,
     pub tensor_size: usize,
-    pub card_id_positions: Vec<usize>,
-    pub scalar_positions: Vec<usize>,
-    pub layout_hash: String,
-    pub schema: ObservationSchema,
+    pub field_slots: usize,
+    pub slot_size: usize,
+    pub max_sources: usize,
+    pub slot_layout: TensorSlotLayout,
+    pub card_id_slot_count: usize,
+    pub scalar_slot_count: usize,
+    pub sections: &'static [TensorSection],
 }
 ```
 
-`ObservationSchema` is a compact, serializable description for debugging and artifact manifests. It does not need to list every feature name, but it includes enough section metadata to audit shape:
+`TensorSection` is a compact description for debugging and artifact manifests. It does not need to list every feature name, but it includes enough section metadata to audit shape:
 
 ```rust
-pub struct ObservationSection {
-    pub name: &'static str,
-    pub offset: usize,
-    pub size: usize,
-    pub shape: Vec<usize>,
-}
-
-pub struct ObservationSchema {
-    pub sections: Vec<ObservationSection>,
+pub struct TensorSection {
+    pub id: &'static str,
+    pub start: usize,
+    pub len: usize,
+    pub shape: &'static [usize],
+    pub kind: TensorSectionKind,
 }
 ```
 
@@ -149,7 +148,7 @@ Shape and position changes already affect `layout_hash` through section metadata
 
 Mechanical enforcement:
 
-- `ObservationLayout` cannot be constructed without `feature_schema_version`.
+- `TensorProfile` cannot be constructed without `feature_schema_version`.
 - The layout hash builder serializes `feature_schema_version` into the canonical hash input.
 - Layout tests assert the version is non-empty for every profile.
 - Snapshot tests pin each implemented profile's `feature_schema_version` and `layout_hash`, so semantic edits require an intentional snapshot update.
@@ -176,24 +175,26 @@ If a feature's meaning changes while shape stays the same, bump the profile's `F
 
 ## Rust API
 
-Observation profile modules live under `code/digimon-engine/src/observation/`. Current modules include the implemented compact compatibility and lite v2 profiles; planned experiment profiles are documented here but are not exported until implemented:
+Observation profile dispatch lives in `code/digimon-engine/src/observation.rs`. Profile layout metadata lives under `code/digimon-engine/src/tensor_profiles/`. Current modules include the implemented compact compatibility and lite v2 profiles; planned experiment profiles are documented here but are not exported until implemented:
 
 ```text
-observation/
-  mod.rs
-  profile.rs
-  layout.rs
-  standard_compact_v1.rs
-  standard_lite_v2.rs
+src/
+  observation.rs
+  tensor_profiles/
+    mod.rs
+    standard/
+      mod.rs
+      v1.rs
+      v2_lite.rs
 ```
 
 Core API:
 
 ```rust
 pub fn default_observation_profile() -> ObservationProfileId;
-pub fn parse_profile_id(raw: &str) -> Result<ObservationProfileId, ObservationProfileError>;
+pub fn parse_observation_profile(raw: &str) -> Result<ObservationProfileId, String>;
 pub fn list_observation_profiles() -> Vec<&'static str>;
-pub fn observation_layout(profile: ObservationProfileId) -> ObservationLayout;
+pub fn observation_layout(profile: ObservationProfileId) -> TensorProfile;
 pub fn build_observation_tensor(
     game: &Game,
     player_id: PlayerId,
@@ -230,7 +231,7 @@ Tensor calls use the stored profile:
 
 ```rust
 runner.get_board_tensor(player_id) -> Vec<f32>
-runner.observation_layout() -> ObservationLayout
+runner.observation_layout() -> TensorProfile
 runner.observation_profile_id() -> &'static str
 ```
 

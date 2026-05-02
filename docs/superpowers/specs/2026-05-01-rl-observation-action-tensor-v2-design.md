@@ -118,7 +118,7 @@ The `reserved` section is deliberately present in both profiles. Reserved indice
 
 ## V2 Lite Row Layout Details
 
-These row offsets make the profile registry and feature extractor deterministic before implementation starts.
+These row offsets define the implemented `standard_lite_v2` registry layout and keep the feature extractor deterministic.
 
 ### Permanent Slot Row
 
