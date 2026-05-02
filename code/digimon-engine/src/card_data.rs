@@ -388,15 +388,34 @@ impl CardData {
 }
 
 fn parse_digixros_aliases(effect_text: &str) -> Vec<String> {
-    let marker = "also treated as [";
+    let marker = "also treated as ";
     let mut aliases = Vec::new();
     for tail in effect_text.split(marker).skip(1) {
-        let Some((name, after_name)) = tail.split_once(']') else {
+        let Some(scope_start) = digixros_scope_start(tail) else {
             continue;
         };
-        if after_name.contains("for DigiXros") {
-            aliases.push(name.trim().to_string());
-        }
+        let alias_phrase = &tail[..scope_start];
+        aliases.extend(parse_bracketed_names(alias_phrase));
+    }
+    aliases
+}
+
+fn digixros_scope_start(text: &str) -> Option<usize> {
+    ["for DigiXros", "for a DigiXros"]
+        .iter()
+        .filter_map(|marker| text.find(marker))
+        .min()
+}
+
+fn parse_bracketed_names(text: &str) -> Vec<String> {
+    let mut aliases = Vec::new();
+    let mut remaining = text;
+    while let Some((_, after_open)) = remaining.split_once('[') {
+        let Some((name, after_close)) = after_open.split_once(']') else {
+            break;
+        };
+        aliases.push(name.trim().to_string());
+        remaining = after_close;
     }
     aliases
 }

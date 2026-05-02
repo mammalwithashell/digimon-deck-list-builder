@@ -1022,8 +1022,8 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Discovered in:** Rocks (2026-04-18)
 - **Card(s):** BT21-021 OmniShoutmon ("This card is also treated as [Shoutmon] for DigiXros.")
 - **Effect text:** As above.
-- **Status:** Implemented as `CardData::digixros_aliases`, parsed from printed "also treated as [X] for DigiXros" card text, and compiled DSL `digixros_aliases`. DigiXros material matching unions printed names with these aliases, while generic name predicates remain overlay-blind so the alias does not leak into unrelated name-sensitive effects.
-- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_digixros_scoped_alias_without_global_name_alias --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- digixros_matching_accepts_scoped_alias_but_generic_name_checks_do_not --nocapture`; prior DSL coverage remains `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digixros`.
+- **Status:** Implemented as `CardData::digixros_aliases`, parsed from printed "also treated as [X] for DigiXros" and "for a DigiXros" card text, including multiple bracketed aliases in one scoped phrase, and compiled DSL `digixros_aliases`. DigiXros material matching unions printed names with these aliases, while generic name predicates remain overlay-blind so the alias does not leak into unrelated name-sensitive effects.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- digixros --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- digixros_matching_accepts_scoped_alias_but_generic_name_checks_do_not --nocapture`; prior DSL coverage remains `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digixros`.
 - **Remaining limits:** This resolves scoped material-name identity only. Full DigiXros play flow and future recipe-cost UX remain separate work.
 - **Related:** Existing "Digivolution-stack name overlay"; future DigiXros play-flow work.
 
