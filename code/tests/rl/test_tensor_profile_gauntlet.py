@@ -95,3 +95,94 @@ def test_memory_estimate_uses_tensor_size_and_rollout_shape():
     assert memory["rollout_observation_mib"] == pytest.approx((43008 * 4 * 128 * 4) / 1024 / 1024)
     assert memory["card_embedding_input_slots"] == 542
     assert memory["scalar_input_slots"] == 42466
+
+
+class FakeEnv:
+    def __init__(self, deck1=None, deck2=None, tensor_profile=None):
+        self.tensor_profile = tensor_profile
+        self.current_player_id = 1
+        self.winner_id = None
+        self.is_game_over = False
+        self._steps = 0
+
+    def reset(self, seed=None):
+        self._steps = 0
+        self.winner_id = None
+        self.is_game_over = False
+        return [0.0], {"tensor_profile": self.tensor_profile}
+
+    def step(self, action):
+        self._steps += 1
+        terminated = self._steps >= 3
+        if terminated:
+            self.is_game_over = True
+            self.winner_id = 1 if action == 62 else 2
+        return [0.0], 0.0, terminated, False, {}
+
+    def action_mask(self):
+        mask = [0] * 2168
+        mask[62] = 1
+        return mask
+
+
+def clock_from(values):
+    iterator = iter(values)
+    return lambda: next(iterator)
+
+
+def test_run_profile_games_counts_steps_wins_and_elapsed(monkeypatch):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    monkeypatch.setattr(gauntlet, "DigimonEnv", FakeEnv)
+    monkeypatch.setattr(gauntlet, "greedy_policy", lambda env: 62)
+
+    profile = fake_profile("standard_lite_v2", 8320)
+    clock = clock_from((10.0, 12.0))
+    result = gauntlet.run_profile_games(
+        requested_profile="standard_lite_v2",
+        profile=profile,
+        config=gauntlet.TensorProfileRunConfig(
+            profiles=("standard_lite_v2",),
+            games_per_profile=2,
+            seeds=(11, 12),
+            max_steps_per_game=10,
+            policy="greedy",
+        ),
+        clock=clock,
+    )
+
+    assert result.profile_id == "standard_lite_v2"
+    assert result.games_played == 2
+    assert result.steps == 6
+    assert result.elapsed_seconds == pytest.approx(2.0)
+    assert result.wins == 2
+    assert result.losses == 0
+    assert result.draws == 0
+
+
+def test_run_profile_games_marks_step_cap_as_draw(monkeypatch):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    monkeypatch.setattr(gauntlet, "DigimonEnv", FakeEnv)
+    monkeypatch.setattr(gauntlet, "greedy_policy", lambda env: 62)
+
+    profile = fake_profile("standard_lite_v2", 8320)
+    clock = clock_from((20.0, 21.0))
+    result = gauntlet.run_profile_games(
+        requested_profile="standard_lite_v2",
+        profile=profile,
+        config=gauntlet.TensorProfileRunConfig(
+            profiles=("standard_lite_v2",),
+            games_per_profile=1,
+            seeds=(11,),
+            max_steps_per_game=2,
+            policy="greedy",
+        ),
+        clock=clock,
+    )
+
+    assert result.games_played == 1
+    assert result.steps == 2
+    assert result.wins == 0
+    assert result.losses == 0
+    assert result.draws == 1
