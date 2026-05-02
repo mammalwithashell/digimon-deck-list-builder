@@ -277,3 +277,90 @@ def test_trigger_order_accuracy_rejects_full_profile_without_action_rows():
 
     assert correct == 1
     assert total == 2
+
+
+def test_run_tensor_profile_gauntlet_includes_unavailable_profiles(monkeypatch):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    available = fake_profile("standard_lite_v2", 8320)
+
+    def resolve(profile_ids, require_profiles):
+        return [
+            gauntlet.ResolvedProfile("standard_lite_v2", available, True, ""),
+            gauntlet.ResolvedProfile("missing_profile", None, False, "unknown tensor profile"),
+        ]
+
+    def run_profile_games(requested_profile, profile, config, clock=None):
+        return gauntlet.TensorProfileRunResult(
+            requested_profile=requested_profile,
+            profile_id=profile.id,
+            available=True,
+            skip_reason="",
+            tensor_size=profile.tensor_size,
+            layout_hash=profile.layout_hash,
+            feature_schema_version=profile.feature_schema_version,
+            memory_footprint=gauntlet.estimate_memory_footprint(profile, 128, 1),
+            games_played=1,
+            steps=3,
+            elapsed_seconds=1.5,
+            wins=1,
+            losses=0,
+            draws=0,
+            trigger_order_correct=1,
+            trigger_order_total=1,
+        )
+
+    monkeypatch.setattr(gauntlet, "resolve_profile_requests", resolve)
+    monkeypatch.setattr(gauntlet, "run_profile_games", run_profile_games)
+
+    result = gauntlet.run_tensor_profile_gauntlet(
+        gauntlet.TensorProfileRunConfig(
+            profiles=("standard_lite_v2", "missing_profile"),
+            games_per_profile=1,
+            seeds=(1,),
+        )
+    )
+
+    assert len(result.results) == 2
+    assert result.results[0].available is True
+    assert result.results[0].steps_per_second == pytest.approx(2.0)
+    assert result.results[1].available is False
+    assert result.results[1].skip_reason == "unknown tensor profile"
+
+
+def test_gauntlet_result_writes_json_and_markdown(tmp_path):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    profile = fake_profile("standard_lite_v2", 8320)
+    run_result = gauntlet.TensorProfileRunResult(
+        requested_profile="standard_lite_v2",
+        profile_id="standard_lite_v2",
+        available=True,
+        skip_reason="",
+        tensor_size=8320,
+        layout_hash=profile.layout_hash,
+        feature_schema_version="standard_lite_v2.1",
+        memory_footprint=gauntlet.estimate_memory_footprint(profile, 128, 1),
+        games_played=2,
+        steps=6,
+        elapsed_seconds=3.0,
+        wins=1,
+        losses=1,
+        draws=0,
+        trigger_order_correct=1,
+        trigger_order_total=1,
+    )
+    result = gauntlet.TensorProfileGauntletResult(
+        config=gauntlet.TensorProfileRunConfig(profiles=("standard_lite_v2",)),
+        results=(run_result,),
+    )
+
+    json_path = tmp_path / "result.json"
+    md_path = tmp_path / "result.md"
+    result.write_json(json_path)
+    result.write_markdown(md_path)
+
+    assert json_path.read_text(encoding="utf-8").startswith("{")
+    markdown = md_path.read_text(encoding="utf-8")
+    assert "| Profile | Tensor Size | Steps/sec | Games/hour | Win Rate vs Greedy | Trigger Accuracy | Tensor KiB |" in markdown
+    assert "| standard_lite_v2 | 8320 | 2.00 | 2400.00 | 50.00% | 100.00% | 32.50 |" in markdown

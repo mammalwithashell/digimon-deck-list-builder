@@ -109,6 +109,45 @@ class TensorProfileGauntletResult:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True), encoding="utf-8")
 
+    def to_markdown(self) -> str:
+        lines = [
+            "# Tensor Profile Gauntlet",
+            "",
+            "| Profile | Tensor Size | Steps/sec | Games/hour | Win Rate vs Greedy | Trigger Accuracy | Tensor KiB |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+        for result in self.results:
+            profile_label = result.profile_id or result.requested_profile
+            if not result.available:
+                lines.append(f"| {profile_label} | unavailable | 0.00 | 0.00 | 0.00% | 0.00% | 0.00 |")
+                continue
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        profile_label,
+                        str(result.tensor_size),
+                        f"{result.steps_per_second:.2f}",
+                        f"{result.games_per_hour:.2f}",
+                        f"{result.win_rate_vs_greedy:.2%}",
+                        f"{result.trigger_order_accuracy:.2%}",
+                        f"{float(result.memory_footprint['tensor_kib']):.2f}",
+                    ]
+                )
+                + " |"
+            )
+        skipped = [result for result in self.results if not result.available]
+        if skipped:
+            lines.extend(["", "## Skipped Profiles", ""])
+            for result in skipped:
+                lines.append(f"- `{result.requested_profile}`: {result.skip_reason}")
+        lines.append("")
+        return "\n".join(lines)
+
+    def write_markdown(self, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(self.to_markdown(), encoding="utf-8")
+
 
 def resolve_profile_requests(
     profile_ids: Iterable[str],
@@ -256,3 +295,47 @@ def run_profile_games(
         trigger_order_correct=trigger_order_correct,
         trigger_order_total=trigger_order_total,
     )
+
+
+def unavailable_result(resolved: ResolvedProfile, config: TensorProfileRunConfig) -> TensorProfileRunResult:
+    return TensorProfileRunResult(
+        requested_profile=resolved.requested_profile,
+        profile_id="",
+        available=False,
+        skip_reason=resolved.skip_reason,
+        tensor_size=0,
+        layout_hash="",
+        feature_schema_version="",
+        memory_footprint={
+            "tensor_bytes": 0,
+            "tensor_kib": 0.0,
+            "rollout_observation_bytes": 0,
+            "rollout_observation_mib": 0.0,
+            "card_embedding_input_slots": 0,
+            "scalar_input_slots": 0,
+        },
+        games_played=0,
+        steps=0,
+        elapsed_seconds=0.0,
+        wins=0,
+        losses=0,
+        draws=0,
+        trigger_order_correct=0,
+        trigger_order_total=0,
+    )
+
+
+def run_tensor_profile_gauntlet(config: TensorProfileRunConfig) -> TensorProfileGauntletResult:
+    results: list[TensorProfileRunResult] = []
+    for resolved in resolve_profile_requests(config.profiles, config.require_profiles):
+        if not resolved.available or resolved.profile is None:
+            results.append(unavailable_result(resolved, config))
+            continue
+        results.append(
+            run_profile_games(
+                requested_profile=resolved.requested_profile,
+                profile=resolved.profile,
+                config=config,
+            )
+        )
+    return TensorProfileGauntletResult(config=config, results=tuple(results))
