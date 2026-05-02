@@ -471,7 +471,7 @@ Exported files are consumed by:
 - **Hosted API / training**: `OnnxMlpPolicy` / `OnnxLstmPolicy` in `code/digimon_gym/inference/onnx_policy.py`; served via the `/games/models` API route.
 - **Desktop app**: `code/digimon-engine/src/inference/` loads the same `.onnx` at runtime after it's downloaded from the hosted manifest and cached under `dirs::data_dir()/digimon-tcg/models/<id>/policy.onnx`.
 
-Newly-exported models reach desktop users by being published to the admin model manifest (`/models/manifest.json`) with the correct `observation_profile`, `tensor_size`, `tensor_layout_hash`, and `action_space_size`; the desktop app rejects downloads that mismatch the Rust engine's contract.
+Newly-exported models reach desktop users by being published to the admin model manifest (`/models/manifest.json`). The export sidecar records `observation_profile` and `tensor_layout_hash` for tools, loaders, and workflows that consume that metadata. The hosted manifest / desktop publication path currently records and validates `tensor_size`, `action_space_size`, and the file hash; rejecting profile or layout-hash mismatches from the manifest is future work unless implemented in that publication path.
 
 ---
 
