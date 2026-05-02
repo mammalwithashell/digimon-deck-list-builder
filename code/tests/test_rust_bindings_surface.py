@@ -300,26 +300,27 @@ class TestActionAndTensorConstants:
 
 
 class TestTensorProfiles:
-    def test_tensor_profile_id_constant(self):
+    def test_default_profile_id_matches_profile(self):
         from digimon_engine import TENSOR_PROFILE_ID, get_tensor_profile
 
-        assert TENSOR_PROFILE_ID == get_tensor_profile().id
-        assert TENSOR_PROFILE_ID == "standard_v1"
+        profile = get_tensor_profile()
+
+        assert TENSOR_PROFILE_ID == "standard_compact_v1"
+        assert profile.id == TENSOR_PROFILE_ID
+        assert profile.game_mode == "standard"
 
     def test_list_tensor_profiles(self):
         from digimon_engine import TENSOR_PROFILE_ID, list_tensor_profiles
 
         profiles = list_tensor_profiles()
-        assert "standard_v1" in profiles
+        assert "standard_compact_v1" in profiles
         assert TENSOR_PROFILE_ID in profiles
 
-    def test_get_default_tensor_profile(self):
+    def test_tensor_profile_positions(self):
         from digimon_engine import TENSOR_SIZE, get_tensor_profile
 
         profile = get_tensor_profile()
-        assert profile.id == "standard_v1"
-        assert profile.game_mode == "standard"
-        assert profile.version == 1
+        assert profile.id == "standard_compact_v1"
         assert profile.tensor_size == TENSOR_SIZE
         assert profile.card_id_slot_count == 520
         assert profile.scalar_slot_count == 855
@@ -328,12 +329,59 @@ class TestTensorProfiles:
         assert profile.card_id_positions[0] == 10
         assert profile.scalar_positions[0] == 0
 
+    def test_legacy_tensor_profile_aliases_resolve_to_canonical_profile(self):
+        from digimon_engine import get_tensor_profile
+
+        canonical = get_tensor_profile("standard_compact_v1")
+        for alias in ("standard_v1", "compact_v1"):
+            profile = get_tensor_profile(alias)
+            assert profile.id == canonical.id == "standard_compact_v1"
+            assert profile.tensor_size == canonical.tensor_size
+            assert profile.card_id_positions == canonical.card_id_positions
+            assert profile.scalar_positions == canonical.scalar_positions
+
     def test_get_unknown_tensor_profile_raises(self):
         import pytest
         from digimon_engine import get_tensor_profile
 
         with pytest.raises(ValueError, match="unknown tensor profile"):
             get_tensor_profile("missing")
+
+    def test_observation_layout_for_standard_lite_v2(self):
+        from digimon_engine import (
+            DEFAULT_OBSERVATION_PROFILE,
+            get_observation_layout,
+            list_observation_profiles,
+        )
+
+        assert DEFAULT_OBSERVATION_PROFILE == "standard_lite_v2"
+        assert "standard_lite_v2" in list_observation_profiles()
+        layout = get_observation_layout("standard_lite_v2")
+
+        assert layout["profile_id"] == "standard_lite_v2"
+        assert layout["tensor_version"] == 2
+        assert layout["feature_schema_version"] == "standard_lite_v2.1"
+        assert layout["tensor_size"] == 8320
+        assert len(layout["card_id_positions"]) == 542
+        assert len(layout["scalar_positions"]) == 7778
+        assert layout["layout_hash"].startswith("sha256:")
+        assert len(layout["layout_hash"]) == len("sha256:") + 64
+        assert layout["sections"][0] == {
+            "name": "global_features",
+            "offset": 0,
+            "size": 64,
+            "shape": [64],
+        }
+
+    def test_rust_headless_game_accepts_observation_profile(self):
+        from digimon_engine import RustHeadlessGame
+
+        deck = ["ST1-01"] * 5 + ["ST1-03"] * 45
+        game = RustHeadlessGame(deck, deck, seed=1, observation_profile="standard_lite_v2")
+
+        assert game.observation_profile_id == "standard_lite_v2"
+        assert game.get_observation_layout()["tensor_size"] == 8320
+        assert game.get_board_tensor(1).shape == (8320,)
 
 
 def _starter_decks():

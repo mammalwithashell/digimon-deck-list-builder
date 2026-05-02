@@ -602,6 +602,9 @@ impl<'a> EffectContext<'a> {
         }
         let cap = labels.len().min(HAND_MAIN_LIMIT);
 
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
         let mut choices: Vec<EffectChoiceEntry> = Vec::with_capacity(cap);
         for (i, label) in labels.iter().take(cap).enumerate() {
@@ -610,15 +613,17 @@ impl<'a> EffectContext<'a> {
             choices.push(EffectChoiceEntry {
                 label: label.clone(),
                 action_id,
+                source_card: Some(source_card),
+                source_kind: Some(source_kind),
+                timing: None,
+                is_optional: false,
+                observation_metadata: Default::default(),
             });
         }
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let controller = self.player;
         let override_pin = self.override_selecting_player;
-        let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
-        let source_kind = self.source_kind;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 

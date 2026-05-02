@@ -143,6 +143,11 @@ pub enum SelectionKind {
 pub struct EffectChoiceEntry {
     pub label: String,
     pub action_id: u16,
+    pub source_card: Option<CardHandle>,
+    pub source_kind: Option<EffectSourceKind>,
+    pub timing: Option<EffectTiming>,
+    pub is_optional: bool,
+    pub observation_metadata: crate::effect::EffectObservationMetadata,
 }
 
 /// A parked selection. Installed by `EffectContext::select_*` helpers and the

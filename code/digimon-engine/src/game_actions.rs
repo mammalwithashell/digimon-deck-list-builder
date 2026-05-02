@@ -442,6 +442,11 @@ impl Game {
                 effect_choices: Some(vec![crate::selection::EffectChoiceEntry {
                     label: format!("{} (-{})", candidate.label, candidate.amount),
                     action_id: crate::action::space::HAND_EFFECT_START,
+                    source_card: Some(key.source_card),
+                    source_kind: Some(source_kind),
+                    timing: Some(crate::enums::EffectTiming::BeforePayCost),
+                    is_optional: candidate.optional,
+                    observation_metadata: Default::default(),
                 }]),
                 source_card: key.source_card,
                 source_permanent: key.source_permanent,

@@ -15,6 +15,7 @@ from typing import List, Tuple, Dict, Any, Optional
 import gymnasium
 from gymnasium import spaces
 from engine_py_legacy.engine.runners.headless_game import HeadlessGame
+from digimon_gym.tensor_profiles import get_tensor_profile
 
 try:
     from digimon_engine import RustHeadlessGame  # type: ignore
@@ -22,25 +23,53 @@ except ImportError:
     RustHeadlessGame = None
 
 
-def _make_runner(deck1: List[str], deck2: List[str], seed: Optional[int] = None):
+def _make_runner(
+    deck1: List[str],
+    deck2: List[str],
+    seed: Optional[int] = None,
+    tensor_profile: str = "standard_compact_v1",
+):
     """Build the game runner chosen by the `DIGIMON_BACKEND` env var.
 
     - `DIGIMON_BACKEND=rust` → `RustHeadlessGame` (requires the `digimon_engine`
       PyO3 wheel to be installed, e.g. via `maturin develop`).
-    - anything else (including unset) → Python `HeadlessGame`.
+    - unset + non-compact tensor profile → `RustHeadlessGame` when available.
+    - unset + compact tensor profile → Python `HeadlessGame` for compatibility.
+    - any other explicit value → Python `HeadlessGame`.
 
     Both runners expose the same duck-typed surface: `step`, `get_action_mask`,
     `get_board_tensor`, and `is_game_over`. Rust runners also expose
     `get_rl_state()` for backend-neutral RL metadata.
     """
-    backend = os.environ.get("DIGIMON_BACKEND", "py").lower()
-    if backend == "rust":
+    backend = os.environ.get("DIGIMON_BACKEND")
+    backend_normalized = backend.lower() if backend is not None else None
+    use_rust = (
+        backend_normalized == "rust"
+        or (backend is None and tensor_profile != "standard_compact_v1")
+    )
+    if use_rust:
         if RustHeadlessGame is None:
+            if backend_normalized == "rust":
+                raise RuntimeError(
+                    "DIGIMON_BACKEND=rust but digimon_engine wheel is not installed. "
+                    "Run `cd digimon-engine-py && maturin develop --release`."
+                )
             raise RuntimeError(
-                "DIGIMON_BACKEND=rust but digimon_engine wheel is not installed. "
+                f"tensor_profile={tensor_profile!r} requires the Rust runner, "
+                "but digimon_engine wheel is not installed. "
                 "Run `cd digimon-engine-py && maturin develop --release`."
             )
-        return RustHeadlessGame(deck1, deck2, seed=seed)
+        return RustHeadlessGame(
+            deck1,
+            deck2,
+            seed=seed,
+            observation_profile=tensor_profile,
+        )
+    if tensor_profile != "standard_compact_v1":
+        raise RuntimeError(
+            f"tensor_profile={tensor_profile!r} requires DIGIMON_BACKEND=rust "
+            "or an unset DIGIMON_BACKEND with Rust bindings available"
+        )
     if seed is None:
         return HeadlessGame(deck1, deck2)
     rng_state = random.getstate()
@@ -102,15 +131,23 @@ class DigimonEnv(gymnasium.Env):
     def __init__(self, deck1: Optional[List[str]] = None,
                  deck2: Optional[List[str]] = None,
                  render_mode: Optional[str] = None,
-                 max_turns: int = 100):
+                 max_turns: int = 100,
+                 tensor_profile: Optional[str] = None):
         super().__init__()
 
         # Observation and action spaces
         # Card ID slots can hold registry indices up to 20000;
         # scalar fields stay within normal game ranges.
+        self.tensor_profile = (
+            tensor_profile
+            or os.environ.get("DIGIMON_TENSOR_PROFILE")
+            or "standard_lite_v2"
+        )
+        self.observation_layout = get_tensor_profile(self.tensor_profile)
+        self.tensor_profile = self.observation_layout.id
         self.observation_space = spaces.Box(
             low=-10.0, high=20001.0,
-            shape=(TENSOR_SIZE,), dtype=np.float32
+            shape=(self.observation_layout.tensor_size,), dtype=np.float32
         )
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
 
@@ -201,11 +238,16 @@ class DigimonEnv(gymnasium.Env):
             deck1 = options.get("deck1", deck1)
             deck2 = options.get("deck2", deck2)
 
-        self.runner = _make_runner(deck1, deck2, seed=seed)
+        self.runner = _make_runner(
+            deck1,
+            deck2,
+            seed=seed,
+            tensor_profile=self.tensor_profile,
+        )
         self._step_count = 0
 
         obs = self.runner.get_board_tensor(1)
-        info = {"action_mask": self.action_mask()}
+        info = {"action_mask": self.action_mask(), **self._tensor_info()}
         return obs, info
 
     def step(self, action: int
@@ -233,8 +275,15 @@ class DigimonEnv(gymnasium.Env):
             # Force game conclusion on truncation
             terminated = True
 
-        info = {"action_mask": self.action_mask()}
+        info = {"action_mask": self.action_mask(), **self._tensor_info()}
         return obs, reward, terminated, truncated, info
+
+    def _tensor_info(self) -> Dict[str, Any]:
+        return {
+            "tensor_profile": self.tensor_profile,
+            "tensor_feature_schema_version": self.observation_layout.feature_schema_version,
+            "tensor_layout_hash": self.observation_layout.layout_hash,
+        }
 
     def action_mask(self) -> np.ndarray:
         """Return boolean action mask for the current state.
@@ -358,7 +407,12 @@ class GameState:
     def get_observation(self) -> Dict[str, np.ndarray]:
         if self._env.runner:
             return {"tensor": self._env.runner.get_board_tensor(1)}
-        return {"tensor": np.zeros(TENSOR_SIZE, dtype=np.float32)}
+        return {
+            "tensor": np.zeros(
+                self._env.observation_layout.tensor_size,
+                dtype=np.float32,
+            )
+        }
 
     def get_action_mask(self) -> np.ndarray:
         return self._env.get_action_mask()

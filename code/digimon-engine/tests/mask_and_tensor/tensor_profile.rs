@@ -11,16 +11,20 @@ use digimon_engine::tensor::{
 use digimon_engine::tensor_profiles::standard;
 use digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorFieldKind, TensorSectionKind,
-    STANDARD_V1_PROFILE_ID,
+    COMPACT_V1_LEGACY_PROFILE_ID, STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID,
+    STANDARD_V1_LEGACY_PROFILE_ID,
 };
 
 #[test]
-fn default_profile_is_standard_v1() {
+fn default_profile_is_standard_compact_v1() {
     let profile = default_profile();
 
-    assert_eq!(profile.id, STANDARD_V1_PROFILE_ID);
+    assert_eq!(profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
+    assert_eq!(profile.id, "standard_compact_v1");
     assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.version, 1);
+    assert_eq!(profile.tensor_version, 1);
+    assert_eq!(profile.feature_schema_version, "standard_compact_v1.1");
     assert_eq!(profile.tensor_size, TENSOR_SIZE);
     assert_eq!(profile.field_slots, FIELD_SLOTS);
     assert_eq!(profile.slot_size, SLOT_SIZE);
@@ -32,13 +36,63 @@ fn default_profile_is_standard_v1() {
 }
 
 #[test]
-fn registry_resolves_standard_profile_by_id() {
-    let ids = all_profile_ids();
-    assert_eq!(ids, vec![STANDARD_V1_PROFILE_ID]);
+fn every_profile_has_schema_version_and_layout_hash() {
+    for id in all_profile_ids() {
+        let profile = profile_by_id(id).unwrap();
+        assert!(!profile.feature_schema_version.is_empty());
+        assert!(profile.layout_hash.starts_with("sha256:"));
+        assert_eq!(profile.layout_hash.len(), "sha256:".len() + 64);
+        assert!(profile.layout_hash["sha256:".len()..]
+            .chars()
+            .all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase()));
+        assert_eq!(
+            profile.layout_hash,
+            profile.layout_hash_with_schema_version_for_test(profile.feature_schema_version)
+        );
+    }
+}
 
-    let profile = profile_by_id(STANDARD_V1_PROFILE_ID).unwrap();
-    assert_eq!(profile.id, "standard_v1");
-    assert_eq!(profile.game_mode, "standard");
+#[test]
+fn layout_hash_changes_when_feature_schema_version_changes() {
+    let profile = default_profile();
+    let baseline = profile.layout_hash;
+    let changed = profile.layout_hash_with_schema_version_for_test("schema-version-test-only");
+
+    assert_ne!(changed, baseline);
+    assert!(changed.starts_with("sha256:"));
+}
+
+#[test]
+fn sections_expose_debug_shapes() {
+    let profile = default_profile();
+    let global = profile.section("global").unwrap();
+    assert_eq!(global.shape, &[10]);
+
+    let my_battle = profile.section("my_battle").unwrap();
+    assert_eq!(my_battle.shape, &[14, 40]);
+}
+
+#[test]
+fn registry_lists_only_canonical_profile_ids() {
+    assert_eq!(
+        all_profile_ids(),
+        vec![STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID]
+    );
+}
+
+#[test]
+fn registry_resolves_standard_compact_profile_and_legacy_aliases() {
+    for id in [
+        STANDARD_COMPACT_V1_PROFILE_ID,
+        STANDARD_V1_LEGACY_PROFILE_ID,
+        COMPACT_V1_LEGACY_PROFILE_ID,
+    ] {
+        let profile = profile_by_id(id).unwrap();
+        assert_eq!(profile.id, STANDARD_COMPACT_V1_PROFILE_ID);
+        assert_eq!(profile.game_mode, "standard");
+        assert_eq!(profile.tensor_size, TENSOR_SIZE);
+    }
+
     assert!(profile_by_id("missing_profile").is_none());
 }
 
@@ -48,7 +102,10 @@ fn standard_family_resolves_profile_by_version() {
 
     assert_eq!(standard::DEFAULT_PROFILE, standard::v1::PROFILE);
     assert_eq!(profile, standard::v1::PROFILE);
-    assert!(standard::profile_by_version(2).is_none());
+    assert_eq!(
+        standard::profile_by_version(2).unwrap(),
+        standard::v2_lite::PROFILE
+    );
 }
 
 #[test]
@@ -323,7 +380,15 @@ fn singular_tensor_profile_alias_still_works() {
 
     assert_eq!(singular, plural);
     assert_eq!(
-        digimon_engine::tensor_profile::STANDARD_V1_PROFILE_ID,
+        digimon_engine::tensor_profile::STANDARD_COMPACT_V1_PROFILE_ID,
+        "standard_compact_v1"
+    );
+    assert_eq!(
+        digimon_engine::tensor_profile::STANDARD_V1_LEGACY_PROFILE_ID,
         "standard_v1"
+    );
+    assert_eq!(
+        digimon_engine::tensor_profile::COMPACT_V1_LEGACY_PROFILE_ID,
+        "compact_v1"
     );
 }

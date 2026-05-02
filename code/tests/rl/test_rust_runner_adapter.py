@@ -28,6 +28,35 @@ def test_rust_env_reports_current_player_without_legacy_game_object(monkeypatch)
     assert env.winner_id is None
 
 
+def test_digimon_env_uses_requested_standard_lite_v2_profile(monkeypatch):
+    env = _rust_env(monkeypatch, tensor_profile="standard_lite_v2")
+    obs, info = env.reset(seed=7)
+
+    assert env.tensor_profile == "standard_lite_v2"
+    assert env.observation_space.shape == (8320,)
+    assert obs.shape == (8320,)
+    assert info["tensor_profile"] == "standard_lite_v2"
+    assert info["tensor_feature_schema_version"] == "standard_lite_v2.1"
+    assert info["tensor_layout_hash"].startswith("sha256:")
+
+
+def test_legacy_env_rejects_standard_lite_v2_profile(monkeypatch):
+    monkeypatch.setenv("DIGIMON_BACKEND", "py")
+    import digimon_gym.digimon_gym as gym_mod
+
+    env = gym_mod.DigimonEnv(
+        deck1=DECK,
+        deck2=DECK,
+        tensor_profile="standard_lite_v2",
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="tensor_profile='standard_lite_v2' requires DIGIMON_BACKEND=rust",
+    ):
+        env.reset(seed=7)
+
+
 def test_rust_env_ansi_render_uses_backend_neutral_state(monkeypatch):
     env = _rust_env(monkeypatch, render_mode="ansi")
     env.reset(seed=7)

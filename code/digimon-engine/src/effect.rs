@@ -49,11 +49,70 @@ pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'sta
 pub type LinkFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct EffectObservationMetadata {
+    pub categories: EffectCategoryFlags,
+    pub target_profile: TargetProfileFlags,
+    pub duration: EffectDurationKind,
+    pub numeric_buckets: EffectNumericBuckets,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct EffectCategoryFlags {
+    pub delete: bool,
+    pub suspend: bool,
+    pub unsuspend: bool,
+    pub bounce: bool,
+    pub bottom_deck: bool,
+    pub dp_change: bool,
+    pub draw_search: bool,
+    pub memory: bool,
+    pub play: bool,
+    pub digivolve: bool,
+    pub recover: bool,
+    pub trash_security: bool,
+    pub grant_keyword: bool,
+    pub grant_immunity: bool,
+    pub protection: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TargetProfileFlags {
+    pub own: bool,
+    pub opponent: bool,
+    pub digimon: bool,
+    pub tamer: bool,
+    pub option: bool,
+    pub battle_area: bool,
+    pub breeding_area: bool,
+    pub security: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum EffectDurationKind {
+    #[default]
+    Unknown,
+    Immediate,
+    UntilEndOfTurn,
+    UntilOpponentEndOfTurn,
+    Persistent,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct EffectNumericBuckets {
+    pub dp_amount: i16,
+    pub memory_amount: i8,
+    pub count: u8,
+    pub level_threshold: u8,
+    pub play_cost_threshold: u8,
+}
+
 /// A single card effect with timing and behavior.
 pub struct Effect {
     pub timing: EffectTiming,
     pub name: String,
     pub source_card: CardHandle,
+    pub observation_metadata: EffectObservationMetadata,
 
     // Timing / kind flags
     pub on_play: bool,
@@ -403,6 +462,7 @@ impl EffectBuilder {
                 timing,
                 name: String::new(),
                 source_card: card,
+                observation_metadata: EffectObservationMetadata::default(),
                 on_play: false,
                 when_digivolving: false,
                 on_attack: false,
@@ -514,6 +574,11 @@ impl EffectBuilder {
 
     pub fn optional(mut self) -> Self {
         self.inner.optional = true;
+        self
+    }
+
+    pub fn observation_metadata(mut self, metadata: EffectObservationMetadata) -> Self {
+        self.inner.observation_metadata = metadata;
         self
     }
 

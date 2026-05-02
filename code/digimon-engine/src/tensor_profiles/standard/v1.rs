@@ -3,9 +3,13 @@ use crate::tensor_profiles::{
     TensorSlotLayout,
 };
 
-pub const PROFILE_ID: &str = "standard_v1";
+pub const PROFILE_ID: &str = "standard_compact_v1";
 pub const GAME_MODE: &str = "standard";
 pub const VERSION: u32 = 1;
+pub const TENSOR_VERSION: u16 = 1;
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_compact_v1.1";
+pub const LAYOUT_HASH: &str =
+    "sha256:7a06fb143d60e854cec0cc36763d8a886afdf98d58f05e638fcd475e1256ca74";
 
 pub const FIELD_SLOTS: usize = 14;
 pub const MAX_HAND: usize = 20;
@@ -54,83 +58,105 @@ pub const OFF_SELECTION: usize = OFF_REVEALED + REVEALED_SIZE;
 
 pub const TENSOR_SIZE: usize = OFF_SELECTION + SELECTION_SIZE;
 
+pub const SHAPE_GLOBAL: &[usize] = &[GLOBAL_SIZE];
+pub const SHAPE_BATTLE: &[usize] = &[FIELD_SLOTS, SLOT_SIZE];
+pub const SHAPE_HAND: &[usize] = &[HAND_SIZE];
+pub const SHAPE_TRASH: &[usize] = &[TRASH_SIZE];
+pub const SHAPE_SECURITY: &[usize] = &[SECURITY_SIZE];
+pub const SHAPE_BREEDING: &[usize] = &[1, SLOT_SIZE];
+pub const SHAPE_REVEALED: &[usize] = &[REVEALED_SIZE];
+pub const SHAPE_SELECTION: &[usize] = &[SELECTION_SIZE];
+
 pub const SECTIONS: &[TensorSection] = &[
     TensorSection {
         id: "global",
         start: OFF_GLOBAL,
         len: GLOBAL_SIZE,
+        shape: SHAPE_GLOBAL,
         kind: TensorSectionKind::Scalars,
     },
     TensorSection {
         id: "my_battle",
         start: OFF_MY_BATTLE,
         len: BATTLE_SIZE,
+        shape: SHAPE_BATTLE,
         kind: TensorSectionKind::PermanentSlots,
     },
     TensorSection {
         id: "opponent_battle",
         start: OFF_OPP_BATTLE,
         len: BATTLE_SIZE,
+        shape: SHAPE_BATTLE,
         kind: TensorSectionKind::PermanentSlots,
     },
     TensorSection {
         id: "my_hand",
         start: OFF_MY_HAND,
         len: HAND_SIZE,
+        shape: SHAPE_HAND,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "opponent_hand",
         start: OFF_OPP_HAND,
         len: HAND_SIZE,
+        shape: SHAPE_HAND,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "my_trash",
         start: OFF_MY_TRASH,
         len: TRASH_SIZE,
+        shape: SHAPE_TRASH,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "opponent_trash",
         start: OFF_OPP_TRASH,
         len: TRASH_SIZE,
+        shape: SHAPE_TRASH,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "my_security",
         start: OFF_MY_SECURITY,
         len: SECURITY_SIZE,
+        shape: SHAPE_SECURITY,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "opponent_security",
         start: OFF_OPP_SECURITY,
         len: SECURITY_SIZE,
+        shape: SHAPE_SECURITY,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "my_breeding",
         start: OFF_MY_BREEDING,
         len: BREEDING_SIZE,
+        shape: SHAPE_BREEDING,
         kind: TensorSectionKind::PermanentSlots,
     },
     TensorSection {
         id: "opponent_breeding",
         start: OFF_OPP_BREEDING,
         len: BREEDING_SIZE,
+        shape: SHAPE_BREEDING,
         kind: TensorSectionKind::PermanentSlots,
     },
     TensorSection {
         id: "revealed",
         start: OFF_REVEALED,
         len: REVEALED_SIZE,
+        shape: SHAPE_REVEALED,
         kind: TensorSectionKind::CardIds,
     },
     TensorSection {
         id: "selection",
         start: OFF_SELECTION,
         len: SELECTION_SIZE,
+        shape: SHAPE_SELECTION,
         kind: TensorSectionKind::Scalars,
     },
 ];
@@ -216,6 +242,9 @@ pub const PROFILE: TensorProfile = TensorProfile {
     id: PROFILE_ID,
     game_mode: GAME_MODE,
     version: VERSION,
+    tensor_version: TENSOR_VERSION,
+    feature_schema_version: FEATURE_SCHEMA_VERSION,
+    layout_hash: LAYOUT_HASH,
     tensor_size: TENSOR_SIZE,
     field_slots: FIELD_SLOTS,
     slot_size: SLOT_SIZE,

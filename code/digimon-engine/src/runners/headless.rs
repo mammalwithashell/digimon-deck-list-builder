@@ -10,9 +10,13 @@ use crate::card_data::CardData;
 use crate::card_registry::CardRegistry;
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
+use crate::observation::{
+    build_observation_tensor, default_observation_profile, observation_layout,
+    parse_observation_profile, ObservationProfileId,
+};
 use crate::recorder::GameRecorder;
 use crate::rules::Rules;
-use crate::tensor::{build_tensor, TENSOR_SIZE};
+use crate::tensor::TENSOR_SIZE;
 
 /// Default PASS action — matches Python `ACTION_PASS_TURN = 62`.
 const ACTION_PASS_TURN: u16 = 62;
@@ -27,6 +31,7 @@ const ACTION_MULLIGAN_KEEP: u16 = 0;
 pub struct HeadlessRunner {
     pub game: Game,
     registry: CardRegistry,
+    observation_profile: ObservationProfileId,
     #[allow(dead_code)]
     verbose: bool,
     #[allow(dead_code)]
@@ -73,6 +78,7 @@ impl HeadlessRunner {
         Ok(Self {
             game,
             registry,
+            observation_profile: default_observation_profile(),
             verbose,
             record_actions,
             record_tensors,
@@ -80,6 +86,42 @@ impl HeadlessRunner {
             deck1_ids,
             deck2_ids,
         })
+    }
+
+    pub fn new_with_observation_profile(
+        deck1_ids: Vec<String>,
+        deck2_ids: Vec<String>,
+        all_card_data: &HashMap<String, CardData>,
+        verbose: bool,
+        record_actions: bool,
+        record_tensors: bool,
+        seed: Option<u64>,
+        observation_profile: ObservationProfileId,
+    ) -> Result<Self, String> {
+        let mut runner = Self::new(
+            deck1_ids,
+            deck2_ids,
+            all_card_data,
+            verbose,
+            record_actions,
+            record_tensors,
+            seed,
+        )?;
+        runner.observation_profile = observation_profile;
+        Ok(runner)
+    }
+
+    pub fn observation_profile_id(&self) -> &'static str {
+        self.observation_profile.as_str()
+    }
+
+    pub fn observation_layout(&self) -> crate::tensor_profiles::TensorProfile {
+        observation_layout(self.observation_profile)
+    }
+
+    pub fn set_observation_profile_for_test(&mut self, raw: &str) -> Result<(), String> {
+        self.observation_profile = parse_observation_profile(raw)?;
+        Ok(())
     }
 
     /// Execute a single action for the current player. No-op after
@@ -169,7 +211,7 @@ impl HeadlessRunner {
     /// current decision player).
     pub fn get_board_tensor(&self, player_id: Option<PlayerId>) -> Vec<f32> {
         let pid = player_id.unwrap_or_else(|| self.current_decision_player());
-        build_tensor(&self.game, pid, &self.registry)
+        build_observation_tensor(&self.game, pid, &self.registry, self.observation_profile)
     }
 
     pub fn get_last_log(&self) -> Vec<String> {

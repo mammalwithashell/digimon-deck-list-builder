@@ -55,10 +55,15 @@ class HeldOutEvalSuite:
     version: int
     opponent_policy: str
     games_per_cell: int
+    tensor_profile: str = "standard_lite_v2"
     matchups: List[Matchup] = field(default_factory=list)
 
     @classmethod
-    def from_yaml(cls, path: Path) -> "HeldOutEvalSuite":
+    def from_yaml(
+        cls,
+        path: Path,
+        tensor_profile: str = "standard_lite_v2",
+    ) -> "HeldOutEvalSuite":
         data = yaml.safe_load(Path(path).read_text()) or {}
         matchups = [
             Matchup(
@@ -73,6 +78,7 @@ class HeldOutEvalSuite:
             version=int(data["version"]),
             opponent_policy=str(data["opponent_policy"]),
             games_per_cell=int(data["games_per_cell"]),
+            tensor_profile=tensor_profile,
             matchups=matchups,
         )
         if suite.opponent_policy not in EVAL_OPPONENT_POLICIES:
@@ -83,10 +89,12 @@ class HeldOutEvalSuite:
         self,
         agent_fn: Callable[[DigimonEnv], int],
         max_games_per_cell: int | None = None,
+        tensor_profile: str | None = None,
     ) -> EvalSuiteResult:
         opponent_fn = EVAL_OPPONENT_POLICIES[self.opponent_policy]
         cells: Dict[str, EvalCellResult] = {}
         limit = max_games_per_cell or self.games_per_cell
+        env_tensor_profile = tensor_profile or self.tensor_profile
 
         for matchup in self.matchups:
             wins = losses = draws = 0
@@ -98,6 +106,7 @@ class HeldOutEvalSuite:
                     seed,
                     agent_fn,
                     opponent_fn,
+                    env_tensor_profile,
                 )
                 if outcome == "win":
                     wins += 1
@@ -115,8 +124,15 @@ class HeldOutEvalSuite:
         return EvalSuiteResult(cell_results=cells)
 
     @staticmethod
-    def _play_one_game(deck1, deck2, seed, agent_fn, opponent_fn) -> str:
-        env = DigimonEnv(deck1=deck1, deck2=deck2)
+    def _play_one_game(
+        deck1,
+        deck2,
+        seed,
+        agent_fn,
+        opponent_fn,
+        tensor_profile: str = "standard_lite_v2",
+    ) -> str:
+        env = DigimonEnv(deck1=deck1, deck2=deck2, tensor_profile=tensor_profile)
         _obs, _info = env.reset(seed=seed)
         terminated = truncated = False
 
