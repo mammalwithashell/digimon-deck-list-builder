@@ -354,7 +354,7 @@ class TestTensorProfiles:
             list_observation_profiles,
         )
 
-        assert DEFAULT_OBSERVATION_PROFILE == "standard_compact_v1"
+        assert DEFAULT_OBSERVATION_PROFILE == "standard_lite_v2"
         assert "standard_lite_v2" in list_observation_profiles()
         layout = get_observation_layout("standard_lite_v2")
 
