@@ -79,7 +79,9 @@ fn write_permanent_table(
     player_id: PlayerId,
 ) {
     let player = game.player(player_id);
-    let action_mask = crate::action::build_action_mask(game, player_id);
+    let action_mask =
+        (player_id == observer).then(|| crate::action::build_action_mask(game, observer));
+    let action_mask = action_mask.as_deref().unwrap_or(&[]);
 
     for (slot, permanent) in player.battle_area.iter().take(14).enumerate() {
         let handle = PermanentHandle {
@@ -166,9 +168,11 @@ fn write_permanent_row(
     {
         let source_base =
             base + layout::PERM_SOURCE_START_OFFSET + source_idx * layout::PERM_SOURCE_ENTRY_SIZE;
-        t[source_base + layout::PERM_SOURCE_CARD_ID_OFFSET] =
-            registry.get_index(source.card_id(&game.card_data)) as f32;
-        if let Some(handle) = handle {
+        if !source.face_down {
+            t[source_base + layout::PERM_SOURCE_CARD_ID_OFFSET] =
+                registry.get_index(source.card_id(&game.card_data)) as f32;
+        }
+        if let Some(handle) = handle.filter(|_| !source.face_down) {
             t[source_base + layout::PERM_SOURCE_OPT_STATE_OFFSET] =
                 game.source_opt_state(handle, source_idx);
             t[source_base + layout::PERM_SOURCE_DP_CONTRIBUTION_OFFSET] =
@@ -243,9 +247,11 @@ fn write_decision_context(t: &mut [f32], game: &Game, observer: PlayerId) {
     if let Some(sel) = game.pending_selection.as_ref() {
         t[base + 25] = 1.0;
         t[base + 26] = relative_player(sel.selecting_player, observer);
-        t[base + 27] = if sel.is_optional { 1.0 } else { 0.0 };
-        t[base + 28] =
-            (sel.valid_action_ids.len() as f32 / layout::PENDING_CHOICE_ROWS as f32).min(1.0);
+        if observer == sel.selecting_player {
+            t[base + 27] = if sel.is_optional { 1.0 } else { 0.0 };
+            t[base + 28] =
+                (sel.valid_action_ids.len() as f32 / layout::PENDING_CHOICE_ROWS as f32).min(1.0);
+        }
     }
 }
 
@@ -256,6 +262,9 @@ fn write_pending_choice_features(
     observer: PlayerId,
 ) {
     if let Some(sel) = game.pending_selection.as_ref() {
+        if observer != sel.selecting_player {
+            return;
+        }
         let source_index = game
             .card_data_for_handle(sel.source_card)
             .map(|card| registry.get_index(&card.card_id) as f32)
