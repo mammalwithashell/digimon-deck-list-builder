@@ -37,7 +37,8 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
-from digimon_engine import ACTION_SPACE_SIZE
+from digimon_gym.tensor_profiles import get_tensor_profile
+from digimon_engine import ACTION_SPACE_SIZE, REGISTRY_CAPACITY, EMBEDDING_DIM
 from digimon_gym.agents.gauntlet import MetaGauntlet, GauntletWrapper
 from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
 from digimon_gym.agents.maskable_recurrent import (
@@ -530,7 +531,8 @@ def make_env(opponent: str = "greedy",
              deck_pool_generate_fn: Optional[Callable] = None,
              deck_pool_generate_kwargs: Optional[Dict] = None,
              deck_pool_seed: Optional[int] = None,
-             deck_pool_hybrid_max: int = 10) -> gymnasium.Env:
+             deck_pool_hybrid_max: int = 10,
+             tensor_profile: str = "standard_compact_v1") -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -550,6 +552,7 @@ def make_env(opponent: str = "greedy",
         deck_pool_generate_kwargs: Keyword arguments for generate_fn.
         deck_pool_seed: RNG seed for DeckPoolWrapper reproducibility.
         deck_pool_hybrid_max: Max dynamic variants in hybrid mode (default: 10).
+        tensor_profile: Observation tensor profile passed to DigimonEnv.
 
     Returns:
         ActionMasker-wrapped environment ready for MaskablePPO.
@@ -557,7 +560,7 @@ def make_env(opponent: str = "greedy",
     Wrapper chain:
         DigimonEnv -> OpponentWrapper -> DeckPoolWrapper -> GauntletWrapper -> ActionMasker
     """
-    base_env = DigimonEnv(deck1=deck1, deck2=deck2)
+    base_env = DigimonEnv(deck1=deck1, deck2=deck2, tensor_profile=tensor_profile)
 
     if opponent == "self-play":
         env = base_env
@@ -611,7 +614,7 @@ def make_vec_env(cfg: TrainingConfig, opponent_fn: Callable[[DigimonEnv], int]):
 
     def _factory(rank: int):
         def _init():
-            base_env = DigimonEnv()
+            base_env = DigimonEnv(tensor_profile=cfg.tensor_profile)
             wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
 
             def mask_fn(env):
@@ -742,6 +745,7 @@ def train(total_timesteps: int = 100_000,
         lstm_hidden_size = cfg.lstm_hidden_size
 
     _seed_everything(cfg.seed)
+    observation_layout = get_tensor_profile(cfg.tensor_profile)
     run_name = cfg.run_name or datetime.now().strftime("pilot_ppo_%Y%m%d_%H%M%S")
     algorithm_name = "MaskableRecurrentPPO" if use_lstm else "MaskablePPO"
     if verbose:
@@ -758,6 +762,14 @@ def train(total_timesteps: int = 100_000,
         print(f"  Rollout steps:  {n_steps}")
         print(f"  Eval freq:      every {eval_freq:,} steps")
         print(f"  TensorBoard:    {tensorboard_log}")
+        print(f"  Tensor profile: {observation_layout.id}")
+        print(
+            f"  Tensor layout:  size={observation_layout.tensor_size}, "
+            f"tensor_v={observation_layout.tensor_version}, "
+            f"schema={observation_layout.feature_schema_version}"
+        )
+        if observation_layout.layout_hash:
+            print(f"  Layout hash:    {observation_layout.layout_hash}")
         if gauntlet and gauntlet.deck_count > 0:
             print(f"  Gauntlet:       {gauntlet.archetype_count} archetypes, "
                   f"{gauntlet.deck_count} decks")
@@ -793,6 +805,7 @@ def train(total_timesteps: int = 100_000,
             deck_pool_mode=deck_pool_mode,
             deck_pool_seed=deck_pool_seed,
             deck_pool_hybrid_max=deck_pool_hybrid_max,
+            tensor_profile=cfg.tensor_profile,
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -811,6 +824,7 @@ def train(total_timesteps: int = 100_000,
         features_extractor_kwargs=dict(
             features_dim=512,
             pretrained_embeddings=pretrained_embeddings,
+            observation_layout=observation_layout,
         ),
     )
 
@@ -871,7 +885,7 @@ def train(total_timesteps: int = 100_000,
     # Create evaluation callback
     if pool_opponent_fn is not None:
         def eval_env_fn():
-            base_env = DigimonEnv(deck1=deck1)
+            base_env = DigimonEnv(deck1=deck1, tensor_profile=cfg.tensor_profile)
             wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
             return ActionMasker(
                 wrapped,
@@ -886,6 +900,7 @@ def train(total_timesteps: int = 100_000,
             deck_pool_mode=deck_pool_mode,
             deck_pool_seed=deck_pool_seed,
             deck_pool_hybrid_max=deck_pool_hybrid_max,
+            tensor_profile=cfg.tensor_profile,
         )
     eval_suite = None
     if cfg.eval_suite:
@@ -953,6 +968,14 @@ def train(total_timesteps: int = 100_000,
         opponent_type=opponent,
         model_path=model_path,
         tensorboard_log_dir=tensorboard_log,
+        observation_profile=observation_layout.id,
+        tensor_version=observation_layout.tensor_version,
+        feature_schema_version=observation_layout.feature_schema_version,
+        tensor_size=observation_layout.tensor_size,
+        tensor_layout_hash=observation_layout.layout_hash,
+        action_space_size=ACTION_SPACE_SIZE,
+        card_registry_capacity=REGISTRY_CAPACITY,
+        embedding_dim=EMBEDDING_DIM,
         final_win_rate=win_rate_cb.last_win_rate,
         final_mean_reward=win_rate_cb.last_mean_reward,
         total_games=win_rate_cb.games_played,
@@ -1069,6 +1092,10 @@ def main():
         "--lstm-hidden-size", type=int, default=None,
         help="LSTM hidden units per layer."
     )
+    parser.add_argument(
+        "--tensor-profile", type=str, default=None,
+        help="Observation tensor profile, e.g. standard_compact_v1 or standard_lite_v2."
+    )
 
     args = parser.parse_args()
 
@@ -1089,6 +1116,7 @@ def main():
         "tensorboard_log": args.log_dir,
         "models_dir": args.save_dir,
         "lstm_hidden_size": args.lstm_hidden_size,
+        "tensor_profile": args.tensor_profile,
     }
     overrides.update({key: value for key, value in legacy_overrides.items() if value is not None})
     if args.self_play:

@@ -53,6 +53,14 @@ class TrainingRunMetadata:
     model_path: str = ""
     tensorboard_log_dir: str = ""
     hyperparameters: dict = field(default_factory=dict)
+    observation_profile: str = ""
+    tensor_version: int = 0
+    feature_schema_version: str = ""
+    tensor_size: int = 0
+    tensor_layout_hash: str = ""
+    action_space_size: int = 0
+    card_registry_capacity: int = 0
+    embedding_dim: int = 0
 
     # Aggregate results
     final_win_rate: float | None = None

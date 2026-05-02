@@ -44,6 +44,10 @@ class TrainingConfig:
     models_dir: str = "models"
     tensorboard_log: str = "runs/pilot_ppo"
     run_name: Optional[str] = None
+    tensor_profile: str = "standard_compact_v1"
+
+    def __post_init__(self) -> None:
+        self._validate()
 
     @classmethod
     def from_yaml(
@@ -85,6 +89,8 @@ class TrainingConfig:
             raise ValueError("keep_last_checkpoints must be >= 1")
         if self.opponent == "pool" and not self.opponent_pool_manifest:
             raise ValueError("opponent=pool requires opponent_pool_manifest")
+        if not isinstance(self.tensor_profile, str) or not self.tensor_profile.strip():
+            raise ValueError("tensor_profile must be a non-blank string")
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
