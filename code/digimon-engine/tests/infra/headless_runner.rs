@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use digimon_engine::action::ACTION_SPACE_SIZE;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
+use digimon_engine::observation::parse_observation_profile;
 use digimon_engine::tensor::TENSOR_SIZE;
 use digimon_engine::HeadlessRunner;
 
@@ -56,6 +57,27 @@ fn test_deck() -> Vec<String> {
     deck
 }
 
+fn sample_runner() -> HeadlessRunner {
+    let db = test_card_db();
+    HeadlessRunner::new(test_deck(), test_deck(), &db, false, false, false, Some(1)).unwrap()
+}
+
+fn sample_runner_with_observation_profile(profile_id: &str) -> HeadlessRunner {
+    let db = test_card_db();
+    let profile = parse_observation_profile(profile_id).unwrap();
+    HeadlessRunner::new_with_observation_profile(
+        test_deck(),
+        test_deck(),
+        &db,
+        false,
+        false,
+        false,
+        Some(1),
+        profile,
+    )
+    .unwrap()
+}
+
 fn dsl_slice_card_db() -> HashMap<String, CardData> {
     ["BT15-003", "BT17-007", "BT17-015", "BT22-084", "AD1-025"]
         .into_iter()
@@ -71,6 +93,34 @@ fn dsl_slice_deck() -> Vec<String> {
     deck.extend(std::iter::repeat("BT22-084".to_string()).take(8));
     deck.extend(std::iter::repeat("AD1-025".to_string()).take(8));
     deck
+}
+
+#[test]
+fn runner_default_observation_profile_is_compact_v1() {
+    let runner = sample_runner();
+
+    assert_eq!(runner.observation_profile_id(), "standard_compact_v1");
+    assert_eq!(runner.observation_layout().tensor_size, TENSOR_SIZE);
+    assert_eq!(runner.get_board_tensor(None).len(), TENSOR_SIZE);
+}
+
+#[test]
+fn runner_can_use_standard_lite_v2_observation_profile() {
+    let runner = sample_runner_with_observation_profile("standard_lite_v2");
+
+    assert_eq!(runner.observation_profile_id(), "standard_lite_v2");
+    assert_eq!(runner.observation_layout().tensor_size, 8320);
+    assert_eq!(runner.get_board_tensor(None).len(), 8320);
+}
+
+#[test]
+fn runner_test_setter_accepts_observation_profile_aliases() {
+    let mut runner = sample_runner();
+
+    runner.set_observation_profile_for_test("v2_lite").unwrap();
+
+    assert_eq!(runner.observation_profile_id(), "standard_lite_v2");
+    assert_eq!(runner.get_board_tensor(None).len(), 8320);
 }
 
 #[test]
