@@ -13,12 +13,14 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledGrantKeywordValue, CompiledPlayerRef, CompiledPredicate, CompiledScope,
+    CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef, CompiledPredicate, CompiledScope,
 };
 
 use crate::card_source::CardHandle;
+use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::modifier_map::{lookup_keyword, lookup_modifier_type};
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::{Expiry, PlayerId};
 use crate::permanent::PermanentHandle;
@@ -30,8 +32,11 @@ pub fn lower(
     target: CompiledPredicate,
     target_player: Option<CompiledPlayerRef>,
     dp_modifier: Option<i32>,
+    dp_modifier_fn: Option<CompiledFormula>,
+    security_attack_fn: Option<CompiledFormula>,
     grant_keyword: Option<CompiledGrantKeywordValue>,
     modifier: Option<String>,
+    raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
     let is_self_aura = target == CompiledPredicate::default();
     let active_when = active_when.map(Arc::new);
@@ -48,6 +53,22 @@ pub fn lower(
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
         }
+        if let Some(formula) = dp_modifier_fn.clone() {
+            builder = builder.dp_modifier_fn(dynamic_formula_fn(
+                formula,
+                target.clone(),
+                true,
+                raw.clone(),
+            ));
+        }
+        if let Some(formula) = security_attack_fn.clone() {
+            builder = builder.security_attack_fn(dynamic_formula_fn(
+                formula,
+                target.clone(),
+                true,
+                raw.clone(),
+            ));
+        }
         if grant_keyword.is_none() {
             return Some(builder.build());
         }
@@ -58,8 +79,31 @@ pub fn lower(
 
     let target_arc = Arc::new(target);
     let dp = dp_modifier;
+    let dp_formula = if is_self_aura { None } else { dp_modifier_fn };
+    let security_attack_formula = if is_self_aura {
+        None
+    } else {
+        security_attack_fn
+    };
     let gk = grant_keyword.and_then(|g| lookup_keyword(&g.keyword, g.value));
     let modifier = modifier.as_deref().and_then(lookup_modifier_type);
+
+    if let Some(formula) = dp_formula {
+        builder = builder.dp_modifier_fn(dynamic_formula_fn(
+            formula,
+            (*target_arc).clone(),
+            false,
+            raw.clone(),
+        ));
+    }
+    if let Some(formula) = security_attack_formula {
+        builder = builder.security_attack_fn(dynamic_formula_fn(
+            formula,
+            (*target_arc).clone(),
+            false,
+            raw.clone(),
+        ));
+    }
 
     builder = builder.process(move |ctx| {
         if let (Some(player_ref), Some(modifier)) = (target_player, modifier) {
@@ -102,6 +146,26 @@ pub fn lower(
     });
 
     Some(builder.build())
+}
+
+fn dynamic_formula_fn(
+    formula: CompiledFormula,
+    target: CompiledPredicate,
+    self_only: bool,
+    raw: Arc<EngineRawRustRegistry>,
+) -> impl Fn(&crate::effect_context::EffectReadContext<'_>, PermanentHandle) -> i32 + Send + Sync + 'static
+{
+    let target = Arc::new(target);
+    move |ctx, handle| {
+        if self_only {
+            if ctx.source_permanent != Some(handle) {
+                return 0;
+            }
+        } else if !eval_predicate(&target, ctx, PredicateSubject::Permanent(handle)) {
+            return 0;
+        }
+        formula_eval::evaluate_read_with_raw(&formula, ctx, handle, &raw)
+    }
 }
 
 fn players_for_ref(

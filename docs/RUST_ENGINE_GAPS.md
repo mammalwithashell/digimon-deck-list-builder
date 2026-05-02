@@ -68,7 +68,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [De-Digivolve N primitive (single + mass)](#de-digivolve-n-primitive-single--mass) | 🟢 | 2 | `effect_context.rs`, `permanent.rs` |
 | [Ace Overflow: inherited memory penalty on zone-change from field / under-card](#ace-overflow-inherited-memory-penalty-on-zone-change-from-field--under-card) | 🟢 | 4 | `card_data.rs`, `game.rs`, `effect.rs` |
 | [Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated)](#dynamic-cost-reduction-at-beforepaycost-closure-valued--selection-gated) | 🟢 | 4 | `effect.rs`, `game.rs` |
-| [Dynamic DP scaling modifier (per-stack-depth / per-opponent-board)](#dynamic-dp-scaling-modifier-per-stack-depth--per-opponent-board) | 🔴 | 2 | `effect.rs`, `tensor.rs` |
+| [Dynamic DP scaling modifier (per-stack-depth / per-opponent-board)](#dynamic-dp-scaling-modifier-per-stack-depth--per-opponent-board) | 🟡 | 2 | `effect.rs`, `tensor.rs` |
 | [Condition-gated modifier entries](#condition-gated-modifier-entries) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
 | [Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement)](#player-scoped-modifier-registry-cannotplayfromtrash-cannotplaydigimonbyeffect-opponentcannotreducedigivolvecost-ignorecolorrequirement) | 🔴 | 6+ | `modifiers.rs`, `enums.rs`, `action/`, `effect_context.rs` |
 | [Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic](#option-card-play-flow-resolve--trash-vs-place-on-field-mainsecurity-activation--plug-in--link-mechanic) | 🔴 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
@@ -381,13 +381,15 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** RUST_ENGINE_API §9, Parity §4.7e (DigiXros cost reduction).
 
 ### Dynamic DP scaling modifier (per-stack-depth / per-opponent-board / per-color)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟡 PARTIAL
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17)
 - **Card(s):** BT21-072 Arresterdramon: Superior Mode (per digivolution cards), BT24-017 Medusamon (per opponent Digimon) — DNA Omnimon adds: P-182 WarGreymon (+1000 DP per distinct color across own Digimon + Tamers)
 - **Effect text:** "This Digimon gets +1000 DP for each of its digivolution cards." / "this Digimon gets +2000 DP for each of your opponent's Digimon until their turn ends."
+- **Status 2026-05-02:** Closed for DSL formula-backed aura clauses. `kind: aura` accepts `dp_modifier_fn` and stores a live runtime formula; `effective_dp` and `source_dp_contribution` evaluate the formula at query/tensor time rather than materializing a stale modifier. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_dynamic_formulas phase2f2_formula_eval phase2f2_modifier_formula --nocapture`.
 - **What's missing:** `EffectBuilder::dp_modifier(n)` is static. Per §13, modifier-registry DP grants are NOT summed into `source_dp_contribution` tensor slots — so `add_dp_modifier` also can't express tensor-correct dynamic DP.
 - **Suggested API shape:** `.dp_modifier_fn(|&EffectReadContext| i16)` closure-valued variant evaluated at tensor-build time. Or `ModifierType::ChangeDpDynamic(Box<dyn Fn(...)>)` with tensor-aware summation.
-- **Workaround:** Static snapshot at cast time for the opponent-scaling variant — fails faithfulness when opponent board changes. Per-stack-depth has no snapshot equivalent.
+- **What's still open:** Non-aura temporary dynamic DP grants and any formula selectors not expressible through the current DSL formula vocabulary should remain tracked separately. Static snapshot at cast time for temporary opponent-scaling variants still fails faithfulness when opponent board changes.
+- **Workaround:** For continuous aura text, use `kind: aura` with `dp_modifier_fn`.
 - **Related:** RUST_ENGINE_API §13.
 
 ### Condition-gated modifier entries + new `Expiry` variants
@@ -594,7 +596,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
 - **Card(s):** BT10-042 Venusmon, P-134 Shoemon — Dark Masters adds: BT19-093 Queen Device ("[Security] Give 2 of your opponent's Digimon `<Security A. -2>` for the turn"), BT16-046 GranKuwagamon ("1 of your Digimon gains `<Security A. +1>` for the turn")
 - **Effect text:** "[When Digivolving] All of your opponent's Digimon gain ＜Security A. -1＞ until the end of your opponent's turn."
-- **What's missing:** `Keyword::SecurityAttackMinus(i8)` / `SecurityAttackPlus(i8)` and `ModifierType::SecurityAttackChange` exist in enums.rs, but (a) no primitive grants a parametric Security A. keyword to a target with an expiry (`grant_keyword` takes a plain `Keyword`, which accepts `SecurityAttackMinus(1)`, but the security-check pipeline doesn't appear to consume granted variants — only the modifier's i32 delta); (b) the security-check pipeline in `combat.rs` must sum both native and modifier-granted Security A. deltas on the attacker; (c) no iteration helper `ctx.for_each_opponent_permanent(|h| …)` for mass application.
+- **Status 2026-05-02:** Dynamic formula aura sibling is closed. `kind: aura` accepts `security_attack_fn`, and the combat security-check path recomputes it at resolution, then adds printed Security Attack keyword deltas and `ModifierType::SecurityAttackChange`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_dynamic_formulas phase2f2_formula_eval phase2f2_modifier_formula --nocapture`.
+- **What's missing:** `Keyword::SecurityAttackMinus(i8)` / `SecurityAttackPlus(i8)` and `ModifierType::SecurityAttackChange` exist in enums.rs, but this targeted-grant gap still lacks a dedicated primitive that grants a parametric Security A. change to a selected target with an expiry, plus iteration helper sugar such as `ctx.for_each_opponent_permanent(|h| …)` for mass application.
 - **Suggested API shape:** `ctx.grant_security_attack_change(target, delta: i8, expiry)` wrapping `add_modifier(target, ModifierType::SecurityAttackChange, delta as i32, expiry)`. Plus `ctx.for_each_opponent_permanent(|h| …)` sugar for mass application (or an aura form for ongoing).
 - **Workaround:** Manual loop over `battle_area(opp_id)` at firing time covers the snapshot variant — fidelity-acceptable for WhenDigivolving cards. Aura form ("all opp Digimon have…") remains BLOCKED.
 - **Related:** "Named-target declarative aura (DP / keyword grants filtered by name/trait/level)"; "Native printed keyword parsing".

@@ -100,6 +100,8 @@ impl CardEffect for DslCardEffect {
                         target,
                         target_player,
                         dp_modifier,
+                        dp_modifier_fn,
+                        security_attack_fn,
                         grant_keyword,
                         modifier,
                         ..
@@ -111,8 +113,11 @@ impl CardEffect for DslCardEffect {
                             target.clone(),
                             *target_player,
                             *dp_modifier,
+                            dp_modifier_fn.clone(),
+                            security_attack_fn.clone(),
                             grant_keyword.clone(),
                             modifier.clone(),
+                            self.raw.clone(),
                         ) {
                             out.push(e);
                         }

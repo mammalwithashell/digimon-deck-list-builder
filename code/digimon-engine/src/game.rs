@@ -1867,6 +1867,92 @@ impl Game {
         total
     }
 
+    pub fn dynamic_dp_aura_bonus(&self, target: crate::permanent::PermanentHandle) -> i32 {
+        self.live_declarative_formula_sum(target, false).0
+    }
+
+    pub fn dynamic_security_attack_aura_bonus(
+        &self,
+        target: crate::permanent::PermanentHandle,
+    ) -> Option<i32> {
+        let (value, found) = self.live_declarative_formula_sum(target, true);
+        found.then_some(value)
+    }
+
+    fn live_declarative_formula_sum(
+        &self,
+        target: crate::permanent::PermanentHandle,
+        security_attack: bool,
+    ) -> (i32, bool) {
+        use crate::effect_context::EffectReadContext;
+
+        let mut sources = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
+                };
+                let stack_size = perm.card_sources.len();
+                for (source_index, source) in perm.card_sources.iter().enumerate() {
+                    let inherited_source = source_index + 1 < stack_size;
+                    sources.push((
+                        source.card_id(&self.card_data).to_string(),
+                        source.handle(),
+                        Some(host),
+                        player_id,
+                        inherited_source,
+                    ));
+                }
+            }
+
+            if let Some(perm) = player.breeding_area.as_ref() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: crate::action::space::BREEDING_TARGET as u8,
+                };
+                let top = perm.top_card();
+                sources.push((
+                    top.card_id(&self.card_data).to_string(),
+                    top.handle(),
+                    Some(host),
+                    player_id,
+                    false,
+                ));
+            }
+        }
+
+        let mut total = 0;
+        let mut found = false;
+        for (card_id, source_card, source_permanent, controller, inherited_source) in sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                let Some(formula_fn) = (if security_attack {
+                    effect.security_attack_fn.as_ref()
+                } else {
+                    effect.dp_modifier_fn.as_ref()
+                }) else {
+                    continue;
+                };
+                let ctx = EffectReadContext::new(self, source_card, source_permanent, controller);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&ctx) {
+                        continue;
+                    }
+                }
+                found = true;
+                total += formula_fn(&ctx, target);
+            }
+        }
+        (total, found)
+    }
+
     // ─── Effect-listing API (§4.5c) ──────────────────────────────────
 
     /// Enumerate a card's effects by asking the registry for its impl.
@@ -2153,19 +2239,22 @@ impl Game {
 
         let mut total = 0i32;
         for effect in &effects {
-            if effect.dp_modifier == 0 {
+            if effect.dp_modifier == 0 && effect.dp_modifier_fn.is_none() {
                 continue;
             }
             if is_under != effect.inherited {
                 continue;
             }
+            let ctx = EffectReadContext::new(self, source.handle(), Some(perm), perm.player);
             if let Some(cond) = &effect.condition {
-                let ctx = EffectReadContext::new(self, source.handle(), Some(perm), perm.player);
                 if !cond(&ctx) {
                     continue;
                 }
             }
             total += effect.dp_modifier;
+            if let Some(formula_fn) = effect.dp_modifier_fn.as_ref() {
+                total += formula_fn(&ctx, perm);
+            }
         }
         total
     }

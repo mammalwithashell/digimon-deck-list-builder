@@ -871,6 +871,8 @@ fn compile_declarative(
                 .unwrap_or_default(),
             target_player: a.target_player.map(compile_player_ref),
             dp_modifier: a.dp_modifier,
+            dp_modifier_fn: a.dp_modifier_fn.as_ref().map(compile_formula),
+            security_attack_fn: a.security_attack_fn.as_ref().map(compile_formula),
             grant_keyword: a.grant_keyword.map(|gk| CompiledGrantKeywordValue {
                 keyword: gk.keyword,
                 value: gk.value,

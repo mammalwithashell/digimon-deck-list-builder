@@ -542,6 +542,8 @@ Format per entry:
 - Effect text: "[All Turns] This Digimon gets +1000 DP for each of its digivolution cards."
 - Missing DSL verb / step kind / predicate: `dp_modifier_fn` / `dp_modifier_formula` — a formula-based variant of `AuraBody.dp_modifier`. The DCGO implements this via `ChangeSelfDPStaticEffect(changeValue: 1000 * count(), ...)` at `EffectTiming.None`, where `count()` is a live lambda returning `PermanentOfThisCard().DigivolutionCards.Count()` (= material_count = stack_size - 1). This is a **continuously-recomputed** aura that updates dynamically each tick, including after `de_digivolve` operations that pop digivolution cards from the stack. The DSL `kind: aura` with self-target accepts only `dp_modifier: Option<i32>` — a static literal with no formula variant. The `FormulaSpec` type (with `per: material_count, delta: 1000`) exists for step-level `add_dp_modifier` verbs, but `add_dp_modifier` only snapshots the formula's value at event-fire time, not continuously. Storing a snapshot in `Effect.dp_modifier` cannot model the dynamic behaviour required.
 - Lowers to engine API: `source_dp_contribution(perm_handle, source_index)` reads `Effect.dp_modifier` continuously — the engine query mechanism already supports live reads. The gap is that `AuraBody` has no formula field to store a `FormulaSpec` that `lower_aura.rs` could evaluate at read-time rather than compile-time.
+- **Closed 2026-05-02:** `kind: aura` now accepts `dp_modifier_fn` and lowers it into a live runtime formula closure instead of snapshotting into `Effect.dp_modifier`. `Game::effective_dp` and `Game::source_dp_contribution` evaluate that closure at query/tensor time, so `per: material_count` changes when the stack changes. Sibling coverage: `security_attack_fn` is also accepted on aura clauses and is recomputed at security-check resolution, alongside printed Security Attack keywords and `ModifierType::SecurityAttackChange`.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_dynamic_formulas phase2f2_formula_eval phase2f2_modifier_formula --nocapture`.
 - Suggested DSL syntax:
   ```yaml
   - kind: aura
@@ -552,9 +554,9 @@ Format per entry:
       per: material_count               # CompiledPerSelector::MaterialCount = stack_size - 1
       delta: 1000
   ```
-  Implementation notes: (1) add `dp_modifier_fn: Option<FormulaSpec>` to `AuraBody` in `digimon-dsl/src/clause.rs`; (2) compile to `CompiledAuraBody.dp_modifier_fn: Option<CompiledFormula>` in `digimon-dsl/src/compiler/clause.rs`; (3) in `lower_aura.rs`, when `dp_modifier_fn` is set, store the `CompiledFormula` in a new `Effect.dp_modifier_formula` field instead of `Effect.dp_modifier`; (4) have `source_dp_contribution` evaluate the formula against the current stack size when `dp_modifier_formula` is present.
-- Gap kind: dsl (engine `source_dp_contribution` already reads continuously; `AuraBody` just lacks the formula field, and `Effect` lacks a formula storage slot for dynamic evaluation).
-- Workaround: Clause omitted from YAML. Test `#[ignore = "pending: G-AURA-DP-FORMULA — AuraBody.dp_modifier does not accept a formula"]`.
+  Implementation notes: implemented as `AuraBody.dp_modifier_fn` / `CompiledDeclarativeClause::Aura::dp_modifier_fn` plus runtime `Effect.dp_modifier_fn` evaluation in the DP query path.
+- Gap kind: dsl (closed for formula-backed DP and Security Attack aura clauses).
+- Workaround: None for this shape.
 - First reported: 2026-04-27 (BT21-072 batch-implement-cards-rust-dsl, Medusamon Batch 11)
 
 ---

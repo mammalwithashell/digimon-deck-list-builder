@@ -43,6 +43,8 @@ pub type EffectReplacementConditionFn = Box<
 pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync + 'static>;
 pub type CostReductionFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
 pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
+pub type DynamicModifierFn =
+    Box<dyn Fn(&EffectReadContext, PermanentHandle) -> i32 + Send + Sync + 'static>;
 /// Closure that accepts a read-only context and a candidate host handle,
 /// returning `true` iff the host is a legal target for a Link Option.
 /// Phase 8: consumed by Link dispatch to mask host-selection prompts.
@@ -166,6 +168,8 @@ pub struct Effect {
 
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
+    pub dp_modifier_fn: Option<DynamicModifierFn>,
+    pub security_attack_fn: Option<DynamicModifierFn>,
     pub cost_reduction: i32,
     pub granted_keyword: Option<Keyword>,
     pub overclock_cost_filter: Option<OverclockCostFilterFn>,
@@ -486,6 +490,8 @@ impl EffectBuilder {
                 cost_reduction_fn: None,
                 pay_cost_fn: None,
                 dp_modifier: 0,
+                dp_modifier_fn: None,
+                security_attack_fn: None,
                 cost_reduction: 0,
                 granted_keyword: None,
                 overclock_cost_filter: None,
@@ -641,6 +647,22 @@ impl EffectBuilder {
 
     pub fn dp_modifier(mut self, n: i32) -> Self {
         self.inner.dp_modifier = n;
+        self
+    }
+
+    pub fn dp_modifier_fn<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> i32 + Send + Sync + 'static,
+    {
+        self.inner.dp_modifier_fn = Some(Box::new(f));
+        self
+    }
+
+    pub fn security_attack_fn<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext, PermanentHandle) -> i32 + Send + Sync + 'static,
+    {
+        self.inner.security_attack_fn = Some(Box::new(f));
         self
     }
 

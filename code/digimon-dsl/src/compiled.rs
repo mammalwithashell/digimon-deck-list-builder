@@ -355,6 +355,8 @@ pub enum CompiledDeclarativeClause {
         target: CompiledPredicate,
         target_player: Option<CompiledPlayerRef>,
         dp_modifier: Option<i32>,
+        dp_modifier_fn: Option<CompiledFormula>,
+        security_attack_fn: Option<CompiledFormula>,
         grant_keyword: Option<CompiledGrantKeywordValue>,
         modifier: Option<String>,
         summary: Option<String>,

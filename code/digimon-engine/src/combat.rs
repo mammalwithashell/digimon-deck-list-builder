@@ -152,7 +152,8 @@ impl Game {
             .battle_area
             .get(handle.index as usize)?;
         let base = perm.base_dp(&self.card_data)?;
-        let bonus = self.modifiers.sum(handle, ModifierType::ChangeDp);
+        let bonus =
+            self.modifiers.sum(handle, ModifierType::ChangeDp) + self.dynamic_dp_aura_bonus(handle);
         Some(base + bonus)
     }
 
@@ -1625,7 +1626,10 @@ impl Game {
             .modifiers
             .sum(attacker, ModifierType::SecurityAttackChange);
         let sa_keyword = self.security_attack_keyword_bonus(attacker);
-        let checks = (1 + sa_modifier + sa_keyword).max(0) as u8;
+        let base_checks = self
+            .dynamic_security_attack_aura_bonus(attacker)
+            .unwrap_or(1);
+        let checks = (base_checks + sa_modifier + sa_keyword).max(0) as u8;
         if checks == 0 {
             return AttackResult::SecurityCheckSurvived;
         }

@@ -104,6 +104,8 @@ Key rules:
 - `.once_per_turn()` — `max_per_turn = 1`.
 - `.timing(EffectTiming::...)` — override the timing enum (rare).
 - `.dp_modifier(n)` — static DP buff (for declarative effects).
+- `.dp_modifier_fn(|ctx, target| n)` — live DP formula/query contribution for declarative aura effects.
+- `.security_attack_fn(|ctx, target| n)` — live Security Attack check count formula for declarative aura effects.
 - `.cost_reduction(n)` — static cost reduction.
 - `.build()` — finalize into `Effect`.
 
@@ -1842,7 +1844,7 @@ Avoid encoding DP-change effects via `ctx.add_dp_modifier(...)` for *static* buf
 
 ### Declarative aura DSL materialization
 
-`kind: aura` supports two process-backed materialization shapes through `Game::tick_declarative_effects`:
+`kind: aura` supports process-backed materialization shapes through `Game::tick_declarative_effects` and formula-backed query-time shapes for values that must not snapshot field state:
 
 ```yaml
 - kind: aura
@@ -1852,11 +1854,21 @@ Avoid encoding DP-change effects via `ctx.add_dp_modifier(...)` for *static* buf
 - kind: aura
   target_player: opponent
   modifier: CannotReduceDigivolveCost
+
+- kind: aura
+  target: {}
+  dp_modifier_fn: { base: 0, per: material_count, delta: 1000 }
+
+- kind: aura
+  target: {}
+  security_attack_fn: { base: 1, per: material_count, delta: 1 }
 ```
 
 With `target`, the aura scans battle-area permanents and installs `dp_modifier`, `grant_keyword`, and named permanent `modifier` entries on matches. `other: true` excludes the source permanent when source context is available. With `target_player`, the aura resolves the player reference using the same `you` / `opponent` / `active` / `any` semantics as player-scoped flood gates and installs the named player modifier.
 
-This is a materialized tick path, not query-time aura recomputation. Each `tick_declarative_effects` call first clears modifiers and granted keywords previously materialized by process-backed declaratives, then reapplies the currently live aura/flood-gate effects. That refresh prevents repeated ticks from stacking and removes stale materializations when an aura source leaves play, `active_when` becomes false, `target_player: active` changes, or a permanent stops matching the target predicate. Call `tick_declarative_effects` after setting up or mutating field state in tests that need these process-backed declaratives to be present.
+Static `dp_modifier`, `grant_keyword`, and named `modifier` aura fields are materialized on tick. Each `tick_declarative_effects` call first clears modifiers and granted keywords previously materialized by process-backed declaratives, then reapplies the currently live aura/flood-gate effects. That refresh prevents repeated ticks from stacking and removes stale materializations when an aura source leaves play, `active_when` becomes false, `target_player: active` changes, or a permanent stops matching the target predicate. Call `tick_declarative_effects` after setting up or mutating field state in tests that need these process-backed declaratives to be present.
+
+Formula-backed `dp_modifier_fn` and `security_attack_fn` auras are not materialized into permanent modifiers. They carry the compiled formula into the runtime effect and are continuously recomputed by the relevant query/resolution path: DP formulas are read by `effective_dp` and `source_dp_contribution`, while Security Attack formulas are read when the attack security-check count is resolved. This keeps `material_count` and other field-state selectors live after stack depth or board state changes.
 
 ### How the tensor reads these
 

@@ -1,0 +1,72 @@
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::permanent::PermanentHandle;
+
+#[test]
+fn self_aura_dp_formula_recomputes_after_stack_depth_changes() {
+    let yaml = r#"
+card: TEST-DP-FORMULA
+name: Formula Body
+kind: digimon
+color: [black]
+level: 4
+cost: 4
+dp: 4000
+effects:
+  - kind: aura
+    target: {}
+    dp_modifier_fn: { base: 0, per: material_count, delta: 1000 }
+"#;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card(make_test_card("BT5-008", "Material One"))
+        .add_card(make_test_card("BT5-009", "Material Two"))
+        .start();
+    r.place_stack(0, &["BT5-008", "BT5-009", "TEST-DP-FORMULA"]);
+    let h = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
+
+    assert_eq!(r.game.effective_dp(h), Some(6000));
+    r.game.players[0].battle_area[0].card_sources.remove(0);
+    assert_eq!(
+        r.game.effective_dp(h),
+        Some(5000),
+        "formula must be live, not snapshotted"
+    );
+}
+
+#[test]
+fn security_attack_formula_recomputes_at_attack_resolution() {
+    let yaml = r#"
+card: TEST-SA-FORMULA
+name: Security Formula Body
+kind: digimon
+color: [red]
+level: 4
+cost: 4
+dp: 4000
+effects:
+  - kind: aura
+    target: {}
+    security_attack_fn: { base: 1, per: material_count, delta: 1 }
+"#;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card(make_test_card("BT5-008", "Material One"))
+        .add_card(make_test_card("BT1-010", "Security One"))
+        .add_card(make_test_card("BT1-011", "Security Two"))
+        .add_card(make_test_card("BT1-012", "Security Three"))
+        .security(1, &["BT1-010", "BT1-011", "BT1-012"])
+        .start();
+    let h = r.place_stack(0, &["BT5-008", "TEST-SA-FORMULA"]);
+
+    r.attack_player(h, 1, false);
+    assert_eq!(
+        r.game.player(1).security.len(),
+        1,
+        "base 1 plus one material performs two checks"
+    );
+}

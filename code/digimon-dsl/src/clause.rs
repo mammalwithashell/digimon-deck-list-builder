@@ -263,6 +263,10 @@ pub struct AuraBody {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dp_modifier: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dp_modifier_fn: Option<crate::formula::FormulaSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security_attack_fn: Option<crate::formula::FormulaSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grant_keyword: Option<GrantKeywordValue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier: Option<String>,
