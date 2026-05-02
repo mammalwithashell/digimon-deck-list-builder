@@ -71,7 +71,7 @@ Future profile ideas are not implemented or exported in HEAD. Examples include `
 - `standard_pending_ablation_v2` answers "do rich pending-choice rows help?" while keeping the rest of the observation close to the compact baseline.
 - `standard_lite_v2` answers "does the practical v2 observation improve training?" and is the first profile intended for serious pilot runs.
 
-Use `standard_pending_ablation_v2` for controlled comparison runs against `standard_compact_v1`, especially trigger-order and pending-selection scenarios. Do not treat it as the production stepping stone unless the ablation result justifies prioritizing pending metadata before the rest of the v2 board layout.
+If `standard_pending_ablation_v2` is implemented and exported later, use it for controlled comparison runs against `standard_compact_v1`, especially trigger-order and pending-selection scenarios. Do not pass this profile ID to today's CLI or registry. Keep `standard_lite_v2` as the implemented default for v2 pilot runs.
 
 ## Layout Metadata
 
@@ -457,13 +457,13 @@ Suggested shape:
 - `pending_choice_features`
 - no full `action_id_features`
 
-This planned profile keeps the non-pending board representation intentionally close to `standard_compact_v1`, except for fairness fixes needed by the Rust profile system. Its comparison target is:
+This planned profile keeps the non-pending board representation intentionally close to `standard_compact_v1`, except for fairness fixes needed by the Rust profile system. If it is implemented and exported later, its comparison target is:
 
 ```text
 standard_compact_v1 vs standard_pending_ablation_v2
 ```
 
-Use it when you want a narrow answer about pending-choice metadata, such as whether trigger-order rows improve simultaneous-effect sequencing. Do not use it to evaluate the full v2 board design, because it intentionally omits `permanent_slots[2][15][96]`, own-hand rows, and known-zone rows from `standard_lite_v2`.
+Use it only after future implementation when you want a narrow answer about pending-choice metadata, such as whether trigger-order rows improve simultaneous-effect sequencing. Do not use it to evaluate the full v2 board design, because it intentionally omits `permanent_slots[2][15][96]`, own-hand rows, and known-zone rows from `standard_lite_v2`.
 
 ### `standard_lite_v2`
 
@@ -482,14 +482,13 @@ Excludes:
 
 - full `action_id_features[2168][16]`
 
-Its comparison targets are:
+Its current compact comparison target is:
 
 ```text
 standard_compact_v1 vs standard_lite_v2
-standard_pending_ablation_v2 vs standard_lite_v2
 ```
 
-The first comparison measures practical end-to-end value. The second separates "pending metadata helped" from "the structured v2 board helped."
+This comparison measures practical end-to-end value. If `standard_pending_ablation_v2` is implemented and exported later, comparing `standard_pending_ablation_v2` against `standard_lite_v2` would separate "pending metadata helped" from "the structured v2 board helped."
 
 ### `standard_full_v2`
 
