@@ -11,7 +11,8 @@ use digimon_engine::tensor::{
 use digimon_engine::tensor_profiles::standard;
 use digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorFieldKind, TensorSectionKind,
-    COMPACT_V1_LEGACY_PROFILE_ID, STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_V1_LEGACY_PROFILE_ID,
+    COMPACT_V1_LEGACY_PROFILE_ID, STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID,
+    STANDARD_V1_LEGACY_PROFILE_ID,
 };
 
 #[test]
@@ -73,7 +74,10 @@ fn sections_expose_debug_shapes() {
 
 #[test]
 fn registry_lists_only_canonical_profile_ids() {
-    assert_eq!(all_profile_ids(), vec![STANDARD_COMPACT_V1_PROFILE_ID]);
+    assert_eq!(
+        all_profile_ids(),
+        vec![STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_LITE_V2_PROFILE_ID]
+    );
 }
 
 #[test]
@@ -98,7 +102,10 @@ fn standard_family_resolves_profile_by_version() {
 
     assert_eq!(standard::DEFAULT_PROFILE, standard::v1::PROFILE);
     assert_eq!(profile, standard::v1::PROFILE);
-    assert!(standard::profile_by_version(2).is_none());
+    assert_eq!(
+        standard::profile_by_version(2).unwrap(),
+        standard::v2_lite::PROFILE
+    );
 }
 
 #[test]

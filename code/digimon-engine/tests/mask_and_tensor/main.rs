@@ -16,4 +16,5 @@ mod tensor_and_mask;
 mod tensor_helpers;
 mod tensor_hidden_info;
 mod tensor_profile;
+mod tensor_profile_v2;
 mod tensor_source_contributions;

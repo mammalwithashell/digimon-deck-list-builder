@@ -3,14 +3,17 @@
 pub mod standard;
 
 pub const STANDARD_COMPACT_V1_PROFILE_ID: &str = standard::v1::PROFILE_ID;
+pub const STANDARD_LITE_V2_PROFILE_ID: &str = standard::v2_lite::PROFILE_ID;
 pub const STANDARD_V1_LEGACY_PROFILE_ID: &str = "standard_v1";
 pub const COMPACT_V1_LEGACY_PROFILE_ID: &str = "compact_v1";
+pub const V2_LITE_TRANSITION_PROFILE_ID: &str = "v2_lite";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TensorSectionKind {
     Scalars,
     CardIds,
     PermanentSlots,
+    Custom,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -120,6 +123,14 @@ impl TensorProfile {
                         );
                     }
                 }
+                TensorSectionKind::Custom => {
+                    custom_section_positions(
+                        self.id,
+                        section,
+                        &mut card_positions,
+                        &mut scalar_positions,
+                    );
+                }
             }
         }
 
@@ -187,6 +198,7 @@ fn section_kind_label(kind: TensorSectionKind) -> &'static str {
         TensorSectionKind::Scalars => "scalars",
         TensorSectionKind::CardIds => "card_ids",
         TensorSectionKind::PermanentSlots => "permanent_slots",
+        TensorSectionKind::Custom => "custom",
     }
 }
 
@@ -206,13 +218,16 @@ pub fn default_profile() -> TensorProfile {
 }
 
 pub fn all_profile_ids() -> Vec<&'static str> {
-    vec![standard::v1::PROFILE_ID]
+    vec![standard::v1::PROFILE_ID, standard::v2_lite::PROFILE_ID]
 }
 
 pub fn profile_by_id(id: &str) -> Option<TensorProfile> {
     match id {
         standard::v1::PROFILE_ID | STANDARD_V1_LEGACY_PROFILE_ID | COMPACT_V1_LEGACY_PROFILE_ID => {
             Some(standard::v1::PROFILE)
+        }
+        standard::v2_lite::PROFILE_ID | V2_LITE_TRANSITION_PROFILE_ID => {
+            Some(standard::v2_lite::PROFILE)
         }
         _ => None,
     }
@@ -243,6 +258,91 @@ fn permanent_slot_positions(
                 TensorFieldKind::CardId => card_positions.push(source_offset + field.offset),
                 TensorFieldKind::Scalar => scalar_positions.push(source_offset + field.offset),
             }
+        }
+    }
+}
+
+fn custom_section_positions(
+    profile_id: &str,
+    section: &TensorSection,
+    card_positions: &mut Vec<usize>,
+    scalar_positions: &mut Vec<usize>,
+) {
+    if profile_id != standard::v2_lite::PROFILE_ID {
+        panic!(
+            "unsupported custom tensor section {} for profile {}",
+            section.id, profile_id
+        );
+    }
+
+    let mut card_markers = vec![false; section.len];
+    let mut mark_card = |position: usize| {
+        assert!(
+            (section.start..section.start + section.len).contains(&position),
+            "card position {position} is outside section {}",
+            section.id
+        );
+        let local = position - section.start;
+        assert!(
+            !card_markers[local],
+            "duplicate card position {position} in section {}",
+            section.id
+        );
+        card_markers[local] = true;
+        card_positions.push(position);
+    };
+
+    match section.id {
+        "permanent_slots" => {
+            for row in 0..standard::v2_lite::PERMANENT_ROW_COUNT {
+                let row_base = section.start + row * standard::v2_lite::PERMANENT_SLOT_SIZE;
+                mark_card(row_base + standard::v2_lite::PERM_TOP_CARD_ID_OFFSET);
+                for source_index in 0..standard::v2_lite::PERM_MAX_SOURCES {
+                    mark_card(
+                        row_base
+                            + standard::v2_lite::PERM_SOURCE_START_OFFSET
+                            + source_index * standard::v2_lite::PERM_SOURCE_ENTRY_SIZE,
+                    );
+                }
+            }
+        }
+        "own_hand" => {
+            for row in 0..standard::v2_lite::OWN_HAND_ROWS {
+                mark_card(
+                    section.start
+                        + row * standard::v2_lite::OWN_HAND_ROW_SIZE
+                        + standard::v2_lite::OWN_HAND_CARD_ID_OFFSET,
+                );
+            }
+        }
+        "known_zone_cards" => {
+            for row in 0..standard::v2_lite::KNOWN_ZONE_ROWS {
+                mark_card(
+                    section.start
+                        + row * standard::v2_lite::KNOWN_ZONE_ROW_SIZE
+                        + standard::v2_lite::KNOWN_ZONE_CARD_ID_OFFSET,
+                );
+            }
+        }
+        "pending_choice_features" => {
+            for row in 0..standard::v2_lite::PENDING_CHOICE_ROWS {
+                mark_card(
+                    section.start
+                        + row * standard::v2_lite::PENDING_CHOICE_ROW_SIZE
+                        + standard::v2_lite::PENDING_SOURCE_CARD_ID_OFFSET,
+                );
+            }
+        }
+        _ => panic!(
+            "unsupported custom tensor section {} for profile {}",
+            section.id, profile_id
+        ),
+    }
+
+    drop(mark_card);
+    for (offset, is_card) in card_markers.iter().enumerate() {
+        if !is_card {
+            scalar_positions.push(section.start + offset);
         }
     }
 }
