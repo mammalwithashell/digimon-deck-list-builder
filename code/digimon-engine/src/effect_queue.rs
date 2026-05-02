@@ -21,7 +21,7 @@
 
 use crate::action::space::{HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS};
 use crate::card_source::CardHandle;
-use crate::effect_context::EffectContext;
+use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{
     CardKind, DelayTrigger, EffectSourceKind, EffectTiming, GamePhase, ModifierType, PlayerId,
 };
@@ -515,6 +515,16 @@ impl Game {
             {
                 continue;
             }
+            if !self.event_gated_delay_condition_matches(
+                effect,
+                source_card,
+                Some(handle),
+                source_kind,
+                handle.player,
+                trigger_context,
+            ) {
+                continue;
+            }
             self.effect_queue.push_back(QueuedEffect {
                 source_card,
                 source_permanent: Some(handle),
@@ -529,6 +539,33 @@ impl Game {
                 allow_below_top_liveness: false,
             });
         }
+    }
+
+    fn event_gated_delay_condition_matches(
+        &mut self,
+        effect: &crate::effect::Effect,
+        source_card: CardHandle,
+        source_permanent: Option<PermanentHandle>,
+        source_kind: EffectSourceKind,
+        controller: PlayerId,
+        trigger_context: TriggerContext,
+    ) -> bool {
+        let Some(cond) = &effect.condition else {
+            return true;
+        };
+
+        let prev_trigger_context = self.current_trigger_context;
+        self.current_trigger_context = Some(trigger_context);
+        let ctx = EffectReadContext::new_with_source_kind(
+            self,
+            source_card,
+            source_permanent,
+            source_kind,
+            controller,
+        );
+        let passes = cond(&ctx);
+        self.current_trigger_context = prev_trigger_context;
+        passes
     }
 
     /// Collect `SecuritySkill` effects off a revealed security card. The
