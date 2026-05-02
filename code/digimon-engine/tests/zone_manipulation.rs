@@ -380,6 +380,71 @@ fn seed_single_card_permanent(r: &mut DebugRunner, card_id: &str) -> PermanentHa
     }
 }
 
+fn seed_stacked_permanent(r: &mut DebugRunner, card_ids_bottom_to_top: &[&str]) -> PermanentHandle {
+    assert!(
+        !card_ids_bottom_to_top.is_empty(),
+        "test helper needs at least one source"
+    );
+
+    let g = r.game_mut();
+    let turn = g.turn_count;
+    let mut sources = Vec::new();
+    for card_id in card_ids_bottom_to_top {
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == *card_id)
+            .unwrap();
+        let card_idx = g.next_card_index();
+        sources.push(digimon_engine::card_source::CardSource::new(
+            data_idx, 0, card_idx,
+        ));
+    }
+
+    let bottom = sources.remove(0);
+    let mut perm = digimon_engine::permanent::Permanent::new(bottom, turn);
+    perm.card_sources.extend(sources);
+    g.players[0].battle_area.push(perm);
+    PermanentHandle {
+        player: 0,
+        index: 0,
+    }
+}
+
+fn seed_stacked_permanent_with_owners(
+    r: &mut DebugRunner,
+    cards_bottom_to_top: &[(&str, u8)],
+) -> PermanentHandle {
+    assert!(
+        !cards_bottom_to_top.is_empty(),
+        "test helper needs at least one source"
+    );
+
+    let g = r.game_mut();
+    let turn = g.turn_count;
+    let mut sources = Vec::new();
+    for (card_id, owner) in cards_bottom_to_top {
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == *card_id)
+            .unwrap();
+        let card_idx = g.next_card_index();
+        sources.push(digimon_engine::card_source::CardSource::new(
+            data_idx, *owner, card_idx,
+        ));
+    }
+
+    let bottom = sources.remove(0);
+    let mut perm = digimon_engine::permanent::Permanent::new(bottom, turn);
+    perm.card_sources.extend(sources);
+    g.players[0].battle_area.push(perm);
+    PermanentHandle {
+        player: 0,
+        index: 0,
+    }
+}
+
 #[test]
 fn return_to_deck_top_places_on_top() {
     let mut r = DebugRunner::builder()
@@ -403,6 +468,138 @@ fn return_to_deck_top_places_on_top() {
             .to_string()
     };
     assert_eq!(top_id, "TOP");
+}
+
+#[test]
+fn return_to_deck_top_moves_only_top_card_and_trashes_sources() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BOTTOM", "Bottom", 4))
+        .add_card(plain_digimon("MIDDLE", "Middle", 4))
+        .add_card(plain_digimon("TOP", "Top", 4))
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .deck(0, &["FILLER"])
+        .start();
+
+    let handle = seed_stacked_permanent(&mut r, &["BOTTOM", "MIDDLE", "TOP"]);
+    let ok = r.game_mut().return_to_deck(handle, StackPosition::Top);
+    assert!(ok);
+    assert_eq!(r.battle_area_size(0), 0, "permanent leaves battle area");
+    assert_eq!(r.deck_size(0), 2, "only the top card joins the deck");
+    assert_eq!(r.trash_size(0), 2, "lower sources are trashed");
+
+    let (deck_ids, trash_ids): (Vec<String>, Vec<String>) = {
+        let g = r.game_mut();
+        (
+            g.player(0)
+                .deck
+                .iter()
+                .map(|c| c.card_id(&g.card_data).to_string())
+                .collect(),
+            g.player(0)
+                .trash
+                .iter()
+                .map(|c| c.card_id(&g.card_data).to_string())
+                .collect(),
+        )
+    };
+    assert_eq!(
+        deck_ids,
+        vec!["FILLER".to_string(), "TOP".to_string()],
+        "top card is placed on top of deck"
+    );
+    assert_eq!(
+        trash_ids,
+        vec!["BOTTOM".to_string(), "MIDDLE".to_string()],
+        "sources are trashed bottom-to-top"
+    );
+}
+
+#[test]
+fn return_to_deck_include_sources_top_preserves_full_stack_order() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BOTTOM", "Bottom", 4))
+        .add_card(plain_digimon("MIDDLE", "Middle", 4))
+        .add_card(plain_digimon("TOP", "Top", 4))
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .deck(0, &["FILLER"])
+        .start();
+
+    let handle = seed_stacked_permanent(&mut r, &["BOTTOM", "MIDDLE", "TOP"]);
+    let ok = r
+        .game_mut()
+        .return_stack_to_deck(handle, StackPosition::Top);
+    assert!(ok);
+    assert_eq!(r.battle_area_size(0), 0, "permanent leaves battle area");
+    assert_eq!(r.trash_size(0), 0, "sources are not trashed");
+
+    let deck: Vec<(String, u8)> = {
+        let g = r.game_mut();
+        g.player(0)
+            .deck
+            .iter()
+            .map(|c| (c.card_id(&g.card_data).to_string(), c.owner))
+            .collect()
+    };
+    assert_eq!(
+        deck,
+        vec![
+            ("FILLER".to_string(), 0),
+            ("BOTTOM".to_string(), 0),
+            ("MIDDLE".to_string(), 0),
+            ("TOP".to_string(), 0),
+        ],
+        "full stack is appended bottom-to-top so TOP remains deck top"
+    );
+}
+
+#[test]
+fn return_to_deck_include_sources_routes_each_card_to_owners_deck() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("P0-BOTTOM", "P0 Bottom", 4))
+        .add_card(plain_digimon("P1-MIDDLE", "P1 Middle", 4))
+        .add_card(plain_digimon("P0-TOP", "P0 Top", 4))
+        .add_card(plain_digimon("FILLER0", "F0", 1))
+        .add_card(plain_digimon("FILLER1", "F1", 1))
+        .deck(0, &["FILLER0"])
+        .deck(1, &["FILLER1"])
+        .start();
+
+    let handle = seed_stacked_permanent_with_owners(
+        &mut r,
+        &[("P0-BOTTOM", 0), ("P1-MIDDLE", 1), ("P0-TOP", 0)],
+    );
+    assert!(r
+        .game_mut()
+        .return_stack_to_deck(handle, StackPosition::Top));
+
+    let (p0_deck, p1_deck): (Vec<String>, Vec<String>) = {
+        let g = r.game_mut();
+        (
+            g.player(0)
+                .deck
+                .iter()
+                .map(|c| c.card_id(&g.card_data).to_string())
+                .collect(),
+            g.player(1)
+                .deck
+                .iter()
+                .map(|c| c.card_id(&g.card_data).to_string())
+                .collect(),
+        )
+    };
+
+    assert_eq!(
+        p0_deck,
+        vec![
+            "FILLER0".to_string(),
+            "P0-BOTTOM".to_string(),
+            "P0-TOP".to_string(),
+        ]
+    );
+    assert_eq!(
+        p1_deck,
+        vec!["FILLER1".to_string(), "P1-MIDDLE".to_string()]
+    );
 }
 
 #[test]

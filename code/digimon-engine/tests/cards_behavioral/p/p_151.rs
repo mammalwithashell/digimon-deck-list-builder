@@ -41,6 +41,21 @@ const YAML: &str = include_str!("../../../cards/p/P-151.yaml");
 // Fixture helpers
 // ---------------------------------------------------------------------------
 
+fn resolve_until_optional_prompt(runner: &mut DebugRunner) {
+    while runner.pending_selection().is_some() && !runner.pending_is_optional() {
+        let view = runner
+            .pending_selection_view()
+            .expect("pending selection must have a view");
+        let action_id = *view
+            .valid_action_ids
+            .first()
+            .expect("mandatory selection must expose at least one action");
+        runner
+            .execute_action(view.selecting_player, action_id)
+            .expect("mandatory selection resolves");
+    }
+}
+
 fn filler(id: &str) -> CardData {
     make_test_card(id, id)
 }
@@ -364,6 +379,8 @@ fn p_151_main_selected_card_added_to_hand() {
     pick_first_pending_action(&mut runner);
     resolve_required_prompts_until_optional_or_done(&mut runner);
 
+    resolve_until_optional_prompt(&mut runner);
+
     // Pass on the optional free-play prompt (decline it to keep hand count clean).
     if runner.pending_selection().is_some() && runner.pending_is_optional() {
         let _ = runner.execute_action(0, digimon_engine::action::space::PASS);
@@ -424,6 +441,8 @@ fn p_151_main_free_play_prompt_is_optional() {
     pick_first_pending_action(&mut runner);
     resolve_required_prompts_until_optional_or_done(&mut runner);
 
+    resolve_until_optional_prompt(&mut runner);
+
     // Now check if the free-play prompt is pending and optional
     if runner.pending_selection().is_some() {
         assert!(
@@ -455,6 +474,8 @@ fn p_151_main_declining_free_play_does_not_add_to_field() {
 
     pick_first_pending_action(&mut runner);
     resolve_required_prompts_until_optional_or_done(&mut runner);
+
+    resolve_until_optional_prompt(&mut runner);
 
     // Now the optional free-play prompt should be pending; decline it with PASS.
     if runner.pending_selection().is_some() && runner.pending_is_optional() {

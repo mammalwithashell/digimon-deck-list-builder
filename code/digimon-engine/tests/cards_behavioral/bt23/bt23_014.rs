@@ -19,6 +19,7 @@
 //! - Shared [On Play]/[When Digivolving] + standalone [When Attacking] triggering
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 
 const LOW_DP_TARGET: &str = "BT23-014-LOW-DP-TARGET";
@@ -28,9 +29,15 @@ fn gallantmon_runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT23-014")
         .expect("BT23-014 found in embedded DSL pack")
-        .add_card(make_test_card(LOW_DP_TARGET, "LowDpTarget"))
+        .add_card(low_dp_opponent())
         .memory(12)
         .start()
+}
+
+fn low_dp_opponent() -> CardData {
+    let mut card = make_test_card(LOW_DP_TARGET, "LowDpTarget");
+    card.dp = Some(9000);
+    card
 }
 
 /// Fixture with Gallantmon in hand for playing.
@@ -40,7 +47,7 @@ fn gallantmon_in_hand() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT23-014")
         .expect("BT23-014 found in embedded DSL pack")
-        .add_card(make_test_card(LOW_DP_TARGET, "LowDpTarget"))
+        .add_card(low_dp_opponent())
         .hand(0, &["BT23-014"])
         // 3-card decks for each player prevent deck-out during multi-turn tests.
         .deck(0, &["BT23-014", "BT23-014", "BT23-014"])
@@ -356,6 +363,7 @@ fn bt23_014_on_play_with_opp_digimon_present_deletes_it() {
     // Place an eligible opponent Digimon first, then play Gallantmon.
     let mut runner = gallantmon_in_hand();
 
+    // With one opponent permanent, the dynamic cap is 8000 + 2000 = 10000.
     runner.place_on_field(1, LOW_DP_TARGET, None);
     let opp_count_before = runner.game.players[1].battle_area.len();
 

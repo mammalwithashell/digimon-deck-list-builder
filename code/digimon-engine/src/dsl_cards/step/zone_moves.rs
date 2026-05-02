@@ -41,6 +41,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::AddToHandFromSecurity { of, card } => {
+            let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
+                return true;
+            };
+            let p = resolve_player(ctx, *of);
+            if let ResolvedBinding::Card(h) = resolved {
+                let _ = ctx.add_to_hand_from_security(p, h);
+            }
+            true
+        }
         CompiledStep::AddToHandFromDeck { of, card } => {
             // Phase 2b has no way to bind a deck card (no SelectDeck variant
             // and RevealTopDeck binds into the reveal pool, not deck). The

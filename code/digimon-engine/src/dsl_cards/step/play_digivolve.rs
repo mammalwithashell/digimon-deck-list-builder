@@ -60,11 +60,42 @@ fn resolve_card_source_ref(
     match resolve_binding_ref(source, ctx, bindings)? {
         ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
         ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),
-        ResolvedBinding::Card(h) => Some(CardSourceRef::Reveal(h)),
+        ResolvedBinding::Card(h) => resolve_card_handle_source_ref(ctx, h),
         // DeckTop and other kinds: no IR binding produces them today.
         // Future: widen as IR evolves.
         _ => None,
     }
+}
+
+fn resolve_card_handle_source_ref(ctx: &EffectContext<'_>, h: CardHandle) -> Option<CardSourceRef> {
+    for pid in 0..ctx.game.players.len() {
+        let player_id = pid as crate::enums::PlayerId;
+        let player = ctx.game.player(player_id);
+        if let Some(idx) = player.hand.iter().position(|c| c.handle() == h) {
+            return Some(CardSourceRef::Hand(player_id, idx));
+        }
+        if let Some(idx) = player.trash.iter().position(|c| c.handle() == h) {
+            return Some(CardSourceRef::Trash(player_id, idx));
+        }
+        if let Some(idx) = player.security.iter().position(|c| c.handle() == h) {
+            return Some(CardSourceRef::Security(player_id, idx));
+        }
+        for (perm_idx, perm) in player.battle_area.iter().enumerate() {
+            if let Some(src_idx) = perm.card_sources.iter().position(|c| c.handle() == h) {
+                return Some(CardSourceRef::Material(
+                    crate::permanent::PermanentHandle {
+                        player: player_id,
+                        index: perm_idx as u8,
+                    },
+                    src_idx,
+                ));
+            }
+        }
+    }
+    if ctx.game.revealed_cards.iter().any(|c| c.handle() == h) {
+        return Some(CardSourceRef::Reveal(h));
+    }
+    None
 }
 
 /// Try to handle `step` as a play / digivolve / placement variant.
@@ -175,21 +206,17 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
             };
-            let (hand_owner, hand_index) = match resolve_binding_ref(from_hand, ctx, bindings) {
-                Some(ResolvedBinding::HandIndex(p, i)) => (p, i as usize),
-                _ => return true,
+            let Some(source_ref) = resolve_card_source_ref(from_hand, ctx, bindings) else {
+                return true;
             };
             let delta = lower_cost_delta(Some(cost));
             // The effect runs on the target's controller (the digivolve is
-            // applied to `target` and the source is from that player's hand).
+            // applied to `target`; the result card can now come from any
+            // supported source zone.
             let player = target_handle.player;
-            debug_assert_eq!(
-                hand_owner, player,
-                "effect_initiated_digivolve hand binding player differs from target controller"
-            );
-            let _ = ctx.effect_initiated_digivolve(
+            let _ = ctx.effect_initiated_digivolve_from_source(
                 player,
-                hand_index,
+                source_ref,
                 target_handle,
                 delta,
                 *ignore_requirements,

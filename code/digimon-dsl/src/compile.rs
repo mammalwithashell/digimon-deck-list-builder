@@ -1156,6 +1156,10 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::AddToHandFromSecurity(a) => CompiledStep::AddToHandFromSecurity {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+        },
         S::AddToHandFromReveal(a) => CompiledStep::AddToHandFromReveal {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
@@ -1175,6 +1179,9 @@ fn compile_step(
             position: compile_stack_position(a.position),
         },
         S::ShuffleDeck(a) => CompiledStep::ShuffleDeck {
+            of: compile_player_ref(a.of),
+        },
+        S::ShuffleSecurity(a) => CompiledStep::ShuffleSecurity {
             of: compile_player_ref(a.of),
         },
         S::RevealTopDeck(a) => CompiledStep::RevealTopDeck {
@@ -1267,7 +1274,18 @@ fn compile_step(
         },
         S::EffectInitiatedDigivolve(a) => CompiledStep::EffectInitiatedDigivolve {
             target: compile_binding_ref(&a.target),
-            from_hand: compile_binding_ref(&a.from_hand),
+            from_hand: match a.source.as_ref().or(a.from_hand.as_ref()) {
+                Some(source) => compile_binding_ref(source),
+                None => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.effect_initiated_digivolve"),
+                        message: "effect_initiated_digivolve requires source or from_hand"
+                            .to_string(),
+                    });
+                    CompiledBindingRef::SelfRef
+                }
+            },
             cost: compile_cost_delta(&a.cost),
             ignore_requirements: a.ignore_requirements,
         },

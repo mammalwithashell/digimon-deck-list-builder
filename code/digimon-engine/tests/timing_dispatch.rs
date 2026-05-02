@@ -888,13 +888,10 @@ impl CardEffect for OnMoveObserver {
 
 #[test]
 fn on_move_fires_after_breeding_permanent_moves_to_battle() {
-    let mut rookie = plain_digimon("ROOKIE", "Rookie", 0);
-    rookie.level = Some(3);
-
     let filler: Vec<&str> = vec!["FILLER"; 5];
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("OBS", "Move Observer", 3))
-        .add_card(rookie)
+        .add_card(plain_digimon("ROOKIE", "Rookie", 1))
         .add_card(plain_digimon("FILLER", "Filler", 1))
         .hand(0, &["OBS"])
         .digitama(0, &["ROOKIE"])

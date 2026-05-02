@@ -1210,11 +1210,26 @@ impl<'a> EffectContext<'a> {
 
         let p = self.game.player_mut(player);
         if let Some(card) = p.security.pop() {
-            p.trash.push(card);
+            p.face_up_security.remove(&card.card_index);
+            self.fire_security_removed_observers(
+                player,
+                card,
+                crate::selection::SecurityRemovalDestination::Trash,
+            );
             true
         } else {
             false
         }
+    }
+
+    fn fire_security_removed_observers(
+        &mut self,
+        defender: PlayerId,
+        card: crate::card_source::CardSource,
+        destination: crate::selection::SecurityRemovalDestination,
+    ) {
+        self.game
+            .fire_effect_security_removal(defender, self.player, card, destination);
     }
 
     // ─── Field mutations ──────────────────────────────────────────────
@@ -1429,6 +1444,35 @@ impl<'a> EffectContext<'a> {
         self.game.add_to_hand_from_trash(player, card)
     }
 
+    /// Move a specific card from `player`'s security stack to their hand.
+    pub fn add_to_hand_from_security(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(idx) = self
+            .game
+            .player(player)
+            .security
+            .iter()
+            .position(|c| c.handle() == card)
+        else {
+            return false;
+        };
+        let removed = self.game.player_mut(player).security.remove(idx);
+        let owner = removed.owner;
+        self.game
+            .player_mut(player)
+            .face_up_security
+            .remove(&removed.card_index);
+        self.fire_security_removed_observers(
+            player,
+            removed,
+            crate::selection::SecurityRemovalDestination::Hand(owner),
+        );
+        true
+    }
+
     /// Reveal up to `n` cards from the top of `player`'s deck. See
     /// `Game::reveal_top_deck`.
     pub fn reveal_top_deck(
@@ -1517,8 +1561,8 @@ impl<'a> EffectContext<'a> {
             return false;
         }
 
-        let defender = pending.defender;
-        self.game.player_mut(defender).hand.push(pending.card);
+        let owner = pending.card.owner;
+        self.game.player_mut(owner).hand.push(pending.card);
         true
     }
 
@@ -1623,6 +1667,11 @@ impl<'a> EffectContext<'a> {
     /// "search and shuffle" effects.
     pub fn shuffle_deck(&mut self, player: PlayerId) {
         self.game.shuffle_deck(player);
+    }
+
+    /// Shuffle `player`'s security stack.
+    pub fn shuffle_security(&mut self, player: PlayerId) {
+        self.game.shuffle_security(player);
     }
 
     /// Play a card from `player`'s hand at `hand_index`, deducting memory
@@ -1964,7 +2013,18 @@ impl<'a> EffectContext<'a> {
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
     ) -> bool {
-        self.game.place_as_bottom_source(source, target)
+        self.game
+            .place_as_bottom_source_observed(source, target, self.player)
+    }
+
+    /// Move `player`'s real breeding permanent into the battle area by effect.
+    pub fn move_from_breeding_by_effect(&mut self, player: PlayerId) -> bool {
+        self.game.move_from_breeding_by_effect(player)
+    }
+
+    /// Play/place `player`'s hand card into their real breeding area by effect.
+    pub fn play_to_breeding_from_hand(&mut self, player: PlayerId, hand_index: usize) -> bool {
+        self.game.play_to_breeding_from_hand(player, hand_index)
     }
 
     /// Move `card` from whatever zone it currently occupies to the **bottom**
@@ -2293,29 +2353,44 @@ impl<'a> EffectContext<'a> {
     ///
     /// The card is removed from `perm.card_sources` (anywhere in the stack —
     /// not just the top — see `armor_purge_top` for the top-card-only variant)
-    /// and pushed to the controller's trash.
+    /// and pushed to the card owner's trash.
     ///
     /// Panics if `card` is not present in `perm.card_sources`. Token cards
     /// (`is_token == true`) are still pushed to trash; the caller's gate is
     /// responsible for any token-aware filtering.
     pub fn trash_card_source(&mut self, perm: PermanentHandle, card: CardHandle) {
-        let permanent = self
-            .game
-            .player_mut(perm.player)
-            .battle_area
-            .get_mut(perm.index as usize)
-            .expect("trash_card_source: permanent not found");
-        let pos = permanent
-            .card_sources
-            .iter()
-            .position(|c| c.handle() == card)
-            .expect("trash_card_source: card not in this permanent's stack");
-        let removed = permanent.card_sources.remove(pos);
-        self.game.player_mut(perm.player).trash.push(removed);
+        let (removed, host_card) = {
+            let permanent = self
+                .game
+                .player_mut(perm.player)
+                .battle_area
+                .get_mut(perm.index as usize)
+                .expect("trash_card_source: permanent not found");
+            let host_card = permanent.top_card().handle();
+            let pos = permanent
+                .card_sources
+                .iter()
+                .position(|c| c.handle() == card)
+                .expect("trash_card_source: card not in this permanent's stack");
+            (permanent.card_sources.remove(pos), host_card)
+        };
+        let source_card = removed.handle();
+        let owner = removed.owner;
+        self.game.player_mut(owner).trash.push(removed);
+        self.game.enqueue_triggered(
+            crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+            crate::selection::TriggerSource::SourceTrashedFromStack {
+                player: perm.player,
+                host: perm,
+                host_card,
+                card: source_card,
+            },
+        );
+        self.game.drain_effect_queue();
     }
 
     /// Strip the top digivolution source from `target`'s stack and route the
-    /// underlying card to the target's controller's trash. Returns `true` on
+    /// underlying card to its owner's trash. Returns `true` on
     /// success; `false` if the target handle is invalid or the stack is empty.
     ///
     /// Used by card effects that say "trash the top digivolution source of
@@ -2324,45 +2399,55 @@ impl<'a> EffectContext<'a> {
     /// auto-install body and panics on insufficient stack).
     ///
     /// Mirrors `armor_purge_top`'s observer dispatch: after the trash, fires
-    /// `OnDigivolutionCardTrashed` once per player and drains the queue, so
-    /// observers (e.g. Rocks-archetype source-trash listeners) see the
-    /// trashed top. The trashed card moves through the standard trash path —
-    /// no special routing.
+    /// `OnDigivolutionCardTrashed` and drains the queue, so observers
+    /// (e.g. Rocks-archetype source-trash listeners) see the trashed top with
+    /// source/host event context. The trashed card moves through the standard
+    /// owner trash path.
     ///
     /// Reject-before-mutate discipline: invalid handle and empty stack both
     /// return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
         // Validate target slot.
-        let permanent = match self
-            .game
-            .player_mut(target.player)
-            .battle_area
-            .get_mut(target.index as usize)
-        {
-            Some(p) => p,
-            None => return false,
+        let (removed, host_card) = {
+            let permanent = match self
+                .game
+                .player_mut(target.player)
+                .battle_area
+                .get_mut(target.index as usize)
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            // Pop top of card_sources; bail clean if empty.
+            let removed = match permanent.card_sources.pop() {
+                Some(s) => s,
+                None => return false,
+            };
+            let host_card = permanent
+                .card_sources
+                .last()
+                .map(|card| card.handle())
+                .unwrap_or_else(|| removed.handle());
+            (removed, host_card)
         };
-        // Pop top of card_sources; bail clean if empty.
-        let removed = match permanent.card_sources.pop() {
-            Some(s) => s,
-            None => return false,
-        };
-        // Route the trashed source to the controller's trash (sources are
-        // controlled by the permanent's controller).
-        let controller = target.player;
-        self.game.player_mut(controller).trash.push(removed);
+        let source_card = removed.handle();
+        let owner = removed.owner;
+        self.game.player_mut(owner).trash.push(removed);
 
         // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors
         // `armor_purge_top` (effect_context/mod.rs:~1604) and the
         // sources-below-top dispatch in `Game::return_to_hand` /
         // `Game::return_to_deck`. Enqueue once per player so observers on
         // either side of the field pick it up.
-        for pid in 0..self.game.players.len() {
-            self.game.enqueue_triggered(
-                crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-            );
-        }
+        self.game.enqueue_triggered(
+            crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+            crate::selection::TriggerSource::SourceTrashedFromStack {
+                player: target.player,
+                host: target,
+                host_card,
+                card: source_card,
+            },
+        );
         self.game.drain_effect_queue();
         true
     }
@@ -2398,6 +2483,19 @@ impl<'a> EffectContext<'a> {
         self.game.return_to_deck(target, position)
     }
 
+    /// Return a permanent's full stack to its owner's deck. See
+    /// `Game::return_stack_to_deck`.
+    pub fn return_stack_to_deck(
+        &mut self,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+    ) -> bool {
+        if !self.can_affect_permanent(target) {
+            return false;
+        }
+        self.game.return_stack_to_deck(target, position)
+    }
+
     /// Digivolve a card from `player`'s hand at `hand_index` onto `target`
     /// by effect. Bypasses the Main-phase check; optionally ignores color
     /// requirements (`ignore_color=true`); pays memory via `cost_delta`.
@@ -2414,6 +2512,26 @@ impl<'a> EffectContext<'a> {
         self.game.effect_initiated_digivolve(
             player,
             hand_index,
+            target,
+            cost_delta,
+            ignore_color,
+            PlaySource::ByEffect,
+        )
+    }
+
+    /// Digivolve a card from any supported source zone onto `target` by
+    /// effect. See `Game::effect_initiated_digivolve_from_source`.
+    pub fn effect_initiated_digivolve_from_source(
+        &mut self,
+        player: PlayerId,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        ignore_color: bool,
+    ) -> bool {
+        self.game.effect_initiated_digivolve_from_source(
+            player,
+            source,
             target,
             cost_delta,
             ignore_color,
@@ -2597,7 +2715,7 @@ impl<'a> EffectContext<'a> {
             return false;
         }
         self.game
-            .place_on_security(player, source, position, face_up)
+            .place_on_security_observed(player, source, position, face_up, self.player)
     }
 
     // ─── Combat mutations (Phase 9 Task 2) ────────────────────────────
