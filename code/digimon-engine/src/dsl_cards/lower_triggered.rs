@@ -3,7 +3,9 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledPredicate, CompiledScope, CompiledTriggeredClause};
+use digimon_dsl::compiled::{
+    CompiledPredicate, CompiledScope, CompiledStep, CompiledTriggeredClause,
+};
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
@@ -13,6 +15,7 @@ use crate::dsl_cards::step::{run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::timing_map::compiled_timing_to_engine;
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::EffectTiming;
+use crate::resource_flow::identifier_indicates_resource_flow;
 
 pub fn lower(card: CardHandle, clause: &CompiledTriggeredClause) -> Vec<Effect> {
     lower_with_raw(card, clause, Arc::new(EngineRawRustRegistry::new()))
@@ -68,6 +71,9 @@ pub fn lower_with_raw_and_option_use_requirement(
         if optional {
             builder = builder.optional();
         }
+        if steps_provide_resource_flow(&clause.process) {
+            builder = builder.resource_flow();
+        }
         if matches!(
             engine_timing,
             EffectTiming::MainFromHand | EffectTiming::OptionMain
@@ -112,6 +118,29 @@ pub fn lower_with_raw_and_option_use_requirement(
     out
 }
 
+fn steps_provide_resource_flow(steps: &[CompiledStep]) -> bool {
+    steps.iter().any(step_provides_resource_flow)
+}
+
+fn step_provides_resource_flow(step: &CompiledStep) -> bool {
+    match step {
+        CompiledStep::Draw { .. }
+        | CompiledStep::AddToHandFromDeck { .. }
+        | CompiledStep::AddToHandFromTrash { .. }
+        | CompiledStep::AddToHandFromReveal { .. } => true,
+        CompiledStep::RawRust { fn_name, .. } => identifier_indicates_resource_flow(fn_name),
+        CompiledStep::AsSelectingPlayer { body, .. }
+        | CompiledStep::ForEach { body, .. }
+        | CompiledStep::PerSelected { body, .. }
+        | CompiledStep::ScheduleDelayed { body, .. }
+        | CompiledStep::Optional(body) => steps_provide_resource_flow(body),
+        CompiledStep::If {
+            then, else_branch, ..
+        } => steps_provide_resource_flow(then) || steps_provide_resource_flow(else_branch),
+        _ => false,
+    }
+}
+
 fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
     match timing {
         EffectTiming::OnPlay => Effect::on_play(card),
@@ -143,5 +172,28 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         EffectTiming::OnSecurityCheck => Effect::on_security_check(card),
         EffectTiming::OnLoseSecurity => Effect::on_lose_security(card),
         other => EffectBuilder::new(card, other),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use digimon_dsl::compiled::CompiledPlayerRef;
+
+    #[test]
+    fn resource_flow_catalog_detects_nested_draw_steps() {
+        let steps = vec![CompiledStep::Optional(vec![CompiledStep::Draw {
+            of: CompiledPlayerRef::You,
+            count: 1,
+        }])];
+
+        assert!(steps_provide_resource_flow(&steps));
+    }
+
+    #[test]
+    fn resource_flow_catalog_ignores_non_hand_resource_steps() {
+        let steps = vec![CompiledStep::GainMemory(1)];
+
+        assert!(!steps_provide_resource_flow(&steps));
     }
 }

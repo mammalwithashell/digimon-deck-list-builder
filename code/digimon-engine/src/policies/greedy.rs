@@ -1,20 +1,23 @@
-//! Heuristic greedy opponent — port of Python's `greedy_policy()` in
-//! `digimon_gym/digimon_gym.py`.
+//! Heuristic greedy opponent — derived from Python's `greedy_policy()` in
+//! `digimon_gym/digimon_gym.py`, with Rust-owned refinements documented in
+//! `docs/RUST_PYTHON_PARITY.md`.
 //!
 //! Priorities:
 //! - Mulligan: keep if hand contains a level-3 Digimon, else mulligan.
 //! - Trash-from-hand selection: discard the lowest-value card (prefer
 //!   non-Digimon, then lower cost).
-//! - Breeding phase: Hatch > Move > Pass.
-//! - Main phase: best keep-turn Digivolve > best Attack > best Play > Pass.
+//! - Breeding phase: Hatch > Move if the raising Digimon has value or a
+//!   hand evolution line > Pass.
+//! - Main phase: setup Play (search/resource cards or Tamers) > best
+//!   keep-turn Digivolve > best Attack (security pressure before board
+//!   trades) > best Play > Pass.
 //!
 //! The heuristic inspects the full `Game` state rather than the obs
 //! tensor, so it's cheap and deterministic. Tie-breaks are deterministic
-//! (by level, DP, cost, index) to match the Python reference.
+//! (by level, DP, cost, index).
 //!
 //! Replaces the `first_valid_action` placeholder previously wired into
-//! `PlayerKind::Greedy` (see commit 4ab3c87a). Parity hazard: any change
-//! to `greedy_policy()` in Python must be mirrored here — tracked in
+//! `PlayerKind::Greedy` (see commit 4ab3c87a). Parity status is tracked in
 //! `docs/RUST_PYTHON_PARITY.md` under "Policies".
 
 use crate::action::space::{
@@ -25,6 +28,7 @@ use crate::action::space::{
 use crate::card_data::CardData;
 use crate::enums::{CardKind, GamePhase, PlayerId};
 use crate::game::Game;
+use crate::resource_flow::card_data_indicates_resource_flow;
 use crate::selection::SelectionKind;
 
 /// Pick the next action for a `PlayerKind::Greedy` seat, using the
@@ -63,7 +67,7 @@ pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
             if valid.contains(&HATCH) {
                 return HATCH;
             }
-            if valid.contains(&MOVE_FROM_BREEDING) {
+            if valid.contains(&MOVE_FROM_BREEDING) && should_move_from_breeding(game, player_id) {
                 return MOVE_FROM_BREEDING;
             }
             if valid.contains(&PASS) {
@@ -72,6 +76,9 @@ pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
             first_non_pass(&valid)
         }
         GamePhase::Main => {
+            if let Some(a) = best_setup_play(game, player_id, &valid) {
+                return a;
+            }
             if let Some(a) = best_keep_turn_digivolve(game, player_id, &valid) {
                 return a;
             }
@@ -183,6 +190,47 @@ fn estimate_digivolve_cost(
     best.unwrap_or(fallback_cost)
 }
 
+fn can_digivolve_card_onto(
+    hand_card: &crate::card_source::CardSource,
+    base_perm: &crate::permanent::Permanent,
+    data: &[CardData],
+) -> bool {
+    let entry = &data[hand_card.data_index];
+    let Some(base_level) = base_perm.level(data) else {
+        return false;
+    };
+    let base_colors = base_perm.top_card().colors(data);
+
+    entry.evo_costs.iter().any(|evo| {
+        evo.level == base_level && base_colors.iter().any(|c| (*c as u8) == evo.card_color)
+    })
+}
+
+fn has_valid_evolution_in_hand_for_base(
+    game: &Game,
+    pid: PlayerId,
+    base_perm: &crate::permanent::Permanent,
+) -> bool {
+    game.player(pid)
+        .hand
+        .iter()
+        .any(|card| can_digivolve_card_onto(card, base_perm, &game.card_data))
+}
+
+fn should_move_from_breeding(game: &Game, pid: PlayerId) -> bool {
+    let Some(base) = game.player(pid).breeding_area.as_ref() else {
+        return false;
+    };
+    let top = base.top_card();
+    if top.level(&game.card_data) != Some(3) {
+        return true;
+    }
+    if card_has_resource_flow(game, top) {
+        return true;
+    }
+    has_valid_evolution_in_hand_for_base(game, pid, base)
+}
+
 /// Best digivolve that keeps the turn (relative memory stays ≥ 0). None if
 /// no valid digivolve in `valid` meets the memory constraint.
 fn best_keep_turn_digivolve(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
@@ -231,8 +279,67 @@ fn best_keep_turn_digivolve(game: &Game, pid: PlayerId, valid: &[u16]) -> Option
     best.map(|(_, a)| a)
 }
 
-/// Best attack: prioritize lethal security hits, then favorable trades,
-/// then security pokes, then unfavorable trades (Python priorities 3/2/1/0).
+fn best_setup_play(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
+    let player = game.player(pid);
+    let mut best: Option<((i32, i32, i32, i32, i32, i32), u16)> = None;
+    for &action in valid {
+        if !(PLAY_HAND_START..PLAY_HAND_END).contains(&action) {
+            continue;
+        }
+        let hand_idx = action - PLAY_HAND_START;
+        if hand_idx as usize >= player.hand.len() {
+            continue;
+        }
+        let card = &player.hand[hand_idx as usize];
+        let is_resource = card_has_resource_flow(game, card);
+        let is_tamer = card.card_kind(&game.card_data) == CardKind::Tamer;
+        if !is_resource && !is_tamer {
+            continue;
+        }
+
+        let level_score = if card.is_digimon(&game.card_data) {
+            10 - card.level(&game.card_data).unwrap_or(10) as i32
+        } else {
+            0
+        };
+        let dp = card.dp(&game.card_data).unwrap_or(0);
+        let cost = card.play_cost(&game.card_data) as i32;
+        let score = (
+            i32::from(is_resource),
+            i32::from(is_tamer),
+            level_score,
+            dp,
+            -cost,
+            -(hand_idx as i32),
+        );
+        if best.as_ref().map_or(true, |(s, _)| score > *s) {
+            best = Some((score, action));
+        }
+    }
+    best.map(|(_, a)| a)
+}
+
+fn card_has_resource_flow(game: &Game, card: &crate::card_source::CardSource) -> bool {
+    let data = &game.card_data[card.data_index];
+    if card_data_indicates_resource_flow(data) {
+        return true;
+    }
+
+    if let Some(effect) = game.effect_registry.get(&data.card_id) {
+        if effect
+            .effects(card.handle())
+            .iter()
+            .any(|effect| effect.resource_flow)
+        {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Best attack: prioritize lethal security hits, then security pressure,
+/// then favorable trades, then unfavorable trades.
 fn best_attack(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
     let player = game.player(pid);
     let opp_id = 1 - pid;
@@ -263,7 +370,7 @@ fn best_attack(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
         let score: (i32, i32, i32, i32);
         if target_idx == SECURITY_TARGET {
             let is_lethal = opponent.security.is_empty();
-            let priority = if is_lethal { 3 } else { 1 };
+            let priority = if is_lethal { 3 } else { 2 };
             score = (priority, attacker_dp, -(attacker_idx as i32), 0);
         } else {
             if target_idx as usize >= opponent.battle_area.len() {
@@ -278,7 +385,7 @@ fn best_attack(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
                 .or_else(|| target.base_dp(&game.card_data))
                 .unwrap_or(0);
             let favorable = attacker_dp > target_dp;
-            let priority = if favorable { 2 } else { 0 };
+            let priority = if favorable { 1 } else { 0 };
             score = (
                 priority,
                 attacker_dp - target_dp,
@@ -293,11 +400,12 @@ fn best_attack(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
     best.map(|(_, a)| a)
 }
 
-/// Best play from hand: prefer higher cost (bigger board presence) and
-/// Digimon > Option > Tamer. Matches Python's `_best_play`.
+/// Best fallback play from hand: prefer Digimon that build a curve before
+/// expensive hard-plays, then sort non-Digimon by kind/cost/index. Tamers
+/// are normally handled earlier by `best_setup_play`.
 fn best_play(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
     let player = game.player(pid);
-    let mut best: Option<((i32, i32, i32), u16)> = None;
+    let mut best: Option<((i32, i32, i32, i32, i32), u16)> = None;
     for &action in valid {
         if !(PLAY_HAND_START..PLAY_HAND_END).contains(&action) {
             continue;
@@ -308,12 +416,19 @@ fn best_play(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
         }
         let card = &player.hand[hand_idx as usize];
         let kind_score = match card.card_kind(&game.card_data) {
-            CardKind::Digimon => 2,
+            CardKind::Digimon => 3,
+            CardKind::Tamer => 2,
             CardKind::Option => 1,
             _ => 0,
         };
+        let curve_score = if card.is_digimon(&game.card_data) {
+            10 - card.level(&game.card_data).unwrap_or(10) as i32
+        } else {
+            0
+        };
+        let dp = card.dp(&game.card_data).unwrap_or(0);
         let cost = card.play_cost(&game.card_data) as i32;
-        let score = (cost, kind_score, -(hand_idx as i32));
+        let score = (kind_score, curve_score, dp, -cost, -(hand_idx as i32));
         if best.as_ref().map_or(true, |(s, _)| score > *s) {
             best = Some((score, action));
         }
@@ -351,4 +466,40 @@ fn best_trash_choice(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
         }
     }
     best.map(|(_, a)| a)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::*;
+    use crate::action::space::PLAY_HAND_START;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+
+    #[test]
+    fn fallback_best_play_prefers_curve_digimon_over_tamer() {
+        let mut rookie = make_test_card("BT1-010", "Agumon");
+        rookie.level = Some(3);
+        rookie.dp = Some(2000);
+
+        let mut tamer = make_test_card("BT1-080", "Setup Tamer");
+        tamer.card_kind = CardKind::Tamer;
+        tamer.level = None;
+        tamer.dp = None;
+
+        let db = HashMap::from([
+            (rookie.card_id.clone(), rookie),
+            (tamer.card_id.clone(), tamer),
+        ]);
+        let runner = DebugRunner::builder()
+            .with_card_data(db)
+            .hand(0, &["BT1-080", "BT1-010"])
+            .start();
+        let valid = vec![PLAY_HAND_START, PLAY_HAND_START + 1];
+
+        assert_eq!(
+            best_play(&runner.game, 0, &valid),
+            Some(PLAY_HAND_START + 1)
+        );
+    }
 }
