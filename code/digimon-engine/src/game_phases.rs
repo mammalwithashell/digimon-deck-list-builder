@@ -30,6 +30,12 @@ impl Game {
         );
         self.drain_effect_queue();
         if self.pending_selection.is_some() {
+            self.pending_delayed_option_lifecycle = Some(DelayedOptionLifecycleResume {
+                turn: self.turn_count,
+                kind: DelayedOptionLifecycleResumeKind::StartTurn,
+                pending_delete_key: None,
+                skip_key: None,
+            });
             return;
         }
 

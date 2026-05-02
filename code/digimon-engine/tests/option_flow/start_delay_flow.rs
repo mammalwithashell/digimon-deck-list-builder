@@ -215,6 +215,49 @@ fn start_delay_waits_when_start_observer_installs_selection() {
             .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
         "delayed option is not trashed while a start-of-turn selection is pending"
     );
+
+    let (selecting_player, action_id) = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("start-of-turn observer selection should be pending");
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    r.game
+        .resolve_selection(selecting_player, action_id)
+        .expect("start-of-turn observer selection resolves");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "resolving the start-of-turn observer selection must not leave the game stuck"
+    );
+    assert_eq!(
+        *delay_seen.lock().unwrap(),
+        1,
+        "mature start Delay drains after the earlier start observer selection resolves"
+    );
+    assert_eq!(
+        r.game.current_phase,
+        GamePhase::Main,
+        "begin_turn continues through draw/breeding into main after start observer selection resolves"
+    );
+    assert_eq!(r.game.turn_player(), 0);
+    assert_eq!(
+        r.game.player(0).hand.len(),
+        1,
+        "player 0 draws after the start-of-turn lifecycle resumes"
+    );
+    assert_eq!(r.game.player(0).deck.len(), 5);
+    assert!(
+        !r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
+        "mature start Delay is disposed after lifecycle resumes"
+    );
+    assert_eq!(r.trash_size(0), 1);
 }
 
 #[test]
