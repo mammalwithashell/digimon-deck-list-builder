@@ -2262,11 +2262,19 @@ keywords and would miss native printed keywords. Always use
 `game.has_keyword(...)`. All 14 pre-existing keyword check sites
 (combat.rs, action/mask.rs, game_phases.rs) migrated in Phase 3.
 
+Mask-affecting keywords must be enforced in both RL-visible masks and decode /
+resolver validation. Consumers such as Collision, Piercing, Reboot, and
+Retaliation use `Game::has_keyword(handle, keyword)` so printed,
+modifier-granted, and inherited keyword sources remain unified. Collision is
+the canonical mask/decode example: the block-decline PASS bit is removed only
+when a legal blocker exists, and `decode_action`/selection resolution must
+reject PASS while the block is mandatory.
+
 ### Keyword extraction patterns
 
 Keywords appear in card text as `＜Keyword＞` (full-width angle brackets).
-The parser recognizes the 19 non-parametric keywords in the `Keyword`
-enum plus three parametric patterns:
+The parser recognizes non-parametric combat keywords including `Collision`,
+`Piercing`, `Reboot`, and `Retaliation` plus parametric patterns:
 
 - `＜Security A. +N＞` / `＜Security A. -N＞` → `SecurityAttackPlus(N)` / `SecurityAttackMinus(N)`
 - `＜De-Digivolve N＞` → `DeDigivolve(N)`

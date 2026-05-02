@@ -32,6 +32,19 @@ fn parses_multiple_keywords_in_same_field() {
 }
 
 #[test]
+fn parses_group6_core_combat_keywords() {
+    let keywords = parse_printed_keywords(
+        "\u{ff1c}Collision\u{ff1e} \u{ff1c}Piercing\u{ff1e} \u{ff1c}Reboot\u{ff1e} \u{ff1c}Retaliation\u{ff1e}",
+        "",
+        "",
+    );
+    assert!(keywords.contains(&Keyword::Collision));
+    assert!(keywords.contains(&Keyword::Piercing));
+    assert!(keywords.contains(&Keyword::Reboot));
+    assert!(keywords.contains(&Keyword::Retaliation));
+}
+
+#[test]
 fn dedupes_same_keyword_in_multiple_fields() {
     let kw = parse_printed_keywords(
         "\u{ff1c}Rush\u{ff1e} (...)",
