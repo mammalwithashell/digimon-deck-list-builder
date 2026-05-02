@@ -2,7 +2,7 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-04-30
+Last updated: 2026-05-02
 
 ## Resolved Gaps
 
@@ -350,7 +350,8 @@ Resolved by Group 3:
 - **Effect text:** "[Start of Your Turn] … ＜Delay＞ …"
 - **Status:** Resolved 2026-05-02. `DelayTrigger::StartOfYourNextTurn` is stored on delayed Option permanents, drains from `begin_turn` after `StartOfYourTurn` observers and before per-turn reset/draw/main progression, and DSL `CompiledTiming::StartOfYourTurn` lowers to the start-delay trigger.
 - **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- start_of_your_next_turn_delay_fires_at_turn_start_not_end`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay_start_of_your_turn_maps_to_start_of_your_next_turn`.
-- **Remaining related work:** Card-specific Scramble bodies may still be blocked by other non-timing gaps such as pending-security self-to-hand, hand-or-trash/free-play selection, color requirement bypass, and card-specific effect bodies. Those remain tracked under their own entries.
+- **Group 5 handoff verification:** The full Delay/Link regression set passes: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay link`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed`.
+- **Remaining related work:** Card-specific Scramble bodies may still be blocked by other non-timing gaps such as pending-security self-to-hand, hand-or-trash/free-play selection, color requirement bypass, and card-specific effect bodies. Existing ignored LM-027 card-level tests that still name `G-DELAY-START-OF-TURN` are stale migration placeholders, not evidence that the generic start-of-turn Delay primitive is open.
 
 ### `EffectContext::add_pending_security_to_hand`  [G-ADD-OPTION-SELF-TO-HAND]
 - **Discovered in:** Medusamon Batch 12, LM-027 Red Scramble DSL implementation (2026-04-28). Also previously surfaced by ST22-08 Offensive Plug-In V (Batch 11) and EX6-072 pattern.
@@ -422,6 +423,7 @@ Resolved by Group 3:
 - **Workaround:** None — BLOCKED for the inherited memory trigger. Piggybacking on `OnEnterFieldAnyone` would over-fire for Digimon/Tamers and lacks the Option-specific trait context.
 - **Updated 2026-04-29:** Delay-style Option placement through `Game::play_option_from_hand` now dispatches `OnOptionPlaced` via `TriggerSource::OptionPlaced { player, permanent, card }`, and the placed Option is exposed through `TriggerContext.event_permanent`, `event_card`, and `source_player`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed_fires_after_delay_option_enters_battle_area` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_option_placed_event_card_trait_predicate_matches_placed_option`.
 - **Updated 2026-05-02:** Group 5 Task 4 extends `TriggerSource::OptionPlaced` with optional standalone permanent and linked-host context, dispatches `OnOptionPlaced` from Delay, Training, Link, and inherited/security self-placement paths, includes top-card and inherited breeding-area observers in the `OnOptionPlaced` fan-out, resumes `OnLink` after placed-option selections settle, and makes breeding-source `max_per_turn` accounting work for this queued observer path. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- on_option_placed_fires_for_training_link_and_security_placement_with_event_card link_on_option_placed_selection_resumes_on_link_after_choice_resolves on_option_placed_scans_inherited_sources_under_breeding_top_card once_per_turn_breeding_on_option_placed_observer_fires_once_not_zero`. Keep transient Standard options open; they still are not battle-area placements.
+- **Group 5 contract note:** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks. Task 8 verified the handoff regression set with `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay link`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed`.
 
 ### `OnAllyAttack` / `OnOpponentAttack` Declared-Attack Observer Timing
 - **Discovered in:** Dark Masters / Rocks archetype assessments (2026-04-29 follow-up)
