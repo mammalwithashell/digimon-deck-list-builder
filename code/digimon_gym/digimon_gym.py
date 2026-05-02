@@ -127,7 +127,7 @@ class DigimonEnv(gymnasium.Env):
         self.tensor_profile = (
             tensor_profile
             or os.environ.get("DIGIMON_TENSOR_PROFILE")
-            or "standard_compact_v1"
+            or "standard_lite_v2"
         )
         self.observation_layout = get_tensor_profile(self.tensor_profile)
         self.tensor_profile = self.observation_layout.id

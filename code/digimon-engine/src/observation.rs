@@ -23,7 +23,7 @@ impl ObservationProfileId {
 }
 
 pub fn default_observation_profile() -> ObservationProfileId {
-    ObservationProfileId::StandardCompactV1
+    ObservationProfileId::StandardLiteV2
 }
 
 pub fn parse_observation_profile(raw: &str) -> Result<ObservationProfileId, String> {

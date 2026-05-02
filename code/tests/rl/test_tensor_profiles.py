@@ -10,15 +10,36 @@ import numpy as np
 import pytest
 
 
-def test_default_tensor_profile_shape():
+DECK = ["ST1-01"] * 5 + ["ST1-03"] * 45
+
+
+def test_default_observation_profile_shape():
     from digimon_gym.tensor_profiles import get_tensor_profile
-    from digimon_engine import TENSOR_PROFILE_ID, TENSOR_SIZE
+    from digimon_engine import DEFAULT_OBSERVATION_PROFILE
 
     profile = get_tensor_profile()
 
+    assert profile.id == DEFAULT_OBSERVATION_PROFILE
+    assert profile.id == "standard_lite_v2"
+    assert profile.game_mode == "standard"
+    assert profile.tensor_size == 8320
+    assert profile.card_id_slot_count == 542
+    assert profile.scalar_slot_count == 7778
+    assert len(profile.card_id_positions) == 542
+    assert len(profile.scalar_positions) == 7778
+
+
+def test_compact_tensor_profile_remains_compatibility_profile():
+    from digimon_gym.tensor_profiles import get_tensor_profile
+    from digimon_engine import TENSOR_PROFILE_ID, TENSOR_SIZE
+
+    profile = get_tensor_profile("standard_compact_v1")
+
     assert profile.id == TENSOR_PROFILE_ID
+    assert profile.id == "standard_compact_v1"
     assert profile.game_mode == "standard"
     assert profile.tensor_size == TENSOR_SIZE
+    assert profile.tensor_size == 1375
     assert profile.card_id_slot_count == 520
     assert profile.scalar_slot_count == 855
     assert len(profile.card_id_positions) == 520
@@ -60,7 +81,7 @@ def test_feature_extractor_uses_profile_positions():
     from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
     from digimon_gym.tensor_profiles import get_tensor_profile
 
-    profile = get_tensor_profile()
+    profile = get_tensor_profile("standard_compact_v1")
     space = spaces.Box(
         shape=(TENSOR_SIZE,),
         low=-10.0,
@@ -76,6 +97,42 @@ def test_feature_extractor_uses_profile_positions():
     obs = torch.zeros((2, TENSOR_SIZE), dtype=torch.float32)
     out = extractor(obs)
     assert tuple(out.shape) == (2, 512)
+
+
+def test_digimon_env_defaults_to_standard_lite_v2_under_rust_backend(monkeypatch):
+    pytest.importorskip("digimon_engine")
+    monkeypatch.setenv("DIGIMON_BACKEND", "rust")
+    monkeypatch.delenv("DIGIMON_TENSOR_PROFILE", raising=False)
+
+    from digimon_gym.digimon_gym import DigimonEnv
+
+    env = DigimonEnv(deck1=DECK, deck2=DECK)
+    obs, info = env.reset(seed=7)
+
+    assert env.tensor_profile == "standard_lite_v2"
+    assert env.observation_space.shape == (8320,)
+    assert obs.shape == (8320,)
+    assert info["tensor_profile"] == "standard_lite_v2"
+
+
+def test_digimon_env_preserves_explicit_compact_profile_under_rust_backend(monkeypatch):
+    pytest.importorskip("digimon_engine")
+    monkeypatch.setenv("DIGIMON_BACKEND", "rust")
+    monkeypatch.delenv("DIGIMON_TENSOR_PROFILE", raising=False)
+
+    from digimon_gym.digimon_gym import DigimonEnv
+
+    env = DigimonEnv(
+        deck1=DECK,
+        deck2=DECK,
+        tensor_profile="standard_compact_v1",
+    )
+    obs, info = env.reset(seed=7)
+
+    assert env.tensor_profile == "standard_compact_v1"
+    assert env.observation_space.shape == (1375,)
+    assert obs.shape == (1375,)
+    assert info["tensor_profile"] == "standard_compact_v1"
 
 
 def test_feature_extractor_accepts_observation_layout():

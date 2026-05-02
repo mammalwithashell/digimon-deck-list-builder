@@ -96,21 +96,21 @@ fn dsl_slice_deck() -> Vec<String> {
 }
 
 #[test]
-fn runner_default_observation_profile_is_compact_v1() {
+fn runner_default_observation_profile_is_standard_lite_v2() {
     let runner = sample_runner();
-
-    assert_eq!(runner.observation_profile_id(), "standard_compact_v1");
-    assert_eq!(runner.observation_layout().tensor_size, TENSOR_SIZE);
-    assert_eq!(runner.get_board_tensor(None).len(), TENSOR_SIZE);
-}
-
-#[test]
-fn runner_can_use_standard_lite_v2_observation_profile() {
-    let runner = sample_runner_with_observation_profile("standard_lite_v2");
 
     assert_eq!(runner.observation_profile_id(), "standard_lite_v2");
     assert_eq!(runner.observation_layout().tensor_size, 8320);
     assert_eq!(runner.get_board_tensor(None).len(), 8320);
+}
+
+#[test]
+fn runner_can_use_standard_compact_v1_observation_profile() {
+    let runner = sample_runner_with_observation_profile("standard_compact_v1");
+
+    assert_eq!(runner.observation_profile_id(), "standard_compact_v1");
+    assert_eq!(runner.observation_layout().tensor_size, TENSOR_SIZE);
+    assert_eq!(runner.get_board_tensor(None).len(), TENSOR_SIZE);
 }
 
 #[test]
@@ -143,9 +143,18 @@ fn mask_and_tensor_sizes_match_layout() {
         HeadlessRunner::new(test_deck(), test_deck(), &db, false, false, false, Some(1)).unwrap();
 
     assert_eq!(runner.get_action_mask().len(), ACTION_SPACE_SIZE);
-    assert_eq!(runner.get_board_tensor(None).len(), TENSOR_SIZE);
-    assert_eq!(runner.get_board_tensor(Some(0)).len(), TENSOR_SIZE);
-    assert_eq!(runner.get_board_tensor(Some(1)).len(), TENSOR_SIZE);
+    assert_eq!(
+        runner.get_board_tensor(None).len(),
+        runner.observation_layout().tensor_size
+    );
+    assert_eq!(
+        runner.get_board_tensor(Some(0)).len(),
+        runner.observation_layout().tensor_size
+    );
+    assert_eq!(
+        runner.get_board_tensor(Some(1)).len(),
+        runner.observation_layout().tensor_size
+    );
 }
 
 #[test]

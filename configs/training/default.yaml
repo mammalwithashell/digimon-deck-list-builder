@@ -36,3 +36,4 @@ resume_from: null
 models_dir: models
 tensorboard_log: runs/pilot_ppo
 run_name: null
+tensor_profile: standard_lite_v2
