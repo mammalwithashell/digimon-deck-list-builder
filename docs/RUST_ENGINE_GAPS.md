@@ -72,7 +72,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Condition-gated modifier entries](#condition-gated-modifier-entries) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
 | [Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement)](#player-scoped-modifier-registry-cannotplayfromtrash-cannotplaydigimonbyeffect-opponentcannotreducedigivolvecost-ignorecolorrequirement) | 🔴 | 6+ | `modifiers.rs`, `enums.rs`, `action/`, `effect_context.rs` |
 | [Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic](#option-card-play-flow-resolve--trash-vs-place-on-field-mainsecurity-activation--plug-in--link-mechanic) | 🔴 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
-| [Scheduled end-of-turn effect queue (for transient Options)](#scheduled-end-of-turn-effect-queue-for-transient-options) | 🔴 | 1 | `game.rs`, `effect_context.rs` |
+| [Scheduled end-of-turn effect queue (for transient Options)](#scheduled-end-of-turn-effect-queue-for-transient-options) | ✅ | 1 | resolved in Group 5 Task 7 |
 | [Effect re-firing / cross-timing self-trigger](#effect-re-firing--cross-timing-self-trigger) | 🔴 | 1 | `effect_context.rs`, `effect_queue.rs` |
 | [Effect-initiated digivolve from non-hand source zones](#effect-initiated-digivolve-from-non-hand-source-zones) | ✅ | 4+ | resolved in Group 4 |
 | [Force-follow-up-attack / "may attack without suspending" script helpers](#force-follow-up-attack--may-attack-without-suspending-script-helpers) | 🔴 | 6 | `effect_context.rs`, `modifiers.rs`, `combat.rs` |
@@ -425,13 +425,13 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 **Updated 2026-04-29 (Task 4 / G-OPTION-PLACED-TIMING):** Delay-style Option placement through `Game::play_option_from_hand` now dispatches `EffectTiming::OnOptionPlaced` after the Option permanent is committed to the battle area, carrying `TriggerContext.event_permanent`, `event_card`, and `source_player` through `TriggerSource::OptionPlaced { player, permanent, card }`. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed_fires_after_delay_option_enters_battle_area` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_option_placed_event_card_trait_predicate_matches_placed_option`. Transient Standard options, security-effect "place in battle area" disposition, Link, Training, and breeding-area observer fan-out remain open unless separately tested.
 
 ### Scheduled end-of-turn effect queue (for transient Options)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
 - **Card(s):** BT1-090 Gravity Crush (shared across both audits — "[Main] Gain 2 memory. At end of turn, lose 2 memory.") — Dark Masters adds: EX10-012 / EX10-020 / EX10-035 / EX10-057 / EX10-061 ("At turn end, delete the Digimon this effect played" — provenance-anchored EOT cleanup, see standalone "Effect-spawned permanent with end-of-turn deletion rider")
 - **Effect text:** "[Main] Gain 2 memory. At end of turn, lose 2 memory."
-- **What's missing:** Transient Option cards resolve + trash before `end_turn`; existing `EndOfYourTurn` timing only walks live permanents. No mechanism to enqueue a closure from an Option's `[Main]` that fires at turn end after the card is in trash.
-- **Suggested API shape:** `ctx.schedule_end_of_turn(|ctx| { … })` enqueues a boxed closure onto `Game.scheduled_eot: Vec<…>`. `Game::end_turn` drains after standard `EndOfYourTurn` triggers, before memory reset.
-- **Workaround:** None — BLOCKED.
+- **Resolution:** `EffectContext::schedule_delayed_with_runtime` captures the source card, source permanent, source kind, controller, bindings, schedule turn, and runtime; `Game::fire_end_of_your_turn` drains `EndOfYourTurn` and `EndOfYourNextTurn` scheduled entries after printed observers, so Standard Options can schedule replay bodies that still run after the Option has been trashed.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- transient_option_scheduled_end_of_turn_effect_replays_with_option_source`
+- **Workaround:** None needed for generic transient Option end-of-turn replay. Provenance-anchored "delete the Digimon this effect played" cleanup remains tracked separately.
 - **Related:** Couples with Option-card play-flow gap.
 
 ### Effect re-firing / cross-timing self-trigger
