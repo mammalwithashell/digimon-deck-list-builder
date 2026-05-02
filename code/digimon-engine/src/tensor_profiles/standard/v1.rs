@@ -9,7 +9,7 @@ pub const VERSION: u32 = 1;
 pub const TENSOR_VERSION: u16 = 1;
 pub const FEATURE_SCHEMA_VERSION: &str = "standard_compact_v1.1";
 pub const LAYOUT_HASH: &str =
-    "sha256:77b03394536d53cbb711b2aa3c9c70a79bef4d118b8fbcd051c6ee96862dd2e5";
+    "sha256:7a06fb143d60e854cec0cc36763d8a886afdf98d58f05e638fcd475e1256ca74";
 
 pub const FIELD_SLOTS: usize = 14;
 pub const MAX_HAND: usize = 20;

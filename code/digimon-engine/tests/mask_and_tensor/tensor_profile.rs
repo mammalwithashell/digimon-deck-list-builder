@@ -44,6 +44,10 @@ fn every_profile_has_schema_version_and_layout_hash() {
         assert!(profile.layout_hash["sha256:".len()..]
             .chars()
             .all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase()));
+        assert_eq!(
+            profile.layout_hash,
+            profile.layout_hash_with_schema_version_for_test(profile.feature_schema_version)
+        );
     }
 }
 

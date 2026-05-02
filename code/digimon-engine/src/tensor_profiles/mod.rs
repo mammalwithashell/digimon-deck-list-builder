@@ -169,17 +169,36 @@ pub fn compute_layout_hash(
         canonical.push(':');
         canonical.push_str(&section.len.to_string());
         canonical.push(':');
-        canonical.push_str(&format!("{:?}", section.shape));
+        push_usize_slice(&mut canonical, section.shape);
         canonical.push(':');
-        canonical.push_str(&format!("{:?}", section.kind));
+        canonical.push_str(section_kind_label(section.kind));
     }
     canonical.push('|');
-    canonical.push_str(&format!("{:?}", card_id_positions));
+    push_usize_slice(&mut canonical, card_id_positions);
     canonical.push('|');
-    canonical.push_str(&format!("{:?}", scalar_positions));
+    push_usize_slice(&mut canonical, scalar_positions);
 
     let digest = Sha256::digest(canonical.as_bytes());
     format!("sha256:{digest:x}")
+}
+
+fn section_kind_label(kind: TensorSectionKind) -> &'static str {
+    match kind {
+        TensorSectionKind::Scalars => "scalars",
+        TensorSectionKind::CardIds => "card_ids",
+        TensorSectionKind::PermanentSlots => "permanent_slots",
+    }
+}
+
+fn push_usize_slice(output: &mut String, values: &[usize]) {
+    output.push('[');
+    for (index, value) in values.iter().enumerate() {
+        if index > 0 {
+            output.push(',');
+        }
+        output.push_str(&value.to_string());
+    }
+    output.push(']');
 }
 
 pub fn default_profile() -> TensorProfile {
