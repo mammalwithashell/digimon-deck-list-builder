@@ -150,7 +150,7 @@ fn write_permanent_row(
         permanent.card_sources.len() as f32 / layout::PERM_MAX_SOURCES as f32;
     t[base + layout::PERM_LINKED_COUNT_OFFSET] = permanent.linked_cards.len() as f32 / 5.0;
 
-    if let Some(handle) = handle {
+    if let Some(handle) = handle.filter(|_| !permanent.card_sources.iter().any(|s| s.face_down)) {
         t[base + layout::PERM_OPT_TOTAL_OFFSET] = game.opt_total(handle) as f32;
         t[base + layout::PERM_OPT_USED_OFFSET] = game.opt_used(handle) as f32;
     }

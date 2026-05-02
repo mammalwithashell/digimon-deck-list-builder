@@ -1,11 +1,13 @@
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::card_registry::CardRegistry;
-use digimon_engine::card_source::CardSource;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{EffectSourceKind, GamePhase};
 use digimon_engine::observation::{build_observation_tensor, parse_observation_profile};
 use digimon_engine::selection::{PendingSelection, SelectionKind};
 use digimon_engine::tensor_profiles::standard::v2_lite;
+use std::sync::Arc;
 
 use crate::tensor_helpers::sample_game_with_known_cards;
 
@@ -22,6 +24,17 @@ fn registry_from_runner(r: &DebugRunner) -> CardRegistry {
 fn v2_lite_tensor(r: &DebugRunner, observer: u8, registry: &CardRegistry) -> Vec<f32> {
     let profile = parse_observation_profile("standard_lite_v2").unwrap();
     build_observation_tensor(&r.game, observer, registry, profile)
+}
+
+struct OncePerTurnInheritedEffect;
+
+impl CardEffect for OncePerTurnInheritedEffect {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::inherited(card)
+            .name("Hidden source OPT")
+            .once_per_turn()
+            .build()]
+    }
 }
 
 #[test]
@@ -107,6 +120,55 @@ fn v2_lite_redacts_face_down_source_card_identity() {
             "face-down source card identity leaked at tensor position {position}"
         );
     }
+}
+
+#[test]
+fn v2_lite_redacts_face_down_source_aggregate_opt_counts() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("SRC-HIDDEN-OPT", "HiddenOptSource"))
+        .add_card(make_test_card("SRC-TOP", "TopCard"))
+        .start();
+    r.register_effect("SRC-HIDDEN-OPT", Arc::new(OncePerTurnInheritedEffect));
+
+    r.place_on_field(0, "SRC-HIDDEN-OPT", Some(0));
+    let top_data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "SRC-TOP")
+        .unwrap();
+    let top = CardSource::new(top_data_idx, 0, r.game.next_card_index());
+    r.game.digivolve_onto(0, 0, top);
+    let hidden_handle = r.game.players[0].battle_area[0].card_sources[0].handle();
+    r.game.players[0].battle_area[0].card_sources[0].face_down = true;
+    r.game.players[0].battle_area[0].record_activation(hidden_handle, 0);
+
+    let registry = registry_from_runner(&r);
+    assert_eq!(
+        r.game
+            .opt_total(digimon_engine::permanent::PermanentHandle {
+                player: 0,
+                index: 0
+            }),
+        1
+    );
+    assert_eq!(
+        r.game.opt_used(digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: 0
+        }),
+        1
+    );
+
+    let tensor = v2_lite_tensor(&r, 0, &registry);
+    assert_eq!(
+        tensor[v2_lite::OFF_PERMANENT_SLOTS + v2_lite::PERM_OPT_TOTAL_OFFSET],
+        0.0
+    );
+    assert_eq!(
+        tensor[v2_lite::OFF_PERMANENT_SLOTS + v2_lite::PERM_OPT_USED_OFFSET],
+        0.0
+    );
 }
 
 #[test]
