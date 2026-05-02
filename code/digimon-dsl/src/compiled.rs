@@ -540,6 +540,10 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    AddToHandFromSecurity {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
     AddToHandFromReveal {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
@@ -559,6 +563,9 @@ pub enum CompiledStep {
         position: CompiledStackPosition,
     },
     ShuffleDeck {
+        of: CompiledPlayerRef,
+    },
+    ShuffleSecurity {
         of: CompiledPlayerRef,
     },
     RevealTopDeck {

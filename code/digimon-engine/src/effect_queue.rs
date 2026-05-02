@@ -26,8 +26,8 @@ use crate::enums::{CardKind, EffectSourceKind, EffectTiming, GamePhase, Modifier
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{
-    EffectChoiceEntry, PendingPayCostEffect, PendingSelection, QueuedEffect, SelectionKind,
-    TriggerSource,
+    EffectChoiceEntry, PendingEffectSecurityRemoval, PendingPayCostEffect, PendingSecurity,
+    PendingSelection, QueuedEffect, SecurityRemovalDestination, SelectionKind, TriggerSource,
 };
 use crate::trigger_context::TriggerContext;
 
@@ -978,6 +978,164 @@ impl Game {
         }
     }
 
+    pub(crate) fn complete_effect_security_removal(
+        &mut self,
+        pending: PendingEffectSecurityRemoval,
+    ) {
+        let mut completed_digivolve: Option<PermanentHandle> = None;
+        if let Some(security) = self.pending_security.take() {
+            if !security.played {
+                match pending.destination {
+                    SecurityRemovalDestination::Trash => {
+                        let owner = security.card.owner;
+                        self.player_mut(owner).trash.push(security.card);
+                    }
+                    SecurityRemovalDestination::Hand(owner) => {
+                        self.player_mut(owner).hand.push(security.card);
+                    }
+                    SecurityRemovalDestination::BottomSource(target) => {
+                        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                            if let Some(breeding) =
+                                self.player_mut(target.player).breeding_area.as_mut()
+                            {
+                                breeding.push_under(security.card);
+                            } else {
+                                let owner = security.card.owner;
+                                self.player_mut(owner).trash.push(security.card);
+                            }
+                        } else if let Some(perm) = self
+                            .player_mut(target.player)
+                            .battle_area
+                            .get_mut(target.index as usize)
+                        {
+                            perm.push_under(security.card);
+                        } else {
+                            let owner = security.card.owner;
+                            self.player_mut(owner).trash.push(security.card);
+                        }
+                    }
+                    SecurityRemovalDestination::Digivolve {
+                        player: _,
+                        target,
+                        turn,
+                    } => {
+                        if let Some(perm) = self
+                            .player_mut(target.player)
+                            .battle_area
+                            .get_mut(target.index as usize)
+                        {
+                            perm.digivolve(security.card, turn);
+                            completed_digivolve = Some(target);
+                        } else {
+                            let owner = security.card.owner;
+                            self.player_mut(owner).trash.push(security.card);
+                        }
+                    }
+                    SecurityRemovalDestination::Security {
+                        player,
+                        position,
+                        face_up,
+                    } => {
+                        let face_up_key = security.card.card_index;
+                        match position {
+                            crate::enums::StackPosition::Top => {
+                                self.player_mut(player).security.push(security.card);
+                            }
+                            crate::enums::StackPosition::Bottom => {
+                                self.player_mut(player).security.insert(0, security.card);
+                            }
+                            crate::enums::StackPosition::Random => {
+                                use rand::Rng;
+                                let len = self.player(player).security.len();
+                                let idx = if len == 0 {
+                                    0
+                                } else {
+                                    self.rng.gen_range(0..=len)
+                                };
+                                self.player_mut(player).security.insert(idx, security.card);
+                            }
+                        }
+                        if face_up {
+                            self.player_mut(player).face_up_security.insert(face_up_key);
+                        }
+                    }
+                }
+            }
+        }
+
+        self.pending_security = pending.previous_pending_security;
+
+        if let Some(target) = completed_digivolve {
+            self.enqueue_triggered(
+                EffectTiming::WhenDigivolving,
+                TriggerSource::Permanent(target),
+            );
+            self.drain_effect_queue();
+
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    EffectTiming::OnDigivolve,
+                    TriggerSource::PlayerBattleArea(pid as PlayerId),
+                );
+            }
+            self.drain_effect_queue();
+        }
+
+        if pending.defender != pending.observer_player {
+            self.enqueue_triggered(
+                EffectTiming::OnOpponentSecurityRemoved,
+                TriggerSource::PlayerBattleArea(pending.observer_player),
+            );
+            self.drain_effect_queue();
+        }
+    }
+
+    pub(crate) fn resume_pending_effect_security_removal(&mut self) {
+        while self.pending_selection.is_none() {
+            let Some(pending) = self.pending_effect_security_removal.pop() else {
+                return;
+            };
+            self.complete_effect_security_removal(pending);
+        }
+    }
+
+    pub(crate) fn fire_effect_security_removal(
+        &mut self,
+        defender: PlayerId,
+        observer_player: PlayerId,
+        card: crate::card_source::CardSource,
+        destination: SecurityRemovalDestination,
+    ) {
+        let card_handle = card.handle();
+        let previous_pending = self.pending_security.replace(PendingSecurity {
+            defender,
+            card,
+            played: false,
+        });
+
+        self.enqueue_triggered(
+            EffectTiming::OnLoseSecurity,
+            TriggerSource::SecurityRevealed {
+                defender,
+                card: card_handle,
+            },
+        );
+        self.drain_effect_queue();
+
+        let pending = PendingEffectSecurityRemoval {
+            defender,
+            observer_player,
+            destination,
+            previous_pending_security: previous_pending,
+        };
+
+        if self.pending_selection.is_some() {
+            self.pending_effect_security_removal.push(pending);
+            return;
+        }
+        self.complete_effect_security_removal(pending);
+    }
+
     /// Install a `TriggerOrder` selection offering `bundle` indices as
     /// resolution picks. `allow_decline_all` enables PASS = decline every
     /// remaining optional trigger controlled by `chooser`.
@@ -1143,6 +1301,10 @@ impl Game {
 
         if self.pending_selection.is_none() {
             self.resume_pending_pay_cost_effect();
+        }
+
+        if self.pending_selection.is_none() {
+            self.resume_pending_effect_security_removal();
         }
 
         if self.pending_selection.is_none() {

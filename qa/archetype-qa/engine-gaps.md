@@ -163,7 +163,7 @@ Resolved by Group 3:
 - **Status:** Fixed for battle-area permanent dispatch on 2026-04-29. `enqueue_from_permanent` now preserves top-card / linked / Training dispatch, then scans below-top `card_sources` and queues only matching `effect.inherited == true` effects with `source_permanent` set to the carrier and `source_card` set to the inherited source card.
 - **Affected cards:** YAML cards with `scope: inherited` and a triggered timing can now fire from below the top card when the relevant event is already dispatched to the carrier permanent's battle-area observer path.
 - **Regression coverage:** `bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn` and `buried_non_inherited_triggered_effect_does_not_fire_from_source_position`.
-- **Remaining limits:** This does not add new event fire sites. Source-trash paths outside the `Game::return_to_hand` event-payload slice, breeding-area dispatch, and effect-driven security-removal fan-out remain separate gaps. Group 2 closed the shared source, DP-budget, breeding-permanent, and empty-tail selection primitives on 2026-04-29.
+- **Remaining limits:** This does not add every event fire site. Group 4 added source-trash context for direct `EffectContext::trash_card_source` / `trash_top_source` helpers and effect-driven security-removal fan-out/resume for direct security stack moves. Lower-source trash from some older zone-return paths and breeding-area dispatch remain separate follow-ups. Group 2 closed the shared source, DP-budget, breeding-permanent, and empty-tail selection primitives on 2026-04-29.
 
 ### `max_per_turn` (Once-Per-Turn) Not Enforced for Triggered Effects  [G-OPT-TRIGGERED]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
@@ -172,7 +172,7 @@ Resolved by Group 3:
 - **Effect text:** any clause that combines `[Once Per Turn]` with a non-Main triggered timing (`OnLoseSecurity`, `WhenAttacking`, `OnPlay`, `OnDigivolving`, etc.).
 - **Status:** Fixed for permanent-backed queued triggered effects on 2026-04-29. `run_queued_effect_inner` now checks `Permanent::activation_count(source_card, slot) >= effect.max_per_turn` before processing and records activation before `process`, matching the existing activated field-main timing.
 - **Regression coverage:** `bt21_008_inherited_opt_blocks_second_trigger_same_turn`.
-- **Remaining limits:** This only enforces the existing queued-effect activation counter. It does not add optional prompt/action-space handling, source-trash paths outside the `Game::return_to_hand` event-payload slice, or breeding dispatch.
+- **Remaining limits:** This only enforces the existing queued-effect activation counter. It does not add optional prompt/action-space handling or breeding dispatch. Group 4 separately covered direct source-trash helper context and owner routing.
 
 ### `EffectTiming::OnMove` for Breeding-to-Battle Movement  [G-ON-MOVE]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
@@ -408,7 +408,7 @@ Resolved by Group 3:
 - **First test:** trigger `BT20-083` On Deletion with a `BT13-007` in breeding and assert a pending selection offers the breeding King Drasil rather than silently doing nothing.
 - **Workaround:** None faithful. Auto-selecting the only breeding permanent hides a gameplay choice and fails when future cards offer multiple legal destinations across battle/breeding zones.
 - **Updated 2026-04-29:** Resolved for pending selection and DSL binding without fake battle-area handles. `EffectContext::select_own_breeding_permanent` installs `SelectionKind::BreedingPermanent`, masks only the phase-scoped breeding selection action (`encode_breeding_select(player)`), and DSL `select_own_breeding_permanent` binds a `BreedingPermanentRef`. Covered by `breeding_permanent_selection_targets_breeding_without_fake_battle_handle`, `breeding_selection_mask_exposes_only_breeding_select_action`, and `dsl_select_breeding_permanent_binds_target`.
-- **Remaining limits:** This does not solve breeding-area trigger fan-out, effect-initiated movement to or from the breeding stack, or source placement under a selected breeding permanent. Those remain under `G-BREEDING-TRIGGER-DISPATCH` and the relevant zone-movement gaps.
+- **Remaining limits:** Group 4 now covers effect-initiated movement to/from the real breeding slot and bottom-source placement under the `BREEDING_TARGET` selected breeding permanent. This still does not solve breeding-area trigger fan-out for effects whose source remains in breeding; keep that under `G-BREEDING-TRIGGER-DISPATCH`.
 
 ### Option-Placed Observer Timing Missing  [G-OPTION-PLACED-TIMING]
 - **Discovered in:** Royal Knights archetype assessment (2026-04-28)
