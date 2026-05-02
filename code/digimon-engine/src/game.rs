@@ -169,6 +169,11 @@ pub struct Game {
     /// turn-end check after the observer queue settles.
     #[doc(hidden)]
     pub(crate) pending_option_placed_turn_check: bool,
+    /// Link Option continuation parked when `OnOptionPlaced` observers install
+    /// a selection after the linked card has attached but before `OnLink` has
+    /// fired.
+    #[doc(hidden)]
+    pub(crate) pending_option_placed_link_resume: Option<PermanentHandle>,
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
@@ -547,6 +552,7 @@ impl Game {
             pending_effect_security_removal: Vec::new(),
             pending_option: None,
             pending_option_placed_turn_check: false,
+            pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
             logger: Box::new(SilentLogger),

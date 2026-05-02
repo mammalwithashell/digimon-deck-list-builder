@@ -1218,7 +1218,8 @@ impl Game {
                     EffectTiming::OnOptionPlaced,
                     TriggerSource::OptionPlaced {
                         player: owner,
-                        permanent,
+                        permanent: Some(permanent),
+                        linked_host: None,
                         card: placed_card,
                     },
                 );
@@ -1293,12 +1294,29 @@ impl Game {
                 // permanent the owner controls fires `OnTrainingTrash` and is
                 // trashed (see `Game::move_from_breeding`). Training sideways-
                 // inheritance is dispatched in `enqueue_from_permanent`.
+                let owner = pending.owner;
+                let placed_card = pending.card.handle();
                 let turn = self.turn_count;
                 let mut perm = crate::permanent::Permanent::new(pending.card, turn);
-                perm.option_state = crate::permanent::OptionState::Training {
-                    owner: pending.owner,
+                perm.option_state = crate::permanent::OptionState::Training { owner };
+                self.player_mut(owner).battle_area.push(perm);
+                let permanent = PermanentHandle {
+                    player: owner,
+                    index: (self.player(owner).battle_area.len() - 1) as u8,
                 };
-                self.player_mut(pending.owner).battle_area.push(perm);
+                self.enqueue_triggered(
+                    EffectTiming::OnOptionPlaced,
+                    TriggerSource::OptionPlaced {
+                        player: owner,
+                        permanent: Some(permanent),
+                        linked_host: None,
+                        card: placed_card,
+                    },
+                );
+                self.drain_effect_queue();
+                if self.pending_selection.is_some() {
+                    self.pending_option_placed_turn_check = true;
+                }
             }
         }
     }
@@ -1440,11 +1458,31 @@ impl Game {
         }
 
         // Attach.
+        let linked_card = pending.card.handle();
         self.player_mut(host.player).battle_area[host.index as usize]
             .linked_cards
             .push(pending.card);
 
-        // Fire OnLink globally — every player's battle area scans for
+        self.enqueue_triggered(
+            EffectTiming::OnOptionPlaced,
+            TriggerSource::OptionPlaced {
+                player: pending.owner,
+                permanent: None,
+                linked_host: Some(host),
+                card: linked_card,
+            },
+        );
+        self.drain_effect_queue();
+        if self.pending_selection.is_some() {
+            self.pending_option_placed_link_resume = Some(host);
+            return;
+        }
+
+        self.fire_on_link_after_option_placed();
+    }
+
+    fn fire_on_link_after_option_placed(&mut self) {
+        // Fire OnLink globally - every player's battle area scans for
         // OnLink-timed effects. Load-bearing for Appmon-trait cards.
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
@@ -1453,12 +1491,27 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+        if self.pending_selection.is_some() {
+            self.pending_option_placed_turn_check = true;
+            return;
+        }
 
         // Link lifecycle complete — check if memory state demands turn transition.
         // The Standard Option path hits this via `advance_pending_option`; the
         // Link path bypasses that dispatcher (host-select callback calls this
         // directly), so we must invoke `check_turn_end` ourselves.
         self.check_turn_end();
+    }
+
+    pub(crate) fn resume_pending_option_placed_link(&mut self) {
+        if self.pending_option_placed_link_resume.is_none() {
+            return;
+        }
+        if self.pending_selection.is_some() || !self.effect_queue.is_empty() {
+            return;
+        }
+        self.pending_option_placed_link_resume = None;
+        self.fire_on_link_after_option_placed();
     }
 
     /// Compute the absolute `turn_count` at which a delayed Option should

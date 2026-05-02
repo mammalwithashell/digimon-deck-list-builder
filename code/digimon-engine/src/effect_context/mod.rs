@@ -675,7 +675,8 @@ impl<'a> EffectContext<'a> {
             EffectTiming::OnOptionPlaced,
             crate::selection::TriggerSource::OptionPlaced {
                 player: owner,
-                permanent: handle,
+                permanent: Some(handle),
+                linked_host: None,
                 card: placed_card,
             },
         );

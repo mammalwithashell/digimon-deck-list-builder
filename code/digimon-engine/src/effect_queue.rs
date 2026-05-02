@@ -19,7 +19,9 @@
 //! rail against self-triggering loops. Matches Python's
 //! `_resolve_effect_stack` max=50 bound.
 
-use crate::action::space::{HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS};
+use crate::action::space::{
+    BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS,
+};
 use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{
@@ -177,6 +179,17 @@ impl Game {
                             self.trigger_context_for_source(&source, Some(handle));
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
+                    let breeding_handle = PermanentHandle {
+                        player,
+                        index: BREEDING_TARGET as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(breeding_handle));
+                    self.enqueue_from_breeding_permanent(
+                        timing,
+                        breeding_handle,
+                        Some(trigger_context),
+                    );
                 }
             }
             TriggerSource::EventObserved { .. } => {
@@ -397,12 +410,16 @@ impl Game {
             TriggerSource::OptionPlaced {
                 player,
                 permanent,
+                linked_host,
                 card,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
-                event_permanent: Some(permanent),
+                event_permanent: permanent,
                 event_card: Some(card),
+                event_source_card: Some(card),
+                event_host_card: linked_host.and_then(|h| self.top_card_handle(h)),
+                event_host_permanent: linked_host,
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
@@ -437,6 +454,13 @@ impl Game {
     }
 
     fn top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
+        if handle.index == BREEDING_TARGET as u8 {
+            return self
+                .players
+                .get(handle.player as usize)
+                .and_then(|p| p.breeding_area.as_ref())
+                .map(|perm| perm.top_card().handle());
+        }
         self.players
             .get(handle.player as usize)
             .and_then(|p| p.battle_area.get(handle.index as usize))
@@ -892,6 +916,91 @@ impl Game {
         }
     }
 
+    fn enqueue_from_breeding_permanent(
+        &mut self,
+        timing: EffectTiming,
+        handle: PermanentHandle,
+        trigger_context: Option<TriggerContext>,
+    ) {
+        let Some(perm) = self
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.breeding_area.as_ref())
+        else {
+            return;
+        };
+        let top = perm.top_card();
+        let card_id = top.card_id(&self.card_data).to_string();
+        let source_card = top.handle();
+        let source_kind = source_kind_for_card_kind(top.card_kind(&self.card_data));
+        let is_turn_player = handle.player == self.turn_player();
+
+        if let Some(effects) = self.effects_for_card(&card_id, source_card) {
+            for (slot, effect) in effects.iter().enumerate() {
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                if effect.inherited {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card,
+                    source_permanent: Some(handle),
+                    source_kind,
+                    controller: handle.player,
+                    timing,
+                    trigger_context,
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: card_id.clone(),
+                    allow_below_top_liveness: false,
+                });
+            }
+        }
+
+        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind)> = {
+            let stack_len = perm.card_sources.len();
+            perm.card_sources
+                .iter()
+                .take(stack_len.saturating_sub(1))
+                .map(|c| {
+                    (
+                        c.card_id(&self.card_data).to_string(),
+                        c.handle(),
+                        source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                    )
+                })
+                .collect()
+        };
+        for (source_card_id, inherited_source, inherited_source_kind) in inherited_sources {
+            let Some(effects) = self.effects_for_card(&source_card_id, inherited_source) else {
+                continue;
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if !effect.inherited {
+                    continue;
+                }
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card: inherited_source,
+                    source_permanent: Some(handle),
+                    source_kind: inherited_source_kind,
+                    controller: handle.player,
+                    timing,
+                    trigger_context,
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: source_card_id.clone(),
+                    allow_below_top_liveness: true,
+                });
+            }
+        }
+    }
+
     /// Who gets to choose the next effect to resolve. Turn player first,
     /// then clockwise through the remaining players.
     fn next_chooser(&self) -> Option<PlayerId> {
@@ -944,14 +1053,14 @@ impl Game {
 
         if effect.max_per_turn > 0 {
             if let Some(perm_handle) = qe.source_permanent {
-                let Some(perm) = self
-                    .players
-                    .get(perm_handle.player as usize)
-                    .and_then(|p| p.battle_area.get(perm_handle.index as usize))
-                else {
+                let Some(activation_count) = self.source_permanent_activation_count(
+                    perm_handle,
+                    qe.source_card,
+                    qe.effect_slot,
+                ) else {
                     return;
                 };
-                if perm.activation_count(qe.source_card, qe.effect_slot) >= effect.max_per_turn {
+                if activation_count >= effect.max_per_turn {
                     return;
                 }
             }
@@ -1029,24 +1138,21 @@ impl Game {
 
         if effect.max_per_turn > 0 {
             if let Some(perm_handle) = qe.source_permanent {
-                let Some(activation_count) = self
-                    .players
-                    .get(perm_handle.player as usize)
-                    .and_then(|p| p.battle_area.get(perm_handle.index as usize))
-                    .map(|perm| perm.activation_count(qe.source_card, qe.effect_slot))
-                else {
+                let Some(activation_count) = self.source_permanent_activation_count(
+                    perm_handle,
+                    qe.source_card,
+                    qe.effect_slot,
+                ) else {
                     return;
                 };
                 if activation_count >= effect.max_per_turn {
                     return;
                 }
-                if let Some(perm) = self
-                    .players
-                    .get_mut(perm_handle.player as usize)
-                    .and_then(|p| p.battle_area.get_mut(perm_handle.index as usize))
-                {
-                    perm.record_activation(qe.source_card, qe.effect_slot);
-                }
+                self.record_source_permanent_activation(
+                    perm_handle,
+                    qe.source_card,
+                    qe.effect_slot,
+                );
             }
         }
 
@@ -1150,6 +1256,24 @@ impl Game {
         let Some(perm_handle) = qe.source_permanent else {
             return true;
         };
+        if perm_handle.index == BREEDING_TARGET as u8 {
+            return self
+                .players
+                .get(perm_handle.player as usize)
+                .and_then(|p| p.breeding_area.as_ref())
+                .is_some_and(|perm| {
+                    let top_matches = !qe.allow_below_top_liveness
+                        && perm.top_card().card_index == qe.source_card.0;
+                    let below_top_source_matches = perm
+                        .card_sources
+                        .iter()
+                        .take(perm.card_sources.len().saturating_sub(1))
+                        .any(|c| c.card_index == qe.source_card.0);
+                    let inherited_source_matches =
+                        below_top_source_matches && qe.allow_below_top_liveness && effect.inherited;
+                    top_matches || inherited_source_matches
+                });
+        }
         let Some(perm) = self
             .players
             .get(perm_handle.player as usize)
@@ -1190,6 +1314,50 @@ impl Game {
             })
             .unwrap_or(false);
         top_matches || linked_matches || inherited_source_matches || training_matches
+    }
+
+    fn source_permanent_activation_count(
+        &self,
+        handle: PermanentHandle,
+        source_card: CardHandle,
+        effect_slot: u8,
+    ) -> Option<u8> {
+        if handle.index == BREEDING_TARGET as u8 {
+            return self
+                .players
+                .get(handle.player as usize)
+                .and_then(|p| p.breeding_area.as_ref())
+                .map(|perm| perm.activation_count(source_card, effect_slot));
+        }
+        self.players
+            .get(handle.player as usize)
+            .and_then(|p| p.battle_area.get(handle.index as usize))
+            .map(|perm| perm.activation_count(source_card, effect_slot))
+    }
+
+    fn record_source_permanent_activation(
+        &mut self,
+        handle: PermanentHandle,
+        source_card: CardHandle,
+        effect_slot: u8,
+    ) {
+        if handle.index == BREEDING_TARGET as u8 {
+            if let Some(perm) = self
+                .players
+                .get_mut(handle.player as usize)
+                .and_then(|p| p.breeding_area.as_mut())
+            {
+                perm.record_activation(source_card, effect_slot);
+            }
+            return;
+        }
+        if let Some(perm) = self
+            .players
+            .get_mut(handle.player as usize)
+            .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+        {
+            perm.record_activation(source_card, effect_slot);
+        }
     }
 
     fn resume_queued_effect_process_tail(&mut self, qe: QueuedEffect) {
@@ -1598,6 +1766,9 @@ impl Game {
         // the body finishes; Delay/Link/Training hook here in Tasks 3-5.
         if self.pending_selection.is_none() {
             self.advance_pending_option();
+        }
+        if self.pending_selection.is_none() {
+            self.resume_pending_option_placed_link();
         }
         if self.pending_selection.is_none() {
             self.finish_pending_option_placed_turn_check();
