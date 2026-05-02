@@ -347,6 +347,42 @@ class TestTensorProfiles:
         with pytest.raises(ValueError, match="unknown tensor profile"):
             get_tensor_profile("missing")
 
+    def test_observation_layout_for_standard_lite_v2(self):
+        from digimon_engine import (
+            DEFAULT_OBSERVATION_PROFILE,
+            get_observation_layout,
+            list_observation_profiles,
+        )
+
+        assert DEFAULT_OBSERVATION_PROFILE == "standard_compact_v1"
+        assert "standard_lite_v2" in list_observation_profiles()
+        layout = get_observation_layout("standard_lite_v2")
+
+        assert layout["profile_id"] == "standard_lite_v2"
+        assert layout["tensor_version"] == 2
+        assert layout["feature_schema_version"] == "standard_lite_v2.1"
+        assert layout["tensor_size"] == 8320
+        assert len(layout["card_id_positions"]) == 542
+        assert len(layout["scalar_positions"]) == 7778
+        assert layout["layout_hash"].startswith("sha256:")
+        assert len(layout["layout_hash"]) == len("sha256:") + 64
+        assert layout["sections"][0] == {
+            "name": "global_features",
+            "offset": 0,
+            "size": 64,
+            "shape": [64],
+        }
+
+    def test_rust_headless_game_accepts_observation_profile(self):
+        from digimon_engine import RustHeadlessGame
+
+        deck = ["ST1-01"] * 5 + ["ST1-03"] * 45
+        game = RustHeadlessGame(deck, deck, seed=1, observation_profile="standard_lite_v2")
+
+        assert game.observation_profile_id == "standard_lite_v2"
+        assert game.get_observation_layout()["tensor_size"] == 8320
+        assert game.get_board_tensor(1).shape == (8320,)
+
 
 def _starter_decks():
     return ["ST1-01"] * 5 + ["ST1-03"] * 45, ["ST1-01"] * 5 + ["ST1-03"] * 45

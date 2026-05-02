@@ -42,6 +42,10 @@ use ::digimon_engine::card_registry::{CardRegistry as RustCardRegistry, REGISTRY
 use ::digimon_engine::deck_tools;
 use ::digimon_engine::enums::{CardKind as RustCardKind, GamePhase as RustGamePhase};
 use ::digimon_engine::events::GameEvent;
+use ::digimon_engine::observation::{
+    default_observation_profile, list_observation_profiles as rust_list_observation_profiles,
+    observation_layout, parse_observation_profile,
+};
 use ::digimon_engine::policies::greedy_action as choose_greedy_action;
 use ::digimon_engine::rules::CardRestriction;
 use ::digimon_engine::tensor::{MAX_SOURCES, TENSOR_SIZE};
@@ -454,6 +458,58 @@ fn list_tensor_profiles() -> Vec<String> {
     all_profile_ids().into_iter().map(str::to_string).collect()
 }
 
+fn profile_to_pydict(py: Python<'_>, profile: &RustTensorProfile) -> PyResult<PyObject> {
+    let d = PyDict::new_bound(py);
+    let (card_id_positions, scalar_positions) = profile.positions();
+
+    d.set_item("profile_id", profile.id)?;
+    d.set_item("game_mode", profile.game_mode)?;
+    d.set_item("version", profile.version)?;
+    d.set_item("tensor_version", profile.tensor_version)?;
+    d.set_item("feature_schema_version", profile.feature_schema_version)?;
+    d.set_item("tensor_size", profile.tensor_size)?;
+    d.set_item("field_slots", profile.field_slots)?;
+    d.set_item("slot_size", profile.slot_size)?;
+    d.set_item("max_sources", profile.max_sources)?;
+    d.set_item("card_id_slot_count", profile.card_id_slot_count)?;
+    d.set_item("scalar_slot_count", profile.scalar_slot_count)?;
+    d.set_item("card_id_positions", card_id_positions)?;
+    d.set_item("scalar_positions", scalar_positions)?;
+    d.set_item("layout_hash", profile.layout_hash)?;
+
+    let sections = PyList::empty_bound(py);
+    for section in profile.sections {
+        let sd = PyDict::new_bound(py);
+        sd.set_item("name", section.id)?;
+        sd.set_item("offset", section.start)?;
+        sd.set_item("size", section.len)?;
+        sd.set_item("shape", section.shape.to_vec())?;
+        sections.append(sd)?;
+    }
+    d.set_item("sections", sections)?;
+
+    Ok(d.into_py(py))
+}
+
+#[pyfunction]
+fn list_observation_profiles() -> Vec<String> {
+    rust_list_observation_profiles()
+        .into_iter()
+        .map(str::to_string)
+        .collect()
+}
+
+#[pyfunction]
+#[pyo3(signature = (profile_id = None))]
+fn get_observation_layout(py: Python<'_>, profile_id: Option<String>) -> PyResult<PyObject> {
+    let parsed = match profile_id {
+        None => default_observation_profile(),
+        Some(raw) => parse_observation_profile(&raw).map_err(PyValueError::new_err)?,
+    };
+    let profile = observation_layout(parsed);
+    profile_to_pydict(py, &profile)
+}
+
 /// Python-visible wrapper around the Rust `CardRegistry`.
 #[pyclass(module = "digimon_engine", name = "CardRegistry")]
 pub struct CardRegistry {
@@ -553,7 +609,15 @@ pub struct RustHeadlessGame {
 #[pymethods]
 impl RustHeadlessGame {
     #[new]
-    #[pyo3(signature = (deck1_ids, deck2_ids, verbose = false, record_actions = false, record_tensors = false, seed = None))]
+    #[pyo3(signature = (
+        deck1_ids,
+        deck2_ids,
+        verbose = false,
+        record_actions = false,
+        record_tensors = false,
+        seed = None,
+        observation_profile = None
+    ))]
     fn new(
         deck1_ids: Vec<String>,
         deck2_ids: Vec<String>,
@@ -561,9 +625,14 @@ impl RustHeadlessGame {
         record_actions: bool,
         record_tensors: bool,
         seed: Option<u64>,
+        observation_profile: Option<String>,
     ) -> PyResult<Self> {
         let db = card_db()?;
-        let runner = HeadlessRunner::new(
+        let profile = match observation_profile {
+            None => default_observation_profile(),
+            Some(raw) => parse_observation_profile(&raw).map_err(PyValueError::new_err)?,
+        };
+        let runner = HeadlessRunner::new_with_observation_profile(
             deck1_ids,
             deck2_ids,
             db,
@@ -571,6 +640,7 @@ impl RustHeadlessGame {
             record_actions,
             record_tensors,
             seed,
+            profile,
         )
         .map_err(PyValueError::new_err)?;
         Ok(Self { inner: runner })
@@ -749,6 +819,16 @@ impl RustHeadlessGame {
     #[getter]
     fn current_player_id(&self) -> u8 {
         self.inner.current_decision_player() + 1
+    }
+
+    #[getter]
+    fn observation_profile_id(&self) -> &'static str {
+        self.inner.observation_profile_id()
+    }
+
+    fn get_observation_layout(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let profile = self.inner.observation_layout();
+        profile_to_pydict(py, &profile)
     }
 
     /// Manual mulligan override. `pid` is the Python player_id (1 or 2).
@@ -960,6 +1040,12 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_tensor_profile, m)?)?;
     m.add_function(wrap_pyfunction!(list_tensor_profiles, m)?)?;
     m.add("TENSOR_PROFILE_ID", default_profile().id)?;
+    m.add_function(wrap_pyfunction!(list_observation_profiles, m)?)?;
+    m.add_function(wrap_pyfunction!(get_observation_layout, m)?)?;
+    m.add(
+        "DEFAULT_OBSERVATION_PROFILE",
+        default_observation_profile().as_str(),
+    )?;
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;
