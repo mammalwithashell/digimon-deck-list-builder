@@ -54,6 +54,20 @@ impl std::fmt::Display for OverclockError {
 
 impl std::error::Error for OverclockError {}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DelayedOptionLifecycleResumeKind {
+    StartTurn,
+    EndTurn { ending_player: PlayerId },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DelayedOptionLifecycleResume {
+    pub(crate) turn: u16,
+    pub(crate) kind: DelayedOptionLifecycleResumeKind,
+    pub(crate) pending_delete_key: Option<(PlayerId, u16)>,
+    pub(crate) skip_key: Option<(PlayerId, u16)>,
+}
+
 /// The core game state. Drives the turn state machine.
 ///
 /// `impl Game` blocks for this struct are spread across three files for
@@ -384,6 +398,9 @@ pub struct Game {
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
     /// Continuation for a scheduled-effect drain paused by a DSL selection.
     pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
+    /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
+    /// delete/replacement selection. Re-entered from `resolve_selection`.
+    pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
 }
 
 impl Game {
@@ -549,6 +566,7 @@ impl Game {
             dsl_outer_tail: None,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
+            pending_delayed_option_lifecycle: None,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it

@@ -10,7 +10,9 @@
 use crate::enums::{
     DelayTrigger, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw,
 };
-use crate::game::{Game, OverclockError};
+use crate::game::{
+    DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, Game, OverclockError,
+};
 use crate::permanent::PermanentHandle;
 use crate::selection::{AttackTarget, PendingSelection, SelectionKind};
 
@@ -35,6 +37,12 @@ impl Game {
         if self.pending_selection.is_some() {
             return;
         }
+
+        self.continue_begin_turn_after_start_delays();
+    }
+
+    fn continue_begin_turn_after_start_delays(&mut self) {
+        let tp = self.turn_player();
 
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::UntilNextUnsuspend);
 
@@ -184,11 +192,15 @@ impl Game {
         // played by P0 during P1's turn (via a Counter window) parks on P0's
         // battle_area with `trash_on_turn == P1's current turn`, and must fire
         // regardless of who's ending their turn.
-        self.resolve_delayed_options(self.turn_count);
+        self.resolve_delayed_options(self.turn_count, ending_player);
         if self.pending_selection.is_some() {
             return;
         }
 
+        self.continue_end_turn_after_delays(ending_player);
+    }
+
+    fn continue_end_turn_after_delays(&mut self, ending_player: PlayerId) {
         // Memory swing-back: capture memory before firing OnEndTurn effects,
         // fire them, then see if an effect restored memory from negative.
         let memory_before = self.memory;
@@ -525,18 +537,31 @@ impl Game {
     /// the opponent from their `DelayEffect` body are currently
     /// unsupported; file a gap in `docs/RUST_ENGINE_GAPS.md` if a printed
     /// card needs this shape.
-    pub(crate) fn resolve_delayed_options(&mut self, ending_turn: u16) {
+    pub(crate) fn resolve_delayed_options(&mut self, ending_turn: u16, ending_player: PlayerId) {
         self.resolve_delayed_options_matching(
             ending_turn,
             &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn],
+            DelayedOptionLifecycleResumeKind::EndTurn { ending_player },
+            None,
         );
     }
 
     pub(crate) fn resolve_start_delayed_options(&mut self, starting_turn: u16) {
-        self.resolve_delayed_options_matching(starting_turn, &[DelayTrigger::StartOfYourNextTurn]);
+        self.resolve_delayed_options_matching(
+            starting_turn,
+            &[DelayTrigger::StartOfYourNextTurn],
+            DelayedOptionLifecycleResumeKind::StartTurn,
+            None,
+        );
     }
 
-    fn resolve_delayed_options_matching(&mut self, turn: u16, triggers: &[DelayTrigger]) {
+    fn resolve_delayed_options_matching(
+        &mut self,
+        turn: u16,
+        triggers: &[DelayTrigger],
+        resume_kind: DelayedOptionLifecycleResumeKind,
+        initial_skip_key: Option<(PlayerId, u16)>,
+    ) {
         use crate::permanent::OptionState;
         use std::collections::HashSet;
 
@@ -547,6 +572,9 @@ impl Game {
         // can't key on `(owner, turn_played)` alone — two Delay Options
         // played on the same turn share `turn_played`.
         let mut cancelled_keys: HashSet<(PlayerId, u16)> = HashSet::new();
+        if let Some(key) = initial_skip_key {
+            cancelled_keys.insert(key);
+        }
 
         loop {
             // Find the next matching Delayed permanent across ALL players'
@@ -593,6 +621,12 @@ impl Game {
             );
             self.drain_effect_queue();
             if self.pending_selection.is_some() {
+                self.pending_delayed_option_lifecycle = Some(DelayedOptionLifecycleResume {
+                    turn,
+                    kind: resume_kind,
+                    pending_delete_key: Some(key),
+                    skip_key: None,
+                });
                 return;
             }
 
@@ -606,6 +640,12 @@ impl Game {
                 );
             }
             if self.pending_selection.is_some() {
+                self.pending_delayed_option_lifecycle = Some(DelayedOptionLifecycleResume {
+                    turn,
+                    kind: resume_kind,
+                    pending_delete_key: None,
+                    skip_key: Some(key),
+                });
                 return;
             }
 
@@ -619,6 +659,77 @@ impl Game {
                 .is_some()
             {
                 cancelled_keys.insert(key);
+            }
+        }
+    }
+
+    pub(crate) fn resume_pending_delayed_option_lifecycle(&mut self) {
+        if self.pending_selection.is_some() {
+            return;
+        }
+
+        let Some(mut resume) = self.pending_delayed_option_lifecycle.take() else {
+            return;
+        };
+
+        if let Some(key) = resume.pending_delete_key.take() {
+            let triggers = Self::delay_lifecycle_triggers(resume.kind);
+            if let Some(current_handle) =
+                self.find_delayed_permanent_by_key(key, resume.turn, triggers)
+            {
+                self.delete_permanent_with_cause(
+                    current_handle,
+                    crate::replacement::ReplacementCause::Cost,
+                );
+            }
+
+            if self.pending_selection.is_some() {
+                resume.skip_key = Some(key);
+                self.pending_delayed_option_lifecycle = Some(resume);
+                return;
+            }
+
+            if self
+                .find_delayed_permanent_by_key(key, resume.turn, triggers)
+                .is_some()
+            {
+                resume.skip_key = Some(key);
+            }
+        }
+
+        match resume.kind {
+            DelayedOptionLifecycleResumeKind::StartTurn => {
+                self.resolve_delayed_options_matching(
+                    resume.turn,
+                    &[DelayTrigger::StartOfYourNextTurn],
+                    resume.kind,
+                    resume.skip_key,
+                );
+                if self.pending_selection.is_some() {
+                    return;
+                }
+                self.continue_begin_turn_after_start_delays();
+            }
+            DelayedOptionLifecycleResumeKind::EndTurn { ending_player } => {
+                self.resolve_delayed_options_matching(
+                    resume.turn,
+                    &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn],
+                    resume.kind,
+                    resume.skip_key,
+                );
+                if self.pending_selection.is_some() {
+                    return;
+                }
+                self.continue_end_turn_after_delays(ending_player);
+            }
+        }
+    }
+
+    fn delay_lifecycle_triggers(kind: DelayedOptionLifecycleResumeKind) -> &'static [DelayTrigger] {
+        match kind {
+            DelayedOptionLifecycleResumeKind::StartTurn => &[DelayTrigger::StartOfYourNextTurn],
+            DelayedOptionLifecycleResumeKind::EndTurn { .. } => {
+                &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn]
             }
         }
     }

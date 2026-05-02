@@ -298,4 +298,56 @@ fn start_delay_scan_stops_when_delay_effect_installs_selection() {
         "the selecting Delay and its sibling both remain parked until selection resolution"
     );
     assert_eq!(r.trash_size(0), 0);
+
+    let (selecting_player, action_id) = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("DelayEffect selection should be pending");
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    r.game
+        .resolve_selection(selecting_player, action_id)
+        .expect("DelayEffect selection resolves");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "resolving the DelayEffect selection must not leave the game stuck"
+    );
+    assert_eq!(
+        *first_seen.lock().unwrap(),
+        1,
+        "the selecting Delay must not re-fire when delayed lifecycle resumes"
+    );
+    assert_eq!(
+        *second_seen.lock().unwrap(),
+        1,
+        "remaining mature start Delay resolves after the first selection is answered"
+    );
+    assert_eq!(
+        r.game.current_phase,
+        GamePhase::Main,
+        "begin_turn resumes through draw/breeding into main after delayed selections settle"
+    );
+    assert_eq!(r.game.turn_count, 3);
+    assert_eq!(r.game.turn_player(), 0);
+    assert_eq!(
+        r.game.player(0).hand.len(),
+        1,
+        "player 0 draws for the new turn after delayed lifecycle resumes"
+    );
+    assert_eq!(r.game.player(0).deck.len(), 5);
+    let delayed_remaining = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .filter(|p| matches!(p.option_state, OptionState::Delayed { .. }))
+        .count();
+    assert_eq!(
+        delayed_remaining, 0,
+        "both mature start delays are disposed after lifecycle resumes"
+    );
+    assert_eq!(r.trash_size(0), 2);
 }

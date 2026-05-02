@@ -1362,6 +1362,9 @@ impl Game {
         if self.pending_selection.is_none() {
             self.finish_pending_option_placed_turn_check();
         }
+        if self.pending_selection.is_none() {
+            self.resume_pending_delayed_option_lifecycle();
+        }
         // Some attack-time selections, especially optional pre-declare
         // replacements, park `pending_attack` before declaration commits. Once
         // the selection callback and any nested drains settle, resume the

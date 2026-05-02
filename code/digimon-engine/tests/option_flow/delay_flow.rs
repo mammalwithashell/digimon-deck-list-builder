@@ -676,4 +676,57 @@ fn end_turn_pauses_when_delay_effect_installs_selection() {
         6,
         "opponent deck is unchanged because turn rotation/draw has not happened"
     );
+
+    let (selecting_player, action_id) = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("DelayEffect selection should be pending");
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    r.game
+        .resolve_selection(selecting_player, action_id)
+        .expect("DelayEffect selection resolves");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "resolving the DelayEffect selection must not leave end_turn stuck"
+    );
+    assert_eq!(
+        *delay_seen.lock().unwrap(),
+        1,
+        "the selecting Delay must not re-fire when end_turn resumes"
+    );
+    assert_eq!(
+        *end_seen.lock().unwrap(),
+        1,
+        "later EndOfYourTurn observers run after delayed lifecycle resumes"
+    );
+    assert_eq!(
+        r.game.turn_count,
+        start_turn + 1,
+        "end_turn resumes through turn rotation"
+    );
+    assert_eq!(r.game.turn_player(), 1);
+    assert_eq!(
+        r.game.current_phase,
+        GamePhase::Main,
+        "next player's turn reaches main after delayed selection resolves"
+    );
+    assert_eq!(
+        r.game.player(1).hand.len(),
+        1,
+        "next player draws after end_turn resumes"
+    );
+    assert_eq!(r.game.player(1).deck.len(), 5);
+    assert!(
+        !r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
+        "delayed option is disposed after end_turn resumes"
+    );
+    assert_eq!(r.trash_size(0), 1);
 }
