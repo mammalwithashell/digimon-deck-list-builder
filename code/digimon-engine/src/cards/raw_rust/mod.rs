@@ -963,35 +963,23 @@ fn lm_027_delay_start_of_turn_noop(_handle: crate::card_source::CardHandle) -> V
     vec![]
 }
 
-/// LM-027 Red Scramble — Security clause "add this card to hand" no-op.
+/// LM-027 Red Scramble — legacy shim for "add this card to hand".
 ///
 /// The printed Security effect ends with "Then, add this card to the hand."
 /// DCGO implements this via `CardEffectCommons.AddThisCardToHand(card, activateClass)`
 /// which moves the currently-resolving option card from security-resolution
 /// staging back to the controller's hand.
 ///
-/// This function is a step no-op placeholder until G-ADD-OPTION-SELF-TO-HAND
-/// is resolved. When the gap closes:
-///   1. Add `EffectContext::add_security_option_to_hand()` to the engine.
-///   2. Add an `add_this_option_to_hand` step verb to the DSL.
-///   3. Replace the raw_rust step in LM-027.yaml with the native verb.
-///   4. Remove this function and its registration.
-///
-/// Tracked in qa/dsl-vocab-gaps.md under G-ADD-OPTION-SELF-TO-HAND and in
-/// qa/archetype-qa/engine-gaps.md (also referenced by ST22-08, EX6-072).
-fn lm_027_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
-    // The engine has no EffectContext::add_security_option_to_hand() method.
+/// Prefer the native DSL `add_this_option_to_hand: {}` step for new scripts.
+fn lm_027_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    ctx.add_pending_security_to_hand();
 }
 
 /// EX7-074 Vortex Resonance — [Security] "Then, add this card to the hand."
 ///
-/// No-op placeholder for G-ADD-OPTION-SELF-TO-HAND. Identical semantics to
-/// `lm_027_add_self_to_hand`: when the engine implements
-/// `EffectContext::add_security_option_to_hand()`, replace this with that call.
-fn ex7_074_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
-    // The engine has no EffectContext::add_security_option_to_hand() method.
+/// Legacy raw-rust shim; prefer native DSL `add_this_option_to_hand: {}`.
+fn ex7_074_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    ctx.add_pending_security_to_hand();
 }
 
 /// P-206 Digital Gate Open — [Inherited][Security] "Then, add this card to the hand."
@@ -1004,31 +992,9 @@ fn ex7_074_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindin
 ///   currently-resolving Option card from security-resolution staging into the
 ///   controller's hand instead of routing it to trash.
 ///
-/// This function is a step no-op placeholder pending resolution of G-ADD-OPTION-SELF-TO-HAND:
-///
-/// **DSL gap**: No `add_this_option_to_hand` / `return_self_to_hand` step verb exists
-///   in `digimon-dsl/src/step.rs`. The `StepSpec` enum has no variant that maps to
-///   "find the currently-resolving security option card and move it to hand."
-///
-/// **Engine gap**: `EffectContext` has no `add_security_option_to_hand()` method.
-///   The security-resolution flow routes Option cards to trash via `dispose_option`.
-///   A hand-transfer variant must pop the card from the security staging area and
-///   push it to `player.hand` before `dispose_option` runs.
-///
-/// When G-ADD-OPTION-SELF-TO-HAND is closed:
-///   1. Add `EffectContext::add_security_option_to_hand()` to the engine.
-///   2. Add a `return_self_to_hand: {}` (or `add_this_option_to_hand: {}`) step verb
-///      to the DSL.
-///   3. Replace the `raw_rust: { fn: p_206_add_self_to_hand }` step in P-206.yaml
-///      with the native DSL verb.
-///   4. Remove this function and its registration.
-///
-/// Same pattern as `ex6_072_add_self_to_hand`, `st22_08_add_self_to_hand`,
-/// `lm_027_add_self_to_hand`, and `ex7_074_add_self_to_hand`.
-/// Tracked in `qa/dsl-vocab-gaps.md` under G-ADD-OPTION-SELF-TO-HAND.
-fn p_206_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
-    // The engine has no EffectContext::add_security_option_to_hand() method.
+/// Legacy raw-rust shim; prefer native DSL `add_this_option_to_hand: {}`.
+fn p_206_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    ctx.add_pending_security_to_hand();
 }
 
 /// BT21-093 Raging Serpentine — cost reduction formula.

@@ -26,10 +26,8 @@
 //!   `kind: delay` only supports EndOfThisTurn / EndOfYourNextTurn; no
 //!   StartOfYourTurn delay trigger exists in engine or DSL.
 //! - Clause C (Security): on_security with select_trash (red Digimon ≤2000 DP),
-//!   play_from_trash_free, raw_rust add-self-to-hand.
+//!   play_from_trash_free, add_this_option_to_hand.
 //!   - PARTIAL: G-PRED-DP-LTE (dp_lte filter not enforced at selection)
-//!   - PARTIAL: G-ADD-OPTION-SELF-TO-HAND (no DSL step for returning played
-//!     option card to hand after security resolution; uses raw_rust placeholder)
 //!
 //! # Known gaps
 //! - **G-DELAY-START-OF-TURN**: Clause B requires a Delay that fires at the
@@ -41,8 +39,6 @@
 //!   body is modelled as a raw_rust no-op placeholder until this gap is resolved.
 //! - **G-PRED-DP-LTE**: `dp_lte` predicate not evaluated at selection time for
 //!   permanents or trash cards.
-//! - **G-ADD-OPTION-SELF-TO-HAND**: No DSL step for returning the currently-
-//!   resolving security option card to the controller's hand.
 //! - **G-ZONE-TRASH-TO-DECK** (Clause B inner): "Return 1 red Digimon from
 //!   trash to top of deck" — no native DSL verb; raw_rust step needed.
 //!   Blocked by the outer G-DELAY-START-OF-TURN gap anyway.
@@ -586,8 +582,8 @@ fn lm_027_security_no_selection_when_only_large_red_digimon_in_trash() {
 /// After the Security clause resolves and a small red Digimon is played from
 /// trash, the card moves from trash to battle area (field count may increase).
 ///
-/// NOTE: add-self-to-hand (G-ADD-OPTION-SELF-TO-HAND) uses raw_rust stub so
-/// this test focuses only on the play-from-trash + no-panic outcome.
+/// The dedicated add-self-to-hand assertion below checks the final hand move;
+/// this test stays focused on the play-from-trash + no-panic outcome.
 #[test]
 fn lm_027_security_plays_small_red_digimon_from_trash_no_panic() {
     let small = make_small_red_digimon("LM027-SMALL-SEC");
@@ -644,20 +640,54 @@ fn lm_027_security_plays_small_red_digimon_from_trash_no_panic() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// After the Security clause resolves (play from trash complete), the printed
-/// text says "Then, add this card to the hand." This uses the raw_rust step
-/// `lm_027_add_self_to_hand` which is a no-op placeholder until
-/// G-ADD-OPTION-SELF-TO-HAND is resolved.
-///
-/// DCGO: `CardEffectCommons.AddThisCardToHand(card, activateClass)` — moves the
-/// currently-resolving option card from security-resolution staging to hand.
-/// Engine has no `EffectContext::add_security_option_to_hand()` method and
-/// no DSL step verb for it.
+/// text says "Then, add this card to the hand." This must move the currently
+/// resolving security Option out of `pending_security`, not a card from trash
+/// or the battle area.
 #[test]
-#[ignore = "pending: G-ADD-OPTION-SELF-TO-HAND — no DSL step or engine API to return security option to hand"]
 fn lm_027_security_adds_card_to_hand_after_play() {
-    // When G-ADD-OPTION-SELF-TO-HAND is resolved, verify:
-    // 1. Before Security fires: P0 hand has 0 copies of LM-027.
-    // 2. Security resolves (plays small red Digimon from trash).
-    // 3. After Security: P0 hand has 1 copy of LM-027.
-    unimplemented!("blocked on G-ADD-OPTION-SELF-TO-HAND");
+    let small = make_small_red_digimon("LM027-SMALL-HAND");
+    let mut attacker = make_filler("LM027-ATTACKER");
+    attacker.dp = Some(6000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(LM_027_YAML)
+        .expect("LM-027 YAML parses")
+        .add_card(small)
+        .add_card(attacker)
+        .memory(10)
+        .deck(1, &["LM027-SMALL-HAND"])
+        .security(1, &["LM-027"])
+        .start();
+
+    let trash_seed = runner.game.players[1]
+        .deck
+        .pop()
+        .expect("small red seed in deck");
+    runner.game.players[1].trash.push(trash_seed);
+
+    let attacker = runner.place_on_field(0, "LM027-ATTACKER", Some(0));
+    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
+
+    let _ = runner.attack_player(attacker, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    assert_eq!(runner.security_count(1), 0, "LM-027 left security");
+    assert_eq!(runner.hand_size(1), 1, "LM-027 moved to defender hand");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "LM-027 was not trashed and the selected Digimon left trash"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "selected small red Digimon was played from trash"
+    );
+    let played_id = runner.game.players[1].battle_area[0].card_sources[0]
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        played_id, "LM027-SMALL-HAND",
+        "the specifically seeded trash Digimon was played"
+    );
 }

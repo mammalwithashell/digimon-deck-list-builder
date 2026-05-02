@@ -1153,6 +1153,7 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::AddThisOptionToHand(_) => CompiledStep::AddThisOptionToHand,
         S::TrashFromHandByIndex(a) => CompiledStep::TrashFromHandByIndex {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),

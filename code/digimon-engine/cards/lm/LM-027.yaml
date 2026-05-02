@@ -99,14 +99,7 @@ cost: 2
 #   - optional: true     (DCGO canNoSelect: true at SelectTrashCardEffect)
 #   - select_trash (filter: digimon + color_is: red [+ dp_lte: 2000 blocked])
 #   - play_from_trash_free
-#   - raw_rust { fn: lm_027_add_self_to_hand }   (G-ADD-OPTION-SELF-TO-HAND)
-#
-# G-ADD-OPTION-SELF-TO-HAND [DSL gap]:
-#   No DSL step verb for "return the currently-resolving security option card
-#   to the controller's hand." DCGO uses CardEffectCommons.AddThisCardToHand.
-#   Engine has no EffectContext::add_security_option_to_hand() method. The step
-#   is modelled as a raw_rust no-op placeholder.
-#   Tracked in qa/dsl-vocab-gaps.md under G-ADD-OPTION-SELF-TO-HAND.
+#   - add_this_option_to_hand
 
 effects:
   # ─── Clause A: [Main] ───────────────────────────────────────────────────────
@@ -192,5 +185,4 @@ effects:
           of: you
           hand_index: picked
       # Step 3: add this card (LM-027) to the hand.
-      # G-ADD-OPTION-SELF-TO-HAND: no native DSL step for this. No-op placeholder.
-      - raw_rust: { fn: lm_027_add_self_to_hand }
+      - add_this_option_to_hand: {}

@@ -1502,6 +1502,26 @@ impl<'a> EffectContext<'a> {
         self.game.add_to_hand_from_reveal(player, card)
     }
 
+    /// Move the card currently resolving from security into its defender's hand.
+    ///
+    /// This consumes `Game.pending_security`, so the security dispose phase
+    /// cannot also trash the card. If the card was already played from
+    /// security, the pending state is restored and this is a no-op.
+    pub fn add_pending_security_to_hand(&mut self) -> bool {
+        let Some(pending) = self.game.pending_security.take() else {
+            return false;
+        };
+
+        if pending.played {
+            self.game.pending_security = Some(pending);
+            return false;
+        }
+
+        let defender = pending.defender;
+        self.game.player_mut(defender).hand.push(pending.card);
+        true
+    }
+
     /// Move a specific revealed card into `player`'s trash.
     pub fn trash_from_reveal(
         &mut self,
