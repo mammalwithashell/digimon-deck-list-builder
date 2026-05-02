@@ -8,11 +8,13 @@
 
 use std::sync::Arc;
 
+use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::cards::CardEffectRegistry;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::Expiry;
+use digimon_engine::game::Game;
 use digimon_engine::permanent::PermanentHandle;
 
 /// "DP-BUFF" — non-inherited: +1000 DP always.
@@ -80,6 +82,50 @@ fn fresh_runner() -> DebugRunner {
         .add_card(make_test_card("OPT", "OptCard"))
         .with_registry(test_registry())
         .start()
+}
+
+pub fn sample_game_with_known_cards() -> (Game, CardRegistry) {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_egg("ST1-01", "Koromon"))
+        .add_card(make_test_card("ST1-02", "Biyomon"))
+        .add_card(make_test_card("ST1-03", "Agumon"))
+        .add_card(make_test_card("ST1-04", "Greymon"))
+        .add_card(make_test_card("ST1-05", "Garurumon"))
+        .add_card(make_test_card("ST1-06", "Tyrannomon"))
+        .add_card(make_test_card("ST1-07", "Birdramon"))
+        .hand(0, &["ST1-02"])
+        .hand(1, &["ST1-03"])
+        .security(0, &["ST1-04"])
+        .security(1, &["ST1-05"])
+        .start();
+
+    runner.place_in_breeding(0, "ST1-01");
+    runner.place_on_field(0, "ST1-06", Some(0));
+    let own_trash = card_source(&runner, 0, "ST1-04");
+    let opp_trash = card_source(&runner, 1, "ST1-05");
+    let revealed = card_source(&runner, 0, "ST1-07");
+    runner.game.players[0].trash.push(own_trash);
+    runner.game.players[1].trash.push(opp_trash);
+    runner.game.revealed_cards.push(revealed);
+
+    let cards = runner
+        .game
+        .card_data
+        .iter()
+        .map(|card| (card.card_id.clone(), card.clone()))
+        .collect();
+    let registry = CardRegistry::from_cards(&cards);
+    (runner.game, registry)
+}
+
+fn card_source(runner: &DebugRunner, owner: u8, card_id: &str) -> CardSource {
+    let data_index = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == card_id)
+        .unwrap_or_else(|| panic!("unknown card_id {card_id}"));
+    CardSource::new(data_index, owner, 10_000 + data_index as u16)
 }
 
 // ─── source_dp_contribution ─────────────────────────────────────────
