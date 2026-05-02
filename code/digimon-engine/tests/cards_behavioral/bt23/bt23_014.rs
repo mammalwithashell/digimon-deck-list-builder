@@ -19,7 +19,8 @@
 //! - Shared [On Play]/[When Digivolving] + standalone [When Attacking] triggering
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 
 /// Standard fixture: Gallantmon registered, no cards in hand yet.
 fn gallantmon_runner() -> DebugRunner {
@@ -30,6 +31,12 @@ fn gallantmon_runner() -> DebugRunner {
         .start()
 }
 
+fn low_dp_opponent() -> CardData {
+    let mut card = make_test_card("OPP-9K", "OppLow9K");
+    card.dp = Some(9000);
+    card
+}
+
 /// Fixture with Gallantmon in hand for playing.
 /// Includes minimal decks for both players so `end_turn()` sequences don't
 /// cause deck-out (draw on empty deck → game_over) before modifiers expire.
@@ -37,6 +44,7 @@ fn gallantmon_in_hand() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT23-014")
         .expect("BT23-014 found in embedded DSL pack")
+        .add_card(low_dp_opponent())
         .hand(0, &["BT23-014"])
         // 3-card decks for each player prevent deck-out during multi-turn tests.
         .deck(0, &["BT23-014", "BT23-014", "BT23-014"])
@@ -350,14 +358,10 @@ fn bt23_014_on_play_with_no_opp_digimon_does_not_delete() {
 #[test]
 fn bt23_014_on_play_with_opp_digimon_present_deletes_it() {
     // Place an opponent Digimon first, then play Gallantmon.
-    // NOTE G-PRED-DP-LTE: dp_lte predicate on permanents is not evaluated yet.
-    // All opponent Digimon are valid targets regardless of DP. After the gap
-    // closes, only Digimon with DP ≤ (8000 + 2000 × opp_count) will be targeted.
     let mut runner = gallantmon_in_hand();
 
-    // Place a target on opponent's side (also Gallantmon for simplicity — high DP
-    // but still targetable while G-PRED-DP-LTE is open).
-    runner.place_on_field(1, "BT23-014", None);
+    // With one opponent permanent, the dynamic cap is 8000 + 2000 = 10000.
+    runner.place_on_field(1, "OPP-9K", None);
     let opp_count_before = runner.game.players[1].battle_area.len();
 
     let _idx = runner.play(0, 0);

@@ -43,6 +43,8 @@
 //!   — e.g. a Tamer or Option permanent — are skipped). The legacy
 //!   payload-less aggregate variant scans the controller for compatibility.
 
+use std::sync::OnceLock;
+
 use digimon_dsl::compiled::{
     CompiledAggregateSelector, CompiledFormula, CompiledPerSelector, CompiledPlayerRef,
     CompiledZone,
@@ -159,7 +161,12 @@ pub fn evaluate_read(
     ctx: &EffectReadContext<'_>,
     target: PermanentHandle,
 ) -> i32 {
-    evaluate_read_with_raw(f, ctx, target, &EngineRawRustRegistry::new())
+    evaluate_read_with_raw(f, ctx, target, default_raw_registry())
+}
+
+fn default_raw_registry() -> &'static EngineRawRustRegistry {
+    static RAW: OnceLock<EngineRawRustRegistry> = OnceLock::new();
+    RAW.get_or_init(crate::cards::raw_rust::build_registry)
 }
 
 pub fn evaluate_read_with_raw(

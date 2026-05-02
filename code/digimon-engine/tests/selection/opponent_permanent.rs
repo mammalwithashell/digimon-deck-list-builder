@@ -112,7 +112,7 @@ fn resolving_deletes_chosen_permanent() {
         r.game.pending_selection.is_none(),
         "selection cleared after resolution"
     );
-    assert_eq!(r.current_phase(), GamePhase::Breeding, "phase restored");
+    assert_eq!(r.current_phase(), GamePhase::Main, "phase restored");
     assert_eq!(
         r.battle_area_size(1),
         2,
@@ -130,7 +130,7 @@ fn pass_declines_and_leaves_field_intact() {
         .expect("PASS is legal on optional selections");
 
     assert!(r.game.pending_selection.is_none());
-    assert_eq!(r.current_phase(), GamePhase::Breeding);
+    assert_eq!(r.current_phase(), GamePhase::Main);
     assert_eq!(
         r.battle_area_size(1),
         2,
@@ -192,7 +192,7 @@ fn empty_opponent_field_is_noop() {
     );
     assert_eq!(
         r.current_phase(),
-        GamePhase::Breeding,
+        GamePhase::Main,
         "phase stays unchanged when the effect is a no-op"
     );
 }

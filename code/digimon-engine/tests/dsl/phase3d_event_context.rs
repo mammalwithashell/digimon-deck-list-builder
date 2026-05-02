@@ -327,25 +327,24 @@ effects:
       - gain_memory: 2
 "#;
 
-    let mut moved_card = digimon_card("BABY-ROCK", "Rock Baby", &["Rock"], 1000);
-    moved_card.level = Some(2);
+    let moved_card = digimon_card("ROOKIE-ROCK", "Rock Rookie", &["Rock"], 1000);
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(yaml)
         .unwrap()
         .add_card(moved_card)
-        .digitama(0, &["BABY-ROCK"])
+        .digitama(0, &["ROOKIE-ROCK"])
         .memory(10)
         .build();
 
     runner.place_on_field(0, "DSL-MOVE-REAL-OBS", None);
 
-    assert!(runner.game.hatch(0), "hatch Rock baby into breeding");
+    assert!(runner.game.hatch(0), "hatch Rock rookie into breeding");
     let after_hatch = runner.memory();
 
     assert!(
         runner.game.move_from_breeding(0),
-        "move Rock baby from breeding to battle"
+        "move Rock rookie from breeding to battle"
     );
     assert_eq!(
         runner.memory(),
