@@ -318,8 +318,9 @@ On initialization:
 On runner creation:
 
 - pass `observation_profile=self.tensor_profile` to `RustHeadlessGame`
-- for Python legacy backend, only allow `standard_compact_v1` unless a Python-side profile exists
-- fail fast if `DIGIMON_BACKEND != rust` and a non-`standard_compact_v1` profile is requested
+- normalize legacy aliases (`standard_v1`, `compact_v1`) to `standard_compact_v1` before backend-specific checks
+- for Python legacy backend, only allow the normalized `standard_compact_v1` unless a Python-side profile exists
+- fail fast if `DIGIMON_BACKEND != rust` and a normalized non-`standard_compact_v1` profile is requested
 
 `reset()` and `step()` should include profile metadata in `info`:
 

@@ -574,11 +574,11 @@ Expected engine/RL surfaces to update:
 
 Preferred implementation shape:
 
-- Introduce profile-specific tensor builders, starting with `build_tensor_v2_lite`.
+- Introduce profile-specific tensor builders, starting with `build_tensor_standard_lite_v2`.
 - Keep `build_tensor` as an alias only if the migration needs a short transition.
 - Export `TENSOR_VERSION = 2`.
 - Export `TENSOR_SIZE = TENSOR_SIZE_V2_LITE` only after `DigimonEnv` has intentionally switched its default profile.
-- Add profile-specific position generation, starting with `compute_positions_v2_lite`.
+- Add profile-specific position generation, starting with `compute_positions_standard_lite_v2`.
 
 ## Invariants
 
