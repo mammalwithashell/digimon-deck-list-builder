@@ -314,6 +314,94 @@ def section(name: str, offset: int, size: int, shape):
     return SimpleNamespace(name=name, offset=offset, size=size, shape=tuple(shape))
 
 
+def test_run_profile_games_scores_trigger_accuracy_from_runtime_zero_probe(monkeypatch):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    profile = profile_with_sections(
+        "standard_full_v2",
+        43008,
+        [
+            section("pending_choice_features", 4992, 3072, (32, 96)),
+            section("action_id_features", 8064, 34688, (2168, 16)),
+        ],
+    )
+
+    class ZeroProbeEnv(FakeEnv):
+        def reset(self, seed=None):
+            super().reset(seed=seed)
+            return [0.0] * profile.tensor_size, {"tensor_profile": self.tensor_profile}
+
+        def step(self, action):
+            _obs, reward, terminated, truncated, info = super().step(action)
+            return [0.0] * profile.tensor_size, reward, terminated, truncated, info
+
+    monkeypatch.setattr(gauntlet, "DigimonEnv", ZeroProbeEnv)
+    monkeypatch.setattr(gauntlet, "greedy_policy", lambda env: 62)
+
+    result = gauntlet.run_profile_games(
+        requested_profile="standard_full_v2",
+        profile=profile,
+        config=gauntlet.TensorProfileRunConfig(
+            profiles=("standard_full_v2",),
+            games_per_profile=1,
+            seeds=(11,),
+            max_steps_per_game=10,
+            policy="greedy",
+        ),
+        clock=clock_from((60.0, 61.0)),
+    )
+
+    assert result.trigger_order_correct == 0
+    assert result.trigger_order_total == 2
+
+
+def test_run_profile_games_accumulates_trigger_accuracy_from_runtime_probes(monkeypatch):
+    from digimon_gym.agents import tensor_profile_gauntlet as gauntlet
+
+    profile = profile_with_sections(
+        "standard_full_v2",
+        43008,
+        [
+            section("pending_choice_features", 4992, 3072, (32, 96)),
+            section("action_id_features", 8064, 34688, (2168, 16)),
+        ],
+    )
+
+    class TriggerProbeEnv(FakeEnv):
+        def reset(self, seed=None):
+            super().reset(seed=seed)
+            return [0.0] * profile.tensor_size, {"tensor_profile": self.tensor_profile}
+
+        def step(self, action):
+            _obs, reward, terminated, truncated, info = super().step(action)
+            obs = [0.0] * profile.tensor_size
+            if self._steps == 1:
+                obs[4992] = 1.0
+            if self._steps == 2:
+                obs[8064] = 1.0
+                obs[8064 + 14] = 1.0
+            return obs, reward, terminated, truncated, info
+
+    monkeypatch.setattr(gauntlet, "DigimonEnv", TriggerProbeEnv)
+    monkeypatch.setattr(gauntlet, "greedy_policy", lambda env: 62)
+
+    result = gauntlet.run_profile_games(
+        requested_profile="standard_full_v2",
+        profile=profile,
+        config=gauntlet.TensorProfileRunConfig(
+            profiles=("standard_full_v2",),
+            games_per_profile=1,
+            seeds=(11,),
+            max_steps_per_game=10,
+            policy="greedy",
+        ),
+        clock=clock_from((70.0, 71.0)),
+    )
+
+    assert result.trigger_order_correct == 2
+    assert result.trigger_order_total == 2
+
+
 def test_trigger_order_accuracy_compact_profile_has_no_signal():
     from digimon_gym.agents.tensor_profile_gauntlet import score_trigger_order_accuracy
 

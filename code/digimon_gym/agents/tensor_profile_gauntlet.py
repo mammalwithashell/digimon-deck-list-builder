@@ -256,6 +256,19 @@ def _section_values(tensor: Any, section: Any) -> Sequence[Any]:
     return values[offset : offset + size]
 
 
+def _empty_observed_probe(profile: TensorProfile | Any) -> list[float]:
+    return [0.0] * int(getattr(profile, "tensor_size", 0))
+
+
+def _merge_observed_probe(probe: list[float], observation: Any) -> None:
+    values = observation.ravel() if hasattr(observation, "ravel") else observation
+    limit = min(len(probe), len(values))
+    for index in range(limit):
+        value = float(values[index])
+        if value != 0.0:
+            probe[index] = value
+
+
 def _synthetic_trigger_probe(profile: TensorProfile | Any, sections: dict[str, Any]) -> list[float]:
     probe = [0.0] * int(getattr(profile, "tensor_size", 0))
     pending_section = sections.get("pending_choice_features")
@@ -333,6 +346,7 @@ def run_profile_games(
     wins = 0
     losses = 0
     draws = 0
+    observed_probe = _empty_observed_probe(profile)
 
     with _forced_backend("rust"):
         for seed in seeds:
@@ -341,7 +355,8 @@ def run_profile_games(
                 deck2=list(DEFAULT_DECK),
                 tensor_profile=profile.id,
             )
-            env.reset(seed=seed)
+            obs, _info = env.reset(seed=seed)
+            _merge_observed_probe(observed_probe, obs)
             terminated = False
             truncated = False
             game_steps = 0
@@ -349,7 +364,8 @@ def run_profile_games(
             while not (terminated or truncated) and game_steps < config.max_steps_per_game:
                 acting_policy = policy_fn if getattr(env, "current_player_id", 1) == 1 else greedy_policy
                 action = int(acting_policy(env))
-                _obs, _reward, terminated, truncated, _info = env.step(action)
+                obs, _reward, terminated, truncated, _info = env.step(action)
+                _merge_observed_probe(observed_probe, obs)
                 steps += 1
                 game_steps += 1
 
@@ -366,7 +382,7 @@ def run_profile_games(
                 draws += 1
 
     elapsed = max(now() - start, 1e-9)
-    trigger_order_correct, trigger_order_total = score_trigger_order_accuracy(profile)
+    trigger_order_correct, trigger_order_total = score_trigger_order_accuracy_from_probe(profile, observed_probe)
     return TensorProfileRunResult(
         requested_profile=requested_profile,
         profile_id=str(profile.id),
