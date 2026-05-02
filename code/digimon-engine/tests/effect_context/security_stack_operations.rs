@@ -118,6 +118,16 @@ fn add_card_to_security_owned(
     handle
 }
 
+fn ids_in_zone(
+    cards: &[CardSource],
+    card_data: &[digimon_engine::card_data::CardData],
+) -> Vec<String> {
+    cards
+        .iter()
+        .map(|card| card.card_id(card_data).to_string())
+        .collect()
+}
+
 #[test]
 fn selected_security_card_moves_to_hand_by_exact_identity() {
     let mut runner = DebugRunner::builder()
@@ -384,22 +394,39 @@ fn nested_deferred_security_removals_resume_outer_after_inner_selection() {
     assert!(runner.game.pending_selection.is_none());
     assert!(runner.game.pending_effect_security_removal.is_empty());
     assert!(runner.game.pending_security.is_none());
-    assert_eq!(runner.game.players[0].security.len(), 0);
+
+    let hand_ids = ids_in_zone(&runner.game.players[0].hand, &runner.game.card_data);
+    let trash_ids = ids_in_zone(&runner.game.players[0].trash, &runner.game.card_data);
+    let security_ids = ids_in_zone(&runner.game.players[0].security, &runner.game.card_data);
+
+    assert_eq!(security_ids, Vec::<String>::new());
     assert_eq!(
-        runner.game.players[0]
-            .hand
-            .iter()
-            .filter(|card| card.card_id(&runner.game.card_data) == "INNER")
-            .count(),
-        1
+        hand_ids,
+        vec![
+            "CHOICE-A".to_string(),
+            "CHOICE-B".to_string(),
+            "INNER".to_string(),
+        ],
+        "INNER should appear only in hand alongside the untouched choice cards"
     );
     assert_eq!(
-        runner.game.players[0]
-            .trash
-            .iter()
-            .filter(|card| card.card_id(&runner.game.card_data) == "OUTER")
-            .count(),
-        1
+        trash_ids,
+        vec!["OUTER".to_string()],
+        "OUTER should appear only in trash after the outer continuation resumes"
+    );
+
+    let battle_ids: Vec<String> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .flat_map(|perm| {
+            perm.card_sources
+                .iter()
+                .map(|card| card.card_id(&runner.game.card_data).to_string())
+        })
+        .collect();
+    assert!(
+        !battle_ids.iter().any(|id| id == "INNER" || id == "OUTER"),
+        "removed security cards must not be duplicated into battle-area stacks"
     );
 }
 

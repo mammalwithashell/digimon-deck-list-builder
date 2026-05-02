@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
@@ -8,18 +8,26 @@ use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, CardKind, CardSourceRef, CostDelta};
 use digimon_engine::permanent::PermanentHandle;
 
-struct SecurityLossAndDigivolveGain;
+struct SecurityLossAndDigivolveOrder {
+    seen: Arc<Mutex<Vec<&'static str>>>,
+}
 
-impl CardEffect for SecurityLossAndDigivolveGain {
+impl CardEffect for SecurityLossAndDigivolveOrder {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let lose_seen = self.seen.clone();
+        let digivolve_seen = self.seen.clone();
         vec![
             Effect::on_lose_security(card)
-                .name("gain 2 on lose security")
-                .process(|ctx| ctx.gain_memory(2))
+                .name("record lose security")
+                .process(move |_ctx| {
+                    lose_seen.lock().unwrap().push("lose_security");
+                })
                 .build(),
             Effect::when_digivolving(card)
-                .name("gain 3 when digivolving")
-                .process(|ctx| ctx.gain_memory(3))
+                .name("record when digivolving")
+                .process(move |_ctx| {
+                    digivolve_seen.lock().unwrap().push("when_digivolving");
+                })
                 .build(),
         ]
     }
@@ -164,13 +172,17 @@ fn effect_digivolve_from_security_moves_selected_card_and_preserves_neighbors() 
 
 #[test]
 fn effect_digivolve_from_security_fires_security_loss_before_digivolve_triggers() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("BASE3", "Base"))
         .add_card(evo_lv4("EVO4"))
         .security(0, &["EVO4"])
         .memory(5)
         .start();
-    runner.register_effect("EVO4", Arc::new(SecurityLossAndDigivolveGain));
+    runner.register_effect(
+        "EVO4",
+        Arc::new(SecurityLossAndDigivolveOrder { seen: seen.clone() }),
+    );
 
     let target = runner.place_on_field(0, "BASE3", None);
     let evo_handle = runner.game.players[0].security[0].handle();
@@ -198,8 +210,9 @@ fn effect_digivolve_from_security_fires_security_loss_before_digivolve_triggers(
         evo_handle
     );
     assert_eq!(
-        runner.game.memory, 10,
-        "OnLoseSecurity (+2) resolves before the final WhenDigivolving (+3)"
+        seen.lock().unwrap().as_slice(),
+        ["lose_security", "when_digivolving"],
+        "security-loss observer must finish before the final digivolve trigger dispatch"
     );
 }
 
@@ -250,33 +263,52 @@ fn effect_digivolve_from_material_moves_exact_source_out_of_stack() {
 }
 
 #[test]
-fn failed_effect_digivolve_restores_source_zone() {
+fn failed_effect_digivolve_after_take_restores_source_zone() {
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("BASE3", "Base"))
         .add_card(evo_lv4("EVO4"))
-        .security(0, &["EVO4"])
-        .memory(5)
+        .add_card(make_test_card("OTHER", "Other"))
+        .memory(-9)
         .start();
 
-    let bogus_target = PermanentHandle {
-        player: 0,
-        index: 9,
-    };
-    let evo_handle = runner.game.players[0].security[0].handle();
-    let source_card = evo_handle;
+    let target = runner.place_on_field(0, "BASE3", None);
+    let evo_handle = add_to_trash(&mut runner, 0, "EVO4");
+    let other_handle = add_to_trash(&mut runner, 0, "OTHER");
+    let source_card = runner.game.players[0].battle_area[target.index as usize]
+        .top_card()
+        .handle();
 
     let ok = {
-        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(target), 0);
         ctx.effect_initiated_digivolve_from_source(
             0,
-            CardSourceRef::Security(0, 0),
-            bogus_target,
-            CostDelta::Free,
+            CardSourceRef::Trash(0, 0),
+            target,
+            CostDelta::Fixed(2),
             false,
         )
     };
 
     assert!(!ok);
-    assert_eq!(runner.game.players[0].security.len(), 1);
-    assert_eq!(runner.game.players[0].security[0].handle(), evo_handle);
+    assert_eq!(
+        runner.game.memory, -9,
+        "failed payment must not move memory"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[target.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BASE3",
+        "target should not digivolve after the post-take failure"
+    );
+    let trash_handles: Vec<_> = runner.game.players[0]
+        .trash
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(
+        trash_handles,
+        vec![evo_handle, other_handle],
+        "taken source must be restored at its original trash index"
+    );
 }
