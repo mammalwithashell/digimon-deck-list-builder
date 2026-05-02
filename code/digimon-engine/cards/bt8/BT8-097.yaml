@@ -71,7 +71,7 @@ effects:
   #      - !permanent.TopCard.CanNotBeAffected && permanent.CanBeDestroyedBySkill
   #      → DestroyPermanentsClass(filtered list)  (no player choice — automated sweep)
   #
-  # Floodgate: raw_rust step installs CannotPlayDigimonByEffect player-modifier on
+  # Floodgate: add_player_modifier installs CannotPlayDigimonByEffect on
   # opponent with EndOfOpponentsTurn expiry. Note: DCGO blocks "Digimon or DigiEgg"
   # — in the Rust engine CannotPlayDigimonByEffect covers both.
   #
@@ -82,12 +82,13 @@ effects:
   # Digimon currently pass the dp_lte filter unconditionally (all get deleted).
   # The YAML is correctly authored; enforcement will activate once G-PRED-DP-LTE closes.
   #
-  # NOTE G-PLAYER-FLOOD-GATE-DSL: the DSL kind:flood_gate lowers to permanent-level
-  # modifiers only. Player-level CannotPlayDigimonByEffect requires raw_rust.
   - when: main_from_hand
     summary: "Opp can't play Digimon by effect until their turn ends; delete all opp Digimon ≤6000 DP"
     process:
-      - raw_rust: { fn: bt8_097_opp_cannot_play_digimon_by_effect }
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotPlayDigimonByEffect
+          expiry: end_of_opponents_turn
       - for_each:
           over:
             all_of:
@@ -109,7 +110,10 @@ effects:
   - when: on_security
     summary: "[Security] Activate [Main] effects: floodgate + delete opp Digimon ≤6000 DP"
     process:
-      - raw_rust: { fn: bt8_097_opp_cannot_play_digimon_by_effect }
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotPlayDigimonByEffect
+          expiry: end_of_opponents_turn
       - for_each:
           over:
             all_of:

@@ -129,9 +129,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
 
-                // Security attack.
-                let sec_action = encode_attack(i as u16, SECURITY_TARGET);
-                mask[sec_action as usize] = 1.0;
+                if !game.modifiers.has(handle, ModifierType::CannotAttackPlayer) {
+                    let sec_action = encode_attack(i as u16, SECURITY_TARGET);
+                    mask[sec_action as usize] = 1.0;
+                }
 
                 // Digimon attacks (§4.4). Suspended enemies are always valid.
                 // Unsuspended enemies are valid iff attacker has:
@@ -525,7 +526,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
 
-                mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
+                if !game.modifiers.has(handle, ModifierType::CannotAttackPlayer) {
+                    mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
+                }
                 for j in 0..max_opp {
                     let target = &opp.battle_area[j];
                     if !target.is_digimon(&game.card_data) {

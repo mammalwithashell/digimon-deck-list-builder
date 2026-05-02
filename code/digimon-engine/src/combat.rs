@@ -293,14 +293,21 @@ impl Game {
             return AttackResult::Invalid;
         }
         // Target validation (Digimon must be a Digimon on field; Player target
-        // is always valid — player existence is guaranteed by turn_order).
+        // is legal unless the attacker is under a CannotAttackPlayer gate).
         match target {
             AttackTarget::Digimon(d) => {
                 if !self.handle_valid(d) {
                     return AttackResult::Invalid;
                 }
             }
-            AttackTarget::Player(_) => {}
+            AttackTarget::Player(_) => {
+                if self
+                    .modifiers
+                    .has(attacker, ModifierType::CannotAttackPlayer)
+                {
+                    return AttackResult::Invalid;
+                }
+            }
         }
 
         // Install PendingAttack.

@@ -22,10 +22,10 @@
 //! - Option card [Main] from hand (when: main_from_hand)
 //! - [Security] activate Main (when: on_security mirrors main_from_hand body)
 //! - G-PRED-DP-LTE: dp_lte filter on for_each not yet evaluated in eval_permanent_fields
-//! - G-PLAYER-FLOOD-GATE-DSL: raw_rust bridge for player-level modifier
+//! - Player-level floodgate DSL via add_player_modifier
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
     CompiledTriggeredClause,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -486,7 +486,6 @@ fn bt8_097_main_deletes_opp_digimon_with_exactly_6000_dp() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// [Security] timing fires the floodgate modifier on the opponent.
-/// Verifies the on_security clause contains the raw_rust step.
 #[test]
 fn bt8_097_security_installs_cannot_play_digimon_by_effect_modifier() {
     let mut runner = runner();
@@ -515,6 +514,43 @@ fn bt8_097_security_installs_cannot_play_digimon_by_effect_modifier() {
             .modifiers
             .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "CannotPlayDigimonByEffect must be installed on opponent after [Security] fires"
+    );
+}
+
+#[test]
+fn bt8_097_triggered_clauses_use_native_add_player_modifier_step() {
+    let runner = runner();
+    let card = runner.compiled_card("BT8-097").expect("BT8-097 in pack");
+
+    let triggered: Vec<&CompiledTriggeredClause> = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
+
+    assert!(
+        triggered.iter().all(|clause| {
+            clause.process.iter().any(|step| {
+                matches!(
+                    step,
+                    CompiledStep::AddPlayerModifier {
+                        modifier,
+                        ..
+                    } if modifier == "CannotPlayDigimonByEffect"
+                )
+            })
+        }),
+        "BT8-097 main and security clauses should use add_player_modifier for the floodgate"
+    );
+    assert!(
+        triggered.iter().all(|clause| !clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::RawRust { .. }))),
+        "BT8-097 should not need raw_rust for its player-level floodgate"
     );
 }
 

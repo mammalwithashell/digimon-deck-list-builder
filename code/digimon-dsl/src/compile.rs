@@ -969,7 +969,11 @@ fn compile_declarative(
             scope,
             active_when,
             modifier: fg.modifier,
-            target: compile_predicate(&fg.target, &format!("{prefix}.target"), card_id, errors),
+            target: fg.target.as_ref().map(|target| {
+                compile_predicate(target, &format!("{prefix}.target"), card_id, errors)
+            }),
+            target_player: fg.target_player.map(compile_player_ref),
+            expiry: fg.expiry,
             summary,
             summary_key,
         },
@@ -1296,6 +1300,11 @@ fn compile_step(
             ),
             modifier: a.modifier.clone(),
             value: compile_modifier_value(&a.value),
+            expiry: a.expiry.clone(),
+        },
+        S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
+            target_player: compile_player_ref(a.target_player),
+            modifier: a.modifier.clone(),
             expiry: a.expiry.clone(),
         },
         S::GrantKeyword(a) => CompiledStep::GrantKeyword {

@@ -62,10 +62,10 @@ effects:
   # acceptable under the no-approximations policy since no player choice is removed
   # — only unwanted plays are blocked, never forced.
   #
-  # NOTE G-PLAYER-FLOOD-GATE-DSL: the DSL kind: flood_gate lowers via lower_flood_gate.rs
-  # which installs permanent-level modifiers. Player-level modifiers cannot be installed
-  # from DSL yet. This raw_rust step bridges the gap until a `add_player_modifier` DSL
-  # verb is available.
+  # NOTE: broad player-level floodgates can now be installed from DSL via
+  # target_player/add_player_modifier. This remains raw_rust because the printed
+  # text is source-zone scoped ("from trash"), while the current broad
+  # CannotPlay*ByEffect modifiers block effect-plays from all zones.
   - when: [on_play, when_digivolving]
     summary: "Until opp's turn ends, their effects can't play Digimon/Tamers from trash"
     process:

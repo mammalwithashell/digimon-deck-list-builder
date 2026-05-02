@@ -22,7 +22,7 @@
 use crate::action::space::{HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS};
 use crate::card_source::CardHandle;
 use crate::effect_context::EffectContext;
-use crate::enums::{CardKind, EffectSourceKind, EffectTiming, GamePhase, PlayerId};
+use crate::enums::{CardKind, EffectSourceKind, EffectTiming, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{
@@ -41,6 +41,33 @@ fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
         CardKind::Tamer => EffectSourceKind::Tamer,
         CardKind::Option => EffectSourceKind::Option,
         CardKind::Token => EffectSourceKind::Rule,
+    }
+}
+
+fn security_activation_blocked_for_timing(
+    game: &Game,
+    player: PlayerId,
+    timing: EffectTiming,
+) -> bool {
+    matches!(timing, EffectTiming::SecuritySkill)
+        && game
+            .modifiers
+            .player_has(player, ModifierType::CannotActivateSecurityEffects)
+}
+
+fn permanent_activation_blocked_for_timing(
+    game: &Game,
+    handle: PermanentHandle,
+    timing: EffectTiming,
+) -> bool {
+    match timing {
+        EffectTiming::WhenDigivolving => game
+            .modifiers
+            .has(handle, ModifierType::CannotActivateWhenDigivolvingEffects),
+        EffectTiming::WhenAttacking => game
+            .modifiers
+            .has(handle, ModifierType::CannotActivateWhenAttackingEffects),
+        _ => false,
     }
 }
 
@@ -412,6 +439,9 @@ impl Game {
         let is_turn_player = defender == tp;
 
         for (slot, effect) in effects.iter().enumerate() {
+            if security_activation_blocked_for_timing(self, defender, timing) {
+                continue;
+            }
             if !timing_flag_matches(effect, timing) {
                 continue;
             }
@@ -467,6 +497,9 @@ impl Game {
 
         let tp = self.turn_player();
         let is_turn_player = handle.player == tp;
+        if permanent_activation_blocked_for_timing(self, handle, timing) {
+            return;
+        }
 
         // Defensive guard — not reachable through current dispatch paths but
         // prevents future double-enqueue if a caller fires a timing directly on

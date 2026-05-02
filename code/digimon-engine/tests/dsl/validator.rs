@@ -51,6 +51,56 @@ effects:
 }
 
 #[test]
+fn validate_activation_timing_gate_requires_permanent_target() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: tamer
+color: [red]
+cost: 1
+effects:
+  - kind: flood_gate
+    active_when: { opponents_turn: true }
+    modifier: CannotActivateWhenAttackingEffects
+    target_player: opponent
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| e.message.contains("permanent target")),
+        "expected player-scoped activation timing gate to be rejected, got: {errs:?}"
+    );
+}
+
+#[test]
+fn validate_add_player_modifier_rejects_activation_timing_gate() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: option
+color: [red]
+cost: 1
+effects:
+  - when: main_from_hand
+    process:
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotActivateWhenDigivolvingEffects
+          expiry: end_of_opponents_turn
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| e.message.contains("permanent target")),
+        "expected add_player_modifier activation timing gate to be rejected, got: {errs:?}"
+    );
+}
+
+#[test]
 fn validate_unknown_keyword_name_fails() {
     let spec = parse(
         r#"
