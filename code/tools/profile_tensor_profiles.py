@@ -15,11 +15,39 @@ from digimon_gym.agents.tensor_profile_gauntlet import (
 )
 
 
+def positive_int(raw: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{raw!r} is not a valid positive integer") from exc
+    if value <= 0:
+        raise argparse.ArgumentTypeError(f"{raw!r} must be a positive integer")
+    return value
+
+
 def parse_seed_range(raw: str) -> tuple[int, ...]:
+    if not raw.strip():
+        raise ValueError("seed range must not be empty")
     if ":" in raw:
-        start_raw, stop_raw = raw.split(":", 1)
-        return tuple(range(int(start_raw), int(stop_raw)))
-    return tuple(int(part.strip()) for part in raw.split(",") if part.strip())
+        parts = raw.split(":")
+        if len(parts) != 2:
+            raise ValueError("seed range must use start:stop")
+        start_raw, stop_raw = parts
+        try:
+            start = int(start_raw)
+            stop = int(stop_raw)
+        except ValueError as exc:
+            raise ValueError("seed range bounds must be integers") from exc
+        if stop <= start:
+            raise ValueError("seed range stop must be greater than start")
+        return tuple(range(start, stop))
+    try:
+        seeds = tuple(int(part.strip()) for part in raw.split(",") if part.strip())
+    except ValueError as exc:
+        raise ValueError("seed list entries must be integers") from exc
+    if not seeds:
+        raise ValueError("seed list must contain at least one seed")
+    return seeds
 
 
 def parse_args(argv: list[str] | None = None):
@@ -31,7 +59,7 @@ def parse_args(argv: list[str] | None = None):
         default=",".join(DEFAULT_PROFILE_REQUESTS),
         help="Comma-separated tensor profile IDs to compare.",
     )
-    parser.add_argument("--games", type=int, default=25, help="Games per profile.")
+    parser.add_argument("--games", type=positive_int, default=25, help="Games per profile.")
     parser.add_argument(
         "--seeds",
         default="101:126",
@@ -39,7 +67,7 @@ def parse_args(argv: list[str] | None = None):
     )
     parser.add_argument(
         "--max-steps-per-game",
-        type=int,
+        type=positive_int,
         default=1000,
         help="Step cap per game; capped games count as draws.",
     )
@@ -51,13 +79,13 @@ def parse_args(argv: list[str] | None = None):
     )
     parser.add_argument(
         "--n-steps",
-        type=int,
+        type=positive_int,
         default=128,
         help="Rollout step count used for memory footprint estimates.",
     )
     parser.add_argument(
         "--n-envs",
-        type=int,
+        type=positive_int,
         default=1,
         help="Vectorized env count used for memory footprint estimates.",
     )
@@ -72,7 +100,12 @@ def parse_args(argv: list[str] | None = None):
         action="store_true",
         help="Fail if any requested profile is unavailable.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    try:
+        parse_seed_range(args.seeds)
+    except ValueError as exc:
+        parser.error(str(exc))
+    return args
 
 
 def config_from_args(args) -> TensorProfileRunConfig:

@@ -402,3 +402,27 @@ def test_cli_parses_profiles_and_output_directory():
         "profile_runs/tensor_profiles/test"
     )
     assert args.require_profiles is True
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--games", "0"],
+        ["--max-steps-per-game", "0"],
+        ["--n-steps", "0"],
+        ["--n-envs", "0"],
+    ],
+)
+def test_cli_rejects_non_positive_integer_arguments(argv):
+    from tools.profile_tensor_profiles import parse_args
+
+    with pytest.raises(SystemExit):
+        parse_args(argv)
+
+
+@pytest.mark.parametrize("raw", ["", "10:10", "11:10", "abc"])
+def test_cli_rejects_invalid_seed_ranges(raw):
+    from tools.profile_tensor_profiles import parse_seed_range
+
+    with pytest.raises(ValueError, match="seed"):
+        parse_seed_range(raw)
