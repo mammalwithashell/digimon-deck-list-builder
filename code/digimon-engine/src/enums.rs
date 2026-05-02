@@ -568,7 +568,6 @@ pub enum ModifierType {
     CannotAddSecurityByEffect,
     CannotTrashOpponentSecurity,
     CannotReduceOpponentSecurity,
-    #[allow(dead_code)]
     IgnoreColorRequirement,
 }
 

@@ -44,7 +44,7 @@ Last updated: 2026-04-30
 
 19. ~~**Face-Down Card Tracking**~~ — RESOLVED 2026-03-14 (matches DCGO). DCGO `IsFlipped` is Security-only. Approximation counting all non-top sources is acceptable.
 
-20. ~~**Ignore Color Requirement**~~ — RESOLVED 2026-03-14. Added `ModifierType.IGNORE_COLOR_REQUIREMENT` for aura-style bypass in `action_mask.py`. 7 Hudiemon Option scripts use `card._match_color_requirement = False` for self-bypass. BT23-094 also updated.
+20. ~~**Ignore Color Requirement**~~ — RESOLVED 2026-03-14. Added `ModifierType.IGNORE_COLOR_REQUIREMENT` for aura-style bypass in `action_mask.py`. 7 Hudiemon Option scripts use `card._match_color_requirement = False` for self-bypass. BT23-094 also updated. Rust note 2026-05-02: `ModifierType::IgnoreColorRequirement` is now honored by Option masks and decode/execution in `digimon-engine`, covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test flood_gates -- group6_option_color --nocapture`.
 
 21. ~~**Security Play API**~~ — RESOLVED 2026-03-17. Added `game.effect_play_from_security(player, card)` helper. `security_attack()` now checks `card._security_played` flag before trashing. EX1-066 updated.
 
@@ -333,14 +333,14 @@ Resolved by Group 3:
 - **Regression coverage:** `source_multi::exact_two_sources_can_be_selected_across_own_battle_area`, `source_multi::up_to_sources_enables_pass_only_after_minimum_is_met`, `source_multi_mask_only_exposes_selecting_players_pending_actions`, `select_own_sources_binds_source_refs_for_trashing`, and `empty_select_own_sources_runs_outer_tail_synchronously`.
 - **Remaining limits:** Triggered-body cost ordering, Fragment / Digi-Burst / replacement integration, and card-specific Rocks bodies remain separate gaps.
 
-### `IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask  [G-IGNORE-COLOR-MASK]
+### ~~`IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask~~ — RESOLVED 2026-05-02 [G-IGNORE-COLOR-MASK]
 - **Discovered in:** Medusamon Batch 11, ST22-08 Offensive Plug-In V DSL implementation (2026-04-27)
 - **Scope:** Rust engine.
 - **Card(s):** ST22-08 Offensive Plug-In V — "While you have a Tamer, you can ignore this card's color requirements." Also any card that would use the `IgnoreColorRequirement` modifier via a flood_gate clause.
 - **Effect text:** "While you have a Tamer, you can ignore this card's color requirements."
-- **What's missing:** `code/digimon-engine/src/action/mask.rs`'s `option_color_match_available` function (line 598) has the following comment: "Script-level `match_color_requirement=False` and the `IGNORE_COLOR_REQUIREMENT` aura modifier are residual §4.2b work; both are absent here." The `ModifierType::IgnoreColorRequirement` variant exists in `enums.rs` (line 488) and the DSL validator accepts it, but no enforcement hook reads this modifier in the Rust action mask. The Python engine resolved this gap on 2026-03-14, but the Rust engine's action mask never received the equivalent fix.
-- **Suggested change:** In `option_color_match_available`, before returning `false`, check whether the card itself carries an `IgnoreColorRequirement` modifier (self-modifier on the card source) or whether any ally permanent has a permanent-level `IgnoreColorRequirement` modifier that applies to this card. If so, return `true`. This matches the Python engine's `_match_color_requirement_fn` pattern and the `ModifierType.IGNORE_COLOR_REQUIREMENT` aura check in `action_mask.py`.
-- **Workaround:** None — the `flood_gate` YAML clause with `modifier: IgnoreColorRequirement` compiles correctly but has zero runtime effect because the enforcement is absent.
+- **Resolution:** `code/digimon-engine/src/action/mask.rs` now treats player-scoped `ModifierType::IgnoreColorRequirement` as satisfying Option use legality before board color checks. The same helper is used by `play_option_from_hand`, so decode/execution rejects or accepts the same actions as the mask.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test flood_gates -- group6_option_color --nocapture`.
+- **Remaining limits:** This closes the Rust engine mask/decode hook only. DSL-specific conditional aura expression, live condition refresh, and card-specific flood_gate authoring remain separate DSL/card implementation work where applicable.
 
 ### `DelayTrigger::StartOfYourNextTurn` Missing — Delay Fires at Start of Turn  [G-DELAY-START-OF-TURN]
 - **Discovered in:** Medusamon Batch 12, LM-027 Red Scramble DSL implementation (2026-04-28)

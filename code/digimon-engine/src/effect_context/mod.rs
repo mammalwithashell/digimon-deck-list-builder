@@ -28,7 +28,9 @@ use crate::enums::{
 };
 use crate::game::Game;
 use crate::game_actions::PlayFromHandCostResult;
-use crate::modifiers::{EffectControllerFilter, EffectImmunityFilter, ModifierEntry};
+use crate::modifiers::{
+    EffectControllerFilter, EffectImmunityFilter, ModifierEntry, PlayerModifierEntry,
+};
 use crate::permanent::{Permanent, PermanentHandle};
 use crate::player::Player;
 use crate::replacement::{ReplacementCause, ReplacementSubject};
@@ -2680,6 +2682,19 @@ impl<'a> EffectContext<'a> {
                 }),
         );
         true
+    }
+
+    pub fn ignore_option_color_requirement(&mut self, target_player: PlayerId, expiry: Expiry) {
+        self.game.modifiers.add_player_modifier(
+            target_player,
+            PlayerModifierEntry::simple(
+                ModifierType::IgnoreColorRequirement,
+                0,
+                expiry,
+                None,
+                self.player,
+            ),
+        );
     }
 
     pub fn grant_keyword(&mut self, target: PermanentHandle, keyword: Keyword, expiry: Expiry) {

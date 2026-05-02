@@ -361,6 +361,7 @@ Format per entry:
 
 - Effect text: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
 - Status: CLOSED for DSL vocabulary and direct runtime primitives as of 2026-05-01. The DSL now supports `target_player` on `kind: flood_gate` and an explicit `add_player_modifier` step, and the engine has a `CannotReduceDigivolveCost` modifier with digivolve-only cost-reduction enforcement.
+- Engine note 2026-05-02: player-scoped `IgnoreColorRequirement` is now consumed by Rust Option masks and decode/execution. No new DSL syntax landed in that engine-only pass; passive/static field dispatch remains governed by the related blocker below.
 - Remaining related blocker: passive/static field effects still depend on G-DECLARATIVE-KEYWORD. BT5-008 compiles to the native player-targeted flood_gate below, but the engine still needs the global declarative field-effect dispatcher before face-up static rookies install their modifiers from board state.
 - Implemented DSL syntax:
   ```yaml
