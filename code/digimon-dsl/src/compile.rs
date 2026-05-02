@@ -353,6 +353,7 @@ fn compile_predicate(
         name_contains: p.name_contains.clone(),
         name_in: p.name_in.clone(),
         card_number_is: p.card_number_is.clone(),
+        play_cost_lte: p.play_cost_lte,
         dp_eq: p.dp_eq.as_ref().map(compile_dp_constraint),
         dp_lte: p.dp_lte.as_ref().map(compile_dp_constraint),
         dp_gte: p.dp_gte.as_ref().map(compile_dp_constraint),
@@ -375,6 +376,7 @@ fn compile_predicate(
         owner: p.owner.map(compile_player_ref),
         other: p.other,
         of_permanent: p.of_permanent.clone(),
+        not_in_binding: p.not_in_binding.clone(),
         source_is_tamer: p.source_is_tamer,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
@@ -967,7 +969,11 @@ fn compile_declarative(
             scope,
             active_when,
             modifier: fg.modifier,
-            target: compile_predicate(&fg.target, &format!("{prefix}.target"), card_id, errors),
+            target: fg.target.as_ref().map(|target| {
+                compile_predicate(target, &format!("{prefix}.target"), card_id, errors)
+            }),
+            target_player: fg.target_player.map(compile_player_ref),
+            expiry: fg.expiry,
             summary,
             summary_key,
         },
@@ -1149,10 +1155,15 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::AddToHandFromSecurity(a) => CompiledStep::AddToHandFromSecurity {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+        },
         S::AddToHandFromReveal(a) => CompiledStep::AddToHandFromReveal {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::AddThisOptionToHand(_) => CompiledStep::AddThisOptionToHand,
         S::TrashFromHandByIndex(a) => CompiledStep::TrashFromHandByIndex {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
@@ -1167,6 +1178,9 @@ fn compile_step(
             position: compile_stack_position(a.position),
         },
         S::ShuffleDeck(a) => CompiledStep::ShuffleDeck {
+            of: compile_player_ref(a.of),
+        },
+        S::ShuffleSecurity(a) => CompiledStep::ShuffleSecurity {
             of: compile_player_ref(a.of),
         },
         S::RevealTopDeck(a) => CompiledStep::RevealTopDeck {
@@ -1259,7 +1273,18 @@ fn compile_step(
         },
         S::EffectInitiatedDigivolve(a) => CompiledStep::EffectInitiatedDigivolve {
             target: compile_binding_ref(&a.target),
-            from_hand: compile_binding_ref(&a.from_hand),
+            from_hand: match a.source.as_ref().or(a.from_hand.as_ref()) {
+                Some(source) => compile_binding_ref(source),
+                None => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.effect_initiated_digivolve"),
+                        message: "effect_initiated_digivolve requires source or from_hand"
+                            .to_string(),
+                    });
+                    CompiledBindingRef::SelfRef
+                }
+            },
             cost: compile_cost_delta(&a.cost),
             ignore_requirements: a.ignore_requirements,
         },
@@ -1293,6 +1318,11 @@ fn compile_step(
             ),
             modifier: a.modifier.clone(),
             value: compile_modifier_value(&a.value),
+            expiry: a.expiry.clone(),
+        },
+        S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {
+            target_player: compile_player_ref(a.target_player),
+            modifier: a.modifier.clone(),
             expiry: a.expiry.clone(),
         },
         S::GrantKeyword(a) => CompiledStep::GrantKeyword {

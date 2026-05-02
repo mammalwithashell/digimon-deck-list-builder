@@ -6,8 +6,23 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
     Some(match name {
         "CannotActivateSecurityEffects" => ModifierType::CannotActivateSecurityEffects,
         "CannotPlayDigimonByEffect" => ModifierType::CannotPlayDigimonByEffect,
+        "CannotPlayTamerByEffect" => ModifierType::CannotPlayTamerByEffect,
         "IgnoreColorRequirement" => ModifierType::IgnoreColorRequirement,
         "CannotActivateMainEffects" => ModifierType::CannotActivateMainEffects,
+        "CannotActivateWhenDigivolvingEffects" => {
+            ModifierType::CannotActivateWhenDigivolvingEffects
+        }
+        "CannotActivateWhenAttackingEffects" => ModifierType::CannotActivateWhenAttackingEffects,
+        "CannotDigivolveDigimonByEffect" => ModifierType::CannotDigivolveDigimonByEffect,
+        "CannotGainMemoryByEffect" => ModifierType::CannotGainMemoryByEffect,
+        "CannotGainMemoryExceptFromTamers" => ModifierType::CannotGainMemoryExceptFromTamers,
+        "CannotReducePlayCost" => ModifierType::CannotReducePlayCost,
+        "CannotReduceDigivolveCost" => ModifierType::CannotReduceDigivolveCost,
+        "CannotDrawByEffect" => ModifierType::CannotDrawByEffect,
+        "CannotAddSecurityByEffect" => ModifierType::CannotAddSecurityByEffect,
+        "CannotTrashOpponentSecurity" => ModifierType::CannotTrashOpponentSecurity,
+        "CannotReduceOpponentSecurity" => ModifierType::CannotReduceOpponentSecurity,
+        "CannotPlayFromHand" => ModifierType::CannotPlayFromHand,
         "CannotBeDestroyed" => ModifierType::CannotBeDestroyed,
         "CannotBeDestroyedByBattle" => ModifierType::CannotBeDestroyedByBattle,
         "CannotBeDestroyedByEffect" => ModifierType::CannotBeDestroyedByEffect,

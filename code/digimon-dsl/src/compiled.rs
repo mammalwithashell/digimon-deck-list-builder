@@ -179,6 +179,7 @@ pub struct CompiledPredicate {
     pub name_contains: Option<String>,
     pub name_in: Option<Vec<String>>,
     pub card_number_is: Option<String>,
+    pub play_cost_lte: Option<i32>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     pub dp_gte: Option<CompiledDpConstraint>,
@@ -194,6 +195,7 @@ pub struct CompiledPredicate {
     pub owner: Option<CompiledPlayerRef>,
     pub other: Option<bool>,
     pub of_permanent: Option<String>,
+    pub not_in_binding: Option<String>,
     pub source_is_tamer: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
@@ -413,7 +415,9 @@ pub enum CompiledDeclarativeClause {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
         modifier: String,
-        target: CompiledPredicate,
+        target: Option<CompiledPredicate>,
+        target_player: Option<CompiledPlayerRef>,
+        expiry: Option<String>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -536,10 +540,15 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    AddToHandFromSecurity {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
     AddToHandFromReveal {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    AddThisOptionToHand,
     TrashFromHandByIndex {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
@@ -554,6 +563,9 @@ pub enum CompiledStep {
         position: CompiledStackPosition,
     },
     ShuffleDeck {
+        of: CompiledPlayerRef,
+    },
+    ShuffleSecurity {
         of: CompiledPlayerRef,
     },
     RevealTopDeck {
@@ -664,6 +676,11 @@ pub enum CompiledStep {
         target: CompiledModifierTarget,
         modifier: String,
         value: CompiledModifierValue,
+        expiry: String,
+    },
+    AddPlayerModifier {
+        target_player: CompiledPlayerRef,
+        modifier: String,
         expiry: String,
     },
     GrantKeyword {

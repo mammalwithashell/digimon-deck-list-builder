@@ -403,12 +403,18 @@ pub struct DelayBody {
 }
 
 /// Body for `kind: flood_gate` — applies a blanket modifier to matching
-/// permanents (e.g. `CannotDigivolve`, `CannotAttack`).
+/// permanents (e.g. `CannotDigivolve`, `CannotAttack`) or to referenced
+/// players (e.g. `CannotPlayDigimonByEffect`, `CannotReducePlayCost`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FloodGateBody {
     pub modifier: String,
-    pub target: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_player: Option<crate::common::PlayerRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expiry: Option<String>,
 }
 
 /// Body for `kind: alt_path_registration`.

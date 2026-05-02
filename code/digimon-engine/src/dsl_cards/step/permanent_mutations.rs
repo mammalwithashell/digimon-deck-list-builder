@@ -56,15 +56,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::ReturnToDeck {
             target,
             position,
-            include_sources: _,
+            include_sources,
         } => {
-            // Phase 2c: `include_sources=true` is modelled in CompiledStep but the
-            // engine currently trashes lower sources regardless — there is no
-            // stack-return API yet. Phase 2d must add one (faithful full-stack
-            // return) before this arm can honor `include_sources=true`.
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
-                let _ = ctx.return_to_deck(h, super::map_stack_position(*position));
+                let position = super::map_stack_position(*position);
+                if *include_sources {
+                    let _ = ctx.return_stack_to_deck(h, position);
+                } else {
+                    let _ = ctx.return_to_deck(h, position);
+                }
             }
             true
         }

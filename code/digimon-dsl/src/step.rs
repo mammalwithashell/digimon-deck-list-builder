@@ -73,11 +73,14 @@ pub enum StepSpec {
     TrashFromTop(DrawArgs),
     AddToHandFromDeck(HandleMoveArgs),
     AddToHandFromTrash(HandleMoveArgs),
+    AddToHandFromSecurity(HandleMoveArgs),
     AddToHandFromReveal(HandleMoveArgs),
+    AddThisOptionToHand(EmptyArgs),
     TrashFromHandByIndex(IndexedMoveArgs),
     TrashFromReveal(HandleMoveArgs),
     ReturnToDeckFromReveal(ReturnToDeckArgs),
     ShuffleDeck(PlayerArg),
+    ShuffleSecurity(PlayerArg),
     RevealTopDeck(RevealArgs),
     PlaceRemainderOnDeck(PlaceRemainderArgs),
 
@@ -113,6 +116,7 @@ pub enum StepSpec {
     // Modifiers
     AddDpModifier(AddDpModifierArgs),
     AddModifier(AddModifierArgs),
+    AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
     GrantEffectImmunity(GrantEffectImmunityArgs),
 
@@ -180,11 +184,14 @@ impl Serialize for StepSpec {
             StepSpec::TrashFromTop(v) => kv!(s, "trash_from_top", v),
             StepSpec::AddToHandFromDeck(v) => kv!(s, "add_to_hand_from_deck", v),
             StepSpec::AddToHandFromTrash(v) => kv!(s, "add_to_hand_from_trash", v),
+            StepSpec::AddToHandFromSecurity(v) => kv!(s, "add_to_hand_from_security", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
+            StepSpec::AddThisOptionToHand(v) => kv!(s, "add_this_option_to_hand", v),
             StepSpec::TrashFromHandByIndex(v) => kv!(s, "trash_from_hand_by_index", v),
             StepSpec::TrashFromReveal(v) => kv!(s, "trash_from_reveal", v),
             StepSpec::ReturnToDeckFromReveal(v) => kv!(s, "return_to_deck_from_reveal", v),
             StepSpec::ShuffleDeck(v) => kv!(s, "shuffle_deck", v),
+            StepSpec::ShuffleSecurity(v) => kv!(s, "shuffle_security", v),
             StepSpec::RevealTopDeck(v) => kv!(s, "reveal_top_deck", v),
             StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
             // Field / permanent
@@ -216,6 +223,7 @@ impl Serialize for StepSpec {
             // Modifiers
             StepSpec::AddDpModifier(v) => kv!(s, "add_dp_modifier", v),
             StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
+            StepSpec::AddPlayerModifier(v) => kv!(s, "add_player_modifier", v),
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
             StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
             // Selection
@@ -301,11 +309,14 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_from_top" => StepSpec::TrashFromTop(map.next_value()?),
             "add_to_hand_from_deck" => StepSpec::AddToHandFromDeck(map.next_value()?),
             "add_to_hand_from_trash" => StepSpec::AddToHandFromTrash(map.next_value()?),
+            "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
+            "add_this_option_to_hand" => StepSpec::AddThisOptionToHand(map.next_value()?),
             "trash_from_hand_by_index" => StepSpec::TrashFromHandByIndex(map.next_value()?),
             "trash_from_reveal" => StepSpec::TrashFromReveal(map.next_value()?),
             "return_to_deck_from_reveal" => StepSpec::ReturnToDeckFromReveal(map.next_value()?),
             "shuffle_deck" => StepSpec::ShuffleDeck(map.next_value()?),
+            "shuffle_security" => StepSpec::ShuffleSecurity(map.next_value()?),
             "reveal_top_deck" => StepSpec::RevealTopDeck(map.next_value()?),
             "place_remainder_on_deck" => StepSpec::PlaceRemainderOnDeck(map.next_value()?),
 
@@ -343,6 +354,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Modifiers
             "add_dp_modifier" => StepSpec::AddDpModifier(map.next_value()?),
             "add_modifier" => StepSpec::AddModifier(map.next_value()?),
+            "add_player_modifier" => StepSpec::AddPlayerModifier(map.next_value()?),
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
 
@@ -395,11 +407,14 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_from_top",
                         "add_to_hand_from_deck",
                         "add_to_hand_from_trash",
+                        "add_to_hand_from_security",
                         "add_to_hand_from_reveal",
+                        "add_this_option_to_hand",
                         "trash_from_hand_by_index",
                         "trash_from_reveal",
                         "return_to_deck_from_reveal",
                         "shuffle_deck",
+                        "shuffle_security",
                         "reveal_top_deck",
                         "place_remainder_on_deck",
                         "delete_permanent",
@@ -702,7 +717,10 @@ pub struct PlayFromSecurityArgs {
 #[serde(deny_unknown_fields)]
 pub struct EffectDigivolveArgs {
     pub target: BindingRef,
-    pub from_hand: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_hand: Option<BindingRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<BindingRef>,
     pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
@@ -740,6 +758,14 @@ pub struct AddModifierArgs {
     pub target: ModifierTarget,
     pub modifier: String,
     pub value: ModifierValueSpec,
+    pub expiry: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AddPlayerModifierArgs {
+    pub target_player: PlayerRef,
+    pub modifier: String,
     pub expiry: String,
 }
 

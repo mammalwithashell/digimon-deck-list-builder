@@ -224,7 +224,9 @@ fn collect_declarative_raw_rust_fns(
             ..
         } => {
             collect_optional_predicate_raw_rust_fns(active_when.as_ref(), names);
-            collect_predicate_raw_rust_fns(target, names);
+            if let Some(target) = target {
+                collect_predicate_raw_rust_fns(target, names);
+            }
         }
         CompiledDeclarativeClause::AltPathRegistration {
             active_when,
@@ -254,6 +256,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
             }
             collect_modifier_value_raw_rust_fns(value, names);
         }
+        CompiledStep::AddPlayerModifier { .. } => {}
         CompiledStep::SelectOwnPermanent { filter, .. }
         | CompiledStep::SelectOpponentPermanent { filter, .. }
         | CompiledStep::SelectHand { filter, .. }

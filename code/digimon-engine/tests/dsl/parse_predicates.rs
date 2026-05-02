@@ -1,4 +1,5 @@
 use digimon_engine::dsl::{
+    predicate::DpConstraint,
     predicate::{PredicateSpec, Zone},
     PlayerRef,
 };
@@ -77,4 +78,23 @@ count_lte:
     let p = parse(yaml);
     let c = p.count_lte.as_ref().unwrap();
     assert_eq!(c.n, 1);
+}
+
+#[test]
+fn parse_group7_predicate_leaves() {
+    let p = parse("play_cost_lte: 3");
+    assert_eq!(p.play_cost_lte, Some(3));
+
+    let p = parse("not_in_binding: saved");
+    assert_eq!(p.not_in_binding.as_deref(), Some("saved"));
+
+    let p = parse(
+        r#"
+dp_gte:
+  base: 0
+  per: material_count
+  delta: 1000
+"#,
+    );
+    assert!(matches!(p.dp_gte, Some(DpConstraint::Formula(_))));
 }

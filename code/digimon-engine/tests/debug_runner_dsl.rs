@@ -1,4 +1,5 @@
 use digimon_dsl::compiled::CompiledClause;
+use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::events::GameEvent;
 use digimon_engine::selection::SelectionKind;
@@ -20,6 +21,20 @@ effects:
           bind_as: branch
           prompt: "Pick one"
       - gain_memory: 2
+"#
+}
+
+fn security_add_this_option_to_hand_yaml() -> &'static str {
+    r#"
+card: DSL-SEC-HAND
+name: Security Hand
+kind: option
+color: [red]
+cost: 1
+effects:
+  - when: on_security
+    process:
+      - add_this_option_to_hand: {}
 "#
 }
 
@@ -124,4 +139,30 @@ fn event_helpers_checkpoint_and_filter_events() {
         matches!(event, GameEvent::MemoryChange { .. })
     });
     assert!(!memory_events.is_empty());
+}
+
+#[test]
+fn security_dsl_adds_currently_resolving_option_to_hand() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(security_add_this_option_to_hand_yaml())
+        .expect("inline security option DSL parses")
+        .add_card(make_test_card("ATTACKER", "Attacker"))
+        .security(1, &["DSL-SEC-HAND"])
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let result = runner.attack_player(attacker, 1, false);
+
+    assert_eq!(result, AttackResult::SecurityCheckSurvived);
+    assert_eq!(runner.security_count(1), 0, "revealed option left security");
+    assert_eq!(runner.hand_size(1), 1, "revealed option moved to hand");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "revealed option must not be trashed"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "adding the currently resolving option to hand is deterministic"
+    );
 }

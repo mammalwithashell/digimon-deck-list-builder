@@ -432,13 +432,11 @@ fn training_carrier_does_not_keep_turn_in_breeding_when_only_training_is_availab
     let breeding_training_bit =
         FIELD_EFFECT_START + BREEDING_TARGET * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN;
     assert_eq!(
-        mask[breeding_training_bit as usize],
-        1.0,
+        mask[breeding_training_bit as usize], 1.0,
         "Main-phase mask should surface the breeding-area Training activation"
     );
     assert_eq!(
-        mask[MOVE_FROM_BREEDING as usize],
-        0.0,
+        mask[MOVE_FROM_BREEDING as usize], 0.0,
         "full field keeps move unavailable; Training is the only relevant action"
     );
 }

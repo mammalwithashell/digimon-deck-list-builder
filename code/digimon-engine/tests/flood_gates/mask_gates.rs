@@ -225,6 +225,56 @@ fn cannot_attack_only_affects_target_player() {
     );
 }
 
+#[test]
+fn cannot_attack_player_on_attacker_zeroes_only_security_attack_bit() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATCK", 3000))
+        .add_card(make_digimon("DEF", 2000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+
+    let attacker = r.place_on_field(tp, "ATCK", Some(0));
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+    r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
+    r.game.enter_main_phase();
+
+    let mask_before = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask_before[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
+        "security attack should be available before CannotAttackPlayer"
+    );
+    assert_eq!(
+        mask_before[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        1.0,
+        "Digimon attack should be available before CannotAttackPlayer"
+    );
+
+    r.game.modifiers.add(
+        attacker,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            ModifierType::CannotAttackPlayer,
+            0,
+            Expiry::Permanent,
+            opp,
+        ),
+    );
+
+    let mask_after = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask_after[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        0.0,
+        "CannotAttackPlayer should suppress direct player attacks"
+    );
+    assert_eq!(
+        mask_after[encode_attack(attacker.index as u16, defender.index as u16) as usize],
+        1.0,
+        "CannotAttackPlayer should still allow legal Digimon attacks"
+    );
+}
+
 /// CannotAttack (player-scoped) must also gate attack bits in EndOfTurnAction.
 ///
 /// Regression guard for the §4.7e fix that extended the CannotAttack gate from

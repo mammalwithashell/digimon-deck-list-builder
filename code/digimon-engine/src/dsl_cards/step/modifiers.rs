@@ -24,10 +24,10 @@ use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::expiry_map::lookup_expiry;
 use crate::dsl_cards::formula_eval;
-use crate::dsl_cards::step::StepRuntime;
+use crate::dsl_cards::step::{resolve_player, StepRuntime};
 use crate::effect_context::EffectContext;
 use crate::enums::EffectSourceKind;
-use crate::modifiers::EffectControllerFilter;
+use crate::modifiers::{EffectControllerFilter, PlayerModifierEntry};
 use crate::permanent::PermanentHandle;
 
 /// Resolve a `CompiledModifierValue` to the `i32` the engine modifier APIs
@@ -157,13 +157,39 @@ pub fn try_run(
                     // Phase 2f2 Task 3: formula evaluation is INSIDE the loop with
                     // `h` as the target, so per-selectors (StackSize etc.) resolve
                     // against each matched permanent — NOT hoisted outside.
-                    let matches = crate::dsl_cards::step::permanent_scan::scan(ctx, pred);
+                    let matches =
+                        crate::dsl_cards::step::permanent_scan::scan(ctx, pred, Some(bindings));
                     for h in matches {
                         let n = resolve_modifier_value(value, ctx, h, runtime);
                         ctx.add_modifier(h, modifier_ty, n, expiry);
                     }
                 }
             }
+            true
+        }
+        CompiledStep::AddPlayerModifier {
+            target_player,
+            modifier,
+            expiry,
+        } => {
+            let Some(expiry) = resolve_expiry("add_player_modifier", expiry) else {
+                return true;
+            };
+            let Some(modifier_ty) = crate::dsl_cards::modifier_map::lookup_modifier_type(modifier)
+            else {
+                return true;
+            };
+            let player = resolve_player(ctx, *target_player);
+            ctx.game.modifiers.add_player_modifier(
+                player,
+                PlayerModifierEntry::simple(
+                    modifier_ty,
+                    0,
+                    expiry,
+                    ctx.source_permanent,
+                    ctx.player,
+                ),
+            );
             true
         }
         CompiledStep::GrantKeyword {

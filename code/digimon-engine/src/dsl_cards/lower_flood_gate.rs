@@ -6,13 +6,15 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledPredicate, CompiledScope};
+use digimon_dsl::compiled::{CompiledPlayerRef, CompiledPredicate, CompiledScope};
 
 use crate::card_source::CardHandle;
+use crate::dsl_cards::expiry_map::lookup_expiry;
 use crate::dsl_cards::modifier_map::lookup_modifier_type;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::{Expiry, PlayerId};
+use crate::modifiers::PlayerModifierEntry;
 use crate::permanent::PermanentHandle;
 
 pub fn lower(
@@ -20,11 +22,14 @@ pub fn lower(
     scope: CompiledScope,
     active_when: Option<CompiledPredicate>,
     modifier_name: &str,
-    target: CompiledPredicate,
+    target: Option<CompiledPredicate>,
+    target_player: Option<CompiledPlayerRef>,
+    expiry: Option<&str>,
 ) -> Option<Effect> {
     let modifier = lookup_modifier_type(modifier_name)?;
     let active_when = active_when.map(Arc::new);
-    let target_arc = Arc::new(target);
+    let target_arc = target.map(Arc::new);
+    let player_expiry = expiry.and_then(lookup_expiry).unwrap_or(Expiry::Permanent);
     let label = format!("Flood gate: {modifier_name}");
 
     let mut builder: EffectBuilder = Effect::declarative(card).name(&label);
@@ -42,6 +47,28 @@ pub fn lower(
                 }
             }
         }
+        let source_permanent = ctx.source_permanent;
+        let source_player = ctx.player;
+
+        if let Some(target_player) = target_player {
+            for player in players_for_ref(target_player, ctx) {
+                ctx.game.modifiers.add_player_modifier(
+                    player,
+                    PlayerModifierEntry::simple(
+                        modifier,
+                        0,
+                        player_expiry,
+                        source_permanent,
+                        source_player,
+                    ),
+                );
+            }
+        }
+
+        let Some(target_arc) = &target_arc else {
+            return;
+        };
+
         // Collect target handles under a read borrow.
         let mut targets: Vec<PermanentHandle> = Vec::new();
         {
@@ -67,4 +94,16 @@ pub fn lower(
     });
 
     Some(builder.build())
+}
+
+fn players_for_ref(
+    of: CompiledPlayerRef,
+    ctx: &crate::effect_context::EffectContext<'_>,
+) -> Vec<PlayerId> {
+    match of {
+        CompiledPlayerRef::You => vec![ctx.player],
+        CompiledPlayerRef::Opponent => vec![ctx.opponent_id()],
+        CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
+        CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
+    }
 }

@@ -10,7 +10,7 @@
 
 use std::sync::Arc;
 
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -44,6 +44,22 @@ fn make_digimon(id: &str) -> CardData {
         index: 0,
         norm_id: 0.0,
     }
+}
+
+fn make_level_digimon(id: &str, level: u8) -> CardData {
+    let mut card = make_digimon(id);
+    card.level = Some(level);
+    card
+}
+
+fn make_evo_digimon(id: &str, level: u8, from_level: u8, cost: u16) -> CardData {
+    let mut card = make_level_digimon(id, level);
+    card.evo_costs = vec![EvoCost {
+        level: from_level,
+        memory_cost: cost,
+        card_color: 0,
+    }];
+    card
 }
 
 fn make_tamer(id: &str) -> CardData {
@@ -90,6 +106,77 @@ fn make_filler() -> CardData {
         index: 0,
         norm_id: 0.0,
     }
+}
+
+struct FieldCostReducer;
+impl CardEffect for FieldCostReducer {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::before_pay_cost(card).cost_reduction(3).build()]
+    }
+}
+
+fn field_cost_reducer_registry() -> digimon_engine::CardEffectRegistry {
+    let mut registry = digimon_engine::cards::build_registry();
+    registry.insert("REDUCER", Arc::new(FieldCostReducer));
+    registry
+}
+
+fn paid_play_cost_with_modifier(modifier: ModifierType) -> i32 {
+    let mut r = DebugRunner::builder()
+        .with_registry(field_cost_reducer_registry())
+        .add_card(make_digimon("DIG-A"))
+        .add_card(make_level_digimon("REDUCER", 4))
+        .add_card(make_filler())
+        .hand(0, &["DIG-A"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    let tp = r.game.turn_player();
+    r.place_on_field(tp, "REDUCER", Some(0));
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1 - tp),
+    );
+
+    let memory_before = r.game.memory;
+    let result = r
+        .game
+        .play_from_hand_with_cost(tp, 0, CostDelta::Reduce(0), PlaySource::ByHand);
+    assert!(result.is_some(), "play should succeed");
+    (memory_before - r.game.memory) as i32
+}
+
+fn paid_digivolve_cost_with_modifier(modifier: ModifierType) -> i32 {
+    let mut r = DebugRunner::builder()
+        .with_registry(field_cost_reducer_registry())
+        .add_card(make_level_digimon("BASE", 3))
+        .add_card(make_evo_digimon("EVO", 4, 3, 4))
+        .add_card(make_level_digimon("REDUCER", 4))
+        .add_card(make_filler())
+        .hand(0, &["EVO"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    let tp = r.game.turn_player();
+    r.place_on_field(tp, "BASE", Some(0));
+    r.place_on_field(tp, "REDUCER", Some(1));
+    r.game.enter_main_phase();
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1 - tp),
+    );
+
+    let memory_before = r.game.memory;
+    assert!(
+        r.game
+            .digivolve_from_hand(tp, 0, 0, PlaySource::ByDigivolve),
+        "digivolve should succeed"
+    );
+    (memory_before - r.game.memory) as i32
 }
 
 // ─── CannotPlayDigimonByEffect ─────────────────────────────────────────────
@@ -183,6 +270,60 @@ fn cannot_play_digimon_by_effect_does_not_block_non_digimon() {
     assert!(
         result.is_some(),
         "Tamer ByEffect play must succeed even under CannotPlayDigimonByEffect"
+    );
+}
+
+// ─── CannotDigivolveDigimonByEffect ────────────────────────────────────────
+
+#[test]
+fn cannot_digivolve_digimon_by_effect_blocks_effect_initiated_digivolve() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_level_digimon("BASE", 3))
+        .add_card(make_evo_digimon("EVO", 4, 3, 0))
+        .add_card(make_filler())
+        .hand(0, &["EVO"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    let tp = r.game.turn_player();
+    let target = r.place_on_field(tp, "BASE", Some(0));
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotDigivolveDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
+    );
+
+    let result = r.game.effect_initiated_digivolve(
+        tp,
+        0,
+        target,
+        CostDelta::Free,
+        false,
+        PlaySource::ByEffect,
+    );
+
+    assert!(
+        !result,
+        "effect-initiated digivolve must be blocked by CannotDigivolveDigimonByEffect"
+    );
+    assert_eq!(
+        r.game.player(tp).hand.len(),
+        1,
+        "evolution card should remain in hand after blocked effect digivolve"
+    );
+    assert_eq!(
+        r.game.player(tp).battle_area[target.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "BASE",
+        "target stack should not change after blocked effect digivolve"
     );
 }
 
@@ -389,6 +530,92 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
 }
 
 #[test]
+fn cannot_reduce_cost_suppresses_play_cost_reducers() {
+    struct CostReducer;
+    impl CardEffect for CostReducer {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::before_pay_cost(card).cost_reduction(3).build()]
+        }
+    }
+
+    let mut registry = digimon_engine::cards::build_registry();
+    registry.insert("REDUCER", Arc::new(CostReducer));
+
+    let mut r = DebugRunner::builder()
+        .with_registry(registry)
+        .add_card(make_digimon("DIG-A"))
+        .add_card(CardData {
+            card_id: "REDUCER".to_string(),
+            card_name: "Reducer".to_string(),
+            card_kind: CardKind::Digimon,
+            level: Some(4),
+            dp: Some(2000),
+            play_cost: 2,
+            colors: vec![CardColor::Red],
+            traits: Vec::new(),
+            evo_costs: Vec::new(),
+            dna_costs: Vec::new(),
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            security_text: String::new(),
+            keywords: Vec::new(),
+            dual: None,
+            effect_class_name: "REDUCER".to_string(),
+            index: 0,
+            norm_id: 0.0,
+        })
+        .add_card(make_filler())
+        .hand(0, &["DIG-A"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    let tp = r.game.turn_player();
+    r.place_on_field(tp, "REDUCER", Some(0));
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotReduceCost,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
+    );
+
+    let memory_before = r.game.memory;
+    let result = r
+        .game
+        .play_from_hand_with_cost(tp, 0, CostDelta::Reduce(0), PlaySource::ByHand);
+
+    assert!(result.is_some(), "play should succeed at full printed cost");
+    assert_eq!(
+        (memory_before - r.game.memory) as i32,
+        4,
+        "generic CannotReduceCost must suppress play cost reducers"
+    );
+}
+
+#[test]
+fn cannot_reduce_digivolve_cost_does_not_block_play_cost_reducers() {
+    assert_eq!(
+        paid_play_cost_with_modifier(ModifierType::CannotReduceDigivolveCost),
+        1,
+        "CannotReduceDigivolveCost must leave play-cost reducers available"
+    );
+}
+
+#[test]
+fn cannot_reduce_play_cost_does_not_block_digivolve_cost_reducers() {
+    assert_eq!(
+        paid_digivolve_cost_with_modifier(ModifierType::CannotReducePlayCost),
+        1,
+        "CannotReducePlayCost must leave digivolve-cost reducers available"
+    );
+}
+
+#[test]
 fn cannot_reduce_play_cost_suppresses_when_playing_this_hand_reducer() {
     struct HandSelfReducer;
     impl CardEffect for HandSelfReducer {
@@ -454,6 +681,70 @@ fn cannot_reduce_play_cost_suppresses_when_playing_this_hand_reducer() {
     assert_eq!(
         cost_paid, 4,
         "hand-card when_playing_this reducer must be suppressed by CannotReducePlayCost"
+    );
+}
+
+#[test]
+fn cannot_reduce_digivolve_cost_suppresses_digivolve_cost_reducers() {
+    struct CostReducer;
+    impl CardEffect for CostReducer {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::before_pay_cost(card).cost_reduction(3).build()]
+        }
+    }
+
+    let mut registry = digimon_engine::cards::build_registry();
+    registry.insert("REDUCER", Arc::new(CostReducer));
+
+    let mut r = DebugRunner::builder()
+        .with_registry(registry)
+        .add_card(make_level_digimon("BASE", 3))
+        .add_card(make_evo_digimon("EVO", 4, 3, 4))
+        .add_card(make_level_digimon("REDUCER", 4))
+        .add_card(make_filler())
+        .hand(0, &["EVO"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    let tp = r.game.turn_player();
+    r.place_on_field(tp, "BASE", Some(0));
+    r.place_on_field(tp, "REDUCER", Some(1));
+    r.game.enter_main_phase();
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotReduceDigivolveCost,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - tp,
+        ),
+    );
+
+    let memory_before = r.game.memory;
+    let result = r
+        .game
+        .digivolve_from_hand(tp, 0, 0, PlaySource::ByDigivolve);
+
+    assert!(
+        result,
+        "digivolve should still succeed at full printed cost"
+    );
+    let cost_paid = (memory_before - r.game.memory) as i32;
+    assert_eq!(
+        cost_paid, 4,
+        "digivolve cost must not be reduced under CannotReduceDigivolveCost"
+    );
+}
+
+#[test]
+fn cannot_reduce_cost_suppresses_digivolve_cost_reducers() {
+    assert_eq!(
+        paid_digivolve_cost_with_modifier(ModifierType::CannotReduceCost),
+        4,
+        "generic CannotReduceCost must also suppress digivolve cost reducers"
     );
 }
 

@@ -124,6 +124,11 @@ pub struct Effect {
     pub counter: bool,
     pub declarative: bool,
     pub optional: bool,
+    /// Heuristic metadata for policies: this effect produces or preserves
+    /// hand/resource flow, such as drawing, searching/add-to-hand, filtering
+    /// hand, or Save-like deletion value. This is deliberately advisory; it
+    /// never affects rules execution.
+    pub resource_flow: bool,
     /// Marks this effect as a blast-digivolve declaration — the card can be
     /// stacked onto a battle-area Digimon during the defender's
     /// `CounterTiming` window at zero memory cost. Consumed by
@@ -467,6 +472,7 @@ impl EffectBuilder {
                 counter: false,
                 declarative: false,
                 optional: false,
+                resource_flow: false,
                 blast_digivolve: false,
                 max_per_turn: 0,
                 condition: None,
@@ -574,6 +580,17 @@ impl EffectBuilder {
     pub fn observation_metadata(mut self, metadata: EffectObservationMetadata) -> Self {
         self.inner.observation_metadata = metadata;
         self
+    }
+
+    /// Mark the effect as card/resource-flow positive for policy heuristics.
+    pub fn resource_flow(mut self) -> Self {
+        self.inner.resource_flow = true;
+        self
+    }
+
+    /// Alias for effects that draw or add cards to hand.
+    pub fn adds_cards_to_hand(self) -> Self {
+        self.resource_flow()
     }
 
     pub fn once_per_turn(mut self) -> Self {

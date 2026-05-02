@@ -558,8 +558,10 @@ pub enum ModifierType {
     CannotGainMemoryByEffect,
     CannotGainMemoryExceptFromTamers,
     CannotReducePlayCost,
+    CannotReduceDigivolveCost,
     CannotActivateMainEffects,
     CannotActivateWhenDigivolvingEffects,
+    CannotActivateWhenAttackingEffects,
     CannotActivateSecurityEffects,
     CannotDigivolveDigimonByEffect,
     CannotDrawByEffect,
@@ -677,6 +679,8 @@ pub enum CardSourceRef {
     Hand(PlayerId, usize),
     Trash(PlayerId, usize),
     DeckTop(PlayerId),
+    Security(PlayerId, usize),
+    Material(crate::permanent::PermanentHandle, usize),
     Reveal(CardHandle),
 }
 

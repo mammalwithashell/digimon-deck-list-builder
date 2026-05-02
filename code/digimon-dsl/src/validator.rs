@@ -130,13 +130,44 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         message: format!("unknown modifier: {}", b.modifier),
                                     });
                                 }
-                                validate_predicate(
-                                    &b.target,
-                                    &format!("{prefix}.target"),
-                                    &spec.card,
-                                    ctx,
-                                    &mut errors,
-                                );
+                                if b.target.is_none() && b.target_player.is_none() {
+                                    errors.push(ValidationError {
+                                        card_id: spec.card.clone(),
+                                        path: prefix.clone(),
+                                        message: "flood_gate requires target or target_player"
+                                            .into(),
+                                    });
+                                }
+                                if b.target_player.is_some()
+                                    && is_permanent_activation_modifier(&b.modifier)
+                                {
+                                    errors.push(ValidationError {
+                                        card_id: spec.card.clone(),
+                                        path: format!("{prefix}.target_player"),
+                                        message: format!(
+                                            "{} requires a permanent target, not target_player",
+                                            b.modifier
+                                        ),
+                                    });
+                                }
+                                if let Some(target) = &b.target {
+                                    validate_predicate(
+                                        target,
+                                        &format!("{prefix}.target"),
+                                        &spec.card,
+                                        ctx,
+                                        &mut errors,
+                                    );
+                                }
+                                if let Some(expiry) = &b.expiry {
+                                    if !is_known_expiry(expiry) {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.expiry"),
+                                            message: format!("unknown expiry: {expiry}"),
+                                        });
+                                    }
+                                }
                             }
                         }
                         DeclarativeKind::Aura => {
@@ -336,6 +367,32 @@ fn validate_step(
                     card_id: card_id.into(),
                     path: format!("{prefix}.modifier"),
                     message: format!("unknown modifier: {}", args.modifier),
+                });
+            }
+            if !is_known_expiry(&args.expiry) {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.expiry"),
+                    message: format!("unknown expiry: {}", args.expiry),
+                });
+            }
+        }
+        StepSpec::AddPlayerModifier(args) => {
+            if !is_known_modifier(&args.modifier) {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.modifier"),
+                    message: format!("unknown modifier: {}", args.modifier),
+                });
+            }
+            if is_permanent_activation_modifier(&args.modifier) {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.modifier"),
+                    message: format!(
+                        "{} requires a permanent target, not add_player_modifier",
+                        args.modifier
+                    ),
                 });
             }
             if !is_known_expiry(&args.expiry) {
@@ -564,11 +621,14 @@ fn is_known_modifier(name: &str) -> bool {
             | "MemoryBlock"
             | "CannotPlayFromHand"
             | "CannotPlayDigimonByEffect"
+            | "CannotPlayTamerByEffect"
             | "CannotGainMemoryByEffect"
             | "CannotGainMemoryExceptFromTamers"
             | "CannotReducePlayCost"
+            | "CannotReduceDigivolveCost"
             | "CannotActivateMainEffects"
             | "CannotActivateWhenDigivolvingEffects"
+            | "CannotActivateWhenAttackingEffects"
             | "CannotActivateSecurityEffects"
             | "CannotDigivolveDigimonByEffect"
             | "CannotDrawByEffect"
@@ -576,6 +636,13 @@ fn is_known_modifier(name: &str) -> bool {
             | "CannotTrashOpponentSecurity"
             | "CannotReduceOpponentSecurity"
             | "IgnoreColorRequirement"
+    )
+}
+
+fn is_permanent_activation_modifier(name: &str) -> bool {
+    matches!(
+        name,
+        "CannotActivateWhenDigivolvingEffects" | "CannotActivateWhenAttackingEffects"
     )
 }
 

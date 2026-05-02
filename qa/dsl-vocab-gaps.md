@@ -67,8 +67,8 @@ Format per entry:
 
 ## Chaos Control — effect-initiated digivolve from trash
 - Effect text: EX11-005 Yaamon / EX11-069 Yuuki / BT21-100 The Digimon I Designed / BT24-080 Megidramon all digivolve a battle-area Digimon into a card in trash, sometimes for free and sometimes with a reduced cost.
-- Missing DSL verb / step kind / predicate: `effect_initiated_digivolve` only accepts `from_hand`; there is no source-zone-parametric form for `from_trash` or `from_security`.
-- Lowers to engine API: currently blocked by `docs/RUST_ENGINE_GAPS.md` "Effect-initiated digivolve from non-hand source zones"; once the engine primitive accepts a source zone, lower to that shared helper.
+- Status: resolved for selected live card bindings in Group 4 (2026-05-02). `effect_initiated_digivolve` now accepts `source:` as a source-zone-parametric binding while preserving legacy `from_hand:`.
+- Lowers to engine API: `EffectContext::effect_initiated_digivolve_from_source` / `Game::effect_initiated_digivolve_from_source`, with card-handle bindings resolved from hand, trash, security, material stack, or reveal pool.
 - Suggested DSL syntax:
   ```yaml
   - effect_initiated_digivolve:
@@ -81,6 +81,7 @@ Format per entry:
       ignore_requirements: false
   ```
 - First reported: 2026-04-28
+- Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_digivolve_from_zones`, plus `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group4_zone_movement`.
 
 ## BT24-080 — delete all opponent Digimon with the lowest level
 - Effect text: "[On Play] [When Digivolving] [On Deletion] Delete all of your opponent's lowest level Digimon."
@@ -97,6 +98,7 @@ Format per entry:
 - First reported: 2026-04-28
 
 ## EX4-011 — DP deletion threshold from shared trash count
+- Status: PARTIAL after 2026-05-01. Runtime evaluation for `dp_lte` / `dp_gte` permanent predicates is closed for literal thresholds and existing `FormulaSpec` variants. This entry remains open only for the missing `shared_trash_count` / bucket formula vocabulary shown below.
 - Effect text: "For every 10 total cards in both player's trashes, add 2000 to the maximum DP you can choose with DP-based deletion effects."
 - Missing DSL verb / step kind / predicate: formula support for cross-player trash count buckets inside a `dp_lte` selection predicate. Existing formula vocabulary covers some modifier values, but not a target-filter threshold derived from `floor((your_trash + opponent_trash) / 10) * 2000`.
 - Lowers to engine API: read both players' trash lengths, compute the threshold, then install the normal opponent-permanent selection and `delete_permanent` callback.
@@ -166,7 +168,7 @@ Format per entry:
 - Finding: only `BT14-009`, `BT16-082`, `EX7-074`, and `P-206` currently have Rust YAML under `code/digimon-engine/cards/`; the main `EX8`/`EX10`/`EX11`/`P-167` Rocks shell is not authored in DSL yet.
 - Existing DSL gaps reaffirmed by the refresh:
   - `EX11-008 — [When Moving] timing` no longer blocks on the `on_move` token or moved-card event context as of 2026-04-29; card bodies may still need separate target-selection, reveal, or follow-up action primitives.
-  - `P-189 — play cost <= filter` also blocks `P-206` and `EX7-074` security selections.
+  - `P-189 — play cost <= filter` was closed on 2026-05-01 for static `play_cost_lte` filters on `select_hand` / `select_trash`; remaining Rocks blockers are tracked separately.
   - `P-206 — Board-color cross-reference predicate` remains the specific blocker for `P-206` Delay filtering.
   - `P-107 — place_self_as_delay_option` remains relevant to `P-107`, `P-039`, `BT23-096`, and related Delay/security disposition effects.
 - First reported: 2026-04-28 (Rocks Rust-engine assessment refresh)
@@ -315,6 +317,7 @@ Format per entry:
 
 ## P-189 — [Security] play cost ≤ 4 filter on select_hand / select_trash  [G-PLAY-COST-LTE]
 
+- Status: CLOSED on 2026-05-01. `play_cost_lte` is now parsed, compiled, evaluated against `CardData::play_cost`, and wired into `select_hand` / `select_trash` valid-action filtering. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_predicate_batch parse_group7_predicate_leaves`.
 - Effect text: "[Security] You may play 1 card with the [LIBERATOR] trait and a play cost of 4 or less from your hand or trash without paying the cost."
 - Missing DSL verb / step kind / predicate: `play_cost_lte` (or `cost_lte`) — a `PredicateSpec` leaf that checks `CardData::play_cost <= N`. `PredicateSpec` in `digimon-dsl/src/predicate.rs` has no cost-comparison field. The `eval_card_fields` function in `code/digimon-engine/src/dsl_cards/predicate.rs` handles `level_eq`, `level_lte`, `level_gte`, `color_is`, `trait_has`, `name_*`, `card_number_is` — but no `play_cost` / `cost_lte` / `cost_gte` variant.
 - Companion issue: `install_select_hand` and `install_select_trash` in `code/digimon-engine/src/dsl_cards/step/selections.rs` currently use `|_game, _idx| true` (accept-all filter, Phase 2b), so even if `play_cost_lte` were added to `PredicateSpec`, it would not be evaluated until Phase 2b filter wiring is completed.
@@ -327,7 +330,7 @@ Format per entry:
       - play_cost_lte: 4
   ```
 - Gap kind: dsl (engine already stores `play_cost` on `CardData`; the DSL/lowering path just lacks the predicate leaf).
-- Workaround: `trait_has: LIBERATOR` filter expressed in YAML (documents intent); cost-≤4 constraint silently not enforced at selection time. Tests for incorrect candidate filtering are `#[ignore = "pending: G-PLAY-COST-LTE"]`.
+- Workaround: none needed for static play-cost caps after 2026-05-01. Previously ignored tests for incorrect candidate filtering can be unignored when updating affected card suites.
 - First reported: 2026-04-27 (P-189 batch-implement-cards-rust-dsl)
 
 ---
@@ -347,20 +350,18 @@ Format per entry:
 ## BT5-008 — Player-level flood-gate modifier not installable from DSL  [G-PLAYER-FLOOD-GATE-DSL]
 
 - Effect text: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
-- Missing DSL verb / step kind / predicate: No DSL step verb installs a **player-level** modifier. `kind: flood_gate` lowers via `lower_flood_gate.rs` which iterates the battle area and calls `ctx.add_modifier(h, modifier, 0, Expiry::Permanent)` — permanent-level modifiers only. `EffectContext::add_modifier` takes a `PermanentHandle`, not a `PlayerId`. The engine's enforcement path for digivolve-cost reduction suppression uses `modifiers.player_has(acting_player, ModifierType::CannotReducePlayCost)` (player-level registry, separate from permanent modifiers). There is no DSL verb that calls `ctx.game.modifiers.add_player_modifier(player_id, ...)`.
-- Additional engine gap: `scan_before_pay_cost_reduction` in `game_actions.rs` checks only `CannotReducePlayCost`, which covers ALL cost types (play + digivolve). A per-cost-type split (`CannotReduceDigivolveCost` vs `CannotReducePlayCost`) does not exist. The `CannotReduceCost` modifier type (enums.rs line 389) exists but is NEVER checked anywhere.
-- Lowers to engine API: `modifiers.add_player_modifier(player_id, PlayerModifierEntry)` exists in `modifiers.rs` but is not exposed via `EffectContext`. Raw_rust functions can call `ctx.game.modifiers.add_player_modifier(...)` directly (field is public).
-- Suggested DSL syntax:
+- Status: CLOSED for DSL vocabulary and direct runtime primitives as of 2026-05-01. The DSL now supports `target_player` on `kind: flood_gate` and an explicit `add_player_modifier` step, and the engine has a `CannotReduceDigivolveCost` modifier with digivolve-only cost-reduction enforcement.
+- Remaining related blocker: passive/static field effects still depend on G-DECLARATIVE-KEYWORD. BT5-008 compiles to the native player-targeted flood_gate below, but the engine still needs the global declarative field-effect dispatcher before face-up static rookies install their modifiers from board state.
+- Implemented DSL syntax:
   ```yaml
   - kind: flood_gate
     active_when: { opponents_turn: true }
-    target: { player: opponent }     # NEW: player-level target
-    modifier: CannotReduceDigivolveCost  # NEW: per-cost-type variant
+    target_player: opponent
+    modifier: CannotReduceDigivolveCost
   ```
-  Requires: (1) add `player: Option<PlayerRef>` to `FloodGateBody` as alternative to the `target: PredicateSpec` field; (2) add `CannotReduceDigivolveCost` to `ModifierType` enum + validator allowlist; (3) install via `ctx.game.modifiers.add_player_modifier` in `lower_flood_gate.rs` when `player:` is set; (4) add enforcement branch in `scan_before_pay_cost_reduction` for the digivolve path.
-- Gap kind: hybrid (DSL lacks player-targeted flood_gate; engine lacks `CannotReduceDigivolveCost` enforcement).
-- Workaround: `kind: raw_rust` declarative no-op placeholder (`bt5_008_opp_cannot_reduce_digivolve_cost`). Test `#[ignore]`'d with `G-PLAYER-FLOOD-GATE-DSL` tag.
-- First reported: 2026-04-27 (BT5-008 batch-implement-cards-rust-dsl, Medusamon archetype)
+- Gap kind: closed vocabulary/runtime primitive gap; remaining passive dispatch gap is tracked separately by G-DECLARATIVE-KEYWORD.
+- Former workaround removed for BT5-008: raw_rust no-op placeholder (`bt5_008_opp_cannot_reduce_digivolve_cost`).
+- First reported: 2026-04-27 (BT5-008 batch-implement-cards-rust-dsl, Medusamon archetype). Closed: 2026-05-01 (floodgate DSL flexibility pass).
 
 ---
 
@@ -508,22 +509,20 @@ Format per entry:
   ```
   Requires: (1) add `BindingDp(String)` to `FormulaSpec` and `CompiledFormula`; (2) add evaluation branch in `formula_eval.rs` that resolves the binding from `Bindings` and calls `ctx.game.effective_dp(h)`; (3) pass `Bindings` into the formula evaluator call chain.
 - Gap kind: dsl (engine has `effective_dp`; DSL formula system has no binding-reference form).
-- Workaround: None — `dp_lte` predicate is also not evaluated (G-PRED-DP-LTE). Both gaps must close together for this clause to work.
+- Workaround: None for `binding_dp` itself. Static and existing formula-backed `dp_lte` / `dp_gte` permanent predicates are now evaluated as of 2026-05-01, but this gap remains open until formulas can read a named binding's effective DP.
 - First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
 
 ---
 
 ## ST22-08 — Return Played Option Card to Hand Post-Security  [G-ADD-OPTION-SELF-TO-HAND]
 - Effect text: "[Security] Delete 1 of your opponent's Digimon with the lowest DP. Then, add this card to the hand."
-- Missing DSL verb / step kind / predicate: A step verb for "add this played Option card back to the controller's hand after security resolution." This is different from `add_top_security_to_hand` (which moves the TOP of the security stack to hand) and different from `return_to_hand` (which moves a battle-area permanent to hand). The played Option is in the "being resolved" state during security — it has not yet been trashed. The DCGO calls `CardEffectCommons.AddThisCardToHand(card, activateClass)`. In the Python engine, this was implemented as `CardEffectCommons.add_this_card_to_hand` after the security-effect fires. EX6-072 Mega Digimon Assembly uses `raw_rust: { fn: ex6_072_add_self_to_hand }` for the same pattern.
-- Lowers to engine API: `ctx.add_security_option_to_hand()` or a method that retrieves the current card being resolved in the security context and places it in the controller's hand instead of trashing it. The exact engine mechanism depends on how `security_attack()` manages the Option card — checking `_security_played` flag vs. moving it to hand.
-- Suggested DSL syntax:
+- Status: Resolved for the narrow pending-security disposition slice on 2026-05-01. DSL now supports a deterministic `add_this_option_to_hand: {}` step that lowers to `EffectContext::add_pending_security_to_hand()`, consuming `Game.pending_security` and moving the revealed card to the defender/controller hand instead of letting security dispose trash it.
+- DSL syntax:
   ```yaml
-  - return_self_to_hand: {}   # Or: add_this_card_to_hand: {}
+  - add_this_option_to_hand: {}
   ```
-  This would lower to a method that finds the source card's handle and transfers it from the security-resolution staging to the controller's hand.
-- Gap kind: dsl (the engine already has a pattern for this — ex6_072_add_self_to_hand raw_rust — but there is no DSL step verb).
-- Workaround: `raw_rust: { fn: st22_08_add_self_to_hand }` (same pattern as `ex6_072_add_self_to_hand`).
+- Coverage: `debug_runner_dsl::security_dsl_adds_currently_resolving_option_to_hand` and `lm_027_security_adds_card_to_hand_after_play`.
+- Remaining related gaps: cards may still be blocked by other predicates or Option mechanics, such as lowest-DP selection, Plug-In/Link, Delay timing, or play-cost filters.
 - First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
 
 ---
@@ -571,22 +570,21 @@ Format per entry:
 
 ## BT20-102 — Exclude-from-binding filter in `for_each`  [G-FOR-EACH-EXCLUDE-BINDING]
 
+- Status: CLOSED on 2026-05-01. `not_in_binding` is now parsed, compiled, evaluated against `Permanent` / `PermanentList` bindings, and `for_each` threads current bindings into its permanent scan. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_predicate_batch parse_group7_predicate_leaves`.
 - Effect text: "[On Play][When Digivolving] ... choose 1 of both players' Digimon and delete all other Digimon."
 - Missing DSL verb / step kind / predicate: `not_in_binding` — a `CandidatePredicate` leaf in `for_each { over, filter, body }` that excludes permanents whose handle appears in a named binding (a prior selection). Without it, "delete all OTHER Digimon" (all except the two saved by selection) cannot be expressed purely in DSL.
 - Engine API: the engine can iterate `battle_area` handles and compare against a collected `Vec<PermanentHandle>`. No new API needed — gap is purely in the DSL filter vocabulary.
 - Suggested DSL syntax:
   ```yaml
   - for_each:
-      over: { of: any, kind: digimon }
+      over: { owner: any, kind: digimon, not_in_binding: saved }
       bind_as: candidate
-      filter:
-        not_in_binding: saved   # CandidatePredicate: exclude if handle is in binding "saved"
       body:
         - delete_permanent: { target: candidate }
   ```
   Implementation: add `not_in_binding: Option<String>` to `CandidatePredicateSpec` in `digimon-dsl/src/predicate.rs`, compile, and evaluate by looking up the named binding in `Bindings` and comparing handle equality.
 - Gap kind: dsl (engine can express this in a raw_rust loop; DSL has no filter for handle-set exclusion).
-- Workaround: entire boardwipe clause routed through `raw_rust: { fn: bt20_102_boardwipe_and_return }` which collects `saved: Vec<PermanentHandle>` and filters deletions via `.contains()`.
+- Workaround: none needed for handle-set exclusion after 2026-05-01. Card YAML/tests may still need separate migration away from any raw_rust bridge if other blockers remain.
 - First reported: 2026-04-27 (BT20-102 batch-implement-cards-rust-dsl, Medusamon Batch 11)
 
 ---
@@ -655,9 +653,9 @@ Format per entry:
 ## Royal Knights — selecting permanents in the breeding area  [G-BREEDING-PERMANENT-SELECTION]
 
 - Effect text: `BT20-083` Omekamon: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area." Similar Royal Knights effects target or play from the breeding-area King Drasil stack (`BT13-093`, `BT13-110`, `BT13-112`, `EX11-053`, `BT23-072`).
-- Missing DSL verb / step kind / predicate: `select_own_permanent` / `select_any_permanent` only scan `battle_area`, even when the YAML filter includes `zone: [breeding]`. There is no `select_own_breeding_permanent` step and no selection kind/action encoding for a breeding-area permanent.
-- Companion engine gap: `PendingSelection` currently represents field, hand, trash, reveal, security, material, and similar prompts, but not a breeding-area permanent handle. `PermanentHandle` also encodes battle-area indices; the breeding slot needs either a new handle variant or a dedicated selection path.
-- Lowers to engine API: after the engine exposes breeding-area selection, the existing `place_as_bottom_source`, `play_from_materials`, and `effect_initiated_digivolve` steps can consume the selected breeding permanent.
+- Status: selection is resolved; effect movement support is partially resolved. `select_own_breeding_permanent` now installs a breeding-specific pending selection and binding without fake battle-area handles. Group 4 also lets `place_as_bottom_source` target the real breeding slot via `BREEDING_TARGET`.
+- Companion engine state: `SelectionKind::BreedingPermanent`, `BreedingPermanentSelectionRef`, and phase-scoped breeding select actions cover the player-visible choice. `EffectContext::move_from_breeding_by_effect` and `play_to_breeding_from_hand` cover direct effect movement to/from the real breeding slot.
+- Lowers to engine API: `select_own_breeding_permanent` for the choice, `place_as_bottom_source` for tucking under the selected breeding stack, and source-parametric `effect_initiated_digivolve` for non-hand result cards once a source binding is available.
 - Suggested DSL syntax:
   ```yaml
   - select_own_permanent:
@@ -677,6 +675,7 @@ Format per entry:
 - Gap kind: hybrid (the YAML shape exists, but lowering/runtime selection ignore breeding).
 - Workaround: None faithful. Auto-targeting the only breeding permanent would hide a player-visible selection and violates the no-approximations policy.
 - First reported: 2026-04-28 (Royal Knights archetype assessment)
+- Updated 2026-05-02: remaining open follow-ups are breeding-area trigger fan-out (`G-BREEDING-TRIGGER-DISPATCH`) and card-specific optional/filter wrappers, not the basic breeding selection or real-zone movement primitives.
 
 ---
 

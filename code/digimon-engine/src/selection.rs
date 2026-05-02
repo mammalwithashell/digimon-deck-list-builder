@@ -387,6 +387,31 @@ pub struct PendingSecurity {
     pub played: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecurityRemovalDestination {
+    Trash,
+    Hand(PlayerId),
+    BottomSource(PermanentHandle),
+    Digivolve {
+        player: PlayerId,
+        target: PermanentHandle,
+        turn: u16,
+    },
+    Security {
+        player: PlayerId,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct PendingEffectSecurityRemoval {
+    pub defender: PlayerId,
+    pub observer_player: PlayerId,
+    pub destination: SecurityRemovalDestination,
+    pub previous_pending_security: Option<PendingSecurity>,
+}
+
 /// Transient state for an Option card mid-resolution. Mirrors
 /// PendingSecurity / PendingAttack. Carries the card between pay-cost
 /// and dispose so effect scripts can reference it via ctx.source_card.

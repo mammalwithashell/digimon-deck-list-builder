@@ -152,6 +152,8 @@ impl CardEffect for DslCardEffect {
                         active_when,
                         modifier,
                         target,
+                        target_player,
+                        expiry,
                         ..
                     } => {
                         if let Some(e) = lower_flood_gate::lower(
@@ -160,6 +162,8 @@ impl CardEffect for DslCardEffect {
                             active_when.clone(),
                             modifier,
                             target.clone(),
+                            *target_player,
+                            expiry.as_deref(),
                         ) {
                             out.push(e);
                         }

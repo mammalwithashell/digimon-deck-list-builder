@@ -8,6 +8,18 @@ fn modifier_map_covers_flood_gate_names_used_by_examples() {
         Some(ModifierType::CannotActivateSecurityEffects)
     );
     assert_eq!(
+        lookup_modifier_type("CannotActivateWhenAttackingEffects"),
+        Some(ModifierType::CannotActivateWhenAttackingEffects)
+    );
+    assert_eq!(
+        lookup_modifier_type("CannotPlayTamerByEffect"),
+        Some(ModifierType::CannotPlayTamerByEffect)
+    );
+    assert_eq!(
+        lookup_modifier_type("CannotReduceDigivolveCost"),
+        Some(ModifierType::CannotReduceDigivolveCost)
+    );
+    assert_eq!(
         lookup_modifier_type("CannotBeDestroyed"),
         Some(ModifierType::CannotBeDestroyed)
     );
@@ -273,7 +285,9 @@ fn fixture_flood_gate(modifier: &str, target: CompiledPredicate) -> CompiledCard
                     ..Default::default()
                 }),
                 modifier: modifier.into(),
-                target,
+                target: Some(target),
+                target_player: None,
+                expiry: None,
                 summary: None,
                 summary_key: None,
             },
@@ -291,6 +305,50 @@ fn flood_gate_emits_declarative_with_process_closure() {
     let dsl = DslCardEffect::new(Arc::new(fixture_flood_gate(
         "CannotActivateSecurityEffects",
         target,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert!(effects[0].declarative);
+    assert!(effects[0].process.is_some());
+}
+
+fn fixture_player_flood_gate(modifier: &str, target_player: CompiledPlayerRef) -> CompiledCard {
+    CompiledCard {
+        card: "F-PFG".into(),
+        name: "Player Fixture".into(),
+        kind: CompiledCardKind::Digimon,
+        level: Some(3),
+        color: vec![],
+        cost: Some(3),
+        dp: Some(3000),
+        traits: vec![],
+        form: None,
+        attribute: None,
+        ace_overflow: None,
+        identity: None,
+        dual: None,
+        use_requirement: None,
+        alt_paths: vec![],
+        effects: vec![CompiledClause::Declarative(
+            CompiledDeclarativeClause::FloodGate {
+                scope: CompiledScope::FaceUp,
+                active_when: None,
+                modifier: modifier.into(),
+                target: None,
+                target_player: Some(target_player),
+                expiry: None,
+                summary: None,
+                summary_key: None,
+            },
+        )],
+    }
+}
+
+#[test]
+fn player_scoped_flood_gate_emits_declarative_with_process_closure() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_player_flood_gate(
+        "CannotPlayDigimonByEffect",
+        CompiledPlayerRef::Any,
     )));
     let effects = dsl.effects(CardHandle(0));
     assert_eq!(effects.len(), 1);

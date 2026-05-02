@@ -122,43 +122,6 @@ fn bt16_082_on_move_noop(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings)
     // No-op: full implementation blocked by G-ON-MOVE.
 }
 
-/// BT5-008 Gaossmon — [Opponent's Turn] opponent can't reduce digivolution costs.
-///
-/// Printed effect: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
-///
-/// This function is a no-op placeholder pending resolution of the following gaps:
-///
-/// **DSL gap G-PLAYER-FLOOD-GATE-DSL**: The DSL `kind: flood_gate` lowers to
-/// `lower_flood_gate.rs` which calls `ctx.add_modifier(h, ...)` — permanent-level only.
-/// There is no `add_player_modifier` step verb in the DSL, and `EffectContext` does not
-/// expose `add_player_modifier`. As a result, a player-level `CannotReducePlayCost`
-/// modifier cannot be installed via any DSL or EffectContext API path.
-///
-/// **Engine enforcement gap**: `scan_before_pay_cost_reduction` in `game_actions.rs`
-/// checks only `CannotReducePlayCost` (which covers ALL cost types, both play and digivolve).
-/// There is no separate `CannotReduceDigivolveCost` variant or per-cost-type enforcement
-/// split. The correct fix is to add `CannotReduceDigivolveCost` + enforce it specifically
-/// in the digivolve cost-reduction scan path.
-///
-/// When both gaps are closed, the YAML clause should be replaced with:
-/// ```yaml
-/// - kind: flood_gate   # or add_player_modifier step once available
-///   active_when: { opponents_turn: true }
-///   target: { player: opponent }
-///   modifier: CannotReduceDigivolveCost
-/// ```
-/// And this function should be removed.
-///
-/// Tracked in `qa/dsl-vocab-gaps.md` under G-PLAYER-FLOOD-GATE-DSL.
-fn bt5_008_opp_cannot_reduce_digivolve_cost(
-    _handle: crate::card_source::CardHandle,
-) -> Vec<Effect> {
-    // No-op: returns an empty effect list.
-    // Full implementation blocked by G-PLAYER-FLOOD-GATE-DSL and missing
-    // CannotReduceDigivolveCost enforcement in scan_before_pay_cost_reduction.
-    vec![]
-}
-
 /// P-137 Flamedramon — [Your Turn][OPT] opponent adds their top security to hand.
 ///
 /// Printed effect: "[Your Turn][Once Per Turn] When this Digimon's attack target
@@ -885,55 +848,6 @@ fn bt20_016_dna_on_deletion(_handle: crate::card_source::CardHandle) -> Vec<Effe
     vec![]
 }
 
-/// BT8-097 Crimson Blaze — [Main][Security] opponent can't play Digimon by effects
-/// until the end of their turn.
-///
-/// Printed effect: "[Main] Your opponent can't play Digimon by effects until the end
-/// of their turn."
-///
-/// DCGO analysis (BT8_097.cs, ActivateClass EffectTiming.OptionSkill):
-///   CanNotPutFieldClass targeting:
-///     cardSource.IsDigimon || cardSource.IsDigiEgg
-///   CardEffectCondition:
-///     cardEffect.EffectSourceCard.Owner == card.Owner.Enemy
-///   Added to card.Owner.Enemy.UntilOwnerTurnEndEffects →
-///     expires at end of OPPONENT'S turn.
-///
-/// Implementation:
-///   Install `CannotPlayDigimonByEffect` as a player-scoped modifier on the opponent
-///   with `Expiry::EndOfOpponentsTurn`. This blocks effect-initiated Digimon plays
-///   from any zone (hand + trash) via the gate in `play_from_hand_with_cost` and
-///   `play_from_trash_with_cost`.
-///
-/// Note: Unlike BT23-014 (which also blocks Tamers), BT8-097 only blocks Digimon.
-/// Per DCGO: `CardCondition: cardSource.IsDigimon || cardSource.IsDigiEgg`; no Tamer.
-///
-/// NOTE G-PLAYER-FLOOD-GATE-DSL: DSL `kind: flood_gate` only installs permanent-level
-/// modifiers. Player-level `CannotPlayDigimonByEffect` requires this raw_rust bridge
-/// until a `add_player_modifier` DSL verb is available.
-fn bt8_097_opp_cannot_play_digimon_by_effect(
-    ctx: &mut EffectContext<'_>,
-    _bindings: &mut Bindings,
-) {
-    use crate::enums::{Expiry, ModifierType};
-    use crate::modifiers::PlayerModifierEntry;
-
-    let opponent = ctx.opponent_id();
-    let source_player = ctx.player;
-
-    // Block opponent from playing Digimon by effect (covers any zone).
-    ctx.game.modifiers.add_player_modifier(
-        opponent,
-        PlayerModifierEntry::simple(
-            ModifierType::CannotPlayDigimonByEffect,
-            0,
-            Expiry::EndOfOpponentsTurn,
-            None,
-            source_player,
-        ),
-    );
-}
-
 /// LM-027 Red Scramble — Delay placeholder no-op (G-DELAY-START-OF-TURN).
 ///
 /// The Delay clause in LM-027 fires at the START of the controller's turn
@@ -963,35 +877,23 @@ fn lm_027_delay_start_of_turn_noop(_handle: crate::card_source::CardHandle) -> V
     vec![]
 }
 
-/// LM-027 Red Scramble — Security clause "add this card to hand" no-op.
+/// LM-027 Red Scramble — legacy shim for "add this card to hand".
 ///
 /// The printed Security effect ends with "Then, add this card to the hand."
 /// DCGO implements this via `CardEffectCommons.AddThisCardToHand(card, activateClass)`
 /// which moves the currently-resolving option card from security-resolution
 /// staging back to the controller's hand.
 ///
-/// This function is a step no-op placeholder until G-ADD-OPTION-SELF-TO-HAND
-/// is resolved. When the gap closes:
-///   1. Add `EffectContext::add_security_option_to_hand()` to the engine.
-///   2. Add an `add_this_option_to_hand` step verb to the DSL.
-///   3. Replace the raw_rust step in LM-027.yaml with the native verb.
-///   4. Remove this function and its registration.
-///
-/// Tracked in qa/dsl-vocab-gaps.md under G-ADD-OPTION-SELF-TO-HAND and in
-/// qa/archetype-qa/engine-gaps.md (also referenced by ST22-08, EX6-072).
-fn lm_027_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
-    // The engine has no EffectContext::add_security_option_to_hand() method.
+/// Prefer the native DSL `add_this_option_to_hand: {}` step for new scripts.
+fn lm_027_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    ctx.add_pending_security_to_hand();
 }
 
 /// EX7-074 Vortex Resonance — [Security] "Then, add this card to the hand."
 ///
-/// No-op placeholder for G-ADD-OPTION-SELF-TO-HAND. Identical semantics to
-/// `lm_027_add_self_to_hand`: when the engine implements
-/// `EffectContext::add_security_option_to_hand()`, replace this with that call.
-fn ex7_074_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
-    // The engine has no EffectContext::add_security_option_to_hand() method.
+/// Legacy raw-rust shim; prefer native DSL `add_this_option_to_hand: {}`.
+fn ex7_074_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    ctx.add_pending_security_to_hand();
 }
 
 /// P-206 Digital Gate Open — [Inherited][Security] "Then, add this card to the hand."
@@ -1004,31 +906,9 @@ fn ex7_074_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindin
 ///   currently-resolving Option card from security-resolution staging into the
 ///   controller's hand instead of routing it to trash.
 ///
-/// This function is a step no-op placeholder pending resolution of G-ADD-OPTION-SELF-TO-HAND:
-///
-/// **DSL gap**: No `add_this_option_to_hand` / `return_self_to_hand` step verb exists
-///   in `digimon-dsl/src/step.rs`. The `StepSpec` enum has no variant that maps to
-///   "find the currently-resolving security option card and move it to hand."
-///
-/// **Engine gap**: `EffectContext` has no `add_security_option_to_hand()` method.
-///   The security-resolution flow routes Option cards to trash via `dispose_option`.
-///   A hand-transfer variant must pop the card from the security staging area and
-///   push it to `player.hand` before `dispose_option` runs.
-///
-/// When G-ADD-OPTION-SELF-TO-HAND is closed:
-///   1. Add `EffectContext::add_security_option_to_hand()` to the engine.
-///   2. Add a `return_self_to_hand: {}` (or `add_this_option_to_hand: {}`) step verb
-///      to the DSL.
-///   3. Replace the `raw_rust: { fn: p_206_add_self_to_hand }` step in P-206.yaml
-///      with the native DSL verb.
-///   4. Remove this function and its registration.
-///
-/// Same pattern as `ex6_072_add_self_to_hand`, `st22_08_add_self_to_hand`,
-/// `lm_027_add_self_to_hand`, and `ex7_074_add_self_to_hand`.
-/// Tracked in `qa/dsl-vocab-gaps.md` under G-ADD-OPTION-SELF-TO-HAND.
-fn p_206_add_self_to_hand(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    // No-op: full implementation blocked by G-ADD-OPTION-SELF-TO-HAND.
-    // The engine has no EffectContext::add_security_option_to_hand() method.
+/// Legacy raw-rust shim; prefer native DSL `add_this_option_to_hand: {}`.
+fn p_206_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    ctx.add_pending_security_to_hand();
 }
 
 /// BT21-093 Raging Serpentine — cost reduction formula.
@@ -1073,19 +953,11 @@ pub fn build_registry() -> EngineRawRustRegistry {
         bt24_012_would_leave_replacement,
     );
     r.register_step("bt16_082_on_move_noop", bt16_082_on_move_noop);
-    r.register_declarative(
-        "bt5_008_opp_cannot_reduce_digivolve_cost",
-        bt5_008_opp_cannot_reduce_digivolve_cost,
-    );
     r.register_step(
         "p_137_opp_adds_top_security_to_hand",
         p_137_opp_adds_top_security_to_hand,
     );
     r.register_formula("ex8_074_suspended_dp_cap", ex8_074_suspended_dp_cap);
-    r.register_step(
-        "bt8_097_opp_cannot_play_digimon_by_effect",
-        bt8_097_opp_cannot_play_digimon_by_effect,
-    );
     r.register_step(
         "bt23_014_opp_cannot_play_from_trash",
         bt23_014_opp_cannot_play_from_trash,

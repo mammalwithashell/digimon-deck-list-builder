@@ -163,7 +163,7 @@ Resolved by Group 3:
 - **Status:** Fixed for battle-area permanent dispatch on 2026-04-29. `enqueue_from_permanent` now preserves top-card / linked / Training dispatch, then scans below-top `card_sources` and queues only matching `effect.inherited == true` effects with `source_permanent` set to the carrier and `source_card` set to the inherited source card.
 - **Affected cards:** YAML cards with `scope: inherited` and a triggered timing can now fire from below the top card when the relevant event is already dispatched to the carrier permanent's battle-area observer path.
 - **Regression coverage:** `bt21_008_inherited_positive_fires_when_source_under_carrier_your_turn` and `buried_non_inherited_triggered_effect_does_not_fire_from_source_position`.
-- **Remaining limits:** This does not add new event fire sites. Source-trash paths outside the `Game::return_to_hand` event-payload slice, breeding-area dispatch, and effect-driven security-removal fan-out remain separate gaps. Group 2 closed the shared source, DP-budget, breeding-permanent, and empty-tail selection primitives on 2026-04-29.
+- **Remaining limits:** This does not add every event fire site. Group 4 added source-trash context for direct `EffectContext::trash_card_source` / `trash_top_source` helpers and effect-driven security-removal fan-out/resume for direct security stack moves. Lower-source trash from some older zone-return paths and breeding-area dispatch remain separate follow-ups. Group 2 closed the shared source, DP-budget, breeding-permanent, and empty-tail selection primitives on 2026-04-29.
 
 ### `max_per_turn` (Once-Per-Turn) Not Enforced for Triggered Effects  [G-OPT-TRIGGERED]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
@@ -172,7 +172,7 @@ Resolved by Group 3:
 - **Effect text:** any clause that combines `[Once Per Turn]` with a non-Main triggered timing (`OnLoseSecurity`, `WhenAttacking`, `OnPlay`, `OnDigivolving`, etc.).
 - **Status:** Fixed for permanent-backed queued triggered effects on 2026-04-29. `run_queued_effect_inner` now checks `Permanent::activation_count(source_card, slot) >= effect.max_per_turn` before processing and records activation before `process`, matching the existing activated field-main timing.
 - **Regression coverage:** `bt21_008_inherited_opt_blocks_second_trigger_same_turn`.
-- **Remaining limits:** This only enforces the existing queued-effect activation counter. It does not add optional prompt/action-space handling, source-trash paths outside the `Game::return_to_hand` event-payload slice, or breeding dispatch.
+- **Remaining limits:** This only enforces the existing queued-effect activation counter. It does not add optional prompt/action-space handling or breeding dispatch. Group 4 separately covered direct source-trash helper context and owner routing.
 
 ### `EffectTiming::OnMove` for Breeding-to-Battle Movement  [G-ON-MOVE]
 - **Discovered in:** Medusamon archetype, EX11-008 Elizamon DSL implementation (2026-04-27)
@@ -351,14 +351,14 @@ Resolved by Group 3:
 - **Suggested change:** (1) Add `StartOfYourNextTurn` variant to `DelayTrigger` in `src/enums.rs`. (2) Add a `"start_of_your_turn"` token (or `"start_of_next_turn"`) in the DSL timing map (`timing_map.rs`) that lowers to `DelayTrigger::StartOfYourNextTurn`. (3) Wire `StartOfYourNextTurn` firing into the game's start-of-turn hook (`game_phases.rs::begin_turn`): after incrementing `turn_number`, scan all permanents for `Delay` state with `trigger == StartOfYourNextTurn` and fire those. This is symmetric to the end-of-turn Delay drain already implemented.
 - **Workaround:** `kind: raw_rust` no-op placeholder (`lm_027_delay_start_of_turn_noop`) preserving the clause-index slot. All Delay behavioral tests are `#[ignore]`'d.
 
-### `EffectContext::add_security_option_to_hand` Missing  [G-ADD-OPTION-SELF-TO-HAND]
+### `EffectContext::add_pending_security_to_hand`  [G-ADD-OPTION-SELF-TO-HAND]
 - **Discovered in:** Medusamon Batch 12, LM-027 Red Scramble DSL implementation (2026-04-28). Also previously surfaced by ST22-08 Offensive Plug-In V (Batch 11) and EX6-072 pattern.
 - **Scope:** Rust engine + DSL (hybrid).
 - **Card(s):** LM-027 Red Scramble — "[Security] … Then, add this card to the hand." Also ST22-08 Offensive Plug-In V and any option card whose Security clause ends with returning itself to hand.
 - **Effect text:** "Then, add this card to the hand." — the currently-resolving security option card moves to the controller's hand.
-- **What's missing:** DCGO implements this via `CardEffectCommons.AddThisCardToHand(card, activateClass)` which moves the option card from security-resolution staging to the controller's hand. In the Rust engine, no analogous `EffectContext` method exists. During Security resolution, the option card lives in `Game.pending_security` (after being popped from the security stack but before being trashed). `EffectContext` has no way to reference `pending_security` and move it to `players[controller].hand`.
-- **Suggested change:** Add `pub fn add_pending_security_to_hand(&mut self)` to `EffectContext`. Implementation: if `self.game.pending_security.is_some()`, take it and push to `self.game.players[self.player].hand`. Add a DSL step verb `add_this_option_to_hand: {}` that lowers to this method call.
-- **Workaround:** `raw_rust: { fn: lm_027_add_self_to_hand }` — registered as a step in `src/cards/raw_rust/mod.rs` but implemented as a no-op until the engine method exists.
+- **Status:** Resolved for the narrow pending-security disposition slice on 2026-05-01. `EffectContext::add_pending_security_to_hand()` consumes `Game.pending_security` and pushes the revealed card to the defender/controller hand so the security dispose phase cannot trash it. DSL `add_this_option_to_hand: {}` lowers to the method. Legacy raw-rust shims now delegate to the method; new scripts should use the native step.
+- **Coverage:** `debug_runner_dsl::security_dsl_adds_currently_resolving_option_to_hand`; `lm_027_security_adds_card_to_hand_after_play`.
+- **Remaining related work:** ST22-08, P-206, EX7-074, and sibling Options may still be blocked by other gaps such as DP/play-cost predicates, Plug-In/Link, Delay timing, or broader Option play-flow disposition.
 
 <!-- Entry template:
 ### {Gap Title}
@@ -408,7 +408,7 @@ Resolved by Group 3:
 - **First test:** trigger `BT20-083` On Deletion with a `BT13-007` in breeding and assert a pending selection offers the breeding King Drasil rather than silently doing nothing.
 - **Workaround:** None faithful. Auto-selecting the only breeding permanent hides a gameplay choice and fails when future cards offer multiple legal destinations across battle/breeding zones.
 - **Updated 2026-04-29:** Resolved for pending selection and DSL binding without fake battle-area handles. `EffectContext::select_own_breeding_permanent` installs `SelectionKind::BreedingPermanent`, masks only the phase-scoped breeding selection action (`encode_breeding_select(player)`), and DSL `select_own_breeding_permanent` binds a `BreedingPermanentRef`. Covered by `breeding_permanent_selection_targets_breeding_without_fake_battle_handle`, `breeding_selection_mask_exposes_only_breeding_select_action`, and `dsl_select_breeding_permanent_binds_target`.
-- **Remaining limits:** This does not solve breeding-area trigger fan-out, effect-initiated movement to or from the breeding stack, or source placement under a selected breeding permanent. Those remain under `G-BREEDING-TRIGGER-DISPATCH` and the relevant zone-movement gaps.
+- **Remaining limits:** Group 4 now covers effect-initiated movement to/from the real breeding slot and bottom-source placement under the `BREEDING_TARGET` selected breeding permanent. This still does not solve breeding-area trigger fan-out for effects whose source remains in breeding; keep that under `G-BREEDING-TRIGGER-DISPATCH`.
 
 ### Option-Placed Observer Timing Missing  [G-OPTION-PLACED-TIMING]
 - **Discovered in:** Royal Knights archetype assessment (2026-04-28)
