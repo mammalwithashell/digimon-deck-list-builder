@@ -229,6 +229,23 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         message: format!("unknown keyword: {}", b.keyword),
                                     });
                                 }
+                                if let Some(filter) = &b.overclock_cost_filter {
+                                    if !b.keyword.eq_ignore_ascii_case("Overclock") {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.overclock_cost_filter"),
+                                            message: "overclock_cost_filter is only valid for keyword: Overclock"
+                                                .to_string(),
+                                        });
+                                    }
+                                    validate_predicate(
+                                        filter,
+                                        &format!("{prefix}.overclock_cost_filter"),
+                                        &spec.card,
+                                        ctx,
+                                        &mut errors,
+                                    );
+                                }
                             }
                         }
                         _ => {}

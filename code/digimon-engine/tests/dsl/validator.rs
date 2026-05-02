@@ -122,6 +122,61 @@ effects:
 }
 
 #[test]
+fn validate_overclock_cost_filter_on_non_overclock_grant_keyword_fails() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    overclock_cost_filter:
+      trait_has: Puppet
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter()
+            .any(|e| e.path.contains("overclock_cost_filter")
+                && e.message.contains("Overclock")),
+        "expected non-Overclock filter to be rejected, got: {errs:?}"
+    );
+}
+
+#[test]
+fn validate_invalid_overclock_cost_filter_predicate_fails() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      has_keyword: NotARealKeyword
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| e.path.contains("overclock_cost_filter.has_keyword")
+            && e.message.contains("NotARealKeyword")),
+        "expected invalid predicate inside overclock_cost_filter to be reported, got: {errs:?}"
+    );
+}
+
+#[test]
 fn validate_invalid_expiry_fails() {
     let spec = parse(
         r#"

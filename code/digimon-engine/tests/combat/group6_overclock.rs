@@ -119,6 +119,33 @@ fn overclock_decode_rejects_non_candidate_cost_target() {
 }
 
 #[test]
+fn overclock_attack_survives_cost_deleting_lower_slot() {
+    let mut r = DebugRunner::builder()
+        .add_card(overclock_digimon("PUPPET-OVERCLOCK", "Puppet"))
+        .add_card(digimon("PUPPET-ALLY", &["Puppet"]))
+        .start();
+
+    r.place_on_field(0, "PUPPET-ALLY", Some(0));
+    r.place_on_field(0, "PUPPET-OVERCLOCK", Some(0));
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    r.game
+        .decode_action(encode_field_effect(1, FIELD_EFFECT_SLOT_FOR_OVERCLOCK), 0);
+    r.game.decode_action(encode_attack(0, 0), 0);
+
+    assert_eq!(
+        r.game.player(0).battle_area.len(),
+        1,
+        "selected lower-index cost should be deleted"
+    );
+    assert!(
+        r.game.game_over,
+        "Overclock source should be re-resolved after the cost shifts its slot and attack directly"
+    );
+    assert_eq!(r.game.winner, Some(0));
+}
+
+#[test]
 fn overclock_decline_does_not_delete_or_attack() {
     let mut r = DebugRunner::builder()
         .add_card(overclock_digimon("PUPPET-OVERCLOCK", "Puppet"))

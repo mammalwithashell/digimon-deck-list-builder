@@ -543,20 +543,31 @@ impl Game {
                 game.delete_permanent_with_effects(sacrifice_handle);
 
                 // OnDeletion may have removed the Overclock Digimon, shifted
-                // indices, or killed the game. Bail if the Overclock Digimon
-                // is no longer present at its original index.
-                let attacker_alive = game
-                    .players
-                    .get(player as usize)
-                    .and_then(|p| p.battle_area.get(overclock_index as usize))
-                    .map(|p| p.top_card().card_index == source_card.0)
-                    .unwrap_or(false);
-                if !attacker_alive || game.game_over {
+                // indices, or killed the game. Re-find the captured top card
+                // before attacking so lower-slot costs don't stale the handle.
+                let Some(current_overclock_handle) =
+                    game.players.get(player as usize).and_then(|p| {
+                        p.battle_area.iter().enumerate().find_map(|(i, perm)| {
+                            (perm.top_card().card_index == source_card.0).then_some(
+                                PermanentHandle {
+                                    player,
+                                    index: i as u8,
+                                },
+                            )
+                        })
+                    })
+                else {
+                    return;
+                };
+                if game.game_over {
                     return;
                 }
 
                 // Fire the attack on the opponent player without suspending.
-                game.begin_attack_overclock(overclock_handle, AttackTarget::Player(opponent));
+                game.begin_attack_overclock(
+                    current_overclock_handle,
+                    AttackTarget::Player(opponent),
+                );
             }),
             on_decline: None,
         });
