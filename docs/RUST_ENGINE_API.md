@@ -1856,7 +1856,7 @@ Avoid encoding DP-change effects via `ctx.add_dp_modifier(...)` for *static* buf
 
 With `target`, the aura scans battle-area permanents and installs `dp_modifier`, `grant_keyword`, and named permanent `modifier` entries on matches. `other: true` excludes the source permanent when source context is available. With `target_player`, the aura resolves the player reference using the same `you` / `opponent` / `active` / `any` semantics as player-scoped flood gates and installs the named player modifier.
 
-This is a materialized tick path, not query-time aura recomputation. Call `tick_declarative_effects` after setting up or mutating field state in tests that need these process-backed declaratives to be present.
+This is a materialized tick path, not query-time aura recomputation. Each `tick_declarative_effects` call first clears modifiers and granted keywords previously materialized by process-backed declaratives, then reapplies the currently live aura/flood-gate effects. That refresh prevents repeated ticks from stacking and removes stale materializations when an aura source leaves play, `active_when` becomes false, `target_player: active` changes, or a permanent stops matching the target predicate. Call `tick_declarative_effects` after setting up or mutating field state in tests that need these process-backed declaratives to be present.
 
 ### How the tensor reads these
 

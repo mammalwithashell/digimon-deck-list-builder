@@ -1645,6 +1645,8 @@ impl Game {
     /// this dispatcher is for declarative clauses lowered to process closures,
     /// such as filtered auras and player-scoped flood gates.
     pub fn tick_declarative_effects(&mut self) {
+        self.modifiers.clear_materialized_declaratives();
+
         let mut sources = Vec::new();
         for (pid, player) in self.players.iter().enumerate() {
             let player_id = pid as PlayerId;

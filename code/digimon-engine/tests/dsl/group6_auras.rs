@@ -108,3 +108,134 @@ effects:
         .modifiers
         .player_has(0, ModifierType::CannotReduceDigivolveCost));
 }
+
+#[test]
+fn aura_tick_refresh_does_not_stack_dp_modifier() {
+    let yaml = r#"
+card: TEST-AURA-REFRESH
+name: Aura Refresh Source
+kind: digimon
+color: [blue]
+level: 3
+cost: 3
+dp: 1000
+traits: []
+effects:
+  - kind: aura
+    target: { owner: you, trait: Gaossmon }
+    dp_modifier: 3000
+"#;
+
+    let mut ally = make_test_card("TEST-GAOSSMON-REFRESH", "Gaossmon");
+    ally.traits.push("Gaossmon".to_string());
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card(ally)
+        .build();
+    runner.place_on_field(0, "TEST-AURA-REFRESH", None);
+    runner.place_on_field(0, "TEST-GAOSSMON-REFRESH", None);
+
+    runner.game.tick_declarative_effects();
+    runner.game.tick_declarative_effects();
+
+    let ally = PermanentHandle {
+        player: 0,
+        index: 1,
+    };
+    assert_eq!(
+        runner.game.modifiers.sum(ally, ModifierType::ChangeDp),
+        3000
+    );
+}
+
+#[test]
+fn aura_tick_refresh_removes_materialized_modifier_after_source_leaves() {
+    let yaml = r#"
+card: TEST-AURA-LEAVES
+name: Aura Leaves Source
+kind: digimon
+color: [blue]
+level: 3
+cost: 3
+dp: 1000
+traits: []
+effects:
+  - kind: aura
+    target: { owner: you, trait: Gaossmon }
+    dp_modifier: 3000
+"#;
+
+    let mut ally = make_test_card("TEST-GAOSSMON-LEAVES", "Gaossmon");
+    ally.traits.push("Gaossmon".to_string());
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card(ally)
+        .build();
+    runner.place_on_field(0, "TEST-AURA-LEAVES", None);
+    runner.place_on_field(0, "TEST-GAOSSMON-LEAVES", None);
+
+    runner.game.tick_declarative_effects();
+    let old_ally = PermanentHandle {
+        player: 0,
+        index: 1,
+    };
+    assert_eq!(
+        runner.game.modifiers.sum(old_ally, ModifierType::ChangeDp),
+        3000
+    );
+
+    runner.game.players[0].battle_area.remove(0);
+    runner.game.tick_declarative_effects();
+
+    let new_ally = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
+    assert_eq!(
+        runner.game.modifiers.sum(old_ally, ModifierType::ChangeDp),
+        0
+    );
+    assert_eq!(
+        runner.game.modifiers.sum(new_ally, ModifierType::ChangeDp),
+        0
+    );
+}
+
+#[test]
+fn player_scoped_aura_tick_refresh_does_not_duplicate_modifier() {
+    let yaml = r#"
+card: TEST-PLAYER-AURA-REFRESH
+name: Player Aura Refresh Source
+kind: digimon
+color: [black]
+level: 3
+cost: 3
+dp: 1000
+traits: []
+effects:
+  - kind: aura
+    target_player: opponent
+    modifier: CannotReduceDigivolveCost
+"#;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .build();
+    runner.place_on_field(0, "TEST-PLAYER-AURA-REFRESH", None);
+
+    runner.game.tick_declarative_effects();
+    runner.game.tick_declarative_effects();
+
+    let installed = runner
+        .game
+        .modifiers
+        .player_modifiers_iter(1)
+        .filter(|entry| entry.modifier == ModifierType::CannotReduceDigivolveCost)
+        .count();
+    assert_eq!(installed, 1);
+}

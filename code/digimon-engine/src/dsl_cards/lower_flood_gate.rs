@@ -1,8 +1,8 @@
 //! Lower `CompiledDeclarativeClause::FloodGate`. On each declarative tick,
 //! the process closure scans battle areas for permanents matching `target`
 //! and installs `ModifierType::<name>` on each with `Expiry::Permanent`.
-//! The modifier registry dedups identical entries so re-installation is
-//! safe.
+//! These entries are tagged as materialized declaratives so each tick can
+//! clear and refresh them without stacking or leaving stale flood-gate state.
 
 use std::sync::Arc;
 
@@ -14,7 +14,6 @@ use crate::dsl_cards::modifier_map::lookup_modifier_type;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::{Expiry, PlayerId};
-use crate::modifiers::PlayerModifierEntry;
 use crate::permanent::PermanentHandle;
 
 pub fn lower(
@@ -47,21 +46,9 @@ pub fn lower(
                 }
             }
         }
-        let source_permanent = ctx.source_permanent;
-        let source_player = ctx.player;
-
         if let Some(target_player) = target_player {
             for player in players_for_ref(target_player, ctx) {
-                ctx.game.modifiers.add_player_modifier(
-                    player,
-                    PlayerModifierEntry::simple(
-                        modifier,
-                        0,
-                        player_expiry,
-                        source_permanent,
-                        source_player,
-                    ),
-                );
+                ctx.add_declarative_player_modifier(player, modifier, 0, player_expiry);
             }
         }
 
@@ -89,7 +76,7 @@ pub fn lower(
         }
         // Install the modifier on each match via the curated EffectContext API.
         for h in targets {
-            ctx.add_modifier(h, modifier, 0, Expiry::Permanent);
+            ctx.add_declarative_modifier(h, modifier, 0, Expiry::Permanent);
         }
     });
 

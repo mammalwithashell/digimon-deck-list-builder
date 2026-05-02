@@ -6,9 +6,9 @@
 //!    so the tensor layer reads it without invoking the process closure.
 //! 2. Filtered aura (non-empty target) — emit a declarative Effect whose
 //!    process scans battle areas and applies `add_dp_modifier` +
-//!    `grant_keyword` to each matching permanent. The engine's modifier
-//!    registry dedups identical entries (same target/modifier/value/expiry)
-//!    so re-installing on each declarative tick is safe.
+//!    `grant_keyword` to each matching permanent. These entries are tagged
+//!    as materialized declaratives so each declarative tick can clear and
+//!    refresh them without stacking or leaving stale aura state behind.
 
 use std::sync::Arc;
 
@@ -21,7 +21,6 @@ use crate::dsl_cards::modifier_map::{lookup_keyword, lookup_modifier_type};
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::effect::{Effect, EffectBuilder};
 use crate::enums::{Expiry, PlayerId};
-use crate::modifiers::PlayerModifierEntry;
 use crate::permanent::PermanentHandle;
 
 pub fn lower(
@@ -64,19 +63,8 @@ pub fn lower(
 
     builder = builder.process(move |ctx| {
         if let (Some(player_ref), Some(modifier)) = (target_player, modifier) {
-            let source_permanent = ctx.source_permanent;
-            let source_player = ctx.player;
             for player in players_for_ref(player_ref, ctx) {
-                ctx.game.modifiers.add_player_modifier(
-                    player,
-                    PlayerModifierEntry::simple(
-                        modifier,
-                        0,
-                        Expiry::Permanent,
-                        source_permanent,
-                        source_player,
-                    ),
-                );
+                ctx.add_declarative_player_modifier(player, modifier, 0, Expiry::Permanent);
             }
             return;
         }
@@ -102,13 +90,13 @@ pub fn lower(
         // Apply outside the read borrow.
         for h in matched {
             if let Some(dp) = dp {
-                ctx.add_dp_modifier(h, dp, Expiry::Permanent);
+                ctx.add_declarative_dp_modifier(h, dp, Expiry::Permanent);
             }
             if let Some(kw) = gk {
-                ctx.grant_keyword(h, kw, Expiry::Permanent);
+                ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
             }
             if let Some(modifier) = modifier {
-                ctx.add_modifier(h, modifier, 0, Expiry::Permanent);
+                ctx.add_declarative_modifier(h, modifier, 0, Expiry::Permanent);
             }
         }
     });

@@ -2647,6 +2647,15 @@ impl<'a> EffectContext<'a> {
         self.add_modifier(target, ModifierType::ChangeDp, value, expiry);
     }
 
+    pub fn add_declarative_dp_modifier(
+        &mut self,
+        target: PermanentHandle,
+        value: i32,
+        expiry: Expiry,
+    ) {
+        self.add_declarative_modifier(target, ModifierType::ChangeDp, value, expiry);
+    }
+
     pub fn add_modifier(
         &mut self,
         target: PermanentHandle,
@@ -2660,6 +2669,28 @@ impl<'a> EffectContext<'a> {
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player),
+        );
+    }
+
+    pub fn add_declarative_modifier(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::materialized_declarative(
+                modifier,
+                value,
+                expiry,
+                self.source_permanent,
+                self.player,
+            ),
         );
     }
 
@@ -2722,6 +2753,25 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    pub fn add_declarative_player_modifier(
+        &mut self,
+        target_player: PlayerId,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+    ) {
+        self.game.modifiers.add_player_modifier(
+            target_player,
+            PlayerModifierEntry::materialized_declarative(
+                modifier,
+                value,
+                expiry,
+                self.source_permanent,
+                self.player,
+            ),
+        );
+    }
+
     pub fn grant_keyword(&mut self, target: PermanentHandle, keyword: Keyword, expiry: Expiry) {
         if !self.can_affect_permanent(target) {
             return;
@@ -2729,6 +2779,24 @@ impl<'a> EffectContext<'a> {
         self.game
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);
+    }
+
+    pub fn grant_declarative_keyword(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        expiry: Expiry,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.grant_declarative_keyword(
+            target,
+            keyword,
+            expiry,
+            self.source_permanent,
+            self.player,
+        );
     }
 
     // ─── Breeding-area mutations ──────────────────────────────────────

@@ -180,6 +180,26 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                             .to_string(),
                                     });
                                 }
+                                if b.dp_modifier.is_none()
+                                    && b.grant_keyword.is_none()
+                                    && b.modifier.is_none()
+                                {
+                                    errors.push(ValidationError {
+                                        card_id: spec.card.clone(),
+                                        path: prefix.clone(),
+                                        message: "aura requires a payload: dp_modifier, grant_keyword, or modifier"
+                                            .to_string(),
+                                    });
+                                }
+                                if let Some(modifier) = &b.modifier {
+                                    if !is_known_modifier(modifier) {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.modifier"),
+                                            message: format!("unknown modifier: {modifier}"),
+                                        });
+                                    }
+                                }
                                 if let Some(gk) = &b.grant_keyword {
                                     if !is_known_keyword(&gk.keyword) {
                                         errors.push(ValidationError {

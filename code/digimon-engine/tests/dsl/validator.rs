@@ -220,3 +220,54 @@ effects:
         "expected aura grant_keyword typo to be reported, got: {errs:?}"
     );
 }
+
+#[test]
+fn validate_noop_aura_fails() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+effects:
+  - kind: aura
+    target:
+      of: you
+      zone: [battle_area]
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| e.message.contains("payload")),
+        "expected no-op aura to be rejected, got: {errs:?}"
+    );
+}
+
+#[test]
+fn validate_unknown_aura_modifier_fails() {
+    let spec = parse(
+        r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+effects:
+  - kind: aura
+    target_player: opponent
+    modifier: NotAModifierEnumVariant
+"#,
+    );
+    let reg = StubRegistry::empty();
+    let errs = validate(&spec, &ctx(&reg)).unwrap_err();
+    assert!(
+        errs.iter().any(|e| e.message.contains("modifier")),
+        "expected aura modifier typo to be reported, got: {errs:?}"
+    );
+}
