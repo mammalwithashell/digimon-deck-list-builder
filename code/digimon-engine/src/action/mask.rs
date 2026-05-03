@@ -529,11 +529,21 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 if !vortex && !may_attack && !force_attack {
                     continue;
                 }
-                if !game.can_attack(handle, /* vortex = */ vortex) {
+                let vortex_can_attack = vortex && game.can_attack(handle, /* vortex = */ true);
+                let normal_eot_can_attack = (may_attack || force_attack)
+                    && game.can_attack(handle, /* vortex = */ false);
+                if !vortex_can_attack && !normal_eot_can_attack {
                     continue;
                 }
 
-                if !game.modifiers.has(handle, ModifierType::CannotAttackPlayer) {
+                let can_attack_player = normal_eot_can_attack
+                    || (vortex_can_attack
+                        && game
+                            .modifiers
+                            .has(handle, ModifierType::VortexCanAttackPlayer));
+                if can_attack_player
+                    && !game.modifiers.has(handle, ModifierType::CannotAttackPlayer)
+                {
                     mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
                 }
                 for j in 0..max_opp {
