@@ -64,3 +64,4 @@ These statuses are from the legacy Python QA lane. Rust YAML DSL readiness repor
 | [dsl/puppets-2026-05-03-engine-dsl-gaps.md](dsl/puppets-2026-05-03-engine-dsl-gaps.md) | Rust engine / DSL gap inventory for Puppets |
 | [dsl/royal-knights-2026-05-03-dsl-engine-gaps.md](dsl/royal-knights-2026-05-03-dsl-engine-gaps.md) | Royal Knights Rust DSL/engine gap rollup for cross-archetype spec planning |
 | [dsl/ts-olympos-2026-05-03-dsl-engine-gaps.md](dsl/ts-olympos-2026-05-03-dsl-engine-gaps.md) | TS Olympos Rust DSL/engine reusable gap inputs for cross-archetype spec compilation |
+| [dsl/zephagamon-2026-05-03-dsl-engine-gaps.md](dsl/zephagamon-2026-05-03-dsl-engine-gaps.md) | Zephagamon Rust DSL/engine reusable gap source document for cross-archetype spec compilation |
