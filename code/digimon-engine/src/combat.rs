@@ -253,6 +253,26 @@ impl Game {
         self.begin_attack(attacker, AttackTarget::Player(defender_player), vortex)
     }
 
+    /// Resolve a Digimon-vs-Digimon battle caused by an effect.
+    ///
+    /// This is not an attack declaration: it does not suspend the source,
+    /// install `PendingAttack`, fire attack timings, open interrupt windows,
+    /// or continue into Piercing security checks.
+    pub fn battle_digimon(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+    ) -> AttackResult {
+        if attacker.player == defender.player {
+            return AttackResult::Invalid;
+        }
+        if !self.handle_valid(attacker) || !self.handle_valid(defender) {
+            return AttackResult::Invalid;
+        }
+
+        self.resolve_battle(attacker, defender)
+    }
+
     /// Declare an attack. Validates, installs `PendingAttack`, fires
     /// OnAttack, then hands off to `advance_pending_attack` to drive the
     /// interrupt state machine.
@@ -2044,9 +2064,10 @@ impl Game {
     }
 
     fn handle_valid(&self, handle: PermanentHandle) -> bool {
-        self.player(handle.player)
-            .battle_area
-            .get(handle.index as usize)
+        self.players
+            .get(handle.player as usize)
+            .map(|player| &player.battle_area)
+            .and_then(|battle_area| battle_area.get(handle.index as usize))
             .map(|p| {
                 // Must be a Digimon (Tamers, DigiEggs, Options aren't attack
                 // targets). Phase 8 Task 3 reinforces this for Delayed /

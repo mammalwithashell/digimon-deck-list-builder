@@ -281,6 +281,15 @@ impl DebugRunner {
         self.game.attack_digimon(attacker, defender, vortex)
     }
 
+    /// Resolve a direct effect battle without declaring an attack.
+    pub fn battle_digimon(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+    ) -> crate::combat::AttackResult {
+        self.game.battle_digimon(attacker, defender)
+    }
+
     /// Attack the opposing player's security. See [`Self::attack_digimon`]
     /// for the `vortex` flag.
     pub fn attack_player(
