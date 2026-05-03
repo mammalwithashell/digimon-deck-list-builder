@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-04-04T20:52:02.775487+00:00",
+  "generated_at": "2026-05-03T02:58:56.396949+00:00",
   "total_entries": 1884,
   "archetypes": {
     "7GDL": {
@@ -16321,15 +16321,19 @@
       "secondary_color": "Purple",
       "display_card_id": "BT17-017",
       "stats": {
-        "times_played": 14,
-        "meta_share": 0.007431,
-        "top_cut_count": 2,
-        "conversion_rate": 0.1429,
-        "avg_placement": 19.43,
+        "times_played": 15,
+        "meta_share": 0.007962,
+        "top_cut_count": 3,
+        "conversion_rate": 0.2,
+        "avg_placement": 18.2,
         "sources": {
           "digilab": {
             "count": 14,
             "top_cuts": 2
+          },
+          "digimonmeta": {
+            "count": 1,
+            "top_cuts": 1
           }
         }
       },
@@ -16473,6 +16477,16 @@
           "placement": "73",
           "is_top_cut": false,
           "event_date": "2025-10-11"
+        },
+        {
+          "deck_id": "digimonmeta_e693081ae36a",
+          "source": "digimonmeta",
+          "source_url": "https://digimonmeta.com/deck-list/deckinfo2/?dn=RedHybrid+Ancient&date=3/28/2026&cn=China&au=NA&pl=1st+Place&tn=TB&hs=Cardshop(18)&dg=4nBT14-001a2nBT6-022a4nBT7-008a1nBT12-009a4nBT17-009a1nP-029a3nBT17-011a3nBT17-012a2nBT18-011a1nBT18-022a2nBT18-048a4nBT21-013a4nAD1-002a3nBT17-017a4nAD1-020a2nEX1-066a2nBT12-088a2nBT21-082a1nBT1-090a1nBT8-097a2nBT17-094a2nBT21-091&cs=267",
+          "decklist": "[\"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT6-022\", \"BT6-022\", \"BT7-008\", \"BT7-008\", \"BT7-008\", \"BT7-008\", \"BT12-009\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"P-029\", \"BT17-011\", \"BT17-011\", \"BT17-011\", \"BT17-012\", \"BT17-012\", \"BT17-012\", \"BT18-011\", \"BT18-011\", \"BT18-022\", \"BT18-048\", \"BT18-048\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"BT17-017\", \"BT17-017\", \"BT17-017\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"EX1-066\", \"EX1-066\", \"BT12-088\", \"BT12-088\", \"BT21-082\", \"BT21-082\", \"BT1-090\", \"BT8-097\", \"BT17-094\", \"BT17-094\", \"BT21-091\", \"BT21-091\"]",
+          "format": null,
+          "placement": "1st Place",
+          "is_top_cut": true,
+          "event_date": "3/28/2026"
         }
       ],
       "digilab_stats": {
@@ -16502,37 +16516,6 @@
         "win_rate": 0.2581,
         "top4_rate": 0.0
       }
-    },
-    "RedHybrid Ancient": {
-      "archetype_name": "RedHybrid Ancient",
-      "primary_color": null,
-      "secondary_color": null,
-      "display_card_id": null,
-      "stats": {
-        "times_played": 1,
-        "meta_share": 0.000531,
-        "top_cut_count": 1,
-        "conversion_rate": 1.0,
-        "avg_placement": 1.0,
-        "sources": {
-          "digimonmeta": {
-            "count": 1,
-            "top_cuts": 1
-          }
-        }
-      },
-      "decklists": [
-        {
-          "deck_id": "digimonmeta_e693081ae36a",
-          "source": "digimonmeta",
-          "source_url": "https://digimonmeta.com/deck-list/deckinfo2/?dn=RedHybrid+Ancient&date=3/28/2026&cn=China&au=NA&pl=1st+Place&tn=TB&hs=Cardshop(18)&dg=4nBT14-001a2nBT6-022a4nBT7-008a1nBT12-009a4nBT17-009a1nP-029a3nBT17-011a3nBT17-012a2nBT18-011a1nBT18-022a2nBT18-048a4nBT21-013a4nAD1-002a3nBT17-017a4nAD1-020a2nEX1-066a2nBT12-088a2nBT21-082a1nBT1-090a1nBT8-097a2nBT17-094a2nBT21-091&cs=267",
-          "decklist": "[\"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT6-022\", \"BT6-022\", \"BT7-008\", \"BT7-008\", \"BT7-008\", \"BT7-008\", \"BT12-009\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"P-029\", \"BT17-011\", \"BT17-011\", \"BT17-011\", \"BT17-012\", \"BT17-012\", \"BT17-012\", \"BT18-011\", \"BT18-011\", \"BT18-022\", \"BT18-048\", \"BT18-048\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"BT17-017\", \"BT17-017\", \"BT17-017\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"EX1-066\", \"EX1-066\", \"BT12-088\", \"BT12-088\", \"BT21-082\", \"BT21-082\", \"BT1-090\", \"BT8-097\", \"BT17-094\", \"BT17-094\", \"BT21-091\", \"BT21-091\"]",
-          "format": null,
-          "placement": "1st Place",
-          "is_top_cut": true,
-          "event_date": "3/28/2026"
-        }
-      ]
     },
     "Rocks": {
       "archetype_name": "Rocks",
