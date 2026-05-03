@@ -8,6 +8,7 @@ mod effect_battle;
 mod effect_granted_attack;
 mod effect_immunity_step;
 mod embedded_registry;
+mod event_context_bindings;
 mod group4_zone_movement;
 mod group6_auras;
 mod group6_dynamic_formulas;
