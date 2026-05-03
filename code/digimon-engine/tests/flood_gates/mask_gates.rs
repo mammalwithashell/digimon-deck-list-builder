@@ -305,12 +305,13 @@ fn cannot_attack_also_gates_end_of_turn_attack_bits() {
     // Enter EndOfTurnAction.
     r.game.current_phase = GamePhase::EndOfTurnAction;
 
-    // Confirm attack bits ARE lit before blocking (validates the test setup).
+    // Confirm a Vortex Digimon-target bit is lit before blocking (validates
+    // the test setup without relying on the separate player-target extension).
     let mask_before = build_action_mask(&r.game, tp);
     assert_eq!(
         mask_before[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
-        1.0,
-        "Vortex should emit security-attack bit in EndOfTurnAction before CannotAttack"
+        0.0,
+        "base Vortex should not emit security-attack bit without VortexCanAttackPlayer"
     );
     assert_eq!(
         mask_before[encode_attack(attacker.index as u16, defender.index as u16) as usize],

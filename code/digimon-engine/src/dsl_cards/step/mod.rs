@@ -352,7 +352,7 @@ pub fn run_step_with_runtime(
     if try_run_link_step(step, ctx) {
         return;
     }
-    if combat::try_run(step, ctx) {
+    if combat::try_run(step, ctx, bindings) {
         return;
     }
     if replacement_outcome::try_run(step, ctx, bindings) {

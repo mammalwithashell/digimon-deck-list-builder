@@ -86,6 +86,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 **Group 5 contract note (2026-05-02):** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks.
 
+**Zephagamon prep note (2026-05-03):** Task 4 added an EX11-074/Vortexdramon readiness slice in `code/digimon-engine/cards/ex11/EX11-074.yaml` and `code/digimon-engine/tests/cards_behavioral/ex11/ex11_074.rs`. The slice confirms the rule boundary that an effect battle resolves DP battle and `EndOfBattle`, but is not an attack: even if the attacker has `<Piercing>`, the `battle:` step must not trigger Piercing security checks and must not leave `pending_attack` populated. Remaining Zephagamon-specific blockers are documented in `qa/dsl-vocab-gaps.md`: conditional "if this effect suspended your Digimon" branch/binding support for EX11-074, BT20-101 suspended-Digimon count / divide-by-2 / capped multi-select bottom-deck formula, EX11-035 formula DP cap for green Avian/Bird play, and EX11-062 conditional `VortexCanAttackPlayer` aura while the opponent has no unsuspended Digimon.
+
 ## Open gaps
 
 ### Global `OnOpponentSecurityRemoved` observer timing
