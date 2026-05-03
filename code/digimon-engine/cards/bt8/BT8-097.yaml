@@ -38,11 +38,9 @@ effects:
   #   CanUseCondition: card is in hand AND count() >= 1
   #   CardSourceCondition: cardSource == card (only this card, no leak)
   #
-  # NOTE: card_count_in_zone has no kind:digimon filter — it counts all
-  # battle_area permanents (Digimon + Tamers). In practice opponents rarely
-  # run Tamers alongside Digimon in competitive play; any Tamer over-counts
-  # conservatively (more reduction, never less). A future G-FORMULA-KIND-FILTER
-  # gap can address this precisely if needed.
+  # card_count_in_zone uses the Group 7 filtered count form so only opponent
+  # Digimon contribute. Tamers and Option permanents in battle_area do not
+  # reduce the cost.
   - kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
@@ -52,6 +50,7 @@ effects:
         card_count_in_zone:
           of: opponent
           zone: battle_area
+          filter: { kind: digimon }
       delta: 1
     summary: "-1 per opp Digimon when played"
 
@@ -77,10 +76,8 @@ effects:
   #
   # Delete: for_each over opp battle area Digimon with dp_lte:6000 → delete_permanent.
   #
-  # NOTE G-PRED-DP-LTE: dp_lte in for_each.over is parsed and lowered but the
-  # predicate evaluator does not yet apply it in eval_permanent_fields. All opponent
-  # Digimon currently pass the dp_lte filter unconditionally (all get deleted).
-  # The YAML is correctly authored; enforcement will activate once G-PRED-DP-LTE closes.
+  # dp_lte is evaluated by the Group 7 predicate path, so the sweep only
+  # deletes opponent Digimon whose current DP is 6000 or less.
   #
   - when: main_from_hand
     summary: "Opp can't play Digimon by effect until their turn ends; delete all opp Digimon ≤6000 DP"

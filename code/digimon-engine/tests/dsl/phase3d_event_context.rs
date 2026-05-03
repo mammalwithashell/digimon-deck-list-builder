@@ -494,6 +494,74 @@ effects:
 }
 
 #[test]
+fn event_target_owner_predicate_compiles() {
+    let yaml = r#"
+card: DSL-EVT-OWNER-COMPILE
+name: Event Owner Compile
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolve
+    condition: { event_target_owner: you }
+    process:
+      - gain_memory: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let digimon_dsl::compiled::CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let condition = triggered.condition.as_ref().expect("condition");
+    assert_eq!(
+        condition.event_target_owner,
+        Some(digimon_dsl::compiled::CompiledPlayerRef::You)
+    );
+}
+
+#[test]
+fn source_trash_host_and_trashed_source_predicates_compile() {
+    let yaml = r#"
+card: DSL-SOURCE-PREDS-COMPILE
+name: Source Predicate Compile
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - host_permanent_trait_has: Rock
+        - trashed_source_trait_has: Mineral
+        - trashed_source_card_id_is: UNDER-MINERAL
+    process:
+      - gain_memory: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let digimon_dsl::compiled::CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let condition = triggered.condition.as_ref().expect("condition");
+    assert!(condition
+        .all_of
+        .iter()
+        .any(|p| p.host_permanent_trait_has.as_deref() == Some("Rock")));
+    assert!(condition
+        .all_of
+        .iter()
+        .any(|p| p.trashed_source_trait_has.as_deref() == Some("Mineral")));
+    assert!(condition
+        .all_of
+        .iter()
+        .any(|p| p.trashed_source_card_id_is.as_deref() == Some("UNDER-MINERAL")));
+}
+
+#[test]
 fn on_enter_field_anyone_event_card_trait_predicate_matches_entering_card() {
     let yaml = r#"
 card: DSL-ENTER-OBS
@@ -626,6 +694,175 @@ effects:
     assert!(runner.game_mut().return_to_hand(host).is_some());
 
     assert_eq!(runner.memory(), 3);
+}
+
+#[test]
+fn on_digivolution_card_trashed_host_and_trashed_source_predicates_match_event_context() {
+    let yaml = r#"
+card: DSL-SOURCE-TRASH-CONTEXT
+name: Source Trash Context
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - host_permanent_trait_has: Rock
+        - trashed_source_trait_has: Mineral
+        - trashed_source_card_id_is: UNDER-MINERAL
+    process:
+      - gain_memory: 4
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BASE", "Base", &[], 1000))
+        .add_card(digimon_card(
+            "UNDER-MINERAL",
+            "Under Mineral",
+            &["Mineral"],
+            1000,
+        ))
+        .add_card(digimon_card("HOST-ROCK", "Host Rock", &["Rock"], 4000))
+        .build();
+    runner.place_on_field(0, "DSL-SOURCE-TRASH-CONTEXT", None);
+    let (host, host_card, trashed_card) = {
+        let g = runner.game_mut();
+        let turn = g.turn_count;
+        let base_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BASE")
+            .unwrap();
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER-MINERAL")
+            .unwrap();
+        let host_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "HOST-ROCK")
+            .unwrap();
+        let base = CardSource::new(base_idx, 0, g.next_card_index());
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(host_idx, 0, g.next_card_index());
+        let trashed_card = under.handle();
+        let host_card = top.handle();
+        let mut permanent = Permanent::new(base, turn);
+        permanent.card_sources.push(under);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        (
+            PermanentHandle {
+                player: 0,
+                index: (g.players[0].battle_area.len() - 1) as u8,
+            },
+            host_card,
+            trashed_card,
+        )
+    };
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnDigivolutionCardTrashed,
+        TriggerSource::SourceTrashedFromStack {
+            player: 0,
+            host,
+            host_card,
+            card: trashed_card,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.memory(), 4);
+}
+
+#[test]
+fn source_trash_event_target_owner_uses_trashed_stack_host_owner_not_observer() {
+    let yaml = r#"
+card: DSL-SOURCE-TRASH-OWNER
+name: Source Trash Owner
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - host_permanent_trait_has: Rock
+        - trashed_source_trait_has: Mineral
+    process:
+      - gain_memory: 4
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BASE", "Base", &[], 1000))
+        .add_card(digimon_card(
+            "UNDER-MINERAL",
+            "Under Mineral",
+            &["Mineral"],
+            1000,
+        ))
+        .add_card(digimon_card("HOST-ROCK", "Host Rock", &["Rock"], 4000))
+        .build();
+    runner.place_on_field(0, "DSL-SOURCE-TRASH-OWNER", None);
+    let (host, host_card, trashed_card) = {
+        let g = runner.game_mut();
+        let turn = g.turn_count;
+        let base_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BASE")
+            .unwrap();
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER-MINERAL")
+            .unwrap();
+        let host_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "HOST-ROCK")
+            .unwrap();
+        let base = CardSource::new(base_idx, 1, g.next_card_index());
+        let under = CardSource::new(under_idx, 1, g.next_card_index());
+        let top = CardSource::new(host_idx, 1, g.next_card_index());
+        let trashed_card = under.handle();
+        let host_card = top.handle();
+        let mut permanent = Permanent::new(base, turn);
+        permanent.card_sources.push(under);
+        permanent.card_sources.push(top);
+        g.players[1].battle_area.push(permanent);
+        (
+            PermanentHandle {
+                player: 1,
+                index: (g.players[1].battle_area.len() - 1) as u8,
+            },
+            host_card,
+            trashed_card,
+        )
+    };
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnDigivolutionCardTrashed,
+        TriggerSource::SourceTrashedFromStack {
+            player: 1,
+            host,
+            host_card,
+            card: trashed_card,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.memory(), 4);
 }
 
 struct DeleteSelfThenPlayNext;

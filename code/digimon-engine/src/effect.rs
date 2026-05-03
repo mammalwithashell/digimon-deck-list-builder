@@ -4,6 +4,8 @@ use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{DelayTrigger, EffectTiming, Keyword};
 use crate::permanent::PermanentHandle;
+use digimon_dsl::compiled::{CompiledAltPath, CompiledPredicate};
+use std::sync::Arc;
 
 /// Condition closures run during effect evaluation and during tensor-time
 /// inspection (for static DP modifiers / OPT state). They receive a
@@ -54,6 +56,12 @@ pub type LinkFilterFn =
 /// battle-area permanents can be deleted as the cost.
 pub type OverclockCostFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
+
+#[derive(Clone)]
+pub struct AltPathRegistrationEffect {
+    pub applies_to: Option<Arc<CompiledPredicate>>,
+    pub registers: Arc<CompiledAltPath>,
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct EffectObservationMetadata {
@@ -204,6 +212,7 @@ pub struct Effect {
     /// Filter closure selecting legal host Digimon for a Link Option.
     /// Set by `.link(cost, filter)`.
     pub link_filter: Option<LinkFilterFn>,
+    pub alt_path_registration: Option<AltPathRegistrationEffect>,
     /// True for a Training card — placed into the Breeding Area with the
     /// Training state. Set by `.training()`.
     pub training: bool,
@@ -506,6 +515,7 @@ impl EffectBuilder {
                 delay_trigger: None,
                 link_cost: None,
                 link_filter: None,
+                alt_path_registration: None,
                 training: false,
                 linked: false,
                 when_playing_this: false,
@@ -672,6 +682,18 @@ impl EffectBuilder {
         F: Fn(&EffectReadContext, PermanentHandle) -> Option<i32> + Send + Sync + 'static,
     {
         self.inner.security_attack_fn = Some(Box::new(f));
+        self
+    }
+
+    pub fn alt_path_registration(
+        mut self,
+        applies_to: Option<Arc<CompiledPredicate>>,
+        registers: Arc<CompiledAltPath>,
+    ) -> Self {
+        self.inner.alt_path_registration = Some(AltPathRegistrationEffect {
+            applies_to,
+            registers,
+        });
         self
     }
 

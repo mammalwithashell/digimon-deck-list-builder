@@ -4,7 +4,7 @@
 
 **Goal:** Extend the Rust card DSL so predicate, formula, and lowering-only blockers can be expressed declaratively without raw-Rust escape hatches.
 
-**Architecture:** Add narrow parser, compiler, compiled-IR, evaluator, lowerer, and DSL infra tests for each missing reusable vocabulary item. Pure predicate and formula gaps land first because they do not resize action space; hybrid slices are gated behind the relevant engine primitives and must prove behavior with DSL-driven tests, not just parse tests.
+**Architecture:** Add narrow parser, compiler, compiled-IR, evaluator, lowerer, and DSL infra tests for each missing reusable vocabulary item. Pure predicate and formula gaps land first because they do not resize action space; hybrid slices are gated behind the relevant engine primitives and must prove behavior with DSL-driven tests, not just parse tests. Current `main` already landed the adjacent Group 5, Group 6, and Group 8 primitives, so this plan treats those as baseline coverage and keeps only residual predicate/formula and inherited alt-path registration work in Group 7.
 
 **Tech Stack:** Rust (`code/digimon-dsl`, `code/digimon-engine`), YAML card DSL, Cargo integration tests, markdown gap trackers.
 
@@ -20,6 +20,13 @@ Already-landed Group 7 slices must be protected, not reimplemented:
 - `not_in_binding` parses, compiles, evaluates, and threads through `for_each` / modifier filters.
 - Static `play_cost_lte` works for card and permanent predicates and selection filters.
 - Basic `event_card_trait_has`, `event_target_trait_has`, and replacement cause/controller predicates exist for the event/replacement contexts already supplied by the engine.
+
+Mainline updates after this plan was first drafted must also be protected:
+
+- Group 5 closes reusable Option/Delay/Link state: Delay windows, replacement-aware Delay, Link registration/action DSL, linked-card scope dispatch, inherited-security placement, `OnOptionPlaced` fan-out, Training scope, and transient Standard Option replay. Do not reopen these generic primitives from this plan; only migrate stale card YAML/tests once their Group 7 predicate/formula blockers are also gone.
+- Group 6 closes dynamic formula-backed aura fields. `kind: aura` now accepts `dp_modifier_fn` and `security_attack_fn`, and runtime DP/security queries recompute those formulas live. Keep regression coverage, but do not implement another Group 7 aura storage path.
+- Group 8 closes top-level printed DNA authoring through `alt_paths: [{ kind: dna_digivolve, ... }]` into `CardData.dna_costs`, and existing DNA action masks observe that metadata. The remaining Group 7-adjacent DNA item is inherited/end-of-turn `alt_path_registration` lowering, not top-level `dna_costs` authoring.
+- Group 8 also closes scoped DigiXros aliases, ACE Overflow metadata, token card data, and reveal overlays. Leave those out of Group 7 unless a card-specific predicate/formula blocker still depends on them.
 
 This plan must not add new raw-Rust callbacks as the final implementation state. If a slice cannot be implemented faithfully because an engine primitive is missing, leave the tracker open with that dependency named and keep affected card YAML on an explicit blocked path.
 
@@ -48,12 +55,13 @@ Likely Rust lowering and evaluator files:
 - Modify: `code/digimon-engine/src/dsl_cards/step/play_digivolve.rs`
 - Modify: `code/digimon-engine/src/dsl_registry.rs`
 
-Likely engine/card-data files for the DNA-cost slice:
+Likely files for the residual inherited alt-path registration slice:
 
-- Modify: `code/digimon-engine/src/card_data.rs`
-- Modify: `code/digimon-engine/src/card_registry.rs`
-- Modify: `code/digimon-engine/build.rs`
-- Modify: `code/digimon-engine-py/src/lib.rs` only if exposed card-data constants change.
+- Modify: `code/digimon-engine/src/dsl_cards/mod.rs`
+- Create or modify: `code/digimon-engine/src/dsl_cards/lower_alt_path_registration.rs`
+- Modify: `code/digimon-engine/src/effect.rs` only if a new runtime registration effect is required.
+- Modify: `code/digimon-engine/src/action/mask.rs` and `code/digimon-engine/src/game_actions.rs` only if inherited registration changes how existing DNA action IDs become legal.
+- Modify: `code/digimon-engine-py/src/lib.rs` only if exposed action or card-data constants change.
 
 Likely tests:
 
@@ -65,8 +73,9 @@ Likely tests:
 - Modify: `code/digimon-engine/tests/dsl/phase2f2_formula_eval.rs`
 - Modify: `code/digimon-engine/tests/dsl/phase2f2_modifier_formula.rs`
 - Create or modify: `code/digimon-engine/tests/dsl/group7_formula_batch.rs`
-- Create or modify: `code/digimon-engine/tests/dsl/group7_aura_formula.rs`
-- Create or modify: `code/digimon-engine/tests/dsl/group7_dna_costs.rs`
+- Create or modify: `code/digimon-engine/tests/dsl/group7_alt_path_registration.rs`
+- Modify: `code/digimon-engine/tests/dsl/group6_dynamic_formulas.rs` only as regression evidence if aura behavior is accidentally touched.
+- Modify: `code/digimon-engine/tests/dna_digivolve_user_action.rs`
 - Modify production YAML only after a reusable slice passes, for example `code/digimon-engine/cards/p/P-206.yaml`, `code/digimon-engine/cards/bt8/BT8-097.yaml`, or `code/digimon-engine/cards/bt24/BT24-080.yaml` when present.
 
 Tracker files:
@@ -110,9 +119,12 @@ Run:
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3d_formula_zone_count
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3d_event_context
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement
+cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_dynamic_formulas
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dsl_dna_alt_path_enriches_card_data_dna_costs
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- authored_dna_alt_path_makes_dna_action_legal_for_bt20_016
 ```
 
-Expected: PASS or a targeted failure that identifies a regression in the already-claimed slice. Fix regressions before continuing to new vocabulary.
+Expected: PASS or a targeted failure that identifies a regression in an already-claimed slice. Fix regressions before continuing to new vocabulary. The Group 6 dynamic aura and Group 8 DNA-alt-path commands are baseline evidence from current `main`; failures there mean the plan should be paused for regression repair rather than re-implementing those features inside Group 7.
 
 - [ ] **Step 3: Update tracker wording for partial closures**
 
@@ -122,9 +134,11 @@ Edit `qa/dsl-vocab-gaps.md` so these entries do not read as fully open:
 - EX4-011 shared trash: keep open only for `shared_trash_count` / bucket formula.
 - BT20-102 not_in_binding: keep closed for predicate/filter support; leave card-specific raw-rust retirement to the card's remaining blockers.
 - P-189 / play-cost filters if still mentioned in archetype notes: state that static `play_cost_lte` selection filters are closed.
+- G-AURA-DP-FORMULA: keep closed under Group 6 for `dp_modifier_fn` and `security_attack_fn`; do not carry it as a Group 7 implementation task.
+- BG Imperial top-level DNA authoring: keep closed for `alt_paths: kind: dna_digivolve` populating `CardData.dna_costs`; keep inherited/end-of-turn `alt_path_registration` lowering open.
 ```
 
-Do not mark `G-COLOR-MATCH-AGAINST-BOARD`, `G-FORMULA-KIND-FILTER`, `G-AURA-DP-FORMULA`, same-level pair formulas, shared-trash formulas, or `dna_costs` authoring as closed in this step.
+Do not mark `G-COLOR-MATCH-AGAINST-BOARD`, `G-FORMULA-KIND-FILTER`, same-level pair formulas, shared-trash formulas, binding-DP formulas, or inherited `alt_path_registration` lowering as closed in this step.
 
 - [ ] **Step 4: Verify tracker edits**
 
@@ -918,233 +932,105 @@ git add code/digimon-dsl/src/predicate.rs code/digimon-dsl/src/compiled.rs code/
 git commit -m "feat: add event subject dsl predicates"
 ```
 
-## Task 6: Dynamic Formula-Backed Aura Fields
+## Task 6: Protect Main-Landed Dynamic Aura Formula Coverage
 
 **Files:**
-- Modify: `code/digimon-dsl/src/clause.rs`
-- Modify: `code/digimon-dsl/src/compiled.rs`
-- Modify: `code/digimon-dsl/src/compile.rs`
-- Modify: `code/digimon-engine/src/dsl_cards/lower_aura.rs`
-- Modify: `code/digimon-engine/src/effect.rs`
-- Modify: `code/digimon-engine/src/game.rs`
-- Modify: `code/digimon-engine/src/tensor.rs` if source DP contribution changes tensor-visible values.
-- Create: `code/digimon-engine/tests/dsl/group7_aura_formula.rs`
+- Verify: `code/digimon-dsl/src/clause.rs`
+- Verify: `code/digimon-dsl/src/compiled.rs`
+- Verify: `code/digimon-engine/src/dsl_cards/lower_aura.rs`
+- Verify: `code/digimon-engine/src/effect.rs`
+- Verify: `code/digimon-engine/src/game.rs`
+- Verify: `code/digimon-engine/tests/dsl/group6_dynamic_formulas.rs`
 - Docs: `qa/dsl-vocab-gaps.md`
+- Docs: `docs/RUST_ENGINE_GAPS.md`
 
-- [ ] **Step 1: Write the failing parse/compile test**
-
-Create `code/digimon-engine/tests/dsl/group7_aura_formula.rs`:
-
-```rust
-#[test]
-fn aura_accepts_dp_modifier_formula() {
-    let yaml = r#"
-card: T-G7-AURA
-name: Dynamic Aura
-kind: digimon
-level: 5
-color: [purple]
-cost: 7
-dp: 7000
-effects:
-  - kind: aura
-    target: {}
-    dp_modifier_fn:
-      base: 0
-      per: material_count
-      delta: 1000
-"#;
-    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
-    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
-    let digimon_dsl::compiled::CompiledClause::Declarative(
-        digimon_dsl::compiled::CompiledDeclarativeClause::Aura { dp_modifier_fn, .. },
-    ) = &compiled.effects[0]
-    else {
-        panic!("expected aura");
-    };
-    assert!(dp_modifier_fn.is_some());
-}
-```
-
-Register the module in `code/digimon-engine/tests/dsl/main.rs`:
-
-```rust
-mod group7_aura_formula;
-```
-
-- [ ] **Step 2: Run the parse/compile test to verify it fails**
+- [ ] **Step 1: Confirm the schema and runtime fields already exist**
 
 Run:
 
 ```bash
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- aura_accepts_dp_modifier_formula
+git grep -n "dp_modifier_fn\|security_attack_fn" -- code/digimon-dsl/src/clause.rs code/digimon-dsl/src/compiled.rs code/digimon-engine/src/dsl_cards/lower_aura.rs code/digimon-engine/src/effect.rs code/digimon-engine/src/game.rs
 ```
 
-Expected: FAIL because `AuraBody` and `CompiledDeclarativeClause::Aura` do not have `dp_modifier_fn`.
+Expected: output shows `AuraBody.dp_modifier_fn`, `AuraBody.security_attack_fn`, compiled aura fields, `lower_aura` formula lowering, and runtime `Effect` / `Game` query usage.
 
-- [ ] **Step 3: Write the failing runtime test**
-
-Add:
-
-```rust
-#[test]
-fn self_aura_dp_formula_recomputes_when_source_count_changes() {
-    use digimon_engine::card_source::CardSource;
-    use digimon_engine::debug_runner::DebugRunner;
-
-    let yaml = r#"
-card: T-G7-AURA
-name: Dynamic Aura
-kind: digimon
-level: 5
-color: [purple]
-cost: 7
-dp: 7000
-effects:
-  - kind: aura
-    target: {}
-    dp_modifier_fn:
-      base: 0
-      per: material_count
-      delta: 1000
-"#;
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(yaml)
-        .hand(0, &["T-G7-AURA"])
-        .build();
-    let handle = runner.place_on_field(0, "T-G7-AURA", None);
-    assert_eq!(runner.effective_dp(handle).unwrap(), 7000);
-
-    let data_idx = runner.game.card_data.iter().position(|c| c.card_id == "T-G7-AURA").unwrap();
-    let next = runner.game.next_card_index();
-    runner.game.players[0].battle_area[handle.index as usize]
-        .card_sources
-        .insert(0, CardSource::new(data_idx, 0, next));
-
-    assert_eq!(runner.effective_dp(handle).unwrap(), 8000);
-}
-```
-
-- [ ] **Step 4: Run the runtime test to verify it fails**
+- [ ] **Step 2: Run the current mainline aura regression tests**
 
 Run:
 
 ```bash
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- self_aura_dp_formula_recomputes_when_source_count_changes
+cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_dynamic_formulas phase2f2_formula_eval phase2f2_modifier_formula --nocapture
 ```
 
-Expected: FAIL because the DSL cannot lower a dynamic self aura formula or the engine snapshots the value.
+Expected: PASS. This is not a failing-test step because current `main` already implemented the behavior. A failure means a regression must be fixed before continuing, not that Group 7 should add a second aura implementation.
 
-- [ ] **Step 5: Implement dynamic aura formula storage and query**
+- [ ] **Step 3: Keep tracker wording aligned with Group 6 ownership**
 
-Make these changes:
+Edit `qa/dsl-vocab-gaps.md` and `docs/RUST_ENGINE_GAPS.md` only if they drift from this baseline:
 
 ```text
-1. Add `dp_modifier_fn: Option<FormulaSpec>` to `AuraBody`.
-2. Add `dp_modifier_fn: Option<CompiledFormula>` to `CompiledDeclarativeClause::Aura`.
-3. Compile the formula in `compile.rs`.
-4. In `effect.rs`, add an optional formula-backed DP field to `Effect` for declarative self auras, for example `dp_modifier_formula: Option<CompiledFormula>`.
-5. In `lower_aura.rs`, for self auras with `dp_modifier_fn`, store the compiled formula on the declarative effect rather than materializing a static modifier.
-6. In the engine DP query path, evaluate the formula every time effective DP or source DP contribution is queried. Use the source permanent as the formula target.
-7. Preserve static `dp_modifier` behavior and existing aura tests.
+G-AURA-DP-FORMULA is closed by Group 6 for `dp_modifier_fn`.
+Security Attack formula auras are closed by Group 6 for `security_attack_fn`.
+Residual formula selectors that `dp_modifier_fn` may consume remain tracked under their own Group 7 formula entries.
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [ ] **Step 4: Verify docs only if edited**
 
 Run:
 
 ```bash
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_aura_formula
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2f2_modifier_formula
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test tensor_and_mask
+git diff --check -- qa/dsl-vocab-gaps.md docs/RUST_ENGINE_GAPS.md
 ```
 
-Expected: PASS. If `tensor_and_mask` is not a valid test target in this workspace, run the closest existing tensor/mask test target shown by `cargo test --manifest-path code/digimon-engine/Cargo.toml -- --list`.
+Expected: no output.
 
-- [ ] **Step 7: Update tracker**
-
-In `qa/dsl-vocab-gaps.md`, mark `G-AURA-DP-FORMULA` resolved only for dynamic self-aura DP formulas. Keep named-target or player-scoped aura delivery blockers under Group 6 unless they are also implemented and tested.
-
-- [ ] **Step 8: Commit**
+- [ ] **Step 5: Commit only if tracker wording changed**
 
 ```bash
-git add code/digimon-dsl/src/clause.rs code/digimon-dsl/src/compiled.rs code/digimon-dsl/src/compile.rs code/digimon-engine/src/dsl_cards/lower_aura.rs code/digimon-engine/src/effect.rs code/digimon-engine/src/game.rs code/digimon-engine/src/tensor.rs code/digimon-engine/tests/dsl/main.rs code/digimon-engine/tests/dsl/group7_aura_formula.rs qa/dsl-vocab-gaps.md
-git commit -m "feat: add formula backed dsl auras"
+git add qa/dsl-vocab-gaps.md docs/RUST_ENGINE_GAPS.md
+git commit -m "docs: preserve dynamic aura formula baseline"
 ```
 
-## Task 7: DNA Costs and Alt-Path Authoring Lowering
+## Task 7: Inherited Alt-Path Registration Lowering
 
 **Files:**
-- Modify: `code/digimon-dsl/src/spec.rs`
-- Modify: `code/digimon-dsl/src/alt_path.rs`
-- Modify: `code/digimon-dsl/src/compiled.rs`
-- Modify: `code/digimon-dsl/src/compile.rs`
-- Modify: `code/digimon-engine/src/card_data.rs`
-- Modify: `code/digimon-engine/src/dsl_registry.rs`
 - Modify: `code/digimon-engine/src/dsl_cards/mod.rs`
-- Modify: `code/digimon-engine/src/dsl_cards/lower_triggered.rs`
-- Create: `code/digimon-engine/tests/dsl/group7_dna_costs.rs`
+- Create or modify: `code/digimon-engine/src/dsl_cards/lower_alt_path_registration.rs`
+- Modify: `code/digimon-engine/src/effect.rs` if a runtime registration payload must live on `Effect`.
+- Modify: `code/digimon-engine/src/action/mask.rs` only if the registration changes existing DNA action-mask legality.
+- Modify: `code/digimon-engine/src/game_actions.rs` only if executing the registered DNA path needs a new resume branch.
+- Create: `code/digimon-engine/tests/dsl/group7_alt_path_registration.rs`
+- Modify: `code/digimon-engine/tests/dsl/main.rs`
 - Test: `code/digimon-engine/tests/dna_digivolve_user_action.rs`
 - Docs: `qa/dsl-vocab-gaps.md`
+- Docs: `qa/archetype-qa/dsl/bg-imperial.md`
 
-- [ ] **Step 1: Write the failing DNA-cost authoring test**
-
-Create `code/digimon-engine/tests/dsl/group7_dna_costs.rs`:
-
-```rust
-#[test]
-fn yaml_dna_costs_populate_runtime_card_data() {
-    let yaml = r#"
-card: T-G7-DNA
-name: DNA Test
-kind: digimon
-level: 5
-color: [blue, green]
-cost: 8
-dp: 8000
-dna_costs:
-  - left: { color: blue, level: 4 }
-    right: { color: green, level: 4 }
-    cost: 0
-effects: []
-"#;
-    let mut runner = digimon_engine::debug_runner::DebugRunner::builder()
-        .from_dsl_yaml(yaml)
-        .hand(0, &["T-G7-DNA"])
-        .build();
-    let data = runner
-        .game
-        .card_data
-        .iter()
-        .find(|c| c.card_id == "T-G7-DNA")
-        .expect("card data");
-    assert_eq!(data.dna_costs.len(), 1);
-}
-```
-
-Register in `code/digimon-engine/tests/dsl/main.rs`:
-
-```rust
-mod group7_dna_costs;
-```
-
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **Step 1: Run the already-closed top-level DNA authoring baselines**
 
 Run:
 
 ```bash
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- yaml_dna_costs_populate_runtime_card_data
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dsl_dna_alt_path_enriches_card_data_dna_costs
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- authored_dna_alt_path_makes_dna_action_legal_for_bt20_016
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_016_has_dna_digivolve_alt_path
 ```
 
-Expected: FAIL because top-level `dna_costs` is not accepted or is not copied into runtime `CardData`.
+Expected: PASS. These tests prove top-level `alt_paths: kind: dna_digivolve` already populates `CardData.dna_costs`; do not add a second `dna_costs:` top-level schema.
 
-- [ ] **Step 3: Write failing alt-path registration lowering test**
+- [ ] **Step 2: Write the failing parse/compile guard for inherited registration**
 
-Add:
+Create `code/digimon-engine/tests/dsl/group7_alt_path_registration.rs`:
 
 ```rust
+use digimon_dsl::{compile, CardSpec};
+
+fn compile_yaml(yaml: &str) -> digimon_dsl::compiled::CompiledCard {
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("parse card yaml");
+    compile::compile(&spec).expect("compile card yaml")
+}
+
 #[test]
-fn inherited_end_of_turn_alt_path_registration_lowers_to_effect() {
+fn inherited_end_of_turn_alt_path_registration_compiles() {
     let yaml = r#"
 card: T-G7-ALT
 name: Alt Registration
@@ -1165,52 +1051,120 @@ effects:
         - filter: { color_is: green, level_eq: 4 }
       cost: 0
 "#;
-    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
-    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
-    assert_eq!(compiled.effects.len(), 1);
-    let effects = digimon_engine::dsl_cards::effects_for_compiled_card(&compiled, &[]).expect("lower effects");
-    assert_eq!(effects.len(), 1);
+    let compiled = compile_yaml(yaml);
+    let digimon_dsl::compiled::CompiledClause::Declarative(
+        digimon_dsl::compiled::CompiledDeclarativeClause::AltPathRegistration {
+            trigger,
+            registers,
+            ..
+        },
+    ) = &compiled.effects[0]
+    else {
+        panic!("expected alt_path_registration clause");
+    };
+    assert_eq!(*trigger, digimon_dsl::compiled::CompiledTiming::EndOfYourTurn);
+    assert_eq!(registers.materials.len(), 2);
 }
 ```
 
-Use the actual public helper for lowering compiled cards in this repository; if `effects_for_compiled_card` is not the exported name, replace it with the current `dsl_cards` lowering entrypoint and keep the assertion that the clause is no longer dropped.
+Register it in `code/digimon-engine/tests/dsl/main.rs`:
 
-- [ ] **Step 4: Run alt-path test to verify it fails**
+```rust
+mod group7_alt_path_registration;
+```
+
+- [ ] **Step 3: Run the parse/compile guard**
 
 Run:
 
 ```bash
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- inherited_end_of_turn_alt_path_registration_lowers_to_effect
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- inherited_end_of_turn_alt_path_registration_compiles
 ```
 
-Expected: FAIL because declarative `AltPathRegistration` is not lowered into an engine effect for inherited end-of-turn DNA registration.
+Expected: PASS. The DSL syntax and compiled IR already exist; the open gap is engine lowering/runtime behavior.
 
-- [ ] **Step 5: Implement DNA authoring and lowering**
+- [ ] **Step 4: Write the failing lowering test**
+
+Add to `code/digimon-engine/tests/dsl/group7_alt_path_registration.rs`:
+
+```rust
+#[test]
+fn inherited_alt_path_registration_lowers_to_runtime_effect() {
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::dsl_cards::DslCardEffect;
+    use digimon_engine::effect::CardEffect;
+    use digimon_engine::enums::EffectTiming;
+    use std::sync::Arc;
+
+    let compiled = compile_yaml(r#"
+card: T-G7-ALT
+name: Alt Registration
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+effects:
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    applies_to: { kind: digimon }
+    registers:
+      kind: dna_digivolve
+      materials:
+        - filter: { color_is: blue, level_eq: 4 }
+        - filter: { color_is: green, level_eq: 4 }
+      cost: 0
+"#);
+    let dsl = DslCardEffect::new(Arc::new(compiled));
+    let effects = dsl.effects(CardHandle(0));
+    assert!(
+        effects.iter().any(|effect| {
+            effect.timing == EffectTiming::EndOfYourTurn
+                && effect.alt_path_registration.is_some()
+                && effect.inherited
+        }),
+        "inherited alt_path_registration must lower into an end-of-turn runtime effect"
+    );
+}
+```
+
+- [ ] **Step 5: Run the lowering test to verify it fails**
+
+Run:
+
+```bash
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- inherited_alt_path_registration_lowers_to_runtime_effect
+```
+
+Expected: FAIL to compile or fail the assertion because `Effect` has no `alt_path_registration` payload and `DslCardEffect::effects()` currently drops `CompiledDeclarativeClause::AltPathRegistration`.
+
+- [ ] **Step 6: Implement inherited registration without new action IDs**
 
 Make these changes:
 
 ```text
-1. Add top-level `dna_costs` to `CardSpec` with a typed left/right material filter and cost.
-2. Compile `dna_costs` into `CompiledCard`.
-3. When creating `CardData` from compiled DSL cards, populate `CardData.dna_costs` using the same structure consumed by normal DNA action masks.
-4. Lower `CompiledDeclarativeClause::AltPathRegistration` into a real declarative or triggered engine effect that registers the alternative DNA path during the printed timing.
-5. Ensure inherited alt-path registration reads the carrier/source context and does not install a hidden automatic DNA digivolve.
-6. Add action-mask coverage if the newly-authored DNA cost makes a user action legal through existing DNA ranges.
+1. Add a small runtime payload, for example `AltPathRegistrationEffect { applies_to: Option<CompiledPredicate>, registers: CompiledAltPath }`, in `code/digimon-engine/src/effect.rs`.
+2. Add `alt_path_registration: Option<AltPathRegistrationEffect>` to `Effect`.
+3. Add `lower_alt_path_registration.rs` that maps `CompiledDeclarativeClause::AltPathRegistration` to an `Effect` at the compiled trigger timing, preserving `scope`, `active_when`, `applies_to`, and `registers`.
+4. Call the lowerer from `DslCardEffect::effects()` instead of allowing the declarative clause to fall through.
+5. Reuse existing DNA action IDs (`DNA_DIGIVOLVE_START..DNA_DIGIVOLVE_END`) when a registered path makes a hand card legal. Do not add hidden automatic DNA digivolve resolution.
+6. If no engine surface can consult the registered path during action-mask construction, add the narrow query hook there and cover both mask legality and execution validation in `dna_digivolve_user_action.rs`.
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [ ] **Step 7: Run tests to verify they pass**
 
 Run:
 
 ```bash
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_dna_costs
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_alt_path_registration
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3e_on_dna_digivolve
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor -- dna
 ```
 
-Expected: PASS.
+Expected: PASS. `mask_and_tensor` is the current tensor/mask target name on `main`.
 
-- [ ] **Step 7: Contract review**
+- [ ] **Step 8: Contract review**
 
 Review these files and confirm no constant changes were required:
 
@@ -1221,17 +1175,17 @@ code/digimon-engine-py/src/lib.rs
 code/digimon_gym/digimon_gym.py
 ```
 
-Expected: no edits unless the implementation changed action-space or tensor semantics. If edits are required, add targeted tests proving masks and PyO3 constants remain synchronized.
+Expected: no edits unless implementation changed action-space or tensor semantics. If edits are required, add targeted tests proving masks and PyO3 constants remain synchronized.
 
-- [ ] **Step 8: Update tracker**
+- [ ] **Step 9: Update tracker**
 
-In `qa/dsl-vocab-gaps.md`, mark BG Imperial `dna_costs` authoring resolved only when authored YAML populates `CardData.dna_costs` and existing DNA action masks observe it. Mark end-of-turn inherited alt-path lowering resolved only when the engine offers the player-visible DNA action path.
+In `qa/dsl-vocab-gaps.md` and `qa/archetype-qa/dsl/bg-imperial.md`, keep top-level DNA alt-path authoring marked resolved, and mark inherited/end-of-turn `alt_path_registration` resolved only when the registered path can make an existing DNA action legal and executing that action uses the registered materials/cost.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add code/digimon-dsl/src/spec.rs code/digimon-dsl/src/alt_path.rs code/digimon-dsl/src/compiled.rs code/digimon-dsl/src/compile.rs code/digimon-engine/src/card_data.rs code/digimon-engine/src/dsl_registry.rs code/digimon-engine/src/dsl_cards/mod.rs code/digimon-engine/src/dsl_cards/lower_triggered.rs code/digimon-engine/tests/dsl/main.rs code/digimon-engine/tests/dsl/group7_dna_costs.rs qa/dsl-vocab-gaps.md
-git commit -m "feat: add dsl dna cost authoring"
+git add code/digimon-engine/src/effect.rs code/digimon-engine/src/dsl_cards/mod.rs code/digimon-engine/src/dsl_cards/lower_alt_path_registration.rs code/digimon-engine/src/action/mask.rs code/digimon-engine/src/game_actions.rs code/digimon-engine/tests/dsl/main.rs code/digimon-engine/tests/dsl/group7_alt_path_registration.rs code/digimon-engine/tests/dna_digivolve_user_action.rs qa/dsl-vocab-gaps.md qa/archetype-qa/dsl/bg-imperial.md
+git commit -m "feat: lower inherited dsl alt path registration"
 ```
 
 ## Task 8: Raw-Rust Retirement Guard and Representative YAML Migration
@@ -1242,7 +1196,7 @@ git commit -m "feat: add dsl dna cost authoring"
 - Modify: `qa/dsl-vocab-gaps.md`
 - Modify relevant `qa/archetype-qa/dsl/*.md`
 
-- [ ] **Step 1: Identify raw-rust placeholders made obsolete by Tasks 2-7**
+- [ ] **Step 1: Identify raw-rust placeholders made obsolete by Tasks 2-5 and 7**
 
 Run:
 
@@ -1250,7 +1204,7 @@ Run:
 Select-String -Path 'code/digimon-engine/cards/**/*.yaml' -Pattern 'raw_rust|process: \[\]' -Context 2,4
 ```
 
-Expected: output lists any remaining raw-Rust or empty-process placeholders. For this task, only edit cards whose remaining blockers are fully covered by Group 7 tasks in this plan.
+Expected: output lists any remaining raw-Rust or empty-process placeholders. For this task, only edit cards whose remaining blockers are fully covered by Group 7 tasks in this plan plus the already-landed Group 5/6/8 baselines.
 
 - [ ] **Step 2: Add or update a retirement guard test**
 
@@ -1305,7 +1259,7 @@ amount_fn:
   delta: 1
 ```
 
-Do not migrate card clauses that still require unimplemented Option/Delay/Link, effect-initiated digivolve from non-hand zones, repeat target selection, or player-visible choices not covered by the current engine.
+Do not migrate card clauses that still require effect-initiated digivolve from non-hand zones, repeat target selection, inherited alt-path registration before Task 7 lands, or player-visible choices not covered by the current engine. Delay/Link/Option primitives from Group 5 and dynamic aura fields from Group 6 are no longer generic blockers on current `main`; if a stale card note still names them, retag it to the actual remaining card-level gap before migrating YAML.
 
 - [ ] **Step 5: Run card and DSL tests**
 
@@ -1370,10 +1324,10 @@ Run if any slice changes player-visible choices, DNA masks, or action decoding:
 
 ```bash
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action
-cargo test --manifest-path code/digimon-engine/Cargo.toml --test tensor_and_mask
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor
 ```
 
-Expected: PASS. If `tensor_and_mask` is not a valid target, list tests and run the repository's current mask/tensor target:
+Expected: PASS. If `mask_and_tensor` is not a valid target, list tests and run the repository's current mask/tensor target:
 
 ```bash
 cargo test --manifest-path code/digimon-engine/Cargo.toml -- --list

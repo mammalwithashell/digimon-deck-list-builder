@@ -41,3 +41,25 @@ fn src_cards_contains_only_test_tokens_keyword_and_raw_rust_shells() {
             .join("\n")
     );
 }
+
+#[test]
+fn group7_migrated_cards_do_not_use_raw_rust_or_empty_placeholders() {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let migrated_cards = [(
+        "BT8-097",
+        manifest_dir.join("cards").join("bt8").join("BT8-097.yaml"),
+    )];
+
+    for (card_id, path) in migrated_cards {
+        let yaml = fs::read_to_string(&path)
+            .unwrap_or_else(|err| panic!("read migrated YAML for {card_id} at {path:?}: {err}"));
+        assert!(
+            !yaml.contains("raw_rust"),
+            "{card_id} should remain fully native DSL after Group 7 migration"
+        );
+        assert!(
+            !yaml.contains("process: []"),
+            "{card_id} should not regress to an empty process placeholder"
+        );
+    }
+}

@@ -13,7 +13,7 @@ Target: `data/deck_library.json` archetype `BG Imperial`, using the two DigimonM
 BG Imperial is not currently implementable faithfully as executable Rust YAML DSL. The card metadata exists in `data/cards.json`, but no production YAML specs exist under `code/digimon-engine/cards/**/` for the assessed card IDs. More importantly, several core effects require missing DSL/data or engine behavior:
 
 - DNA digivolve cost authoring/data population for the normal DNA action mask.
-- Inherited end-of-turn DNA digivolve registration.
+- Inherited end-of-turn DNA digivolve registration is now covered for literal-cost, two battle-area material `alt_path_registration` clauses; card YAML and card-specific tests still need to land.
 - Partition source-list enforcement and source selection in a replacement window.
 - Delay effects that act as deletion-prevention replacements.
 - Start-of-turn Delay activation for Green Scramble.
@@ -27,8 +27,8 @@ Older `qa/archetype-qa/bg-imperial.md` notes are Python-era QA and should not be
 | `BT12-002` DemiVeemon | Inherited once-per-turn attack draw when green Digimon is in play | data-gap / test-gap | `data/cards.json`; no matching YAML under `code/digimon-engine/cards/` | Author YAML and add inherited behavioral coverage |
 | `BT3-002` DemiVeemon | Inherited attack draw when this Digimon has Jamming | data-gap / test-gap | `data/cards.json`; `modifier_map.rs` has `Jamming` | Author YAML and add inherited condition coverage |
 | `P-117` Veemon | Free-trait digivolution cost reduction when a Tamer is present; inherited two-color attack draw | dsl-gap / test-gap | `data/cards.json`; `docs/RUST_PYTHON_PARITY.md` notes context-aware cost hooks still have gaps | Add target-card-aware cost-reduction coverage before scripting |
-| `BT12-021` Veemon | Search top 3; inherited end-of-turn DNA digivolve from hand | dsl-gap | `qa/dsl-vocab-gaps.md` inherited end-of-turn DNA entry | Reuse and close inherited `alt_path_registration` lowering gap |
-| `BT12-047` Wormmon | Search top 3; inherited end-of-turn DNA digivolve from hand | dsl-gap | `qa/dsl-vocab-gaps.md` inherited end-of-turn DNA entry | Reuse and close inherited `alt_path_registration` lowering gap |
+| `BT12-021` Veemon | Search top 3; inherited end-of-turn DNA digivolve from hand | card-yaml / test-gap | `qa/dsl-vocab-gaps.md` inherited end-of-turn DNA entry resolved for the reusable route hook | Author YAML using inherited `alt_path_registration`, then add card-specific search + end-of-turn DNA coverage |
+| `BT12-047` Wormmon | Search top 3; inherited end-of-turn DNA digivolve from hand | card-yaml / test-gap | `qa/dsl-vocab-gaps.md` inherited end-of-turn DNA entry resolved for the reusable route hook | Author YAML using inherited `alt_path_registration`, then add card-specific search + end-of-turn DNA coverage |
 | `BT16-040` Wormmon | Start-main/on-play digivolve into Lv.4 Insectoid/Free from trash with reduced cost | test-gap | `data/cards.json`; no YAML | Needs effect-initiated digivolve-from-trash test |
 | `ST9-09` Stingmon | Hand play-cost reduction when blue Digimon is in play; inherited attack draw | test-gap | `data/cards.json`; no YAML | Needs cost-reduction and inherited draw tests |
 | `EX1-014` ExVeemon | Jamming; inherited grants Jamming while Imperialdramon/Free | test-gap | `modifier_map.rs` maps `Jamming`; no YAML | Needs inherited keyword-grant coverage |
@@ -64,13 +64,13 @@ Older `qa/archetype-qa/bg-imperial.md` notes are Python-era QA and should not be
 
 ### Inherited end-of-turn DNA digivolve registration
 
-- **Gap:** Inherited clauses can spell an end-of-turn DNA path, but the lowering path does not register that alternate path as a player-visible action/pending selection.
-- **Type:** `dsl-gap`
+- **Status:** Reusable DSL/runtime hook resolved 2026-05-02 for literal-cost, two battle-area material inherited `alt_path_registration` DNA paths.
+- **Type:** card-yaml / test-gap for BG Imperial cards
 - **Blocks:** `BT12-021`, `BT12-047`
 - **Why it matters:** The inherited effect is one of the archetype's main ways to DNA digivolve outside the normal main phase. Auto-resolving or omitting it would violate the no-approximations policy.
-- **Evidence:** `qa/dsl-vocab-gaps.md` tracks the same missing `alt_path_registration` lowering for `BT22-008` / `BT22-017`; this assessment extends that reusable gap to the BG Imperial inherited Veemon/Wormmon pair.
+- **Evidence:** `qa/dsl-vocab-gaps.md` tracks the reusable `alt_path_registration` lowering as resolved with `group7_alt_path_registration` coverage.
 - **First test:** With `BT12-021` under a Digimon and a valid partner on field, end the turn and assert a player-visible end-of-turn DNA action into a matching hand card is offered.
-- **Implementation hint:** Lower inherited `alt_path_registration` clauses with `timing: end_of_your_turn` and `kind: dna_digivolve` into the same alternate-path/action-mask channel used by normal DNA digivolve.
+- **Implementation hint:** Author the card YAML with inherited `alt_path_registration`; the reusable route hook already parks EndOfTurnAction, exposes the existing DNA action ID, and revalidates selected materials/cost at execution.
 
 ### Partition source enforcement
 
@@ -105,7 +105,7 @@ Older `qa/archetype-qa/bg-imperial.md` notes are Python-era QA and should not be
 ## Implementation Order
 
 1. Close DNA cost authoring/data population, because it unlocks the normal DNA action surface.
-2. Close inherited end-of-turn DNA registration for the Lv.3 searchers.
+2. Author inherited end-of-turn DNA registration YAML for the Lv.3 searchers and add card-specific coverage.
 3. Implement Partition source enforcement for `BT16-025`.
 4. Implement Delay replacement activation for `BT17-097`.
 5. Add start-of-turn Delay and pending-security-to-hand support for `LM-030`.

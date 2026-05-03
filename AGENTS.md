@@ -2,8 +2,21 @@
 
 Refer to `CLAUDE.md` for repository-wide architecture, service boundaries, and working rules.
 Refer to `docs/RULES_CONTEXT.md` for rule implementation details.
-Refer to `docs/TRAINING_RUNBOOK.md` for DB-backed training pipeline operations.
+Refer to `docs/TRAINING_RUNBOOK.md` for training operations and DB-backed pipeline details.
 Refer to `docs/TENSOR_SPEC.md` and `docs/ACTION_SPEC.md` before changing observation or action contracts.
+Refer to `docs/RUST_ENGINE_API.md`, `docs/RUST_DSL_TEST_API.md`, and `docs/RUST_ENGINE_GAPS.md` before planning Rust card-effect or DSL work.
+
+## How to Use This Guide
+
+`CLAUDE.md` is the repository-wide engineering guide. This file narrows that guidance to agent-facing contracts: RL training, deck optimization, action masking, observation profiles, model export, gauntlets, and the hosted training pipeline.
+
+When this file conflicts with a more specific live spec, use the live spec and update this file in the same change. The most common live specs are:
+
+- Observation/action contracts: `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, and `docs/superpowers/specs/2026-05-01-rl-observation-action-tensor-v2-design.md`.
+- Rust engine and DSL gaps: `docs/RUST_ENGINE_GAPS.md`, `qa/archetype-qa/engine-gaps.md`, `qa/dsl-vocab-gaps.md`, and `docs/superpowers/specs/2026-04-29-archetype-engine-dsl-gap-roadmap-design.md`.
+- Training and model operations: `docs/TRAINING_RUNBOOK.md`, `docs/TOOLS.md`, and `docs/ARCHITECTURE.md`.
+
+Avoid adding new hardcoded snapshot claims here unless they are part of a stable contract. Prefer named profile IDs, exported constants, and layout metadata over copied numbers.
 
 ## Scope
 
@@ -11,7 +24,8 @@ This document describes the RL/deckbuilding agent stack in the current Rust-pivo
 
 - Architect: deck optimization by card swaps.
 - Pilot: battle play inside the headless engine.
-- Training wrappers, gauntlets, model export, and DB-backed orchestration.
+- Observation/action profiles, training wrappers, gauntlets, model export, and DB-backed orchestration.
+- Rust card-effect and DSL readiness work when it changes what agents can legally observe or choose.
 
 The no-approximations policy from `CLAUDE.md` applies to agent work: every legal choice must be surfaced through the engine action/pending-selection contracts so RL agents can learn it. Do not add card-effect stubs, auto-selections, or hidden UI-only decisions.
 
@@ -31,6 +45,7 @@ DCGO is useful for detailed flow, but it is not the authority on optionality or 
 The project is migrating to the Rust engine as the source of truth:
 
 - Target engine: `code/digimon-engine/`.
+- Card scripting DSL: `code/digimon-dsl/` plus YAML card specs under `code/digimon-engine/cards/`.
 - Python bindings: `code/digimon-engine-py/`, exposed as `digimon_engine`.
 - RL environment: `code/digimon_gym/digimon_gym.py`.
 - Legacy Python engine: `code/engine_py_legacy/engine/`, retained as transitional reference/fallback only.
@@ -38,9 +53,44 @@ The project is migrating to the Rust engine as the source of truth:
 `DigimonEnv` chooses the runner with `DIGIMON_BACKEND`:
 
 - `DIGIMON_BACKEND=rust`: use `RustHeadlessGame` from the PyO3 wheel.
-- unset or other value: legacy Python `HeadlessGame` fallback where still explicitly wired.
+- unset with `standard_lite_v2`: use Rust when PyO3 bindings are available, because v2 has no legacy Python fallback.
+- unset or other value with `standard_compact_v1`: legacy Python `HeadlessGame` fallback where still explicitly wired.
 
 New production behavior should target Rust first. Before editing engine behavior, check `docs/RUST_PYTHON_PARITY.md` for known divergences, and keep Rust/Python parity notes accurate while the migration is in progress.
+
+`DigimonEnv` also selects an observation profile:
+
+- Default pilot profile: `standard_lite_v2`.
+- Compact compatibility profile: `standard_compact_v1`.
+- Env override: `DIGIMON_TENSOR_PROFILE`.
+
+`standard_lite_v2` requires the Rust/PyO3 runner and is the serious-training default. `standard_compact_v1` is a 1375-float compatibility profile; `digimon_engine.TENSOR_SIZE` still describes that compact layout for legacy imports and compact-profile checks. New training, inference, export, model metadata, and feature-extractor code must use exported observation layout metadata instead of assuming `TENSOR_SIZE` is the active observation size.
+
+---
+
+# 0. Workflows Agents Must Respect
+
+## 0.1 Engine and DSL Gap Work
+
+Use capability-centric gap language. If a card cannot be implemented faithfully, file or reference the missing reusable primitive in `docs/RUST_ENGINE_GAPS.md`, `qa/archetype-qa/engine-gaps.md`, or `qa/dsl-vocab-gaps.md`; do not describe it as a one-off card TODO when the same primitive can unblock multiple cards.
+
+For archetype readiness checks, use `.codex/skills/assess-rust-engine-archetype/`. That workflow is read-only: it inspects printed text, current YAML/DSL lowering, action/pending-selection support, and tests, then reports `ready`, `dsl-gap`, `engine-gap`, `rules-gap`, `test-gap`, or `data-gap`.
+
+For planned gap-roadmap groups, use `.codex/skills/plan-rust-engine-gap-group/` and the roadmap spec in `docs/superpowers/specs/2026-04-29-archetype-engine-dsl-gap-roadmap-design.md`.
+
+Group-style roadmap work has one important invariant: do not expand `ACTION_SPACE_SIZE` or change active tensor contracts as a side effect of card unlock work. If a missing player-visible choice requires a contract change, stop and plan it as an action/tensor contract change with `docs/ACTION_SPEC.md`, `docs/TENSOR_SPEC.md`, Rust constants, PyO3 exports, RL wrappers, frontend constants, and model metadata updated together.
+
+## 0.2 Rust Card Effects
+
+New Rust card effects are TDD:
+
+1. Read printed text in `data/cards.json` and relevant rule sections.
+2. Write a failing Rust behavioral test under `code/digimon-engine/tests/`.
+3. Implement through `CardEffect`, `EffectContext`, or DSL lowering without hidden auto-choices.
+4. Verify the action mask exposes every legal decision.
+5. Update gap trackers and parity notes when the work closes or discovers a reusable primitive.
+
+Do not author new Python card scripts for cards already implemented in Rust. Cards migrate one direction only: legacy Python reference to Rust ownership.
 
 ---
 
@@ -152,7 +202,9 @@ Goal: play Digimon matches inside the headless engine to generate win/loss and p
 - Feed-forward policy from `sb3_contrib.MaskablePPO` with `"MlpPolicy"`.
 - Uses `ActionMasker` so illegal actions are never sampled.
 - Training entrypoint: `code/digimon_gym/agents/pilot_training.py`.
-- Observation shape comes from `digimon_engine.TENSOR_SIZE` and is currently `1375`.
+- Observation shape comes from the selected observation layout, not from `digimon_engine.TENSOR_SIZE`.
+- The default pilot observation layout is `standard_lite_v2`, currently `8320` floats.
+- `digimon_engine.TENSOR_SIZE` remains the `standard_compact_v1` compatibility constant, currently `1375` floats.
 - Action space comes from `digimon_engine.ACTION_SPACE_SIZE` and is currently `2168`.
 
 ### MaskableRecurrentPPO (Custom LSTM)
@@ -223,10 +275,18 @@ API:
 
 Observation/action spaces:
 
-- Observation: `Box(shape=(TENSOR_SIZE,), low=-10.0, high=20001.0, dtype=float32)`.
-- Current `TENSOR_SIZE`: `1375`.
+- Observation: `Box(shape=(selected_layout.tensor_size,), low=-10.0, high=20001.0, dtype=float32)`.
+- Default selected layout: `standard_lite_v2`, currently `8320`.
+- Compact compatibility layout: `standard_compact_v1`, currently `1375`.
 - Action: `Discrete(ACTION_SPACE_SIZE)`.
 - Current `ACTION_SPACE_SIZE`: `2168`.
+
+Profile metadata:
+
+- `DIGIMON_TENSOR_PROFILE` or `DigimonEnv(tensor_profile=...)` selects the profile.
+- `info["tensor_profile"]`, `info["tensor_feature_schema_version"]`, and `info["tensor_layout_hash"]` are included on reset/step.
+- `digimon_engine.get_observation_layout(profile_id)` is the canonical source for tensor size, section table, card-ID positions, scalar positions, layout hash, and feature schema version.
+- Feature extractors and ONNX export must consume layout metadata; they must not infer card-ID slots from legacy Python tensor-layout imports when Rust layout metadata is available.
 
 Mask delivery:
 
@@ -259,6 +319,10 @@ Masking must be preserved end to end:
 6. Inference must pass `action_masks` into `.predict()`.
 
 The maskable distribution sets illegal-action logits to negative infinity. Illegal actions should have zero probability during sampling and log-prob evaluation, and entropy should exclude masked actions.
+
+The action mask is the legality oracle. Observation metadata may explain phases, pending choices, source provenance, effect categories, or target profiles, but it must never drive game legality or rules resolution. If observation metadata is incomplete, encode unknown/zero metadata and keep the mask correct.
+
+`standard_lite_v2` adds rich pending-choice features for currently installed selections. These rows are aligned to prompt presentation order (`pending_selection.valid_action_ids`), not raw action-ID ranges, because action IDs are phase-aware and reused. Keep that row-order contract stable when adding selection kinds.
 
 ## 3.4 Wrapper Chain
 
@@ -434,7 +498,7 @@ Hosted-API queue worker responsibilities:
 - Notify `GauntletOrchestrator` when gauntlet-linked jobs finish.
 - Atomically increment agent wins/losses/draws/timesteps.
 
-Implementation note: the queue, claiming, recovery, stats, and gauntlet hooks are the durable pieces. Verify current implementation before assuming train/evaluate job bodies are complete.
+Implementation note: the queue, claiming, recovery, stats, and gauntlet hooks are the durable pieces. Verify current implementation before assuming train/evaluate job bodies are complete; `docs/TRAINING_RUNBOOK.md` has historically marked some execution bodies as placeholders.
 
 ---
 
@@ -474,11 +538,22 @@ Policy formats:
 - ONNX `.onnx`: loaded through `digimon_gym.inference.onnx_policy`.
 - Heuristic names: `"greedy"` and `"random"`.
 
+Model metadata must include the observation/action contract it was trained or exported against:
+
+- `observation_profile`
+- `tensor_version`
+- `feature_schema_version`
+- `tensor_size`
+- `tensor_layout_hash`
+- `action_space_size`
+
+The desktop model compatibility gate checks manifest/model metadata against the embedded engine before download/use. Any active observation-profile or action-space change requires retraining or re-exporting live models; do not let shape drift fail silently.
+
 ONNX export:
 
 ```bash
-python code/tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
-python code/tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
+python code/tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx --tensor-profile standard_lite_v2
+python code/tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx --tensor-profile standard_lite_v2
 ```
 
 Recurrent inference rule:
@@ -491,6 +566,7 @@ Recurrent inference rule:
 # 9. Commands
 
 Run from repo root unless noted.
+Examples use POSIX-style env prefixes. In PowerShell, use `$env:DIGIMON_BACKEND='rust'; <command>` or set the variable once for the session.
 
 ```bash
 # Install
@@ -498,16 +574,17 @@ pip install -r requirements.txt
 pip install -e .
 
 # Pilot training
-python -m digimon_gym.agents.pilot_training --timesteps 500000
-python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000
-python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
-python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --tensor-profile standard_lite_v2 --timesteps 500000
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --lstm --tensor-profile standard_lite_v2 --timesteps 500000
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --self-play --tensor-profile standard_lite_v2 --timesteps 1000000
+DIGIMON_BACKEND=rust python -m digimon_gym.agents.pilot_training --gauntlet --tensor-profile standard_lite_v2 --timesteps 500000
 
 # Architect training
 python -m digimon_gym.agents.architect_training --archetype "Medusamon" --episodes 200
 
 # Env smoke check
-python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs,info=env.reset(); print(obs.shape, info['action_mask'].shape)"
+DIGIMON_BACKEND=rust python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs,info=env.reset(seed=1); print(obs.shape, info['tensor_profile'], info['action_mask'].shape)"
+DIGIMON_BACKEND=rust python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(tensor_profile='standard_compact_v1'); obs,info=env.reset(seed=1); print(obs.shape, info['tensor_profile'])"
 
 # Rust backend PyO3 bindings
 cd code/digimon-engine-py && maturin develop
@@ -517,6 +594,7 @@ DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_ru
 
 # RL tests
 python -m pytest code/tests/rl -v
+python -m pytest code/tests/rl/test_tensor_profiles.py code/tests/rl/test_rust_runner_adapter.py -v
 ```
 
 Do not run Uvicorn with `--reload` for long-running training workers; reload creates child processes that are not appropriate for worker jobs.
@@ -525,7 +603,7 @@ Do not run Uvicorn with `--reload` for long-running training workers; reload cre
 
 # 10. Implementation Rules for Contributors
 
-1. Keep tensor/action contracts synchronized with `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, Rust constants, env wrappers, and frontend constants.
+1. Keep tensor/action contracts synchronized with `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, Rust constants, PyO3 exports, env wrappers, frontend constants, model metadata, and ONNX export.
 2. Preserve headless-first game logic; UI reflects state and never owns rules.
 3. Maintain legal action masking for every decision step.
 4. Every engine choice that affects gameplay must flow through actions or pending selection.
@@ -538,9 +616,12 @@ Do not run Uvicorn with `--reload` for long-running training workers; reload cre
 11. Engine-only routers must not import DB/auth/AI pipeline modules.
 12. Training CLI modules must not import DB/auth/FastAPI modules.
 13. Desktop builds use `VITE_BUILD_TARGET=desktop` to tree-shake admin/training UI.
-14. New Rust card effects are TDD: write a failing behavioral test under `code/digimon-engine/tests/` before implementing the `CardEffect`.
-15. Do not author new Python card scripts for cards already implemented in Rust.
-16. All source code lives under `code/`; do not add new top-level source directories.
+14. Observation code must use profile/layout metadata. Do not assume `digimon_engine.TENSOR_SIZE` is the active pilot observation size.
+15. Default serious pilot training uses `standard_lite_v2`; compact checks must opt into `standard_compact_v1`.
+16. New Rust card effects are TDD: write a failing behavioral test under `code/digimon-engine/tests/` before implementing the `CardEffect` or DSL lowering.
+17. Do not author new Python card scripts for cards already implemented in Rust.
+18. Do not add no-op/raw-Rust placeholders to claim archetype readiness. Mark blocked gaps explicitly until behavior and tests are real.
+19. All source code lives under `code/`; do not add new top-level source directories.
 
 ---
 
@@ -596,7 +677,10 @@ Key docs:
 - `docs/TRAINING_RUNBOOK.md`: training pipeline operations.
 - `docs/TOOLS.md`: CLI tools and operational workflows.
 - `docs/RUST_ENGINE_API.md`: Rust card scripting API.
+- `docs/RUST_DSL_TEST_API.md`: Rust DSL test helpers and authoring checks.
 - `docs/RUST_PYTHON_PARITY.md`: transitional Rust/Python divergence tracker.
 - `docs/RUST_ENGINE_GAPS.md`: reusable Rust scripting capability gaps surfaced by archetype audits.
+- `qa/dsl-vocab-gaps.md`: DSL vocabulary/lowering gaps surfaced by audits and batch card implementation.
 - `qa/archetype-qa/engine-gaps.md`: known rule/card gaps that block no-approximations compliance.
 - `.codex/skills/assess-rust-engine-archetype/`: Codex read-only DSL readiness assessment workflow for archetypes, decks, card groups, or card lists.
+- `.codex/skills/plan-rust-engine-gap-group/`: Codex workflow for planning numbered Rust engine/DSL gap roadmap groups.

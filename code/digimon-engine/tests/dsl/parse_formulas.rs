@@ -16,7 +16,9 @@ fn parse_literal() {
 fn parse_base_per_delta() {
     let yaml = "base: 15\nper: material_count\ndelta: -1";
     match parse(yaml) {
-        FormulaSpec::BasePerDelta { base, per, delta } => {
+        FormulaSpec::BasePerDelta {
+            base, per, delta, ..
+        } => {
             assert_eq!((base, delta), (15, -1));
             assert!(matches!(per, PerSelector::MaterialCount));
         }
@@ -35,13 +37,16 @@ per:
 delta: 1
 "#;
     match parse(yaml) {
-        FormulaSpec::BasePerDelta { base, per, delta } => {
+        FormulaSpec::BasePerDelta {
+            base, per, delta, ..
+        } => {
             assert_eq!((base, delta), (0, 1));
             assert_eq!(
                 per,
                 PerSelector::CardCountInZone(CardCountInZoneSpec {
                     of: PlayerRef::Opponent,
                     zone: Zone::Trash,
+                    filter: None,
                 })
             );
         }

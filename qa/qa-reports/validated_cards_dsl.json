@@ -823,17 +823,17 @@
       "validated_date": "2026-04-28",
       "report": "batch-implement-cards-rust-dsl",
       "status": "PARTIAL",
-      "gap_kind": "HYBRID",
+      "gap_kind": "engine",
       "archetype": "Medusamon Batch 12",
       "yaml_path": "code/digimon-engine/cards/bt8/BT8-097.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_097.rs",
-      "test_count": 20,
+      "test_count": 21,
       "patterns": [
         "G1",
         "H11",
         "B1"
       ],
-      "notes": "17 active tests pass; 3 ignored pending gaps. Clause A (BeforePayCost cost reduction -1 per opp battle_area permanent) fully DSL-implemented via kind:cost_reduction with amount_fn/card_count_in_zone. Clause B ([Main] floodgate + delete): floodgate via raw_rust bt8_097_opp_cannot_play_digimon_by_effect (installs CannotPlayDigimonByEffect with EndOfOpponentsTurn expiry); delete sweep via for_each/dp_lte:6000. Clause C ([Security]) mirrors Clause B exactly. Gaps: G-PRED-DP-LTE (dp_lte predicate on permanents not evaluated at runtime — all Digimon pass filter), G-FOR-EACH-DELETE-INDEX-SHIFT (for_each snapshot indices become stale after first deletion; multi-delete only removes 1 of N), G-FORMULA-KIND-FILTER (card_count_in_zone counts Tamers in addition to Digimon — approximation noted in YAML). G-PLAYER-FLOOD-GATE-DSL is a known pre-existing gap; raw_rust bridge used correctly."
+      "notes": "20 active tests pass; 1 ignored pending gap. Clause A (BeforePayCost cost reduction -1 per opponent Digimon) uses the Group 7 filtered card_count_in_zone formula, so Tamers and Option permanents do not count. Clause B ([Main] floodgate + delete): native add_player_modifier installs CannotPlayDigimonByEffect with EndOfOpponentsTurn expiry; delete sweep uses for_each/dp_lte:6000 with active DP boundary coverage. Clause C ([Security]) mirrors Clause B exactly. Remaining gap: G-FOR-EACH-DELETE-INDEX-SHIFT (for_each snapshot indices become stale after first deletion; multi-delete only removes 1 of N). BT8-097 is pure DSL with no raw_rust or empty process placeholder."
     },
     "P-151": {
       "card_name": "Digimon Liberator",

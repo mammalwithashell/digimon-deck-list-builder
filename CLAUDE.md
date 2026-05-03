@@ -63,7 +63,7 @@ agent config, runtime data, and project-level configs.
 .
 ├── CLAUDE.md                      # This file — project overview
 ├── AGENTS.md                      # RL agent architecture
-├── README.md, GEMINI.md, PLAN.md
+├── README.md, GEMINI.md
 ├── Cargo.toml                     # Rust workspace (members live under code/)
 ├── pyproject.toml                 # Packages server + digimon_gym from code/
 ├── requirements.txt, requirements-server.txt, requirements-training.txt

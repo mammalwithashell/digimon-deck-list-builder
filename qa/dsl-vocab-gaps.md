@@ -96,8 +96,9 @@ Format per entry:
 - Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_digivolve_from_zones`, plus `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group4_zone_movement`.
 
 ## BT24-080 — delete all opponent Digimon with the lowest level
+- Status: PARTIALLY RESOLVED for the reusable lowest-level permanent predicate on 2026-05-02. `CompiledPredicate::level_matches_aggregate` can match permanents whose top card level equals `CompiledAggregateSelector::LowestLevel` for a player scope, skipping Tamers/Options with no top-card level. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- level_is_lowest_among_opponent_digimon_filters_only_lowest_level_digimon`.
 - Effect text: "[On Play] [When Digivolving] [On Deletion] Delete all of your opponent's lowest level Digimon."
-- Missing DSL verb / step kind / predicate: aggregate minimum-level predicate plus mass delete. `for_each` can delete all permanents matching a predicate, but the DSL has no predicate for "level equals the minimum level among opponent Digimon."
+- Remaining DSL verb / step kind / predicate: card-specific authoring still needs to wire the aggregate predicate through the surrounding delete-all flow. Repeat target-selection blockers elsewhere are unrelated and remain open.
 - Lowers to engine API: engine-side iteration over opponent battle-area permanents plus `delete_permanent` is sufficient once the minimum-level candidate set can be computed.
 - Suggested DSL syntax:
   ```yaml
@@ -110,7 +111,7 @@ Format per entry:
 - First reported: 2026-04-28
 
 ## EX4-011 — DP deletion threshold from shared trash count
-- Status: PARTIAL after 2026-05-01. Runtime evaluation for `dp_lte` / `dp_gte` permanent predicates is closed for literal thresholds and existing `FormulaSpec` variants. This entry remains open only for the missing `shared_trash_count` / bucket formula vocabulary shown below.
+- Status: RESOLVED for the reusable shared-trash formula primitive on 2026-05-02. `FormulaSpec` now accepts `per: { shared_trash_count: {} }` with a `bucket` on the surrounding base/per/delta formula, compiles to `CompiledPerSelector::SharedTrashCount { bucket }`, and runtime evaluation sums both players' trashes before applying bucket floor division.
 - Effect text: "For every 10 total cards in both player's trashes, add 2000 to the maximum DP you can choose with DP-based deletion effects."
 - Missing DSL verb / step kind / predicate: formula support for cross-player trash count buckets inside a `dp_lte` selection predicate. Existing formula vocabulary covers some modifier values, but not a target-filter threshold derived from `floor((your_trash + opponent_trash) / 10) * 2000`.
 - Lowers to engine API: read both players' trash lengths, compute the threshold, then install the normal opponent-permanent selection and `delete_permanent` callback.
@@ -124,6 +125,7 @@ Format per entry:
       delta: 2000
   ```
 - First reported: 2026-04-28
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_formula_batch`.
 
 ---
 
@@ -156,10 +158,11 @@ Format per entry:
 
 ## Rocks archetype refresh — event-card predicates for Mineral/Rock observers  [G-ROCKS-EVENT-CARD-PREDICATES]
 - Effect text: Rocks Tamers and inherited effects gate on the card or host involved in a just-fired event, for example "when any of your Digimon digivolve into a [Mineral] or [Rock] trait Digimon" (`EX8-067`) and "when effects trash digivolution cards of any of your [Mineral] or [Rock] trait Digimon" (`EX10-063`, `P-169`, `EX11-065`).
-- Missing DSL verb / step kind / predicate: Reusable predicate leaves for the event payload: `digivolving_card_trait_has`, `trashed_source_trait_has`, `trashed_source_card_id_is`, and `host_permanent_trait_has`. Existing source-relative leaves such as `source_permanent_trait_has` are not enough unless the lowering receives the correct event subject and distinguishes observer permanent, host permanent, and trashed source card.
+- DSL predicate coverage: reusable predicate leaves for `trashed_source_trait_has`, `trashed_source_card_id_is`, and `host_permanent_trait_has` are implemented for event payloads with host/source context. Broader aliases such as `digivolving_card_trait_has` remain vocabulary work if card authors need that spelling; existing source-relative leaves such as `source_permanent_trait_has` are not enough unless the lowering receives the correct event subject and distinguishes observer permanent, host permanent, and trashed source card.
 - Companion engine gap: the engine still needs full `OnDigivolutionCardTrashed` fan-out with host/source context; see `docs/RUST_ENGINE_GAPS.md` "OnDigivolutionCardTrashed observer timing" and related Rocks entries.
 - Updated 2026-04-29: the OnDigivolve half now has runtime event-card and event-target context for normal `Game::digivolve_from_hand`; `event_card_trait_has` reads the new top card, and `target: event_target` binds the just-digivolved permanent. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_card_trait_predicate_matches_new_top_card` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_target_binding_resolves_digivolved_permanent`.
 - Updated 2026-04-29: `Game::return_to_hand` source disposition now carries `event_card` / `event_source_card` for the trashed source and `event_host_card` for the former host top card, so `event_card_trait_has` can match sources trashed by that path. Runtime `event_host_permanent()` only exposes the stored host handle if it still resolves to that same card. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_digivolution_card_trashed_context_carries_host_and_trashed_source source_trash_host_context_does_not_alias_shifted_permanent` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolution_card_trashed_event_card_trait_predicate_matches_trashed_source`. Remaining source-trash gaps include cross-permanent source selection, source-trash paths other than `return_to_hand`, and first-class DSL leaves for trashed-source / host-permanent predicates.
+- Updated 2026-05-02: first-class predicate leaves now compile for `event_target_owner`, `host_permanent_trait_has`, `trashed_source_trait_has`, and `trashed_source_card_id_is`; runtime coverage exercises `TriggerSource::SourceTrashedFromStack` with live host/trashed-source context. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3d_event_context`. Remaining source-trash producer paths not covered here should stay open until each producer proves it supplies host/source context rather than relying on fallback guessing.
 - Lowers to engine API: `TriggerContext` / event payload fields containing `{host_permanent, trashed_card, trashed_source_index, cause_player}` plus predicate evaluation against those fields.
 - Suggested DSL syntax:
   ```yaml
@@ -181,7 +184,7 @@ Format per entry:
 - Existing DSL gaps reaffirmed by the refresh:
   - `EX11-008 — [When Moving] timing` no longer blocks on the `on_move` token or moved-card event context as of 2026-04-29; card bodies may still need separate target-selection, reveal, or follow-up action primitives.
   - `P-189 — play cost <= filter` was closed on 2026-05-01 for static `play_cost_lte` filters on `select_hand` / `select_trash`; remaining Rocks blockers are tracked separately.
-  - `P-206 — Board-color cross-reference predicate` remains the specific blocker for `P-206` Delay filtering.
+  - `P-206 — Board-color cross-reference predicate` was closed on 2026-05-02 for dynamic `color_matches_any_field_digimon` card predicates; any remaining P-206 Delay, Option, or action-flow blockers are separate.
   - `P-107 — place_self_as_delay_option` remains relevant to `P-107`, `P-039`, `BT23-096`, and related Delay/security disposition effects.
 - First reported: 2026-04-28 (Rocks Rust-engine assessment refresh)
 
@@ -189,10 +192,12 @@ Format per entry:
 
 ## BT22-008 / BT22-017 — inherited end-of-turn DNA digivolve registration
 - Effect text: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in your hand."
-- Missing DSL verb / step kind / predicate: Lowering for existing `alt_path_registration` declarative clauses with `kind: dna_digivolve`. YAML examples can spell the clause, but `code/digimon-engine/src/dsl_cards/mod.rs` currently leaves this declarative form in the unlowered catch-all branch.
+- Missing DSL verb / step kind / predicate: RESOLVED 2026-05-02 for literal-cost, two battle-area material `alt_path_registration` declarative clauses with `kind: dna_digivolve`, `scope: inherited`, and `trigger: end_of_your_turn`.
 - Lowers to engine API: the same alternate-path registration and action-mask channel used by normal DNA digivolve costs, producing a player-visible pending/action path rather than an automatic end-of-turn digivolve.
 - Suggested DSL syntax: keep the existing `alt_path_registration` shape and require lowering for inherited clauses, including `timing: end_of_your_turn`, `kind: dna_digivolve`, material filters, target hand-card filter, and cost override.
 - Also blocks: `BT12-021` Veemon and `BT12-047` Wormmon in BG Imperial. Their inherited text is "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+- Covered by: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_alt_path_registration`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor -- dna`.
+- Remaining limits: formula costs, extra costs, `from` gates, burst end steps, `stacks_unsuspended`, non-battle-area materials, repeat/unbounded materials, `ignore_requirements`, `source_treated_as`, marker routes, and non-DNA alt-path kinds are intentionally not consumed by this v1 action hook.
 - First reported: 2026-04-28
 
 ## BG Imperial DNA cards — YAML `dna_costs` authoring / production data population
@@ -201,7 +206,7 @@ Format per entry:
 - Lowers to engine API: `CardData.dna_costs`, consumed by the DNA digivolve action-mask branch and `Game::initiate_dna_digivolve`.
 - Covered by: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dsl_dna_alt_path_enriches_card_data_dna_costs`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- authored_dna_alt_path_makes_dna_action_legal_for_bt20_016`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_016_has_dna_digivolve_alt_path`.
 - Full verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml`, `DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v`, and `python -m pytest code/tests/rl -v`.
-- Remaining limits: inherited/end-of-turn `alt_path_registration` DNA clauses are still tracked by the preceding entry; this closure covers top-level printed DNA digivolve card data.
+- Remaining limits: this closure covers top-level printed DNA digivolve card data. Inherited/end-of-turn registration is covered separately by the preceding entry and supports the existing DNA action IDs for the v1 literal-cost two-material shape.
 - First reported: 2026-04-28 (BG Imperial assess-rust-engine-archetype)
 
 ## Group 8 — scoped DigiXros aliases, ACE Overflow metadata, and reveal overlays
@@ -220,8 +225,9 @@ Format per entry:
 - First reported: 2026-04-28
 
 ## BT22-015 — count same-level pairs in own stack
+- Status: PARTIALLY RESOLVED for the reusable same-level source pair formula on 2026-05-02. `CompiledPerSelector::SameLevelPairsInSources` counts source cards below the top card by level and sums `count / 2` per level bucket. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- same_level_pair_count_formula_reads_source_stack_levels`.
 - Effect text: "[When Digivolving] For every 2 cards with the same level in this Digimon's digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck."
-- Missing DSL verb / step kind / predicate: Formula support for "number of same-level pairs in this Digimon's digivolution cards" and repeat-count target selection derived from that formula.
+- Remaining DSL verb / step kind / predicate: repeat-count target selection derived from a formula is still open.
 - Lowers to engine API: stack inspection plus repeated `return_to_deck(..., DeckEnd::Bottom)` after each player-visible target selection.
 - Suggested DSL syntax: `formula: { aggregate: same_level_pairs, zone: self_sources }` feeding `repeat: <formula>` around a `select_opponent_permanent` + `return_to_deck_bottom` step.
 - First reported: 2026-04-28
@@ -528,6 +534,7 @@ Format per entry:
 ---
 
 ## ST22-08 — Named-Binding DP Reference in Formula  [G-BINDING-DP-FORMULA]
+- Status: RESOLVED for the reusable `binding_dp` formula primitive on 2026-05-02. `dp_lte: { formula: { binding_dp: ally } }` now parses, compiles to `CompiledFormula::BindingDp("ally")`, and predicate formula evaluation threads current `Bindings` so the threshold reads the named permanent's effective DP.
 - Effect text: "[Main] … delete 1 of your opponent's Digimon with as much or less DP as 1 of your Digimon."
 - Missing DSL verb / step kind / predicate: `binding_dp` — a formula primitive that reads the effective DP of a named binding (a `PermanentHandle` stored by `bind_as:` from a prior `select_own_permanent`). The formula system (`formula.rs` + `formula_eval.rs`) can read `source_permanent`'s DP via `{ of: source_permanent, value: dp }` (see DSL spec §3.10), but there is no form to read an arbitrary named binding's DP — which is required for "DP ≤ chosen own Digimon's DP" where the comparator is player-selected mid-effect.
 - Lowers to engine API: `ctx.game.effective_dp(handle)` — already exists. The gap is that `CompiledFormula` has no `BindingDp(String)` variant that reads `bindings.get_permanent(name)` and calls `effective_dp`. 
@@ -542,6 +549,7 @@ Format per entry:
 - Gap kind: dsl (engine has `effective_dp`; DSL formula system has no binding-reference form).
 - Workaround: None for `binding_dp` itself. Static and existing formula-backed `dp_lte` / `dp_gte` permanent predicates are now evaluated as of 2026-05-01, but this gap remains open until formulas can read a named binding's effective DP.
 - First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_formula_batch group7_predicate_batch`.
 
 ---
 
@@ -586,8 +594,8 @@ Format per entry:
 ## BT20-102 — Omnimon (X Antibody) self-digivolution-stack name check  [G-SELF-DIGIVOLUTION-CONTAINS-NAME]
 
 - Effect text: "[On Play][When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, ..."
-- Missing DSL verb / step kind / predicate: `self_digivolution_contains_name` — a `BoolPredicate` leaf that evaluates `rctx.source_permanent()?.contains_card_name(name, &rctx.game.card_data)` from within a triggered clause's `condition:` block. The DSL predicate `source_name_contains` applies to the SOURCE PERMANENT (the Digimon this card is stacked under, in inherited contexts) — not to this card's own digivolution stack at runtime. Additionally, `lower_triggered.rs` passes `PredicateSubject::None` to condition closures, so any subject-requiring predicate silently passes.
-- Engine gap component (hybrid): `Permanent::contains_card_name(name, data)` exists in `code/digimon-engine/src/permanent.rs` and scans the full stack. The gap is that `lower_triggered.rs` does not pass a `PredicateSubject::Permanent(source_h)` to the condition closure (currently passes `PredicateSubject::None`).
+- DSL predicate coverage: `self_digivolution_contains_name` is the needed `BoolPredicate` leaf for evaluating this Digimon's digivolution stack from a triggered clause's `condition:` block. The DSL predicate `source_name_contains` applies to the SOURCE PERMANENT (the Digimon this card is stacked under, in inherited contexts) — not to this card's own digivolution stack at runtime.
+- Engine support: `Permanent::contains_card_name(name, data)` exists in `code/digimon-engine/src/permanent.rs` and scans the full stack. Triggered `condition:` / `active_when:` evaluation now passes a `PredicateSubject::Permanent(source_h)` when a live source permanent is available.
 - Lowers to engine API: `Permanent::contains_card_name(name, &game.card_data)` on `rctx.source_permanent()`.
 - Suggested DSL syntax:
   ```yaml
@@ -596,7 +604,8 @@ Format per entry:
     # or: any_of: [{ self_digivolution_contains_name: "Omnimon" }, { self_digivolution_contains_name: "X Antibody" }]
   ```
   Implementation: add `self_digivolution_contains_name: Option<String>` to `BoolPredicateSpec` in `digimon-dsl/src/predicate.rs`, compile to `CompiledPredicate` field, evaluate in `eval_predicate(p, rctx, PredicateSubject::Permanent(source_h))` where `source_h` is the triggering permanent's handle — requires threading the source handle into the triggered-clause condition closure in `lower_triggered.rs`.
-- Gap kind: hybrid (engine has the method; DSL needs predicate leaf + `lower_triggered.rs` subject threading).
+- Updated 2026-05-02: `self_digivolution_contains_name` is now a compiled predicate leaf, triggered `condition:` / `active_when:` evaluation passes the live source permanent as subject when available, and runtime evaluation scans the full source stack through `Permanent::contains_card_name`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_predicate_batch`.
+- Gap kind: hybrid; the predicate leaf and triggered-condition subject threading are implemented, with broader BT20-102 authored-card coverage tracked separately.
 - Workaround: entire boardwipe clause routed through `raw_rust: { fn: bt20_102_boardwipe_and_return }` which calls `perm.contains_card_name(...)` directly. Over-wide: top card name "Omnimon (X Antibody)" contains "X Antibody" so condition is always true for BT20-102 even with no digivolution source.
 - First reported: 2026-04-27 (BT20-102 batch-implement-cards-rust-dsl, Medusamon Batch 11)
 
@@ -638,7 +647,7 @@ Format per entry:
 - Gap kind: resolved dsl vocabulary/engine API gap for inherited security context. Engine already handled the Main clause auto-placement; inherited-security-context placement now uses the explicit DSL step because `dispose_option` is not called in that path.
 - Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- inherited_security_places_source_option_as_delay_permanent`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- place_self_as_delay_option`.
 - Group 5 handoff verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay link`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed`.
-- Workaround: no longer needed for new YAML/tests. Existing `process: []` placeholders for P-035, P-103, and BT24-089 can migrate to `place_self_as_delay_option: {}` when those card YAMLs/tests are revisited. Existing ignored card-level tests that still name `G-PLACE-SELF-AS-OPTION-PERMANENT` remain migration/process-body follow-ups, not an open reusable placement primitive; keep distinct blockers such as `G-COLOR-MATCH-AGAINST-BOARD` open.
+- Workaround: no longer needed for new YAML/tests. Existing `process: []` placeholders for P-035, P-103, and BT24-089 can migrate to `place_self_as_delay_option: {}` when those card YAMLs/tests are revisited. Existing ignored card-level tests that still name `G-PLACE-SELF-AS-OPTION-PERMANENT` remain migration/process-body follow-ups, not an open reusable placement primitive; keep distinct card-level blockers such as remaining P-206 Delay/action-flow work separate.
 - First reported: 2026-04-28 (P-035 Red Memory Boost! batch-implement-cards-rust-dsl, Medusamon Batch 12). Same gap pre-existed in P-103.yaml and BT24-089.yaml without a tracker entry.
 
 ---
@@ -646,19 +655,18 @@ Format per entry:
 ## P-206 — Board-color cross-reference predicate in Delay clause  [G-COLOR-MATCH-AGAINST-BOARD]
 
 - Effect text: "[Main] ＜Delay＞ … You may play 1 Tamer card with the same color as any of your Digimon on the field from your hand with the play cost reduced by 4."
-- Missing DSL verb / step kind / predicate: `color_matches_any_field_digimon` (or an equivalent dynamic board-color filter) — a `PredicateSpec` leaf that checks whether a candidate card's colors share at least one color with ANY Digimon currently in the controller's battle area. The existing `color_is` predicate accepts a fixed literal color token (e.g. `red`, `blue`, `white`) — it cannot perform a dynamic cross-reference against the set of colors currently present on field Digimon top cards. No `any_of_field_colors` or `matches_board_color` predicate variant exists in `PredicateSpec` in `digimon-dsl/src/predicate.rs`.
-- Root cause: the filter predicate must inspect runtime game state (the controller's battle area, specifically the colors of permanent top cards) during `select_hand` candidate evaluation — a dynamic query, not a static literal comparison. `eval_card_fields` in `code/digimon-engine/src/dsl_cards/predicate.rs` has no branch for this pattern.
-- Lowers to engine API: `CardData::card_colors` (already on `CardData`) read against the controller's `battle_area.iter().map(|p| card_data[p.top_card().data_index].card_colors)` collected set. No new engine method is needed — the gap is purely in the DSL predicate vocabulary.
+- Status: RESOLVED on 2026-05-02 for dynamic board-color card predicates. `color_matches_any_field_digimon` now parses, compiles to `CompiledPredicate.color_matches_any_field_digimon`, and evaluates against live battle-area Digimon top-card colors during selection filtering. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- color_matches_any_field_digimon_compiles`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- select_hand_color_matches_any_field_digimon_filters_by_live_board_colors`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_predicate_batch`.
+- Implemented DSL predicate: `color_matches_any_field_digimon` — a `PredicateSpec` leaf that checks whether a candidate card's colors share at least one color with any Digimon currently in the requested player's battle area.
+- Lowers to engine API: `CardData::colors` read from the candidate card and from the requested player's battle-area top cards. No new engine method was needed; empty-board behavior is false.
 - Suggested DSL syntax:
   ```yaml
   filter:
     all_of:
       - kind: tamer
-      - color_matches_any_field_digimon: { of: you }   # NEW predicate leaf
+      - color_matches_any_field_digimon: { of: you }
   ```
-  Implementation notes: (1) add `color_matches_any_field_digimon: Option<PlayerRef>` to `BoolPredicateSpec` in `digimon-dsl/src/predicate.rs`; (2) compile to `CompiledPredicate.color_matches_any_field_digimon`; (3) in `eval_card_fields`, collect the union of colors from the relevant player's battle-area top cards, then check if the candidate card's colors overlap. Requires threading `rctx.game` (already available in `eval_card_fields` via `EffectReadContext`) rather than a static literal.
-- Gap kind: dsl (engine stores `card_colors` on `CardData` and has full battle-area access; the DSL/lowering path just lacks the predicate leaf for a dynamic color-set intersection).
-- Workaround: `filter: { kind: tamer }` only — the "same color as any of your Digimon on the field" constraint is not enforced at selection time. Tests asserting color-mismatch rejection are `#[ignore = "pending: G-COLOR-MATCH-AGAINST-BOARD"]`. First card affected: P-206 Digital Gate Open Delay clause.
+- Gap kind: resolved dsl vocabulary/evaluator gap for dynamic card-color filtering.
+- Workaround: no longer needed for the reusable predicate. P-206 card YAML may still need separate Delay, Option, or action-flow follow-up work before the full card can be unblocked.
 - First reported: 2026-04-28 (P-206 Digital Gate Open batch-implement-cards-rust-dsl, Medusamon Batch 14)
 
 ---
@@ -718,8 +726,9 @@ Format per entry:
 
 ## BT8-097 / Royal Knights — formula filters for counted battle-area cards  [G-FORMULA-KIND-FILTER]
 
+- Status: RESOLVED for reusable formula-zone count filters on 2026-05-02. `card_count_in_zone` payloads now accept `filter: { ... }`; the compiler carries the predicate into filtered count IR, and runtime evaluation counts only representable subjects that satisfy the predicate instead of falling back to an unfiltered count.
 - Effect text: `BT8-097` Crimson Blaze: "Reduce the memory cost of this card in your hand by 1 for each Digimon your opponent has in play."
-- Missing DSL verb / step kind / predicate: `card_count_in_zone` formulas can count a player's `battle_area`, but cannot apply a `kind: digimon` filter. The authored YAML therefore counts all opponent battle-area permanents, including Tamers and Option permanents, when computing the cost reduction.
+- Implemented DSL form: `card_count_in_zone` formulas can now apply a `kind: digimon` filter. `BT8-097.yaml` uses this filtered form so Tamers and Option permanents no longer reduce Crimson Blaze's play cost.
 - Lowers to engine API: the engine can inspect each battle-area permanent and test `Permanent::is_digimon(&card_data)`; the formula DSL needs a filtered-count form that passes a compiled predicate into formula evaluation.
 - Suggested DSL syntax:
   ```yaml
@@ -732,6 +741,7 @@ Format per entry:
         filter: { kind: digimon }
     delta: 1
   ```
-- Gap kind: dsl (engine has the data; formula vocabulary lacks the filter).
-- Workaround: current YAML over-reduces when the opponent controls non-Digimon permanents.
+- Gap kind: resolved dsl vocabulary/evaluator gap for filtered zone-count formulas.
+- Workaround: no longer needed for BT8-097 or other `card_count_in_zone` formulas with simple predicate filters.
 - First reported: 2026-04-28 (Royal Knights archetype assessment; surfaced by BT8-097 in Royal Knights lists)
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_formula_batch phase3d_formula_zone_count`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt8_097`.
