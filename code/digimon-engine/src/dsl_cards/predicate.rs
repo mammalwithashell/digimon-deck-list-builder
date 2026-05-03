@@ -180,9 +180,9 @@ pub fn eval_predicate_with_bindings(
     match subject {
         PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false),
         PredicateSubject::RevealedCard(card) => eval_card_fields(pred, rctx, card, true),
-        PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h),
+        PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h, bindings),
         PredicateSubject::BreedingPermanent(player) => {
-            eval_breeding_permanent_fields(pred, rctx, player)
+            eval_breeding_permanent_fields(pred, rctx, player, bindings)
         }
         PredicateSubject::None => eval_no_subject_fields(pred),
     }
@@ -650,6 +650,7 @@ fn eval_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
+    bindings: Option<&Bindings>,
 ) -> bool {
     if pred.other == Some(true) && rctx.source_permanent == Some(handle) {
         return false;
@@ -686,7 +687,7 @@ fn eval_permanent_fields(
             return false;
         }
     }
-    if !eval_dp_constraints(pred, rctx, handle) {
+    if !eval_dp_constraints(pred, rctx, handle, bindings) {
         return false;
     }
     if let Some(want) = pred.is_suspended {
@@ -736,6 +737,7 @@ fn eval_dp_constraints(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
+    bindings: Option<&Bindings>,
 ) -> bool {
     if pred.dp_eq.is_none() && pred.dp_lte.is_none() && pred.dp_gte.is_none() {
         return true;
@@ -744,17 +746,17 @@ fn eval_dp_constraints(
         return false;
     };
     if let Some(want) = &pred.dp_eq {
-        if dp != eval_dp_constraint(want, rctx, handle) {
+        if dp != eval_dp_constraint(want, rctx, handle, bindings) {
             return false;
         }
     }
     if let Some(cap) = &pred.dp_lte {
-        if dp > eval_dp_constraint(cap, rctx, handle) {
+        if dp > eval_dp_constraint(cap, rctx, handle, bindings) {
             return false;
         }
     }
     if let Some(floor) = &pred.dp_gte {
-        if dp < eval_dp_constraint(floor, rctx, handle) {
+        if dp < eval_dp_constraint(floor, rctx, handle, bindings) {
             return false;
         }
     }
@@ -765,10 +767,13 @@ fn eval_dp_constraint(
     constraint: &CompiledDpConstraint,
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
+    bindings: Option<&Bindings>,
 ) -> i32 {
     match constraint {
         CompiledDpConstraint::Literal(n) => *n,
-        CompiledDpConstraint::Formula(f) => formula_eval::evaluate_read(f, rctx, handle),
+        CompiledDpConstraint::Formula(f) => {
+            formula_eval::evaluate_read_with_bindings(f, rctx, handle, bindings)
+        }
     }
 }
 
@@ -776,6 +781,7 @@ fn eval_breeding_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
     player: PlayerId,
+    bindings: Option<&Bindings>,
 ) -> bool {
     let Some(perm) = rctx.game.player(player).breeding_area.as_ref() else {
         return false;
@@ -805,7 +811,7 @@ fn eval_breeding_permanent_fields(
         player,
         index: crate::action::space::BREEDING_TARGET as u8,
     };
-    if !eval_dp_constraints(pred, rctx, handle) {
+    if !eval_dp_constraints(pred, rctx, handle, bindings) {
         return false;
     }
     if let Some(want) = pred.in_breeding {

@@ -45,13 +45,18 @@ fn resolve_modifier_value(
     value: &CompiledModifierValue,
     ctx: &EffectContext<'_>,
     target: PermanentHandle,
+    bindings: &Bindings,
     runtime: &StepRuntime,
 ) -> i32 {
     match value {
         CompiledModifierValue::Literal(n) => *n,
-        CompiledModifierValue::Formula(f) => {
-            formula_eval::evaluate_with_raw(f, ctx, target, runtime.raw())
-        }
+        CompiledModifierValue::Formula(f) => formula_eval::evaluate_with_raw_and_bindings(
+            f,
+            ctx,
+            target,
+            runtime.raw(),
+            Some(bindings),
+        ),
     }
 }
 
@@ -125,7 +130,7 @@ pub fn try_run(
             };
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
-                let n = resolve_modifier_value(value, ctx, h, runtime);
+                let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
                 ctx.add_dp_modifier(h, n, expiry);
             }
             true
@@ -148,7 +153,7 @@ pub fn try_run(
                     if let Some(ResolvedBinding::Permanent(h)) =
                         resolve_binding_ref(b, ctx, bindings)
                     {
-                        let n = resolve_modifier_value(value, ctx, h, runtime);
+                        let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
                         ctx.add_modifier(h, modifier_ty, n, expiry);
                     }
                 }
@@ -160,7 +165,7 @@ pub fn try_run(
                     let matches =
                         crate::dsl_cards::step::permanent_scan::scan(ctx, pred, Some(bindings));
                     for h in matches {
-                        let n = resolve_modifier_value(value, ctx, h, runtime);
+                        let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
                         ctx.add_modifier(h, modifier_ty, n, expiry);
                     }
                 }

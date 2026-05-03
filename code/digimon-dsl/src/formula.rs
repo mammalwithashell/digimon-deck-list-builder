@@ -14,7 +14,12 @@ pub enum FormulaSpec {
     BasePerDelta {
         base: i32,
         per: PerSelector,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        bucket: Option<u32>,
         delta: i32,
+    },
+    BindingDp {
+        binding_dp: String,
     },
     Compound(CompoundFormula),
 }
@@ -100,21 +105,59 @@ impl Serialize for CompoundFormula {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CardCountInZoneSpec {
     pub zone: Zone,
     pub of: PlayerRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<Box<crate::predicate::PredicateSpec>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PerSelector {
     MaterialCount,
     StackSize,
     AllyCount,
     DigivolutionColorCount,
+    SharedTrashCount {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        bucket: Option<u32>,
+    },
     CardCountInZone(CardCountInZoneSpec),
+}
+
+impl Serialize for PerSelector {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::MaterialCount => serializer.serialize_str("material_count"),
+            Self::StackSize => serializer.serialize_str("stack_size"),
+            Self::AllyCount => serializer.serialize_str("ally_count"),
+            Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
+            Self::SharedTrashCount { bucket } => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                #[derive(Serialize)]
+                struct SharedTrashPayload {
+                    #[serde(skip_serializing_if = "Option::is_none")]
+                    bucket: Option<u32>,
+                }
+                outer.serialize_entry(
+                    "shared_trash_count",
+                    &SharedTrashPayload { bucket: *bucket },
+                )?;
+                outer.end()
+            }
+            Self::CardCountInZone(spec) => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                outer.serialize_entry("card_count_in_zone", spec)?;
+                outer.end()
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]

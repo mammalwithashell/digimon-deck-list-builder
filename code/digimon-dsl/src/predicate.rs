@@ -181,11 +181,33 @@ pub struct PredicateSpec {
     pub extra: IndexMap<String, serde_yml::Value>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum DpConstraint {
     Literal(i32),
     Formula(FormulaSpec),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
+enum DpConstraintDeserialize {
+    Literal(i32),
+    WrappedFormula { formula: FormulaSpec },
+    Formula(FormulaSpec),
+}
+
+impl<'de> Deserialize<'de> for DpConstraint {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let helper = DpConstraintDeserialize::deserialize(deserializer)?;
+        Ok(match helper {
+            DpConstraintDeserialize::Literal(n) => Self::Literal(n),
+            DpConstraintDeserialize::WrappedFormula { formula }
+            | DpConstraintDeserialize::Formula(formula) => Self::Formula(formula),
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

@@ -382,10 +382,19 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
                 collect_formula_raw_rust_fns(arg, names);
             }
         }
+        CompiledFormula::BasePerDelta { per, .. } => {
+            collect_per_selector_raw_rust_fns(per, names);
+        }
         CompiledFormula::Literal(_)
-        | CompiledFormula::BasePerDelta { .. }
         | CompiledFormula::Aggregate(_)
-        | CompiledFormula::AggregateScoped { .. } => {}
+        | CompiledFormula::AggregateScoped { .. }
+        | CompiledFormula::BindingDp(_) => {}
+    }
+}
+
+fn collect_per_selector_raw_rust_fns(sel: &CompiledPerSelector, names: &mut BTreeSet<String>) {
+    if let CompiledPerSelector::FilteredCardCountInZoneScoped { filter, .. } = sel {
+        collect_predicate_raw_rust_fns(filter, names);
     }
 }
 
@@ -519,7 +528,25 @@ mod tests {
                     optional: false,
                     once_per_turn: false,
                     amount: None,
-                    amount_fn: Some(CompiledFormula::RawRust("formula_fn".into())),
+                    amount_fn: Some(CompiledFormula::Max(vec![
+                        CompiledFormula::RawRust("formula_fn".into()),
+                        CompiledFormula::BasePerDelta {
+                            base: 0,
+                            per: CompiledPerSelector::FilteredCardCountInZoneScoped {
+                                zone: CompiledZone::Trash,
+                                of: CompiledPlayerRef::Any,
+                                filter: Box::new(CompiledPredicate {
+                                    dp_lte: Some(CompiledDpConstraint::Formula(
+                                        CompiledFormula::RawRust(
+                                            "filtered_count_formula_fn".into(),
+                                        ),
+                                    )),
+                                    ..Default::default()
+                                }),
+                            },
+                            delta: 1,
+                        },
+                    ])),
                     pay_cost: vec![],
                     summary: None,
                     summary_key: None,
@@ -532,6 +559,7 @@ mod tests {
             pack.manifest.required_raw_rust_fns,
             vec![
                 "dual_use_req_nested_formula_fn",
+                "filtered_count_formula_fn",
                 "formula_fn",
                 "step_fn",
                 "use_req_formula_fn",

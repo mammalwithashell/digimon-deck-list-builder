@@ -292,19 +292,28 @@ pub enum CompiledFormula {
         selector: CompiledAggregateSelector,
         scope: CompiledPlayerRef,
     },
+    BindingDp(String),
     RawRust(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledPerSelector {
     MaterialCount,
     StackSize,
     AllyCount,
     DigivolutionColorCount,
+    SharedTrashCount {
+        bucket: Option<u32>,
+    },
     CardCountInZone,
     CardCountInZoneScoped {
         zone: CompiledZone,
         of: CompiledPlayerRef,
+    },
+    FilteredCardCountInZoneScoped {
+        zone: CompiledZone,
+        of: CompiledPlayerRef,
+        filter: Box<CompiledPredicate>,
     },
 }
 

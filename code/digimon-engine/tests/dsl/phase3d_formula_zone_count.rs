@@ -98,6 +98,7 @@ delta: 2000
                 PerSelector::CardCountInZone(CardCountInZoneSpec {
                     zone: Zone::Trash,
                     of: PlayerRef::You,
+                    filter: None,
                 }),
             ..
         } => {}

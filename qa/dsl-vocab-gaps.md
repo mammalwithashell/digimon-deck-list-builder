@@ -99,7 +99,7 @@ Format per entry:
 - First reported: 2026-04-28
 
 ## EX4-011 — DP deletion threshold from shared trash count
-- Status: PARTIAL after 2026-05-01. Runtime evaluation for `dp_lte` / `dp_gte` permanent predicates is closed for literal thresholds and existing `FormulaSpec` variants. This entry remains open only for the missing `shared_trash_count` / bucket formula vocabulary shown below.
+- Status: RESOLVED for the reusable shared-trash formula primitive on 2026-05-02. `FormulaSpec` now accepts `per: { shared_trash_count: {} }` with a `bucket` on the surrounding base/per/delta formula, compiles to `CompiledPerSelector::SharedTrashCount { bucket }`, and runtime evaluation sums both players' trashes before applying bucket floor division.
 - Effect text: "For every 10 total cards in both player's trashes, add 2000 to the maximum DP you can choose with DP-based deletion effects."
 - Missing DSL verb / step kind / predicate: formula support for cross-player trash count buckets inside a `dp_lte` selection predicate. Existing formula vocabulary covers some modifier values, but not a target-filter threshold derived from `floor((your_trash + opponent_trash) / 10) * 2000`.
 - Lowers to engine API: read both players' trash lengths, compute the threshold, then install the normal opponent-permanent selection and `delete_permanent` callback.
@@ -113,6 +113,7 @@ Format per entry:
       delta: 2000
   ```
 - First reported: 2026-04-28
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_formula_batch`.
 
 ---
 
@@ -517,6 +518,7 @@ Format per entry:
 ---
 
 ## ST22-08 — Named-Binding DP Reference in Formula  [G-BINDING-DP-FORMULA]
+- Status: RESOLVED for the reusable `binding_dp` formula primitive on 2026-05-02. `dp_lte: { formula: { binding_dp: ally } }` now parses, compiles to `CompiledFormula::BindingDp("ally")`, and predicate formula evaluation threads current `Bindings` so the threshold reads the named permanent's effective DP.
 - Effect text: "[Main] … delete 1 of your opponent's Digimon with as much or less DP as 1 of your Digimon."
 - Missing DSL verb / step kind / predicate: `binding_dp` — a formula primitive that reads the effective DP of a named binding (a `PermanentHandle` stored by `bind_as:` from a prior `select_own_permanent`). The formula system (`formula.rs` + `formula_eval.rs`) can read `source_permanent`'s DP via `{ of: source_permanent, value: dp }` (see DSL spec §3.10), but there is no form to read an arbitrary named binding's DP — which is required for "DP ≤ chosen own Digimon's DP" where the comparator is player-selected mid-effect.
 - Lowers to engine API: `ctx.game.effective_dp(handle)` — already exists. The gap is that `CompiledFormula` has no `BindingDp(String)` variant that reads `bindings.get_permanent(name)` and calls `effective_dp`. 
@@ -531,6 +533,7 @@ Format per entry:
 - Gap kind: dsl (engine has `effective_dp`; DSL formula system has no binding-reference form).
 - Workaround: None for `binding_dp` itself. Static and existing formula-backed `dp_lte` / `dp_gte` permanent predicates are now evaluated as of 2026-05-01, but this gap remains open until formulas can read a named binding's effective DP.
 - First reported: 2026-04-27 (ST22-08 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_formula_batch group7_predicate_batch`.
 
 ---
 
@@ -706,6 +709,7 @@ Format per entry:
 
 ## BT8-097 / Royal Knights — formula filters for counted battle-area cards  [G-FORMULA-KIND-FILTER]
 
+- Status: RESOLVED for reusable formula-zone count filters on 2026-05-02. `card_count_in_zone` payloads now accept `filter: { ... }`; the compiler carries the predicate into filtered count IR, and runtime evaluation counts only representable subjects that satisfy the predicate instead of falling back to an unfiltered count.
 - Effect text: `BT8-097` Crimson Blaze: "Reduce the memory cost of this card in your hand by 1 for each Digimon your opponent has in play."
 - Missing DSL verb / step kind / predicate: `card_count_in_zone` formulas can count a player's `battle_area`, but cannot apply a `kind: digimon` filter. The authored YAML therefore counts all opponent battle-area permanents, including Tamers and Option permanents, when computing the cost reduction.
 - Lowers to engine API: the engine can inspect each battle-area permanent and test `Permanent::is_digimon(&card_data)`; the formula DSL needs a filtered-count form that passes a compiled predicate into formula evaluation.
@@ -723,3 +727,4 @@ Format per entry:
 - Gap kind: dsl (engine has the data; formula vocabulary lacks the filter).
 - Workaround: current YAML over-reduces when the opponent controls non-Digimon permanents.
 - First reported: 2026-04-28 (Royal Knights archetype assessment; surfaced by BT8-097 in Royal Knights lists)
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_formula_batch phase3d_formula_zone_count`.
