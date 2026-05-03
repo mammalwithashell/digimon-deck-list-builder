@@ -20,6 +20,11 @@ Format per entry:
 - Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2e_select_reveal phase2e_select_ordered_permutation phase2b_zone_moves_extra --nocapture`.
 - Remaining related blockers: card-specific TS/Olympos YAML migration and any top-security inherited variants are tracked separately; the reusable multi-bucket reveal selection primitive is closed.
 
+## Security Option self-disposition to hand
+- Status: COVERED on 2026-05-03 for the narrow currently-resolving security Option moving itself to hand. The existing DSL step `add_this_option_to_hand: {}` already parses/compiles as `AddThisOptionToHand`, lowers through `zone_moves.rs` to `EffectContext::add_pending_security_to_hand()`, and consumes `Game.pending_security` so the security dispose phase cannot also trash the card.
+- No new disposition marker/API was added. Broader security disposition primitives such as adding an opponent's top security card to hand remain separate tracker entries.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl -- security_dsl_adds_currently_resolving_option_to_hand --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- option_security_disposition --nocapture`.
+
 ## Zephagamon / Vortexdramon — remaining battle-engine prep gaps
 - Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` now covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that an effect battle deletes the defender through DP battle but is not an attack: it must not trigger Piercing/security and must not leave `pending_attack` populated.
 - Rule boundary: `battle:` is the correct DSL step for effects that say a Digimon battles another Digimon. Do not model these as `attack` or force-follow-up attack effects. Attack-only timings and Piercing security continuation remain tied to declared attacks, not effect battles.

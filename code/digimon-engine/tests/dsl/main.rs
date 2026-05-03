@@ -19,6 +19,7 @@ mod hybrid_tamer_digivolve;
 mod i18n_scaffolding;
 mod link;
 mod loader;
+mod option_security_disposition;
 mod option_use_req;
 mod pack_file_loader;
 mod parse_alt_paths;
