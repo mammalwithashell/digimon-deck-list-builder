@@ -1080,6 +1080,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
     match b {
         B::Named(n) => match n.as_str() {
             "self" => CompiledBindingRef::SelfRef,
+            "this" => CompiledBindingRef::Source,
             "carrier" => CompiledBindingRef::Carrier,
             "source" => CompiledBindingRef::Source,
             "event_target" => CompiledBindingRef::EventTarget,
@@ -1618,6 +1619,10 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.optional[{i}]"), card_id, errors))
                 .collect(),
         ),
+        S::Battle(b) => CompiledStep::Battle {
+            attacker: compile_binding_ref(&b.attacker),
+            defender: compile_binding_ref(&b.defender),
+        },
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,
         S::HandleReplacement(_) => CompiledStep::HandleReplacement,

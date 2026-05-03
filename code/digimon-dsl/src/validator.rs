@@ -9,7 +9,7 @@ use crate::clause::{ClauseSpec, DeclarativeKind, TriggeredClause};
 use crate::errors::ValidationError;
 use crate::raw_rust_registry::RawRustRegistry;
 use crate::spec::CardSpec;
-use crate::step::StepSpec;
+use crate::step::{BindingRef, StepSpec, StructuredBindingRef};
 
 pub struct ValidationContext<'a> {
     pub raw_rust: &'a dyn RawRustRegistry,
@@ -469,6 +469,20 @@ fn validate_step(
     errors: &mut Vec<ValidationError>,
 ) {
     match step {
+        StepSpec::Battle(args) => {
+            validate_binding_ref(
+                &args.attacker,
+                &format!("{prefix}.attacker"),
+                card_id,
+                errors,
+            );
+            validate_binding_ref(
+                &args.defender,
+                &format!("{prefix}.defender"),
+                card_id,
+                errors,
+            );
+        }
         StepSpec::AddDpModifier(args) => {
             validate_modifier_value(
                 &args.value,
@@ -658,6 +672,42 @@ fn validate_step(
             }
         }
         _ => {}
+    }
+}
+
+fn validate_binding_ref(
+    binding_ref: &BindingRef,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    let BindingRef::Structured(StructuredBindingRef {
+        binding,
+        permanent,
+        source_permanent,
+        of_permanent,
+        ..
+    }) = binding_ref
+    else {
+        return;
+    };
+
+    let populated = [binding, permanent, source_permanent, of_permanent]
+        .iter()
+        .filter(|field| field.is_some())
+        .count();
+    if populated == 0 {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: prefix.into(),
+            message: "binding ref must name a binding".into(),
+        });
+    } else if populated > 1 {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: prefix.into(),
+            message: "binding ref must use only one binding field".into(),
+        });
     }
 }
 

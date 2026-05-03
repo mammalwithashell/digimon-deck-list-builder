@@ -867,6 +867,10 @@ pub enum CompiledStep {
         filter: CompiledPredicate,
     },
     Optional(Vec<CompiledStep>),
+    Battle {
+        attacker: CompiledBindingRef,
+        defender: CompiledBindingRef,
+    },
     EndAttack {
         enabled: bool,
     },

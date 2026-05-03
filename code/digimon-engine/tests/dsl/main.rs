@@ -4,6 +4,7 @@
 mod cross_check;
 mod delay;
 mod digixros_aliases;
+mod effect_battle;
 mod effect_immunity_step;
 mod embedded_registry;
 mod group4_zone_movement;
