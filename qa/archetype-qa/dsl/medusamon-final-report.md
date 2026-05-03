@@ -74,13 +74,13 @@ Plus a small assortment of cross-batch fixes (binding-keyword bug `target: sourc
 | G-INHERITED-DISPATCH | `enqueue_from_permanent` doesn't iterate `card_sources[0..n-1]` for inherited triggered effects | BT21-008 |
 | G-OPT-TRIGGERED | `Effect::max_per_turn` not consulted in `run_queued_effect_inner` for triggered-effect dispatch | EX11-008 |
 | G-ON-MOVE | `EffectTiming::OnMove` variant + dispatch hook missing in `move_from_breeding()` | EX11-008, BT16-082 |
-| G-PRED-DP-LTE (consolidated) | `dp_lte` / `dp_gte` parse but `eval_permanent_fields` has no match arm | BT21-015 (Batch 2), reused throughout |
+| G-PRED-DP-LTE (consolidated) | Resolved for reusable permanent `dp_lte` / `dp_gte` predicate evaluation by Group 7; older card-level ignores may still need migration | BT21-015 (Batch 2), reused throughout |
 | G-EVENT-TARGET-OWNER | No predicate to filter triggers/replacements by event-target permanent's controller | BT24-018, BT21-029 |
 | G-WHEN-DIGIVOLVING-DISPATCH | Own-scope WhenDigivolving triggered effects don't fire when this card is the source being digivolved-into | BT21-013 |
 | G-COUNT-LTE-EVAL / G-COUNT-GTE-EVAL | `count_lte` / `count_gte` aggregate predicates parse, no evaluation branch in `eval_predicate_with_bindings` | BT21-017, EX4-006 |
-| G-DP-LTE-PREDICATE (= G-PRED-DP-LTE) | Same root cause as above | BT21-015 |
+| G-DP-LTE-PREDICATE (= G-PRED-DP-LTE) | Same root cause as above; reusable predicate path resolved by Group 7 | BT21-015 |
 | G-FOR-EACH-DELETE-INDEX-SHIFT | `for_each` snapshot indices stale after first deletion in multi-target sweep | BT8-097 |
-| G-FORMULA-KIND-FILTER | `card_count_in_zone` over-counts when filtered by kind | BT8-097 |
+| G-FORMULA-KIND-FILTER | Resolved 2026-05-02: `card_count_in_zone` supports predicate filters; BT8-097 now counts opponent Digimon only | BT8-097 |
 | G-DECLARATIVE-KEYWORD | `EffectTiming::Declarative` defined but never enqueued (filtered auras don't fire) | BT5-008 |
 | G-AURA-DP-FORMULA | `AuraBody.dp_modifier: Option<i32>` is static literal only — no formula support | BT21-072 |
 | G-ON-DIGIVOLVE-TRAIT-FILTER | `on_digivolve` trigger context doesn't carry the newly-digivolved permanent | BT24-082 |

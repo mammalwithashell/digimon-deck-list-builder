@@ -201,12 +201,12 @@ Resolved by Group 3:
 - **Suggested change:** add `event_target_owner: you | opponent` (or `event_target_is_yours: bool`) to `CompiledPredicate` AND wire `eval_predicate` to read the trigger context's target permanent's controller.
 - **Workaround:** None — replacement/trigger fires for both players' permanents until closed.
 
-### `dp_lte` / `dp_gte` Predicates Not Evaluated for Permanents  [G-PRED-DP-LTE / G-PREDICATE-DP-FILTER / G-SELECT-OPP-FILTER — same root cause]
+### `dp_lte` / `dp_gte` Permanent Predicates  [G-PRED-DP-LTE / G-PREDICATE-DP-FILTER / G-SELECT-OPP-FILTER — same root cause]
 - **Discovered in:** Medusamon archetype, BT21-015 Cyclonemon (Batch 2) + BT24-017 Medusamon + BT21-029 Medusamon (Batch 3) (2026-04-27)
 - **Scope:** Rust engine.
 - **Card(s):** BT21-015 (delete ≤4000 DP), BT24-017 (lowest DP), BT21-029 (lowest DP), and most cards with DP-bounded delete/select.
-- **What's missing:** `dp_lte` / `dp_gte` parse and lower into `CompiledPredicate` but `eval_permanent_fields` (in `dsl_cards/predicate.rs`) doesn't read the target's DP and apply the comparator. Selection prompts therefore include ineligible high-DP targets.
-- **Suggested change:** add `dp_lte` / `dp_gte` arms to `eval_permanent_fields` that read printed DP from card metadata (or `permanent.dp()` for live DP — pin the semantics first).
+- **Status:** RESOLVED for reusable permanent predicate evaluation by Group 7 (2026-05-02). `dp_lte` / `dp_gte` now evaluate against live/effective permanent DP in the shared predicate path; BT8-097's high-DP and exact-6000 boundary tests are active and passing.
+- **Remaining migration work:** older card-level tests and QA notes that were ignored under this gap may still need to be unignored or retagged after each card is revisited. Aggregate extrema shapes such as "lowest DP" / "highest DP" remain separate aggregate-selection/filtering work when they require more than a direct comparator.
 - **Note:** Three card-discovery names (G-PRED-DP-LTE, G-PREDICATE-DP-FILTER, G-SELECT-OPP-FILTER, G-DP-LTE-PREDICATE) all refer to this same root cause; consolidating under G-PRED-DP-LTE.
 
 ### `[All Turns]` (Both-Player) Filter on Triggered Clauses  [G-ALL-TURNS-FILTER]

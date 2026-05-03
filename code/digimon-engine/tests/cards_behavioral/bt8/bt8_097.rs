@@ -21,7 +21,8 @@
 //! - for_each delete opp Digimon ≤6000 DP (automated sweep, no player choice)
 //! - Option card [Main] from hand (when: main_from_hand)
 //! - [Security] activate Main (when: on_security mirrors main_from_hand body)
-//! - G-PRED-DP-LTE: dp_lte filter on for_each not yet evaluated in eval_permanent_fields
+//! - Filtered card_count_in_zone formula for per-Digimon cost reduction
+//! - dp_lte filter on for_each
 //! - Player-level floodgate DSL via add_player_modifier
 
 use digimon_dsl::compiled::{
@@ -325,12 +326,6 @@ fn bt8_097_main_no_crash_when_opponent_has_no_digimon() {
 }
 
 /// [Main]: opponent Digimon with DP ≤ 6000 is deleted (positive — eligible target).
-///
-/// NOTE G-PRED-DP-LTE: dp_lte predicate on permanents is not yet evaluated in
-/// eval_permanent_fields. Until that gap closes, ALL opponent Digimon appear as
-/// valid targets of the for_each sweep regardless of DP. This test verifies the
-/// sweep fires and deletes when a Digimon is present, but cannot yet verify the
-/// DP cap is enforced.
 #[test]
 fn bt8_097_main_deletes_opp_digimon_with_dp_lte_6000() {
     let mut low_dp = make_test_card("OPP-LOWDP", "OppLowDp");
@@ -417,10 +412,8 @@ fn bt8_097_main_deletes_multiple_opp_digimon_with_no_player_choice() {
     );
 }
 
-/// [Main]: opponent with DP > 6000 is NOT deleted (once G-PRED-DP-LTE closes).
-/// Until then, the test is ignored — all Digimon pass the filter unconditionally.
+/// [Main]: opponent with DP > 6000 is NOT deleted.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte predicate on for_each.over not evaluated in eval_permanent_fields"]
 fn bt8_097_main_spares_opp_digimon_with_dp_above_6000() {
     let mut high_dp = make_test_card("OPP-HIGHDP", "OppHighDp");
     high_dp.card_kind = CardKind::Digimon;
@@ -449,10 +442,9 @@ fn bt8_097_main_spares_opp_digimon_with_dp_above_6000() {
     );
 }
 
-/// [Main] DP boundary: exactly 6000 DP must be deleted (once G-PRED-DP-LTE closes).
+/// [Main] DP boundary: exactly 6000 DP must be deleted.
 /// Boundary-inclusion test for dp_lte: 6000 (≤ 6000 means exactly 6000 is eligible).
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte boundary inclusion not evaluable until predicate is wired"]
 fn bt8_097_main_deletes_opp_digimon_with_exactly_6000_dp() {
     let mut exactly_6000 = make_test_card("OPP-6000DP", "Opp6000Dp");
     exactly_6000.card_kind = CardKind::Digimon;
@@ -611,38 +603,36 @@ fn bt8_097_cost_reduction_declarative_compiles() {
     );
 }
 
-/// The cost reduction reduces play cost by 1 per opponent battle-area permanent.
-/// Behavioral test: with 3 opponent permanents, cost decreases by 3 (from 6 to 3).
-///
-/// NOTE: card_count_in_zone counts all battle_area permanents (Digimon + Tamers).
-/// Printed text says "per opponent Digimon" — Tamers are a conservative over-count.
-/// This is a known formula approximation pending G-FORMULA-KIND-FILTER.
+/// The cost reduction reduces play cost by 1 per opponent battle-area Digimon.
+/// Behavioral test: with 2 opponent Digimon and 1 Tamer, cost decreases by 2
+/// (from 6 to 4); the Tamer is ignored by the filtered card_count_in_zone formula.
 #[test]
-fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_permanent() {
+fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_digimon() {
     let mut opp_digi = make_test_card("CR-OPP-DIGI", "CrOppDigi");
     opp_digi.card_kind = CardKind::Digimon;
-    opp_digi.dp = Some(7000); // high DP — won't be deleted (G-PRED-DP-LTE open,
-                              // but at 7000 should survive once gap closes too)
+    opp_digi.dp = Some(7000); // high DP — not eligible for the delete sweep
     opp_digi.level = Some(5);
+    let mut opp_tamer = make_test_card("CR-OPP-TAMER", "CrOppTamer");
+    opp_tamer.card_kind = CardKind::Tamer;
 
     let mut runner = DebugRunner::builder()
         .dsl_card("BT8-097")
         .expect("BT8-097 in embedded DSL pack")
         .add_card(opp_digi.clone())
+        .add_card(opp_tamer)
         .hand(0, &["BT8-097"])
-        .memory(4) // With 3 opp perms, cost becomes 6 - 3 = 3 → playable at 4 memory
+        .memory(4) // With 2 opp Digimon, cost becomes 6 - 2 = 4 → playable exactly.
         .start();
 
-    // Place 3 opponent permanents (all same card, different slots).
+    // Place 2 opponent Digimon plus 1 Tamer. Only the Digimon should count.
     runner.place_on_field(1, "CR-OPP-DIGI", None);
     runner.place_on_field(1, "CR-OPP-DIGI", None);
-    runner.place_on_field(1, "CR-OPP-DIGI", None);
+    runner.place_on_field(1, "CR-OPP-TAMER", None);
 
     let memory_before = runner.memory();
 
-    // With 3 opp perms: base cost 6 - 3 = 3. Memory starts at 4. After pay: 4 - 3 = 1
-    // (card costs 3 memory so memory should move from 4 to 1 if cost is 3).
-    // Play should succeed at memory=4 if reduced cost = 3.
+    // With 2 opp Digimon: base cost 6 - 2 = 4. If the Tamer were counted,
+    // the cost would incorrectly become 3.
     runner.play(0, 0);
     runner.auto_resolve();
 
@@ -654,9 +644,9 @@ fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_permanent() {
     );
 
     // Memory should have moved by the reduced cost, not the base cost.
-    // At 4 memory, base cost 6 would require memory at ≥ 6. Reduced cost 3 requires ≥ 3.
-    let _memory_after = runner.memory();
-    // We can confirm the card played (hand emptied) — that verifies cost was affordable.
-    // Exact memory delta depends on implementation; we just check it played.
-    let _ = memory_before;
+    let cost = memory_before - runner.memory();
+    assert_eq!(
+        cost, 4,
+        "BT8-097 must reduce by 2 for opponent Digimon only; Tamer must not count"
+    );
 }
