@@ -21,6 +21,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotBeDeDigivolved" => ModifierType::CannotBeDeDigivolved,
         "CannotAttack" => ModifierType::CannotAttack,
         "CannotAttackPlayer" => ModifierType::CannotAttackPlayer,
+        "VortexCanAttackPlayer" => ModifierType::VortexCanAttackPlayer,
         "CanAttackUnsuspended" => ModifierType::CanAttackUnsuspended,
         "CanAttackActivePlayer" => ModifierType::CanAttackActivePlayer,
         "CannotAttackTarget" => ModifierType::CannotAttackTarget,

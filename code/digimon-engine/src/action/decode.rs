@@ -17,7 +17,7 @@ use crate::action::space::{
     PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, TARGETS_PER_ATTACKER, TRASH_EFFECT_END,
     TRASH_EFFECT_START,
 };
-use crate::enums::{CardKind, GamePhase, PlaySource, PlayerId};
+use crate::enums::{CardKind, GamePhase, Keyword, ModifierType, PlaySource, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
@@ -138,7 +138,7 @@ impl Game {
             let offset = action_id - ATTACK_START;
             let attacker_idx = offset / TARGETS_PER_ATTACKER;
             let target_idx = offset % TARGETS_PER_ATTACKER;
-            self.execute_attack(tp, attacker_idx as u8, target_idx as u8);
+            self.execute_attack(tp, attacker_idx as u8, target_idx as u8, false);
             return;
         }
 
@@ -213,7 +213,10 @@ impl Game {
             let offset = action_id - ATTACK_START;
             let attacker_idx = (offset / TARGETS_PER_ATTACKER) as u8;
             let target_idx = (offset % TARGETS_PER_ATTACKER) as u8;
-            self.execute_attack(tp, attacker_idx, target_idx);
+            if let Some(vortex) = self.end_of_turn_attack_vortex_flag(tp, attacker_idx, target_idx)
+            {
+                self.execute_attack(tp, attacker_idx, target_idx, vortex);
+            }
             return;
         }
 
@@ -228,7 +231,7 @@ impl Game {
         }
     }
 
-    fn execute_attack(&mut self, player: PlayerId, attacker_idx: u8, target_idx: u8) {
+    fn execute_attack(&mut self, player: PlayerId, attacker_idx: u8, target_idx: u8, vortex: bool) {
         // Validate attacker.
         let attacker_handle = PermanentHandle {
             player,
@@ -242,7 +245,7 @@ impl Game {
             // Attack the opposing player (there's exactly one opponent in
             // standard 2-player games; `next_clockwise` resolves it).
             let opponent = self.next_clockwise(player);
-            let _ = self.attack_player(attacker_handle, opponent, /* vortex */ false);
+            let _ = self.attack_player(attacker_handle, opponent, vortex);
             return;
         }
 
@@ -254,6 +257,73 @@ impl Game {
             player: opponent,
             index: target_idx,
         };
-        let _ = self.attack_digimon(attacker_handle, defender, /* vortex */ false);
+        let _ = self.attack_digimon(attacker_handle, defender, vortex);
+    }
+
+    fn end_of_turn_attack_vortex_flag(
+        &self,
+        player: PlayerId,
+        attacker_idx: u8,
+        target_idx: u8,
+    ) -> Option<bool> {
+        if (attacker_idx as usize) >= self.player(player).battle_area.len() {
+            return None;
+        }
+        if self
+            .modifiers
+            .player_has(player, ModifierType::CannotAttack)
+        {
+            return None;
+        }
+
+        let attacker = PermanentHandle {
+            player,
+            index: attacker_idx,
+        };
+        let has_vortex = self.has_keyword(attacker, Keyword::Vortex);
+        let has_normal_eot_attack = self.modifiers.has(attacker, ModifierType::MayAttack)
+            || self.modifiers.has(attacker, ModifierType::ForceAttack);
+        let vortex_legal = has_vortex && self.can_attack(attacker, /* vortex = */ true);
+        let normal_legal =
+            has_normal_eot_attack && self.can_attack(attacker, /* vortex = */ false);
+
+        if target_idx == SECURITY_TARGET as u8 {
+            if self
+                .modifiers
+                .has(attacker, ModifierType::CannotAttackPlayer)
+            {
+                return None;
+            }
+            if vortex_legal
+                && self
+                    .modifiers
+                    .has(attacker, ModifierType::VortexCanAttackPlayer)
+            {
+                return Some(true);
+            }
+            return normal_legal.then_some(false);
+        }
+
+        let opponent = self.next_clockwise(player);
+        let Some(target) = self.player(opponent).battle_area.get(target_idx as usize) else {
+            return None;
+        };
+        if !target.is_digimon(&self.card_data) {
+            return None;
+        }
+        let defender = PermanentHandle {
+            player: opponent,
+            index: target_idx,
+        };
+        if self
+            .modifiers
+            .has(defender, ModifierType::CannotAttackTarget)
+        {
+            return None;
+        }
+        if vortex_legal {
+            return Some(true);
+        }
+        normal_legal.then_some(false)
     }
 }

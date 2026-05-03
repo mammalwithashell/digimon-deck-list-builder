@@ -797,6 +797,7 @@ fn is_known_modifier(name: &str) -> bool {
             | "CannotBeRemoved"
             | "CannotAttack"
             | "CannotAttackPlayer"
+            | "VortexCanAttackPlayer"
             | "CanAttackUnsuspended"
             | "CanAttackActivePlayer"
             | "CannotAttackTarget"
