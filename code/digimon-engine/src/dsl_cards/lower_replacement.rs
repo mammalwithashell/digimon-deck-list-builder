@@ -82,17 +82,21 @@ pub fn lower_with_raw(
         builder = builder.inherited();
     }
 
-    if let Some(active_when) = active_when {
-        let active_when = active_when.clone();
-        builder = builder.replacement_condition(move |ctx, subject| {
-            let subject = match *subject {
-                ReplacementSubject::Permanent(handle) => PredicateSubject::Permanent(handle),
-                ReplacementSubject::Card(handle, _) => PredicateSubject::Card(handle),
-                ReplacementSubject::Player(_) => PredicateSubject::None,
-            };
-            eval_predicate(&active_when, ctx, subject)
-        });
-    }
+    let active_when = active_when.cloned();
+    let can_match_cross_permanent_subject = active_when
+        .as_ref()
+        .is_some_and(predicate_requires_replacement_subject);
+    builder = builder.replacement_condition(move |ctx, subject| {
+        source_permanent_is_still_active(ctx)
+            && (can_match_cross_permanent_subject || replacement_subject_is_source(ctx, *subject))
+            && active_when.as_ref().is_none_or(|active_when| {
+                eval_predicate(
+                    active_when,
+                    ctx,
+                    predicate_subject_from_replacement_subject(*subject),
+                )
+            })
+    });
 
     if let Some(delay_flow) = DelayHandDigivolveFlow::from_process(&process) {
         builder = builder.replacement_process(move |rctx| {
@@ -133,22 +137,6 @@ pub fn lower_with_raw(
     }
 
     builder = builder.replacement_process(move |rctx| {
-        // DSL replacements scope to the carrier permanent by default:
-        // only fire when the SUBJECT is the same permanent that carries
-        // this effect. This mirrors the "When THIS Digimon would leave"
-        // semantics on all printed self-replacement clauses. Inherited
-        // clauses (scope == Inherited) can propagate from any card in the
-        // digivolution stack; for now they still bind to the top-card perm.
-        let subject_matches = match rctx.subject {
-            ReplacementSubject::Permanent(subject_h) => {
-                rctx.effect.source_permanent == Some(subject_h)
-            }
-            _ => false,
-        };
-        if !subject_matches {
-            return;
-        }
-
         let mut bindings = Bindings::new();
         if let Some(subject) = rctx.subject.permanent() {
             bindings.insert_permanent("replacement_subject", subject);
@@ -161,6 +149,54 @@ pub fn lower_with_raw(
     });
 
     Some(builder.build())
+}
+
+fn predicate_requires_replacement_subject(pred: &CompiledPredicate) -> bool {
+    pred.replacement_subject_is_mine.is_some()
+        || pred
+            .all_of
+            .iter()
+            .any(predicate_requires_replacement_subject)
+        || (!pred.any_of.is_empty()
+            && pred
+                .any_of
+                .iter()
+                .all(predicate_requires_replacement_subject))
+}
+
+fn replacement_subject_is_source(ctx: &EffectReadContext<'_>, subject: ReplacementSubject) -> bool {
+    subject
+        .permanent()
+        .is_some_and(|h| ctx.source_permanent == Some(h))
+}
+
+fn predicate_subject_from_replacement_subject(subject: ReplacementSubject) -> PredicateSubject {
+    match subject {
+        ReplacementSubject::Permanent(handle) => PredicateSubject::Permanent(handle),
+        ReplacementSubject::Card(handle, _) => PredicateSubject::Card(handle),
+        ReplacementSubject::Player(_) => PredicateSubject::None,
+    }
+}
+
+fn source_permanent_is_still_active(ctx: &EffectReadContext<'_>) -> bool {
+    let Some(handle) = ctx.source_permanent else {
+        return false;
+    };
+
+    let permanent = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+        ctx.game.player(handle.player).breeding_area.as_ref()
+    } else {
+        ctx.game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+    };
+
+    permanent.is_some_and(|perm| {
+        perm.card_sources
+            .iter()
+            .any(|source| source.handle() == ctx.source_card)
+    })
 }
 
 struct DelayHandDigivolveFlow {

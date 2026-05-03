@@ -160,6 +160,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 **FULLY RESOLVED 2026-04-25 (Phase D):** all seven alpha-tier selection-bearing keyword auto-installs landed — `Fragment(N)` (commits d4fd09a0 + db47ca35), `ArmorPurge` (f08d5eca + e07031d5), `Save` (re-mounted as OnDeletion: 5c072623 + doc 608fb970), `Decoy` (3a6b70a5), `Fortitude` (e57ae55e + 8ae02510), `Partition` (5b18d355 + 7f499326), `MaterialSave(N)` (d353013a + dispatcher fix 99f7435a). Cards declaring only these printed keywords now require zero hand-rolled `CardEffect` code. Substrate extensions: `Game.pending_deletion_resume` (Save) and `Game.pending_post_deletion_replays` (Fortitude/Partition). See [`docs/superpowers/plans/2026-04-25-keyword-parity-phase-d.md`](../superpowers/plans/2026-04-25-keyword-parity-phase-d.md).
 
+**Updated 2026-05-03:** Generic DSL cross-permanent replacement authoring is now supported for clauses that explicitly use replacement-subject context predicates, such as `replacement_subject_is_mine`, alongside `replacement_source_is_opponent` and `replacement_cause`. `lower_replacement.rs` preserves self-scoped behavior by default, but no longer drops an explicitly scoped different subject during process execution. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- cross_permanent context_predicates route_replacements nested_select_substrate --nocapture` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement_context --nocapture`.
+
 ### Selection: multi-select with aggregate-sum constraint (and count-capped sibling)
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18)
