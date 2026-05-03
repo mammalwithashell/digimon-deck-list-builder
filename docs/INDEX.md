@@ -11,6 +11,8 @@
 | [MODEL_CATALOG.md](MODEL_CATALOG.md) | ONNX model catalog — admin upload, desktop cache, storage backends, integrity |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Hosted API deployment — DigitalOcean topology, env vars, bootstrap |
 | [RUST_ENGINE_API.md](RUST_ENGINE_API.md) | Rust engine scripting reference — `CardEffect`, `EffectContext`, `Expiry`, `ModifierType`, common patterns, DebugRunner |
+| [RUST_DSL_AGENT_GUIDE.md](RUST_DSL_AGENT_GUIDE.md) | Practical Rust YAML DSL authoring guide for agents — workflow, clause/step API, archetype patterns, gap filing, and tests |
+| [RUST_DSL_TEST_API.md](RUST_DSL_TEST_API.md) | Rust DSL card test API — per-card behavioral test layout, DebugRunner helpers, and DSL test patterns |
 | [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) | Rust ↔ Python engine parity tracker — every known behavioral divergence with severity and fix order |
 | [RUST_ENGINE_GAPS.md](RUST_ENGINE_GAPS.md) | Rust engine capability gaps surfaced by archetype audits (`assess-rust-engine-archetype`) — primitives still needed before each archetype can ship under the no-approximations policy |
 | [qa/dsl-vocab-gaps.md](../qa/dsl-vocab-gaps.md) | DSL vocabulary and lowering gaps surfaced by Rust archetype assessments and batch card implementation |

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Rust DSL Archetype"
+  short_description: "Implement archetype DSL cards with TDD"
+  default_prompt: "Use $implement-rust-dsl-archetype to implement this Digimon archetype as Rust engine YAML DSL cards."
