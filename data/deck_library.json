@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated_at": "2026-04-04T20:52:02.775487+00:00",
-  "total_entries": 1884,
+  "generated_at": "2026-05-03T02:59:53.604677+00:00",
+  "total_entries": 1900,
   "archetypes": {
     "7GDL": {
       "archetype_name": "7GDL",
@@ -10,7 +10,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 5.0,
@@ -41,7 +41,7 @@
       "display_card_id": "BT20-037",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 10.0,
@@ -78,7 +78,7 @@
       "display_card_id": "BT21-102",
       "stats": {
         "times_played": 29,
-        "meta_share": 0.015393,
+        "meta_share": 0.015263,
         "top_cut_count": 2,
         "conversion_rate": 0.069,
         "avg_placement": 30.97,
@@ -395,7 +395,7 @@
       "display_card_id": "EX9-057",
       "stats": {
         "times_played": 6,
-        "meta_share": 0.003185,
+        "meta_share": 0.003158,
         "top_cut_count": 2,
         "conversion_rate": 0.3333,
         "avg_placement": 10.33,
@@ -549,7 +549,7 @@
       "display_card_id": "EX4-060",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 21.0,
@@ -607,7 +607,7 @@
       "display_card_id": "BT21-101",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 2,
         "conversion_rate": 0.6667,
         "avg_placement": 4.33,
@@ -689,7 +689,7 @@
       "display_card_id": "BT22-028",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 18.0,
@@ -788,7 +788,7 @@
       "display_card_id": "BT17-051",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002123,
+        "meta_share": 0.002105,
         "top_cut_count": 2,
         "conversion_rate": 0.5,
         "avg_placement": 5.75,
@@ -876,7 +876,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 2,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -917,7 +917,7 @@
       "display_card_id": "EX10-059",
       "stats": {
         "times_played": 16,
-        "meta_share": 0.008493,
+        "meta_share": 0.008421,
         "top_cut_count": 9,
         "conversion_rate": 0.5625,
         "avg_placement": 5.94,
@@ -1167,7 +1167,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -1198,7 +1198,7 @@
       "display_card_id": "EX10-074",
       "stats": {
         "times_played": 33,
-        "meta_share": 0.017516,
+        "meta_share": 0.017368,
         "top_cut_count": 8,
         "conversion_rate": 0.2424,
         "avg_placement": 15.53,
@@ -1559,7 +1559,7 @@
       "display_card_id": "BT13-088",
       "stats": {
         "times_played": 13,
-        "meta_share": 0.0069,
+        "meta_share": 0.006842,
         "top_cut_count": 2,
         "conversion_rate": 0.1538,
         "avg_placement": 13.15,
@@ -1766,7 +1766,7 @@
       "display_card_id": "EX10-010",
       "stats": {
         "times_played": 8,
-        "meta_share": 0.004246,
+        "meta_share": 0.004211,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 31.38,
@@ -1873,7 +1873,7 @@
       "display_card_id": "BT10-057",
       "stats": {
         "times_played": 16,
-        "meta_share": 0.008493,
+        "meta_share": 0.008421,
         "top_cut_count": 5,
         "conversion_rate": 0.3125,
         "avg_placement": 25.75,
@@ -2089,7 +2089,7 @@
       "display_card_id": "BT17-028",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002654,
+        "meta_share": 0.002632,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 33.4,
@@ -2166,7 +2166,7 @@
       "display_card_id": "BT22-063",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002123,
+        "meta_share": 0.002105,
         "top_cut_count": 2,
         "conversion_rate": 0.5,
         "avg_placement": 10.0,
@@ -2254,7 +2254,7 @@
       "display_card_id": "BT23-102",
       "stats": {
         "times_played": 12,
-        "meta_share": 0.006369,
+        "meta_share": 0.006316,
         "top_cut_count": 6,
         "conversion_rate": 0.5,
         "avg_placement": 10.67,
@@ -2405,7 +2405,7 @@
       "display_card_id": "BT22-015",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 44.0,
@@ -2483,7 +2483,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -2514,7 +2514,7 @@
       "display_card_id": "BT24-080",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 0.0,
@@ -2551,7 +2551,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 3.0,
@@ -2624,7 +2624,7 @@
       "display_card_id": "BT20-060",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 17.0,
@@ -2671,7 +2671,7 @@
       "display_card_id": "EX10-009",
       "stats": {
         "times_played": 14,
-        "meta_share": 0.007431,
+        "meta_share": 0.007368,
         "top_cut_count": 8,
         "conversion_rate": 0.5714,
         "avg_placement": 6.93,
@@ -2842,7 +2842,7 @@
       "display_card_id": "BT14-068",
       "stats": {
         "times_played": 12,
-        "meta_share": 0.006369,
+        "meta_share": 0.006316,
         "top_cut_count": 1,
         "conversion_rate": 0.0833,
         "avg_placement": 11.09,
@@ -2989,7 +2989,7 @@
       "display_card_id": "EX2-055",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 7.5,
@@ -3057,7 +3057,7 @@
       "display_card_id": "BT22-061",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 0.0,
@@ -3136,7 +3136,7 @@
       "display_card_id": "BT17-078",
       "stats": {
         "times_played": 66,
-        "meta_share": 0.035032,
+        "meta_share": 0.034737,
         "top_cut_count": 18,
         "conversion_rate": 0.2727,
         "avg_placement": 21.06,
@@ -3827,7 +3827,7 @@
       "display_card_id": "BT23-088",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 4.0,
@@ -3864,7 +3864,7 @@
       "display_card_id": "EX10-061",
       "stats": {
         "times_played": 19,
-        "meta_share": 0.010085,
+        "meta_share": 0.01,
         "top_cut_count": 10,
         "conversion_rate": 0.5263,
         "avg_placement": 6.89,
@@ -4106,7 +4106,7 @@
       "display_card_id": "EX8-029",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 12.67,
@@ -4163,7 +4163,7 @@
       "display_card_id": "EX10-073",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 10.67,
@@ -4220,7 +4220,7 @@
       "display_card_id": "EX5-074",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 30.0,
@@ -4277,7 +4277,7 @@
       "display_card_id": "BT17-073",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 11.0,
@@ -4324,7 +4324,7 @@
       "display_card_id": "BT22-064",
       "stats": {
         "times_played": 41,
-        "meta_share": 0.021762,
+        "meta_share": 0.021579,
         "top_cut_count": 16,
         "conversion_rate": 0.3902,
         "avg_placement": 9.44,
@@ -4765,7 +4765,7 @@
       "display_card_id": "BT24-064",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -4802,7 +4802,7 @@
       "display_card_id": "EX8-016",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 21.5,
@@ -4870,7 +4870,7 @@
       "display_card_id": "EX3-014",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 15.0,
@@ -4907,7 +4907,7 @@
       "display_card_id": "BT23-035",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002123,
+        "meta_share": 0.002105,
         "top_cut_count": 1,
         "conversion_rate": 0.25,
         "avg_placement": 7.75,
@@ -4974,7 +4974,7 @@
       "display_card_id": "BT22-079",
       "stats": {
         "times_played": 45,
-        "meta_share": 0.023885,
+        "meta_share": 0.023684,
         "top_cut_count": 17,
         "conversion_rate": 0.3778,
         "avg_placement": 9.91,
@@ -5451,7 +5451,7 @@
       "display_card_id": "BT17-076",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 9.0,
@@ -5498,7 +5498,7 @@
       "display_card_id": "EX11-073",
       "stats": {
         "times_played": 7,
-        "meta_share": 0.003715,
+        "meta_share": 0.003684,
         "top_cut_count": 1,
         "conversion_rate": 0.1429,
         "avg_placement": 15.14,
@@ -5595,7 +5595,7 @@
       "display_card_id": "BT23-047",
       "stats": {
         "times_played": 10,
-        "meta_share": 0.005308,
+        "meta_share": 0.005263,
         "top_cut_count": 1,
         "conversion_rate": 0.1,
         "avg_placement": 12.3,
@@ -5722,7 +5722,7 @@
       "display_card_id": "BT14-081",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002123,
+        "meta_share": 0.002105,
         "top_cut_count": 1,
         "conversion_rate": 0.25,
         "avg_placement": 47.0,
@@ -5810,7 +5810,7 @@
       "display_card_id": "BT6-030",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 9.67,
@@ -5888,7 +5888,7 @@
       "display_card_id": "BT21-101",
       "stats": {
         "times_played": 11,
-        "meta_share": 0.005839,
+        "meta_share": 0.005789,
         "top_cut_count": 2,
         "conversion_rate": 0.1818,
         "avg_placement": 22.27,
@@ -6045,11 +6045,11 @@
       "secondary_color": null,
       "display_card_id": "BT21-062",
       "stats": {
-        "times_played": 14,
-        "meta_share": 0.007431,
+        "times_played": 15,
+        "meta_share": 0.007895,
         "top_cut_count": 6,
-        "conversion_rate": 0.4286,
-        "avg_placement": 6.5,
+        "conversion_rate": 0.4,
+        "avg_placement": 6.4,
         "sources": {
           "digilab": {
             "count": 13,
@@ -6058,6 +6058,10 @@
           "digimonmeta": {
             "count": 1,
             "top_cuts": 1
+          },
+          "egman": {
+            "count": 1,
+            "top_cuts": 0
           }
         }
       },
@@ -6201,6 +6205,16 @@
           "placement": "1st Place",
           "is_top_cut": true,
           "event_date": "1/31/2026"
+        },
+        {
+          "deck_id": "egman_59d988a87461",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=EX11-046:4,BT21-062:3,BT21-098:3,BT11-105:3,BT11-061:9,BT18-060:4,BT21-056:4,BT21-060:2,P-094:4,BT18-065:3,BT21-058:3,BT21-087:3,BT18-092:2,EX11-066:3,BT21-006:4&type=digimon",
+          "decklist": "[\"BT11-105\", \"BT11-105\", \"BT11-105\", \"EX11-046\", \"EX11-046\", \"EX11-046\", \"EX11-046\", \"BT21-056\", \"BT21-056\", \"BT21-056\", \"BT21-056\", \"P-094\", \"P-094\", \"P-094\", \"P-094\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT11-061\", \"BT21-062\", \"BT21-062\", \"BT21-062\", \"BT18-060\", \"BT18-060\", \"BT18-060\", \"BT18-060\", \"BT21-087\", \"BT21-087\", \"BT21-087\", \"BT18-092\", \"BT18-092\", \"BT18-065\", \"BT18-065\", \"BT18-065\", \"EX11-066\", \"EX11-066\", \"EX11-066\", \"BT21-060\", \"BT21-060\", \"BT21-098\", \"BT21-098\", \"BT21-098\", \"BT21-058\", \"BT21-058\", \"BT21-058\", \"BT21-006\", \"BT21-006\", \"BT21-006\", \"BT21-006\"]",
+          "format": null,
+          "placement": "5th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -6217,7 +6231,7 @@
       "display_card_id": "EX5-073",
       "stats": {
         "times_played": 36,
-        "meta_share": 0.019108,
+        "meta_share": 0.018947,
         "top_cut_count": 6,
         "conversion_rate": 0.1667,
         "avg_placement": 24.72,
@@ -6608,7 +6622,7 @@
       "display_card_id": "EX8-073",
       "stats": {
         "times_played": 76,
-        "meta_share": 0.04034,
+        "meta_share": 0.04,
         "top_cut_count": 31,
         "conversion_rate": 0.4079,
         "avg_placement": 18.21,
@@ -7424,7 +7438,7 @@
       "display_card_id": "BT21-010",
       "stats": {
         "times_played": 7,
-        "meta_share": 0.003715,
+        "meta_share": 0.003684,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.86,
@@ -7520,14 +7534,18 @@
       "secondary_color": null,
       "display_card_id": "EX9-021",
       "stats": {
-        "times_played": 1,
-        "meta_share": 0.000531,
-        "top_cut_count": 1,
-        "conversion_rate": 1.0,
-        "avg_placement": 1.0,
+        "times_played": 3,
+        "meta_share": 0.001579,
+        "top_cut_count": 2,
+        "conversion_rate": 0.6667,
+        "avg_placement": 4.0,
         "sources": {
           "digimonmeta": {
             "count": 1,
+            "top_cuts": 1
+          },
+          "egman": {
+            "count": 2,
             "top_cuts": 1
           }
         }
@@ -7542,6 +7560,26 @@
           "placement": "1st Place",
           "is_top_cut": true,
           "event_date": "1/23/2026"
+        },
+        {
+          "deck_id": "egman_a5ab2cccb43d",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=AD1-001:4,AD1-010:4,AD1-012:4,AD1-009:4,EX4-051:1,BT17-027:1,EX9-012:4,EX9-021:3,EX9-019:4,LM-033:2,LM-049:3,EX1-066:4,BT22-084:2,EX4-060:1,BT13-065:1,EX4-039:4,EX4-038:4,ST20-01:4&type=digimon",
+          "decklist": "[\"EX4-051\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"LM-049\", \"LM-049\", \"LM-049\", \"BT17-027\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"LM-033\", \"LM-033\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX4-038\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"BT13-065\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"EX4-039\", \"BT22-084\", \"BT22-084\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"EX4-060\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"ST20-01\", \"ST20-01\", \"ST20-01\", \"ST20-01\"]",
+          "format": null,
+          "placement": "1st",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_3fe6c90b862c",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=ST20-14:4,AD1-022:3,EX9-066:2,AD1-019:3,ST20-02:4,ST20-07:3,ST21-07:3,AD1-001:4,AD1-009:4,EX9-012:4,AD1-010:4,AD1-012:4,EX9-019:4,EX9-021:4,ST21-01:4&type=digimon",
+          "decklist": "[\"AD1-010\", \"AD1-010\", \"AD1-010\", \"AD1-010\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"EX9-021\", \"ST20-14\", \"ST20-14\", \"ST20-14\", \"ST20-14\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"AD1-001\", \"ST20-07\", \"ST20-07\", \"ST20-07\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-019\", \"EX9-066\", \"EX9-066\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"AD1-009\", \"ST21-01\", \"ST21-01\", \"ST21-01\", \"ST21-01\", \"AD1-022\", \"AD1-022\", \"AD1-022\", \"AD1-019\", \"AD1-019\", \"AD1-019\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"AD1-012\", \"ST21-07\", \"ST21-07\", \"ST21-07\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"EX9-012\", \"ST20-02\", \"ST20-02\", \"ST20-02\", \"ST20-02\"]",
+          "format": null,
+          "placement": "10th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -7558,7 +7596,7 @@
       "display_card_id": "EX11-051",
       "stats": {
         "times_played": 22,
-        "meta_share": 0.011677,
+        "meta_share": 0.011579,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.32,
@@ -7805,7 +7843,7 @@
       "display_card_id": "BT20-028",
       "stats": {
         "times_played": 10,
-        "meta_share": 0.005308,
+        "meta_share": 0.005263,
         "top_cut_count": 5,
         "conversion_rate": 0.5,
         "avg_placement": 18.2,
@@ -7978,7 +8016,7 @@
       "display_card_id": "BT24-079",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 13.0,
@@ -8035,7 +8073,7 @@
       "display_card_id": "EX11-052",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 2.0,
@@ -8093,7 +8131,7 @@
       "display_card_id": "EX7-023",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 9.0,
@@ -8140,7 +8178,7 @@
       "display_card_id": "P-175",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 8.0,
@@ -8176,14 +8214,14 @@
       "secondary_color": "Yellow",
       "display_card_id": "BT23-101",
       "stats": {
-        "times_played": 138,
-        "meta_share": 0.073248,
+        "times_played": 140,
+        "meta_share": 0.073684,
         "top_cut_count": 44,
-        "conversion_rate": 0.3188,
-        "avg_placement": 11.71,
+        "conversion_rate": 0.3143,
+        "avg_placement": 11.69,
         "sources": {
           "egman": {
-            "count": 20,
+            "count": 22,
             "top_cuts": 11
           },
           "digimonmeta": {
@@ -9576,6 +9614,26 @@
           "placement": "10",
           "is_top_cut": false,
           "event_date": "2025-10-25"
+        },
+        {
+          "deck_id": "egman_453086a05ab9",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-040:1,BT23-048:4,BT23-017:3,BT23-037:4,BT23-101:4,BT23-020:4,BT23-027:4,BT23-051:1,BT23-032:1,BT16-025:2,BT23-096:2,BT23-081:2,BT23-084:4,BT23-085:3,BT23-090:4,BT23-092:3,BT22-089:3,BT22-094:1,BT23-002:4&type=digimon",
+          "decklist": "[\"BT22-089\", \"BT22-089\", \"BT22-089\", \"BT23-032\", \"BT23-085\", \"BT23-085\", \"BT23-085\", \"BT23-092\", \"BT23-092\", \"BT23-092\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT16-025\", \"BT16-025\", \"BT23-081\", \"BT23-081\", \"BT23-084\", \"BT23-084\", \"BT23-084\", \"BT23-084\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-020\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-096\", \"BT23-096\", \"BT23-037\", \"BT23-037\", \"BT23-037\", \"BT23-037\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT22-094\", \"BT23-051\", \"BT23-040\", \"BT23-017\", \"BT23-017\", \"BT23-017\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-027\"]",
+          "format": null,
+          "placement": "9th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_6645aa4465f8",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT23-040:3,BT23-048:4,BT23-017:2,BT23-037:4,BT23-101:4,BT23-020:2,BT23-027:4,BT23-032:1,BT16-025:2,BT23-096:2,BT23-081:3,BT23-084:4,BT23-085:2,BT23-090:4,BT23-092:2,BT22-089:2,BT23-002:4,BT24-037:2,BT23-050:3&type=digimon",
+          "decklist": "[\"BT22-089\", \"BT22-089\", \"BT23-050\", \"BT23-050\", \"BT23-050\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-048\", \"BT23-096\", \"BT23-096\", \"BT23-081\", \"BT23-081\", \"BT23-081\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-027\", \"BT23-092\", \"BT23-092\", \"BT23-020\", \"BT23-020\", \"BT23-040\", \"BT23-040\", \"BT23-040\", \"BT23-017\", \"BT23-017\", \"BT16-025\", \"BT16-025\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-002\", \"BT23-032\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT23-090\", \"BT23-037\", \"BT23-037\", \"BT23-037\", \"BT23-037\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-101\", \"BT23-084\", \"BT23-084\", \"BT23-084\", \"BT23-084\", \"BT23-085\", \"BT23-085\", \"BT24-037\", \"BT24-037\"]",
+          "format": null,
+          "placement": "12th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -9592,7 +9650,7 @@
       "display_card_id": "BT12-083",
       "stats": {
         "times_played": 6,
-        "meta_share": 0.003185,
+        "meta_share": 0.003158,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 30.17,
@@ -9679,7 +9737,7 @@
       "display_card_id": "EX7-023",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 11.5,
@@ -9726,7 +9784,7 @@
       "display_card_id": "BT20-020",
       "stats": {
         "times_played": 19,
-        "meta_share": 0.010085,
+        "meta_share": 0.01,
         "top_cut_count": 4,
         "conversion_rate": 0.2105,
         "avg_placement": 16.53,
@@ -9943,7 +10001,7 @@
       "display_card_id": "BT17-077",
       "stats": {
         "times_played": 36,
-        "meta_share": 0.019108,
+        "meta_share": 0.018947,
         "top_cut_count": 8,
         "conversion_rate": 0.2222,
         "avg_placement": 24.03,
@@ -10330,7 +10388,7 @@
       "display_card_id": "BT20-055",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002123,
+        "meta_share": 0.002105,
         "top_cut_count": 2,
         "conversion_rate": 0.5,
         "avg_placement": 13.0,
@@ -10397,7 +10455,7 @@
       "display_card_id": "BT23-013",
       "stats": {
         "times_played": 94,
-        "meta_share": 0.049894,
+        "meta_share": 0.049474,
         "top_cut_count": 35,
         "conversion_rate": 0.3723,
         "avg_placement": 11.16,
@@ -11368,7 +11426,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 9,
-        "meta_share": 0.004777,
+        "meta_share": 0.004737,
         "top_cut_count": 8,
         "conversion_rate": 0.8889,
         "avg_placement": 5.11,
@@ -11504,7 +11562,7 @@
       "display_card_id": "P-203",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 21.5,
@@ -11551,7 +11609,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -11603,7 +11661,7 @@
       "display_card_id": "EX5-055",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 110.0,
@@ -11640,7 +11698,7 @@
       "display_card_id": "EX5-063",
       "stats": {
         "times_played": 45,
-        "meta_share": 0.023885,
+        "meta_share": 0.023684,
         "top_cut_count": 10,
         "conversion_rate": 0.2222,
         "avg_placement": 19.02,
@@ -12142,7 +12200,7 @@
       "display_card_id": "EX5-043",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 2,
         "conversion_rate": 0.6667,
         "avg_placement": 7.0,
@@ -12199,7 +12257,7 @@
       "display_card_id": "EX6-054",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 36.5,
@@ -12250,7 +12308,7 @@
       "display_card_id": "EX1-073",
       "stats": {
         "times_played": 30,
-        "meta_share": 0.015924,
+        "meta_share": 0.015789,
         "top_cut_count": 12,
         "conversion_rate": 0.4,
         "avg_placement": 15.6,
@@ -12577,7 +12635,7 @@
       "display_card_id": "P-153",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 4.0,
@@ -12614,7 +12672,7 @@
       "display_card_id": "BT16-102",
       "stats": {
         "times_played": 16,
-        "meta_share": 0.008493,
+        "meta_share": 0.008421,
         "top_cut_count": 3,
         "conversion_rate": 0.1875,
         "avg_placement": 13.31,
@@ -12805,7 +12863,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -12836,7 +12894,7 @@
       "display_card_id": "BT23-102",
       "stats": {
         "times_played": 10,
-        "meta_share": 0.005308,
+        "meta_share": 0.005263,
         "top_cut_count": 3,
         "conversion_rate": 0.3,
         "avg_placement": 12.2,
@@ -12963,7 +13021,7 @@
       "display_card_id": "P-187",
       "stats": {
         "times_played": 28,
-        "meta_share": 0.014862,
+        "meta_share": 0.014737,
         "top_cut_count": 13,
         "conversion_rate": 0.4643,
         "avg_placement": 10.89,
@@ -13273,11 +13331,11 @@
       "secondary_color": null,
       "display_card_id": "BT24-017",
       "stats": {
-        "times_played": 94,
-        "meta_share": 0.049894,
+        "times_played": 95,
+        "meta_share": 0.05,
         "top_cut_count": 41,
-        "conversion_rate": 0.4362,
-        "avg_placement": 10.14,
+        "conversion_rate": 0.4316,
+        "avg_placement": 10.12,
         "sources": {
           "digimonmeta": {
             "count": 9,
@@ -13286,6 +13344,10 @@
           "digilab": {
             "count": 85,
             "top_cuts": 32
+          },
+          "egman": {
+            "count": 1,
+            "top_cuts": 0
           }
         }
       },
@@ -14229,6 +14291,16 @@
           "placement": "79",
           "is_top_cut": false,
           "event_date": "2025-10-11"
+        },
+        {
+          "deck_id": "egman_aed76a87693c",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-008:4,BT24-008:3,EX11-008:2,BT16-082:3,BT21-017:3,BT24-012:3,P-189:1,BT24-011:2,BT24-016:4,BT21-025:1,BT21-024:1,BT24-017:1,EX11-012:4,BT24-018:3,BT8-097:2,LM-027:2,P-103:3,LM-055:1,P-035:1,BT21-093:1,EX11-054:1,BT21-081:2,BT24-082:2,BT21-001:4&type=digimon",
+          "decklist": "[\"BT24-018\", \"BT24-018\", \"BT24-018\", \"BT24-012\", \"BT24-012\", \"BT24-012\", \"EX11-008\", \"EX11-008\", \"BT24-017\", \"BT8-097\", \"BT8-097\", \"EX11-054\", \"P-189\", \"BT21-081\", \"BT21-081\", \"BT21-017\", \"BT21-017\", \"BT21-017\", \"BT21-093\", \"BT24-011\", \"BT24-011\", \"LM-027\", \"LM-027\", \"P-103\", \"P-103\", \"P-103\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"LM-055\", \"BT21-025\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"EX11-012\", \"P-035\", \"BT24-008\", \"BT24-008\", \"BT24-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-008\", \"BT21-024\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT21-001\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-016\", \"BT24-082\", \"BT24-082\"]",
+          "format": null,
+          "placement": "8th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -14245,7 +14317,7 @@
       "display_card_id": "BT21-079",
       "stats": {
         "times_played": 7,
-        "meta_share": 0.003715,
+        "meta_share": 0.003684,
         "top_cut_count": 3,
         "conversion_rate": 0.4286,
         "avg_placement": 10.86,
@@ -14346,7 +14418,7 @@
       "display_card_id": "EX5-054",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 16.5,
@@ -14413,11 +14485,11 @@
       "secondary_color": "Black",
       "display_card_id": "P-220",
       "stats": {
-        "times_played": 26,
-        "meta_share": 0.0138,
-        "top_cut_count": 16,
-        "conversion_rate": 0.6154,
-        "avg_placement": 7.65,
+        "times_played": 28,
+        "meta_share": 0.014737,
+        "top_cut_count": 18,
+        "conversion_rate": 0.6429,
+        "avg_placement": 7.29,
         "sources": {
           "digimonmeta": {
             "count": 7,
@@ -14426,6 +14498,10 @@
           "digilab": {
             "count": 19,
             "top_cuts": 9
+          },
+          "egman": {
+            "count": 2,
+            "top_cuts": 2
           }
         }
       },
@@ -14689,6 +14765,26 @@
           "placement": "32",
           "is_top_cut": false,
           "event_date": "2025-11-04"
+        },
+        {
+          "deck_id": "egman_0db86609cf4f",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=P-220:4,BT19-075:2,BT18-019:4,BT19-101:1,BT19-070:4,BT18-015:1,BT18-073:4,BT19-065:1,BT13-083:3,P-193:4,BT18-013:1,P-205:3,EX9-058:4,BT9-070:2,BT3-077:1,EX11-055:3,EX1-066:4,BT16-082:3,BT8-107:1,BT15-006:4&type=digimon",
+          "decklist": "[\"BT19-101\", \"P-205\", \"P-205\", \"P-205\", \"BT8-107\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"EX9-058\", \"BT9-070\", \"BT9-070\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT15-006\", \"BT18-015\", \"EX11-055\", \"EX11-055\", \"EX11-055\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT18-073\", \"BT19-075\", \"BT19-075\", \"BT13-083\", \"BT13-083\", \"BT13-083\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"BT18-019\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT19-065\", \"BT18-013\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"P-193\", \"P-193\", \"P-193\", \"P-193\", \"BT3-077\"]",
+          "format": null,
+          "placement": "2nd",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_fbdc92ff7c7c",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-066:1,BT21-064:4,EX8-009:2,EX9-058:1,BT21-068:4,BT21-076:1,EX8-015:1,EX8-012:4,BT19-068:2,BT20-052:1,EX9-064:1,BT19-070:4,EX9-012:1,EX1-073:3,P-220:4,EX1-066:4,BT9-102:2,LM-053:2,P-205:3,P-108:2,LM-055:1,LM-056:1,P-177:4,EX9-011:1&type=digimon",
+          "decklist": "[\"EX9-011\", \"EX8-009\", \"EX8-009\", \"EX9-064\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"BT19-070\", \"EX9-012\", \"EX8-015\", \"LM-055\", \"P-205\", \"P-205\", \"P-205\", \"BT20-052\", \"EX1-073\", \"EX1-073\", \"EX1-073\", \"BT21-076\", \"LM-056\", \"EX8-012\", \"EX8-012\", \"EX8-012\", \"EX8-012\", \"P-177\", \"P-177\", \"P-177\", \"P-177\", \"P-108\", \"P-108\", \"BT19-068\", \"BT19-068\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"EX1-066\", \"LM-053\", \"LM-053\", \"BT21-064\", \"BT21-064\", \"BT21-064\", \"BT21-064\", \"P-220\", \"P-220\", \"P-220\", \"P-220\", \"BT24-066\", \"BT21-068\", \"BT21-068\", \"BT21-068\", \"BT21-068\", \"BT9-102\", \"BT9-102\", \"EX9-058\"]",
+          "format": null,
+          "placement": "3rd",
+          "is_top_cut": true,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -14705,7 +14801,7 @@
       "display_card_id": "BT11-033",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002654,
+        "meta_share": 0.002632,
         "top_cut_count": 4,
         "conversion_rate": 0.8,
         "avg_placement": 5.8,
@@ -14782,7 +14878,7 @@
       "display_card_id": "EX10-011",
       "stats": {
         "times_played": 20,
-        "meta_share": 0.010616,
+        "meta_share": 0.010526,
         "top_cut_count": 8,
         "conversion_rate": 0.4,
         "avg_placement": 16.2,
@@ -15034,7 +15130,7 @@
       "display_card_id": "EX8-064",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 9.0,
@@ -15081,7 +15177,7 @@
       "display_card_id": "BT22-031",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002123,
+        "meta_share": 0.002105,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.5,
@@ -15147,14 +15243,40 @@
       "secondary_color": "Yellow",
       "display_card_id": "BT24-102",
       "stats": {
-        "times_played": 0,
-        "meta_share": 0.0,
+        "times_played": 2,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
-        "avg_placement": 0.0,
-        "sources": {}
+        "avg_placement": 14.0,
+        "sources": {
+          "egman": {
+            "count": 2,
+            "top_cuts": 0
+          }
+        }
       },
-      "decklists": [],
+      "decklists": [
+        {
+          "deck_id": "egman_e1a89c8453d4",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-004:4,BT24-090:4,BT24-100:3,BT24-102:4,BT24-085:3,BT10-042:2,BT24-040:3,BT24-041:4,BT24-030:3,BT24-051:1,BT24-037:4,BT24-034:4,BT24-046:4,P-197:3,BT24-031:3,BT24-020:4,BT24-043:1&type=digimon",
+          "decklist": "[\"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-020\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-043\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-046\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-090\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT10-042\", \"BT10-042\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-051\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-037\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"P-197\", \"P-197\", \"P-197\", \"BT24-031\", \"BT24-031\", \"BT24-031\"]",
+          "format": null,
+          "placement": "13th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_6d11e30a556b",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-031:4,BT24-043:4,BT24-034:4,BT24-014:4,P-194:3,P-213:2,BT24-101:2,BT24-041:3,BT24-040:3,BT24-084:2,BT24-102:4,P-197:3,BT24-100:3,BT24-094:1,BT24-090:1,BT24-051:1,BT24-030:3,BT24-085:3,BT24-004:4&type=digimon",
+          "decklist": "[\"BT24-101\", \"BT24-101\", \"P-194\", \"P-194\", \"P-194\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-040\", \"BT24-040\", \"BT24-040\", \"BT24-041\", \"BT24-041\", \"BT24-041\", \"P-213\", \"P-213\", \"BT24-100\", \"BT24-100\", \"BT24-100\", \"BT24-051\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-085\", \"BT24-085\", \"BT24-085\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-084\", \"BT24-084\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"BT24-004\", \"P-197\", \"P-197\", \"P-197\", \"BT24-030\", \"BT24-030\", \"BT24-030\", \"BT24-090\", \"BT24-094\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\"]",
+          "format": null,
+          "placement": "15th",
+          "is_top_cut": false,
+          "event_date": null
+        }
+      ],
       "digilab_stats": {
         "times_played": 4,
         "conversion_rate": 0.25,
@@ -15211,7 +15333,7 @@
       "display_card_id": "BT16-015",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002654,
+        "meta_share": 0.002632,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 22.6,
@@ -15288,7 +15410,7 @@
       "display_card_id": "BT23-024",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 5.67,
@@ -15345,7 +15467,7 @@
       "display_card_id": "BT20-029",
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 17.0,
@@ -15381,15 +15503,19 @@
       "secondary_color": null,
       "display_card_id": "BT22-042",
       "stats": {
-        "times_played": 23,
-        "meta_share": 0.012208,
+        "times_played": 25,
+        "meta_share": 0.013158,
         "top_cut_count": 7,
-        "conversion_rate": 0.3043,
-        "avg_placement": 11.57,
+        "conversion_rate": 0.28,
+        "avg_placement": 11.44,
         "sources": {
           "digilab": {
             "count": 23,
             "top_cuts": 7
+          },
+          "egman": {
+            "count": 2,
+            "top_cuts": 0
           }
         }
       },
@@ -15623,6 +15749,26 @@
           "placement": "33",
           "is_top_cut": false,
           "event_date": "2025-10-11"
+        },
+        {
+          "deck_id": "egman_3d66fdddabaa",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=ST19-03:4,EX7-024:4,P-165:4,EX9-024:1,BT9-033:2,BT20-084:1,BT6-084:1,BT16-055:1,EX11-021:4,EX9-032:4,EX11-022:1,EX9-033:2,EX11-024:4,BT22-042:1,EX6-011:1,EX4-074:1,P-229:4,EX9-067:4,P-105:2,LM-054:2,BT4-104:1,LM-029:1,BT15-003:4&type=digimon",
+          "decklist": "[\"EX11-022\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"LM-054\", \"LM-054\", \"EX6-011\", \"LM-029\", \"BT22-042\", \"BT9-033\", \"BT9-033\", \"EX9-033\", \"EX9-033\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"P-105\", \"P-105\", \"BT4-104\", \"BT16-055\", \"EX4-074\", \"BT6-084\", \"BT20-084\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"EX9-024\"]",
+          "format": null,
+          "placement": "6th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_52d9dd025779",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=ST19-03:4,EX7-024:4,P-165:4,EX9-024:1,BT6-084:1,EX11-021:4,EX9-032:4,EX11-022:2,EX9-033:1,EX11-024:4,BT22-042:1,EX4-074:1,P-229:4,EX9-067:4,P-105:3,LM-054:1,BT15-003:4,EX11-019:3,BT23-077:1,ST19-14:2,EX7-025:1&type=digimon",
+          "decklist": "[\"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT15-003\", \"BT6-084\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-03\", \"ST19-14\", \"ST19-14\", \"BT23-077\", \"EX9-033\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"EX11-021\", \"P-229\", \"P-229\", \"P-229\", \"P-229\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX11-024\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-067\", \"EX9-024\", \"EX11-019\", \"EX11-019\", \"EX11-019\", \"EX4-074\", \"P-105\", \"P-105\", \"P-105\", \"P-165\", \"P-165\", \"P-165\", \"P-165\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX7-024\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX9-032\", \"EX11-022\", \"EX11-022\", \"BT22-042\", \"LM-054\", \"EX7-025\"]",
+          "format": null,
+          "placement": "14th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -15639,7 +15785,7 @@
       "display_card_id": "BT18-079",
       "stats": {
         "times_played": 38,
-        "meta_share": 0.02017,
+        "meta_share": 0.02,
         "top_cut_count": 9,
         "conversion_rate": 0.2368,
         "avg_placement": 14.63,
@@ -16088,7 +16234,7 @@
       "display_card_id": "EX6-011",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.0,
@@ -16145,7 +16291,7 @@
       "display_card_id": "BT16-101",
       "stats": {
         "times_played": 15,
-        "meta_share": 0.007962,
+        "meta_share": 0.007895,
         "top_cut_count": 4,
         "conversion_rate": 0.2667,
         "avg_placement": 14.67,
@@ -16322,7 +16468,7 @@
       "display_card_id": "BT17-017",
       "stats": {
         "times_played": 14,
-        "meta_share": 0.007431,
+        "meta_share": 0.007368,
         "top_cut_count": 2,
         "conversion_rate": 0.1429,
         "avg_placement": 19.43,
@@ -16510,7 +16656,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -16541,7 +16687,7 @@
       "display_card_id": "EX10-036",
       "stats": {
         "times_played": 118,
-        "meta_share": 0.062633,
+        "meta_share": 0.062105,
         "top_cut_count": 38,
         "conversion_rate": 0.322,
         "avg_placement": 12.45,
@@ -17756,7 +17902,7 @@
       "display_card_id": "BT23-046",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002654,
+        "meta_share": 0.002632,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 9.4,
@@ -17833,7 +17979,7 @@
       "display_card_id": "BT23-045",
       "stats": {
         "times_played": 32,
-        "meta_share": 0.016985,
+        "meta_share": 0.016842,
         "top_cut_count": 6,
         "conversion_rate": 0.1875,
         "avg_placement": 10.88,
@@ -18180,7 +18326,7 @@
       "display_card_id": "BT13-007",
       "stats": {
         "times_played": 51,
-        "meta_share": 0.02707,
+        "meta_share": 0.026842,
         "top_cut_count": 29,
         "conversion_rate": 0.5686,
         "avg_placement": 7.76,
@@ -18746,7 +18892,7 @@
       "display_card_id": "ST22-05",
       "stats": {
         "times_played": 90,
-        "meta_share": 0.047771,
+        "meta_share": 0.047368,
         "top_cut_count": 38,
         "conversion_rate": 0.4222,
         "avg_placement": 8.16,
@@ -19677,7 +19823,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 2,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -19718,7 +19864,7 @@
       "display_card_id": "BT1-107",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 13.67,
@@ -19775,7 +19921,7 @@
       "display_card_id": "EX6-073",
       "stats": {
         "times_played": 12,
-        "meta_share": 0.006369,
+        "meta_share": 0.006316,
         "top_cut_count": 2,
         "conversion_rate": 0.1667,
         "avg_placement": 26.25,
@@ -19922,7 +20068,7 @@
       "display_card_id": "BT16-063",
       "stats": {
         "times_played": 17,
-        "meta_share": 0.009023,
+        "meta_share": 0.008947,
         "top_cut_count": 6,
         "conversion_rate": 0.3529,
         "avg_placement": 8.65,
@@ -20119,7 +20265,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 3,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -20170,7 +20316,7 @@
       "display_card_id": "BT12-043",
       "stats": {
         "times_played": 6,
-        "meta_share": 0.003185,
+        "meta_share": 0.003158,
         "top_cut_count": 2,
         "conversion_rate": 0.3333,
         "avg_placement": 10.83,
@@ -20257,7 +20403,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -20288,7 +20434,7 @@
       "display_card_id": "BT16-012",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002123,
+        "meta_share": 0.002105,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 17.25,
@@ -20355,7 +20501,7 @@
       "display_card_id": "BT23-076",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 4.0,
@@ -20402,7 +20548,7 @@
       "display_card_id": "BT24-051",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 0,
         "conversion_rate": 0.0,
         "avg_placement": 12.0,
@@ -20449,7 +20595,7 @@
       "display_card_id": "BT24-101",
       "stats": {
         "times_played": 5,
-        "meta_share": 0.002654,
+        "meta_share": 0.002632,
         "top_cut_count": 5,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -20526,7 +20672,7 @@
       "display_card_id": "BT24-051",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 2,
         "conversion_rate": 1.0,
         "avg_placement": 1.5,
@@ -20573,7 +20719,7 @@
       "display_card_id": "BT24-030",
       "stats": {
         "times_played": 10,
-        "meta_share": 0.005308,
+        "meta_share": 0.005263,
         "top_cut_count": 10,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -20699,11 +20845,11 @@
       "secondary_color": null,
       "display_card_id": "BT24-101",
       "stats": {
-        "times_played": 64,
-        "meta_share": 0.03397,
+        "times_played": 66,
+        "meta_share": 0.034737,
         "top_cut_count": 27,
-        "conversion_rate": 0.4219,
-        "avg_placement": 9.69,
+        "conversion_rate": 0.4091,
+        "avg_placement": 9.67,
         "sources": {
           "digilab": {
             "count": 59,
@@ -20712,6 +20858,10 @@
           "digimonmeta": {
             "count": 5,
             "top_cuts": 5
+          },
+          "egman": {
+            "count": 2,
+            "top_cuts": 0
           }
         }
       },
@@ -21355,6 +21505,26 @@
           "placement": "1st Place",
           "is_top_cut": true,
           "event_date": "1/22/2026"
+        },
+        {
+          "deck_id": "egman_d1cb7292797f",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-031:4,BT24-043:3,P-198:3,BT16-082:2,BT24-034:4,BT24-014:4,P-194:4,P-213:3,BT24-030:1,BT24-101:3,BT24-041:2,BT10-042:1,BT24-040:2,EX4-074:1,BT24-083:3,BT24-084:3,BT24-088:3,BT24-102:3,BT4-104:1,BT24-003:4&type=digimon",
+          "decklist": "[\"BT24-043\", \"BT24-043\", \"BT24-043\", \"P-213\", \"P-213\", \"P-213\", \"BT10-042\", \"BT24-030\", \"BT24-040\", \"BT24-040\", \"P-198\", \"P-198\", \"P-198\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"EX4-074\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT4-104\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"BT16-082\", \"BT16-082\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT24-041\", \"BT24-041\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-101\", \"BT24-101\", \"BT24-101\"]",
+          "format": null,
+          "placement": "7th",
+          "is_top_cut": false,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_e6489a8dfabb",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT24-031:4,BT24-043:4,P-198:3,BT24-034:4,BT24-014:4,P-194:4,P-213:3,BT24-101:3,BT24-041:2,BT10-042:1,BT24-040:2,EX4-074:1,BT24-083:4,BT24-084:3,BT24-088:3,BT24-102:3,BT4-104:1,BT24-003:4&type=digimon",
+          "decklist": "[\"BT24-043\", \"BT24-043\", \"BT24-043\", \"BT24-043\", \"EX4-074\", \"P-194\", \"P-194\", \"P-194\", \"P-194\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-031\", \"BT24-101\", \"BT24-101\", \"BT24-101\", \"BT10-042\", \"P-213\", \"P-213\", \"P-213\", \"BT24-102\", \"BT24-102\", \"BT24-102\", \"BT24-088\", \"BT24-088\", \"BT24-088\", \"BT24-040\", \"BT24-040\", \"P-198\", \"P-198\", \"P-198\", \"BT24-041\", \"BT24-041\", \"BT4-104\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-034\", \"BT24-084\", \"BT24-084\", \"BT24-084\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-003\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-014\", \"BT24-083\", \"BT24-083\", \"BT24-083\", \"BT24-083\"]",
+          "format": null,
+          "placement": "11th",
+          "is_top_cut": false,
+          "event_date": null
         }
       ],
       "digilab_stats": {
@@ -21413,7 +21583,7 @@
       "display_card_id": "BT24-081",
       "stats": {
         "times_played": 8,
-        "meta_share": 0.004246,
+        "meta_share": 0.004211,
         "top_cut_count": 1,
         "conversion_rate": 0.125,
         "avg_placement": 14.62,
@@ -21541,7 +21711,7 @@
       "display_card_id": "BT17-101",
       "stats": {
         "times_played": 4,
-        "meta_share": 0.002123,
+        "meta_share": 0.002105,
         "top_cut_count": 1,
         "conversion_rate": 0.25,
         "avg_placement": 9.0,
@@ -21629,7 +21799,7 @@
       "display_card_id": "P-170",
       "stats": {
         "times_played": 6,
-        "meta_share": 0.003185,
+        "meta_share": 0.003158,
         "top_cut_count": 1,
         "conversion_rate": 0.1667,
         "avg_placement": 9.67,
@@ -21716,7 +21886,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 2,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -21757,7 +21927,7 @@
       "display_card_id": "BT16-048",
       "stats": {
         "times_played": 14,
-        "meta_share": 0.007431,
+        "meta_share": 0.007368,
         "top_cut_count": 3,
         "conversion_rate": 0.2143,
         "avg_placement": 15.14,
@@ -21924,7 +22094,7 @@
       "display_card_id": "BO-70",
       "stats": {
         "times_played": 2,
-        "meta_share": 0.001062,
+        "meta_share": 0.001053,
         "top_cut_count": 1,
         "conversion_rate": 0.5,
         "avg_placement": 13.5,
@@ -21971,7 +22141,7 @@
       "display_card_id": "BT22-025",
       "stats": {
         "times_played": 3,
-        "meta_share": 0.001592,
+        "meta_share": 0.001579,
         "top_cut_count": 1,
         "conversion_rate": 0.3333,
         "avg_placement": 14.33,
@@ -22021,6 +22191,47 @@
         "top4_rate": 0.4444
       }
     },
+    "Unclassified": {
+      "archetype_name": "Unclassified",
+      "primary_color": null,
+      "secondary_color": null,
+      "display_card_id": null,
+      "stats": {
+        "times_played": 2,
+        "meta_share": 0.001053,
+        "top_cut_count": 1,
+        "conversion_rate": 0.5,
+        "avg_placement": 10.0,
+        "sources": {
+          "egman": {
+            "count": 2,
+            "top_cuts": 1
+          }
+        }
+      },
+      "decklists": [
+        {
+          "deck_id": "egman_37dc6d2e1019",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT21-012:4,BT17-009:3,BT16-082:3,BT6-022:2,BT18-022:1,BT17-012:3,BT18-049:1,BT18-011:3,BT21-013:4,BT18-048:2,AD1-002:4,BT7-014:2,EX11-012:1,BT18-018:2,P-185:1,BT18-088:1,BT21-082:4,AD1-020:4,BT21-091:3,BT8-097:1,BT1-090:1,BT14-001:4&type=digimon",
+          "decklist": "[\"BT18-018\", \"BT18-018\", \"BT6-022\", \"BT6-022\", \"BT21-082\", \"BT21-082\", \"BT21-082\", \"BT21-082\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"BT21-013\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"AD1-020\", \"BT8-097\", \"BT17-012\", \"BT17-012\", \"BT17-012\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT14-001\", \"BT17-009\", \"BT17-009\", \"BT17-009\", \"BT16-082\", \"BT16-082\", \"BT16-082\", \"BT18-022\", \"EX11-012\", \"BT18-088\", \"BT18-049\", \"BT18-011\", \"BT18-011\", \"BT18-011\", \"BT18-048\", \"BT18-048\", \"BT7-014\", \"BT7-014\", \"BT21-012\", \"BT21-012\", \"BT21-012\", \"BT21-012\", \"P-185\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"AD1-002\", \"BT21-091\", \"BT21-091\", \"BT21-091\", \"BT1-090\"]",
+          "format": null,
+          "placement": "4th",
+          "is_top_cut": true,
+          "event_date": null
+        },
+        {
+          "deck_id": "egman_57b02ce176ba",
+          "source": "egman",
+          "source_url": "https://deckbuilder.egmanevents.com/?deck=BT12-021:4,BT12-022:4,P-117:3,BT12-047:4,BT16-040:1,P-118:1,EX1-014:2,BT21-037:1,BT12-050:4,ST9-09:1,BT16-025:4,AD1-011:4,BT16-028:3,ST9-06:1,AD1-024:3,BT16-085:4,BT3-093:2,BT17-097:3,LM-036:1,BT12-002:4&type=digimon",
+          "decklist": "[\"AD1-024\", \"AD1-024\", \"AD1-024\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT12-021\", \"BT17-097\", \"BT17-097\", \"BT17-097\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"BT12-002\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"AD1-011\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"BT12-050\", \"EX1-014\", \"EX1-014\", \"BT3-093\", \"BT3-093\", \"LM-036\", \"ST9-06\", \"P-117\", \"P-117\", \"P-117\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-022\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"BT12-047\", \"P-118\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-025\", \"BT16-040\", \"BT21-037\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"BT16-085\", \"ST9-09\", \"BT16-028\", \"BT16-028\", \"BT16-028\"]",
+          "format": null,
+          "placement": "16th",
+          "is_top_cut": false,
+          "event_date": null
+        }
+      ]
+    },
     "Virus Imperialdramon": {
       "archetype_name": "Virus Imperialdramon",
       "primary_color": "Red",
@@ -22049,7 +22260,7 @@
       "display_card_id": "BT14-101",
       "stats": {
         "times_played": 15,
-        "meta_share": 0.007962,
+        "meta_share": 0.007895,
         "top_cut_count": 1,
         "conversion_rate": 0.0667,
         "avg_placement": 17.73,
@@ -22226,7 +22437,7 @@
       "display_card_id": "BT19-014",
       "stats": {
         "times_played": 27,
-        "meta_share": 0.014331,
+        "meta_share": 0.014211,
         "top_cut_count": 8,
         "conversion_rate": 0.2963,
         "avg_placement": 8.59,
@@ -22531,7 +22742,7 @@
       "display_card_id": null,
       "stats": {
         "times_played": 1,
-        "meta_share": 0.000531,
+        "meta_share": 0.000526,
         "top_cut_count": 1,
         "conversion_rate": 1.0,
         "avg_placement": 1.0,
@@ -22562,7 +22773,7 @@
       "display_card_id": "BT14-033",
       "stats": {
         "times_played": 12,
-        "meta_share": 0.006369,
+        "meta_share": 0.006316,
         "top_cut_count": 1,
         "conversion_rate": 0.0833,
         "avg_placement": 19.33,
@@ -22730,7 +22941,7 @@
       "display_card_id": "EX11-074",
       "stats": {
         "times_played": 54,
-        "meta_share": 0.028662,
+        "meta_share": 0.028421,
         "top_cut_count": 18,
         "conversion_rate": 0.3333,
         "avg_placement": 11.31,
