@@ -149,6 +149,7 @@ pub enum StepSpec {
     Optional(OptionalStep),
 
     // Combat / replacement process outcomes
+    Battle(BattleArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
     HandleReplacement(EmptyArgs),
@@ -257,6 +258,7 @@ impl Serialize for StepSpec {
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
+            StepSpec::Battle(v) => kv!(s, "battle", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
@@ -393,6 +395,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "optional" => StepSpec::Optional(map.next_value()?),
 
             // Combat / replacement process outcomes
+            "battle" => StepSpec::Battle(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
@@ -559,6 +562,13 @@ pub struct EmptyArgs {}
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BattleArgs {
+    pub attacker: BindingRef,
+    pub defender: BindingRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

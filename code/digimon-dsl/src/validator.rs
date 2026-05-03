@@ -9,7 +9,7 @@ use crate::clause::{ClauseSpec, DeclarativeKind, TriggeredClause};
 use crate::errors::ValidationError;
 use crate::raw_rust_registry::RawRustRegistry;
 use crate::spec::CardSpec;
-use crate::step::StepSpec;
+use crate::step::{BindingRef, StepSpec, StructuredBindingRef};
 
 pub struct ValidationContext<'a> {
     pub raw_rust: &'a dyn RawRustRegistry,
@@ -492,6 +492,20 @@ fn validate_step(
     errors: &mut Vec<ValidationError>,
 ) {
     match step {
+        StepSpec::Battle(args) => {
+            validate_binding_ref(
+                &args.attacker,
+                &format!("{prefix}.attacker"),
+                card_id,
+                errors,
+            );
+            validate_binding_ref(
+                &args.defender,
+                &format!("{prefix}.defender"),
+                card_id,
+                errors,
+            );
+        }
         StepSpec::AddDpModifier(args) => {
             validate_modifier_value(
                 &args.value,
@@ -684,6 +698,50 @@ fn validate_step(
     }
 }
 
+fn validate_binding_ref(
+    binding_ref: &BindingRef,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    let BindingRef::Structured(StructuredBindingRef {
+        binding,
+        permanent,
+        source_permanent,
+        of_permanent,
+        ..
+    }) = binding_ref
+    else {
+        return;
+    };
+
+    if source_permanent.is_some() {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: prefix.into(),
+            message: "source_permanent binding refs are not supported here".into(),
+        });
+    }
+
+    let populated = [binding, permanent, of_permanent]
+        .iter()
+        .filter(|field| field.is_some())
+        .count();
+    if populated == 0 {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: prefix.into(),
+            message: "binding ref must name a binding".into(),
+        });
+    } else if populated > 1 {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: prefix.into(),
+            message: "binding ref must use only one binding field".into(),
+        });
+    }
+}
+
 fn validate_modifier_value(
     value: &crate::step::ModifierValueSpec,
     prefix: &str,
@@ -835,6 +893,7 @@ fn is_known_modifier(name: &str) -> bool {
             | "CannotBeRemoved"
             | "CannotAttack"
             | "CannotAttackPlayer"
+            | "VortexCanAttackPlayer"
             | "CanAttackUnsuspended"
             | "CanAttackActivePlayer"
             | "CannotAttackTarget"
@@ -990,6 +1049,33 @@ effects:
         let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
         let reg = StubRegistry::with(["registered_formula_fn"]);
         assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    #[test]
+    fn battle_step_rejects_source_permanent_binding_ref_until_compiler_lowers_it() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    process:
+      - battle:
+          attacker: { source_permanent: picked }
+          defender: target
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs.iter().any(|e| {
+            e.path.ends_with(".attacker")
+                && e.message
+                    .contains("source_permanent binding refs are not supported here")
+        }));
     }
 
     #[test]
