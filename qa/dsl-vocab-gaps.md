@@ -204,7 +204,7 @@ Format per entry:
 - Suggested DSL syntax: keep the existing `alt_path_registration` shape and require lowering for inherited clauses, including `timing: end_of_your_turn`, `kind: dna_digivolve`, material filters, target hand-card filter, and cost override.
 - Also blocks: `BT12-021` Veemon and `BT12-047` Wormmon in BG Imperial. Their inherited text is "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
 - Covered by: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_alt_path_registration`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor -- dna`.
-- Remaining limits: formula costs, extra costs, `from` gates, burst end steps, `stacks_unsuspended`, non-battle-area materials, repeat/unbounded materials, `ignore_requirements`, `source_treated_as`, marker routes, and non-DNA alt-path kinds are intentionally not consumed by this v1 action hook.
+- Remaining limits: formula costs, extra costs, `from` gates, burst end steps, `stacks_unsuspended`, non-battle-area materials, repeat/unbounded materials, `ignore_requirements`, `source_treated_as` for DNA routes, marker routes, and non-DNA alt-path kinds beyond normal digivolve are intentionally not consumed by this v1 action hook. Normal digivolve `source_treated_as` routes are covered separately by the 2026-05-03 Hybrid/Tamer closure.
 - First reported: 2026-04-28
 
 ## BG Imperial DNA cards — YAML `dna_costs` authoring / production data population

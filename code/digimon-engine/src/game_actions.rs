@@ -2600,32 +2600,19 @@ impl Game {
 
         let card = player.hand[hand_index].clone();
         let perm = &player.battle_area[field_index];
-        if !self.can_digivolve(&card, perm) {
+        let Some(route) = self.normal_digivolve_route_for_hand_card(player_id, hand_index, handle)
+        else {
             self.logger.log(&format!(
                 "[Rejected] digivolve_from_hand: card {} cannot digivolve onto {} (evo-cost mismatch)",
                 card.card_id(&self.card_data),
                 perm.top_card().card_id(&self.card_data),
             ));
             return false;
-        }
+        };
         let from_stack_top = perm.top_card().card_id(&self.card_data).to_string();
         let top_card_id = card.card_id(&self.card_data).to_string();
 
-        let base_top = perm.top_card();
-        let base_level = base_top.digimon_level(&self.card_data).unwrap();
-        let base_colors = base_top.digimon_colors(&self.card_data);
-        let printed_cost = card
-            .digivolution_costs(&self.card_data)
-            .iter()
-            .filter(|ec| {
-                ec.level == base_level
-                    && crate::action::mask::evo_color(ec.card_color)
-                        .map(|c| base_colors.contains(&c))
-                        .unwrap_or(false)
-            })
-            .map(|ec| ec.memory_cost)
-            .min()
-            .expect("can_digivolve guarantees at least one matching evo_cost");
+        let printed_cost = route.memory_cost;
 
         let total_reduction =
             self.scan_before_pay_cost_reduction(player_id, CostReductionKind::Digivolve);

@@ -225,7 +225,6 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 }
                 let max_field = me.battle_area.len().min(FIELD_SLOTS);
                 for f in 0..max_field {
-                    let base_perm = &me.battle_area[f];
                     let base_handle = PermanentHandle {
                         player: player_id,
                         index: f as u8,
@@ -240,7 +239,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     {
                         continue;
                     }
-                    if can_basic_digivolve(card, base_perm, &game.card_data) {
+                    if game
+                        .normal_digivolve_route_for_hand_card(player_id, h, base_handle)
+                        .is_some()
+                    {
                         mask[encode_digivolve(h as u16, f as u16) as usize] = 1.0;
                     }
                 }

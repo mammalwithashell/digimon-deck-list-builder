@@ -52,6 +52,7 @@ The deck's core gameplay is Tamer-based Hybrid evolution, recursive Tamer play, 
 - **Why it matters:** Red Hybrid's core line is built around turning Tamers into Hybrid stacks. If Tamers cannot be selected as digivolution bases through the action mask, the deck cannot perform its main legal actions.
 - **First test:** With `BT17-079` Takuya in battle area and `BT17-012` in hand, the action mask exposes a digivolve action onto the Tamer at the printed Tamer route cost. Resolving the action creates a stack with the Tamer as source and fires When Digivolving.
 - **Implementation hint:** `code/digimon-engine/src/action/mask.rs`, `code/digimon-engine/src/game_actions.rs`, `code/digimon-engine/src/game.rs::can_digivolve`, `code/digimon-dsl/src/spec.rs` alt-path representation, and `code/digimon-engine/src/dsl_cards/lower_alt_path_registration.rs`.
+- **Status update (2026-05-03):** RESOLVED for normal hand-to-battle-area action mask and execution using DSL `alt_paths.kind: digivolve` plus `source_treated_as`; printed Tamer kind remains unchanged. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- hybrid_tamer_digivolve phase2e_select_union_zone --nocapture`.
 
 ### RH-02: Effect-initiated digivolve from Tamer or Digimon bases with dynamic cost formulas
 
@@ -179,7 +180,7 @@ These items are required for archetype readiness but should remain card-authorin
 
 | Card(s) | Status | Next Rust test |
 |---|---|---|
-| `BT17-012` | Core card missing production YAML; depends on `RH-01`, `RH-02`, and `RH-08` | Tamer-base digivolve, Raid selection, attack-window Hybrid digivolve with cost reduction. |
+| `BT17-012` | Core card missing production YAML; depends on card-local use of resolved `RH-01`, plus `RH-02` and `RH-08` | Card-shaped Tamer-base digivolve regression, Raid selection, attack-window Hybrid digivolve with cost reduction. |
 | `BT17-009`, `BT18-010`, `BT7-008` | Searcher YAML missing; depends on `RH-05` and `RH-04` for inherited play | Reveal multi-pick and bottom remainder, then inherited free Tamer play on deletion. |
 | `BT18-088` | Core Tamer missing YAML; depends on `RH-06` and `RH-07` | Start-turn memory setter, start-main count-scaled source placement, inherited end-turn player attack. |
 | `BT21-082` | Core Tamer missing YAML; depends on `RH-02`, `RH-04`, `RH-09` | Start-main Digimon/Tamer effect digivolve with dynamic reduction, inherited security-removed Tamer play. |

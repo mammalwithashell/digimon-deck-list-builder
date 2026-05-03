@@ -14,6 +14,7 @@ mod group6_dynamic_formulas;
 mod group7_alt_path_registration;
 mod group7_formula_batch;
 mod group7_predicate_batch;
+mod hybrid_tamer_digivolve;
 mod i18n_scaffolding;
 mod link;
 mod loader;

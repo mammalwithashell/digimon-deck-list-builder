@@ -13,10 +13,11 @@
 //! `CardData` with `dna_costs` populated.
 
 use crate::card_data::{CardData, DnaCost, DnaRequirement};
+use crate::card_source::CardSource;
 use crate::digixros::matches_digixros_name_requirement;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::effect_context::EffectReadContext;
-use crate::enums::{EffectTiming, GamePhase, PlayerId};
+use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, PlayerId};
 use crate::game::Game;
 use crate::permanent::Permanent;
 use crate::permanent::PermanentHandle;
@@ -34,6 +35,11 @@ pub enum DnaRouteWindow {
 pub struct DnaRouteMatch {
     pub first_is_top: bool,
     pub memory_cost: i16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DigivolveRouteMatch {
+    pub memory_cost: u16,
 }
 
 impl Game {
@@ -101,6 +107,131 @@ impl Game {
             GamePhase::Main => Some(DnaRouteWindow::Main),
             GamePhase::EndOfTurnAction => Some(DnaRouteWindow::EndOfTurnAction),
             _ => None,
+        }
+    }
+
+    pub(crate) fn normal_digivolve_route_for_hand_card(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+        base_handle: PermanentHandle,
+    ) -> Option<DigivolveRouteMatch> {
+        if base_handle.player != player {
+            return None;
+        }
+        let player_state = self.players.get(player as usize)?;
+        let card = player_state.hand.get(hand_index)?;
+        self.normal_digivolve_route_for_card(card, base_handle)
+    }
+
+    pub(crate) fn normal_digivolve_route_for_card(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+    ) -> Option<DigivolveRouteMatch> {
+        let base = self
+            .players
+            .get(base_handle.player as usize)?
+            .battle_area
+            .get(base_handle.index as usize)?;
+
+        [
+            printed_digivolve_memory_cost(card, base, &self.card_data)
+                .map(|memory_cost| DigivolveRouteMatch { memory_cost }),
+            self.dsl_alt_digivolve_route_for_card(card, base_handle),
+        ]
+        .into_iter()
+        .flatten()
+        .min_by_key(|route| route.memory_cost)
+    }
+
+    fn dsl_alt_digivolve_route_for_card(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+    ) -> Option<DigivolveRouteMatch> {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let card_id = card.card_id(&self.card_data);
+            let paths = self.alt_path_registry.get(card_id)?;
+            let rctx = EffectReadContext::new(self, card.handle(), Some(base_handle), card.owner);
+            let base = self
+                .players
+                .get(base_handle.player as usize)?
+                .battle_area
+                .get(base_handle.index as usize)?;
+            let base_top = base.top_card();
+            let base_meta = &self.card_data[base_top.data_index];
+            let base_requires_treated_as = !base_top.is_digimon_card_for_search(&self.card_data)
+                && base_meta.card_kind != CardKind::DigiEgg;
+            let mut best: Option<DigivolveRouteMatch> = None;
+            for path in paths {
+                if !matches!(path.kind, CompiledAltPathKind::Digivolve) {
+                    continue;
+                }
+                if !path.materials.is_empty()
+                    || !path.extra_cost.is_empty()
+                    || !path.on_burst_turn_end.is_empty()
+                    || path.stacks_unsuspended
+                    || path.marker
+                {
+                    continue;
+                }
+                let Some(from) = path.from.as_ref() else {
+                    continue;
+                };
+                if !eval_predicate(from, &rctx, PredicateSubject::Permanent(base_handle)) {
+                    continue;
+                }
+
+                let treated_as_cost = if let Some(profile) = path.source_treated_as.as_deref() {
+                    let Some(profile) = parse_treated_as_profile(profile) else {
+                        continue;
+                    };
+                    if profile.kind != CardKind::Digimon && profile.kind != CardKind::DigiEgg {
+                        continue;
+                    }
+                    if profile.level == 0 || profile.colors.is_empty() {
+                        continue;
+                    }
+                    let Some(matching_cost) =
+                        matching_evo_cost(card, profile.level, &profile.colors, &self.card_data)
+                    else {
+                        continue;
+                    };
+                    Some(matching_cost)
+                } else {
+                    if base_requires_treated_as {
+                        continue;
+                    }
+                    printed_digivolve_memory_cost(card, base, &self.card_data)
+                };
+
+                let memory_cost = match &path.cost {
+                    Some(CompiledCost::Literal(n)) => {
+                        let Some(memory_cost) = u16::try_from(*n).ok() else {
+                            continue;
+                        };
+                        memory_cost
+                    }
+                    Some(CompiledCost::Formula(_)) => continue,
+                    None => {
+                        let Some(memory_cost) = treated_as_cost else {
+                            continue;
+                        };
+                        memory_cost
+                    }
+                };
+                let route = DigivolveRouteMatch { memory_cost };
+                if best.is_none_or(|current| route.memory_cost < current.memory_cost) {
+                    best = Some(route);
+                }
+            }
+            return best;
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            None
         }
     }
 
@@ -227,6 +358,96 @@ impl Game {
             }
         }
         None
+    }
+}
+
+fn printed_digivolve_memory_cost(
+    card: &CardSource,
+    base: &Permanent,
+    card_data: &[CardData],
+) -> Option<u16> {
+    let base_top = base.top_card();
+    let base_meta = &card_data[base_top.data_index];
+
+    if !base_top.is_digimon_card_for_search(card_data) && base_meta.card_kind != CardKind::DigiEgg {
+        return None;
+    }
+
+    let base_level = base_top.digimon_level(card_data)?;
+    let base_colors = base_top.digimon_colors(card_data);
+    matching_evo_cost(card, base_level, &base_colors, card_data)
+}
+
+fn matching_evo_cost(
+    card: &CardSource,
+    base_level: u8,
+    base_colors: &[CardColor],
+    card_data: &[CardData],
+) -> Option<u16> {
+    matching_evo_cost_from_evo_costs(card.digivolution_costs(card_data), base_level, base_colors)
+}
+
+fn matching_evo_cost_from_evo_costs(
+    evo_costs: &[crate::card_data::EvoCost],
+    base_level: u8,
+    base_colors: &[CardColor],
+) -> Option<u16> {
+    evo_costs
+        .iter()
+        .filter(|ec| {
+            ec.level == base_level
+                && crate::action::mask::evo_color(ec.card_color)
+                    .map(|c| base_colors.contains(&c))
+                    .unwrap_or(false)
+        })
+        .map(|ec| ec.memory_cost)
+        .min()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TreatedAsProfile {
+    level: u8,
+    colors: Vec<CardColor>,
+    kind: CardKind,
+}
+
+fn parse_treated_as_profile(profile: &str) -> Option<TreatedAsProfile> {
+    let mut parts = profile.split('_');
+    if parts.next()? != "level" {
+        return None;
+    }
+    let level = parts.next()?.parse::<u8>().ok()?;
+    let rest: Vec<_> = parts.collect();
+    if rest.len() < 2 {
+        return None;
+    }
+    let kind = match *rest.last()? {
+        "digimon" => CardKind::Digimon,
+        "digiegg" | "digi_egg" => CardKind::DigiEgg,
+        _ => return None,
+    };
+    let color_parts = &rest[..rest.len() - 1];
+    let mut colors = Vec::new();
+    for color in color_parts {
+        colors.push(parse_profile_color(color)?);
+    }
+    Some(TreatedAsProfile {
+        level,
+        colors,
+        kind,
+    })
+}
+
+fn parse_profile_color(color: &str) -> Option<CardColor> {
+    match color {
+        "red" => Some(CardColor::Red),
+        "blue" => Some(CardColor::Blue),
+        "yellow" => Some(CardColor::Yellow),
+        "green" => Some(CardColor::Green),
+        "black" => Some(CardColor::Black),
+        "purple" => Some(CardColor::Purple),
+        "white" => Some(CardColor::White),
+        _ => None,
     }
 }
 

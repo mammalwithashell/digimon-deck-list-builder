@@ -8,6 +8,7 @@ mod armor_purge_top;
 mod battle_opponent_of;
 mod breeding_zone_movement;
 mod effect_digivolve_from_zones;
+mod effect_digivolve_union_zones;
 mod effect_initiated_dna_digivolve;
 mod material_zone_select;
 mod override_persistence;

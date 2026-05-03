@@ -674,6 +674,21 @@ impl DebugRunnerBuilder {
         let empty_decks: Vec<Vec<String>> = (0..player_count).map(|_| Vec::new()).collect();
         let mut game = Game::new(&empty_decks, &self.card_data, rules, Some(0xC0FFEE))
             .expect("DebugRunner: Game::new failed");
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            game.alt_path_registry
+                .extend(
+                    self.compiled_cards
+                        .iter()
+                        .filter_map(|(card_id, compiled)| {
+                            if compiled.alt_paths.is_empty() {
+                                None
+                            } else {
+                                Some((card_id.clone(), compiled.alt_paths.clone()))
+                            }
+                        }),
+                );
+        }
 
         // Wipe any cards Game::new placed (it populates from empty decks, so this
         // should be a no-op, but we want to be defensive).
