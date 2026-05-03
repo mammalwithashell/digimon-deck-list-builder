@@ -502,7 +502,40 @@ Requires `stable-baselines3` and `sb3-contrib`.
 
 ---
 
-### 6.4 Pilot Training
+### 6.4 Tensor Profile Gauntlet
+
+**Script:** `code/tools/profile_tensor_profiles.py`
+
+Compares board-state tensor profiles with fixed-seed RL profiling metrics:
+
+```powershell
+python code/tools/profile_tensor_profiles.py --profiles compact_v1,standard_lite_v2,standard_full_v2 --games 100 --seeds 1000:1100 --policy greedy --out profile_runs/tensor_profiles/latest --require-profiles
+```
+
+The default profile set is:
+
+- `compact_v1`, reported as canonical `standard_compact_v1`
+- `standard_lite_v2`
+- `standard_full_v2`
+
+The gauntlet writes `result.json` and `result.md`. Each profile row includes:
+
+- Steps/sec
+- Games/hour
+- Win rate versus greedy
+- Trigger-order signal accuracy
+- Tensor bytes
+- Rollout observation memory estimates
+
+For a quick smoke run, use one game and a short step cap:
+
+```powershell
+python code/tools/profile_tensor_profiles.py --profiles compact_v1,standard_lite_v2,standard_full_v2 --games 1 --seeds 301:302 --policy greedy --max-steps-per-game 50 --out profile_runs/tensor_profiles/smoke --require-profiles
+```
+
+---
+
+### 6.5 Pilot Training
 
 Pilot training defaults to the Rust-backed `standard_lite_v2` observation profile, an `8320`-float fair-information tensor. Pass the profile explicitly in reproducible runs:
 
