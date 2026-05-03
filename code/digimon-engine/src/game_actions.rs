@@ -2600,32 +2600,19 @@ impl Game {
 
         let card = player.hand[hand_index].clone();
         let perm = &player.battle_area[field_index];
-        if !self.can_digivolve(&card, perm) {
+        let Some(route) = self.normal_digivolve_route_for_hand_card(player_id, hand_index, handle)
+        else {
             self.logger.log(&format!(
                 "[Rejected] digivolve_from_hand: card {} cannot digivolve onto {} (evo-cost mismatch)",
                 card.card_id(&self.card_data),
                 perm.top_card().card_id(&self.card_data),
             ));
             return false;
-        }
+        };
         let from_stack_top = perm.top_card().card_id(&self.card_data).to_string();
         let top_card_id = card.card_id(&self.card_data).to_string();
 
-        let base_top = perm.top_card();
-        let base_level = base_top.digimon_level(&self.card_data).unwrap();
-        let base_colors = base_top.digimon_colors(&self.card_data);
-        let printed_cost = card
-            .digivolution_costs(&self.card_data)
-            .iter()
-            .filter(|ec| {
-                ec.level == base_level
-                    && crate::action::mask::evo_color(ec.card_color)
-                        .map(|c| base_colors.contains(&c))
-                        .unwrap_or(false)
-            })
-            .map(|ec| ec.memory_cost)
-            .min()
-            .expect("can_digivolve guarantees at least one matching evo_cost");
+        let printed_cost = route.memory_cost;
 
         let total_reduction =
             self.scan_before_pay_cost_reduction(player_id, CostReductionKind::Digivolve);
@@ -3729,6 +3716,84 @@ impl Game {
         face_up: bool,
     ) -> bool {
         self.place_on_security_observed(player_id, source, position, face_up, player_id)
+    }
+
+    pub(crate) fn place_sourceless_permanent_on_security_bottom(
+        &mut self,
+        player_id: PlayerId,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+    ) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        if self
+            .modifiers
+            .player_has(observer_player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+
+        let Some(permanent) = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+        else {
+            return false;
+        };
+        if permanent.card_sources.len() != 1 {
+            return false;
+        }
+
+        let source_card = permanent.top_card().handle();
+        let cause = self.infer_effect_cause(player_id);
+        let leave_subject = ReplacementSubject::Permanent(target);
+        let leave_outcome = self.try_replace(
+            EffectTiming::WhenWouldLeaveBattleArea,
+            leave_subject,
+            cause,
+            Some(Zone::Security),
+        );
+        if self.pending_selection.is_some() || !matches!(leave_outcome, ReplacementOutcome::None) {
+            return false;
+        }
+
+        let place_subject = ReplacementSubject::Card(source_card, Zone::BattleArea);
+        let place_outcome = self.try_replace(
+            EffectTiming::WhenWouldPlaceInSecurity,
+            place_subject,
+            cause,
+            Some(Zone::Security),
+        );
+        if self.pending_selection.is_some() || !matches!(place_outcome, ReplacementOutcome::None) {
+            return false;
+        }
+
+        let mut permanent = self
+            .player_mut(target.player)
+            .battle_area
+            .remove(target.index as usize);
+        let Some(card) = permanent.card_sources.pop() else {
+            return false;
+        };
+
+        self.modifiers.clear_permanent(target);
+        self.modifiers.expire_player_on_permanent_leave(target);
+
+        let had_linked = !permanent.linked_cards.is_empty();
+        for linked in permanent.linked_cards {
+            self.player_mut(target.player).trash.push(linked);
+        }
+        if had_linked {
+            self.enqueue_triggered(
+                EffectTiming::OnLinkedCardTrashed,
+                TriggerSource::PlayerBattleArea(observer_player),
+            );
+            self.drain_effect_queue();
+        }
+
+        self.player_mut(player_id).security.insert(0, card);
+        true
     }
 
     pub(crate) fn place_on_security_observed(

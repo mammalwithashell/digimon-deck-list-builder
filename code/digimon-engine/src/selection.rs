@@ -96,6 +96,14 @@ pub enum SelectionKind {
     Material,
     /// Pick one of the cards currently exposed in `Game.revealed_cards`.
     Reveal,
+    /// Pick cards from one named reveal bucket. Reuses the reveal action range;
+    /// `bucket_index` identifies which bucket is currently being resolved.
+    RevealBucket {
+        bucket_index: u8,
+        min: u8,
+        max: u8,
+        picked: u8,
+    },
     /// Pick a security stack slot.
     Security,
     /// Pick one of several labeled effect-text branches ("choose one").

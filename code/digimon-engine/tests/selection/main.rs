@@ -13,5 +13,6 @@ mod opponent_permanent;
 mod opponent_selector;
 mod ordered_permutation;
 mod place_remainder;
+mod reveal_buckets;
 mod source_multi;
 mod union_zone;

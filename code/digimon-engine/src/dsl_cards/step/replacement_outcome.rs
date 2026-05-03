@@ -20,6 +20,26 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             set_outcome(ctx, ReplacementOutcome::Cancelled);
             true
         }
+        CompiledStep::TrashTopSecurityAndCancelReplacement { of } => {
+            let player = crate::dsl_cards::step::resolve_player(ctx, *of);
+            if ctx.trash_top_security_and_cancel_current_replacement(player) {
+                set_outcome(ctx, ReplacementOutcome::Cancelled);
+            }
+            true
+        }
+        CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement { of, target } => {
+            let player = crate::dsl_cards::step::resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Permanent(handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            {
+                if ctx.place_sourceless_permanent_bottom_security_and_cancel_current_replacement(
+                    player, handle,
+                ) {
+                    set_outcome(ctx, ReplacementOutcome::Cancelled);
+                }
+            }
+            true
+        }
         CompiledStep::HandleReplacement => {
             set_outcome(ctx, ReplacementOutcome::CustomHandled);
             true

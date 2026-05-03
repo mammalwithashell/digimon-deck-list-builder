@@ -21,9 +21,9 @@
 //! frozen set. Single-threaded engine, queue pauses while a selection is
 //! parked, so state cannot drift.
 
-use crate::card_source::CardSource;
+use crate::card_source::{CardHandle, CardSource};
 use crate::effect_context::{EffectContext, PartitionRequirement};
-use crate::enums::{CardKind, GamePhase, ModifierType, PlayerId};
+use crate::enums::{CardKind, EffectSourceKind, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::selection::{
@@ -56,6 +56,14 @@ pub enum CountCappedZone {
     /// Digivolution sources of `perm`, excluding the top card.
     /// Action IDs: `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD + i`.
     Material(crate::permanent::PermanentHandle),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RevealBucketSelection {
+    pub bind_as: String,
+    pub min: u8,
+    pub max: u8,
+    pub candidates: Vec<CardHandle>,
 }
 
 /// Per-card-number / -level / -name uniqueness constraint applied to a
@@ -725,6 +733,57 @@ impl<'a> EffectContext<'a> {
             on_decline: None,
         });
         true
+    }
+
+    pub fn select_reveal_buckets<C>(
+        &mut self,
+        buckets: Vec<RevealBucketSelection>,
+        prompt: &str,
+        no_duplicate_cards: bool,
+        callback: C,
+    ) -> bool
+    where
+        C: FnOnce(&mut EffectContext<'_>, Vec<(String, Vec<CardHandle>)>) + Send + Sync + 'static,
+    {
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+        let previous_phase = self.game.current_phase;
+
+        let final_callback: RevealBucketCallback =
+            std::sync::Arc::new(std::sync::Mutex::new(Some(Box::new(
+                move |game: &mut Game, picked: Vec<(String, Vec<CardHandle>)>| {
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller,
+                        override_pin,
+                    );
+                    callback(&mut ctx, picked);
+                },
+            ))));
+
+        install_reveal_bucket_step(
+            self.game,
+            buckets,
+            0,
+            Vec::new(),
+            Vec::new(),
+            prompt.to_string(),
+            no_duplicate_cards,
+            source_card,
+            source_permanent,
+            source_kind,
+            selecting_player,
+            previous_phase,
+            final_callback,
+        );
+        self.game.pending_selection.is_some()
     }
 
     /// Prompt `self.player` to pick a card from a security stack. Set
@@ -1550,6 +1609,200 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
         self.ctx.select_ordered_permutation(items, prompt, callback);
         self.ctx.override_selecting_player = prev;
     }
+}
+
+type RevealBucketCallback = std::sync::Arc<
+    std::sync::Mutex<
+        Option<Box<dyn FnOnce(&mut Game, Vec<(String, Vec<CardHandle>)>) + Send + Sync>>,
+    >,
+>;
+
+// ── reveal bucket trampoline ────────────────────────────────────────────────
+
+#[allow(clippy::too_many_arguments)]
+fn install_reveal_bucket_step(
+    game: &mut Game,
+    buckets: Vec<RevealBucketSelection>,
+    bucket_index: usize,
+    picked_buckets: Vec<(String, Vec<CardHandle>)>,
+    current_bucket_picks: Vec<CardHandle>,
+    prompt: String,
+    no_duplicate_cards: bool,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: EffectSourceKind,
+    selecting_player: PlayerId,
+    previous_phase: GamePhase,
+    final_callback: RevealBucketCallback,
+) {
+    use crate::action::space::{MAX_REVEALED, SEL_REVEAL_START};
+
+    let Some(bucket) = buckets.get(bucket_index).cloned() else {
+        if let Some(cb) = final_callback.lock().unwrap().take() {
+            cb(game, picked_buckets);
+        }
+        return;
+    };
+
+    if bucket.max == 0 {
+        let mut next_picked = picked_buckets;
+        next_picked.push((bucket.bind_as, Vec::new()));
+        install_reveal_bucket_step(
+            game,
+            buckets,
+            bucket_index + 1,
+            next_picked,
+            Vec::new(),
+            prompt,
+            no_duplicate_cards,
+            source_card,
+            source_permanent,
+            source_kind,
+            selecting_player,
+            previous_phase,
+            final_callback,
+        );
+        return;
+    }
+
+    let already_chosen: std::collections::HashSet<CardHandle> = picked_buckets
+        .iter()
+        .flat_map(|(_, cards)| cards.iter().copied())
+        .chain(current_bucket_picks.iter().copied())
+        .collect();
+    let cap = game.revealed_cards.len().min(MAX_REVEALED);
+    let mut valid_action_ids = Vec::new();
+    for idx in 0..cap {
+        let handle = game.revealed_cards[idx].handle();
+        if !bucket.candidates.contains(&handle) {
+            continue;
+        }
+        if current_bucket_picks.contains(&handle) {
+            continue;
+        }
+        if no_duplicate_cards && already_chosen.contains(&handle) {
+            continue;
+        }
+        valid_action_ids.push(SEL_REVEAL_START + idx as u16);
+    }
+
+    if valid_action_ids.is_empty() {
+        let mut next_picked = picked_buckets;
+        next_picked.push((bucket.bind_as, current_bucket_picks));
+        install_reveal_bucket_step(
+            game,
+            buckets,
+            bucket_index + 1,
+            next_picked,
+            Vec::new(),
+            prompt,
+            no_duplicate_cards,
+            source_card,
+            source_permanent,
+            source_kind,
+            selecting_player,
+            previous_phase,
+            final_callback,
+        );
+        return;
+    }
+
+    let picked = current_bucket_picks.len() as u8;
+    let is_optional = picked >= bucket.min;
+    let callback_bucket = bucket.clone();
+    let decline_bucket = bucket;
+    let current_for_callback = current_bucket_picks.clone();
+    let current_for_decline = current_bucket_picks;
+    let picked_for_callback = picked_buckets.clone();
+    let picked_for_decline = picked_buckets;
+
+    game.current_phase = GamePhase::SelectReveal;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::RevealBucket {
+            bucket_index: bucket_index as u8,
+            min: callback_bucket.min,
+            max: callback_bucket.max,
+            picked,
+        },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: prompt.clone(),
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        source_kind,
+        callback: Box::new({
+            let buckets = buckets.clone();
+            let prompt = prompt.clone();
+            let final_callback = std::sync::Arc::clone(&final_callback);
+            move |game: &mut Game, action_id: u16| {
+                let reveal_index = action_id.saturating_sub(SEL_REVEAL_START) as usize;
+                let Some(card) = game.revealed_cards.get(reveal_index) else {
+                    return;
+                };
+                let mut next_current = current_for_callback;
+                next_current.push(card.handle());
+
+                if next_current.len() >= callback_bucket.max as usize {
+                    let mut next_picked = picked_for_callback;
+                    next_picked.push((callback_bucket.bind_as.clone(), next_current));
+                    install_reveal_bucket_step(
+                        game,
+                        buckets,
+                        bucket_index + 1,
+                        next_picked,
+                        Vec::new(),
+                        prompt,
+                        no_duplicate_cards,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        selecting_player,
+                        previous_phase,
+                        final_callback,
+                    );
+                    return;
+                }
+
+                install_reveal_bucket_step(
+                    game,
+                    buckets,
+                    bucket_index,
+                    picked_for_callback,
+                    next_current,
+                    prompt,
+                    no_duplicate_cards,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    selecting_player,
+                    previous_phase,
+                    final_callback,
+                );
+            }
+        }),
+        on_decline: Some(Box::new(move |game: &mut Game| {
+            let mut next_picked = picked_for_decline;
+            next_picked.push((decline_bucket.bind_as.clone(), current_for_decline));
+            install_reveal_bucket_step(
+                game,
+                buckets,
+                bucket_index + 1,
+                next_picked,
+                Vec::new(),
+                prompt,
+                no_duplicate_cards,
+                source_card,
+                source_permanent,
+                source_kind,
+                selecting_player,
+                previous_phase,
+                final_callback,
+            );
+        })),
+    });
 }
 
 // ── ordered permutation trampoline ──────────────────────────────────────────

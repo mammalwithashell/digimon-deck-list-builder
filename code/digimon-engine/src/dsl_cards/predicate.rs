@@ -830,6 +830,17 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    let materials_count = perm.card_sources.len().saturating_sub(1) as u8;
+    if let Some(cap) = pred.materials_count_lte {
+        if materials_count > cap {
+            return false;
+        }
+    }
+    if let Some(floor) = pred.materials_count_gte {
+        if materials_count < floor {
+            return false;
+        }
+    }
     if !pred.zone.is_empty()
         && !pred.zone.contains(if in_breeding {
             &CompiledZone::Breeding
@@ -999,6 +1010,8 @@ fn eval_breeding_permanent_fields(
         && pred.is_unsuspended.is_none()
         && pred.stack_size_lte.is_none()
         && pred.stack_size_gte.is_none()
+        && pred.materials_count_lte.is_none()
+        && pred.materials_count_gte.is_none()
 }
 
 fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {

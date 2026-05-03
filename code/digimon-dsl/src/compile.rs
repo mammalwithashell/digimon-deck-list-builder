@@ -234,6 +234,14 @@ fn compile_distinct_by(d: crate::alt_path::DistinctBy) -> CompiledDistinctBy {
     }
 }
 
+fn compile_attack_target_spec(t: crate::step::AttackTargetSpec) -> CompiledAttackTargetSpec {
+    match t {
+        crate::step::AttackTargetSpec::Any => CompiledAttackTargetSpec::Any,
+        crate::step::AttackTargetSpec::Player => CompiledAttackTargetSpec::Player,
+        crate::step::AttackTargetSpec::Digimon => CompiledAttackTargetSpec::Digimon,
+    }
+}
+
 fn compile_per_selector(
     p: &crate::formula::PerSelector,
     prefix: &str,
@@ -342,6 +350,19 @@ fn compile_formula(
             delta: *delta,
         },
         FormulaSpec::BindingDp { binding_dp } => CompiledFormula::BindingDp(binding_dp.clone()),
+        FormulaSpec::SourceStackDpSum {
+            source_stack_dp_sum,
+        } => CompiledFormula::SourceStackDpSum {
+            target: source_stack_dp_sum.target.clone(),
+            filter: source_stack_dp_sum.filter.as_ref().map(|filter| {
+                Box::new(compile_predicate(
+                    filter,
+                    &format!("{prefix}.source_stack_dp_sum.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+        },
         FormulaSpec::Compound(CompoundFormula::FloorDiv(v)) => CompiledFormula::FloorDiv(
             v.iter()
                 .enumerate()
@@ -1033,6 +1054,8 @@ fn compile_declarative(
                 scope,
                 active_when,
                 trigger,
+                optional: r.optional,
+                once_per_turn: r.once_per_turn,
                 process: compile_replacement_process(&r, prefix, card_id, errors),
                 summary,
                 summary_key,
@@ -1317,6 +1340,12 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
+            of: compile_player_ref(a.of),
+        },
+        S::MayAddTopSecurityToHand(a) => CompiledStep::MayAddTopSecurityToHand {
+            of: compile_player_ref(a.of),
+        },
         S::AddToHandFromReveal(a) => CompiledStep::AddToHandFromReveal {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
@@ -1394,6 +1423,9 @@ fn compile_step(
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashAllSources(a) => CompiledStep::TrashAllSources {
+            target: compile_binding_ref(&a.target),
+        },
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
@@ -1429,6 +1461,9 @@ fn compile_step(
             source_index: compile_binding_ref(&a.source_index),
             cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
         },
+        S::PlaySelectedSourcesFree(a) => CompiledStep::PlaySelectedSourcesFree {
+            source_refs: a.source_refs.clone(),
+        },
         S::EffectInitiatedDigivolve(a) => CompiledStep::EffectInitiatedDigivolve {
             target: compile_binding_ref(&a.target),
             from_hand: match a.source.as_ref().or(a.from_hand.as_ref()) {
@@ -1456,6 +1491,21 @@ fn compile_step(
 
         S::TrashTopSecurity(a) => CompiledStep::TrashTopSecurity {
             of: compile_player_ref(a.of),
+        },
+        S::TrashTopSecurityAndCancelReplacement(a) => {
+            CompiledStep::TrashTopSecurityAndCancelReplacement {
+                of: compile_player_ref(a.of),
+            }
+        }
+        S::PlacePermanentBottomSecurityAndCancelReplacement(a) => {
+            CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
+                of: compile_player_ref(a.of),
+                target: compile_binding_ref(&a.target),
+            }
+        }
+        S::Recover(a) => CompiledStep::Recover {
+            of: compile_player_ref(a.of),
+            count: a.count,
         },
         S::MarkSecurityFaceUp(a) => CompiledStep::MarkSecurityFaceUp {
             of: compile_player_ref(a.of),
@@ -1605,6 +1655,29 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
         },
+        S::SelectRevealBuckets(a) => CompiledStep::SelectRevealBuckets {
+            from: a.from.clone(),
+            buckets: a
+                .buckets
+                .iter()
+                .enumerate()
+                .map(|(i, bucket)| CompiledRevealBucket {
+                    bind_as: bucket.bind_as.clone(),
+                    filter: bucket.filter.as_ref().map(|filter| {
+                        compile_predicate(
+                            filter,
+                            &format!("{prefix}.buckets[{i}].filter"),
+                            card_id,
+                            errors,
+                        )
+                    }),
+                    min: bucket.min.unwrap_or(0),
+                    max: bucket.max.unwrap_or(1),
+                })
+                .collect(),
+            no_duplicate_cards: a.no_duplicate_cards,
+            prompt: a.prompt.clone(),
+        },
         S::SelectSecurity(a) => CompiledStep::SelectSecurity {
             of: compile_player_ref(a.of),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -1736,6 +1809,30 @@ fn compile_step(
         S::Battle(b) => CompiledStep::Battle {
             attacker: compile_binding_ref(&b.attacker),
             defender: compile_binding_ref(&b.defender),
+        },
+        S::MayAttackNow(a) => CompiledStep::MayAttackNow {
+            attacker: compile_binding_ref(&a.attacker),
+            targets: compile_attack_target_spec(a.targets),
+            without_suspending: a.without_suspending,
+            optional: a.optional,
+            prompt: a.prompt.clone(),
+        },
+        S::RefireEffect(a) => CompiledStep::RefireEffect {
+            source: compile_binding_ref(&a.source),
+            timing: if a.timing == "when_digivolving" {
+                a.timing.clone()
+            } else {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.refire_effect.timing"),
+                    message: format!(
+                        "refire_effect only supports timing: when_digivolving, got {}",
+                        a.timing
+                    ),
+                });
+                "when_digivolving".to_string()
+            },
+            optional: a.optional,
         },
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,

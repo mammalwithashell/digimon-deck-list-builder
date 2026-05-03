@@ -299,6 +299,10 @@ pub enum CompiledFormula {
         scope: CompiledPlayerRef,
     },
     BindingDp(String),
+    SourceStackDpSum {
+        target: String,
+        filter: Option<Box<CompiledPredicate>>,
+    },
     RawRust(String),
 }
 
@@ -399,6 +403,8 @@ pub enum CompiledDeclarativeClause {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
         trigger: String,
+        optional: bool,
+        once_per_turn: bool,
         process: Vec<CompiledStep>,
         summary: Option<String>,
         summary_key: Option<String>,
@@ -576,6 +582,12 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    AddTopSecurityToHand {
+        of: CompiledPlayerRef,
+    },
+    MayAddTopSecurityToHand {
+        of: CompiledPlayerRef,
+    },
     AddToHandFromReveal {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
@@ -652,6 +664,9 @@ pub enum CompiledStep {
     TrashTopSource {
         target: CompiledBindingRef,
     },
+    TrashAllSources {
+        target: CompiledBindingRef,
+    },
     Hatch {
         of: CompiledPlayerRef,
     },
@@ -679,6 +694,9 @@ pub enum CompiledStep {
         source_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
     },
+    PlaySelectedSourcesFree {
+        source_refs: String,
+    },
     EffectInitiatedDigivolve {
         target: CompiledBindingRef,
         from_hand: CompiledBindingRef,
@@ -694,6 +712,17 @@ pub enum CompiledStep {
     },
     TrashTopSecurity {
         of: CompiledPlayerRef,
+    },
+    TrashTopSecurityAndCancelReplacement {
+        of: CompiledPlayerRef,
+    },
+    PlacePermanentBottomSecurityAndCancelReplacement {
+        of: CompiledPlayerRef,
+        target: CompiledBindingRef,
+    },
+    Recover {
+        of: CompiledPlayerRef,
+        count: u8,
     },
     MarkSecurityFaceUp {
         of: CompiledPlayerRef,
@@ -814,6 +843,12 @@ pub enum CompiledStep {
         prompt_key: Option<String>,
         optional: bool,
     },
+    SelectRevealBuckets {
+        from: String,
+        buckets: Vec<CompiledRevealBucket>,
+        no_duplicate_cards: bool,
+        prompt: Option<String>,
+    },
     SelectSecurity {
         of: CompiledPlayerRef,
         filter: CompiledPredicate,
@@ -888,6 +923,18 @@ pub enum CompiledStep {
         attacker: CompiledBindingRef,
         defender: CompiledBindingRef,
     },
+    MayAttackNow {
+        attacker: CompiledBindingRef,
+        targets: CompiledAttackTargetSpec,
+        without_suspending: bool,
+        optional: bool,
+        prompt: Option<String>,
+    },
+    RefireEffect {
+        source: CompiledBindingRef,
+        timing: String,
+        optional: bool,
+    },
     EndAttack {
         enabled: bool,
     },
@@ -904,6 +951,21 @@ pub enum CompiledStep {
         consumes: Vec<String>,
         binds: Vec<String>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledRevealBucket {
+    pub bind_as: String,
+    pub filter: Option<CompiledPredicate>,
+    pub min: u8,
+    pub max: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledAttackTargetSpec {
+    Any,
+    Player,
+    Digimon,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

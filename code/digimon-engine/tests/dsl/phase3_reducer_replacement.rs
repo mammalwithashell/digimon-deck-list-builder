@@ -87,6 +87,8 @@ fn compiled_replacement_card(
                 scope: CompiledScope::FaceUp,
                 active_when,
                 trigger: "when_would_be_deleted".into(),
+                optional: false,
+                once_per_turn: false,
                 process,
                 summary: None,
                 summary_key: None,

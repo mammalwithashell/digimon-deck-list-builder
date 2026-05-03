@@ -39,6 +39,8 @@ fn fixture_replacement(trigger: &str, scope: CompiledScope) -> CompiledCard {
                 scope,
                 active_when: None,
                 trigger: trigger.into(),
+                optional: false,
+                once_per_turn: false,
                 process: vec![],
                 summary: None,
                 summary_key: None,

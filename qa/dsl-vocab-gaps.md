@@ -13,6 +13,48 @@ Format per entry:
 - First reported: YYYY-MM-DD
 ```
 
+## Reveal-zone multi-bucket selection
+- Status: RESOLVED on 2026-05-03 for the reusable DSL/runtime primitive. `select_reveal_buckets` now parses and compiles named reveal buckets, validates empty/duplicate/malformed bucket shapes, evaluates bucket predicates against the reveal overlay, installs one `SelectionKind::RevealBucket` pending selection per bucket, and supports `no_duplicate_cards` across buckets without changing action-space or tensor contracts.
+- Bucket results bind as `CardList`; singleton bucket lists are compatible with reveal single-card consumers such as `add_to_hand_from_reveal`.
+- Lowers to engine API: `EffectContext::select_reveal_buckets(Vec<RevealBucketSelection>, prompt, no_duplicate_cards, callback)`.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2e_select_reveal phase2e_select_ordered_permutation phase2b_zone_moves_extra --nocapture`.
+- Remaining related blockers: card-specific TS/Olympos YAML migration and any top-security inherited variants are tracked separately; the reusable multi-bucket reveal selection primitive is closed.
+
+## Source-stack DP sum formula
+- Status: RESOLVED on 2026-05-03 for the narrow reusable formula leaf. `source_stack_dp_sum` now parses, compiles, validates its optional predicate filter, and evaluates by summing printed DP of live source-stack cards below the target permanent's top card. The optional filter reuses existing card predicate evaluation against each source card handle.
+- Implemented DSL formula:
+  ```yaml
+  source_stack_dp_sum:
+    target: self
+    filter: { trait_has: Iliad }
+  ```
+- Lowers to engine formula evaluator: `CompiledFormula::SourceStackDpSum { target, filter }`.
+- Verification: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test dsl -- residual_formula_predicate_vocab group7_formula_batch group7_predicate_batch group6_dynamic_formulas --nocapture`.
+- Remaining related blockers: none for summing matching live source-stack card DP; card-specific YAML authoring remains separate.
+
+## Source-stack trash-all-sources step
+- Status: RESOLVED on 2026-05-03 for the reusable `trash_all_sources` DSL step and runtime path. The step preserves the target permanent's top card, trashes every below-top source, and is now used by production `BT24-040` YAML.
+- Lowers to engine API: `EffectContext::trash_all_sources(target)`.
+- Verification: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test dsl -- source_stack_aggregates --nocapture`; `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`.
+- Remaining related blockers: source-count aggregate predicates and dynamic De-Digivolve amount formulas for other TS/Olympos cards remain separate.
+
+## Permanent-scoped effect suppression modifier
+- Status: RESOLVED on 2026-05-03 for targeted `CannotActivateEffectsByTiming` DSL modifier use. Production `BT24-040` YAML uses it with `CannotSuspend` to lock two selected opponent Digimon/Tamers until the printed expiry.
+- Lowers to engine modifier registry: `ModifierType::CannotActivateEffectsByTiming(EffectTiming::WhenDigivolving)` plus the existing `CannotSuspend` modifier.
+- Verification: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`.
+- Remaining related blockers: aura-wide timing suppression, other printed timings, and unvalidated Venusmon/Queen Device cards remain separate.
+
+## Security Option self-disposition to hand
+- Status: COVERED on 2026-05-03 for the narrow currently-resolving security Option moving itself to hand. The existing DSL step `add_this_option_to_hand: {}` already parses/compiles as `AddThisOptionToHand`, lowers through `zone_moves.rs` to `EffectContext::add_pending_security_to_hand()`, and consumes `Game.pending_security` so the security dispose phase cannot also trash the card.
+- No new disposition marker/API was added. Broader security disposition primitives such as adding an opponent's top security card to hand remain separate tracker entries.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test debug_runner_dsl -- security_dsl_adds_currently_resolving_option_to_hand --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- option_security_disposition --nocapture`.
+
+## Security stack steps: top-security-to-hand and Recovery
+- Status: RESOLVED on 2026-05-03 for the reusable `add_top_security_to_hand` and `recover_from_deck` DSL/runtime steps. Production `BT24-031` and `BT24-101` YAML now exercise top-security-to-hand, trash-top-security, and Recovery branches through behavioral tests.
+- Lowers to engine API: `EffectContext::add_top_security_to_hand(player)` and `EffectContext::recover_from_deck(player, count)`.
+- Verification: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test dsl -- security_stack_steps --nocapture`; `cargo test --manifest-path code\digimon-engine\Cargo.toml --test effect_context -- security_stack_operations --nocapture`; `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- bt24_031 bt24_101 --nocapture`.
+- Remaining related blockers: security-stack search/extraction, face-up security handling, placing the resolving permanent itself into security, and card-specific YAML for `BT24-034`, `BT24-090`, and similar cards remain separate.
+
 ## Zephagamon / Vortexdramon — remaining battle-engine prep gaps
 - Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` now covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that an effect battle deletes the defender through DP battle but is not an attack: it must not trigger Piercing/security and must not leave `pending_attack` populated.
 - Rule boundary: `battle:` is the correct DSL step for effects that say a Digimon battles another Digimon. Do not model these as `attack` or force-follow-up attack effects. Attack-only timings and Piercing security continuation remain tied to declared attacks, not effect battles.
@@ -55,8 +97,9 @@ Format per entry:
 
 ## EX9-032 / EX7-027 / BT22-036 — replacement cause predicate and `active_when` lowering
 - Effect text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
-- Missing DSL verb / step kind / predicate: replacement clauses accept `active_when`, but `lower_replacement` ignores it. The DSL also lacks a replacement-context predicate for "other than by your effects", so this prevention effect cannot be faithfully gated by cause/controller.
-- Lowers to engine API: the replacement evaluator needs to expose replacement cause/controller to DSL predicates and apply `active_when` before presenting the cost/selection branch.
+- Status: PARTIALLY RESOLVED on 2026-05-03. Replacement clauses now preserve replacement subject/source/cause predicates through lowering, apply `active_when`, and can protect a different subject than the replacement source. This is verified for `BT24-040`/`BT24-101`-style TS protection and `BT17-097` Delay replacement continuation.
+- Remaining missing DSL verb / step kind / predicate: Puppet/token-specific cost bodies and card-specific EX9-032 / EX7-027 / BT22-036 production YAML/tests remain open until authored and verified.
+- Lowers to engine API: replacement evaluator context plus `EffectContext` replacement outcome setters such as `cancel_leave`.
 - Suggested DSL syntax:
   ```yaml
   - kind: replacement
@@ -74,7 +117,8 @@ Format per entry:
       - delete_permanent: { target: cost }
       - cancel_replacement: {}
   ```
-- Gap kind: hybrid (DSL predicate/lowering plus engine replacement-context plumbing).
+- Gap kind: partially resolved hybrid. The reusable replacement-context predicate/lowering slice is closed; unimplemented card bodies remain card-authoring work unless they surface new reusable primitives.
+- Verification: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test replacements -- cross_permanent context_predicates route_replacements nested_select_substrate --nocapture`; `cargo test --manifest-path code\digimon-engine\Cargo.toml --test option_flow -- replacement_integration::bt17_097 --nocapture`; `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- bt24_040 bt24_101 --nocapture`.
 - First reported: 2026-04-28 (Puppets archetype assessment)
 
 ## Chaos Control — effect-initiated digivolve from trash
@@ -163,6 +207,7 @@ Format per entry:
 - Updated 2026-04-29: the OnDigivolve half now has runtime event-card and event-target context for normal `Game::digivolve_from_hand`; `event_card_trait_has` reads the new top card, and `target: event_target` binds the just-digivolved permanent. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_card_trait_predicate_matches_new_top_card` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_target_binding_resolves_digivolved_permanent`.
 - Updated 2026-04-29: `Game::return_to_hand` source disposition now carries `event_card` / `event_source_card` for the trashed source and `event_host_card` for the former host top card, so `event_card_trait_has` can match sources trashed by that path. Runtime `event_host_permanent()` only exposes the stored host handle if it still resolves to that same card. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_digivolution_card_trashed_context_carries_host_and_trashed_source source_trash_host_context_does_not_alias_shifted_permanent` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolution_card_trashed_event_card_trait_predicate_matches_trashed_source`. Remaining source-trash gaps include cross-permanent source selection, source-trash paths other than `return_to_hand`, and first-class DSL leaves for trashed-source / host-permanent predicates.
 - Updated 2026-05-02: first-class predicate leaves now compile for `event_target_owner`, `host_permanent_trait_has`, `trashed_source_trait_has`, and `trashed_source_card_id_is`; runtime coverage exercises `TriggerSource::SourceTrashedFromStack` with live host/trashed-source context. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3d_event_context`. Remaining source-trash producer paths not covered here should stay open until each producer proves it supplies host/source context rather than relying on fallback guessing.
+- Updated 2026-05-03: Task 6 audit found the reusable source-trash payload and DSL predicate leaves already implemented. Added focused regression coverage that an actual `EffectContext::trash_card_source` producer supplies the exact trashed source card and live host into `trashed_source_trait_has`, `trashed_source_card_id_is`, `host_permanent_trait_has`, and `event_target_owner`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_context_bindings group6_dynamic_formulas group7_predicate_batch --nocapture`. No new event payload, predicate, formula, action, or tensor primitive was added.
 - Lowers to engine API: `TriggerContext` / event payload fields containing `{host_permanent, trashed_card, trashed_source_index, cause_player}` plus predicate evaluation against those fields.
 - Suggested DSL syntax:
   ```yaml
@@ -197,7 +242,7 @@ Format per entry:
 - Suggested DSL syntax: keep the existing `alt_path_registration` shape and require lowering for inherited clauses, including `timing: end_of_your_turn`, `kind: dna_digivolve`, material filters, target hand-card filter, and cost override.
 - Also blocks: `BT12-021` Veemon and `BT12-047` Wormmon in BG Imperial. Their inherited text is "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
 - Covered by: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_alt_path_registration`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor -- dna`.
-- Remaining limits: formula costs, extra costs, `from` gates, burst end steps, `stacks_unsuspended`, non-battle-area materials, repeat/unbounded materials, `ignore_requirements`, `source_treated_as`, marker routes, and non-DNA alt-path kinds are intentionally not consumed by this v1 action hook.
+- Remaining limits: formula costs, extra costs, `from` gates, burst end steps, `stacks_unsuspended`, non-battle-area materials, repeat/unbounded materials, `ignore_requirements`, `source_treated_as` for DNA routes, marker routes, and non-DNA alt-path kinds beyond normal digivolve are intentionally not consumed by this v1 action hook. Normal digivolve `source_treated_as` routes are covered separately by the 2026-05-03 Hybrid/Tamer closure.
 - First reported: 2026-04-28
 
 ## BG Imperial DNA cards — YAML `dna_costs` authoring / production data population
@@ -307,16 +352,19 @@ Format per entry:
 ## BT24-082 / BT21-081 — Immediate optional attack within effect resolution  [G-MAY-ATTACK-NOW]
 - Effect text (BT24-082): "[Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] Digimon, by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack."
 - Effect text (BT21-081): "[End of Your Turn] By suspending this Tamer, 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains <Piercing> for the turn. Then, that Digimon attacks."
-- Missing DSL verb / step kind / predicate: No DSL verb for an immediate attack (optional or mandatory) on a specific named Digimon mid-effect-resolution. The DCGO fires `SelectAttackEffect` (BT24-082) or `SetCanNotSelectNotAttack` (BT21-081) within the effect coroutine — i.e., an in-effect attack, not an end-of-turn attack-window action.
-- Engine gap: `ModifierType::MayAttack` and `ModifierType::ForceAttack` exist in `enums.rs` but are NOT in `lookup_modifier_type` (`modifier_map.rs`), so they cannot be granted via `add_modifier:`. Even if registered, these modifiers target the EOT Execute/Vortex attack window — they don't trigger an immediate, mid-effect attack on a specific permanent.
-- Lowers to engine API: A new `EffectContext::may_attack_now(target: PermanentHandle)` / `force_attack_now(target: PermanentHandle)` primitive would be needed, plus a corresponding DSL step verb.
+- Status: RESOLVED for the reusable immediate in-effect attack primitive on 2026-05-03. The DSL now has `may_attack_now`, which lowers to `EffectContext::may_attack_now_optional(...)` and installs an existing-action-ID pending target selection mid-effect-resolution.
+- Engine notes: `ModifierType::MayAttack` / `ForceAttack` remain EOT-window modifiers and are still not the right vehicle for this specific immediate prompt. This gap is closed by a distinct effect-context primitive, not by registering those modifiers.
+- Lowers to engine API: `EffectContext::may_attack_now_optional(attacker, targets, without_suspending, optional, prompt)`; mandatory "then attacks" is `optional: false`, optional "may attack" is `optional: true`.
 - Suggested DSL syntax:
   ```yaml
-  - may_attack_now: { target: tgt }          # optional — player may choose to attack
-  - force_attack_now: { target: tgt }         # mandatory — Digimon must attack
+  - may_attack_now:
+      attacker: tgt
+      targets: any        # any | player | digimon
+      optional: true      # false for mandatory "then attacks"
+      without_suspending: false
   ```
-- Gap kind: hybrid (DSL lacks the verb AND engine lacks the mid-effect attack primitive).
-- Workaround: Omit the "may attack" / "then attacks" sub-clause. Test `#[ignore]`'d with `G-MAY-ATTACK-NOW` tag.
+- Gap kind: closed for immediate attack prompts. Persistent player-scoped grants such as `MayAttackPlayerOnly` and cross-side granted forced attacks remain separate engine gaps.
+- Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- effect_granted_attack --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- effect_granted_attack --nocapture`.
 - First reported: 2026-04-27 (BT24-082 batch-implement-cards-rust-dsl)
 
 ---
@@ -398,15 +446,14 @@ Format per entry:
 
 ## P-137 — Opponent adds top security card to hand  [G-ADD-TOP-SECURITY-TO-HAND]
 - Effect text: "[Your Turn][Once Per Turn] When this Digimon's attack target is switched, your opponent adds the top card of their security stack to the hand."
-- Missing DSL verb / step kind / predicate: `add_top_security_to_hand` — a verb to move the top security card to the owner's hand (as opposed to `trash_top_security` which trashes it). No `add_top_security_to_hand` step exists in `digimon-dsl/src/step.rs` (`StepSpec` enum).
-- Companion engine gap: `EffectContext` has `trash_top_security(player)` but no `add_top_security_to_hand(player)`. The engine move primitive (pop from security vec, push to hand vec, fire `OnLoseSecurity` + `OnOpponentSecurityRemoved` events) must be implemented as a new method on `EffectContext` before a DSL verb can lower to it.
-- Lowers to engine API (proposed): `EffectContext::add_top_security_to_hand(player: PlayerId) -> bool` — pops `security.last()`, pushes to `hand`, fires `EffectTiming::OnLoseSecurity` via `SecurityRevealed` and `EffectTiming::OnOpponentSecurityRemoved` via `PlayerBattleArea(controller)`.
+- Status: RESOLVED for the reusable DSL/runtime primitive on 2026-05-03. `add_top_security_to_hand` now moves the top security card to the owner's hand and preserves the security-loss observer chain. P-137 production YAML still needs a card-level cleanup pass if it retains an old raw-rust workaround.
+- Lowers to engine API: `EffectContext::add_top_security_to_hand(player: PlayerId) -> bool` — pops `security.last()`, pushes to `hand`, fires `EffectTiming::OnLoseSecurity` via `SecurityRevealed` and `EffectTiming::OnOpponentSecurityRemoved` via `PlayerBattleArea(controller)`.
 - Suggested DSL syntax:
   ```yaml
   - add_top_security_to_hand: { of: opponent }
   ```
-- Gap kind: hybrid (DSL lacks the verb AND engine lacks the `EffectContext` method; only `trash_top_security` exists).
-- Workaround: `raw_rust: { fn: p_137_opp_adds_top_security_to_hand }` registered in `src/cards/raw_rust/mod.rs`. When closed: replace the `raw_rust:` step with the native DSL verb.
+- Gap kind: resolved reusable DSL/engine primitive; card-local raw_rust removal remains a separate authoring cleanup if present.
+- Verification: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test dsl -- security_stack_steps --nocapture`; `cargo test --manifest-path code\digimon-engine\Cargo.toml --test effect_context -- security_stack_operations --nocapture`.
 - First reported: 2026-04-27 (P-137 batch-implement-cards-rust-dsl, Medusamon Batch 8)
 
 ---

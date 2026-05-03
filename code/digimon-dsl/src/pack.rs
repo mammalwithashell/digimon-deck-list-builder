@@ -274,6 +274,13 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         | CompiledStep::LinkToOwnDigimon { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
+        CompiledStep::SelectRevealBuckets { buckets, .. } => {
+            for bucket in buckets {
+                if let Some(filter) = &bucket.filter {
+                    collect_predicate_raw_rust_fns(filter, names);
+                }
+            }
+        }
         CompiledStep::If {
             condition,
             then,
@@ -386,6 +393,11 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         }
         CompiledFormula::BasePerDelta { per, .. } => {
             collect_per_selector_raw_rust_fns(per, names);
+        }
+        CompiledFormula::SourceStackDpSum { filter, .. } => {
+            if let Some(filter) = filter {
+                collect_predicate_raw_rust_fns(filter, names);
+            }
         }
         CompiledFormula::Literal(_)
         | CompiledFormula::Aggregate(_)

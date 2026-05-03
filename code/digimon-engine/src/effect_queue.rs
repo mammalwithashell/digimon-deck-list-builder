@@ -23,6 +23,7 @@ use crate::action::space::{
     BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS,
 };
 use crate::card_source::CardHandle;
+use crate::effect::ReFireableEffect;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{
     CardKind, DelayTrigger, EffectSourceKind, EffectTiming, GamePhase, ModifierType, PlayerId,
@@ -31,8 +32,9 @@ use crate::game::{DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind
 use crate::permanent::{OptionState, PermanentHandle};
 use crate::replacement::ReplacementCause;
 use crate::selection::{
-    EffectChoiceEntry, PendingEffectSecurityRemoval, PendingPayCostEffect, PendingSecurity,
-    PendingSelection, QueuedEffect, SecurityRemovalDestination, SelectionKind, TriggerSource,
+    DeclineCallback, EffectChoiceEntry, PendingEffectSecurityRemoval, PendingPayCostEffect,
+    PendingSecurity, PendingSelection, QueuedEffect, SecurityRemovalDestination, SelectionKind,
+    TriggerSource,
 };
 use crate::trigger_context::TriggerContext;
 
@@ -79,6 +81,87 @@ fn permanent_activation_blocked_for_timing(
 impl Game {
     // ─── Public API ─────────────────────────────────────────────────
 
+    fn queued_refired_effect(&self, effect: ReFireableEffect) -> QueuedEffect {
+        let is_turn_player = effect.controller == self.turn_player();
+        QueuedEffect {
+            source_card: effect.source_card,
+            source_permanent: Some(effect.source),
+            source_kind: effect.source_kind,
+            controller: effect.controller,
+            timing: effect.timing,
+            trigger_context: None,
+            effect_slot: effect.effect_id,
+            is_optional: false,
+            is_turn_player,
+            card_id: effect.card_id,
+            allow_below_top_liveness: false,
+        }
+    }
+
+    pub(crate) fn run_refired_effect(&mut self, effect: ReFireableEffect) {
+        let qe = self.queued_refired_effect(effect);
+        self.run_queued_effect(qe);
+    }
+
+    pub(crate) fn install_refire_effect_selection(
+        &mut self,
+        chooser: PlayerId,
+        effects: Vec<ReFireableEffect>,
+        optional: bool,
+    ) {
+        if effects.is_empty() {
+            return;
+        }
+
+        let capped = effects.len().min(HAND_MAIN_LIMIT);
+        let mut valid_action_ids: Vec<u16> = Vec::with_capacity(capped);
+        let mut choices: Vec<EffectChoiceEntry> = Vec::with_capacity(capped);
+        for (pos, effect) in effects.iter().take(capped).enumerate() {
+            let action_id = HAND_EFFECT_START + pos as u16;
+            let observation_metadata = self
+                .effects_for_card(&effect.card_id, effect.source_card)
+                .and_then(|effects| {
+                    effects
+                        .get(effect.effect_id as usize)
+                        .map(|effect| effect.observation_metadata)
+                })
+                .unwrap_or_default();
+            valid_action_ids.push(action_id);
+            choices.push(EffectChoiceEntry {
+                label: format!("{} {}", effect.card_id, effect.timing_key),
+                action_id,
+                source_card: Some(effect.source_card),
+                source_kind: Some(effect.source_kind),
+                timing: Some(effect.timing),
+                is_optional: optional,
+                observation_metadata,
+            });
+        }
+
+        let head = effects[0].clone();
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::EffectChoice,
+            selecting_player: chooser,
+            previous_phase,
+            valid_action_ids,
+            is_optional: optional,
+            prompt: "Choose an effect to activate".to_string(),
+            effect_choices: Some(choices),
+            source_card: head.source_card,
+            source_permanent: Some(head.source),
+            source_kind: head.source_kind,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
+                if let Some(effect) = effects.get(pos).cloned() {
+                    game.run_refired_effect(effect);
+                }
+            }),
+            on_decline: optional.then(|| Box::new(|_game: &mut Game| {}) as DeclineCallback),
+        });
+    }
+
     /// Collect every effect on `source` whose timing matches `timing` and
     /// whose `is_*` flag matches the timing, append them to `effect_queue`.
     ///
@@ -107,6 +190,16 @@ impl Game {
             TriggerSource::SecurityRevealed { defender, card } => {
                 let trigger_context = self.trigger_context_for_source(&source, None);
                 self.enqueue_from_security_card(timing, defender, card, Some(trigger_context));
+                if timing == EffectTiming::OnLoseSecurity {
+                    let count = self.player(defender).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player: defender,
+                            index: i as u8,
+                        };
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
             }
             TriggerSource::OnSecurityCheck { defender, .. } => {
                 // Observer timing: scan every permanent in the defender's

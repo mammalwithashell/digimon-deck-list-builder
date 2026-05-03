@@ -326,6 +326,10 @@ pub struct ReplacementBody {
     pub trigger: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timing: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub once_per_turn: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost: Option<ReplacementCostBody>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -1,6 +1,7 @@
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
+use std::collections::HashMap;
 
 use crate::card_data::CardData;
 use crate::card_source::CardSource;
@@ -116,6 +117,9 @@ pub struct Game {
     pub winner: Option<PlayerId>,
     /// Shared card data store (all cards in the game reference into this).
     pub card_data: Vec<CardData>,
+    /// Compiled DSL alternate digivolution paths keyed by result card id.
+    #[cfg(feature = "dsl-yaml-loader")]
+    pub(crate) alt_path_registry: HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>,
     /// Active modifiers (DP buffs, granted keywords, etc.) attached to permanents.
     pub modifiers: ModifierRegistry,
     /// Card effect registry — maps card_id to effect implementations.
@@ -452,11 +456,26 @@ impl Game {
 
         let mut effective_card_data = all_card_data.clone();
         #[cfg(feature = "dsl-yaml-loader")]
+        let mut alt_path_registry: HashMap<
+            String,
+            Vec<digimon_dsl::compiled::CompiledAltPath>,
+        > = HashMap::new();
+        #[cfg(feature = "dsl-yaml-loader")]
         if let Ok(dsl_registry) = crate::dsl_registry::from_embedded() {
             crate::dsl_bridge::enrich_card_data_with_dsl_alt_paths(
                 &mut effective_card_data,
                 &dsl_registry,
             );
+            alt_path_registry = dsl_registry
+                .iter()
+                .filter_map(|(card_id, compiled)| {
+                    if compiled.alt_paths.is_empty() {
+                        None
+                    } else {
+                        Some((card_id.clone(), compiled.alt_paths.clone()))
+                    }
+                })
+                .collect();
         }
 
         // Build card data store (flat vec, indexed by position)
@@ -551,6 +570,8 @@ impl Game {
             game_over: false,
             winner: None,
             card_data: card_data_store,
+            #[cfg(feature = "dsl-yaml-loader")]
+            alt_path_registry,
             modifiers: ModifierRegistry::new(),
             effect_registry: build_registry(),
             formula_extensions: FormulaExtensionRegistry::empty(),

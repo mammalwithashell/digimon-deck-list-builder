@@ -143,8 +143,7 @@ effects:
     let errs = validate(&spec, &ctx(&reg)).unwrap_err();
     assert!(
         errs.iter()
-            .any(|e| e.path.contains("overclock_cost_filter")
-                && e.message.contains("Overclock")),
+            .any(|e| e.path.contains("overclock_cost_filter") && e.message.contains("Overclock")),
         "expected non-Overclock filter to be rejected, got: {errs:?}"
     );
 }
@@ -170,8 +169,9 @@ effects:
     let reg = StubRegistry::empty();
     let errs = validate(&spec, &ctx(&reg)).unwrap_err();
     assert!(
-        errs.iter().any(|e| e.path.contains("overclock_cost_filter.has_keyword")
-            && e.message.contains("NotARealKeyword")),
+        errs.iter()
+            .any(|e| e.path.contains("overclock_cost_filter.has_keyword")
+                && e.message.contains("NotARealKeyword")),
         "expected invalid predicate inside overclock_cost_filter to be reported, got: {errs:?}"
     );
 }
@@ -353,8 +353,9 @@ effects:
     let reg = StubRegistry::empty();
     let errs = validate(&spec, &ctx(&reg)).unwrap_err();
     assert!(
-        errs.iter().any(|e| e.path.contains("dp_modifier_fn")
-            && e.message.contains("DP-dependent active_when")),
+        errs.iter()
+            .any(|e| e.path.contains("dp_modifier_fn")
+                && e.message.contains("DP-dependent active_when")),
         "expected dynamic DP aura DP-dependent active_when rejection, got: {errs:?}"
     );
 }

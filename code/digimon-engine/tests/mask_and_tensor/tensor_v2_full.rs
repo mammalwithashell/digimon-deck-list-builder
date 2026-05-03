@@ -6,8 +6,8 @@ use digimon_engine::observation::{
     parse_observation_profile, ObservationProfileId,
 };
 use digimon_engine::selection::{PendingSelection, SelectionKind};
-use digimon_engine::tensor_profiles::STANDARD_FULL_V2_PROFILE_ID;
 use digimon_engine::tensor_profiles::standard::{v2_full, v2_lite};
+use digimon_engine::tensor_profiles::STANDARD_FULL_V2_PROFILE_ID;
 use digimon_engine::tensor_v2_full::build_tensor_standard_full_v2;
 use digimon_engine::tensor_v2_lite::build_tensor_standard_lite_v2;
 
@@ -26,7 +26,10 @@ fn v2_full_tensor_has_expected_size() {
 fn observation_dispatch_supports_standard_full_v2_without_changing_default() {
     let (game, registry) = sample_game_with_known_cards();
 
-    assert_eq!(default_observation_profile(), ObservationProfileId::StandardLiteV2);
+    assert_eq!(
+        default_observation_profile(),
+        ObservationProfileId::StandardLiteV2
+    );
 
     let profile_id = parse_observation_profile(STANDARD_FULL_V2_PROFILE_ID).unwrap();
     assert_eq!(profile_id, ObservationProfileId::StandardFullV2);

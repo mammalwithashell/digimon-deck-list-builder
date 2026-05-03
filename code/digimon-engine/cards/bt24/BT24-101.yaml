@@ -1,0 +1,78 @@
+card: BT24-101
+name: Jupitermon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 13000
+traits: [Shaman, Olympos XII, Iliad, TS]
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: yellow
+    cost: 5
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: TS
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - name_contains: Aegiochusmon
+    cost:
+      formula:
+        base: 0
+        per:
+          card_count_in_zone:
+            of: you
+            zone: security
+        delta: 1
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "Trash own top security, -13000 DP, then Recovery +2 at <=1 security"
+    process:
+      - trash_top_security: { of: you }
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Select 1 opponent Digimon to get -13000 DP"
+      - add_dp_modifier:
+          target: dp_target
+          value: -13000
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { security_count_lte: 1 }
+          then:
+            - recover: { of: you, count: 2 }
+
+  - when: on_lose_security
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_owner: you
+    summary: "[All Turns][OPT] When your security stack is removed from, trash opponent top security"
+    process:
+      - trash_top_security: { of: opponent }
+
+  - kind: replacement
+    timing: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - any_of:
+            - kind: digimon
+            - kind: tamer
+        - trait_has: TS
+        - security_count_gte: 1
+    summary: "[All Turns][OPT] By trashing top security, a TS Digimon or Tamer does not leave"
+    process:
+      - trash_top_security_and_cancel_replacement: { of: you }

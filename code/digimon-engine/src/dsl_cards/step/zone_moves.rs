@@ -8,6 +8,67 @@ use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
+use crate::enums::{GamePhase, PlayerId};
+use crate::selection::{PendingSelection, SelectionKind};
+
+fn singleton_card(resolved: ResolvedBinding) -> Option<crate::card_source::CardHandle> {
+    match resolved {
+        ResolvedBinding::Card(h) => Some(h),
+        ResolvedBinding::CardList(cards) if cards.len() == 1 => cards.first().copied(),
+        _ => None,
+    }
+}
+
+fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_player: PlayerId) {
+    use crate::action::space::{MAX_SECURITY, SEL_MY_SECURITY_START, SEL_OPP_SECURITY_START};
+
+    let security_len = ctx.game.player(target_player).security.len();
+    if security_len == 0 {
+        return;
+    }
+
+    let base = if target_player == ctx.player {
+        SEL_MY_SECURITY_START
+    } else {
+        SEL_OPP_SECURITY_START
+    };
+    let top_index = security_len
+        .saturating_sub(1)
+        .min(MAX_SECURITY.saturating_sub(1));
+    let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
+    let controller = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let previous_phase = ctx.game.current_phase;
+
+    ctx.game.current_phase = GamePhase::SelectSecurity;
+    ctx.game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::Security,
+        selecting_player,
+        previous_phase,
+        valid_action_ids: vec![base + top_index as u16],
+        is_optional: true,
+        prompt: "Add top security to hand".to_string(),
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        source_kind,
+        callback: Box::new(move |game, _action_id| {
+            let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                controller,
+                override_pin,
+            );
+            cb_ctx.add_top_security_to_hand(target_player);
+        }),
+        on_decline: Some(Box::new(|_game| {})),
+    });
+}
 
 /// Returns `true` if `step` is a zone-move family handled here. Unknown
 /// steps fall through (the caller may try other families).
@@ -51,6 +112,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::AddTopSecurityToHand { of } => {
+            let p = resolve_player(ctx, *of);
+            ctx.add_top_security_to_hand(p);
+            true
+        }
+        CompiledStep::MayAddTopSecurityToHand { of } => {
+            let p = resolve_player(ctx, *of);
+            install_may_add_top_security_to_hand(ctx, p);
+            true
+        }
         CompiledStep::AddToHandFromDeck { of, card } => {
             // Phase 2b has no way to bind a deck card (no SelectDeck variant
             // and RevealTopDeck binds into the reveal pool, not deck). The
@@ -73,7 +144,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let ResolvedBinding::Card(h) = resolved {
+            if let Some(h) = singleton_card(resolved) {
                 ctx.add_to_hand_from_reveal(p, h);
             }
             true
@@ -84,12 +155,18 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
 
+        CompiledStep::Recover { of, count } => {
+            let p = resolve_player(ctx, *of);
+            ctx.recover_from_deck(p, *count);
+            true
+        }
+
         CompiledStep::TrashFromReveal { of, card } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let ResolvedBinding::Card(h) = resolved {
+            if let Some(h) = singleton_card(resolved) {
                 ctx.trash_from_reveal(p, h);
             }
             true
@@ -104,12 +181,19 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
 
+        CompiledStep::PlaySelectedSourcesFree { source_refs } => {
+            if let Some(source_refs) = bindings.get_source_refs(source_refs) {
+                ctx.play_selected_sources_without_cost(source_refs);
+            }
+            true
+        }
+
         CompiledStep::ReturnToDeckFromReveal { of, card, position } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let ResolvedBinding::Card(h) = resolved {
+            if let Some(h) = singleton_card(resolved) {
                 ctx.return_to_deck_from_reveal(p, h, super::map_stack_position(*position));
             }
             true
@@ -131,15 +215,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         bindings.insert_card(name, h);
                     }
                 }
+            } else if let Some(name) = bind_as {
+                bindings.insert_card_list(name, handles);
             }
-            // Multi-card reveal (count > 1): the reveal pool is populated for
-            // subsequent SelectReveal steps, but Phase 2b does not support
-            // multi-bindings. The pool is observable via ctx.revealed() and
-            // subsequent PlaceRemainderOnDeck / AddToHandFromReveal steps can
-            // consume it. Multi-card bind_as support is deferred to Phase 2c.
-            // (The `zone` field selects which zone is revealed; the engine's
+            // The `zone` field selects which zone is revealed; the engine's
             // `reveal_top_deck` always reveals from the deck — full zone routing
-            // is likewise Phase 2c scope.)
+            // is Phase 2c scope.
             true
         }
 

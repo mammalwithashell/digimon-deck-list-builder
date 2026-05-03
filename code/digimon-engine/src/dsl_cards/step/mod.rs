@@ -7,6 +7,7 @@ pub mod as_selecting_player;
 pub mod combat;
 pub mod control_flow;
 pub mod draw;
+pub mod effects;
 pub mod iteration;
 pub mod memory;
 pub mod modifiers;
@@ -290,9 +291,20 @@ pub fn run_steps_with_runtime(
             continue;
         }
 
-        // Selection steps install the remainder as their callback and return.
-        if selections::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
-            return RunOutcome::Parked;
+        // Selection steps either install the remainder as their callback, no-op
+        // and continue, or complete their captured tail synchronously.
+        match selections::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
+            selections::InstallResult::NotSelection => {}
+            selections::InstallResult::Continue => {
+                i += 1;
+                continue;
+            }
+            selections::InstallResult::TailAlreadyRan => {
+                return RunOutcome::Synchronous;
+            }
+            selections::InstallResult::Parked => {
+                return RunOutcome::Parked;
+            }
         }
 
         // Synchronous families — execute and advance.
@@ -353,6 +365,9 @@ pub fn run_step_with_runtime(
         return;
     }
     if combat::try_run(step, ctx, bindings) {
+        return;
+    }
+    if effects::try_run(step, ctx, bindings) {
         return;
     }
     if replacement_outcome::try_run(step, ctx, bindings) {

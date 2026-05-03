@@ -6,7 +6,7 @@ use digimon_dsl::compiled::{CompiledPlayerRef, CompiledPredicate, CompiledStep, 
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
-use digimon_engine::dsl_cards::step::run_steps;
+use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
 use digimon_engine::effect_context::EffectContext;
 
 use crate::phase2d_helpers::resolve_count_capped_picks;
@@ -80,5 +80,47 @@ fn multi_pick_binds_card_list_for_per_selected() {
         runner.game.memory,
         memory_before + 2,
         "PerSelected over the 2 picks should have run gain_memory(1) twice"
+    );
+}
+
+#[test]
+fn empty_multi_pick_runs_tail_once_synchronously() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .hand(0, &["SRC"])
+        .build();
+
+    let src_card = runner.game.players[0].hand[0].handle();
+    let memory_before = runner.game.memory;
+    let steps = vec![
+        CompiledStep::SelectCountCappedMulti {
+            of: CompiledPlayerRef::Opponent,
+            zone: CompiledZone::Trash,
+            max: 2,
+            filter: CompiledPredicate::default(),
+            bind_as: Some("picks".to_string()),
+            prompt: "Pick up to 2".to_string(),
+            prompt_key: None,
+            optional_zero: false,
+            distinct_by: None,
+        },
+        CompiledStep::GainMemory(1),
+    ];
+
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        let mut bindings = Bindings::new();
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Synchronous);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "empty count-capped selection should not park"
+    );
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 1,
+        "empty count-capped selection should run its tail exactly once"
     );
 }

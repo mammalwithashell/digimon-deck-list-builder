@@ -506,6 +506,19 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::RefireEffect(args) => {
+            validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
+            if args.timing != "when_digivolving" {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.timing"),
+                    message: format!(
+                        "refire_effect only supports timing: when_digivolving, got {}",
+                        args.timing
+                    ),
+                });
+            }
+        }
         StepSpec::AddDpModifier(args) => {
             validate_modifier_value(
                 &args.value,
@@ -619,6 +632,49 @@ fn validate_step(
                 ctx,
                 errors,
             );
+        }
+        StepSpec::SelectRevealBuckets(args) => {
+            if args.buckets.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.buckets"),
+                    message: "select_reveal_buckets requires at least one bucket".into(),
+                });
+            }
+            let mut seen = std::collections::BTreeSet::new();
+            for (i, bucket) in args.buckets.iter().enumerate() {
+                if !seen.insert(bucket.bind_as.clone()) {
+                    errors.push(ValidationError {
+                        card_id: card_id.into(),
+                        path: format!("{prefix}.buckets[{i}].bind_as"),
+                        message: format!(
+                            "select_reveal_buckets duplicate bucket bind_as: {}",
+                            bucket.bind_as
+                        ),
+                    });
+                }
+                let min = bucket.min.unwrap_or(0);
+                let max = bucket.max.unwrap_or(1);
+                if min > max {
+                    errors.push(ValidationError {
+                        card_id: card_id.into(),
+                        path: format!("{prefix}.buckets[{i}]"),
+                        message: format!(
+                            "select_reveal_buckets bucket {} has min greater than max",
+                            bucket.bind_as
+                        ),
+                    });
+                }
+                if let Some(filter) = &bucket.filter {
+                    validate_predicate(
+                        filter,
+                        &format!("{prefix}.buckets[{i}].filter"),
+                        card_id,
+                        ctx,
+                        errors,
+                    );
+                }
+            }
         }
         StepSpec::SelectMaterial(args) => {
             validate_predicate(
@@ -783,6 +839,19 @@ fn validate_formula(
         FormulaSpec::BasePerDelta { per, .. } => {
             validate_per_selector(per, &format!("{prefix}.per"), card_id, ctx, errors);
         }
+        FormulaSpec::SourceStackDpSum {
+            source_stack_dp_sum,
+        } => {
+            if let Some(filter) = &source_stack_dp_sum.filter {
+                validate_predicate(
+                    filter,
+                    &format!("{prefix}.source_stack_dp_sum.filter"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+        }
         FormulaSpec::Literal(_)
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
@@ -823,6 +892,7 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
             | CompoundFormula::Min(args),
         ) => args.iter().any(formula_uses_dp_aggregate),
         FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
+        FormulaSpec::SourceStackDpSum { .. } => false,
         FormulaSpec::Literal(_)
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))

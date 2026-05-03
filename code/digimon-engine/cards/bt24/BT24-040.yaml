@@ -1,0 +1,93 @@
+card: BT24-040
+name: Venusmon
+kind: digimon
+level: 6
+color: [yellow, blue]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: TS
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition: { security_count_lte: 3 }
+    amount: 5
+    summary: "When played at <=3 security, reduce play cost by 5"
+
+  - when: [on_play, when_digivolving]
+    summary: "Trash all sources of 1 opponent Digimon, then lock 2 opponent Digimon/Tamers"
+    process:
+      - select_opponent_permanent:
+          bind_as: source_stack
+          filter: { kind: digimon }
+          prompt: "Trash all digivolution cards of 1 opponent Digimon"
+      - trash_all_sources: { target: source_stack }
+      - select_opponent_permanent:
+          bind_as: lock_1
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose an opponent Digimon or Tamer to lock"
+      - add_modifier:
+          target: lock_1
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: lock_1
+          modifier: CannotActivateWhenDigivolvingEffects
+          value: 1
+          expiry: end_of_opponents_turn
+      - select_opponent_permanent:
+          bind_as: lock_2
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - not_in_binding: lock_1
+          prompt: "Choose another opponent Digimon or Tamer to lock"
+      - add_modifier:
+          target: lock_2
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: lock_2
+          modifier: CannotActivateWhenDigivolvingEffects
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - kind: replacement
+    timing: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - trait_has: TS
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[All Turns][OPT] Place another sourceless Digimon as bottom security so your TS Digimon does not leave"
+    process:
+      - select_any_permanent:
+          bind_as: cost_body
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+              - not_in_binding: replacement_subject
+          prompt: "Place another sourceless Digimon as bottom security"
+      - place_permanent_bottom_security_and_cancel_replacement:
+          of: you
+          target: cost_body

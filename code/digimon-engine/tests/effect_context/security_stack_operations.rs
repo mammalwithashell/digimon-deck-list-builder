@@ -271,6 +271,32 @@ fn trash_top_security_fires_removed_cards_on_lose_security_once() {
 }
 
 #[test]
+fn trash_top_security_fires_defenders_battle_area_on_lose_security_once() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("OBS", "Observer"))
+        .add_card(make_test_card("SEC", "Security"))
+        .security(0, &["SEC"])
+        .memory(0)
+        .start();
+    runner.register_effect("OBS", Arc::new(LoseSecurityGainTwo));
+    runner.place_on_field(0, "OBS", Some(0));
+
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        assert!(ctx.trash_top_security(0));
+    }
+
+    assert_eq!(
+        runner.game.memory, 2,
+        "OnLoseSecurity battle-area observer should fire when its controller loses security"
+    );
+    assert_eq!(runner.game.players[0].security.len(), 0);
+    assert_eq!(runner.game.players[0].trash.len(), 1);
+}
+
+#[test]
 fn trash_top_security_pending_to_hand_does_not_duplicate_removed_card() {
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("SEC", "Security"))
@@ -464,5 +490,73 @@ fn place_on_security_bottom_from_trash_preserves_owner_and_does_not_fire_loss_ob
     assert_eq!(
         runner.game.players[0].security[0].owner, 1,
         "the recovered card keeps its original owner"
+    );
+}
+
+#[test]
+fn add_top_security_to_hand_moves_top_card_and_fires_loss_observer() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("OBS", "Observer"))
+        .add_card(make_test_card("BOTTOM", "Bottom"))
+        .add_card(make_test_card("TOP", "Top"))
+        .security(0, &["BOTTOM", "TOP"])
+        .memory(0)
+        .start();
+    runner.register_effect("OBS", Arc::new(OppSecurityRemovedGainOne));
+    runner.place_on_field(1, "OBS", Some(0));
+
+    let source_card = runner.game.players[1].battle_area[0].top_card().handle();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        assert!(ctx.add_top_security_to_hand(0));
+    }
+
+    assert_eq!(runner.security_count(0), 1);
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "TOP"),
+        "top security card moved to hand"
+    );
+    assert_eq!(
+        runner.memory(),
+        1,
+        "security removal observers fire for security-to-hand"
+    );
+}
+
+#[test]
+fn recover_from_deck_places_deck_top_on_security_without_loss_observer() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("OBS", "Observer"))
+        .add_card(make_test_card("RECOVER-A", "Recover A"))
+        .add_card(make_test_card("RECOVER-B", "Recover B"))
+        .deck(0, &["RECOVER-A", "RECOVER-B"])
+        .memory(0)
+        .start();
+    runner.register_effect("OBS", Arc::new(OppSecurityRemovedGainOne));
+    runner.place_on_field(1, "OBS", Some(0));
+
+    let source_card = runner.game.players[1].battle_area[0].top_card().handle();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        assert_eq!(ctx.recover_from_deck(0, 1), 1);
+    }
+
+    assert_eq!(runner.security_count(0), 1);
+    assert_eq!(
+        runner.memory(),
+        0,
+        "Recovery does not fire security-loss observers"
+    );
+    assert_eq!(
+        runner.game.players[0]
+            .security
+            .last()
+            .unwrap()
+            .card_id(&runner.game.card_data),
+        "RECOVER-B",
+        "deck top becomes top security"
     );
 }

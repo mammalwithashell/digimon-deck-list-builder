@@ -142,6 +142,13 @@ pub fn evaluate_with_bindings(
             .and_then(|b| b.get_permanent(name))
             .and_then(|handle| ctx.game.effective_dp(handle))
             .unwrap_or(0),
+        CompiledFormula::SourceStackDpSum {
+            target: target_name,
+            filter,
+        } => {
+            let read = ctx.as_read();
+            source_stack_dp_sum(target_name, filter.as_deref(), &read, target, bindings)
+        }
         CompiledFormula::RawRust(name) => {
             if let Some(value) = ctx.game.formula_extensions.evaluate(name, ctx, target) {
                 return value;
@@ -266,6 +273,10 @@ fn evaluate_read_with_raw_and_bindings(
             .and_then(|b| b.get_permanent(name))
             .and_then(|handle| ctx.game.effective_dp(handle))
             .unwrap_or(0),
+        CompiledFormula::SourceStackDpSum {
+            target: target_name,
+            filter,
+        } => source_stack_dp_sum(target_name, filter.as_deref(), ctx, target, bindings),
         CompiledFormula::RawRust(name) => {
             if let Some(f) = raw.formula_fn(name) {
                 return f(ctx, target);
@@ -433,6 +444,50 @@ fn same_level_pairs_in_sources(perm: &Permanent, data: &[crate::card_data::CardD
         }
     }
     counts.values().map(|count| count / 2).sum()
+}
+
+fn source_stack_dp_sum(
+    target_name: &str,
+    filter: Option<&CompiledPredicate>,
+    ctx: &EffectReadContext<'_>,
+    fallback_target: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    let Some(target) = resolve_formula_target(target_name, ctx, fallback_target, bindings) else {
+        return 0;
+    };
+    let Some(perm) = target_permanent_read(ctx, target) else {
+        return 0;
+    };
+    perm.card_sources
+        .iter()
+        .rev()
+        .skip(1)
+        .filter(|source| {
+            filter.is_none_or(|filter| {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::Card(source.handle()),
+                    bindings,
+                )
+            })
+        })
+        .filter_map(|source| source.dp(ctx.card_data()))
+        .sum()
+}
+
+fn resolve_formula_target(
+    target_name: &str,
+    ctx: &EffectReadContext<'_>,
+    fallback_target: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> Option<PermanentHandle> {
+    match target_name {
+        "self" | "target" => Some(fallback_target),
+        "source" => ctx.source_permanent,
+        name => bindings.and_then(|b| b.get_permanent(name)),
+    }
 }
 
 fn players_for_ref(of: CompiledPlayerRef, ctx: &EffectContext<'_>) -> Vec<PlayerId> {

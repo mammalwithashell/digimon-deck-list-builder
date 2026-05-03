@@ -74,6 +74,8 @@ pub enum StepSpec {
     AddToHandFromDeck(HandleMoveArgs),
     AddToHandFromTrash(HandleMoveArgs),
     AddToHandFromSecurity(HandleMoveArgs),
+    AddTopSecurityToHand(PlayerArg),
+    MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
     AddThisOptionToHand(EmptyArgs),
     TrashFromHandByIndex(IndexedMoveArgs),
@@ -96,6 +98,7 @@ pub enum StepSpec {
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
     TrashTopSource(TargetArg),
+    TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
     Hatch(PlayerArg),
 
@@ -106,11 +109,15 @@ pub enum StepSpec {
     PlayFromTrashFree(PlayFromHandArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
+    PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
     EffectInitiatedDigivolve(EffectDigivolveArgs),
     EffectInitiatedDnaDigivolve(EffectDnaDigivolveArgs),
 
     // Security
     TrashTopSecurity(PlayerArg),
+    TrashTopSecurityAndCancelReplacement(PlayerArg),
+    PlacePermanentBottomSecurityAndCancelReplacement(PlacePermanentSecurityReplacementArgs),
+    Recover(DrawArgs),
     MarkSecurityFaceUp(MarkSecurityArgs),
 
     // Modifiers
@@ -132,6 +139,7 @@ pub enum StepSpec {
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
     SelectOwnBreedingPermanent(SelectOwnBreedingPermanentArgs),
     SelectReveal(SelectZoneArgs),
+    SelectRevealBuckets(SelectRevealBucketsArgs),
     SelectSecurity(SelectZoneArgs),
     SelectUnionZone(SelectUnionArgs),
     SelectOrderedPermutation(SelectPermutationArgs),
@@ -150,6 +158,8 @@ pub enum StepSpec {
 
     // Combat / replacement process outcomes
     Battle(BattleArgs),
+    MayAttackNow(MayAttackNowArgs),
+    RefireEffect(RefireEffectArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
     HandleReplacement(EmptyArgs),
@@ -188,6 +198,8 @@ impl Serialize for StepSpec {
             StepSpec::AddToHandFromDeck(v) => kv!(s, "add_to_hand_from_deck", v),
             StepSpec::AddToHandFromTrash(v) => kv!(s, "add_to_hand_from_trash", v),
             StepSpec::AddToHandFromSecurity(v) => kv!(s, "add_to_hand_from_security", v),
+            StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
+            StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
             StepSpec::AddThisOptionToHand(v) => kv!(s, "add_this_option_to_hand", v),
             StepSpec::TrashFromHandByIndex(v) => kv!(s, "trash_from_hand_by_index", v),
@@ -209,6 +221,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
+            StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
@@ -218,10 +231,18 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
+            StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
             StepSpec::EffectInitiatedDigivolve(v) => kv!(s, "effect_initiated_digivolve", v),
             StepSpec::EffectInitiatedDnaDigivolve(v) => kv!(s, "effect_initiated_dna_digivolve", v),
             // Security
             StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
+            StepSpec::TrashTopSecurityAndCancelReplacement(v) => {
+                kv!(s, "trash_top_security_and_cancel_replacement", v)
+            }
+            StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(v) => {
+                kv!(s, "place_permanent_bottom_security_and_cancel_replacement", v)
+            }
+            StepSpec::Recover(v) => kv!(s, "recover", v),
             StepSpec::MarkSecurityFaceUp(v) => kv!(s, "mark_security_face_up", v),
             // Modifiers
             StepSpec::AddDpModifier(v) => kv!(s, "add_dp_modifier", v),
@@ -243,6 +264,7 @@ impl Serialize for StepSpec {
                 kv!(s, "select_own_breeding_permanent", v)
             }
             StepSpec::SelectReveal(v) => kv!(s, "select_reveal", v),
+            StepSpec::SelectRevealBuckets(v) => kv!(s, "select_reveal_buckets", v),
             StepSpec::SelectSecurity(v) => kv!(s, "select_security", v),
             StepSpec::SelectUnionZone(v) => kv!(s, "select_union_zone", v),
             StepSpec::SelectOrderedPermutation(v) => kv!(s, "select_ordered_permutation", v),
@@ -259,6 +281,8 @@ impl Serialize for StepSpec {
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
+            StepSpec::MayAttackNow(v) => kv!(s, "may_attack_now", v),
+            StepSpec::RefireEffect(v) => kv!(s, "refire_effect", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
@@ -316,6 +340,10 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_to_hand_from_deck" => StepSpec::AddToHandFromDeck(map.next_value()?),
             "add_to_hand_from_trash" => StepSpec::AddToHandFromTrash(map.next_value()?),
             "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
+            "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
+            "may_add_top_security_to_hand" => {
+                StepSpec::MayAddTopSecurityToHand(map.next_value()?)
+            }
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
             "add_this_option_to_hand" => StepSpec::AddThisOptionToHand(map.next_value()?),
             "trash_from_hand_by_index" => StepSpec::TrashFromHandByIndex(map.next_value()?),
@@ -338,6 +366,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
+            "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
@@ -348,6 +377,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
+            "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
             "effect_initiated_digivolve" => StepSpec::EffectInitiatedDigivolve(map.next_value()?),
             "effect_initiated_dna_digivolve" => {
                 StepSpec::EffectInitiatedDnaDigivolve(map.next_value()?)
@@ -355,6 +385,13 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
+            "trash_top_security_and_cancel_replacement" => {
+                StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
+            }
+            "place_permanent_bottom_security_and_cancel_replacement" => {
+                StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(map.next_value()?)
+            }
+            "recover" => StepSpec::Recover(map.next_value()?),
             "mark_security_face_up" => StepSpec::MarkSecurityFaceUp(map.next_value()?),
 
             // Modifiers
@@ -378,6 +415,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 StepSpec::SelectOwnBreedingPermanent(map.next_value()?)
             }
             "select_reveal" => StepSpec::SelectReveal(map.next_value()?),
+            "select_reveal_buckets" => StepSpec::SelectRevealBuckets(map.next_value()?),
             "select_security" => StepSpec::SelectSecurity(map.next_value()?),
             "select_union_zone" => StepSpec::SelectUnionZone(map.next_value()?),
             "select_ordered_permutation" => StepSpec::SelectOrderedPermutation(map.next_value()?),
@@ -396,6 +434,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Combat / replacement process outcomes
             "battle" => StepSpec::Battle(map.next_value()?),
+            "may_attack_now" => StepSpec::MayAttackNow(map.next_value()?),
+            "refire_effect" => StepSpec::RefireEffect(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
@@ -417,6 +457,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_to_hand_from_deck",
                         "add_to_hand_from_trash",
                         "add_to_hand_from_security",
+                        "add_top_security_to_hand",
+                        "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
                         "add_this_option_to_hand",
                         "trash_from_hand_by_index",
@@ -437,6 +479,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_token",
                         "place_as_bottom_source",
                         "trash_top_source",
+                        "trash_all_sources",
                         "trash_selected_sources",
                         "hatch",
                         "play_from_hand",
@@ -445,9 +488,13 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_from_trash_free",
                         "play_from_security",
                         "play_from_materials",
+                        "play_selected_sources_free",
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "trash_top_security",
+                        "trash_top_security_and_cancel_replacement",
+                        "place_permanent_bottom_security_and_cancel_replacement",
+                        "recover",
                         "mark_security_face_up",
                         "add_dp_modifier",
                         "add_modifier",
@@ -464,6 +511,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_opponent_dp_budget",
                         "select_own_breeding_permanent",
                         "select_reveal",
+                        "select_reveal_buckets",
                         "select_security",
                         "select_union_zone",
                         "select_ordered_permutation",
@@ -477,6 +525,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_self_as_delay_option",
                         "link_to_own_digimon",
                         "optional",
+                        "battle",
+                        "may_attack_now",
+                        "refire_effect",
                         "end_attack",
                         "cancel_replacement",
                         "handle_replacement",
@@ -573,6 +624,40 @@ pub struct BattleArgs {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub struct MayAttackNowArgs {
+    pub attacker: BindingRef,
+    #[serde(default)]
+    pub targets: AttackTargetSpec,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub without_suspending: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RefireEffectArgs {
+    pub source: BindingRef,
+    pub timing: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, Default,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum AttackTargetSpec {
+    #[default]
+    Any,
+    Player,
+    Digimon,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct RedirectReplacementArgs {
     pub zone: Zone,
 }
@@ -665,6 +750,18 @@ pub struct PlaceOnSecurityArgs {
     pub position: StackPosition,
     #[serde(default)]
     pub face_up: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlacePermanentSecurityReplacementArgs {
+    #[serde(default = "default_player_ref_you")]
+    pub of: PlayerRef,
+    pub target: BindingRef,
+}
+
+fn default_player_ref_you() -> PlayerRef {
+    PlayerRef::You
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -899,6 +996,29 @@ pub struct SelectZoneArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectRevealBucketsArgs {
+    pub from: String,
+    pub buckets: Vec<SelectRevealBucketArgs>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub no_duplicate_cards: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectRevealBucketArgs {
+    pub bind_as: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

@@ -409,7 +409,11 @@ fn transient_option_scheduled_end_of_turn_effect_replays_with_option_source() {
         r.game.play_option_from_hand(0, 0),
         OptionPlayResult::Trashed
     );
-    assert_eq!(r.trash_size(0), 1, "scheduled option is in trash before replay");
+    assert_eq!(
+        r.trash_size(0),
+        1,
+        "scheduled option is in trash before replay"
+    );
     assert_eq!(*witness.lock().unwrap(), 0);
     r.end_turn();
     assert_eq!(*witness.lock().unwrap(), 1);

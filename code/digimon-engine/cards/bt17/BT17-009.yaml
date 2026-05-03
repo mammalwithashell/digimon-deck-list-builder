@@ -1,0 +1,59 @@
+card: BT17-009
+name: Flamemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Wizard, Hybrid]
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: red
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add one Hybrid/Ten Warriors and one inherited-effect Tamer"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: hybrid_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: Hybrid
+                  - trait_has: Ten Warriors
+            - bind_as: tamer_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: tamer
+                  - has_inherited: {}
+          no_duplicate_cards: true
+          prompt: "Select 1 [Hybrid]/[Ten Warriors] and 1 inherited-effect Tamer"
+      - add_to_hand_from_reveal: { of: you, card: hybrid_pick }
+      - add_to_hand_from_reveal: { of: you, card: tamer_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[On Deletion] You may play 1 Tamer with inherited effects from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - has_inherited: {}
+          prompt: "Play 1 Tamer card with inherited effects"
+      - play_from_hand_free: { of: you, hand_index: tamer }
